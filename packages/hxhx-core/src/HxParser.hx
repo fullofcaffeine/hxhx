@@ -413,8 +413,9 @@ class HxParser {
 				for (s in stmts)
 					shifted.push(rebaseFunctionBodyStmt(s, base, bodyStartIndex));
 				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
-			case SVar(name, typeHint, init, pos):
-				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SVar(name, typeHint, init, pos, metadata):
+				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex),
+					metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -585,8 +586,9 @@ class HxParser {
 				for (s in stmts)
 					shifted.push(offsetFunctionBodyStmtColumns(s, delta));
 				SBlock(shifted, offsetFunctionBodyPosColumn(pos, delta));
-			case SVar(name, typeHint, init, pos):
-				SVar(name, typeHint, offsetFunctionBodyExprColumns(init, delta), offsetFunctionBodyPosColumn(pos, delta));
+			case SVar(name, typeHint, init, pos, metadata):
+				SVar(name, typeHint, offsetFunctionBodyExprColumns(init, delta), offsetFunctionBodyPosColumn(pos, delta),
+					metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -2093,7 +2095,7 @@ class HxParser {
 		final init:HxExpr = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
 			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
 		final functionTypeHint = !hasFunctionTypeHint ? "" : "(" + argTypeHints.join(", ") + ")->" + (returnType.length == 0 ? "Dynamic" : returnType);
-		return SVar(name, functionTypeHint, init, pos);
+		return SVar(name, functionTypeHint, init, pos, []);
 	}
 
 	function localFunctionArgTypeHintNeedsBackend(typeHint:String):Bool {
@@ -4183,7 +4185,7 @@ class HxParser {
 	}
 
 	function parseVarDecls(pos:HxPos):Array<HxStmt> {
-		// `var a[:T] [= expr], b[:U] [= expr];`
+		// `var [@:meta] a[:T] [= expr], [@:meta] b[:U] [= expr];`
 		//
 		// Why
 		// - Upstream Haxe tests use grouped declarators heavily, e.g. `var a:Int64, b:Int64;`.
@@ -4191,10 +4193,15 @@ class HxParser {
 		//
 		// How
 		// - Parse each declarator here.
+		// - Metadata belongs to the declarator immediately following it. This is
+		//   distinct from metadata written before the whole `var` statement.
 		// - In statement-list contexts, callers flatten grouped declarators into the surrounding list.
 		// - In single-statement contexts (e.g. `if (...) var a, b;`), we keep them wrapped in
 		//   a local block so branch-local scope remains correct.
 		function parseSingleVarDecl():HxStmt {
+			final metadata = new Array<String>();
+			while (isOtherChar("@"))
+				metadata.push(parseMetadataText());
 			final name = readIdent("variable name");
 			var typeHint = "";
 			if (cur.kind.match(TColon)) {
@@ -4206,7 +4213,7 @@ class HxParser {
 			if (acceptOtherChar("=")) {
 				init = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
 			}
-			return SVar(name, typeHint, init, pos);
+			return SVar(name, typeHint, init, pos, metadata);
 		}
 
 		final decls = new Array<HxStmt>();

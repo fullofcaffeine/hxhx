@@ -167,6 +167,24 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 			case body:
 				fail("expression macro expansion lost the declaration wrapper around its expanded child: " + Std.string(body));
 		}
+		final annotatedLocalSource = [
+			"class AnnotatedLocalMacroInitializer {",
+			"  function run():Void {",
+			"    var @:example value:String = hxhxmacros.ExprMacroShim.hello();",
+			"  }",
+			"}",
+		].join("\n");
+		final annotatedLocalParsed = ParserStage.parse(annotatedLocalSource, "AnnotatedLocalMacroInitializer.hx");
+		final annotatedLocalResolved = new ResolvedModule("AnnotatedLocalMacroInitializer", "AnnotatedLocalMacroInitializer.hx", annotatedLocalParsed);
+		final annotatedLocalExpansion = ExprMacroExpander.expandResolvedModules([annotatedLocalResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("annotated local initializer macro expansion count", annotatedLocalExpansion.expandedCount, 1);
+		final annotatedLocalClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(annotatedLocalExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(annotatedLocalClass)[0])) {
+			case [SVar("value", "String", EString("HELLO"), _, metadata)]:
+				assertEq("macro expansion must preserve local metadata", metadata == null ? "<missing>" : metadata.join("|"), "@:example");
+			case body:
+				fail("macro expansion changed the annotated local declaration: " + Std.string(body));
+		}
 		assertEq("args entrypoint", generated.run('hxhxmacros.ArgsMacros.setArg("ok")'), "ok");
 		assertEq("arg define", MacroState.definedValue("HXHX_ARG"), "ok");
 		assertEq("external entrypoint", generated.run("hxhxmacros.ExternalMacros.external()"), "external=ok");

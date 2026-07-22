@@ -193,6 +193,38 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 
+	static function assertLocalVariableMetadataStructure():Void {
+		final filePath = "checks/LocalVariableMetadata.hx";
+		final source = [
+			"class LocalVariableMetadata {",
+			"  function check():Void {",
+			"    var @:nullSafety(Off) nullable:Null<String> = null;",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(source, filePath);
+		final resolved = new ResolvedModule("LocalVariableMetadata", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final body = findFunction(findClass(typed, "LocalVariableMetadata"), "check").getBody();
+		final statement = body.getStatements()[0];
+		assertTrue(statement.getTag() == TypedStmtTag.Var, "annotated local did not become a typed variable statement");
+		assertTrue(statement.getMetadata().join("|") == "@:nullSafety(Off)", "typed local lost its null-safety metadata");
+		switch (TypedBodySource.statement(statement)) {
+			case SVar("nullable", "Null<String>", ENull, position, metadata):
+				assertTrue(position.getLine() == 3, "annotated local lost its exact source line");
+				assertTrue(metadata != null
+					&& metadata.join("|") == "@:nullSafety(Off)", "typed-body source projection dropped local metadata");
+			case _:
+				throw "typed-body source projection changed the annotated local declaration";
+		}
+		final position = new HxPos(0, 1, 1);
+		final annotatedFingerprint = TypedBodyFingerprint.forStatements([SVar("value", "Int", EInt(1), position, ["@:example"])]);
+		final plainFingerprint = TypedBodyFingerprint.forStatements([SVar("value", "Int", EInt(1), position, [])]);
+		assertTrue(annotatedFingerprint != plainFingerprint, "body fingerprint ignored local-variable metadata");
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
@@ -661,6 +693,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertOpaqueGuard();
 		assertReturnMacroArgumentStructure();
 		assertVariableDeclarationMacroArgumentStructure();
+		assertLocalVariableMetadataStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
 }

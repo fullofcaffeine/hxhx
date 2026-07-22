@@ -105,6 +105,35 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("grouped final declarations were not preserved as one expression");
 		}
+		final localVariableMetadata = HxParser.parseFunctionBodyText([
+			"var @:nullSafety(Off) nullable:Null<String> = null;",
+			"var @:first one:Int = 1, @:second(\"two\") two:String = \"two\";",
+			"@:statementOnly var plain:Int = 3;"
+		].join("\n"));
+		assertTrue(localVariableMetadata.length == 4, "grouped annotated locals should flatten into four declarations");
+		switch (localVariableMetadata) {
+			case [
+				SVar("nullable", "Null<String>", ENull, _, nullableMetadata),   SVar("one", "Int", EInt(1), _, oneMetadata),
+				       SVar("two", "String", EString("two"), _, twoMetadata), SVar("plain", "Int", EInt(3), _, plainMetadata)
+			]:
+				assertTrue(nullableMetadata != null && nullableMetadata.join("|") == "@:nullSafety(Off)",
+					"local null-safety metadata was not attached to its declaration");
+				assertTrue(oneMetadata != null && oneMetadata.join("|") == "@:first", "first grouped declaration lost its metadata");
+				assertTrue(twoMetadata != null
+					&& twoMetadata.join("|") == "@:second(\"two\")", "second grouped declaration lost its metadata arguments");
+				assertTrue(plainMetadata != null && plainMetadata.length == 0,
+					"metadata before the whole statement was incorrectly attached to the local variable");
+			case _:
+				fail("local variable metadata fixture lost declaration structure");
+		}
+		final malformedLocalMetadata = HxParser.parseFunctionBodyText("var @:broken( value:Int = 1;");
+		switch (malformedLocalMetadata) {
+			case [SExpr(EUnsupported(raw), _)]:
+				assertTrue(raw.indexOf("body_parse_error") == 0 && raw.indexOf("err=Unterminated parenthesis group") >= 0,
+					"malformed local metadata should report its unclosed argument list, got: " + raw);
+			case _:
+				fail("malformed local metadata should become one precise parser diagnostic");
+		}
 		var spacedQuestionDotFailure:Null<String> = null;
 		try {
 			HxParser.parseExprText("unexpectedStrings ? .copy()");

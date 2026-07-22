@@ -100,8 +100,13 @@ class EmitterStageDebug {
 		final line = pos == null ? 0 : pos.getLine();
 		final col = pos == null ? 0 : pos.getColumn();
 		final detail = switch (stmt) {
-			case SVar(name, typeHint, _init, _):
-				":name=" + name + ":type=" + (typeHint == null ? "" : typeHint);
+			case SVar(name, typeHint, _init, _, metadata):
+				":name="
+				+ name
+				+ ":type="
+				+ (typeHint == null ? "" : typeHint)
+				+ ":metadata="
+				+ (metadata == null ? "" : metadata.join("|"));
 			case SIf(_cond, _thenBranch, elseBranch, _):
 				":hasElse=" + (elseBranch == null ? "0" : "1");
 			case SForIn(name, _iterable, _body, _):

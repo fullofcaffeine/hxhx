@@ -165,7 +165,7 @@ class TypedBodySource {
 				var initializer:Null<HxExpr> = null;
 				if (expressions.length > 0)
 					initializer = expression(expressions[0]);
-				SVar(names[0], typeHint, initializer, position);
+				SVar(names[0], typeHint, initializer, position, typedStatement.getMetadata());
 			case If:
 				var whenFalse:Null<HxStmt> = null;
 				if (statements.length > 1)

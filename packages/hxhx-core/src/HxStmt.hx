@@ -44,8 +44,14 @@ enum HxStmt {
 		- Stores the variable name.
 		- Stores the optional type hint as raw text.
 		- Stores the optional initializer expression.
+		- Stores metadata written on this specific declarator, such as
+		  `var @:nullSafety(Off) value:String`.
+
+		The metadata argument is optional so manually constructed, unannotated
+		statements stay concise. Parser-produced declarations always provide an
+		array, and every structural rebuild must preserve it.
 	**/
-	SVar(name:String, typeHint:String, init:Null<HxExpr>, pos:HxPos);
+	SVar(name:String, typeHint:String, init:Null<HxExpr>, pos:HxPos, ?metadata:Array<String>);
 
 	/**
 		If/else statement: `if (cond) thenStmt [else elseStmt]`.

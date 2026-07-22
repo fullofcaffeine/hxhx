@@ -295,10 +295,14 @@ class TypedBodyFingerprint {
 				addString(state, "stmt-block");
 				addStatements(state, statements);
 				addPosition(state, position);
-			case SVar(name, typeHint, initializer, position):
+			case SVar(name, typeHint, initializer, position, metadata):
 				addString(state, "stmt-var");
 				addString(state, name);
 				addString(state, typeHint);
+				final safeMetadata = metadata == null ? [] : metadata;
+				addInt(state, safeMetadata.length);
+				for (entry in safeMetadata)
+					addString(state, entry);
 				addInt(state, initializer == null ? 0 : 1);
 				if (initializer != null)
 					addExpression(state, initializer);

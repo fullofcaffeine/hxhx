@@ -26,8 +26,10 @@ enum TypedStmtTag {
 	One structurally typed statement with the best exact source position.
 
 	Expressions and nested statements are always structural typed nodes. Catch
-	metadata is stored in parallel immutable arrays whose lengths are validated at
-	construction, keeping the recursive family in this one target module.
+	information is stored in parallel immutable arrays whose lengths are validated
+	at construction. Local-variable metadata has its own immutable array so
+	annotations such as `@:nullSafety(Off)` cannot be confused with names or type
+	hints.
 **/
 class TypedStmt {
 	final tag:TypedStmtTag;
@@ -38,9 +40,10 @@ class TypedStmt {
 	final patterns:Array<HxSwitchPattern>;
 	final catchNames:Array<String>;
 	final catchTypeHints:Array<String>;
+	final metadata:Array<String>;
 
 	function new(tag:TypedStmtTag, position:Null<HxPos>, ?names:Array<String>, ?expressions:Array<TypedExpr>, ?statements:Array<TypedStmt>,
-			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>) {
+			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>, ?metadata:Array<String>) {
 		this.tag = tag;
 		this.position = position;
 		this.names = names == null ? [] : names.copy();
@@ -49,6 +52,7 @@ class TypedStmt {
 		this.patterns = patterns == null ? [] : patterns.copy();
 		this.catchNames = catchNames == null ? [] : catchNames.copy();
 		this.catchTypeHints = catchTypeHints == null ? [] : catchTypeHints.copy();
+		this.metadata = metadata == null ? [] : metadata.copy();
 		if (tag == Try && (this.statements.length != this.catchNames.length + 1 || this.catchNames.length != this.catchTypeHints.length))
 			throw "typed try statement has inconsistent catch payloads";
 	}
@@ -56,8 +60,8 @@ class TypedStmt {
 	public static function block(statements:Array<TypedStmt>, position:Null<HxPos>):TypedStmt
 		return new TypedStmt(Block, position, null, null, statements);
 
-	public static function variable(name:String, typeHint:String, initializer:Null<TypedExpr>, position:Null<HxPos>):TypedStmt
-		return new TypedStmt(Var, position, [name, typeHint], initializer == null ? [] : [initializer]);
+	public static function variable(name:String, typeHint:String, initializer:Null<TypedExpr>, position:Null<HxPos>, ?metadata:Array<String>):TypedStmt
+		return new TypedStmt(Var, position, [name, typeHint], initializer == null ? [] : [initializer], null, null, null, null, metadata);
 
 	public static function ifStmt(condition:TypedExpr, whenTrue:TypedStmt, whenFalse:Null<TypedStmt>, position:Null<HxPos>):TypedStmt {
 		final branches = [whenTrue];
@@ -127,7 +131,10 @@ class TypedStmt {
 	public function getCatchTypeHints():Array<String>
 		return catchTypeHints.copy();
 
+	public function getMetadata():Array<String>
+		return metadata.copy();
+
 	/** Rebuild this immutable statement after a shared recursive expression pass. **/
 	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
-		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints);
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata);
 }

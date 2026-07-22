@@ -219,11 +219,11 @@ class TypedBodyBuilder {
 		return switch (statement) {
 			case SBlock(statements, position):
 				SBlock([for (child in statements) untypedStatement(child)], position);
-			case SVar(name, typeHint, initializer, position):
+			case SVar(name, typeHint, initializer, position, metadata):
 				var untypedInitializer:Null<HxExpr> = null;
 				if (initializer != null)
 					untypedInitializer = untypedExpression(initializer);
-				SVar(name, typeHint, untypedInitializer, position);
+				SVar(name, typeHint, untypedInitializer, position, metadata == null ? [] : metadata.copy());
 			case SIf(condition, whenTrue, whenFalse, position):
 				var untypedWhenFalse:Null<HxStmt> = null;
 				if (whenFalse != null)
@@ -529,10 +529,10 @@ class TypedBodyBuilder {
 		return switch (statement) {
 			case SBlock(statements, _):
 				TypedStmt.block(buildStatements(statements, environment, typeResolver, callResolver), storedPosition);
-			case SVar(name, typeHint, initializer, _):
+			case SVar(name, typeHint, initializer, _, metadata):
 				TypedStmt.variable(name, typeHint,
 					initializer == null ? null : buildExpr(initializer, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					storedPosition);
+					storedPosition, metadata == null ? [] : metadata);
 			case SIf(condition, whenTrue, whenFalse, _):
 				TypedStmt.ifStmt(buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
 					buildStmt(whenTrue, environment, typeResolver, callResolver),

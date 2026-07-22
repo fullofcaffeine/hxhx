@@ -156,14 +156,14 @@ class ExprMacroExpander {
 					out.push(rs);
 				}
 				changed ? SBlock(out, pos) : s;
-			case SVar(name, typeHint, init, pos):
+			case SVar(name, typeHint, init, pos, metadata):
 				var rInit:Null<HxExpr> = init;
 				if (init != null) {
 					final rewrittenInit = rewriteExpr(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 					if (rewrittenInit != init)
 						rInit = true ? rewrittenInit : null;
 				}
-				rInit != init ? SVar(name, typeHint, rInit, pos) : s;
+				rInit != init ? SVar(name, typeHint, rInit, pos, metadata == null ? [] : metadata.copy()) : s;
 			case SIf(cond, thenBranch, elseBranch, pos):
 				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);

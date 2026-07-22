@@ -16782,12 +16782,12 @@ class SourceTargetCommon {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
 				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters, rewriteRawText), pos);
-			case SVar(name, typeHint, init, pos):
+			case SVar(name, typeHint, init, pos, metadata):
 				var rewrittenInit:Null<HxExpr> = null;
 				if (init != null)
 					rewrittenInit = phpRenameScopedLocalExpr(init, env, counters, rewriteRawText);
 				final renamed = phpDeclareScopedLocal(name, env, counters);
-				SVar(renamed, typeHint, rewrittenInit, pos);
+				SVar(renamed, typeHint, rewrittenInit, pos, metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var rewrittenElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -17017,13 +17017,13 @@ class SourceTargetCommon {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
 				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
-			case SVar(name, typeHint, init, pos):
+			case SVar(name, typeHint, init, pos, metadata):
 				var rewrittenInit:Null<HxExpr> = null;
 				if (init != null)
 					rewrittenInit = pythonRewriteSameClassMemberExpr(init, methodNames, fieldNames, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
-				SVar(name, typeHint, rewrittenInit, pos);
+				SVar(name, typeHint, rewrittenInit, pos, metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var rewrittenElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -17319,13 +17319,13 @@ class SourceTargetCommon {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
 				SBlock(csRewriteSameClassStaticMembersInStmts(stmts, staticMemberNames, className, copyStringArray(locals)), pos);
-			case SVar(name, typeHint, init, pos):
+			case SVar(name, typeHint, init, pos, metadata):
 				var rewrittenInit:Null<HxExpr> = null;
 				if (init != null)
 					rewrittenInit = csRewriteSameClassStaticMemberExpr(init, staticMemberNames, className, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
-				SVar(name, typeHint, rewrittenInit, pos);
+				SVar(name, typeHint, rewrittenInit, pos, metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var rewrittenElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -17482,13 +17482,13 @@ class SourceTargetCommon {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
 				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), pos);
-			case SVar(name, typeHint, init, pos):
+			case SVar(name, typeHint, init, pos, metadata):
 				var rewrittenInit:Null<HxExpr> = null;
 				if (init != null)
 					rewrittenInit = phpRewriteSameClassMemberExpr(init, methodNames, fieldNames, staticFieldNames, className, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
-				SVar(name, typeHint, rewrittenInit, pos);
+				SVar(name, typeHint, rewrittenInit, pos, metadata == null ? [] : metadata.copy());
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var rewrittenElse:Null<HxStmt> = null;
 				if (elseBranch != null)
