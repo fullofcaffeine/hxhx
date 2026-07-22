@@ -38,8 +38,9 @@ and stmtHasLocalDeclEvidence = fun stmt evidence -> try let __fallback_result_33
           __assign_13
         )
       )
-      | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+      | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
+        ignore _p4;
         let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let __assign_14 = evidence (name : string) (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
           tempResult := __assign_14;
           __assign_14
@@ -1065,11 +1066,12 @@ and stmtHasBindCallableEvidence = fun stmt -> try let __fallback_result_140 = (
           __assign_120
         )
       )
-      | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+      | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
         ignore _p0;
         ignore _p1;
         let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
           ignore _p3;
+          ignore _p4;
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_121 = exprHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
             tempResult := __assign_121;
             __assign_121
@@ -1540,11 +1542,12 @@ and stmtHasHelperTypedAsEvidence = fun stmt -> try let __fallback_result_266 = (
           __assign_246
         )
       )
-      | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+      | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
         ignore _p0;
         ignore _p1;
         let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
           ignore _p3;
+          ignore _p4;
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_247 = exprHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
             tempResult := __assign_247;
             __assign_247

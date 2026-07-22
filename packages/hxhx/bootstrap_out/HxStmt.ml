@@ -4,7 +4,7 @@
 
 type hxstmt =
 | SBlock of hxstmt HxArray.t * HxPos.t
-| SVar of string * string * Obj.t * HxPos.t
+| SVar of string * string * Obj.t * HxPos.t * string HxArray.t
 | SIf of HxExpr.hxexpr * hxstmt * Obj.t * HxPos.t
 | SForIn of string * HxExpr.hxexpr * hxstmt * HxPos.t
 | SForKeyValue of string * string * HxExpr.hxexpr * hxstmt * HxPos.t

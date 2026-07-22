@@ -574,7 +574,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'typeHint' for HxStmt.SVar" in
     let a2 = if len > 2 then (HxArray.get args 2) else failwith "Type.createEnum: missing ctor arg 'init' for HxStmt.SVar" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SVar" in
-    Obj.repr (HxStmt.SVar (a0, a1, a2, a3))
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxStmt.SVar (a0, a1, a2, a3, a4))
   );
   HxType.register_enum_ctor "HxStmt" "SIf" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1612,7 +1613,8 @@ let init () : unit =
     let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
     let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (TypedStmt.create a0 a1 a2 a3 a4 a5 a6 a7)
+    let a8 = if len > 8 then Obj.magic ((HxArray.get args 8)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TypedStmt.create a0 a1 a2 a3 a4 a5 a6 a7 a8)
   );
   HxType.register_class_ctor "TyperContext" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2575,7 +2577,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedFunctionBody" [];
   HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclaration"; "env"; "getBackendDeclaration"; "getEnv"; "getParsed"; "getRevision"; "getTypedClasses"; "parsed"; "revision"; "typedClasses"; "withTypedClasses" ];
   HxType.register_class_static_fields "TypedModule" [];
-  HxType.register_class_instance_fields "TypedStmt" [ "catchNames"; "catchTypeHints"; "expressions"; "getCatchNames"; "getCatchTypeHints"; "getExpressions"; "getNames"; "getPatterns"; "getPosition"; "getStatements"; "getTag"; "names"; "patterns"; "position"; "statements"; "tag"; "withChildren" ];
+  HxType.register_class_instance_fields "TypedStmt" [ "catchNames"; "catchTypeHints"; "expressions"; "getCatchNames"; "getCatchTypeHints"; "getExpressions"; "getMetadata"; "getNames"; "getPatterns"; "getPosition"; "getStatements"; "getTag"; "metadata"; "names"; "patterns"; "position"; "statements"; "tag"; "withChildren" ];
   HxType.register_class_static_fields "TypedStmt" [ "block"; "breakStmt"; "continueStmt"; "doWhile"; "expressionStmt"; "forIn"; "forKeyValue"; "ifStmt"; "returnValue"; "returnVoid"; "switchStmt"; "throwStmt"; "tryStmt"; "variable"; "whileStmt" ];
   HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "currentClass"; "filePath"; "getClassFullName"; "getFilePath"; "getImports"; "getIndex"; "getModulePath"; "getPackagePath"; "imports"; "index"; "loader"; "modulePath"; "packagePath"; "resolveType" ];
   HxType.register_class_static_fields "TyperContext" [];

@@ -293,11 +293,12 @@ and stmtCallsLocal = fun stmt local sanitizeIdentifier -> let tempResult = ref (
         __assign_5
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
+        ignore _p4;
         let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_6 = exprCallsLocal (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (local : string) sanitizeIdentifier in (
           tempResult := __assign_6;
           __assign_6

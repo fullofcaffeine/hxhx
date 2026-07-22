@@ -304,11 +304,12 @@ let rec collectErasedDynamicArgUsageNamesFromStmt = fun self (stmt : HxStmt.hxst
       collectErasedDynamicArgUsageNamesFromStmt (Obj.magic self) (Obj.magic s) (Obj.magic dynamicArgs) (Obj.magic used)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     ignore _p1;
     let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in if init != Obj.magic (HxRuntime.hx_null) then ignore (collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic dynamicArgs) (Obj.magic used)) else ()
     )
   ))
@@ -1358,8 +1359,9 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       collectClosureVectorLocalCandidatesFromStmt (Obj.magic self) (Obj.magic s) (Obj.magic candidates)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in if isUnhintedEmptyArray (Obj.magic self) (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) then ignore (HxMap.set_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string)) true) else ignore ()
   ))
   | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore ((
@@ -1540,8 +1542,9 @@ let rec collectClosureVectorEvidenceFromStmt = fun self (stmt : HxStmt.hxstmt) (
       collectClosureVectorEvidenceFromStmt (Obj.magic self) (Obj.magic s) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectClosureVectorEvidenceFromExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)) else ());
       let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in if not (HxMap.exists_string candidates local) || not (isUnhintedEmptyArray (Obj.magic self) (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init))) then ignore (let localType = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "cppLocalTypeHint") (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if HxString.length localType > 0 then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local localType) else ()) else ()
@@ -1648,8 +1651,9 @@ let rec collectClosureVectorPushedTypesFromStmt = fun self (stmt : HxStmt.hxstmt
       collectClosureVectorPushedTypesFromStmt (Obj.magic self) (Obj.magic s) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectClosureVectorPushedTypesFromExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)) else ());
       let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in if not (HxMap.exists_string candidates local) || not (isUnhintedEmptyArray (Obj.magic self) (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init))) then ignore (let localType = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "cppLocalTypeHint") (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if HxString.length localType > 0 then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local localType) else ()) else ()
@@ -2286,8 +2290,9 @@ let rec collectStringMapLocalTypeOverridesFromStmt = fun self (stmt : HxStmt.hxs
       collectStringMapLocalTypeOverridesFromStmt (Obj.magic _gthis) (Obj.magic s) scope (Obj.magic candidates)
     )) done))
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates)) else ());
       let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "declareLocalName") (name : string) scope : string) in let mapClass = (mapClassNameFromNewExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in let tempString = ref ("" : string) in (

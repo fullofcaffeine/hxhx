@@ -169,17 +169,20 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
               __assign_31
             )
           )
-          | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+          | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let _g4 = Obj.magic _p3 in let pos = Obj.magic _g4 in let __assign_33 = Obj.magic (let __anon_34 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_34 "kind" (Obj.repr "SVar"));
-              ignore (HxAnon.set __anon_34 "pos" (Obj.repr pos));
-              __anon_34
-            )) in (
-              tempStruct := __assign_33;
-              __assign_33
+            let _g4 = Obj.magic _p3 in (
+              ignore _p4;
+              let pos = Obj.magic _g4 in let __assign_33 = Obj.magic (let __anon_34 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_34 "kind" (Obj.repr "SVar"));
+                ignore (HxAnon.set __anon_34 "pos" (Obj.repr pos));
+                __anon_34
+              )) in (
+                tempStruct := __assign_33;
+                __assign_33
+              )
             )
           )
           | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
@@ -362,11 +365,11 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
                     )
                   )
                 )
-                | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+                | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
                   ignore _p3;
-                  let name = (_g : string) in let typeHint = (_g1 : string) in (
+                  let _g4 = Obj.magic _p4 in let name = (_g : string) in let typeHint = (_g1 : string) in (
                     ignore _g2;
-                    let tempString2 = ref ("" : string) in (
+                    let metadata = Obj.magic _g4 in let tempString2 = ref ("" : string) in (
                       ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_69 = ("" : string) in (
                         tempString2 := __assign_69;
                         __assign_69
@@ -374,9 +377,18 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
                         tempString2 := __assign_70;
                         __assign_70
                       ));
-                      let __assign_71 = (((":name=" ^ HxString.toStdString name) ^ ":type=") ^ HxString.toStdString (!tempString2) : string) in (
-                        tempString := __assign_71;
-                        __assign_71
+                      let tempString3 = ref ("" : string) in (
+                        ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_71 = ("" : string) in (
+                          tempString3 := __assign_71;
+                          __assign_71
+                        ) else let __assign_72 = (HxArray.join metadata "|" (fun x -> Std.string (Obj.repr x)) : string) in (
+                          tempString3 := __assign_72;
+                          __assign_72
+                        ));
+                        let __assign_73 = (((((":name=" ^ HxString.toStdString name) ^ ":type=") ^ HxString.toStdString (!tempString2)) ^ ":metadata=") ^ HxString.toStdString (!tempString3) : string) in (
+                          tempString := __assign_73;
+                          __assign_73
+                        )
                       )
                     )
                   )
@@ -385,17 +397,17 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
                   ignore _p3;
                   ignore _g;
                   ignore _g1;
-                  let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let tempString3 = ref ("" : string) in (
-                    ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_72 = ("0" : string) in (
-                      tempString3 := __assign_72;
-                      __assign_72
-                    ) else let __assign_73 = ("1" : string) in (
-                      tempString3 := __assign_73;
-                      __assign_73
-                    ));
-                    let __assign_74 = (":hasElse=" ^ HxString.toStdString (!tempString3) : string) in (
-                      tempString := __assign_74;
+                  let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let tempString4 = ref ("" : string) in (
+                    ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_74 = ("0" : string) in (
+                      tempString4 := __assign_74;
                       __assign_74
+                    ) else let __assign_75 = ("1" : string) in (
+                      tempString4 := __assign_75;
+                      __assign_75
+                    ));
+                    let __assign_76 = (":hasElse=" ^ HxString.toStdString (!tempString4) : string) in (
+                      tempString := __assign_76;
+                      __assign_76
                     )
                   )
                 )
@@ -404,9 +416,9 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
                   let name = (_g : string) in (
                     ignore _g1;
                     ignore _g2;
-                    let __assign_75 = (":name=" ^ HxString.toStdString name : string) in (
-                      tempString := __assign_75;
-                      __assign_75
+                    let __assign_77 = (":name=" ^ HxString.toStdString name : string) in (
+                      tempString := __assign_77;
+                      __assign_77
                     )
                   )
                 )
@@ -415,34 +427,34 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
                   let keyName = (_g : string) in let valueName = (_g1 : string) in (
                     ignore _g2;
                     ignore _g3;
-                    let __assign_76 = (((":key=" ^ HxString.toStdString keyName) ^ ":value=") ^ HxString.toStdString valueName : string) in (
-                      tempString := __assign_76;
-                      __assign_76
+                    let __assign_78 = (((":key=" ^ HxString.toStdString keyName) ^ ":value=") ^ HxString.toStdString valueName : string) in (
+                      tempString := __assign_78;
+                      __assign_78
                     )
                   )
                 )
                 | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in (
                   ignore _p3;
                   ignore _g;
-                  let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let tempString4 = ref ("" : string) in (
-                    ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_77 = ("0" : string) in (
-                      tempString4 := __assign_77;
-                      __assign_77
-                    ) else let __assign_78 = (string_of_int (HxArray.length patterns) : string) in (
-                      tempString4 := __assign_78;
-                      __assign_78
+                  let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let tempString5 = ref ("" : string) in (
+                    ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_79 = ("0" : string) in (
+                      tempString5 := __assign_79;
+                      __assign_79
+                    ) else let __assign_80 = (string_of_int (HxArray.length patterns) : string) in (
+                      tempString5 := __assign_80;
+                      __assign_80
                     ));
-                    let tempString5 = ref ("" : string) in (
-                      ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_79 = ("0" : string) in (
-                        tempString5 := __assign_79;
-                        __assign_79
-                      ) else let __assign_80 = (string_of_int (HxArray.length bodies) : string) in (
-                        tempString5 := __assign_80;
-                        __assign_80
-                      ));
-                      let __assign_81 = (((":patterns=" ^ HxString.toStdString (!tempString4)) ^ ":bodies=") ^ HxString.toStdString (!tempString5) : string) in (
-                        tempString := __assign_81;
+                    let tempString6 = ref ("" : string) in (
+                      ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_81 = ("0" : string) in (
+                        tempString6 := __assign_81;
                         __assign_81
+                      ) else let __assign_82 = (string_of_int (HxArray.length bodies) : string) in (
+                        tempString6 := __assign_82;
+                        __assign_82
+                      ));
+                      let __assign_83 = (((":patterns=" ^ HxString.toStdString (!tempString5)) ^ ":bodies=") ^ HxString.toStdString (!tempString6) : string) in (
+                        tempString := __assign_83;
+                        __assign_83
                       )
                     )
                   )
@@ -459,4 +471,4 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try l
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82)
+  | HxRuntime.Hx_return __ret_84 -> Obj.obj __ret_84)

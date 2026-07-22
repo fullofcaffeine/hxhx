@@ -89,7 +89,7 @@ let emitCatchCondition = fun typeHint errRef -> try let __fallback_result_28 = l
 
 let rec emitStmtBlockContent = fun writer stmt scope -> ignore (if (match stmt with
   | HxStmt.SBlock (_, _) -> 0
-  | HxStmt.SVar (_, _, _, _) -> 1
+  | HxStmt.SVar (_, _, _, _, _) -> 1
   | HxStmt.SIf (_, _, _, _) -> 2
   | HxStmt.SForIn (_, _, _, _) -> 3
   | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -135,8 +135,9 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
       )
     )
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in (
       ignore _g1;
       let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let local = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (name : string) : string) in if init != Obj.magic (HxRuntime.hx_null) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ()))) ^ ";" : string)) else ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var " ^ HxString.toStdString local) ^ ";" : string))

@@ -198,11 +198,12 @@ let rec stmtContainsBreak = fun stmt -> let tempResult = ref (false : bool) in (
         )
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       ignore _p2;
       ignore _p3;
+      ignore _p4;
       let __assign_217 = false in (
         tempResult := __assign_217;
         __assign_217
@@ -367,10 +368,11 @@ let stmtTag = fun stmt -> let tempResult = ref ("" : string) in (
         __assign_237
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in (
       ignore _p1;
       ignore _p2;
       ignore _p3;
+      ignore _p4;
       let name = (_g : string) in let __assign_238 = (("SVar(" ^ HxString.toStdString name) ^ ")" : string) in (
         tempResult := __assign_238;
         __assign_238
@@ -1639,7 +1641,7 @@ let isAbstractValueHelperFunction = fun fn -> try let __fallback_result_1074 = (
     let tempResult = ref (false : bool) in (
       ignore (let _g = Obj.magic (HxArray.get (Obj.magic body) 0) in if (match _g with
         | HxStmt.SBlock (_, _) -> 0
-        | HxStmt.SVar (_, _, _, _) -> 1
+        | HxStmt.SVar (_, _, _, _, _) -> 1
         | HxStmt.SIf (_, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -2358,11 +2360,12 @@ let rec collectStmtRefs = fun context stmt addConstructor addStatic -> ignore (m
       collectStmtRefs context (Obj.magic s) addConstructor addStatic
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     ignore _p1;
     let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in if init != Obj.magic (HxRuntime.hx_null) then ignore (collectExprRefs context (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) addConstructor addStatic) else ()
     )
   ))
@@ -6619,10 +6622,11 @@ let rec renderStmt = fun out context stmt indent -> ignore (match stmt with
       )
     )
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in (
     ignore _p1;
     let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let name = (_g : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let tempString = ref ("" : string) in (
         ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_194 = ("" : string) in (
           tempString := __assign_194;
@@ -6703,7 +6707,7 @@ and renderControlBlock = fun out context header body indent -> ignore (let block
   ignore (HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString header) ^ " {"));
   ignore (if (match body with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -6737,7 +6741,7 @@ and renderTrySafeWhileStmt = fun out context cond body indent -> ignore (let fla
   ignore (HxArray.push out (((((HxString.toStdString indent ^ "while (") ^ HxString.toStdString flag) ^ " && ") ^ HxString.toStdString (renderExpr context (Obj.magic cond))) ^ ") {"));
   ignore (if (match body with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4

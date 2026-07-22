@@ -24,9 +24,9 @@ type typedstmttag =
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable tag : typedstmttag; mutable position : HxPos.t; mutable names : string HxArray.t; mutable expressions : TypedExpr.t HxArray.t; mutable statements : t HxArray.t; mutable patterns : HxSwitchPattern.hxswitchpattern HxArray.t; mutable catchNames : string HxArray.t; mutable catchTypeHints : string HxArray.t }
+type t = { __hx_type : Obj.t; mutable tag : typedstmttag; mutable position : HxPos.t; mutable names : string HxArray.t; mutable expressions : TypedExpr.t HxArray.t; mutable statements : t HxArray.t; mutable patterns : HxSwitchPattern.hxswitchpattern HxArray.t; mutable catchNames : string HxArray.t; mutable catchTypeHints : string HxArray.t; mutable metadata : string HxArray.t }
 
-let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchNames2 catchTypeHints2 -> let self = ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); names = Obj.magic (HxRuntime.hx_null); expressions = Obj.magic (HxRuntime.hx_null); statements = Obj.magic (HxRuntime.hx_null); patterns = Obj.magic (HxRuntime.hx_null); catchNames = Obj.magic (HxRuntime.hx_null); catchTypeHints = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchNames2 catchTypeHints2 metadata2 -> let self = ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); names = Obj.magic (HxRuntime.hx_null); expressions = Obj.magic (HxRuntime.hx_null); statements = Obj.magic (HxRuntime.hx_null); patterns = Obj.magic (HxRuntime.hx_null); catchNames = Obj.magic (HxRuntime.hx_null); catchTypeHints = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic tag2 in (
       (Obj.magic self : t).tag <- __assign_1;
@@ -108,7 +108,20 @@ let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchN
                   (Obj.magic self : t).catchTypeHints <- __assign_26;
                   __assign_26
                 ));
-                if tag2 = Try && (HxArray.length ((Obj.magic self : t).statements) <> HxInt.add (HxArray.length ((Obj.magic self : t).catchNames)) 1 || HxArray.length ((Obj.magic self : t).catchNames) <> HxArray.length ((Obj.magic self : t).catchTypeHints)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed try statement has inconsistent catch payloads") ["Dynamic"; "String"]) else ()
+                let tempRight6 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+                  ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (let __arr_28 = HxArray.create () in __arr_28) in (
+                    tempRight6 := __assign_27;
+                    __assign_27
+                  ) else let __assign_29 = Obj.magic (HxArray.copy metadata2) in (
+                    tempRight6 := __assign_29;
+                    __assign_29
+                  ));
+                  ignore (let __assign_30 = Obj.magic (!tempRight6) in (
+                    (Obj.magic self : t).metadata <- __assign_30;
+                    __assign_30
+                  ));
+                  if tag2 = Try && (HxArray.length ((Obj.magic self : t).statements) <> HxInt.add (HxArray.length ((Obj.magic self : t).catchNames)) 1 || HxArray.length ((Obj.magic self : t).catchNames) <> HxArray.length ((Obj.magic self : t).catchTypeHints)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed try statement has inconsistent catch payloads") ["Dynamic"; "String"]) else ()
+                )
               )
             )
           )
@@ -119,7 +132,7 @@ let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchN
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); names = Obj.magic (HxRuntime.hx_null); expressions = Obj.magic (HxRuntime.hx_null); statements = Obj.magic (HxRuntime.hx_null); patterns = Obj.magic (HxRuntime.hx_null); catchNames = Obj.magic (HxRuntime.hx_null); catchTypeHints = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); names = Obj.magic (HxRuntime.hx_null); expressions = Obj.magic (HxRuntime.hx_null); statements = Obj.magic (HxRuntime.hx_null); patterns = Obj.magic (HxRuntime.hx_null); catchNames = Obj.magic (HxRuntime.hx_null); catchTypeHints = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getTag = fun self () -> (Obj.magic self : t).tag
 
@@ -137,114 +150,116 @@ let getCatchNames = fun self () -> HxArray.copy ((Obj.magic self : t).catchNames
 
 let getCatchTypeHints = fun self () -> HxArray.copy ((Obj.magic self : t).catchTypeHints)
 
-let withChildren = fun self (newExpressions : TypedExpr.t HxArray.t) (newStatements : t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).tag)) (Obj.magic ((Obj.magic self : t).position)) (Obj.magic ((Obj.magic self : t).names)) (Obj.magic newExpressions) (Obj.magic newStatements) (Obj.magic ((Obj.magic self : t).patterns)) (Obj.magic ((Obj.magic self : t).catchNames)) (Obj.magic ((Obj.magic self : t).catchTypeHints))
+let getMetadata = fun self () -> HxArray.copy ((Obj.magic self : t).metadata)
 
-let block = fun statements2 position2 -> create (Obj.magic Block) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic statements2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let withChildren = fun self (newExpressions : TypedExpr.t HxArray.t) (newStatements : t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).tag)) (Obj.magic ((Obj.magic self : t).position)) (Obj.magic ((Obj.magic self : t).names)) (Obj.magic newExpressions) (Obj.magic newStatements) (Obj.magic ((Obj.magic self : t).patterns)) (Obj.magic ((Obj.magic self : t).catchNames)) (Obj.magic ((Obj.magic self : t).catchTypeHints)) (Obj.magic ((Obj.magic self : t).metadata))
 
-let variable = fun name typeHint hx_initializer position2 -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
-  ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (Obj.magic (let __arr_28 = HxArray.create () in __arr_28)) in (
-    tempMaybeArray := __assign_27;
-    __assign_27
-  ) else let __assign_29 = Obj.magic (Obj.magic (let __arr_30 = HxArray.create () in (
-    ignore (HxArray.push __arr_30 hx_initializer);
-    __arr_30
+let block = fun statements2 position2 -> create (Obj.magic Block) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic statements2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+
+let variable = fun name typeHint hx_initializer position2 metadata2 -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
+  ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic (Obj.magic (let __arr_32 = HxArray.create () in __arr_32)) in (
+    tempMaybeArray := __assign_31;
+    __assign_31
+  ) else let __assign_33 = Obj.magic (Obj.magic (let __arr_34 = HxArray.create () in (
+    ignore (HxArray.push __arr_34 hx_initializer);
+    __arr_34
   ))) in (
-    tempMaybeArray := __assign_29;
-    __assign_29
+    tempMaybeArray := __assign_33;
+    __assign_33
   ));
-  create (Obj.magic Var) (Obj.magic position2) (Obj.magic (let __arr_31 = HxArray.create () in (
-    ignore (HxArray.push __arr_31 name);
-    ignore (HxArray.push __arr_31 typeHint);
-    __arr_31
-  ))) (Obj.magic (!tempMaybeArray)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+  create (Obj.magic Var) (Obj.magic position2) (Obj.magic (let __arr_35 = HxArray.create () in (
+    ignore (HxArray.push __arr_35 name);
+    ignore (HxArray.push __arr_35 typeHint);
+    __arr_35
+  ))) (Obj.magic (!tempMaybeArray)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic metadata2)
 )
 
-let ifStmt = fun condition whenTrue whenFalse position2 -> let branches = Obj.magic (let __arr_32 = HxArray.create () in (
-  ignore (HxArray.push __arr_32 whenTrue);
-  __arr_32
+let ifStmt = fun condition whenTrue whenFalse position2 -> let branches = Obj.magic (let __arr_36 = HxArray.create () in (
+  ignore (HxArray.push __arr_36 whenTrue);
+  __arr_36
 )) in (
   ignore (if whenFalse != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push branches whenFalse) else ());
-  create (Obj.magic If) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_33 = HxArray.create () in (
-    ignore (HxArray.push __arr_33 condition);
-    __arr_33
-  ))) (Obj.magic branches) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+  create (Obj.magic If) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_37 = HxArray.create () in (
+    ignore (HxArray.push __arr_37 condition);
+    __arr_37
+  ))) (Obj.magic branches) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 )
 
-let forIn = fun name iterable body position2 -> create (Obj.magic ForIn) (Obj.magic position2) (Obj.magic (let __arr_34 = HxArray.create () in (
-  ignore (HxArray.push __arr_34 name);
-  __arr_34
-))) (Obj.magic (let __arr_35 = HxArray.create () in (
-  ignore (HxArray.push __arr_35 iterable);
-  __arr_35
-))) (Obj.magic (let __arr_36 = HxArray.create () in (
-  ignore (HxArray.push __arr_36 body);
-  __arr_36
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
-
-let forKeyValue = fun keyName valueName iterable body position2 -> create (Obj.magic ForKeyValue) (Obj.magic position2) (Obj.magic (let __arr_37 = HxArray.create () in (
-  ignore (HxArray.push __arr_37 keyName);
-  ignore (HxArray.push __arr_37 valueName);
-  __arr_37
-))) (Obj.magic (let __arr_38 = HxArray.create () in (
-  ignore (HxArray.push __arr_38 iterable);
+let forIn = fun name iterable body position2 -> create (Obj.magic ForIn) (Obj.magic position2) (Obj.magic (let __arr_38 = HxArray.create () in (
+  ignore (HxArray.push __arr_38 name);
   __arr_38
 ))) (Obj.magic (let __arr_39 = HxArray.create () in (
-  ignore (HxArray.push __arr_39 body);
+  ignore (HxArray.push __arr_39 iterable);
   __arr_39
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
-
-let whileStmt = fun condition body position2 -> create (Obj.magic While) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_40 = HxArray.create () in (
-  ignore (HxArray.push __arr_40 condition);
+))) (Obj.magic (let __arr_40 = HxArray.create () in (
+  ignore (HxArray.push __arr_40 body);
   __arr_40
-))) (Obj.magic (let __arr_41 = HxArray.create () in (
-  ignore (HxArray.push __arr_41 body);
-  __arr_41
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let doWhile = fun body condition position2 -> create (Obj.magic DoWhile) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_42 = HxArray.create () in (
-  ignore (HxArray.push __arr_42 condition);
+let forKeyValue = fun keyName valueName iterable body position2 -> create (Obj.magic ForKeyValue) (Obj.magic position2) (Obj.magic (let __arr_41 = HxArray.create () in (
+  ignore (HxArray.push __arr_41 keyName);
+  ignore (HxArray.push __arr_41 valueName);
+  __arr_41
+))) (Obj.magic (let __arr_42 = HxArray.create () in (
+  ignore (HxArray.push __arr_42 iterable);
   __arr_42
 ))) (Obj.magic (let __arr_43 = HxArray.create () in (
   ignore (HxArray.push __arr_43 body);
   __arr_43
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let switchStmt = fun scrutinee patterns2 bodies position2 -> create (Obj.magic Switch) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_44 = HxArray.create () in (
-  ignore (HxArray.push __arr_44 scrutinee);
+let whileStmt = fun condition body position2 -> create (Obj.magic While) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_44 = HxArray.create () in (
+  ignore (HxArray.push __arr_44 condition);
   __arr_44
-))) (Obj.magic bodies) (Obj.magic patterns2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+))) (Obj.magic (let __arr_45 = HxArray.create () in (
+  ignore (HxArray.push __arr_45 body);
+  __arr_45
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+
+let doWhile = fun body condition position2 -> create (Obj.magic DoWhile) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_46 = HxArray.create () in (
+  ignore (HxArray.push __arr_46 condition);
+  __arr_46
+))) (Obj.magic (let __arr_47 = HxArray.create () in (
+  ignore (HxArray.push __arr_47 body);
+  __arr_47
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+
+let switchStmt = fun scrutinee patterns2 bodies position2 -> create (Obj.magic Switch) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_48 = HxArray.create () in (
+  ignore (HxArray.push __arr_48 scrutinee);
+  __arr_48
+))) (Obj.magic bodies) (Obj.magic patterns2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let tryStmt = fun body catchNames2 catchTypeHints2 catchBodies position2 -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-  ignore (if catchBodies == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (let __arr_46 = HxArray.create () in __arr_46) in (
-    tempArray := __assign_45;
-    __assign_45
-  ) else let __assign_47 = Obj.magic catchBodies in (
-    tempArray := __assign_47;
-    __assign_47
+  ignore (if catchBodies == Obj.magic (HxRuntime.hx_null) then let __assign_49 = Obj.magic (let __arr_50 = HxArray.create () in __arr_50) in (
+    tempArray := __assign_49;
+    __assign_49
+  ) else let __assign_51 = Obj.magic catchBodies in (
+    tempArray := __assign_51;
+    __assign_51
   ));
-  create (Obj.magic Try) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_48 = HxArray.create () in (
-    ignore (HxArray.push __arr_48 body);
-    __arr_48
-  )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic catchNames2) (Obj.magic catchTypeHints2)
+  create (Obj.magic Try) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_52 = HxArray.create () in (
+    ignore (HxArray.push __arr_52 body);
+    __arr_52
+  )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic catchNames2) (Obj.magic catchTypeHints2) (Obj.magic (HxRuntime.hx_null))
 )
 
-let breakStmt = fun position2 -> create (Obj.magic Break) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let breakStmt = fun position2 -> create (Obj.magic Break) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let continueStmt = fun position2 -> create (Obj.magic Continue) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let continueStmt = fun position2 -> create (Obj.magic Continue) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let throwStmt = fun expression position2 -> create (Obj.magic Throw) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_49 = HxArray.create () in (
-  ignore (HxArray.push __arr_49 expression);
-  __arr_49
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let throwStmt = fun expression position2 -> create (Obj.magic Throw) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_53 = HxArray.create () in (
+  ignore (HxArray.push __arr_53 expression);
+  __arr_53
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let returnVoid = fun position2 -> create (Obj.magic ReturnVoid) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let returnVoid = fun position2 -> create (Obj.magic ReturnVoid) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let returnValue = fun expression position2 -> create (Obj.magic Return) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_50 = HxArray.create () in (
-  ignore (HxArray.push __arr_50 expression);
-  __arr_50
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let returnValue = fun expression position2 -> create (Obj.magic Return) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_54 = HxArray.create () in (
+  ignore (HxArray.push __arr_54 expression);
+  __arr_54
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let expressionStmt = fun expression position2 -> create (Obj.magic Expression) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_51 = HxArray.create () in (
-  ignore (HxArray.push __arr_51 expression);
-  __arr_51
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+let expressionStmt = fun expression position2 -> create (Obj.magic Expression) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_55 = HxArray.create () in (
+  ignore (HxArray.push __arr_55 expression);
+  __arr_55
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))

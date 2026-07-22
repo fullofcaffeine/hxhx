@@ -1027,7 +1027,7 @@ let constructorBodyWithoutSuperCall = fun ctor -> let body = Obj.magic (HxFuncti
     ));
     if (match stmt with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -1138,7 +1138,7 @@ let constructorSuperCallArgs = fun stmts -> try let __fallback_result_2096 = (
       ));
       if (match stmt with
         | HxStmt.SBlock (_, _) -> 0
-        | HxStmt.SVar (_, _, _, _) -> 1
+        | HxStmt.SVar (_, _, _, _, _) -> 1
         | HxStmt.SIf (_, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -6234,11 +6234,12 @@ let stmtKind = fun stmt -> let tempResult = ref ("" : string) in (
         __assign_32070
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       ignore _p2;
       ignore _p3;
+      ignore _p4;
       let __assign_32071 = ("SVar" : string) in (
         tempResult := __assign_32071;
         __assign_32071
@@ -8946,11 +8947,12 @@ and stmtForwardsArgToUtestPosition = fun stmt argName -> let tempResult = ref (f
         __assign_1395
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
+        ignore _p4;
         let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_1396 = init != Obj.magic (HxRuntime.hx_null) && exprForwardsArgToUtestPosition (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (argName : string) in (
           tempResult := __assign_1396;
           __assign_1396
@@ -12138,7 +12140,7 @@ let isDynamicIdentityFunction = fun fn -> try let __fallback_result_3780 = (
         let argName = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in let tempResult = ref (false : bool) in (
           ignore (let _g = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in if HxArray.length _g = 1 then let _g2 = Obj.magic (HxArray.get (Obj.magic _g) 0) in if (match _g2 with
             | HxStmt.SBlock (_, _) -> 0
-            | HxStmt.SVar (_, _, _, _) -> 1
+            | HxStmt.SVar (_, _, _, _, _) -> 1
             | HxStmt.SIf (_, _, _, _) -> 2
             | HxStmt.SForIn (_, _, _, _) -> 3
             | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -13682,7 +13684,7 @@ let primitiveBackedAbstractCtorSideEffects = fun typePath args scope -> (
               ));
               if (match stmt with
                 | HxStmt.SBlock (_, _) -> 0
-                | HxStmt.SVar (_, _, _, _) -> 1
+                | HxStmt.SVar (_, _, _, _, _) -> 1
                 | HxStmt.SIf (_, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -22027,7 +22029,7 @@ and inferCallableArgTypeOverrides = fun scope fn -> ignore (try (
             let stmtStartTime = HxSys.time () in (
               ignore (if (match stmt with
                 | HxStmt.SBlock (_, _) -> 0
-                | HxStmt.SVar (_, _, _, _) -> 1
+                | HxStmt.SVar (_, _, _, _, _) -> 1
                 | HxStmt.SIf (_, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -22592,11 +22594,12 @@ and collectStaticFieldCallableArgTypesFromStmt = fun owner field arity stmt scop
       collectStaticFieldCallableArgTypesFromStmt (owner : string) (field : string) arity (Obj.magic s) scope (Obj.magic matches)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     ignore _p1;
     let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in if init != Obj.magic (HxRuntime.hx_null) then ignore (collectStaticFieldCallableArgTypesFromExpr (owner : string) (field : string) arity (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic matches)) else ()
     )
   ))
@@ -22993,8 +22996,9 @@ and collectOptionalLambdaLocalCandidatesFromStmt = fun stmt scope candidates -> 
       collectOptionalLambdaLocalCandidatesFromStmt (Obj.magic s) scope (Obj.magic candidates)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectOptionalLambdaLocalCandidatesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates)) else ());
       let local = (declareLocalName (name : string) scope : string) in let typeName = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in (
@@ -23211,8 +23215,9 @@ and collectOptionalLambdaLocalCallsFromStmt = fun stmt scope callShapes -> ignor
       collectOptionalLambdaLocalCallsFromStmt (Obj.magic s) scope (Obj.magic callShapes)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in if init != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (collectOptionalLambdaLocalCallsFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic callShapes));
       let local = (declareLocalName (name : string) scope : string) in let typeName = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if HxString.length typeName > 0 then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local typeName) else ()
@@ -23883,8 +23888,9 @@ and collectGenericFactoryLocalTypeOverridesFromStmt = fun stmt scope candidates 
       collectGenericFactoryLocalTypeOverridesFromStmt (Obj.magic s) scope (Obj.magic candidates) (Obj.magic mapped)
     )) done))
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectGenericFactoryLocalTypeOverridesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates) (Obj.magic mapped)) else ());
       let local = (declareLocalName (name : string) scope : string) in let className = (genericFactoryClassNameFromNewExpr (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if HxString.length className > 0 then ignore ((
@@ -24222,8 +24228,9 @@ and collectDynamicLocalTypeOverridesFromStmt = fun stmt scope candidates -> igno
       collectDynamicLocalTypeOverridesFromStmt (Obj.magic s) scope (Obj.magic candidates)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectDynamicLocalTypeOverridesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates)) else ());
       let local = (declareLocalName (name : string) scope : string) in let localType = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in (
@@ -24798,8 +24805,9 @@ and collectBindCallableCandidatesFromStmt = fun stmt scope candidates -> ignore 
       collectBindCallableCandidatesFromStmt (Obj.magic s) scope (Obj.magic candidates)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let local = (declareLocalName (name : string) scope : string) in let typeName = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in (
       ignore (if HxString.length typeName > 0 then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local typeName) else ());
       let tempString = ref ("" : string) in (
@@ -24920,8 +24928,9 @@ and collectBindCallableEvidenceFromStmt = fun stmt scope candidates evidence exp
       collectBindCallableEvidenceFromStmt (Obj.magic s) scope (Obj.magic candidates) (Obj.magic evidence) (expectedType : string)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let typeName = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectBindCallableEvidenceFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates) (Obj.magic evidence) (typeName : string)) else ());
       let local = (declareLocalName (name : string) scope : string) in if HxString.length typeName > 0 then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local typeName) else ()
@@ -25410,8 +25419,9 @@ and collectHelperTypedAsLocalTypeOverridesFromStmt = fun stmt scope -> ignore (m
       collectHelperTypedAsLocalTypeOverridesFromStmt (Obj.magic s) scope
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectHelperTypedAsLocalTypeOverridesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope) else ());
       let local = (sanitizeIdentifier (name : string) : string) in let localType = (inferredLocalTypeForArgInference (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if isUsefulHelperTypedAsOverrideType (localType : string) then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) local localType) else ()
@@ -25673,7 +25683,7 @@ and collectForwardedConstructorArgTypeOverrides = fun stmts scope candidates -> 
     ));
     if (match stmt with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -25841,8 +25851,9 @@ and collectAssignedArgTypeOverridesFromStmt = fun stmt scope candidates -> ignor
       collectAssignedArgTypeOverridesFromStmt (Obj.magic s) scope (Obj.magic candidates)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectAssignedArgTypeOverridesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates)) else ());
       let localType = (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if HxString.length localType > 0 then ignore ((
@@ -25879,9 +25890,9 @@ and collectAssignedArgTypeOverridesFromStmt = fun stmt scope candidates -> ignor
           | HxExpr.EUnsupported _ -> 29
           | HxExpr.EReturn _ -> 30
           | HxExpr.EVars _ -> 31
-          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (let __enum_param_2850 = init in if __enum_param_2850 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2850 with
+          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g5 = (let __enum_param_2850 = init in if __enum_param_2850 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2850 with
           | HxExpr.EIdent __enum_param_2849 -> __enum_param_2849
-          | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g4 : string) in if HxMap.exists_string candidates (sanitizeIdentifier (argName : string)) then ignore (setAssignedArgTypeOverride scope (sanitizeIdentifier (argName : string) : string) (localType : string)) else ignore ()) else ignore ()));
+          | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g5 : string) in if HxMap.exists_string candidates (sanitizeIdentifier (argName : string)) then ignore (setAssignedArgTypeOverride scope (sanitizeIdentifier (argName : string) : string) (localType : string)) else ignore ()) else ignore ()));
         HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) (sanitizeIdentifier (name : string)) localType
       )) else ()
     )
@@ -26327,8 +26338,9 @@ and collectCallableArgTypeOverridesFromStmt = fun stmt scope candidates expected
       collectCallableArgTypeOverridesFromStmt (Obj.magic s) scope (Obj.magic candidates) (expectedType : string)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
+    ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let localType = (inferredLocalTypeForArgInference (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in (
       ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore (collectCallableArgTypeOverridesFromExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic candidates) (localType : string)) else ());
       HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) (sanitizeIdentifier (name : string)) localType
@@ -76608,7 +76620,7 @@ and primitiveBackedAbstractToStringExpr = fun expr scope -> try let __fallback_r
 and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self = (renderExpr (Obj.magic receiver) scope : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (let _g = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in if HxArray.length _g = 1 then let _g2 = Obj.magic (HxArray.get (Obj.magic _g) 0) in if (match _g2 with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -76864,7 +76876,7 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
   let self = (renderExpr (Obj.magic receiver) scope : string) in let nullDefault = (cppDefaultValue (underlying : string) scope : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (let _g = Obj.magic (HxArray.get (Obj.magic body) 0) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -138236,10 +138248,11 @@ and stmtReturnsErasedDynamicValue = fun stmt scope erasedLocals -> let tempResul
         )
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in (
       ignore _p1;
       let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
+        ignore _p4;
         let name = (_g : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
           ignore (if init != Obj.magic (HxRuntime.hx_null) && exprReturnsErasedDynamicValue (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic erasedLocals) && erasedLocals != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string erasedLocals (sanitizeIdentifier (name : string)) true) else ());
           let __assign_32791 = false in (
@@ -138770,8 +138783,9 @@ and inferReturnTypeFromStmt = fun stmt scope -> let tempResult = ref ("" : strin
         __assign_32984
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
         ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) (sanitizeIdentifier (name : string)) (cppLocalTypeHint (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope));
         let __assign_32985 = ("" : string) in (
@@ -139178,10 +139192,11 @@ and addOneStmtClassDependencies = fun stmt add scope -> ignore (match stmt with
     ignore _p1;
     let stmts = Obj.magic _g in addStmtClassDependencies (Obj.magic stmts) add scope
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     let _g2 = (_p1 : string) in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       let typeHint = (_g2 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in (
         ignore (addTypeHintDependencies (typeHint : string) add scope);
         if init != Obj.magic (HxRuntime.hx_null) then ignore (addExprClassDependencies (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) add scope) else ()
@@ -140018,7 +140033,7 @@ let constructorFieldInitializerArg = fun fieldName argName ctor scope -> try let
 let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -143163,10 +143178,11 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                 __assign_249
               )
             )
-            | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+            | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
               ignore _p0;
               let _g2 = (_p1 : string) in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
                 ignore _p3;
+                ignore _p4;
                 let typeHint = (_g2 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let __assign_250 = typeHintMayContributeAnonStruct (typeHint : string) || init != Obj.magic (HxRuntime.hx_null) && (!exprMayContributeAnonStruct) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope in (
                   tempResult2 := __assign_250;
                   __assign_250
@@ -143320,8 +143336,9 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                 (!addStmt) (Obj.magic s) scope
               )) done
             ))
-            | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+            | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
               ignore _p3;
+              ignore _p4;
               let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in (
                 ignore ((!addTypeHint) (typeHint : string) scope (Obj.magic (HxRuntime.hx_null)));
                 ignore (if init != Obj.magic (HxRuntime.hx_null) then ignore ((!addExpr) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope) else ());
@@ -145257,8 +145274,9 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         )
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
       ignore _p3;
+      ignore _p4;
       if _g2 == Obj.magic (HxRuntime.hx_null) then let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let typeHint = (_g1 : string) in let name = (_g : string) in let timingEnabled = traceCppScopeStmtTimingEnabled scope in let sourceLocal = (sanitizeIdentifier (name : string) : string) in let hadPreviousName = scope != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.obj (HxAnon.get scope "localNames")) sourceLocal in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (if hadPreviousName then let __assign_3346 = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "localNames")) sourceLocal : string) in (
           tempMaybeString := __assign_3346;
@@ -145401,9 +145419,9 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         | HxExpr.EUnsupported _ -> 29
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
-        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 2 then let _g4 = (let __enum_param_3369 = _g2 in if __enum_param_3369 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3369 with
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 2 then let _g5 = (let __enum_param_3369 = _g2 in if __enum_param_3369 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3369 with
         | HxExpr.EString __enum_param_3368 -> __enum_param_3368
-        | _ -> failwith "Unexpected enum parameter" : string) in let value = (_g4 : string) in let typeHint = (_g1 : string) in let name = (_g : string) in let tempString3 = ref ("" : string) in (
+        | _ -> failwith "Unexpected enum parameter" : string) in let value = (_g5 : string) in let typeHint = (_g1 : string) in let name = (_g : string) in let tempString3 = ref ("" : string) in (
         ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_3370 = ("" : string) in (
           tempString3 := __assign_3370;
           __assign_3370
@@ -146617,7 +146635,7 @@ and renderTryStmt = fun tryBody catches indent scope -> let out = Obj.magic (let
 and renderStmtBlockContent = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -146678,7 +146696,7 @@ let renderFunctionBody = fun stmts indent scope -> try let __fallback_result_329
   ));
   ignore (if not (HxString.equals (!tempString) "void") && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in if (match _g with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -146749,7 +146767,7 @@ let renderHelperFunctionBody = fun stmts indent scope -> try let __fallback_resu
   ));
   ignore (if not (HxString.equals (!tempString) "void") && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in if (match _g with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -146928,7 +146946,7 @@ let renderTracedHelperFunctionBody = fun ownerName methodName stmts indent scope
   ));
   ignore (if not (HxString.equals (!tempString) "void") && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in if (match _g with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -146999,7 +147017,7 @@ let renderTimedHelperFunctionBody = fun ownerName methodName stmts indent scope 
     ));
     ignore (if not (HxString.equals (!tempString) "void") && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4

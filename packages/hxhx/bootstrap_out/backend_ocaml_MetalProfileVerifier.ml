@@ -369,9 +369,12 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
       verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic inner) (Obj.magic violations)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in (
-    ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (("local `" ^ HxString.toStdString name) ^ "` type" : string) (typeHint : string) (Obj.magic violations));
-    if init != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic violations)) else ()
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in (
+    ignore _p4;
+    let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in (
+      ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (("local `" ^ HxString.toStdString name) ^ "` type" : string) (typeHint : string) (Obj.magic violations));
+      if init != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic violations)) else ()
+    )
   ))
   | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in (
     ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations));

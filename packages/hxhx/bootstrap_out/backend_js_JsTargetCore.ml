@@ -664,7 +664,7 @@ let emitPrototypeInheritance = fun writer unit classRefs -> ignore (try let supe
 let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in (
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
-    | HxStmt.SVar (_, _, _, _) -> 1
+    | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4

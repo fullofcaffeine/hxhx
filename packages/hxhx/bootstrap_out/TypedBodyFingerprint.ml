@@ -482,21 +482,42 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addStatements (Obj.magic state) (Obj.magic statements));
     addPosition (Obj.magic state) (Obj.magic position)
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let typeHint = (_g1 : string) in let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let position = Obj.magic _g3 in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let name = (_g : string) in let typeHint = (_g1 : string) in let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let position = Obj.magic _g3 in let metadata = Obj.magic _g4 in (
     ignore (addString (Obj.magic state) ("stmt-var" : string));
     ignore (addString (Obj.magic state) (name : string));
     ignore (addString (Obj.magic state) (typeHint : string));
-    let tempNumber = ref (0 : int) in (
-      ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_54 = 0 in (
-        tempNumber := __assign_54;
+    let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+      ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_54 = Obj.magic (Obj.magic (let __arr_55 = HxArray.create () in __arr_55)) in (
+        tempMaybeArray := __assign_54;
         __assign_54
-      ) else let __assign_55 = 1 in (
-        tempNumber := __assign_55;
-        __assign_55
+      ) else let __assign_56 = Obj.magic (Obj.magic metadata) in (
+        tempMaybeArray := __assign_56;
+        __assign_56
       ));
-      ignore (addInt (Obj.magic state) (!tempNumber));
-      ignore (if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer))) else ());
-      addPosition (Obj.magic state) (Obj.magic position)
+      let safeMetadata = Obj.magic (!tempMaybeArray) in (
+        ignore (addInt (Obj.magic state) (HxArray.length safeMetadata));
+        let _g5 = ref 0 in (
+          ignore (while !_g5 < HxArray.length safeMetadata do ignore (let entry = (HxArray.get (Obj.magic safeMetadata) (!_g5) : string) in (
+            ignore (let __old_57 = !_g5 in let __new_58 = HxInt.add __old_57 1 in (
+              ignore (_g5 := __new_58);
+              __new_58
+            ));
+            addString (Obj.magic state) (entry : string)
+          )) done);
+          let tempNumber = ref (0 : int) in (
+            ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_59 = 0 in (
+              tempNumber := __assign_59;
+              __assign_59
+            ) else let __assign_60 = 1 in (
+              tempNumber := __assign_60;
+              __assign_60
+            ));
+            ignore (addInt (Obj.magic state) (!tempNumber));
+            ignore (if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer))) else ());
+            addPosition (Obj.magic state) (Obj.magic position)
+          )
+        )
+      )
     )
   ))
   | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let position = Obj.magic _g3 in (
@@ -504,12 +525,12 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addExpression (Obj.magic state) (Obj.magic condition));
     ignore (addStatement (Obj.magic state) (Obj.magic whenTrue));
     let tempNumber1 = ref (0 : int) in (
-      ignore (if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_56 = 0 in (
-        tempNumber1 := __assign_56;
-        __assign_56
-      ) else let __assign_57 = 1 in (
-        tempNumber1 := __assign_57;
-        __assign_57
+      ignore (if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_61 = 0 in (
+        tempNumber1 := __assign_61;
+        __assign_61
+      ) else let __assign_62 = 1 in (
+        tempNumber1 := __assign_62;
+        __assign_62
       ));
       ignore (addInt (Obj.magic state) (!tempNumber1));
       ignore (if whenFalse != Obj.magic (HxRuntime.hx_null) then ignore (addStatement (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" whenFalse))) else ());
@@ -554,18 +575,18 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addString (Obj.magic state) ("stmt-try" : string));
     ignore (addStatement (Obj.magic state) (Obj.magic body));
     let tempNumber2 = ref (0 : int) in (
-      ignore (if catches == Obj.magic (HxRuntime.hx_null) then let __assign_58 = -1 in (
-        tempNumber2 := __assign_58;
-        __assign_58
-      ) else let __assign_59 = HxArray.length catches in (
-        tempNumber2 := __assign_59;
-        __assign_59
+      ignore (if catches == Obj.magic (HxRuntime.hx_null) then let __assign_63 = -1 in (
+        tempNumber2 := __assign_63;
+        __assign_63
+      ) else let __assign_64 = HxArray.length catches in (
+        tempNumber2 := __assign_64;
+        __assign_64
       ));
       ignore (addInt (Obj.magic state) (!tempNumber2));
       ignore (if catches != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let entry = HxArray.get (Obj.magic catches) (!_g3) in (
-        ignore (let __old_60 = !_g3 in let __new_61 = HxInt.add __old_60 1 in (
-          ignore (_g3 := __new_61);
-          __new_61
+        ignore (let __old_65 = !_g3 in let __new_66 = HxInt.add __old_65 1 in (
+          ignore (_g3 := __new_66);
+          __new_66
         ));
         ignore (addString (Obj.magic state) (Obj.obj (HxAnon.get entry "name") : string));
         ignore (addString (Obj.magic state) (Obj.obj (HxAnon.get entry "typeHint") : string));
@@ -602,10 +623,10 @@ and addStatement = fun state statement -> ignore (match statement with
     addPosition (Obj.magic state) (Obj.magic position)
   )))
 
-let forStatements = fun statements -> let state = Obj.magic (let __arr_62 = HxArray.create () in (
-  ignore (HxArray.push __arr_62 17);
-  ignore (HxArray.push __arr_62 0);
-  __arr_62
+let forStatements = fun statements -> let state = Obj.magic (let __arr_67 = HxArray.create () in (
+  ignore (HxArray.push __arr_67 17);
+  ignore (HxArray.push __arr_67 0);
+  __arr_67
 )) in (
   ignore (addStatements (Obj.magic state) (Obj.magic statements));
   (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)

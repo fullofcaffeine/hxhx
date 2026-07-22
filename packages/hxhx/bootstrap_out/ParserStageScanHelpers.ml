@@ -650,11 +650,12 @@ and hasUnsupportedStmt = fun stmt -> let tempResult = ref (false : bool) in (
         __assign_592
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
+        ignore _p4;
         let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_593 = hasUnsupportedExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
           tempResult := __assign_593;
           __assign_593
@@ -800,7 +801,7 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_591 
   ignore (if StringTools.startsWith (fnName : string) ("get_" : string) && HxArray.length stmts = 1 then ignore (let tempResult = ref (false : bool) in (
     ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -832,7 +833,7 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_591 
   ignore (if StringTools.startsWith (fnName : string) ("set_" : string) && HxArray.length stmts = 2 then ignore (let tempResult1 = ref (false : bool) in (
     ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) 0) in let _g1 = Obj.magic (HxArray.get (Obj.magic stmts) 1) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
-      | HxStmt.SVar (_, _, _, _) -> 1
+      | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -929,7 +930,7 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_591 
           | _ -> failwith "Unexpected enum parameter");
         if (match _g1 with
           | HxStmt.SBlock (_, _) -> 0
-          | HxStmt.SVar (_, _, _, _) -> 1
+          | HxStmt.SVar (_, _, _, _, _) -> 1
           | HxStmt.SIf (_, _, _, _) -> 2
           | HxStmt.SForIn (_, _, _, _) -> 3
           | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
@@ -979,11 +980,12 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_591 
         __new_585
       ));
       match stmt with
-        | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore ((
+        | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore ((
           ignore _p0;
           ignore _p1;
           let _g4 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
             ignore _p3;
+            ignore _p4;
             let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g4) in if hasUnsupportedExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
           )
         ))
@@ -1000,7 +1002,7 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_591 
     let tempResult2 = ref (false : bool) in (
       ignore (let _g = Obj.magic (HxArray.get (Obj.magic stmts) (HxInt.sub (HxArray.length stmts) 1)) in if (match _g with
         | HxStmt.SBlock (_, _) -> 0
-        | HxStmt.SVar (_, _, _, _) -> 1
+        | HxStmt.SVar (_, _, _, _, _) -> 1
         | HxStmt.SIf (_, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4

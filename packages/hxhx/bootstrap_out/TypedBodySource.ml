@@ -451,7 +451,7 @@ let rec statement = fun typedStatement -> let position = Obj.magic (sourcePositi
           hx_initializer := __assign_81;
           __assign_81
         )) else ());
-        let __assign_82 = Obj.magic (HxStmt.SVar ((HxArray.get (Obj.magic names) 0 : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!hx_initializer))), Obj.magic position)) in (
+        let __assign_82 = Obj.magic (HxStmt.SVar ((HxArray.get (Obj.magic names) 0 : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!hx_initializer))), Obj.magic position, Obj.magic (TypedStmt.getMetadata (Obj.magic typedStatement) ()))) in (
           tempResult := __assign_82;
           __assign_82
         )
