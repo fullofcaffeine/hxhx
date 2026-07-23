@@ -497,6 +497,9 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
     - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_no_native_decode_extract`, `stage0_no_parser_scan_extract`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb`, `stage0_observability.heartbeat_peak_tree_rss_mb`, and `stage0_observability.heartbeat_trace_file` (plus heartbeat samples/interval)
+    - watchdog configuration and outcome: `stall_timeout_seconds`, `hard_timeout_seconds`,
+      `progress_poll_seconds`, `timeout_kind`, `timeout_elapsed_seconds`,
+      `last_progress_elapsed_seconds`, `last_progress_reason`, and `timeout_cleanup`
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
@@ -568,6 +571,16 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       - `HXHX_BOOTSTRAP_VERIFY=0` (skip snapshot verify)
   - If heartbeat is disabled (`HXHX_STAGE0_HEARTBEAT=0`), optional diagnostics are available via
     `HXHX_STAGE0_DIAG_EVERY=<seconds>` (or `--diag-every <seconds>`).
+  - Stage0 emit has two different safety limits:
+    - `HXHX_STAGE0_STALL_TIMEOUT_SECS=900` stops a compiler only after 15 minutes with no
+      observed CPU-time change, log growth, or process-tree change. A quiet compiler that is
+      still using CPU is therefore allowed to finish.
+    - `HXHX_STAGE0_FAILFAST_SECS=3600` is the absolute one-hour ceiling. It still stops a
+      compiler that keeps using CPU forever. Existing profiling commands that set
+      `HXHX_STAGE0_FAILFAST_SECS` retain their absolute-duration meaning.
+    - `HXHX_STAGE0_PROGRESS_POLL_SECS=5` controls how often the script checks those progress
+      signals. Both timeout paths report which limit fired, the last observed progress, the
+      process identity, and whether the complete process tree was stopped.
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Autocreated `.tmp/hxhx-bootstrap-build.*` workdirs are pruned on later runs; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` or disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.

@@ -124,6 +124,10 @@ Environment knobs (all optional):
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
   HXHX_STAGE0_HEARTBEAT_TRACE_FILE=/path/to/trace.jsonl
                                     Write compact JSONL heartbeat samples for stage0 emit.
+  HXHX_STAGE0_STALL_TIMEOUT_SECS=900
+                                    Stop after this many seconds without CPU, log, or process-tree progress.
+  HXHX_STAGE0_FAILFAST_SECS=3600   Absolute stage0 emit ceiling even while progress continues.
+  HXHX_STAGE0_PROGRESS_POLL_SECS=5 Poll observable progress at this cadence.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
   HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native
@@ -214,7 +218,9 @@ HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_HEARTBEAT_TRACE_FILE="${HXHX_STAGE0_HEARTBEAT_TRACE_FILE:-}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
-HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
+HXHX_STAGE0_STALL_TIMEOUT_SECS="${HXHX_STAGE0_STALL_TIMEOUT_SECS:-900}"
+HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-3600}"
+HXHX_STAGE0_PROGRESS_POLL_SECS="${HXHX_STAGE0_PROGRESS_POLL_SECS:-5}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
@@ -463,11 +469,20 @@ assert_bool_01 "HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" "$HXHX_STAGE0_NO_PARSER_SCAN
 assert_bool_01 "HXHX_STAGE0_OCAML_ONLY" "$HXHX_STAGE0_OCAML_ONLY"
 assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
+	assert_non_negative_int "HXHX_STAGE0_HEARTBEAT" "$HXHX_STAGE0_HEARTBEAT"
 	assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
+	assert_non_negative_int "HXHX_STAGE0_STALL_TIMEOUT_SECS" "$HXHX_STAGE0_STALL_TIMEOUT_SECS"
+	assert_non_negative_int "HXHX_STAGE0_FAILFAST_SECS" "$HXHX_STAGE0_FAILFAST_SECS"
+	assert_non_negative_int "HXHX_STAGE0_PROGRESS_POLL_SECS" "$HXHX_STAGE0_PROGRESS_POLL_SECS"
+	if [ "$HXHX_STAGE0_PROGRESS_POLL_SECS" = "0" ]; then
+		echo "Invalid HXHX_STAGE0_PROGRESS_POLL_SECS: '0' (expected a positive integer)." >&2
+		exit 1
+	fi
 	assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
 	assert_dune_jobs "$HXHX_DUNE_JOBS"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
 if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
 	case "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" in
 		/*) ;;
@@ -494,6 +509,11 @@ skipped_emit=0
 stage0_heartbeat_samples=0
 stage0_heartbeat_peak_rss_mb=0
 stage0_heartbeat_peak_tree_rss_mb=0
+stage0_timeout_kind="none"
+stage0_timeout_elapsed_sec=0
+stage0_last_progress_elapsed_sec=0
+stage0_last_progress_reason="process-start"
+stage0_timeout_cleanup="not-needed"
 script_status="ok"
 script_exit_code=0
 script_report_written=0
@@ -535,38 +555,6 @@ cleanup_stage0_log_file() {
 	else
 		rm -f "$path"
 	fi
-}
-
-collect_process_tree_pids() {
-	local root_pid="$1"
-	local frontier="$root_pid"
-	local seen=" $root_pid "
-	local collected="$root_pid"
-	local parent_pid=""
-	local child_pids=""
-	local child_pid=""
-	local next_frontier=""
-
-	while [ -n "$frontier" ]; do
-		next_frontier=""
-		for parent_pid in $frontier; do
-			child_pids="$(pgrep -P "$parent_pid" 2>/dev/null || true)"
-			if [ -z "$child_pids" ]; then
-				continue
-			fi
-			for child_pid in $child_pids; do
-				if [[ "$seen" == *" $child_pid "* ]]; then
-					continue
-				fi
-				seen="${seen}${child_pid} "
-				collected="${collected} ${child_pid}"
-				next_frontier="${next_frontier} ${child_pid}"
-			done
-		done
-		frontier="$(printf '%s\n' "$next_frontier" | xargs 2>/dev/null || true)"
-	done
-
-	printf '%s\n' "$collected"
 }
 
 list_haxe_server_pids() {
@@ -949,7 +937,15 @@ write_report_json() {
     "heartbeat_samples": $stage0_heartbeat_samples,
     "heartbeat_peak_rss_mb": $stage0_heartbeat_peak_rss_mb,
     "heartbeat_peak_tree_rss_mb": $stage0_heartbeat_peak_tree_rss_mb,
-    "heartbeat_trace_file": "$(json_escape "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")"
+    "heartbeat_trace_file": "$(json_escape "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")",
+    "stall_timeout_seconds": $HXHX_STAGE0_STALL_TIMEOUT_SECS,
+    "hard_timeout_seconds": $HXHX_STAGE0_FAILFAST_SECS,
+    "progress_poll_seconds": $HXHX_STAGE0_PROGRESS_POLL_SECS,
+    "timeout_kind": "$(json_escape "$stage0_timeout_kind")",
+    "timeout_elapsed_seconds": $stage0_timeout_elapsed_sec,
+    "last_progress_elapsed_seconds": $stage0_last_progress_elapsed_sec,
+    "last_progress_reason": "$(json_escape "$stage0_last_progress_reason")",
+    "timeout_cleanup": "$(json_escape "$stage0_timeout_cleanup")"
   },
   "phase_seconds": {
     "preflight": $phase_preflight_sec,
@@ -996,7 +992,7 @@ run_stage0_emit() {
 	local emit_code
 	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
 	metrics_file="$(create_stage0_log_file hxhx-stage0-metrics)"
-	printf '0\t0\t0\n' >"$metrics_file"
+	printf '0\t0\t0\tnone\t0\t0\tprocess-start\tnot-needed\n' >"$metrics_file"
 	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
 	echo "== Stage0 emit log: $log_file"
 	if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
@@ -1012,6 +1008,11 @@ run_stage0_emit() {
 		local heartbeat_samples_local=0
 		local heartbeat_peak_rss_mb_local=0
 		local heartbeat_peak_tree_rss_mb_local=0
+		local timeout_kind_local="none"
+		local timeout_elapsed_local=0
+		local last_progress_elapsed_local=0
+		local last_progress_reason_local="process-start"
+		local timeout_cleanup_local="not-needed"
 		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		else
@@ -1035,19 +1036,33 @@ run_stage0_emit() {
 
 		local elapsed_hb=0
 		local status_elapsed=0
+		stage0_watchdog_init
 		while kill -0 "$pid" >/dev/null 2>&1; do
 			sleep 1 || true
 			elapsed_hb="$((elapsed_hb + 1))"
 			status_elapsed="$((status_elapsed + 1))"
-			if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-				if [ "$elapsed_hb" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
-					echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-					kill -9 "$pid" >/dev/null 2>&1 || true
-					echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
-					tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-					printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
-					exit 1
-				fi
+			stage0_watchdog_poll "$elapsed_hb" "$pid" "$log_file"
+			timeout_kind_local="$STAGE0_WATCHDOG_TIMEOUT_KIND"
+			timeout_elapsed_local="$STAGE0_WATCHDOG_TIMEOUT_ELAPSED"
+			last_progress_elapsed_local="$STAGE0_WATCHDOG_LAST_PROGRESS_ELAPSED"
+			last_progress_reason_local="$STAGE0_WATCHDOG_LAST_PROGRESS_REASON"
+
+			if [ "$timeout_kind_local" != "none" ]; then
+				echo "Stage0 emit watchdog timeout=$timeout_kind_local elapsed=${elapsed_hb}s pid=$pid last_progress_elapsed=${last_progress_elapsed_local}s last_progress_reason=$last_progress_reason_local." >&2
+				stage0_watchdog_terminate_process_tree "$pid"
+				set +e
+				wait "$pid" >/dev/null 2>&1
+				set -e
+				stage0_watchdog_record_cleanup_result
+				timeout_cleanup_local="$STAGE0_WATCHDOG_CLEANUP"
+				echo "Stage0 emit watchdog cleanup=$timeout_cleanup_local pid=$pid process_tree=\"$STAGE0_WATCHDOG_TERMINATED_TREE_PIDS\"." >&2
+				echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+				tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
+					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
+					"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
+				exit 124
 			fi
 			if [ "$interval" = "0" ]; then
 				continue
@@ -1060,7 +1075,7 @@ run_stage0_emit() {
 			local child_pid
 			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
 			local tree_pids
-			tree_pids="$(collect_process_tree_pids "$pid")"
+			tree_pids="$(stage0_watchdog_collect_process_tree_pids "$pid")"
 			local rss_probe_pid="$pid"
 			local rss_kb=""
 			local tree_rss_kb=0
@@ -1100,6 +1115,7 @@ run_stage0_emit() {
 			if [ -n "$log_bytes" ]; then
 				heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
 			fi
+			heartbeat_suffix="$heartbeat_suffix last_progress_elapsed=${last_progress_elapsed_local}s last_progress_reason=${last_progress_reason_local}"
 			if [ -n "$rss_kb" ]; then
 				local rss_mb
 				rss_mb="$((rss_kb / 1024))"
@@ -1110,7 +1126,10 @@ run_stage0_emit() {
 				if [ "$tree_rss_mb" -gt "$heartbeat_peak_tree_rss_mb_local" ]; then
 					heartbeat_peak_tree_rss_mb_local="$tree_rss_mb"
 				fi
-				printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
+				printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+					"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
+					"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
+					"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
 				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
 					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"child_pid":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
 						"$elapsed_hb" "$rss_mb" "$tree_rss_mb" "$pid" "$rss_probe_pid" \
@@ -1151,10 +1170,16 @@ run_stage0_emit() {
 		if [ "$code" != "0" ]; then
 			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-			printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
+			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+				"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
+				"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
+				"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
 			exit "$code"
 		fi
-		printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
+		printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+			"$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" \
+			"$timeout_kind_local" "$timeout_elapsed_local" "$last_progress_elapsed_local" \
+			"$last_progress_reason_local" "$timeout_cleanup_local" >"$metrics_file"
 	)
 	emit_code="$?"
 	set -e
@@ -1163,7 +1188,14 @@ run_stage0_emit() {
 		local observed_samples=""
 		local observed_peak=""
 		local observed_tree_peak=""
-		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak <"$metrics_file" || true
+		local observed_timeout_kind=""
+		local observed_timeout_elapsed=""
+		local observed_last_progress_elapsed=""
+		local observed_last_progress_reason=""
+		local observed_timeout_cleanup=""
+		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak \
+			observed_timeout_kind observed_timeout_elapsed observed_last_progress_elapsed \
+			observed_last_progress_reason observed_timeout_cleanup <"$metrics_file" || true
 		if [ -n "$observed_samples" ] && [ "$observed_samples" -gt "$stage0_heartbeat_samples" ]; then
 			stage0_heartbeat_samples="$observed_samples"
 		fi
@@ -1173,6 +1205,11 @@ run_stage0_emit() {
 		if [ -n "$observed_tree_peak" ] && [ "$observed_tree_peak" -gt "$stage0_heartbeat_peak_tree_rss_mb" ]; then
 			stage0_heartbeat_peak_tree_rss_mb="$observed_tree_peak"
 		fi
+		stage0_timeout_kind="${observed_timeout_kind:-none}"
+		stage0_timeout_elapsed_sec="${observed_timeout_elapsed:-0}"
+		stage0_last_progress_elapsed_sec="${observed_last_progress_elapsed:-0}"
+		stage0_last_progress_reason="${observed_last_progress_reason:-process-start}"
+		stage0_timeout_cleanup="${observed_timeout_cleanup:-not-needed}"
 	fi
 	cleanup_stage0_log_file "$metrics_file"
 
@@ -1256,10 +1293,15 @@ if [ -z "${HXHX_STAGE0_HEARTBEAT}" ] || [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
 else
 	echo "== Stage0 heartbeat: every ${HXHX_STAGE0_HEARTBEAT}s (set HXHX_STAGE0_HEARTBEAT=0 to disable)"
 fi
-if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-	echo "== Stage0 failfast: ${HXHX_STAGE0_FAILFAST_SECS}s"
+if [ "$HXHX_STAGE0_STALL_TIMEOUT_SECS" != "0" ]; then
+	echo "== Stage0 stall watchdog: ${HXHX_STAGE0_STALL_TIMEOUT_SECS}s without observed progress"
 else
-	echo "== Stage0 failfast: disabled"
+	echo "== Stage0 stall watchdog: disabled"
+fi
+if [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+	echo "== Stage0 absolute timeout: ${HXHX_STAGE0_FAILFAST_SECS}s"
+else
+	echo "== Stage0 absolute timeout: disabled"
 fi
 if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 	echo "== Stage0 profile mode: enabled (--times + -D filter-times)"

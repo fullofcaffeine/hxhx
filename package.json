@@ -47,7 +47,7 @@
     "test:hxhx:stage0-free-build-report": "node scripts/ci/stage0-free-build-benchmark-report-fixture-test.js",
     "test:hxhx:native-plugin-loop-report": "node scripts/ci/native-plugin-loop-benchmark-report-fixture-test.js",
     "test:hxhx:haxe-server-identity": "bash scripts/ci/haxe-server-identity-fixture-test.sh && bash scripts/ci/haxe-server-process-classifier-fixture-test.sh",
-    "test:hxhx:bootstrap-regen-server-lifecycle": "bash scripts/ci/bootstrap-regen-server-lifecycle-fixture-test.sh",
+    "test:hxhx:bootstrap-regen-server-lifecycle": "bash scripts/ci/bootstrap-regen-server-lifecycle-fixture-test.sh && bash scripts/ci/bootstrap-regen-watchdog-fixture-test.sh",
     "test:hxhx:hx-format-guard": "node --check scripts/lint/hx-format-guard.js && node --check scripts/ci/hx-format-guard-fixture-test.js && node scripts/ci/hx-format-guard-fixture-test.js",
     "test:hxhx:bootstrap-snapshot-copy": "bash -n scripts/hxhx/copy-bootstrap-snapshot.sh && bash -n scripts/ci/bootstrap-snapshot-copy-fixture-test.sh && bash scripts/ci/bootstrap-snapshot-copy-fixture-test.sh",
     "guard:cpp-render-type-flow-plan": "node scripts/ci/cpp-render-type-flow-plan-check.js",
