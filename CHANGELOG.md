@@ -1,3 +1,12 @@
+## [0.33.2](https://github.com/fullofcaffeine/hxhx/compare/v0.33.1...v0.33.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* **hxhx:** load inherited types during native typing ([35df14f](https://github.com/fullofcaffeine/hxhx/commit/35df14fb1e67fb7d3ee6f60dcd971b51e78cd376))
+* **hxhx:** preserve module directive meaning ([e64e074](https://github.com/fullofcaffeine/hxhx/commit/e64e0745983d67174fa8fe0a353d85d3a9214a47))
+* **hxhx:** reject private static imports ([3206814](https://github.com/fullofcaffeine/hxhx/commit/32068146346e15ef7b77cceb9362394630118155))
+
 ## [0.33.1](https://github.com/fullofcaffeine/hxhx/compare/v0.33.0...v0.33.1) (2026-07-23)
 
 
