@@ -296,7 +296,36 @@ The compiler should feel like a Haxe project, not a sealed artifact:
 - contributors should be able to prototype compiler changes without learning the upstream OCaml implementation first,
 - architectural choices should optimize for clarity and maintainability as well as parity.
 
-This does not weaken compatibility. The default compiler still has to behave like Haxe `4.3.7`; hackability is how we make that behavior easier to evolve and verify.
+Haxe `4.3.7` is the **behavior floor**, not an **architecture ceiling**. In
+plain language, the same supported Haxe program must keep doing the same thing,
+but `hxhx` does not have to inherit every internal file boundary, global state,
+large module, or historical phase relationship from the upstream compiler.
+
+When a clean-room design preserves observable behavior, `hxhx` should aim to
+be better organized and easier to work on:
+
+- each important compiler decision has a clear owner and typed inputs/outputs,
+- reusable facts are immutable and carry exact revisions when incremental
+  correctness depends on them,
+- phase and validation boundaries are visible instead of hidden in printing or
+  process-wide state,
+- diagnostics and tests explain failures without requiring contributors to
+  reverse-engineer the pipeline, and
+- cold, warm, incremental, end-to-end latency and retained memory are measured
+  on representative workloads.
+
+Well-designed compiler implementations in Rust, Go, OCaml, and other systems
+languages are useful comparison classes for architecture, tooling, and
+performance. They are not blueprints to copy. More passes, more intermediate
+representations, or a lower-level implementation language do not by themselves
+make a compiler modern; the evidence is clear ownership, reliable tooling,
+correct incremental behavior, and competitive measured results.
+
+This does not weaken compatibility. The default compiler still has to behave
+like Haxe `4.3.7`; hackability is how we make that behavior easier to evolve and
+verify. Upstream suites prove compatibility, while repo-local architecture
+tests, benchmarks, and memory reports prove that the newer design is actually
+clearer and faster rather than merely described that way.
 
 Current planning owners:
 

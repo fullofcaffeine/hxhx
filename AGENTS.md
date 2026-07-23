@@ -744,6 +744,34 @@ When implementing backend semantics (Haxe → OCaml) and when evolving `hxhx`, t
 - Use upstream compiler implementation patterns as architectural references:
   - OCaml compiler sources under `vendor/haxe/src/`
 
+### Compatibility floor, not an architecture ceiling
+
+An upstream **behavior oracle** tells us what a Haxe program must do: the same
+valid input should produce compatible diagnostics, generated behavior, and
+runtime results. It does not require `hxhx` to reproduce the upstream
+compiler's file layout, mutable global state, large modules, or phase coupling.
+
+- Preserve Haxe 4.3.7 behavior through clean-room tests and black-box evidence.
+- When a fresh design preserves that behavior, prefer source that is easier to
+  read and review: explicit owners, typed inputs and outputs, immutable
+  revisioned facts where reuse needs them, named phase boundaries, validators,
+  and focused modules.
+- Treat well-designed Rust, Go, OCaml, and other modern compiler toolchains as
+  comparison classes for clarity, diagnostics, tooling, cold/warm/incremental
+  latency, and memory use. Do not copy their implementation or use pass count,
+  IR count, or language choice as a proxy for quality.
+- Add architectural power when a concrete correctness, ecosystem, tooling, or
+  performance need justifies it. Do not preserve historical complexity merely
+  because the upstream compiler has it, and do not add fashionable machinery
+  merely to look modern.
+- Record the observable compatibility rule, the chosen local owner, and the
+  relevant tests or measurements when intentionally choosing a clearer local
+  architecture than the upstream implementation.
+
+The North Star is a Haxe-authored compiler whose source and developer workflow
+are at least as carefully designed as a strong modern compiler implementation,
+while upstream-suite parity remains the non-negotiable proof of Haxe behavior.
+
 Vendoring policy:
 
 - We do **not** commit upstream Haxe into this repository.
