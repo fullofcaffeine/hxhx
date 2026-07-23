@@ -18,6 +18,7 @@ let init () : unit =
   ignore (HxType.class_ "CompilerDependencyPhaseTools");
   ignore (HxType.class_ "CompilerDependencySnapshot");
   ignore (HxType.class_ "CompilerDriver");
+  ignore (HxType.class_ "CompilerGeneratedDeclarationObservation");
   ignore (HxType.class_ "CompilerModuleOrigin");
   ignore (HxType.class_ "CompilerModuleResolution");
   ignore (HxType.class_ "CompilerObservationFingerprint");
@@ -1295,10 +1296,11 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'sourceOriginChanges' for CompilerDependencyComparison" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'conditionalCompilationChanges' for CompilerDependencyComparison" in
-    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceChanges' for CompilerDependencyComparison" in
-    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'implementationChanges' for CompilerDependencyComparison" in
-    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'invalidations' for CompilerDependencyComparison" in
-    Obj.repr (CompilerDependencyComparison.create a0 a1 a2 a3 a4)
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'generatedDeclarationChanges' for CompilerDependencyComparison" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceChanges' for CompilerDependencyComparison" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'implementationChanges' for CompilerDependencyComparison" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'invalidations' for CompilerDependencyComparison" in
+    Obj.repr (CompilerDependencyComparison.create a0 a1 a2 a3 a4 a5)
   );
   HxType.register_class_ctor "CompilerDependencyEdge" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1332,6 +1334,12 @@ let init () : unit =
   );
   HxType.register_class_ctor "CompilerDriver" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDriver.create ())
+  );
+  HxType.register_class_ctor "CompilerGeneratedDeclarationObservation" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'generatedMemberCount' for CompilerGeneratedDeclarationObservation" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'resultRevision' for CompilerGeneratedDeclarationObservation" in
+    Obj.repr (CompilerGeneratedDeclarationObservation.create a0 a1)
   );
   HxType.register_class_ctor "CompilerModuleOrigin" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1376,7 +1384,8 @@ let init () : unit =
     let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
     let a5 = if len > 5 then Obj.obj ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (CompilerTypedModuleRevision.create a0 a1 a2 a3 a4 a5 a6)
+    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (CompilerTypedModuleRevision.create a0 a1 a2 a3 a4 a5 a6 a7)
   );
   HxType.register_class_ctor "EmitterCallSigIndex" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (EmitterCallSigIndex.create ())
@@ -1581,7 +1590,8 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'parsed' for ResolvedModule" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (ResolvedModule.create a0 a1 a2 a3 a4)
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (ResolvedModule.create a0 a1 a2 a3 a4 a5)
   );
   HxType.register_class_ctor "ResolverStage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (ResolverStage.create ())
@@ -1864,7 +1874,8 @@ let init () : unit =
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
     let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (TypedModule.create a0 a1 a2 a3 a4 a5)
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TypedModule.create a0 a1 a2 a3 a4 a5 a6)
   );
   HxType.register_class_ctor "TypedStmt" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2618,6 +2629,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "CompilerDependencyPhaseTools" (fun () -> Obj.repr (CompilerDependencyPhaseTools.__empty ()));
   HxType.register_class_empty_ctor "CompilerDependencySnapshot" (fun () -> Obj.repr (CompilerDependencySnapshot.__empty ()));
   HxType.register_class_empty_ctor "CompilerDriver" (fun () -> Obj.repr (CompilerDriver.__empty ()));
+  HxType.register_class_empty_ctor "CompilerGeneratedDeclarationObservation" (fun () -> Obj.repr (CompilerGeneratedDeclarationObservation.__empty ()));
   HxType.register_class_empty_ctor "CompilerModuleOrigin" (fun () -> Obj.repr (CompilerModuleOrigin.__empty ()));
   HxType.register_class_empty_ctor "CompilerModuleResolution" (fun () -> Obj.repr (CompilerModuleResolution.__empty ()));
   HxType.register_class_empty_ctor "CompilerObservationFingerprint" (fun () -> Obj.repr (CompilerObservationFingerprint.__empty ()));
@@ -2881,7 +2893,7 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerConditionalDefineInput" [ "fromDefines" ];
   HxType.register_class_instance_fields "CompilerDependencyCollector" [];
   HxType.register_class_static_fields "CompilerDependencyCollector" [ "addEdge"; "collect"; "collectConstantRead"; "collectExpression"; "collectModuleEdges"; "collectResolvedPath"; "collectStatement"; "collectType"; "compareText"; "normalizeImport" ];
-  HxType.register_class_instance_fields "CompilerDependencyComparison" [ "conditionalCompilationChanges"; "getConditionalCompilationChanges"; "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "getSourceOriginChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor"; "sourceOriginChanges" ];
+  HxType.register_class_instance_fields "CompilerDependencyComparison" [ "conditionalCompilationChanges"; "generatedDeclarationChanges"; "getConditionalCompilationChanges"; "getGeneratedDeclarationChanges"; "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "getSourceOriginChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor"; "sourceOriginChanges" ];
   HxType.register_class_static_fields "CompilerDependencyComparison" [ "compareInvalidations"; "compareText"; "sortedCopy" ];
   HxType.register_class_instance_fields "CompilerDependencyEdge" [ "canonicalKey"; "consumerModule"; "describe"; "factIdentity"; "kind"; "phase"; "providerModule" ];
   HxType.register_class_static_fields "CompilerDependencyEdge" [ "normalize" ];
@@ -2897,6 +2909,8 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerDependencySnapshot" [ "buildCanonicalIdentity"; "compareEdges"; "compareModules"; "compareText"; "normalizeModules" ];
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
+  HxType.register_class_instance_fields "CompilerGeneratedDeclarationObservation" [ "canonicalIdentity"; "generatedMemberCount"; "getCanonicalIdentity"; "getGeneratedMemberCount"; "resultRevision" ];
+  HxType.register_class_static_fields "CompilerGeneratedDeclarationObservation" [ "EMPTY"; "empty"; "fromGeneratedMemberSnippets" ];
   HxType.register_class_instance_fields "CompilerModuleOrigin" [ "describeLookup"; "describeSource"; "getSourceIdentity"; "isSynthetic"; "requestedModulePath"; "selectedClassPathIndex"; "sourceIdentity"; "sourceModulePath"; "usedSecondaryTypeFallback" ];
   HxType.register_class_static_fields "CompilerModuleOrigin" [ "direct"; "normalize"; "parentModule"; "synthetic" ];
   HxType.register_class_instance_fields "CompilerModuleResolution" [ "filePath"; "lookupIdentity"; "observationRevision"; "selectedClassPathIndex"; "toOrigin"; "usedSecondaryTypeFallback" ];
@@ -2911,7 +2925,7 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerSourceProviderReport" [ "compareStrings" ];
   HxType.register_class_instance_fields "CompilerSourceResolver" [];
   HxType.register_class_static_fields "CompilerSourceResolver" [ "compareStrings"; "contains"; "find"; "missing"; "normalizePath"; "observationRevision"; "resolve" ];
-  HxType.register_class_instance_fields "CompilerTypedModuleRevision" [ "conditionalCompilation"; "implementationRevision"; "modulePath"; "publicInterfaceRevision"; "sourceOriginDescription"; "sourceOriginRevision"; "sourceRevision" ];
+  HxType.register_class_instance_fields "CompilerTypedModuleRevision" [ "conditionalCompilation"; "generatedDeclarations"; "implementationRevision"; "modulePath"; "publicInterfaceRevision"; "sourceOriginDescription"; "sourceOriginRevision"; "sourceRevision" ];
   HxType.register_class_static_fields "CompilerTypedModuleRevision" [ "addBools"; "addPattern"; "addPublicClassFacts"; "addResolvedTypePath"; "addStrings"; "addTypedExpression"; "addTypedStatement"; "addTypes"; "compareText"; "expressionTagName"; "fromTypedModule"; "mergeContributions"; "normalize"; "opaqueKindName"; "semanticModulePath"; "statementTagName"; "unaryFixityName"; "unaryOperatorName"; "uniqueSorted" ];
   HxType.register_class_instance_fields "EmitterCallSigIndex" [];
   HxType.register_class_static_fields "EmitterCallSigIndex" [ "get" ];
@@ -2985,8 +2999,8 @@ let init () : unit =
   HxType.register_class_static_fields "ParserStageNativeDecode" [ "balancedSwitchEnd"; "compactTypeHint"; "decodeFieldPayload"; "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "defaultValueFromText"; "expectedTypeName"; "fieldHintKey"; "findFieldTypeHintEnd"; "findFunctionBodyStart"; "findMatchingParen"; "findTopLevelEquals"; "isErasedFunctionTypeHintText"; "isErasedStructuralFallbackTypeHint"; "isFunctionTypeHintText"; "isGenericTypeVariableHintText"; "isKnownConcreteTypeHintText"; "isStructuralTypeHintText"; "looksLikeSwitchCaseFragment"; "normalizeCompactedFunctionReturnExpr"; "normalizeMethodReturnTypeHint"; "parseDecInt"; "parseRegexLiteral"; "parseReturnExprIdentPart"; "parseReturnExprText"; "parseSourceSignatureArgs"; "protocolArgNames"; "readSourceReturnHint"; "scanClassFieldTypeHints"; "scanFieldTypeHintAfterVar"; "scanSourceFieldTypeHints"; "scanUntilToken"; "skipQuotedSource"; "skipToFieldBoundary"; "sourceArgHintByName"; "sourceArgHintsMatchNames"; "sourceArgTypeHintIsMoreSpecific"; "sourceFieldTypeHintByName"; "sourceFieldTypeHints"; "sourceFunctionNameMatches"; "sourceFunctionTypeMetadata"; "sourceIdentifierPart"; "sourceSignatureArgHints"; "sourceSignatureReturnHint"; "sourceTypeHintIsMoreSpecific"; "splitN"; "splitTopLevelComma"; "stripNewTypeParams"; "throwFromErrLine"; "trimCapturedFieldInitializer"; "unescapePayload" ];
   HxType.register_class_instance_fields "ParserStageScanHelpers" [];
   HxType.register_class_static_fields "ParserStageScanHelpers" [ "expressionBodyKeywordStartsWithoutReturn"; "functionTypeParamsMetadata"; "hasUnsupportedExpr"; "hasUnsupportedStmt"; "hasUnsupportedStmtList"; "isTypedefFieldModifier"; "leadingWhitespaceLength"; "parseModuleStaticInitExpr"; "parseSimpleInitExpr"; "posFromIndex"; "scanAbstractHeaderConversions"; "scanAbstractUnderlyingType"; "scanAnonymousTypedefFields"; "scanBalancedBlock"; "scanClassBodyForStatics"; "scanClassHeader"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanFieldDeclarationEnd"; "scanFieldInitializer"; "scanFieldPropertyAccessors"; "scanFieldTypeHint"; "scanFunctionBody"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanModuleStaticFields"; "scanNextFieldNameToken"; "scanNextToken"; "scanTypeParameterNames"; "scanTypedefRhsShape"; "scanTypedefShape"; "scannedStaticBodyIsSafe"; "skipMetadataPayload"; "skipQuotedSource"; "skipTypedefDeclaration"; "skipTypedefField"; "typeParamsMetadata" ];
-  HxType.register_class_instance_fields "ResolvedModule" [ "conditionalCompilation"; "filePath"; "modulePath"; "parsed"; "sourceOrigin" ];
-  HxType.register_class_static_fields "ResolvedModule" [ "getConditionalCompilation"; "getFilePath"; "getModulePath"; "getParsed"; "getSourceOrigin" ];
+  HxType.register_class_instance_fields "ResolvedModule" [ "conditionalCompilation"; "filePath"; "generatedDeclarations"; "modulePath"; "parsed"; "sourceOrigin" ];
+  HxType.register_class_static_fields "ResolvedModule" [ "getConditionalCompilation"; "getFilePath"; "getGeneratedDeclarations"; "getModulePath"; "getParsed"; "getSourceOrigin" ];
   HxType.register_class_instance_fields "ResolverStage" [];
   HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "implicitUtestAddCasesDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "parseProjectRootsShallow"; "resolveImplicitSamePackageTypesEnabled"; "traceResolverDepsEnabled"; "withImplicitCwdClassPath" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
@@ -3063,7 +3077,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedFunction" [];
   HxType.register_class_instance_fields "TypedFunctionBody" [ "getSourceFingerprint"; "getStatements"; "sourceFingerprint"; "statements" ];
   HxType.register_class_static_fields "TypedFunctionBody" [];
-  HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclaration"; "conditionalCompilation"; "env"; "getBackendDeclaration"; "getConditionalCompilation"; "getEnv"; "getParsed"; "getRevision"; "getSourceOrigin"; "getTypedClasses"; "parsed"; "revision"; "sourceOrigin"; "typedClasses"; "withTypedClasses" ];
+  HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclaration"; "conditionalCompilation"; "env"; "generatedDeclarations"; "getBackendDeclaration"; "getConditionalCompilation"; "getEnv"; "getGeneratedDeclarations"; "getParsed"; "getRevision"; "getSourceOrigin"; "getTypedClasses"; "parsed"; "revision"; "sourceOrigin"; "typedClasses"; "withTypedClasses" ];
   HxType.register_class_static_fields "TypedModule" [ "syntheticSourceOrigin" ];
   HxType.register_class_instance_fields "TypedStmt" [ "catchNames"; "catchTypeHints"; "expressions"; "getCatchNames"; "getCatchTypeHints"; "getExpressions"; "getMetadata"; "getNames"; "getPatterns"; "getPosition"; "getStatements"; "getTag"; "metadata"; "names"; "patterns"; "position"; "statements"; "tag"; "withChildren" ];
   HxType.register_class_static_fields "TypedStmt" [ "block"; "breakStmt"; "continueStmt"; "doWhile"; "expressionStmt"; "forIn"; "forKeyValue"; "ifStmt"; "returnValue"; "returnVoid"; "switchStmt"; "throwStmt"; "tryStmt"; "variable"; "whileStmt" ];
@@ -3308,9 +3322,9 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage3BackendPluginSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3BackendPluginSupport" [ "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "buildProviderDefines"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseDelimitedList"; "resetRequestState"; "selectBackend"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3BuildMacroSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3BuildMacroSupport" [ "buildFieldsPayloadForParsed"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "parseGeneratedMembers" ];
+  HxType.register_class_static_fields "hxhx.Stage3BuildMacroSupport" [ "applyGeneratedMembers"; "buildFieldsPayloadForParsed"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "parseGeneratedMembers" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectBackendResources"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "error"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "finishRequest"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "run"; "runConnect"; "runOne"; "runRequest"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "targetDefineForBackend"; "trim" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectBackendResources"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "error"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "finishRequest"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "run"; "runConnect"; "runOne"; "runRequest"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "targetDefineForBackend"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3CustomizationSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3CustomizationSupport" [ "emitTypedSummaryReport"; "has"; "normalize"; "splitRawValue"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3DiagnosticsSupport" [];
@@ -3431,6 +3445,7 @@ let init () : unit =
   HxType.register_class_tags "CompilerDependencyPhaseTools" [ "CompilerDependencyPhaseTools" ];
   HxType.register_class_tags "CompilerDependencySnapshot" [ "CompilerDependencySnapshot" ];
   HxType.register_class_tags "CompilerDriver" [ "CompilerDriver" ];
+  HxType.register_class_tags "CompilerGeneratedDeclarationObservation" [ "CompilerGeneratedDeclarationObservation" ];
   HxType.register_class_tags "CompilerModuleOrigin" [ "CompilerModuleOrigin" ];
   HxType.register_class_tags "CompilerModuleResolution" [ "CompilerModuleResolution" ];
   HxType.register_class_tags "CompilerObservationFingerprint" [ "CompilerObservationFingerprint" ];

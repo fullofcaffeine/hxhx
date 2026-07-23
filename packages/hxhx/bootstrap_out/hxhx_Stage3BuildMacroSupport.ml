@@ -27,18 +27,109 @@ let parseGeneratedMembers = fun members -> try let __fallback_result_6 = (
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.magic __ret_5
 
+let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_26 = (
+  ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "build-macro generated members require a resolved module") ["Dynamic"; "String"]) else ());
+  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hx_module))) else ());
+  let generated = parseGeneratedMembers (Obj.magic members) in let parsed = Obj.magic (ResolvedModule.getParsed (Obj.magic hx_module)) in let oldDeclaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let oldClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic oldDeclaration)) in let generatedFunctionNames = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "functions")) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
+        ignore (_g := __new_8);
+        __new_8
+      ));
+      let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in HxMap.set_string generatedFunctionNames key true
+    )) done);
+    let generatedFieldNames = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "fields")) in (
+      ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+        ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+          ignore (_g := __new_10);
+          __new_10
+        ));
+        let key = (HxFieldDecl.getName (Obj.magic field) : string) in HxMap.set_string generatedFieldNames key true
+      )) done);
+      let mergedFunctions = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic oldClass)) in (
+        ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+          ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
+            ignore (_g := __new_12);
+            __new_12
+          ));
+          let tempBool = ref (false : bool) in let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
+            ignore (let __assign_13 = HxMap.exists_string generatedFunctionNames key in (
+              tempBool := __assign_13;
+              __assign_13
+            ));
+            if not (!tempBool) then ignore (HxArray.push mergedFunctions fn) else ()
+          )
+        )) done);
+        let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "functions")) in (
+          ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+            ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
+              ignore (_g := __new_15);
+              __new_15
+            ));
+            HxArray.push mergedFunctions fn
+          )) done);
+          let mergedFields = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic oldClass)) in (
+            ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+              ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+                ignore (_g := __new_17);
+                __new_17
+              ));
+              let tempBool1 = ref (false : bool) in let key = (HxFieldDecl.getName (Obj.magic field) : string) in (
+                ignore (let __assign_18 = HxMap.exists_string generatedFieldNames key in (
+                  tempBool1 := __assign_18;
+                  __assign_18
+                ));
+                if not (!tempBool1) then ignore (HxArray.push mergedFields field) else ()
+              )
+            )) done);
+            let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "fields")) in (
+              ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+                ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+                  ignore (_g := __new_20);
+                  __new_20
+                ));
+                HxArray.push mergedFields field
+              )) done);
+              let newClass = Obj.magic (HxClassDecl.create (HxClassDecl.getName (Obj.magic oldClass) : string) (HxClassDecl.getHasStaticMain (Obj.magic oldClass)) (Obj.magic mergedFunctions) (Obj.magic mergedFields) (HxClassDecl.getExtendsPath (Obj.magic oldClass) : string) (Obj.magic (HxClassDecl.getMetadata (Obj.magic oldClass))) (HxRuntime.hx_null) (Obj.magic (HxRuntime.hx_null))) in let newClasses = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic oldDeclaration)) in (
+                ignore (while !_g < HxArray.length _g1 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+                  ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
+                    ignore (_g := __new_22);
+                    __new_22
+                  ));
+                  let tempHxClassDecl = ref (Obj.magic (HxRuntime.hx_null) : HxClassDecl.t) in (
+                    ignore (if HxString.equals (HxClassDecl.getName (Obj.magic candidate)) (HxClassDecl.getName (Obj.magic oldClass)) then let __assign_23 = Obj.magic newClass in (
+                      tempHxClassDecl := __assign_23;
+                      __assign_23
+                    ) else let __assign_24 = Obj.magic candidate in (
+                      tempHxClassDecl := __assign_24;
+                      __assign_24
+                    ));
+                    HxArray.push newClasses (!tempHxClassDecl)
+                  )
+                )) done);
+                let newDeclaration = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic oldDeclaration) : string) (Obj.magic (HxModuleDecl.getImports (Obj.magic oldDeclaration))) (Obj.magic newClass) (Obj.magic newClasses) (HxModuleDecl.getHeaderOnly (Obj.magic oldDeclaration)) (HxModuleDecl.getHasToplevelMain (Obj.magic oldDeclaration))) in let newParsed = Obj.magic (ParsedModule.create (ParsedModule.getSource (Obj.magic parsed) () : string) (Obj.magic newDeclaration) (ParsedModule.getFilePath (Obj.magic parsed) () : string)) in ResolvedModule.create (ResolvedModule.getModulePath (Obj.magic hx_module) : string) (ResolvedModule.getFilePath (Obj.magic hx_module) : string) (Obj.magic newParsed) (Obj.magic (ResolvedModule.getSourceOrigin (Obj.magic hx_module))) (Obj.magic (ResolvedModule.getConditionalCompilation (Obj.magic hx_module))) (Obj.magic (CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets (Obj.magic members)))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+) in Obj.magic __fallback_result_26 with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
+
 let buildFieldsPayloadForParsed = fun pm -> Hxhx_macro_BuildFieldSnapshotPayload.encodeParsedModule (Obj.magic pm)
 
 let collectBuildMacroExprs = fun source modulePath -> Hxhx_BuildMetadataCollector.collectBuildMacroExprs (source : string) (modulePath : string)
 
-let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> try let __fallback_result_10 = (
+let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> try let __fallback_result_30 = (
   ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let hooks = Obj.magic (Hxhx_macro_MacroState.listOnTypeNotFoundHookIds ()) in (
     ignore (if HxArray.length hooks = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let _g = ref 0 in let _g1 = HxArray.length hooks in (
-      ignore (while !_g < _g1 do ignore (let i = let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
-        ignore (_g := __new_8);
-        __old_7
+      ignore (while !_g < _g1 do ignore (let i = let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+        ignore (_g := __new_28);
+        __old_27
       ) in if Obj.obj (HxAnon.get macroSession "runTypeNotFoundHook") (HxArray.get (Obj.magic hooks) i) (typePath : string) then ignore ((
         ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath : string));
         raise (HxRuntime.Hx_return (Obj.repr true))
@@ -46,5 +137,5 @@ let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> try let __
       false
     )
   )
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_30 with
+  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29

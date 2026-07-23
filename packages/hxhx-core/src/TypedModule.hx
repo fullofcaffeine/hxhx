@@ -15,16 +15,18 @@ class TypedModule {
 	final revision:Int;
 	final sourceOrigin:CompilerModuleOrigin;
 	final conditionalCompilation:CompilerConditionalCompilationObservation;
+	final generatedDeclarations:CompilerGeneratedDeclarationObservation;
 	final backendDeclaration:HxModuleDecl;
 
 	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin,
-			?conditionalCompilation:CompilerConditionalCompilationObservation) {
+			?conditionalCompilation:CompilerConditionalCompilationObservation, ?generatedDeclarations:CompilerGeneratedDeclarationObservation) {
 		this.parsed = parsed;
 		this.env = env;
 		this.typedClasses = (typedClasses == null ? TypedBodyBuilder.buildFallbackModule(parsed, env) : typedClasses).copy();
 		this.revision = revision <= 0 ? 1 : revision;
 		this.sourceOrigin = sourceOrigin == null ? syntheticSourceOrigin(parsed) : sourceOrigin;
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
+		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
 		TypedBodyInvariant.assertClasses(this.typedClasses);
 		this.backendDeclaration = TypedBodySource.moduleDeclaration(parsed, this.typedClasses);
 	}
@@ -53,9 +55,13 @@ class TypedModule {
 	public function getConditionalCompilation():CompilerConditionalCompilationObservation
 		return conditionalCompilation;
 
+	/** One-way identity of declarations produced by build macros before typing. **/
+	public function getGeneratedDeclarations():CompilerGeneratedDeclarationObservation
+		return generatedDeclarations;
+
 	/** Return the next immutable semantic revision after a shared typed-body pass. **/
 	public function withTypedClasses(classes:Array<TypedClass>):TypedModule {
-		return new TypedModule(parsed, env, classes, revision + 1, sourceOrigin, conditionalCompilation);
+		return new TypedModule(parsed, env, classes, revision + 1, sourceOrigin, conditionalCompilation, generatedDeclarations);
 	}
 
 	/**

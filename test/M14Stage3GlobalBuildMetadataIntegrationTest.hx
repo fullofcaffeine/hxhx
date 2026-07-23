@@ -1,4 +1,5 @@
 import hxhx.BuildMetadataCollector;
+import hxhx.Stage3BuildMacroSupport;
 import hxhx.macro.MacroState;
 
 class M14Stage3GlobalBuildMetadataIntegrationTest {
@@ -17,6 +18,14 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 		if (values.indexOf(unexpected) < 0)
 			return;
 		throw label + ': did not expect "' + unexpected + '" in [' + values.join(", ") + ']';
+	}
+
+	static function generatedReturnType(module:ResolvedModule, functionName:String):String {
+		final declaration = ResolvedModule.getParsed(module).getDecl();
+		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(declaration)))
+			if (HxFunctionDecl.getName(fn) == functionName)
+				return HxFunctionDecl.getReturnTypeHint(fn);
+		return "<missing>";
 	}
 
 	static function main():Void {
@@ -50,6 +59,28 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 		assertTrue(unrelatedExprs.length == 1, "expected only root recursive build rule for unrelated module");
 		assertContains("unrelated module root rule", unrelatedExprs, "hxhxmacros.BuildFieldMacros.addGeneratedField()");
 		assertNotContains("unrelated module package rule", unrelatedExprs, 'hxhxmacros.ArgsMacros.setArg("pkg")');
+
+		final parsed = ParserStage.parse(source, "Target.hx");
+		final resolved = new ResolvedModule("Target", "Target.hx", parsed);
+		final generatedIntText = "public static function generated_answer():Int return 42;";
+		final generatedStringText = 'public static function generated_answer():String return "private-generated-value";';
+		final generatedInt = Stage3BuildMacroSupport.applyGeneratedMembers(resolved, [generatedIntText]);
+		final generatedString = Stage3BuildMacroSupport.applyGeneratedMembers(resolved, [generatedStringText]);
+		assertTrue(generatedReturnType(generatedInt, "generated_answer") == "Int", "generated Int member should be merged before typing");
+		assertTrue(generatedReturnType(generatedString, "generated_answer") == "String", "generated String member should be merged before typing");
+		final intObservation = ResolvedModule.getGeneratedDeclarations(generatedInt);
+		final stringObservation = ResolvedModule.getGeneratedDeclarations(generatedString);
+		assertTrue(intObservation.getCanonicalIdentity() != stringObservation.getCanonicalIdentity(),
+			"different generated declarations should have different observations");
+		assertTrue(intObservation.getCanonicalIdentity().indexOf(generatedIntText) < 0
+			&& stringObservation.getCanonicalIdentity().indexOf("private-generated-value") < 0,
+			"generated-declaration observations must not retain raw member text");
+		final index = TyperIndex.build([generatedInt]);
+		final loader = new ModuleLoader(["."], new haxe.ds.StringMap<String>(), index);
+		loader.markResolvedAlready([generatedInt]);
+		final typed = TyperStage.typeResolvedModule(generatedInt, index, loader, true);
+		assertTrue(typed.getGeneratedDeclarations().getCanonicalIdentity() == intObservation.getCanonicalIdentity(),
+			"typing should preserve the exact generated-declaration observation");
 		MacroState.reset();
 	}
 }

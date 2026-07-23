@@ -74,11 +74,19 @@ class InProcGeneratedEntrypoints {
 					"ok";
 				} else {
 					sink.setDefine("HXHX_BUILD_RAN", "1");
-					sink.emitBuildFields(modulePath, [
-						"public static function generated():Void {",
-						'  trace("from_hxhx_build_macro");',
-						"}"
-					].join("\n"));
+					final variant = sink.definedValue("HXHX_BUILD_VARIANT");
+					final generated = switch (variant) {
+						case "int": "public static function generated_answer():Int return 42;";
+						case "int-body": "public static function generated_answer():Int return 43;";
+						case "string": 'public static function generated_answer():String return "private-generated-value";';
+						case _:
+							[
+								"public static function generated():Void {",
+								'  trace("from_hxhx_build_macro");',
+								"}"
+							].join("\n");
+					};
+					sink.emitBuildFields(modulePath, generated);
 					"ok";
 				}
 			case "hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()":

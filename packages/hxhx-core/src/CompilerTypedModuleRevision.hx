@@ -15,6 +15,9 @@ import TypedStmt.TypedStmtTag;
 	The separate conditional-compilation observation identifies the evaluated `#if`
 	inputs and selected branches. It can therefore recheck a module when a relevant
 	define changes even if the filtered source happens to remain identical.
+	The generated-declaration observation separately identifies fields and methods
+	produced by build macros, whose result can change while the annotated source is
+	byte-for-byte identical.
 
 	The public-interface revision contains the resolved class and member signatures
 	that another module can consume. The implementation revision additionally
@@ -34,11 +37,13 @@ class CompilerTypedModuleRevision {
 	public final sourceOriginRevision:String;
 	public final sourceOriginDescription:String;
 	public final conditionalCompilation:CompilerConditionalCompilationObservation;
+	public final generatedDeclarations:CompilerGeneratedDeclarationObservation;
 	public final publicInterfaceRevision:String;
 	public final implementationRevision:String;
 
 	public function new(modulePath:String, publicInterfaceRevision:String, implementationRevision:String, ?sourceRevision:String,
-			?sourceOriginRevision:String, ?sourceOriginDescription:String, ?conditionalCompilation:CompilerConditionalCompilationObservation) {
+			?sourceOriginRevision:String, ?sourceOriginDescription:String, ?conditionalCompilation:CompilerConditionalCompilationObservation,
+			?generatedDeclarations:CompilerGeneratedDeclarationObservation) {
 		this.modulePath = normalize(modulePath);
 		this.publicInterfaceRevision = publicInterfaceRevision == null ? "" : publicInterfaceRevision;
 		this.implementationRevision = implementationRevision == null ? "" : implementationRevision;
@@ -46,6 +51,7 @@ class CompilerTypedModuleRevision {
 		this.sourceOriginRevision = sourceOriginRevision == null ? CompilerCacheIdentity.encode(["synthetic-module-origin-v1", this.modulePath]) : sourceOriginRevision;
 		this.sourceOriginDescription = sourceOriginDescription == null ? this.modulePath + "@synthetic" : sourceOriginDescription;
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
+		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
 		if (this.modulePath.length == 0)
 			throw "typed module revision requires a module path";
 	}
@@ -59,6 +65,7 @@ class CompilerTypedModuleRevision {
 		final sourceOriginRevision = sourceOrigin.getSourceIdentity();
 		final sourceOriginDescription = sourceOrigin.describeSource();
 		final conditionalCompilation = module.getConditionalCompilation();
+		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
 		publicFacts.push("typed-module-public-interface-v2");
@@ -91,7 +98,7 @@ class CompilerTypedModuleRevision {
 		}
 		final implementationRevision = CompilerCacheIdentity.encode(implementationFacts);
 		return new CompilerTypedModuleRevision(modulePath, publicRevision, implementationRevision, sourceRevision, sourceOriginRevision,
-			sourceOriginDescription, conditionalCompilation);
+			sourceOriginDescription, conditionalCompilation, generatedDeclarations);
 	}
 
 	public static function semanticModulePath(module:TypedModule):String {
@@ -122,6 +129,7 @@ class CompilerTypedModuleRevision {
 		final sourceOriginValues = new Array<String>();
 		final sourceOriginDescriptions = new Array<String>();
 		final conditionalCompilations = new Array<CompilerConditionalCompilationObservation>();
+		final generatedDeclarations = new Array<CompilerGeneratedDeclarationObservation>();
 		final publicValues = new Array<String>();
 		final implementationValues = new Array<String>();
 		for (contribution in contributions) {
@@ -131,6 +139,7 @@ class CompilerTypedModuleRevision {
 			sourceOriginValues.push(contribution.sourceOriginRevision);
 			sourceOriginDescriptions.push(contribution.sourceOriginDescription);
 			conditionalCompilations.push(contribution.conditionalCompilation);
+			generatedDeclarations.push(contribution.generatedDeclarations);
 			publicValues.push(contribution.publicInterfaceRevision);
 			implementationValues.push(contribution.implementationRevision);
 		}
@@ -146,11 +155,14 @@ class CompilerTypedModuleRevision {
 		final conditionalRevisionValues = uniqueSorted([for (conditional in conditionalCompilations) conditional.getCanonicalIdentity()]);
 		if (conditionalRevisionValues.length != 1)
 			throw 'typed module revision merge received conflicting conditional-compilation observations for ${normalizedPath}';
+		final generatedRevisionValues = uniqueSorted([for (generated in generatedDeclarations) generated.getCanonicalIdentity()]);
+		if (generatedRevisionValues.length != 1)
+			throw 'typed module revision merge received conflicting generated-declaration observations for ${normalizedPath}';
 		final sourceRevision = uniqueSourceValues[0];
 		final publicRevision = CompilerCacheIdentity.encode(["typed-module-public-interface-set-v1", normalizedPath].concat(uniqueSorted(publicValues)));
 		final implementationRevision = CompilerCacheIdentity.encode(["typed-module-implementation-set-v1", normalizedPath].concat(uniqueSorted(implementationValues)));
 		return new CompilerTypedModuleRevision(normalizedPath, publicRevision, implementationRevision, sourceRevision, uniqueSourceOriginValues[0],
-			uniqueSourceOriginDescriptions[0], conditionalCompilations[0]);
+			uniqueSourceOriginDescriptions[0], conditionalCompilations[0], generatedDeclarations[0]);
 	}
 
 	static function addPublicClassFacts(out:Array<Null<String>>, typedClass:TypedClass, index:Null<TyperIndex>, packagePath:String,

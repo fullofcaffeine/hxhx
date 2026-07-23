@@ -236,10 +236,6 @@ class Stage3Compiler {
 		return Stage3MacroHostSupport.buildMacroHostExe(repoRoot, extraCp, entrypoints);
 	}
 
-	static function parseGeneratedMembers(members:Array<String>):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
-		return Stage3BuildMacroSupport.parseGeneratedMembers(members);
-	}
-
 	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
 		return Stage3BuildMacroSupport.buildFieldsPayloadForParsed(pm);
 	}
@@ -604,68 +600,11 @@ class Stage3Compiler {
 					continue;
 				}
 
-				final gen = try parseGeneratedMembers(snippets) catch (e:String) {
+				final generatedModule = try Stage3BuildMacroSupport.applyGeneratedMembers(m, snippets) catch (e:String) {
 					closeMacroSession();
 					return error("build fields parse failed: " + modulePath + ": " + e);
 				}
-
-				final oldDecl = pm.getDecl();
-				final oldCls = HxModuleDecl.getMainClass(oldDecl);
-				// Stage4 build-macro bring-up: treat emitted members as "add or replace".
-				//
-				// Why
-				// - Upstream build macros commonly return a full `Array<Field>` where some entries
-				//   are modifications of existing members.
-				// - Our transport is still raw member snippets, so we implement a conservative
-				//   replacement model: if the emitted snippet parses to a member with the same
-				//   name as an existing one, we drop the existing member and keep the new one.
-				//
-				// Non-goal
-				// - True deletion by omission is not supported yet.
-				inline function fnKey(fn:HxFunctionDecl):String {
-					// In our Stage3 bootstrap AST, `static`/visibility parsing is still incomplete for
-					// some member forms. For replacement semantics we therefore match by name only.
-					return HxFunctionDecl.getName(fn);
-				}
-				inline function fieldKey(f:HxFieldDecl):String {
-					return HxFieldDecl.getName(f);
-				}
-
-				final genFnKeys:Map<String, Bool> = new Map();
-				for (fn in gen.functions)
-					genFnKeys.set(fnKey(fn), true);
-				final genFieldKeys:Map<String, Bool> = new Map();
-				for (f in gen.fields)
-					genFieldKeys.set(fieldKey(f), true);
-
-				final keptFns = new Array<HxFunctionDecl>();
-				for (fn in HxClassDecl.getFunctions(oldCls)) {
-					if (!genFnKeys.exists(fnKey(fn)))
-						keptFns.push(fn);
-				}
-				final mergedFns = keptFns.concat(gen.functions);
-
-				final keptFields = new Array<HxFieldDecl>();
-				for (f in HxClassDecl.getFields(oldCls)) {
-					if (!genFieldKeys.exists(fieldKey(f)))
-						keptFields.push(f);
-				}
-				final mergedFields = keptFields.concat(gen.fields);
-				final newCls = new HxClassDecl(HxClassDecl.getName(oldCls), HxClassDecl.getHasStaticMain(oldCls), mergedFns, mergedFields,
-					HxClassDecl.getExtendsPath(oldCls), HxClassDecl.getMetadata(oldCls));
-				final newClasses = new Array<HxClassDecl>();
-				for (c in HxModuleDecl.getClasses(oldDecl)) {
-					if (HxClassDecl.getName(c) == HxClassDecl.getName(oldCls)) {
-						newClasses.push(newCls);
-					} else {
-						newClasses.push(c);
-					}
-				}
-				final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(oldDecl), HxModuleDecl.getImports(oldDecl), newCls, newClasses,
-					HxModuleDecl.getHeaderOnly(oldDecl), HxModuleDecl.getHasToplevelMain(oldDecl));
-				final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
-				out2.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(m), newParsed, ResolvedModule.getSourceOrigin(m),
-					ResolvedModule.getConditionalCompilation(m)));
+				out2.push(generatedModule);
 			}
 			resolvedForTyping = out2;
 		} else if (typeOnly && anyBuildMacros) {

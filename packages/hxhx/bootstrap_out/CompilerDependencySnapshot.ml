@@ -27,7 +27,7 @@ let findModule = fun self (modulePath : string) -> try let __fallback_result_10 
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
 let buildCanonicalIdentity = fun modules2 edges2 -> let values = Obj.magic (HxArray.create ()) in (
-  ignore (HxArray.push values "compiler-dependency-snapshot-v3");
+  ignore (HxArray.push values "compiler-dependency-snapshot-v4");
   ignore (HxArray.push values (string_of_int (HxArray.length modules2)));
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length modules2 do ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic modules2) (!_g)) in (
@@ -40,6 +40,7 @@ let buildCanonicalIdentity = fun modules2 edges2 -> let values = Obj.magic (HxAr
       ignore (HxArray.push values ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginRevision));
       ignore (HxArray.push values ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginDescription));
       ignore (HxArray.push values (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).conditionalCompilation)) ()));
+      ignore (HxArray.push values (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).generatedDeclarations)) ()));
       ignore (HxArray.push values ((Obj.magic hx_module : CompilerTypedModuleRevision.t).publicInterfaceRevision));
       HxArray.push values ((Obj.magic hx_module : CompilerTypedModuleRevision.t).implementationRevision)
     )) done);
@@ -102,7 +103,7 @@ let normalizeModules = fun values -> let tempArray = ref (Obj.magic (HxRuntime.h
             ignore (HxArray.push out hx_module);
             raise (HxRuntime.Hx_continue)
           )) else ());
-          let equivalent = HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginDescription) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginDescription) && HxString.equals (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).publicInterfaceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).publicInterfaceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).implementationRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).implementationRevision) in if not (equivalent) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("compiler dependency snapshot contains conflicting observations for module identity: " ^ HxString.toStdString ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath))) ["Dynamic"; "String"]) else ()
+          let equivalent = HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginDescription) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginDescription) && HxString.equals (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) && HxString.equals (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).publicInterfaceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).publicInterfaceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).implementationRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).implementationRevision) in if not (equivalent) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("compiler dependency snapshot contains conflicting observations for module identity: " ^ HxString.toStdString ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath))) ["Dynamic"; "String"]) else ()
         )
       )
     )) with

@@ -6,6 +6,15 @@
   ],
   "entries": [
     {
+      "path": "packages/hxhx-core/src/CompilerGeneratedDeclarationObservation.hx",
+      "immutable_fields": [
+        "final:EMPTY"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "EMPTY is one immutable observation for modules where no build macro generated declarations. It contains no request, source, or macro-private data and avoids repeating the same SHA-256 work for ordinary modules."
+    },
+    {
       "path": "packages/hxhx-core/src/EmitterStage.hx",
       "immutable_fields": [
         "var:moduleInitTrace",

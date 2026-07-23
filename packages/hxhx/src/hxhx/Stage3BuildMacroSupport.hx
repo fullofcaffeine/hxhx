@@ -14,6 +14,8 @@ import hxhx.macro.MacroRuntimeSession;
 
 	What
 	- Parses generated member snippets into `HxFunctionDecl`/`HxFieldDecl`.
+	- Applies add-or-replace member behavior and attaches a privacy-safe result
+	  revision to the rebuilt module.
 	- Encodes build-field payloads from parsed modules.
 	- Collects build-macro expressions from source text.
 	- Dispatches `Context.onTypeNotFound` hooks through the active macro session.
@@ -39,6 +41,56 @@ class Stage3BuildMacroSupport {
 			fields: HxClassDecl.getFields(cls)
 		};
 		#end
+	}
+
+	/**
+		Apply all generated member snippets to one resolved module.
+
+		Build macros currently use add-or-replace behavior: a generated member with
+		the same name replaces the source member, while other source members remain.
+		The rebuilt module carries a SHA-256 identity of the generated snippets so a
+		future server cannot reuse stale typed declarations when macro output changes.
+	**/
+	public static function applyGeneratedMembers(module:ResolvedModule, members:Array<String>):ResolvedModule {
+		if (module == null)
+			throw "build-macro generated members require a resolved module";
+		if (members == null || members.length == 0)
+			return module;
+		final generated = parseGeneratedMembers(members);
+		final parsed = ResolvedModule.getParsed(module);
+		final oldDeclaration = parsed.getDecl();
+		final oldClass = HxModuleDecl.getMainClass(oldDeclaration);
+		final generatedFunctionNames = new Map<String, Bool>();
+		for (fn in generated.functions)
+			generatedFunctionNames.set(HxFunctionDecl.getName(fn), true);
+		final generatedFieldNames = new Map<String, Bool>();
+		for (field in generated.fields)
+			generatedFieldNames.set(HxFieldDecl.getName(field), true);
+
+		final mergedFunctions = new Array<HxFunctionDecl>();
+		for (fn in HxClassDecl.getFunctions(oldClass))
+			if (!generatedFunctionNames.exists(HxFunctionDecl.getName(fn)))
+				mergedFunctions.push(fn);
+		for (fn in generated.functions)
+			mergedFunctions.push(fn);
+
+		final mergedFields = new Array<HxFieldDecl>();
+		for (field in HxClassDecl.getFields(oldClass))
+			if (!generatedFieldNames.exists(HxFieldDecl.getName(field)))
+				mergedFields.push(field);
+		for (field in generated.fields)
+			mergedFields.push(field);
+
+		final newClass = new HxClassDecl(HxClassDecl.getName(oldClass), HxClassDecl.getHasStaticMain(oldClass), mergedFunctions, mergedFields,
+			HxClassDecl.getExtendsPath(oldClass), HxClassDecl.getMetadata(oldClass));
+		final newClasses = new Array<HxClassDecl>();
+		for (candidate in HxModuleDecl.getClasses(oldDeclaration))
+			newClasses.push(HxClassDecl.getName(candidate) == HxClassDecl.getName(oldClass) ? newClass : candidate);
+		final newDeclaration = new HxModuleDecl(HxModuleDecl.getPackagePath(oldDeclaration), HxModuleDecl.getImports(oldDeclaration), newClass, newClasses,
+			HxModuleDecl.getHeaderOnly(oldDeclaration), HxModuleDecl.getHasToplevelMain(oldDeclaration));
+		final newParsed = new ParsedModule(parsed.getSource(), newDeclaration, parsed.getFilePath());
+		return new ResolvedModule(ResolvedModule.getModulePath(module), ResolvedModule.getFilePath(module), newParsed, ResolvedModule.getSourceOrigin(module),
+			ResolvedModule.getConditionalCompilation(module), CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets(members));
 	}
 
 	public static function buildFieldsPayloadForParsed(pm:ParsedModule):String {

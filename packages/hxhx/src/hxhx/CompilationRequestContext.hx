@@ -350,11 +350,13 @@ class CompilationRequestContext {
 		final dependencyComparison = dependencyReport.comparison;
 		final sourceOriginChanges = dependencyComparison == null ? [] : dependencyComparison.getSourceOriginChanges();
 		final conditionalCompilationChanges = dependencyComparison == null ? [] : dependencyComparison.getConditionalCompilationChanges();
+		final generatedDeclarationChanges = dependencyComparison == null ? [] : dependencyComparison.getGeneratedDeclarationChanges();
 		final publicChanges = dependencyComparison == null ? [] : dependencyComparison.getPublicInterfaceChanges();
 		final implementationChanges = dependencyComparison == null ? [] : dependencyComparison.getImplementationChanges();
 		final invalidations = dependencyComparison == null ? [] : dependencyComparison.getInvalidations();
 		output.stdoutLine("hxhx_server_report.dependency_source_origin_changes=" + sourceOriginChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_conditional_compilation_changes=" + conditionalCompilationChanges.length);
+		output.stdoutLine("hxhx_server_report.dependency_generated_declaration_changes=" + generatedDeclarationChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_public_changes=" + publicChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_implementation_changes=" + implementationChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_predicted_invalidations=" + invalidations.length);

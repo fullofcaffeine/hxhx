@@ -6,7 +6,7 @@
 	so equivalent compilations produce the same observation independent of map
 	iteration order. Equivalent repeated observations of one logical module are
 	coalesced. Two observations that reuse a module name but disagree on source,
-	conditional-compilation choices, public interface, or implementation fail
+	conditional-compilation choices, generated declarations, public interface, or implementation fail
 	instead of silently overwriting one.
 **/
 class CompilerDependencySnapshot {
@@ -39,7 +39,7 @@ class CompilerDependencySnapshot {
 
 	static function buildCanonicalIdentity(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>):String {
 		final values = new Array<Null<String>>();
-		values.push("compiler-dependency-snapshot-v3");
+		values.push("compiler-dependency-snapshot-v4");
 		values.push(Std.string(modules.length));
 		for (module in modules) {
 			values.push(module.modulePath);
@@ -47,6 +47,7 @@ class CompilerDependencySnapshot {
 			values.push(module.sourceOriginRevision);
 			values.push(module.sourceOriginDescription);
 			values.push(module.conditionalCompilation.getCanonicalIdentity());
+			values.push(module.generatedDeclarations.getCanonicalIdentity());
 			values.push(module.publicInterfaceRevision);
 			values.push(module.implementationRevision);
 		}
@@ -75,6 +76,7 @@ class CompilerDependencySnapshot {
 				&& previous.sourceOriginRevision == module.sourceOriginRevision
 				&& previous.sourceOriginDescription == module.sourceOriginDescription
 				&& previous.conditionalCompilation.getCanonicalIdentity() == module.conditionalCompilation.getCanonicalIdentity()
+				&& previous.generatedDeclarations.getCanonicalIdentity() == module.generatedDeclarations.getCanonicalIdentity()
 				&& previous.publicInterfaceRevision == module.publicInterfaceRevision
 				&& previous.implementationRevision == module.implementationRevision;
 			if (!equivalent)

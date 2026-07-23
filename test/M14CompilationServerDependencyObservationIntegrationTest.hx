@@ -345,6 +345,71 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"returning to exact conditional revision A should reproduce the original typed-program observation");
 	}
 
+	/** Prove that real build-macro output is a direct, privacy-safe dependency input. **/
+	static function verifyGeneratedDeclarations(root:String):Void {
+		final generatedRoot = haxe.io.Path.join([root, "generated-declarations"]);
+		ensureDirectory(generatedRoot);
+		final hxmlPath = haxe.io.Path.join([generatedRoot, "build.hxml"]);
+		File.saveContent(haxe.io.Path.join([generatedRoot, "Api.hx"]), [
+			"@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())",
+			"class Api { public static function main():Void {} }"
+		].join("\n"));
+		final args = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"--hxhx-macro-runtime",
+			"inproc",
+			hxmlPath
+		];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+		function writeBuild(variant:String):Void {
+			File.saveContent(hxmlPath, ["-cp .", "-main Api", "-D HXHX_BUILD_VARIANT=" + variant].join("\n") + "\n");
+		}
+
+		writeBuild("int");
+		final firstReply = compile(sourceCache, dependencyCatalog, args);
+		final firstWire = wire(firstReply);
+		assertTrue(!firstReply.isError, "generated-declaration baseline should compile: " + firstWire);
+		final firstSnapshot = reportValue(firstWire, "hxhx_server_report.dependency_snapshot");
+
+		writeBuild("int-body");
+		final bodyReply = compile(sourceCache, dependencyCatalog, args);
+		final bodyWire = wire(bodyReply);
+		assertTrue(!bodyReply.isError, "generated implementation-only edit should compile: " + bodyWire);
+		assertTrue(reportInt(bodyWire, "hxhx_server_report.dependency_generated_declaration_changes") == 1,
+			"changing build-macro output should identify the annotated module even when Api.hx is unchanged");
+		assertTrue(reportInt(bodyWire, "hxhx_server_report.dependency_public_changes") == 0
+			&& reportInt(bodyWire, "hxhx_server_report.dependency_implementation_changes") == 1,
+			"changing only a generated function body should preserve its public interface");
+		assertTrue(reportInt(bodyWire, "hxhx_server_report.dependency_predicted_invalidations") == 1
+			&& bodyWire.indexOf(".module=Api") >= 0,
+			"a generated body-only change should recheck Api without inventing another affected module");
+		assertTrue(bodyWire.indexOf("generated-declarations-changed:Api") >= 0, "the server should explain that Api's generated declarations changed");
+
+		writeBuild("string");
+		final publicReply = compile(sourceCache, dependencyCatalog, args);
+		final publicWire = wire(publicReply);
+		final publicDependencyReport = publicWire.split("\n").filter(line -> line.indexOf("hxhx_server_report.dependency_") >= 0).join("\n");
+		assertTrue(!publicReply.isError, "generated public-interface edit should compile: " + publicWire);
+		assertTrue(reportInt(publicWire, "hxhx_server_report.dependency_generated_declaration_changes") == 1
+			&& reportInt(publicWire, "hxhx_server_report.dependency_public_changes") == 1,
+			"changing a generated return type should report both the macro result and public interface change");
+		assertTrue(publicWire.indexOf("generated-declarations-changed:Api") >= 0,
+			"a generated public signature change should identify the annotated module as the direct cause");
+		assertTrue(publicDependencyReport.indexOf("private-generated-value") < 0,
+			"the dependency report must not expose the generated member's private source text");
+		assertTrue(publicDependencyReport.indexOf(FileSystem.absolutePath(generatedRoot)) < 0,
+			"the generated-declaration report must not expose an absolute workspace path");
+
+		writeBuild("int");
+		final restoredReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!restoredReply.isError, "restored generated-declaration baseline should compile");
+		assertTrue(reportValue(wire(restoredReply), "hxhx_server_report.dependency_snapshot") == firstSnapshot,
+			"returning to exact generated result A should reproduce the original dependency snapshot");
+	}
+
 	static function main():Void {
 		final root = ".tmp/m14_compilation_server_dependency_observation";
 		deleteRecursive(root);
@@ -378,6 +443,7 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			verifySourceOriginShadowing(root);
 			verifySecondaryTypeReplacement(root);
 			verifyConditionalCompilation(root);
+			verifyGeneratedDeclarations(root);
 			final withoutReportArgs = args.filter(argument -> argument != "--hxhx-server-report");
 			final withoutReport = wire(compile(sourceCache, dependencyCatalog, withoutReportArgs));
 			assertTrue(withoutReport.indexOf("hxhx_server_report.dependency_observation") == -1,

@@ -15,6 +15,8 @@
 	  without retaining an absolute path in dependency/cache identity.
 	- `conditionalCompilation`: request-specific `#if` choices kept separately
 	  from reusable parsed syntax.
+	- `generatedDeclarations`: a one-way revision of fields or methods produced
+	  by build macros before typing.
 
 	How:
 	- `ResolverStage` is responsible for constructing these by searching `-cp`
@@ -26,14 +28,16 @@ class ResolvedModule {
 	public final parsed:ParsedModule;
 	public final sourceOrigin:CompilerModuleOrigin;
 	public final conditionalCompilation:CompilerConditionalCompilationObservation;
+	public final generatedDeclarations:CompilerGeneratedDeclarationObservation;
 
 	public function new(modulePath:String, filePath:String, parsed:ParsedModule, ?sourceOrigin:CompilerModuleOrigin,
-			?conditionalCompilation:CompilerConditionalCompilationObservation) {
+			?conditionalCompilation:CompilerConditionalCompilationObservation, ?generatedDeclarations:CompilerGeneratedDeclarationObservation) {
 		this.modulePath = modulePath;
 		this.filePath = filePath;
 		this.parsed = parsed;
 		this.sourceOrigin = sourceOrigin == null ? CompilerModuleOrigin.synthetic(modulePath) : sourceOrigin;
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
+		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
 	}
 
 	/**
@@ -73,5 +77,10 @@ class ResolvedModule {
 	/** Request-specific conditional choices used before parsing this module. **/
 	public static function getConditionalCompilation(m:ResolvedModule):CompilerConditionalCompilationObservation {
 		return m.conditionalCompilation;
+	}
+
+	/** One-way identity of declarations produced by build macros for this module. **/
+	public static function getGeneratedDeclarations(m:ResolvedModule):CompilerGeneratedDeclarationObservation {
+		return m.generatedDeclarations;
 	}
 }

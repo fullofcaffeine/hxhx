@@ -320,6 +320,24 @@ class M14CompilerDependencyObservationTest {
 			conflictingSourceRejected = true;
 		}
 		assertTrue(conflictingSourceRejected, "secondary-type aggregation must reject observations that claim one module path came from different source text");
+		final emptyGeneratedDeclarations = CompilerGeneratedDeclarationObservation.empty();
+		assertTrue(emptyGeneratedDeclarations == CompilerGeneratedDeclarationObservation.empty()
+			&& emptyGeneratedDeclarations.getGeneratedMemberCount() == 0,
+			"ordinary modules should share one immutable empty generated-declaration observation without hashing per module");
+		var conflictingGeneratedDeclarationsRejected = false;
+		try {
+			CompilerTypedModuleRevision.mergeContributions("MultiType", [
+				new CompilerTypedModuleRevision("MultiType", "public", "implementation", "source", null, null,
+					CompilerConditionalCompilationObservation.empty(),
+					CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets(["private-generated-a"])),
+				new CompilerTypedModuleRevision("MultiType", "public", "implementation", "source", null, null,
+					CompilerConditionalCompilationObservation.empty(),
+					CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets(["private-generated-b"]))
+			]);
+		} catch (_) {
+			conflictingGeneratedDeclarationsRejected = true;
+		}
+		assertTrue(conflictingGeneratedDeclarationsRejected, "secondary-type aggregation must reject two generated-declaration results for one source module");
 
 		Sys.println("COMPILER_DEPENDENCY_OBSERVATION:PASS");
 	}

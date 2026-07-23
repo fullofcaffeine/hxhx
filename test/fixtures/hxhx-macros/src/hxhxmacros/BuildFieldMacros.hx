@@ -37,12 +37,21 @@ class BuildFieldMacros {
 
 		Compiler.define("HXHX_BUILD_RAN", "1");
 
-		// Emit a minimal member that our bootstrap parser can ingest.
-		final members = [
-			"public static function generated():Void {",
-			'  trace("from_hxhx_build_macro");',
-			"}"
-		].join("\n");
+		// The two explicit variants let the native server regression prove that
+		// macro output can change while the annotated source file stays unchanged.
+		// Ordinary fixtures omit the define and retain the established member.
+		final variant = Context.definedValue("HXHX_BUILD_VARIANT");
+		final members = switch (variant) {
+			case "int": "public static function generated_answer():Int return 42;";
+			case "int-body": "public static function generated_answer():Int return 43;";
+			case "string": 'public static function generated_answer():String return "private-generated-value";';
+			case _:
+				[
+					"public static function generated():Void {",
+					'  trace("from_hxhx_build_macro");',
+					"}"
+				].join("\n");
+		};
 
 		Compiler.emitBuildFields(modulePath, members);
 	}

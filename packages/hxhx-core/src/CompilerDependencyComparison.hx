@@ -7,14 +7,16 @@
 class CompilerDependencyComparison {
 	final sourceOriginChanges:Array<String>;
 	final conditionalCompilationChanges:Array<String>;
+	final generatedDeclarationChanges:Array<String>;
 	final publicInterfaceChanges:Array<String>;
 	final implementationChanges:Array<String>;
 	final invalidations:Array<CompilerDependencyInvalidation>;
 
-	public function new(sourceOriginChanges:Array<String>, conditionalCompilationChanges:Array<String>, publicInterfaceChanges:Array<String>,
-			implementationChanges:Array<String>, invalidations:Array<CompilerDependencyInvalidation>) {
+	public function new(sourceOriginChanges:Array<String>, conditionalCompilationChanges:Array<String>, generatedDeclarationChanges:Array<String>,
+			publicInterfaceChanges:Array<String>, implementationChanges:Array<String>, invalidations:Array<CompilerDependencyInvalidation>) {
 		this.sourceOriginChanges = sortedCopy(sourceOriginChanges);
 		this.conditionalCompilationChanges = sortedCopy(conditionalCompilationChanges);
+		this.generatedDeclarationChanges = sortedCopy(generatedDeclarationChanges);
 		this.publicInterfaceChanges = sortedCopy(publicInterfaceChanges);
 		this.implementationChanges = sortedCopy(implementationChanges);
 		this.invalidations = invalidations == null ? [] : invalidations.copy();
@@ -27,6 +29,10 @@ class CompilerDependencyComparison {
 	/** Modules whose evaluated `#if` inputs or selected branches changed. **/
 	public function getConditionalCompilationChanges():Array<String>
 		return conditionalCompilationChanges.copy();
+
+	/** Modules whose build-macro generated fields or methods changed. **/
+	public function getGeneratedDeclarationChanges():Array<String>
+		return generatedDeclarationChanges.copy();
 
 	public function getPublicInterfaceChanges():Array<String>
 		return publicInterfaceChanges.copy();

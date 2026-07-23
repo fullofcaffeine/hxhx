@@ -168,7 +168,7 @@ fails the request instead of becoming a stale hit.
 ### Typed-module and dependency observations
 
 When `--hxhx-server-report` is present, hxhx observes the complete typed program
-after typing and generation hooks have finished. It records five related
+after typing and generation hooks have finished. It records six related
 identities for each module:
 
 - the **source revision** says whether that module's direct input changed;
@@ -177,6 +177,9 @@ identities for each module:
 - the **conditional-compilation observation** says which `#if` expressions ran,
   which define keys they actually read, and which branches they selected,
   without retaining raw define values;
+- the **generated-declaration observation** says whether `@:build` macros
+  produced a different set of fields or methods, using only a SHA-256 revision
+  of the generated result rather than retaining generated source text;
 - the **public-interface revision** describes declarations another module can
   use, such as public function signatures; and
 - the **implementation revision** additionally describes the complete source
@@ -186,6 +189,15 @@ This split matters because changing a function body should not force every
 importer to be type checked again when its public signature is unchanged.
 Changing an inline function affects only callers with an explicit inline-call
 edge, because those callers may embed its body.
+
+Build-macro output is a separate direct input because the annotated `.hx` file
+can stay unchanged while a macro adds a different return type or function body.
+The compiler constructs this observation at the same point where it parses and
+applies all generated member snippets. A changed generated body rechecks the
+annotated module; a changed generated public signature then follows ordinary
+public-interface edges to real callers. Reports name the affected module but
+never the generated member text or private macro values. Macro execution still
+runs on every request, and failed or cancelled requests publish no observation.
 
 A **dependency edge** is a plain record saying why one module used another.
 For example, `Main` may depend on `Api` because it imported `Api`, mentioned an
@@ -415,12 +427,13 @@ to cover the remaining compiler facts and prove the predicted affected-module
 set against clean recompilation across the full edit matrix. Only then may the
 project admit sealed typed-module reuse. A **sealed typed module** means a
 completed, validated type-checking result that later requests can read but not
-mutate. It needs deterministic public-API, implementation, body,
-configuration (including more than conditional compilation), macro, and
-dependency revisions before admission.
+mutate. Before reuse is allowed, the compiler needs deterministic revisions for
+public APIs, implementations, function bodies, configuration (including more
+than conditional compilation), broader macro inputs and effects, and module
+dependencies.
 
-Macros, compiler transforms, native plugins, target plans, display recovery,
-parallel requests, and persistent storage remain outside this first cache.
+Macro-result reuse, compiler transforms, native plugins, target plans, display
+recovery, parallel requests, and persistent storage remain outside this first cache.
 Uncertainty is always a miss. No later layer may make the printer, transport, or
 cache catalog a second owner of Haxe behavior.
 

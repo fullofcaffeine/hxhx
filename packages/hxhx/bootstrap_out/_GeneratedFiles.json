@@ -270,6 +270,7 @@
 		"CompilerObservationFingerprint.ml",
 		"CompilerModuleResolution.ml",
 		"CompilerModuleOrigin.ml",
+		"CompilerGeneratedDeclarationObservation.ml",
 		"CompilerDriver.ml",
 		"CompilerDependencySnapshot.ml",
 		"CompilerDependencyPhaseTools.ml",

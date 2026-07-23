@@ -159,6 +159,9 @@ class M14CompilerDependencyEditSequenceTest {
 		].join("\n"), defines).getObservation();
 	}
 
+	static function generatedObservation(value:String):CompilerGeneratedDeclarationObservation
+		return CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets([value]);
+
 	static function main():Void {
 		final sharedA = "class Shared { public static function ordinary():Int return 1; }";
 		final sharedPublicB = 'class Shared { public static function ordinary():String return "one"; }';
@@ -249,6 +252,58 @@ class M14CompilerDependencyEditSequenceTest {
 			"returning to exact conditional revision A should reproduce its dependency snapshot");
 		assertTrue(reasons(CompilerDependencyInvalidator.compare(conditionalB, conditionalAAgain)) == conditionalReason,
 			"conditional A-to-B-to-A comparisons should reproduce deterministic path-safe reasons");
+
+		final generatedAObservation = generatedObservation("private-generated-a");
+		final generatedBObservation = generatedObservation("private-generated-b");
+		final generatedARevision = new CompilerTypedModuleRevision("GeneratedProvider", "public-same", "implementation-same", "source-same", null, null,
+			CompilerConditionalCompilationObservation.empty(), generatedAObservation);
+		final generatedImplementationBRevision = new CompilerTypedModuleRevision("GeneratedProvider", "public-same", "implementation-b", "source-same", null,
+			null, CompilerConditionalCompilationObservation.empty(), generatedBObservation);
+		final generatedA = new CompilerDependencySnapshot([generatedARevision], []);
+		final generatedImplementationB = new CompilerDependencySnapshot([generatedImplementationBRevision], []);
+		final addedWithoutGeneratedDeclarations = CompilerDependencyInvalidator.compare(new CompilerDependencySnapshot([], []),
+			new CompilerDependencySnapshot([
+				new CompilerTypedModuleRevision("AddedGeneratedControl", "public", "implementation", "source")
+			], []));
+		assertTrue(addedWithoutGeneratedDeclarations.getGeneratedDeclarationChanges().length == 0,
+			"adding a module without build-macro output should not be mislabeled as a generated-declaration change");
+		final generatedImplementationComparison = CompilerDependencyInvalidator.compare(generatedA, generatedImplementationB);
+		assertTrue(generatedImplementationComparison.getGeneratedDeclarationChanges().join(",") == "GeneratedProvider",
+			"changing build-macro output should be reported even when annotated source stays identical");
+		assertTrue(affected(generatedImplementationComparison) == "GeneratedProvider",
+			"an implementation-only generated change should recheck its provider without invalidating signature-only callers");
+		final generatedReason = reasons(generatedImplementationComparison);
+		assertTrue(generatedReason.indexOf("generated-declarations-changed:GeneratedProvider") >= 0,
+			"the direct reason should identify the module whose generated declarations changed");
+		assertTrue(generatedReason.indexOf("private-generated-a") < 0 && generatedReason.indexOf("private-generated-b") < 0,
+			"generated-declaration reasons must not reveal macro output");
+		assertTrue(generatedA.getCanonicalIdentity().indexOf("private-generated-a") < 0
+			&& generatedImplementationB.getCanonicalIdentity().indexOf("private-generated-b") < 0,
+			"the long-lived dependency identity must not retain raw generated member text");
+
+		final generatedConsumer = new CompilerTypedModuleRevision("GeneratedConsumer", "consumer-public", "consumer-implementation", "consumer-source");
+		final generatedPublicBRevision = new CompilerTypedModuleRevision("GeneratedProvider", "public-b", "implementation-b", "source-same", null, null,
+			CompilerConditionalCompilationObservation.empty(), generatedBObservation);
+		final generatedEdge = new CompilerDependencyEdge("GeneratedConsumer", "GeneratedProvider", CompilerDependencyPhase.SharedTyping,
+			CompilerDependencyKind.PublicInterface, "declaration:GeneratedProvider.answer");
+		final generatedPublicBefore = new CompilerDependencySnapshot([generatedARevision, generatedConsumer], [generatedEdge]);
+		final generatedPublicAfter = new CompilerDependencySnapshot([generatedPublicBRevision, generatedConsumer], [generatedEdge]);
+		final generatedPublicComparison = CompilerDependencyInvalidator.compare(generatedPublicBefore, generatedPublicAfter);
+		assertTrue(affected(generatedPublicComparison) == "GeneratedConsumer,GeneratedProvider",
+			"a generated public signature change should continue through ordinary caller dependencies");
+		final generatedConsumerReason = generatedPublicComparison.reasonFor("GeneratedConsumer");
+		assertTrue(generatedConsumerReason != null
+			&& generatedConsumerReason.describe().indexOf("generated-declarations-changed:GeneratedProvider") >= 0
+			&& generatedConsumerReason.describe().indexOf("public-interface:GeneratedConsumer->GeneratedProvider") >= 0,
+			"a propagated reason should retain both the macro-output cause and caller edge");
+		final generatedAAgain = new CompilerDependencySnapshot([
+			new CompilerTypedModuleRevision("GeneratedProvider", "public-same", "implementation-same", "source-same", null, null,
+				CompilerConditionalCompilationObservation.empty(), generatedObservation("private-generated-a"))
+		], []);
+		assertTrue(generatedA.getCanonicalIdentity() == generatedAAgain.getCanonicalIdentity(),
+			"returning to exact generated result A should reproduce its dependency snapshot");
+		assertTrue(reasons(CompilerDependencyInvalidator.compare(generatedImplementationB, generatedAAgain)) == generatedReason,
+			"generated-declaration A-to-B-to-A comparisons should reproduce deterministic privacy-safe reasons");
 
 		final inlineA = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 1; }"));
 		final inlineB = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 2; }"));
