@@ -1,3 +1,10 @@
+# [0.33.0](https://github.com/fullofcaffeine/hxhx/compare/v0.32.0...v0.33.0) (2026-07-23)
+
+
+### Features
+
+* **hxhx:** observe build macro declarations ([1a9441f](https://github.com/fullofcaffeine/hxhx/commit/1a9441f60632fcd4ae24e373dc3ff8600a5c26c6))
+
 # [0.32.0](https://github.com/fullofcaffeine/hxhx/compare/v0.31.0...v0.32.0) (2026-07-23)
 
 
