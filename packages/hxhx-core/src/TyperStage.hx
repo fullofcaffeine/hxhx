@@ -116,7 +116,14 @@ class TyperStage {
 		if (provider == null || memberName == null || memberName.length == 0)
 			return false;
 		final field = provider.fieldInfo(memberName);
-		return (field != null && field.getIsStatic()) || provider.staticMethodCandidates(memberName).length > 0;
+		if (field != null && field.getIsStatic() && field.getIsPublic())
+			return true;
+		for (candidate in provider.staticMethodCandidates(memberName)) {
+			final declaration = provider.declarationForSignature(candidate);
+			if (declaration != null && declaration.getIsPublic())
+				return true;
+		}
+		return false;
 	}
 
 	/** Load one module path and return every type that its current source declares. **/

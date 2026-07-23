@@ -2294,12 +2294,13 @@ echo "$out" | grep -q "^typed_modules=11$"
 echo "$out" | grep -q "^header_only_modules=0$"
 parsed_methods_total="$(printf "%s\n" "$out" | sed -n 's/^parsed_methods_total=//p')"
 # This fixture has 95 real method bodies under the pinned Haxe 4.3.7 stdlib.
-# Keep a narrow allowance for intentional fixture growth without accepting the
-# old false-positive graph, which parsed Math.hx three extra times under the
-# made-up module names Math.NEGATIVE_INFINITY, Math.NaN, and
-# Math.POSITIVE_INFINITY and inflated this count to 167.
-if ! printf "%s\n" "$parsed_methods_total" | grep -Eq '^[0-9]+$' || [ "$parsed_methods_total" -lt 90 ] || [ "$parsed_methods_total" -gt 110 ]; then
-  echo "Expected Stage3 type-only full graph to parse 90-110 real method bodies, got: ${parsed_methods_total:-missing}" >&2
+# Keep this exact so a missing method and an accidental duplicate both fail.
+# The old false-positive graph parsed Math.hx three extra times under the made-up
+# module names Math.NEGATIVE_INFINITY, Math.NaN, and Math.POSITIVE_INFINITY,
+# inflating this count to 167. Intentional fixture growth must update this
+# expected count in the same reviewed change.
+if [ "$parsed_methods_total" != "95" ]; then
+  echo "Expected Stage3 type-only full graph to parse exactly 95 real method bodies, got: ${parsed_methods_total:-missing}" >&2
   printf "%s\n" "$out" >&2
   exit 1
 fi

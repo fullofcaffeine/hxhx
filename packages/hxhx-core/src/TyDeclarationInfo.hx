@@ -15,9 +15,10 @@ class TyDeclarationInfo {
 	final sourceDeclaration:HxFunctionDecl;
 	final position:HxPos;
 	final isInline:Bool;
+	final isPublic:Bool;
 
 	public function new(identity:TyDeclarationId, owner:TyNominalTypeId, signature:TyFunSig, metadata:Array<String>, sourceDeclaration:HxFunctionDecl,
-			position:HxPos, isInline:Bool) {
+			position:HxPos, isInline:Bool, isPublic:Bool) {
 		this.identity = identity;
 		this.owner = owner;
 		this.signature = signature;
@@ -25,6 +26,7 @@ class TyDeclarationInfo {
 		this.sourceDeclaration = sourceDeclaration;
 		this.position = position == null ? HxPos.unknown() : position;
 		this.isInline = isInline;
+		this.isPublic = isPublic;
 	}
 
 	public function getIdentity():TyDeclarationId
@@ -50,6 +52,10 @@ class TyDeclarationInfo {
 
 	public function getIsInline():Bool
 		return isInline;
+
+	/** Whether code in another module may name this declaration. **/
+	public function getIsPublic():Bool
+		return isPublic;
 
 	/** Whether `import Owner.*` must withhold this method from bare-name lookup. **/
 	public function getNoImportGlobal():Bool {

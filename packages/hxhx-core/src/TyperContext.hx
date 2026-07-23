@@ -104,7 +104,7 @@ class TyperContext {
 				case _: provider.fieldInfo(name);
 			};
 			final excludedByWildcard = directive.getKind().match(StaticWildcardImport) && field != null && field.getNoImportGlobal();
-			if (field != null && field.getIsStatic() && !excludedByWildcard)
+			if (field != null && field.getIsStatic() && field.getIsPublic() && !excludedByWildcard)
 				return field;
 		}
 		return null;
@@ -125,11 +125,15 @@ class TyperContext {
 			if (memberName.length == 0)
 				continue;
 			final candidates = provider.staticMethodCandidates(memberName);
-			final eligible = directive.getKind().match(StaticWildcardImport) ? [
+			final publicCandidates = [
 				for (candidate in candidates)
-					if (provider.declarationForSignature(candidate) == null
-						|| !provider.declarationForSignature(candidate).getNoImportGlobal()) candidate
-			] : candidates;
+					if (provider.declarationForSignature(candidate) != null
+						&& provider.declarationForSignature(candidate).getIsPublic()) candidate
+			];
+			final eligible = directive.getKind().match(StaticWildcardImport) ? [
+				for (candidate in publicCandidates)
+					if (!provider.declarationForSignature(candidate).getNoImportGlobal()) candidate
+			] : publicCandidates;
 			if (eligible.length > 0)
 				return new TyImportedStaticMethod(provider, memberName, eligible);
 		}

@@ -124,6 +124,41 @@ class M14ModuleImportAliasTargetIntegrationTest {
 		return MacroStage.expandProgram(typed, []);
 	}
 
+	/**
+		Build a toolchain-check fixture that isolates import aliases from target
+		features such as inherited method dispatch and Haxe-array indexing.
+	**/
+	static function compiledAliasProgram():backend.GenIrProgram {
+		return programFromSources([
+			{
+				path: "model/Api.hx",
+				module: "model.Api",
+				source: [
+					"package model;",
+					"class Api {",
+					"  public static var label:String = \"service\";",
+					"  public static var PI:Int = 3;",
+					"  public static function twice(value:Int):Int return value * 2;",
+					"}"
+				].join("\n")
+			},
+			{
+				path: "Main.hx",
+				module: "Main",
+				source: [
+					"import model.Api as Service;",
+					"import model.Api.PI;",
+					"import model.Api.twice as double;",
+					"class Main {",
+					"  public static function main():Void {",
+					"    Sys.println(\"alias-target:\" + Service.label + \":\" + Std.string(PI) + \":\" + Std.string(double(4)));",
+					"  }",
+					"}"
+				].join("\n")
+			}
+		]);
+	}
+
 	/** Build the smallest program that proves generated Java follows Haxe's later-import-wins rule. **/
 	static function javaCollisionProgram():backend.GenIrProgram {
 		return programFromSources([
@@ -298,8 +333,10 @@ class M14ModuleImportAliasTargetIntegrationTest {
 					"class Api {",
 					"  public static var PI:Int = 3;",
 					"  @:noImportGlobal public static var hidden:Int = 4;",
+					"  private static var privateValue:Int = 5;",
 					"  public static function twice(value:Int):Int return value * 2;",
 					"  @:noImportGlobal public static function hiddenMethod():Int return 4;",
+					"  private static function privateMethod():Int return 5;",
 					"}",
 					"class NestedBase {}",
 					"private class Hidden {}"
@@ -351,6 +388,15 @@ class M14ModuleImportAliasTargetIntegrationTest {
 				module: "PrivateSignatureMain",
 				source: "import model.Api; class PrivateSignatureMain { public var value:Hidden; }"
 			},
+			{
+				path: "PrivateStaticImportMain.hx",
+				module: "PrivateStaticImportMain",
+				source: [
+					"import model.Api.privateValue;",
+					"import model.Api.privateMethod;",
+					"class PrivateStaticImportMain {}"
+				].join("\n")
+			},
 			{path: "Main.hx", module: "Main", source: "class Main {}"}
 		];
 		final resolved = [
@@ -400,6 +446,23 @@ class M14ModuleImportAliasTargetIntegrationTest {
 		assertTrue(exactHiddenContext.importedStaticField("hidden") != null
 			&& exactHiddenContext.importedStaticMethod("hiddenMethod") != null,
 			"@:noImportGlobal should affect wildcard imports without rejecting an explicit member import");
+		final exactPrivateFieldSource = HxModuleDirective.normalImport("model.Api.privateValue");
+		final exactPrivateMethodSource = HxModuleDirective.normalImport("model.Api.privateMethod");
+		final exactPrivateContext = new TyperContext(index, "Main.hx", "Main", "", [exactPrivateFieldSource, exactPrivateMethodSource], "Main", null, [
+			new TyModuleDirective(exactPrivateFieldSource, StaticMemberImport("privateValue"), [api.getIdentity()]),
+			new TyModuleDirective(exactPrivateMethodSource, StaticMemberImport("privateMethod"), [api.getIdentity()])
+		]);
+		assertTrue(exactPrivateContext.importedStaticField("privateValue") == null
+			&& exactPrivateContext.importedStaticMethod("privateMethod") == null,
+			"an explicit static import must not expose another type's private member");
+
+		final privateImportModule = resolved.filter(function(module) return ResolvedModule.getModulePath(module) == "PrivateStaticImportMain")[0];
+		final privateImportLoader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		privateImportLoader.markResolvedAlready(resolved);
+		final privateImportTyped = TyperStage.typeResolvedModule(privateImportModule, index, privateImportLoader, true);
+		final privateImportKinds = privateImportTyped.getEnv().getResolvedDirectives().map(function(directive) return directive.canonicalIdentity());
+		assertTrue(privateImportKinds.join("\n") == "import-normal:model.Api.privateValue=>unresolved\nimport-normal:model.Api.privateMethod=>unresolved",
+			"directive resolution must reject exact imports of private static members: " + privateImportKinds.join(", "));
 
 		final usingOrderModule = resolved.filter(function(module) return ResolvedModule.getModulePath(module) == "UsingOrderMain")[0];
 		final usingOrderLoader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
@@ -463,6 +526,21 @@ class M14ModuleImportAliasTargetIntegrationTest {
 		assertTrue(StringTools.trim(result.stdout) == "alias-target:base:role:service:3:8", label + " alias runtime output mismatch: " + result.stdout);
 	}
 
+	/** Compile the alias fixture with target toolchains when they are installed. **/
+	static function assertCompiledTargetOutput(targetId:String, root:String):Void {
+		final available = switch (targetId) {
+			case "java-native": commandExists("java") && commandExists("javac") && commandExists("jar");
+			case "cs-native": commandExists("mcs") || commandExists("csc");
+			case _: false;
+		};
+		if (!available)
+			return;
+		final outputRoot = Path.join([root, targetId + "-compiled"]);
+		final result = BackendRegistry.requireForTarget(targetId)
+			.emit(compiledAliasProgram(), new BackendContext(outputRoot, null, "Main", true, true, new StringMap<String>()));
+		assertTrue(FileSystem.exists(result.entryPath), targetId + " did not produce its compiled alias artifact");
+	}
+
 	static function main():Void {
 		final root = Path.normalize(".tmp/m14_module_import_alias_targets_" + Std.string(Date.now().getTime()));
 		deleteRecursive(root);
@@ -482,6 +560,8 @@ class M14ModuleImportAliasTargetIntegrationTest {
 			assertRuntime("python3", python, "Python");
 			assertRuntime("php", php, "PHP");
 			assertRuntime("lua", lua, "Lua");
+			assertCompiledTargetOutput("java-native", root);
+			assertCompiledTargetOutput("cs-native", root);
 			assertPhpUsingOrder(root);
 		} catch (error:Dynamic) {
 			thrown = error;

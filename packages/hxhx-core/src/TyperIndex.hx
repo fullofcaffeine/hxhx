@@ -667,7 +667,8 @@ class TyperIndex {
 				signatureOccurrences.set(signatureKey, occurrence + 1);
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);
 				declarations.push(new TyDeclarationInfo(declarationId, identity, signature, functionMetadata, functionDeclaration,
-					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline")));
+					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline"),
+					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public));
 			}
 
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {
