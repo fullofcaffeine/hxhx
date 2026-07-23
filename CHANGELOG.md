@@ -1,3 +1,10 @@
+## [0.33.3](https://github.com/fullofcaffeine/hxhx/compare/v0.33.2...v0.33.3) (2026-07-23)
+
+
+### Bug Fixes
+
+* **tooling:** distinguish bootstrap stalls from slow work ([e653cea](https://github.com/fullofcaffeine/hxhx/commit/e653ceacf0dff0bb89dbacfff7d7b96341cf889c))
+
 ## [0.33.2](https://github.com/fullofcaffeine/hxhx/compare/v0.33.1...v0.33.2) (2026-07-23)
 
 
