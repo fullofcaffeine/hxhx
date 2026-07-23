@@ -571,16 +571,48 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       - `HXHX_BOOTSTRAP_VERIFY=0` (skip snapshot verify)
   - If heartbeat is disabled (`HXHX_STAGE0_HEARTBEAT=0`), optional diagnostics are available via
     `HXHX_STAGE0_DIAG_EVERY=<seconds>` (or `--diag-every <seconds>`).
-  - Stage0 emit has two different safety limits:
+  - Stage0 emit has two different safety limits. This watchdog exists because a full bootstrap can
+    be silent for more than 15 minutes while still doing useful compiler work. A single elapsed-time
+    limit used to mistake that healthy work for a hang, while removing the limit entirely would let
+    a genuinely stuck process consume a runner indefinitely.
     - `HXHX_STAGE0_STALL_TIMEOUT_SECS=900` stops a compiler only after 15 minutes with no
       observed CPU-time change, log growth, or process-tree change. A quiet compiler that is
-      still using CPU is therefore allowed to finish.
+      still using CPU is therefore allowed to finish. “CPU-time change” means the operating system's
+      accumulated CPU time increased; a process does not have to remain at a particular instantaneous
+      CPU percentage.
     - `HXHX_STAGE0_FAILFAST_SECS=3600` is the absolute one-hour ceiling. It still stops a
       compiler that keeps using CPU forever. Existing profiling commands that set
       `HXHX_STAGE0_FAILFAST_SECS` retain their absolute-duration meaning.
     - `HXHX_STAGE0_PROGRESS_POLL_SECS=5` controls how often the script checks those progress
       signals. Both timeout paths report which limit fired, the last observed progress, the
       process identity, and whether the complete process tree was stopped.
+    - Set either timeout to `0` only when deliberately disabling that limit. Disabling the stall
+      limit does not disable the absolute limit, and disabling the absolute limit does not disable
+      stall detection.
+  - Example: allow up to 10 quiet minutes, retain a 30-minute absolute ceiling, and preserve the
+    result as a machine-readable report:
+
+    ```bash
+    HXHX_STAGE0_STALL_TIMEOUT_SECS=600 \
+    HXHX_STAGE0_FAILFAST_SECS=1800 \
+      bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
+        --full --force \
+        --report-json .tmp/bootstrap-report.json
+    ```
+
+    A timeout exits with status `124`. The report distinguishes `timeout_kind: "stall"` from
+    `timeout_kind: "hard"`, records elapsed time and the last progress reason, and records whether
+    descendant cleanup completed. This makes a real hang distinguishable from a slow successful
+    compile in local logs and CI evidence.
+  - Implementation ownership:
+    - `scripts/hxhx/regenerate-hxhx-bootstrap.sh` owns configuration, starts and waits for Haxe,
+      prints heartbeat diagnostics, and writes the final report.
+    - `scripts/hxhx/stage0-process-watchdog.sh` owns progress observation and cleanup of the supplied
+      compiler process tree. It takes one fixed process-table snapshot per observation so monitoring
+      a busy compiler cannot itself become an unbounded process walk.
+    - `scripts/ci/bootstrap-regen-watchdog-fixture-test.sh` checks a silent CPU-active compiler, a
+      stalled compiler with descendants, the absolute ceiling, cleanup, reports, and a high-fan-out
+      process tree.
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Autocreated `.tmp/hxhx-bootstrap-build.*` workdirs are pruned on later runs; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` or disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.

@@ -5,11 +5,17 @@ set -euo pipefail
 # compiler from a process that has stopped making observable progress.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
+WATCHDOG_SCRIPT="$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hxhx-bootstrap-watchdog.XXXXXX")"
 FAKE_BIN_DIR="$TMP_DIR/bin"
 FAKE_HAXE="$FAKE_BIN_DIR/haxe"
+TREE_ROOT_PID=""
 
 cleanup() {
+	if [ -n "$TREE_ROOT_PID" ]; then
+		stage0_watchdog_terminate_process_tree "$TREE_ROOT_PID" 2>/dev/null || true
+		wait "$TREE_ROOT_PID" >/dev/null 2>&1 || true
+	fi
 	rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -20,6 +26,28 @@ fail() {
 }
 
 mkdir -p "$FAKE_BIN_DIR"
+source "$WATCHDOG_SCRIPT"
+
+# A compiler can briefly own many helper processes. Process-tree observation
+# must remain bounded and include those descendants instead of chasing a
+# changing process table indefinitely.
+bash -c 'trap "exit 0" TERM; for _ in $(seq 1 80); do sleep 20 & done; wait' >/dev/null 2>&1 &
+TREE_ROOT_PID="$!"
+for _ in $(seq 1 20); do
+	[ "$(pgrep -P "$TREE_ROOT_PID" 2>/dev/null | wc -l | tr -d ' ')" -ge 80 ] && break
+	sleep 0.1
+done
+tree_start="$(date +%s)"
+tree_pids="$(stage0_watchdog_collect_process_tree_pids "$TREE_ROOT_PID")"
+tree_elapsed="$(($(date +%s) - tree_start))"
+[ "$tree_elapsed" -lt 5 ] \
+	|| fail "process-tree collection took ${tree_elapsed}s; expected a bounded snapshot"
+[ "$(wc -w <<<"$tree_pids" | tr -d ' ')" -ge 81 ] \
+	|| fail "process-tree collection omitted high-fan-out descendants"
+stage0_watchdog_terminate_process_tree "$TREE_ROOT_PID"
+wait "$TREE_ROOT_PID" >/dev/null 2>&1 || true
+TREE_ROOT_PID=""
+
 cat >"$FAKE_HAXE" <<'FAKE_HAXE_SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail

@@ -2,40 +2,62 @@
 
 # Process watchdog used by stage0 bootstrap regeneration.
 #
-# Callers start the compiler and keep ownership of `wait`. This module only
-# observes the owned process tree, decides whether a stall or absolute timeout
-# has fired, and terminates that same tree when asked.
+# Why this exists:
+# A full hxhx bootstrap can spend more than 15 minutes compiling without
+# writing to its log. An elapsed-time-only "hang" limit can therefore kill a
+# healthy compiler. Removing all limits would have the opposite problem: a
+# genuinely stuck compiler could occupy CPU, memory, and CI capacity forever.
+#
+# What this module decides:
+# The soft stall limit resets when the owned compiler tree accumulates CPU
+# time, grows its log, or changes process shape. The separate hard limit always
+# measures total elapsed time and cannot be extended by progress. Timeout
+# cleanup is limited to the process tree rooted at the PID supplied by the
+# caller.
+#
+# How ownership is divided:
+# The regeneration script starts the compiler, calls these functions once per
+# second, owns `wait`, writes diagnostics and JSON reports, and chooses the
+# configured limits. This focused module observes a bounded process-table
+# snapshot, records why progress was recognized, decides which limit fired,
+# and stops only the supplied process tree when asked. It never starts a
+# compiler, chooses policy defaults, or writes build output.
 
 stage0_watchdog_collect_process_tree_pids() {
 	local root_pid="$1"
-	local frontier="$root_pid"
-	local seen=" $root_pid "
-	local collected="$root_pid"
-	local parent_pid=""
-	local child_pids=""
-	local child_pid=""
-	local next_frontier=""
 
-	while [ -n "$frontier" ]; do
-		next_frontier=""
-		for parent_pid in $frontier; do
-			child_pids="$(pgrep -P "$parent_pid" 2>/dev/null || true)"
-			if [ -z "$child_pids" ]; then
-				continue
-			fi
-			for child_pid in $child_pids; do
-				if [[ "$seen" == *" $child_pid "* ]]; then
-					continue
-				fi
-				seen="${seen}${child_pid} "
-				collected="${collected} ${child_pid}"
-				next_frontier="${next_frontier} ${child_pid}"
-			done
-		done
-		frontier="$(printf '%s\n' "$next_frontier" | xargs 2>/dev/null || true)"
-	done
-
-	printf '%s\n' "$collected"
+	# Work from one process-table snapshot. Repeatedly invoking pgrep while
+	# walking a busy compiler can chase short-lived descendants and make the
+	# observer itself expensive or non-terminating. The fixed snapshot makes
+	# collection bounded while still finding children at every depth.
+	ps -axo pid=,ppid= 2>/dev/null \
+		| awk -v root_pid="$root_pid" '
+			{
+				pids[NR] = $1
+				parents[NR] = $2
+			}
+			END {
+				in_tree[root_pid] = 1
+				order[++count] = root_pid
+				changed = 1
+				while (changed) {
+					changed = 0
+					for (i = 1; i <= NR; i++) {
+						pid = pids[i]
+						parent = parents[i]
+						if (!in_tree[pid] && in_tree[parent]) {
+							in_tree[pid] = 1
+							order[++count] = pid
+							changed = 1
+						}
+					}
+				}
+				for (i = 1; i <= count; i++) {
+					printf "%s%s", (i == 1 ? "" : " "), order[i]
+				}
+				printf "\n"
+			}
+		'
 }
 
 stage0_watchdog_process_tree_cpu_signature() {
