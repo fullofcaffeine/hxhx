@@ -64,12 +64,28 @@ Use a `thinking:*` label on active beads so execution effort matches task risk.
 
 Agent policy:
 
-- Before starting substantial work on a newly selected task, use the globally
-  installed `$calibrate-reasoning-effort` skill when it is available. Tell the
-  user the recommended `thinking:*` level and give a brief plain-language
-  reason. Treat this as a visible calibration, not an approval request;
-  continue normally unless the task reaches a separate user-requested stop
-  threshold below.
+- At the start of every newly selected task, use the globally installed
+  `$calibrate-reasoning-effort` skill before substantial work. A task means a
+  tracked Bead/issue or a distinct user-requested outcome, not each command or
+  tiny implementation step inside the same task.
+  - Tell the user the recommended `thinking:*` level and give a brief
+    plain-language reason.
+  - Immediately use the skill's supported runtime control to apply that level
+    for subsequent turns.
+  - In the same progress update, report either `Applied reasoning for
+    subsequent turns: <level>` or `Reasoning recommendation not applied:
+    <cause>`. Do not leave the user guessing whether the recommendation was
+    actually applied.
+  - Treat calibration as a visible settings update, not an approval request;
+    continue normally unless the task reaches a separate user-requested stop
+    threshold below.
+- Immediately after closing each task, use `$calibrate-reasoning-effort` again.
+  Compare the completed task with its initial calibration and record whether
+  the selected level was sufficient, unnecessarily high, or too low. If
+  another task is already known, recommend and apply the level for that next
+  task in the same update. If no next task is known, report that no new level
+  was applied instead of inventing work or changing the setting merely because
+  the agent is idle.
 - A `thinking:*` label records the level the task warrants; it does not prove
   that the active Codex runtime changed its reasoning setting. If no current
   tool can apply the setting, recommend it clearly and never claim an automatic
