@@ -19,7 +19,7 @@
 -lib reflaxe
 
 # Library version define
--D reflaxe.ocaml=0.31.0
+-D reflaxe.ocaml=0.32.0
 # Reflaxe target parameters
 -D ocaml
 -D retain-untyped-meta

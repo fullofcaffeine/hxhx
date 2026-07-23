@@ -1,3 +1,10 @@
+# [0.32.0](https://github.com/fullofcaffeine/hxhx/compare/v0.31.0...v0.32.0) (2026-07-23)
+
+
+### Features
+
+* **hxhx:** observe conditional compilation inputs ([4206911](https://github.com/fullofcaffeine/hxhx/commit/4206911172190c988df982a0af61f403c32133f9))
+
 # [0.31.0](https://github.com/fullofcaffeine/hxhx/compare/v0.30.0...v0.31.0) (2026-07-23)
 
 
