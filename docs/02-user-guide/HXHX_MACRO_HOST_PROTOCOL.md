@@ -263,6 +263,40 @@ In current bring-up, this method is used in two ways:
 - indirectly, when an allowlisted `@:build(...)` entrypoint returns `Array<haxe.macro.Expr.Field>`:
   the macro host converts *new* fields into member snippets and forwards them via `compiler.emitBuildFields`
 
+#### When the declared build macro runs
+
+A **module** here is the Haxe source unit the compiler is preparing, usually one
+`.hx` file. Native Stage3 does not read every source file before typing starts.
+It begins with the requested root such as `-main Main`, then loads other modules
+when an import or type reference requires them.
+
+For the currently supported build-macro subset, both routes now follow the same
+order:
+
+1. find the module and read its declared `@:build` expressions;
+2. run those expressions once for this compiler request;
+3. merge the generated fields into the parsed class; and
+4. only then expose the class to type checking.
+
+For example, `Main` may call `Api.generated()` even when `Api` was not part of
+the initial root set: if `Api` declares the supported macro that creates
+`generated`, the member exists before `Main` is type checked. Repeated
+references to `Api` do not rerun its build macro during the same request. Macro
+results and typed classes are not reused between compiler-server requests yet.
+
+Current limitation: an `extends Base` or `implements Interface` declaration by
+itself does not yet make the native typer load that base/interface module. This
+is a general demand-driven type-loading gap, tracked by `haxe_ocaml-nf0wr`, not
+a second build-macro path. An ordinary import or type reference uses the
+supported preparation order above.
+
+When hxhx automatically builds an external macro-host executable, that
+executable contains the macro entrypoints known when the session starts. If a
+later module introduces a different entrypoint that was not compiled into that
+host, hxhx stops with an actionable error instead of silently skipping the
+macro. For projects with several build-macro entrypoints, configure a macro host
+that contains the complete project set.
+
 - request: `req <id> compiler.emitBuildFields m=<...> s=<...>`
   - `m`: module path (e.g. `demo.Main`)
   - `s`: Haxe class-member snippet(s) to merge into that module’s main class

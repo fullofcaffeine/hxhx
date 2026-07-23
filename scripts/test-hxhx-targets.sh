@@ -2588,6 +2588,30 @@ grep -q 'let rec generated ()' "$tmpbuild/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: lazy @:build module is prepared before typing"
+tmpbuild_lazy="$tmpdir/build_fields_lazy_test"
+mkdir -p "$tmpbuild_lazy/src"
+cat >"$tmpbuild_lazy/src/Api.hx" <<'HX'
+@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())
+class Api {}
+HX
+cat >"$tmpbuild_lazy/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    Api.generated();
+    Api.generated();
+  }
+}
+HX
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_lazy/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_lazy/out")"
+test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Api\]\[0\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$')" -eq 1
+echo "$out" | grep -q "^build_macro_run\[Api\]\[0\]=ok$"
+echo "$out" | grep -q "^build_fields\[Api\]=1$"
+grep -q 'let rec generated ()' "$tmpbuild_lazy/out/Api.ml"
+test "$(printf '%s\n' "$out" | grep -c '^from_hxhx_build_macro$')" -eq 2
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: @:build return Array<Field> emits delta members"
 tmpbuild_ret="$tmpdir/build_fields_return_test"
 mkdir -p "$tmpbuild_ret/src"

@@ -61,7 +61,7 @@ However, Gate 1 (upstream `compile-macro.hxml`) is *macro heavy*, so we should e
 | Capability | Compat/delegated lanes (`--ocaml-eval`, `--compat ...`) | Native lanes (`--ocaml`, `--js <file>`) | Notes |
 | --- | --- | --- | --- |
 | CLI `--macro ...` | ✅ via upstream stage0 `haxe` | 🟡 supported for current native macro-host subset | See native protocol limits below. |
-| `@:build` / `@:autoBuild` | ✅ upstream behavior | 🟡 supported for current bring-up subset | Build-field shape is intentionally constrained in bring-up. |
+| `@:build` / `@:autoBuild` | ✅ upstream behavior | 🟡 supported for current bring-up subset | Build-field shape is intentionally constrained. Supported macros run before typing for root modules and modules found later through imports or ordinary type references. Inheritance-only discovery is not complete yet. |
 | Macro hook registration (`onAfterTyping`, `onGenerate`, ...) | ✅ upstream behavior | 🟡 supported for current bring-up subset | Hook callbacks are routed through the native macro host. |
 | Library macro initializers | ✅ automatic (upstream behavior) | 🟡 opt-in during bring-up (`HXHX_RUN_HAXELIB_MACROS=1`) | Keeps native lanes deterministic while maturing. |
 | Promoted native macro modules (`macro.loadNativeModule`) | N/A | ✅ supported (with ABI/version validation) | Used by native macro-module promotion tests. |

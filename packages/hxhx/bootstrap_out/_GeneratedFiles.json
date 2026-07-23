@@ -40,6 +40,8 @@
 		"hxhx_Stage3CustomizationSupport.ml",
 		"hxhx_Stage3Compiler.ml",
 		"hxhx_Stage3BuildMacroSupport.ml",
+		"hxhx_Stage3BuildMacroPreparer.ml",
+		"hxhx_Stage3BuildMacroPreparationError.ml",
 		"hxhx_Stage3BackendPluginSupport.ml",
 		"hxhx_Stage3Args.ml",
 		"hxhx_Stage1Compiler.ml",

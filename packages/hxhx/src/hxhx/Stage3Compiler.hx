@@ -212,36 +212,12 @@ class Stage3Compiler {
 	}
 	#end
 
-	static function inferRepoRootForScripts():String {
-		return Stage3PathSupport.inferRepoRootForScripts();
-	}
-
 	static function trim(s:String):String {
 		return NullableRuntimeString.trimToEmpty(s);
 	}
 
 	static function parseDelimitedList(raw:String):Array<String> {
 		return Stage3MacroHostSupport.parseDelimitedList(raw);
-	}
-
-	static function isBuiltinMacroExpr(expr:String):Bool {
-		return Stage3MacroHostSupport.isBuiltinMacroExpr(expr);
-	}
-
-	static function shouldAutoBuildMacroHost():Bool {
-		return Stage3MacroHostSupport.shouldAutoBuildMacroHost();
-	}
-
-	static function buildMacroHostExe(repoRoot:String, extraCp:Array<String>, entrypoints:Array<String>):String {
-		return Stage3MacroHostSupport.buildMacroHostExe(repoRoot, extraCp, entrypoints);
-	}
-
-	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
-		return Stage3BuildMacroSupport.buildFieldsPayloadForParsed(pm);
-	}
-
-	static function collectBuildMacroExprs(source:String, modulePath:String):Array<String> {
-		return Stage3BuildMacroSupport.collectBuildMacroExprs(source, modulePath);
 	}
 
 	static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String, ?output:CompilationRequestOutput):Bool {
@@ -452,17 +428,18 @@ class Stage3Compiler {
 
 		if (!requestContext.checkpoint("macros"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
-		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hasConfiguredExternalMacroHostExe(), parsedMacros,
-			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths, requestOutput);
+		final hadConfiguredExternalMacroHost = hasConfiguredExternalMacroHostExe();
+		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hadConfiguredExternalMacroHost, parsedMacros, exprMacros,
+			runHaxelibMacros, libMacros, macroHostClassPaths, requestOutput);
 		if (cliMacroRun.error != null) {
 			return error(cliMacroRun.error);
 		}
 		macroSession = cliMacroRun.session;
+		final buildMacroPreparer = new Stage3BuildMacroPreparer(macroRuntimeMode, typeOnly, hadConfiguredExternalMacroHost, macroHostClassPaths,
+			requestContext, macroSession);
 		function closeMacroSession():Void {
-			if (macroSession != null) {
-				macroSession.close();
-				macroSession = null;
-			}
+			buildMacroPreparer.close();
+			macroSession = null;
 		}
 		requestContext.registerCleanup("macro-session", closeMacroSession);
 
@@ -516,108 +493,16 @@ class Stage3Compiler {
 			}
 		}
 
-		// Stage4 bring-up: apply `@:build(...)` macros by asking the macro host to emit raw
-		// member snippets (reverse RPC) that we merge into the parsed module surface before typing.
-		//
-		// This is a small rung that does *not* implement upstream macro semantics yet.
-		var anyBuildMacros = false;
-		final buildExprsAll = new Array<String>();
-		for (m in resolved) {
-			final pm = ResolvedModule.getParsed(m);
-			final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
-			if (exprs.length > 0) {
-				anyBuildMacros = true;
-				for (e in exprs)
-					buildExprsAll.push(e);
-			}
-		}
-
-		var resolvedForTyping = resolved;
-		if (!typeOnly && anyBuildMacros) {
-			// Ensure we have a macro host session.
-			if (macroSession == null) {
-				// Optional convenience: auto-build a macro host that contains the build macro entrypoints.
-				if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST
-					&& !hasConfiguredExternalMacroHostExe()
-					&& shouldAutoBuildMacroHost()) {
-					final repoRoot = inferRepoRootForScripts();
-					if (repoRoot.length == 0)
-						return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
-					try {
-						final entrypoints = new Array<String>();
-						for (e in buildExprsAll)
-							if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
-								entrypoints.push(e);
-						final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
-						Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
-					} catch (e:String) {
-						return error("macro host auto-build failed (build macros): " + e);
-					}
-				}
-
-				try {
-					macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
-				} catch (e:String) {
-					closeMacroSession();
-					return error("macro runtime required for @:build, but could not be started: " + e);
-				}
-			}
-
-			final out2 = new Array<ResolvedModule>();
-			for (m in resolved) {
-				final pm = ResolvedModule.getParsed(m);
-				final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
-				if (exprs.length == 0) {
-					out2.push(m);
-					continue;
-				}
-
-				final modulePath = ResolvedModule.getModulePath(m);
-				// Reset any previously-emitted fields for this module for deterministic behavior.
-				hxhx.macro.MacroState.clearBuildFields(modulePath);
-				hxhx.macro.MacroState.setDefine("HXHX_BUILD_MODULE", modulePath);
-				hxhx.macro.MacroState.setDefine("HXHX_BUILD_FILE", ResolvedModule.getFilePath(m));
-				hxhx.macro.MacroState.setBuildFieldsPayload(buildFieldsPayloadForParsed(pm));
-
-				for (i in 0...exprs.length) {
-					if (!requestContext.checkpoint("macros"))
-						return CompilationRequestContext.CANCELLED_EXIT_CODE;
-					final expr = exprs[i];
-					requestOutput.stdoutLine("build_macro[" + modulePath + "][" + i + "]=" + expr);
-					try {
-						// The macro effect is communicated via reverse RPC `compiler.emitBuildFields`.
-						requestOutput.stdoutLine("build_macro_run[" + modulePath + "][" + i + "]=" + macroSession.run(expr));
-					} catch (e:String) {
-						closeMacroSession();
-						return error("build macro failed: " + modulePath + ": " + e);
-					}
-				}
-
-				final snippets = hxhx.macro.MacroState.listBuildFields(modulePath);
-				requestOutput.stdoutLine("build_fields[" + modulePath + "]=" + snippets.length);
-				if (snippets.length == 0) {
-					out2.push(m);
-					continue;
-				}
-
-				final generatedModule = try Stage3BuildMacroSupport.applyGeneratedMembers(m, snippets) catch (e:String) {
-					closeMacroSession();
-					return error("build fields parse failed: " + modulePath + ": " + e);
-				}
-				out2.push(generatedModule);
-			}
-			resolvedForTyping = out2;
-		} else if (typeOnly && anyBuildMacros) {
-			// Diagnostic mode: surface build macro expressions, but do not attempt to execute them.
-			var i = 0;
-			for (m in resolved) {
-				final pm = ResolvedModule.getParsed(m);
-				final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
-				for (e in exprs) {
-					requestOutput.stdoutLine("build_macro_skipped[" + i + "]=" + ResolvedModule.getModulePath(m) + ":" + e);
-					i += 1;
-				}
-			}
+		// Build macros must prepare roots and later lazy modules through the same request-owned owner.
+		// A module becomes visible to typing only after any generated members have been merged.
+		var resolvedForTyping:Array<ResolvedModule>;
+		try {
+			resolvedForTyping = buildMacroPreparer.prepareAll(resolved);
+		} catch (failure:Stage3BuildMacroPreparationError) {
+			closeMacroSession();
+			if (failure.cancelled)
+				return CompilationRequestContext.CANCELLED_EXIT_CODE;
+			return error(failure.message);
 		}
 
 		// Stage4 bring-up: expression macro expansion pass (pre-typing).
@@ -625,7 +510,8 @@ class Stage3Compiler {
 		// This is a small rung that only expands allowlisted exact call strings, and only supports
 		// a tiny returned expression subset (parsed by `HxParser.parseExprText`).
 		if (!typeOnly && exprMacros.length > 0) {
-			if (macroSession == null) {
+			final expressionMacroSession = buildMacroPreparer.getSession();
+			if (expressionMacroSession == null) {
 				closeMacroSession();
 				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
 			}
@@ -633,7 +519,7 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("expression macro expansion unavailable in stage0 profiling lane");
 			#else
-			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, macroSession, exprMacros);
+			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, expressionMacroSession, exprMacros);
 			resolvedForTyping = exp.modules;
 			requestOutput.stdoutLine("expr_macros_expanded=" + exp.expandedCount);
 			#end
@@ -641,8 +527,8 @@ class Stage3Compiler {
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
-			return dispatchOnTypeNotFoundHooks(macroSession, typePath, requestOutput);
-		}, !noEmit, requestContext.sourceProvider);
+			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
+		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
@@ -691,6 +577,11 @@ class Stage3Compiler {
 					if (ResolvedModule.getFilePath(m) == rootFilePath)
 						rootTyped = typed;
 					typedCount += 1;
+				} catch (failure:Stage3BuildMacroPreparationError) {
+					closeMacroSession();
+					if (failure.cancelled)
+						return CompilationRequestContext.CANCELLED_EXIT_CODE;
+					return error(failure.message);
 				} catch (e:TyperError) {
 					closeMacroSession();
 					final rawDiagnostic = rawTyperDiagnostic(e);
@@ -732,7 +623,7 @@ class Stage3Compiler {
 
 			if (!requestContext.checkpoint("hooks"))
 				return CompilationRequestContext.CANCELLED_EXIT_CODE;
-			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
+			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(buildMacroPreparer.getSession(), requestOutput);
 			if (typeOnlyHookError != null) {
 				closeMacroSession();
 				return error(typeOnlyHookError);
@@ -787,6 +678,11 @@ class Stage3Compiler {
 			cursor += 1;
 			try {
 				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader, true));
+			} catch (failure:Stage3BuildMacroPreparationError) {
+				closeMacroSession();
+				if (failure.cancelled)
+					return CompilationRequestContext.CANCELLED_EXIT_CODE;
+				return error(failure.message);
 			} catch (e:TyperError) {
 				closeMacroSession();
 				final rawDiagnostic = rawTyperDiagnostic(e);
@@ -817,7 +713,7 @@ class Stage3Compiler {
 
 		if (!requestContext.checkpoint("hooks"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
-		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
+		final hookError = Stage3HookSupport.runStandardMacroHooks(buildMacroPreparer.getSession(), requestOutput);
 		if (hookError != null) {
 			closeMacroSession();
 			return error(hookError);

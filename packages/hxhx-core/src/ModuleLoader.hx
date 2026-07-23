@@ -2,6 +2,10 @@ private typedef MissingTypeHook = {
 	function invoke(modulePath:String):Bool;
 }
 
+private typedef ModulePreparationHook = {
+	function invoke(module:ResolvedModule):ResolvedModule;
+}
+
 /**
 	Stage3 module loader: type-driven, on-demand module parsing and indexing.
 
@@ -42,6 +46,7 @@ class ModuleLoader extends LazyTypeLoader {
 	final defines:haxe.ds.StringMap<String>;
 	final index:TyperIndex;
 	final onMissingType:Null<MissingTypeHook>;
+	final prepareModule:Null<ModulePreparationHook>;
 	final sourceProvider:CompilerSourceProvider;
 
 	/**
@@ -62,17 +67,39 @@ class ModuleLoader extends LazyTypeLoader {
 	final pending:Array<ResolvedModule>;
 
 	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool,
-			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider) {
+			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider, ?prepareModule:ResolvedModule->ResolvedModule) {
 		super();
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
 		this.onMissingType = onMissingType == null ? null : {invoke: onMissingType};
+		this.prepareModule = prepareModule == null ? null : {invoke: prepareModule};
 		this.expandDependencies = expandDependencies;
 		this.sourceProvider = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
 		this.pending = [];
+	}
+
+	/**
+		Run the optional request-owned preparation step before a module becomes visible to typing.
+
+		A preparer may replace parsed declarations, for example after a compiler extension adds
+		members, but it must preserve the module's logical identity. The loader itself remains
+		unaware of macro or target semantics.
+	**/
+	function prepareResolvedModule(module:ResolvedModule):ResolvedModule {
+		if (prepareModule == null)
+			return module;
+		final prepared = prepareModule.invoke(module);
+		if (prepared == null)
+			throw "module preparation returned no module for " + ResolvedModule.getModulePath(module);
+		final originalPath = ResolvedModule.getModulePath(module);
+		if (ResolvedModule.getModulePath(prepared) != originalPath)
+			throw "module preparation changed the module path from " + originalPath + " to " + ResolvedModule.getModulePath(prepared);
+		if (ResolvedModule.getFilePath(prepared) != ResolvedModule.getFilePath(module))
+			throw "module preparation changed the source file for " + originalPath;
+		return prepared;
 	}
 
 	inline function invokeOnMissingType(mp:String):Bool {
@@ -286,7 +313,8 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final rm = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
+		final parsedModule = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
+		final rm = prepareResolvedModule(parsedModule);
 		pending.push(rm);
 		if (trace)
 			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
@@ -305,7 +333,8 @@ class ModuleLoader extends LazyTypeLoader {
 		// - Follow explicit imports (including module-type fallback) and fully-qualified type path
 		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
 		if (expandDependencies) {
-			final decl = parsed.getDecl();
+			final preparedParsed = ResolvedModule.getParsed(rm);
+			final decl = preparedParsed.getDecl();
 			for (dep in depsForParsedModule(filtered, decl, effectiveDefines)) {
 				if (dep == null || dep.length == 0)
 					continue;

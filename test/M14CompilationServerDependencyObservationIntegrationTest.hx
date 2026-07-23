@@ -83,6 +83,20 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		return StringTools.trim(result.substring(valueStart, end));
 	}
 
+	static function countOccurrences(value:String, needle:String):Int {
+		if (value == null || needle == null || needle.length == 0)
+			return 0;
+		var count = 0;
+		var offset = 0;
+		while (true) {
+			final found = value.indexOf(needle, offset);
+			if (found < 0)
+				return count;
+			count += 1;
+			offset = found + needle.length;
+		}
+	}
+
 	static function apiSource(returnType:String, bodyValue:String):String {
 		return [
 			"class Api {",
@@ -410,6 +424,70 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"returning to exact generated result A should reproduce the original dependency snapshot");
 	}
 
+	/** A build macro must run before typing even when its module is discovered from a caller. **/
+	static function verifyLazyGeneratedDeclarations(root:String):Void {
+		final generatedRoot = haxe.io.Path.join([root, "lazy-generated-declarations"]);
+		ensureDirectory(generatedRoot);
+		File.saveContent(haxe.io.Path.join([generatedRoot, "Api.hx"]), [
+			"@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())",
+			"class Api { public static function main():Void {} }"
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([generatedRoot, "Main.hx"]), [
+			"import Api;",
+			"class Main {",
+			"  public static function main():Void {",
+			"    var answer:Int = Api.generated_answer();",
+			"    var repeated:Int = Api.generated_answer();",
+			"  }",
+			"}"
+		].join("\n"));
+
+		final commonArgs = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"--hxhx-macro-runtime",
+			"inproc",
+			"-D",
+			"HXHX_BUILD_VARIANT=int",
+			"-cp",
+			generatedRoot
+		];
+		final reply = compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(), commonArgs.concat(["-main", "Main"]));
+		final result = wire(reply);
+		assertTrue(!reply.isError, "a caller should see a member generated on a lazily loaded module: " + result);
+		final apiMacroLine = "build_macro[Api][0]=hxhxmacros.BuildFieldMacros.addGeneratedField()";
+		assertTrue(countOccurrences(result, apiMacroLine) == 1, "repeated lookups should still run the lazy module's declared build macro exactly once");
+		assertTrue(result.indexOf("build_fields[Api]=1") >= 0, "the lazy module should expose one generated member before typing");
+
+		final rootReply = compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(), commonArgs.concat(["-main", "Api"]));
+		final rootResult = wire(rootReply);
+		assertTrue(!rootReply.isError, "the same annotated module should compile when selected directly: " + rootResult);
+		assertTrue(countOccurrences(rootResult, apiMacroLine) == 1 && rootResult.indexOf("build_fields[Api]=1") >= 0,
+			"root-first preparation should run the same macro once and expose the same generated member count");
+
+		final packageRoot = haxe.io.Path.join([generatedRoot, "pack"]);
+		ensureDirectory(packageRoot);
+		File.saveContent(haxe.io.Path.join([packageRoot, "QualifiedApi.hx"]), [
+			"package pack;",
+			"@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())",
+			"class QualifiedApi {}"
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([generatedRoot, "QualifiedMain.hx"]), [
+			"class QualifiedMain {",
+			"  public static function main():Void {",
+			"    var answer:Int = pack.QualifiedApi.generated_answer();",
+			"  }",
+			"}"
+		].join("\n"));
+		final qualifiedReply = compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			commonArgs.concat(["-main", "QualifiedMain"]));
+		final qualifiedResult = wire(qualifiedReply);
+		assertTrue(!qualifiedReply.isError, "a fully qualified reference should prepare its lazily loaded module: " + qualifiedResult);
+		assertTrue(countOccurrences(qualifiedResult, "build_macro[pack.QualifiedApi][0]=hxhxmacros.BuildFieldMacros.addGeneratedField()") == 1,
+			"the fully qualified module should run its build macro exactly once");
+	}
+
 	static function main():Void {
 		final root = ".tmp/m14_compilation_server_dependency_observation";
 		deleteRecursive(root);
@@ -444,6 +522,7 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			verifySecondaryTypeReplacement(root);
 			verifyConditionalCompilation(root);
 			verifyGeneratedDeclarations(root);
+			verifyLazyGeneratedDeclarations(root);
 			final withoutReportArgs = args.filter(argument -> argument != "--hxhx-server-report");
 			final withoutReport = wire(compile(sourceCache, dependencyCatalog, withoutReportArgs));
 			assertTrue(withoutReport.indexOf("hxhx_server_report.dependency_observation") == -1,
