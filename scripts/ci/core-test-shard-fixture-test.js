@@ -49,7 +49,7 @@ function requireIncludes(content, snippet, label) {
 
 function main() {
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 113, `expected 113 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 114, `expected 114 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -65,7 +65,7 @@ function main() {
   )
 
   const expectedCounts = {
-    compiler: 106,
+    compiler: 107,
     'macro-host-integration': 3,
     'target-packages': 3,
     'hxhx-targets': 1

@@ -486,6 +486,22 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		assertTrue(!qualifiedReply.isError, "a fully qualified reference should prepare its lazily loaded module: " + qualifiedResult);
 		assertTrue(countOccurrences(qualifiedResult, "build_macro[pack.QualifiedApi][0]=hxhxmacros.BuildFieldMacros.addGeneratedField()") == 1,
 			"the fully qualified module should run its build macro exactly once");
+
+		File.saveContent(haxe.io.Path.join([generatedRoot, "Base.hx"]),
+			["@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())", "class Base {}"].join("\n"));
+		File.saveContent(haxe.io.Path.join([generatedRoot, "InheritanceMain.hx"]), [
+			"class InheritanceMain extends Base {",
+			"  public static function main():Void {}",
+			"}"
+		].join("\n"));
+		final inheritanceReply = compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			commonArgs.concat(["-main", "InheritanceMain"]));
+		final inheritanceResult = wire(inheritanceReply);
+		assertTrue(!inheritanceReply.isError, "a base class mentioned only by extends should be loaded and prepared: " + inheritanceResult);
+		assertTrue(countOccurrences(inheritanceResult, "build_macro[Base][0]=hxhxmacros.BuildFieldMacros.addGeneratedField()") == 1,
+			"the lazily discovered base class should run its declared build macro exactly once");
+		assertTrue(inheritanceResult.indexOf("build_fields[Base]=1") >= 0,
+			"the base class should expose its generated member before the derived class finishes typing");
 	}
 
 	static function main():Void {

@@ -284,11 +284,14 @@ the initial root set: if `Api` declares the supported macro that creates
 references to `Api` do not rerun its build macro during the same request. Macro
 results and typed classes are not reused between compiler-server requests yet.
 
-Current limitation: an `extends Base` or `implements Interface` declaration by
-itself does not yet make the native typer load that base/interface module. This
-is a general demand-driven type-loading gap, tracked by `haxe_ocaml-nf0wr`, not
-a second build-macro path. An ordinary import or type reference uses the
-supported preparation order above.
+Class headers use the same preparation order. In plain language, `class Child
+extends Base implements Contract` is itself enough to require `Base` and
+`Contract`; a method body does not need to mention them again. Native Stage3
+loads each selected module, runs its supported build macro once, makes its
+declarations available to type checking, and records the inheritance
+dependency. This works for current same-package, imported, fully qualified,
+generic, and secondary-type lookup forms without scanning unrelated source
+files.
 
 When hxhx automatically builds an external macro-host executable, that
 executable contains the macro entrypoints known when the session starts. If a

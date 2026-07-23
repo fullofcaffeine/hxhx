@@ -185,6 +185,7 @@ class TyperStage {
 				+ "."
 				+ className) : semanticInfo.getFullName();
 			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, imports, classFullName, loader);
+			resolveClassHeaderTypes(classDeclaration, context);
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
@@ -224,6 +225,23 @@ class TyperStage {
 		final loweredClasses = index == null
 			|| deferProgramLowering ? typedClasses : TypedAbstractOperatorLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
 		return {classes: loweredClasses, mainFunctions: mainFunctions};
+	}
+
+	/**
+		Make every type named by `extends` or `implements` available before typing the class body.
+
+		Class headers are part of typing even when no method expression mentions the
+		parent. Resolving them through the ordinary context lets the existing lazy
+		loader find, prepare, and index the owning module without scanning unrelated
+		source files. Parsing the header as a type also discovers generic arguments.
+	**/
+	static function resolveClassHeaderTypes(classDeclaration:HxClassDecl, context:TyperContext):Void {
+		final extendsPath = HxClassDecl.getExtendsPath(classDeclaration);
+		if (extendsPath != null && StringTools.trim(extendsPath).length > 0)
+			resolveTypeInContext(TyType.fromHintText(extendsPath), context);
+		for (implementedPath in HxClassDecl.getImplementsPaths(classDeclaration))
+			if (implementedPath != null && StringTools.trim(implementedPath).length > 0)
+				resolveTypeInContext(TyType.fromHintText(implementedPath), context);
 	}
 
 	/**

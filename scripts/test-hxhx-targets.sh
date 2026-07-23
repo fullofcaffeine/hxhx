@@ -2612,6 +2612,29 @@ test "$(printf '%s\n' "$out" | grep -c '^from_hxhx_build_macro$')" -eq 2
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: inheritance-only lazy @:build module is emitted and linked"
+tmpbuild_inheritance="$tmpdir/build_fields_inheritance_test"
+mkdir -p "$tmpbuild_inheritance/src"
+cat >"$tmpbuild_inheritance/src/Base.hx" <<'HX'
+@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())
+class Base {}
+HX
+cat >"$tmpbuild_inheritance/src/Main.hx" <<'HX'
+class Main extends Base {
+  static function main() {
+    Sys.println("inheritance_lazy_ok");
+  }
+}
+HX
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_inheritance/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_inheritance/out")"
+test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Base\]\[0\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$')" -eq 1
+echo "$out" | grep -q "^build_fields\[Base\]=1$"
+test -f "$tmpbuild_inheritance/out/Base.ml"
+grep -q 'let rec generated ()' "$tmpbuild_inheritance/out/Base.ml"
+echo "$out" | grep -q "^inheritance_lazy_ok$"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: @:build return Array<Field> emits delta members"
 tmpbuild_ret="$tmpdir/build_fields_return_test"
 mkdir -p "$tmpbuild_ret/src"
