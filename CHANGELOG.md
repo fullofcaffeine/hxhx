@@ -1,3 +1,10 @@
+# [0.31.0](https://github.com/fullofcaffeine/hxhx/compare/v0.30.0...v0.31.0) (2026-07-23)
+
+
+### Features
+
+* **hxhx:** track typed module source origins ([2118f86](https://github.com/fullofcaffeine/hxhx/commit/2118f86d77010703d58b754a6b587583f7fb8438))
+
 # [0.30.0](https://github.com/fullofcaffeine/hxhx/compare/v0.29.0...v0.30.0) (2026-07-22)
 
 
