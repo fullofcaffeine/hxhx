@@ -1,3 +1,10 @@
+## [0.33.4](https://github.com/fullofcaffeine/hxhx/compare/v0.33.3...v0.33.4) (2026-07-23)
+
+
+### Bug Fixes
+
+* **tooling:** bound bootstrap process discovery ([910320f](https://github.com/fullofcaffeine/hxhx/commit/910320fd0d8b1f0ad59905b9f4e80f3150f30d12))
+
 ## [0.33.3](https://github.com/fullofcaffeine/hxhx/compare/v0.33.2...v0.33.3) (2026-07-23)
 
 
