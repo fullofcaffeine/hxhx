@@ -1,0 +1,3 @@
+ts	phase	decision	why	evidence	result
+2026-07-23T20:27:00Z	calibration	Applied thinking:max for the whole-project checkpoint	The review package can influence project-wide architecture, roadmap order, and readiness interpretation	calibrate-reasoning-effort helper returned applied=true for max	max is warranted; the task remains one coupled evidence-and-synthesis stream rather than ultra parallel work
+2026-07-23T20:28:00Z	scope	Created a dedicated checkpoint Bead before packaging	The complete Beads export should record why the checkpoint exists, what it must answer, and what the package does not claim	haxe_ocaml-vjyxo	the review purpose and acceptance boundary will be present in the exact committed package candidate
