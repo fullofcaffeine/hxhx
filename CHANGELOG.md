@@ -1,3 +1,10 @@
+## [0.33.1](https://github.com/fullofcaffeine/hxhx/compare/v0.33.0...v0.33.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **hxhx:** prepare lazy build-macro modules before typing ([75a5f95](https://github.com/fullofcaffeine/hxhx/commit/75a5f955d3363a65cee62985330068e52b65ba8e))
+
 # [0.33.0](https://github.com/fullofcaffeine/hxhx/compare/v0.32.0...v0.33.0) (2026-07-23)
 
 
