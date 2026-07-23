@@ -1137,7 +1137,7 @@ let indexModule = fun self (hx_module : ResolvedModule.t) -> ignore (ignore (try
                     ));
                     let occurrence = Obj.magic (!tempMaybeNumber) in (
                       ignore (HxMap.set_string signatureOccurrences signatureKey (HxInt.add (let __nullable_int_146 = occurrence in if __nullable_int_146 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_146) 1));
-                      let declarationId = Obj.magic (TyDeclarationId.create ((((HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic identity) ()) ^ "#") ^ HxString.toStdString signatureKey) ^ "#") ^ HxRuntime.nullable_int_toStdString occurrence : string)) in HxArray.push declarations (TyDeclarationInfo.create (Obj.magic declarationId) (Obj.magic identity) (Obj.magic signature) (Obj.magic functionMetadata) (Obj.magic functionDeclaration) (Obj.magic (HxFunctionDecl.getPos (Obj.magic functionDeclaration))) (hasMetadata (Obj.magic functionMetadata) ("inline" : string)))
+                      let declarationId = Obj.magic (TyDeclarationId.create ((((HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic identity) ()) ^ "#") ^ HxString.toStdString signatureKey) ^ "#") ^ HxRuntime.nullable_int_toStdString occurrence : string)) in HxArray.push declarations (TyDeclarationInfo.create (Obj.magic declarationId) (Obj.magic identity) (Obj.magic signature) (Obj.magic functionMetadata) (Obj.magic functionDeclaration) (Obj.magic (HxFunctionDecl.getPos (Obj.magic functionDeclaration))) (hasMetadata (Obj.magic functionMetadata) ("inline" : string)) (HxFunctionDecl.getVisibility (Obj.magic functionDeclaration) = HxVisibility.Public))
                     )
                   )
                 )

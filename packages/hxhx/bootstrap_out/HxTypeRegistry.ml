@@ -1752,7 +1752,8 @@ let init () : unit =
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'sourceDeclaration' for TyDeclarationInfo" in
     let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'position' for TyDeclarationInfo" in
     let a6 = if len > 6 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'isInline' for TyDeclarationInfo" in
-    Obj.repr (TyDeclarationInfo.create a0 a1 a2 a3 a4 a5 a6)
+    let a7 = if len > 7 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'isPublic' for TyDeclarationInfo" in
+    Obj.repr (TyDeclarationInfo.create a0 a1 a2 a3 a4 a5 a6 a7)
   );
   HxType.register_class_ctor "TyFieldInfo" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -3146,7 +3147,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyClassInfo" [];
   HxType.register_class_instance_fields "TyDeclarationId" [ "canonicalKey"; "equals"; "getCanonicalKey"; "toString" ];
   HxType.register_class_static_fields "TyDeclarationId" [];
-  HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getIsInline"; "getIsStatic"; "getMetadata"; "getNoImportGlobal"; "getOwner"; "getPosition"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameters"; "identity"; "isInline"; "metadata"; "owner"; "position"; "signature"; "sourceDeclaration" ];
+  HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getIsInline"; "getIsPublic"; "getIsStatic"; "getMetadata"; "getNoImportGlobal"; "getOwner"; "getPosition"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameters"; "identity"; "isInline"; "isPublic"; "metadata"; "owner"; "position"; "signature"; "sourceDeclaration" ];
   HxType.register_class_static_fields "TyDeclarationInfo" [];
   HxType.register_class_instance_fields "TyFieldInfo" [ "canEmbedCrossModuleValue"; "canonicalKey"; "getCanonicalKey"; "getHasInitializer"; "getIsFinal"; "getIsInline"; "getIsPublic"; "getIsStatic"; "getModulePath"; "getName"; "getNoImportGlobal"; "getOwner"; "getType"; "hasInitializer"; "isFinal"; "isInline"; "isPublic"; "isStatic"; "modulePath"; "name"; "noImportGlobal"; "owner"; "type" ];
   HxType.register_class_static_fields "TyFieldInfo" [];
