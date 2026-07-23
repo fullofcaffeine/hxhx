@@ -56,7 +56,7 @@ class CompilerTypedModuleRevision {
 			throw "typed module revision requires a module path";
 	}
 
-	public static function fromTypedModule(module:TypedModule, ?index:TyperIndex):CompilerTypedModuleRevision {
+	public static function fromTypedModule(module:TypedModule):CompilerTypedModuleRevision {
 		if (module == null)
 			throw "cannot observe a null typed module";
 		final parsed = module.getParsed();
@@ -68,27 +68,33 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v2");
+		publicFacts.push("typed-module-public-interface-v4");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
-		final imports = HxModuleDecl.getImports(declaration);
-		// Resolved field/base identities below are authoritative. Retaining imports
-		// as a conservative fallback also makes an unresolved or ambiguous bootstrap
-		// type lookup change the public revision instead of hiding the change.
-		addStrings(publicFacts, imports);
-		final packagePath = HxModuleDecl.getPackagePath(declaration);
+		final directives = HxModuleDecl.getDirectives(declaration);
+		// Local import spelling is an implementation input, not exported API. Public
+		// signatures below record the exact provider identities selected by typing.
+		// This prevents `import model.Api as Service` -> `... as Client` from
+		// needlessly retyping modules that consume an otherwise unchanged API.
 		for (typedClass in module.getTypedClasses())
-			addPublicClassFacts(publicFacts, typedClass, index, packagePath, imports);
+			addPublicClassFacts(publicFacts, typedClass);
 		final publicRevision = CompilerCacheIdentity.encode(publicFacts);
 		final implementationFacts = new Array<Null<String>>();
-		implementationFacts.push("typed-module-implementation-v2");
+		implementationFacts.push("typed-module-implementation-v5");
 		implementationFacts.push(modulePath);
 		implementationFacts.push(publicRevision);
+		addDirectives(implementationFacts, directives);
+		addResolvedDirectives(implementationFacts, module.getEnv().getResolvedDirectives());
 		implementationFacts.push(parsed.getSource());
 		for (typedClass in module.getTypedClasses()) {
 			implementationFacts.push("typed-class");
 			implementationFacts.push(HxClassDecl.getName(typedClass.getSourceDeclaration()));
+			for (fieldInitializer in typedClass.getFieldInitializers()) {
+				implementationFacts.push("typed-field-initializer");
+				implementationFacts.push(fieldInitializer.getField().getCanonicalKey());
+				addTypedExpression(implementationFacts, fieldInitializer.getExpression());
+			}
 			for (typedFunction in typedClass.getFunctions()) {
 				implementationFacts.push("typed-function");
 				implementationFacts.push(typedFunction.getStableIdentity());
@@ -165,16 +171,16 @@ class CompilerTypedModuleRevision {
 			uniqueSourceOriginDescriptions[0], conditionalCompilations[0], generatedDeclarations[0]);
 	}
 
-	static function addPublicClassFacts(out:Array<Null<String>>, typedClass:TypedClass, index:Null<TyperIndex>, packagePath:String,
-			imports:Array<String>):Void {
+	static function addPublicClassFacts(out:Array<Null<String>>, typedClass:TypedClass):Void {
 		final sourceClass = typedClass.getSourceDeclaration();
 		final semanticInfo = typedClass.getSemanticInfo();
 		out.push("class");
 		out.push(HxClassDecl.getName(sourceClass));
 		out.push(HxClassDecl.getIsInterface(sourceClass) ? "interface" : "class");
-		addResolvedTypePath(out, "extends", HxClassDecl.getExtendsPath(sourceClass), index, packagePath, imports);
-		for (implemented in HxClassDecl.getImplementsPaths(sourceClass))
-			addResolvedTypePath(out, "implements", implemented, index, packagePath, imports);
+		out.push(HxClassDecl.getVisibility(sourceClass) == HxVisibility.Public ? "public" : "private");
+		addResolvedHeaderType(out, "extends", typedClass.getResolvedExtends());
+		for (implemented in typedClass.getResolvedImplements())
+			addResolvedHeaderType(out, "implements", implemented);
 		addStrings(out, HxClassDecl.getMetadata(sourceClass));
 
 		for (field in HxClassDecl.getFields(sourceClass)) {
@@ -210,7 +216,6 @@ class CompilerTypedModuleRevision {
 			out.push("public-function");
 			out.push(typedFunction.getStableIdentity());
 			out.push(HxFunctionDecl.getIsStatic(sourceFunction) ? "static" : "instance");
-			out.push(HxFunctionDecl.getReturnTypeHint(sourceFunction));
 			addStrings(out, HxFunctionDecl.getMetadata(sourceFunction));
 			final declaration = typedFunction.getDeclaration();
 			if (declaration != null) {
@@ -221,6 +226,7 @@ class CompilerTypedModuleRevision {
 				out.push(signature.getReturnType().getSemanticKey());
 				out.push(declaration.getIsInline() ? "inline" : "ordinary");
 			} else {
+				out.push(HxFunctionDecl.getReturnTypeHint(sourceFunction));
 				for (argument in HxFunctionDecl.getArgs(sourceFunction)) {
 					out.push(HxFunctionArg.getName(argument));
 					out.push(HxFunctionArg.getTypeHint(argument));
@@ -231,11 +237,9 @@ class CompilerTypedModuleRevision {
 		}
 	}
 
-	static function addResolvedTypePath(out:Array<Null<String>>, label:String, sourcePath:String, index:Null<TyperIndex>, packagePath:String,
-			imports:Array<String>):Void {
+	static function addResolvedHeaderType(out:Array<Null<String>>, label:String, type:Null<TyType>):Void {
 		out.push(label);
-		final resolved = index == null ? null : index.resolveTypePath(sourcePath, packagePath, imports);
-		out.push(resolved == null ? "unresolved:" + normalize(sourcePath) : resolved.getIdentity().getCanonicalName());
+		out.push(type == null ? "none" : type.getSemanticKey());
 	}
 
 	static function addTypes(out:Array<Null<String>>, values:Array<TyType>):Void {
@@ -243,6 +247,21 @@ class CompilerTypedModuleRevision {
 		if (values != null)
 			for (value in values)
 				out.push(value == null ? "unknown" : value.getSemanticKey());
+	}
+
+	static function addDirectives(out:Array<Null<String>>, directives:Array<HxModuleDirective>):Void {
+		out.push(directives == null ? "-1" : Std.string(directives.length));
+		if (directives != null)
+			for (directive in directives)
+				out.push(HxModuleDirective.canonicalIdentity(directive));
+	}
+
+	/** Include the exact providers chosen by typing in the reusable module identity. **/
+	static function addResolvedDirectives(out:Array<Null<String>>, directives:Array<TyModuleDirective>):Void {
+		out.push(directives == null ? "-1" : Std.string(directives.length));
+		if (directives != null)
+			for (directive in directives)
+				out.push(directive.canonicalIdentity());
 	}
 
 	static function addBools(out:Array<Null<String>>, values:Array<Bool>):Void {

@@ -32,6 +32,8 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 
 	static function main():Void {
 		final source = [
+			"import model.Api as Service;",
+			"using model.Extensions;",
 			"@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())",
 			"class Target {",
 			"}"
@@ -68,6 +70,11 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 		final generatedStringText = 'public static function generated_answer():String return "private-generated-value";';
 		final generatedInt = Stage3BuildMacroSupport.applyGeneratedMembers(resolved, [generatedIntText]);
 		final generatedString = Stage3BuildMacroSupport.applyGeneratedMembers(resolved, [generatedStringText]);
+		final sourceDirectives = HxModuleDecl.getDirectives(parsed.getDecl()).map(HxModuleDirective.canonicalIdentity).join("|");
+		final generatedDirectives = HxModuleDecl.getDirectives(ResolvedModule.getParsed(generatedInt).getDecl())
+			.map(HxModuleDirective.canonicalIdentity)
+			.join("|");
+		assertTrue(generatedDirectives == sourceDirectives, "build-macro member replacement must preserve aliases and using declarations exactly");
 		assertTrue(generatedReturnType(generatedInt, "generated_answer") == "Int", "generated Int member should be merged before typing");
 		assertTrue(generatedReturnType(generatedString, "generated_answer") == "String", "generated String member should be merged before typing");
 		final intObservation = ResolvedModule.getGeneratedDeclarations(generatedInt);

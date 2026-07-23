@@ -6834,44 +6834,42 @@ class EmitterStage {
 		final uniqueImportAliasByIdent:Map<String, String> = new Map();
 		final ambiguousImportAliasIdents:Map<String, Bool> = new Map();
 		for (tm in typedModules) {
-			for (rawImport in tm.getEnv().getImports()) {
-				if (rawImport == null)
+			for (directive in tm.getEnv().getResolvedDirectives()) {
+				if (!directive.getKind().match(TypeImport))
 					continue;
-				final imp = StringTools.trim(rawImport);
-				if (imp.length == 0 || StringTools.endsWith(imp, ".*"))
-					continue;
-				final parts = imp.split(".");
-				if (parts.length == 0)
-					continue;
-				final short = parts[parts.length - 1];
-				if (short == null || short.length == 0 || !isUpperStart(short))
-					continue;
-				final importModName = ocamlModuleNameFromTypePath(imp);
-				if (importModName.length == 0 || importModName == short)
-					continue;
-				if (ambiguousImportAliasIdents.exists(short))
-					continue;
-				final existing = uniqueImportAliasByIdent.get(short);
-				if (existing == null) {
-					uniqueImportAliasByIdent.set(short, importModName);
-				} else if (existing != importModName) {
-					uniqueImportAliasByIdent.remove(short);
-					ambiguousImportAliasIdents.set(short, true);
+				for (provider in directive.getProviders()) {
+					final short = directive.getImportedTypeLocalName(provider);
+					if (short == null || short.length == 0 || !isUpperStart(short))
+						continue;
+					final importModName = ocamlModuleNameFromTypePath(provider.getCanonicalName());
+					if (importModName.length == 0 || importModName == short || ambiguousImportAliasIdents.exists(short))
+						continue;
+					final existing = uniqueImportAliasByIdent.get(short);
+					if (existing == null) {
+						uniqueImportAliasByIdent.set(short, importModName);
+					} else if (existing != importModName) {
+						uniqueImportAliasByIdent.remove(short);
+						ambiguousImportAliasIdents.set(short, true);
+					}
 				}
 			}
 		}
 		currentGlobalImportAliasByIdent = uniqueImportAliasByIdent;
 
-		// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
+		// Index static members by module name so a resolved `import Foo.Bar.*`
+		// can expose the provider's declared names in OCaml output.
 		//
 		// Why
 		// - Upstream `tests/RunCi.hx` uses `import runci.System.*` and refers to helpers like `infoMsg`
 		//   without qualification.
-		// - Stage3 does not implement full import resolution yet; this index enables a conservative
-		//   `{ ident -> ModuleName }` rewrite that keeps bring-up moving.
+		// - Shared typing has already proved which type owns the wildcard. This index
+		//   answers the target-only question of which generated OCaml module contains
+		//   each declared member; it does not repeat Haxe import lookup.
 		//
 		// How
-		// - Collect static function and field names from the parsed surface of each typed module.
+		// - Collect public static members from each class's resolved semantic record.
+		// - Exclude `@:noImportGlobal` members because Haxe deliberately withholds
+		//   them from `import Provider.*` bare-name lookup.
 		final staticMembersByModule:Map<String, Map<String, Bool>> = new Map();
 
 		// Import-driven module alias index for call signature resolution.
@@ -6938,35 +6936,25 @@ class EmitterStage {
 
 			final aliasByShort:Map<String, String> = new Map();
 			for (tm in typedModules) {
-				for (rawImport in tm.getEnv().getImports()) {
-					if (rawImport == null)
+				for (directive in tm.getEnv().getResolvedDirectives()) {
+					if (!directive.getKind().match(TypeImport))
 						continue;
-					final imp = StringTools.trim(rawImport);
-					if (imp.length == 0)
-						continue;
-					if (StringTools.endsWith(imp, ".*"))
-						continue;
-					final parts = imp.split(".");
-					if (parts.length == 0)
-						continue;
-					final short = parts[parts.length - 1];
-					if (short == null || short.length == 0 || !isUpperStart(short))
-						continue;
-					if (deny.exists(short))
-						continue;
-					// Don't alias over a real provider.
-					if (existingMods.exists(short))
-						continue;
-					final target = ocamlModuleNameFromTypePath(imp);
-					if (target == null || target.length == 0)
-						continue;
-					if (target == short)
-						continue;
-					// Only alias to a provider that actually exists in this build output.
-					if (!existingMods.exists(target))
-						continue;
-					if (!aliasByShort.exists(short))
-						aliasByShort.set(short, target);
+					for (provider in directive.getProviders()) {
+						final short = directive.getImportedTypeLocalName(provider);
+						if (short == null || short.length == 0 || !isUpperStart(short) || deny.exists(short))
+							continue;
+						// Don't alias over a real provider.
+						if (existingMods.exists(short))
+							continue;
+						final target = ocamlModuleNameFromTypePath(provider.getCanonicalName());
+						if (target == null || target.length == 0 || target == short)
+							continue;
+						// Only alias to a provider that actually exists in this build output.
+						if (!existingMods.exists(target))
+							continue;
+						if (!aliasByShort.exists(short))
+							aliasByShort.set(short, target);
+					}
 				}
 			}
 
@@ -7057,7 +7045,9 @@ class EmitterStage {
 		for (tm in typedModules) {
 			final decl = tm.getBackendDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
-			for (cls in HxModuleDecl.getClasses(decl)) {
+			for (typedClass in tm.getTypedClasses()) {
+				final cls = typedClass.getSourceDeclaration();
+				final semanticInfo = typedClass.getSemanticInfo();
 				final className = HxClassDecl.getName(cls);
 				if (className == null || className.length == 0 || className == "Unknown")
 					continue;
@@ -7065,21 +7055,16 @@ class EmitterStage {
 
 				final members:Map<String, Bool> = new Map();
 				for (fn in HxClassDecl.getFunctions(cls)) {
-					// Stage3 bootstrap: treat all class functions as "importable" members.
-					//
-					// Why
-					// - Stage3 emission flattens class members into module-level `let` bindings.
-					// - Some native frontend bring-up paths may not perfectly preserve `static` on all
-					//   declarations (e.g. `public static inline function ...`), which would otherwise
-					//   make `import Foo.*` miss helpers and collapse them to poison.
-					//
-					// Non-goal
-					// - Correct instance method semantics. If upstream code relies on instance dispatch,
-					//   Stage3 is not the rung for it.
-					members.set(HxFunctionDecl.getName(fn), true);
+					final declaration = semanticInfo == null ? null : semanticInfo.declarationForSource(fn);
+					if (declaration != null
+						&& declaration.getIsStatic()
+						&& HxFunctionDecl.getVisibility(fn) == HxVisibility.Public
+						&& !declaration.getNoImportGlobal())
+						members.set(HxFunctionDecl.getName(fn), true);
 				}
 				for (field in HxClassDecl.getFields(cls)) {
-					if (HxFieldDecl.getIsStatic(field))
+					final fieldInfo = semanticInfo == null ? null : semanticInfo.fieldInfo(HxFieldDecl.getName(field));
+					if (fieldInfo != null && fieldInfo.getIsStatic() && fieldInfo.getIsPublic() && !fieldInfo.getNoImportGlobal())
 						members.set(HxFieldDecl.getName(field), true);
 				}
 				staticMembersByModule.set(modName, members);
@@ -7127,30 +7112,30 @@ class EmitterStage {
 				}
 			}
 			final tmFilePath = tm.getParsed().getFilePath();
-			for (rawImport in tm.getEnv().getImports()) {
-				if (rawImport == null)
-					continue;
-				final imp = stage3ImportedSignatureModulePath(rawImport);
-				if (imp.length == 0 || importedSigModulesSeen.exists(imp))
-					continue;
-				final resolvedImportFile = resolveImportedModuleFileFromContext(tmFilePath, imp);
-				if (resolvedImportFile == null || !sys.FileSystem.exists(resolvedImportFile))
-					continue;
-				importedSigModulesSeen.set(imp, true);
-				try {
-					final importedSource = sys.io.File.getContent(resolvedImportFile);
-					final importedParsed = ParserStage.parse(importedSource, resolvedImportFile);
-					final importedDecl = importedParsed.getDecl();
-					final importedModuleTypeName = expectedMainClassFromFile(resolvedImportFile);
-					for (importedCls in HxModuleDecl.getClasses(importedDecl)) {
-						final importedClassName = HxClassDecl.getName(importedCls);
-						if (importedClassName == null || importedClassName.length == 0 || importedClassName == "Unknown")
-							continue;
-						final importedModName = moduleNameForDecl(importedDecl, importedModuleTypeName, importedClassName);
-						for (fn in HxClassDecl.getFunctions(importedCls))
-							recordFunctionSig(importedModName, fn);
-					}
-				} catch (_:haxe.Exception) {} catch (_:String) {}
+			for (directive in tm.getEnv().getResolvedDirectives()) {
+				for (provider in directive.getProviders()) {
+					final imp = provider.getCanonicalName();
+					if (imp.length == 0 || importedSigModulesSeen.exists(imp))
+						continue;
+					final resolvedImportFile = resolveImportedModuleFileFromContext(tmFilePath, imp);
+					if (resolvedImportFile == null || !sys.FileSystem.exists(resolvedImportFile))
+						continue;
+					importedSigModulesSeen.set(imp, true);
+					try {
+						final importedSource = sys.io.File.getContent(resolvedImportFile);
+						final importedParsed = ParserStage.parse(importedSource, resolvedImportFile);
+						final importedDecl = importedParsed.getDecl();
+						final importedModuleTypeName = expectedMainClassFromFile(resolvedImportFile);
+						for (importedCls in HxModuleDecl.getClasses(importedDecl)) {
+							final importedClassName = HxClassDecl.getName(importedCls);
+							if (importedClassName == null || importedClassName.length == 0 || importedClassName == "Unknown")
+								continue;
+							final importedModName = moduleNameForDecl(importedDecl, importedModuleTypeName, importedClassName);
+							for (fn in HxClassDecl.getFunctions(importedCls))
+								recordFunctionSig(importedModName, fn);
+						}
+					} catch (_:haxe.Exception) {} catch (_:String) {}
+				}
 			}
 		}
 
@@ -7187,30 +7172,33 @@ class EmitterStage {
 			final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
 			// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
-			function findInt64ImportTarget(imports:Array<String>):Null<String> {
-				if (imports == null)
+			// A normal type import introduces the local name `Int64`. A static wildcard
+			// import also names that owner in source (`import haxe.Int64.*`) and must keep
+			// explicit `Int64.mul(...)` calls attached to Haxe's runtime module.
+			function findInt64ImportTarget(directives:Array<TyModuleDirective>):Null<String> {
+				if (directives == null)
 					return null;
-				for (rawImport in imports) {
-					if (rawImport == null)
+				for (directive in directives) {
+					final isTypeImport = directive.getKind().match(TypeImport);
+					final isStaticWildcard = directive.getKind().match(StaticWildcardImport);
+					if (!isTypeImport && !isStaticWildcard)
 						continue;
-					final imp0 = StringTools.trim(rawImport);
-					if (imp0.length == 0)
-						continue;
-					final base = StringTools.endsWith(imp0, ".*") ? imp0.substr(0, imp0.length - 2) : imp0;
-					final parts = base.split(".");
-					if (parts.length == 0)
-						continue;
-					final short = parts[parts.length - 1];
-					if (short != "Int64")
-						continue;
-					final target = ocamlModuleNameFromTypePath(base);
-					if (target != null && target.length > 0 && target != "Unknown")
-						return target;
+					for (provider in directive.getProviders()) {
+						final base = provider.getCanonicalName();
+						final parts = base.split(".");
+						if (parts.length == 0 || parts[parts.length - 1] != "Int64")
+							continue;
+						if (isTypeImport && directive.getImportedTypeLocalName(provider) != "Int64")
+							continue;
+						final target = ocamlModuleNameFromTypePath(base);
+						if (target != null && target.length > 0 && target != "Unknown")
+							return target;
+					}
 				}
 				return null;
 			}
 
-			final importInt64 = findInt64ImportTarget(tm.getEnv().getImports());
+			final importInt64 = findInt64ImportTarget(tm.getEnv().getResolvedDirectives());
 
 			inline function isTyNamed(t:Null<TyType>, expected:String):Bool {
 				if (t == null)
@@ -7485,8 +7473,8 @@ class EmitterStage {
 						});
 					}
 
-					// Best-effort `import Foo.Bar.*` support:
-					// Build a map of unqualified identifiers -> imported module name for static members.
+					// Project resolved type and static-member imports to generated OCaml module names.
+					// Haxe import meaning was selected earlier by shared typing.
 					final staticImportByIdent:Map<String, String> = new Map();
 					// Prefer module-local helper type aliases in the current module.
 					//
@@ -7506,41 +7494,39 @@ class EmitterStage {
 							continue;
 						staticImportByIdent.set(localName, moduleNameForDecl(decl, moduleTypeName, localName));
 					}
-					for (rawImport in tm.getEnv().getImports()) {
-						if (rawImport == null)
-							continue;
-						final imp = StringTools.trim(rawImport);
-						if (!StringTools.endsWith(imp, ".*")) {
-							final parts = imp.split(".");
-							if (parts.length == 0)
-								continue;
-							final short = parts[parts.length - 1];
-							if (short == null || short.length == 0 || !isUpperStart(short))
-								continue;
-							final importModName = ocamlModuleNameFromTypePath(imp);
-							if (importModName.length == 0 || importModName == short)
-								continue;
-							if (!staticImportByIdent.exists(short))
-								staticImportByIdent.set(short, importModName);
-							continue;
-						}
-						if (!StringTools.endsWith(imp, ".*"))
-							continue;
-
-						final base = imp.substr(0, imp.length - 2);
-						final importModName = ocamlModuleNameFromTypePath(base);
-						if (importModName.length == 0)
-							continue;
-
-						final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
-						if (membersRaw == null)
-							continue;
-						final memberKeys:Null<Iterator<String>> = mapKeysRaw(cast membersRaw);
-						if (memberKeys == null)
-							continue;
-						for (name in memberKeys) {
-							if (!staticImportByIdent.exists(name))
-								staticImportByIdent.set(name, importModName);
+					final moduleDirectives = tm.getEnv().getResolvedDirectives();
+					for (offset in 0...moduleDirectives.length) {
+						final directive = moduleDirectives[moduleDirectives.length - 1 - offset];
+						switch (directive.getKind()) {
+							case TypeImport:
+								for (provider in directive.getProviders()) {
+									final short = directive.getImportedTypeLocalName(provider);
+									final importModName = ocamlModuleNameFromTypePath(provider.getCanonicalName());
+									if (short != null && short.length > 0 && isUpperStart(short) && importModName.length > 0 && importModName != short
+										&& !staticImportByIdent.exists(short))
+										staticImportByIdent.set(short, importModName);
+								}
+							case StaticMemberImport(_):
+								final provider = directive.getSingleProvider();
+								final importModName = provider == null ? "" : ocamlModuleNameFromTypePath(provider.getCanonicalName());
+								final localName = directive.getStaticLocalName();
+								if (localName != null && localName.length > 0 && importModName.length > 0 && !staticImportByIdent.exists(localName))
+									staticImportByIdent.set(localName, importModName);
+							case StaticWildcardImport:
+								final provider = directive.getSingleProvider();
+								final importModName = provider == null ? "" : ocamlModuleNameFromTypePath(provider.getCanonicalName());
+								if (importModName.length == 0)
+									continue;
+								final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
+								if (membersRaw == null)
+									continue;
+								final memberKeys:Null<Iterator<String>> = mapKeysRaw(cast membersRaw);
+								if (memberKeys == null)
+									continue;
+								for (name in memberKeys)
+									if (!staticImportByIdent.exists(name))
+										staticImportByIdent.set(name, importModName);
+							case PackageWildcardImport | UsingType | Unresolved:
 						}
 					}
 
@@ -8795,40 +8781,28 @@ class EmitterStage {
 
 			final aliasByShort:Map<String, String> = new Map();
 			for (tm in typedModules) {
-				for (rawImport in tm.getEnv().getImports()) {
-					if (rawImport == null)
+				for (directive in tm.getEnv().getResolvedDirectives()) {
+					if (!directive.getKind().match(TypeImport))
 						continue;
-					final imp = StringTools.trim(rawImport);
-					if (imp.length == 0)
-						continue;
-					if (StringTools.endsWith(imp, ".*"))
-						continue;
-					final parts = imp.split(".");
-					if (parts.length == 0)
-						continue;
-					final short = parts[parts.length - 1];
-					if (short == null || short.length == 0 || !isUpperStart(short))
-						continue;
-					if (deny.exists(short))
-						continue;
-					if (existing.exists(short))
-						continue;
-					final target = ocamlModuleNameFromTypePath(imp);
-					if (target == null || target.length == 0)
-						continue;
-					if (target == short)
-						continue;
-					// Only alias to a provider that actually exists in this build output.
-					//
-					// Why
-					// - Some imports are inactive after conditional compilation, or are otherwise not
-					//   present in the resolved+emitted module set during bring-up.
-					// - Emitting an alias to a missing provider turns an unused import into a hard
-					//   OCaml build failure.
-					if (!existing.exists(target))
-						continue;
-					if (!aliasByShort.exists(short))
-						aliasByShort.set(short, target);
+					for (provider in directive.getProviders()) {
+						final short = directive.getImportedTypeLocalName(provider);
+						if (short == null || short.length == 0 || !isUpperStart(short) || deny.exists(short) || existing.exists(short))
+							continue;
+						final target = ocamlModuleNameFromTypePath(provider.getCanonicalName());
+						if (target == null || target.length == 0 || target == short)
+							continue;
+						// Only alias to a provider that actually exists in this build output.
+						//
+						// Why
+						// - Some imports are inactive after conditional compilation, or are otherwise not
+						//   present in the resolved+emitted module set during bring-up.
+						// - Emitting an alias to a missing provider turns an unused import into a hard
+						//   OCaml build failure.
+						if (!existing.exists(target))
+							continue;
+						if (!aliasByShort.exists(short))
+							aliasByShort.set(short, target);
+					}
 				}
 			}
 
@@ -8882,18 +8856,6 @@ class EmitterStage {
 				false;
 		};
 		return isInt ? "Haxe_Int64.ofInt (" + rendered + ")" : rendered;
-	}
-
-	/**
-		Return the module whose declared function parameters apply to an import.
-
-		A static wildcard import such as `import haxe.Int64.*` still imports members
-		from the haxe.Int64 module. Removing only the trailing wildcard lets call
-		signature indexing read that module exactly as it does for `import haxe.Int64`.
-	**/
-	static function stage3ImportedSignatureModulePath(rawImport:String):String {
-		final trimmed = StringTools.trim(rawImport == null ? "" : rawImport);
-		return StringTools.endsWith(trimmed, ".*") ? trimmed.substr(0, trimmed.length - 2) : trimmed;
 	}
 
 	/**

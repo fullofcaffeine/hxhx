@@ -141,6 +141,31 @@ class M14CompilerDependencyEditSequenceTest {
 		];
 	}
 
+	static function aliasOnlySources(alias:String):Array<DependencyEditSource> {
+		return [
+			{
+				modulePath: "model.Api",
+				filePath: "model/Api.hx",
+				source: "package model; class Api {}"
+			},
+			{
+				modulePath: "Main",
+				filePath: "Main.hx",
+				source: 'import model.Api as $alias; class Main { public static function pass(value:$alias):$alias return value; }'
+			},
+			{
+				modulePath: "Consumer",
+				filePath: "Consumer.hx",
+				source: "import model.Api; class Consumer { public static function pass(value:Api):Api return Main.pass(value); }"
+			},
+			{
+				modulePath: "Unrelated",
+				filePath: "Unrelated.hx",
+				source: "class Unrelated { public static function value():Int return 0; }"
+			}
+		];
+	}
+
 	static function affected(comparison:CompilerDependencyComparison):String
 		return [for (invalidation in comparison.getInvalidations()) invalidation.modulePath].join(",");
 
@@ -163,6 +188,18 @@ class M14CompilerDependencyEditSequenceTest {
 		return CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets([value]);
 
 	static function main():Void {
+		final aliasA = snapshot(aliasOnlySources("Service"));
+		final aliasB = snapshot(aliasOnlySources("Client"));
+		final aliasComparison = CompilerDependencyInvalidator.compare(aliasA, aliasB);
+		assertTrue(affected(aliasComparison) == "Main",
+			"changing only a local import alias should recheck its module without invalidating its API consumer, an unrelated module, or the provider");
+		assertTrue(aliasComparison.getPublicInterfaceChanges().indexOf("Main") == -1,
+			"a local alias spelling that does not change an exported signature must not become a public-interface change");
+		assertTrue(aliasA.getCanonicalIdentity() != aliasB.getCanonicalIdentity(),
+			"dependency snapshots must retain the alias because it changes which local source name is valid");
+		assertTrue(aliasA.getCanonicalIdentity() == snapshot(aliasOnlySources("Service")).getCanonicalIdentity(),
+			"returning to an earlier alias should reproduce the same exact dependency snapshot");
+
 		final sharedA = "class Shared { public static function ordinary():Int return 1; }";
 		final sharedPublicB = 'class Shared { public static function ordinary():String return "one"; }';
 		final sharedBodyB = "class Shared { public static function ordinary():Int return 2; }";

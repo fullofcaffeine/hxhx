@@ -98,6 +98,15 @@ class M14InheritanceModuleLoadingIntegrationTest {
 		return false;
 	}
 
+	static function resolvedExtends(program:{modules:Array<TypedModule>, index:TyperIndex, prepared:Array<String>}, modulePath:String):Null<TyType> {
+		for (module in program.modules)
+			if (CompilerTypedModuleRevision.semanticModulePath(module) == modulePath)
+				for (typedClass in module.getTypedClasses())
+					if (HxClassDecl.getName(typedClass.getSourceDeclaration()) == "Main")
+						return typedClass.getResolvedExtends();
+		return null;
+	}
+
 	static function compareText(left:String, right:String):Int
 		return left < right ? -1 : (left > right ? 1 : 0);
 
@@ -148,10 +157,85 @@ class M14InheritanceModuleLoadingIntegrationTest {
 			assertModuleSet(typeFromRoot(root, "qualified.Main"), ["model.QualifiedBase", "qualified.Main"],
 				"a fully qualified base should resolve without an import");
 
+			saveSource(root, "model.AliasedBase", "package model; class AliasedBase {}");
+			saveSource(root, "aliased.Main",
+				"package aliased; import model.AliasedBase as Parent; class Main extends Parent { public static function main():Void {} }");
+			final aliasedProgram = typeFromRoot(root, "aliased.Main");
+			assertModuleSet(aliasedProgram, ["aliased.Main", "model.AliasedBase"],
+				"an aliased base should resolve through the local name declared by the import");
+			final aliasedMain = aliasedProgram.modules.filter(module -> CompilerTypedModuleRevision.semanticModulePath(module) == "aliased.Main")[0];
+			final aliasDirectives = HxModuleDecl.getDirectives(aliasedMain.getParsed().getDecl());
+			final aliasHit = aliasedProgram.index.resolveTypePath("Parent", "aliased", aliasDirectives);
+			assertTrue(aliasHit != null && aliasHit.getIdentity().getCanonicalName() == "model.AliasedBase",
+				"the alias should resolve to the imported type after its module is loaded");
+			assertTrue(aliasedProgram.index.resolveTypePath("AliasedBase", "aliased", aliasDirectives) == null,
+				"an alias import must not also expose the provider's original short name through the global fallback");
+
 			saveSource(root, "secondary.Holder", "package secondary; class Holder {} class NestedBase {}");
 			saveSource(root, "secondary.Main", "package secondary; class Main extends secondary.Holder.NestedBase { public static function main():Void {} }");
 			assertModuleSet(typeFromRoot(root, "secondary.Main"), ["secondary.Holder", "secondary.Main"],
 				"a secondary type should load the Haxe module file that declares it");
+			saveSource(root, "secondaryAlias.Main",
+				"package secondaryAlias; import secondary.Holder.NestedBase as Parent; class Main extends Parent { public static function main():Void {} }");
+			assertModuleSet(typeFromRoot(root, "secondaryAlias.Main"), ["secondary.Holder", "secondaryAlias.Main"],
+				"an alias for a secondary type should load the owner module and resolve the declared local name");
+
+			saveSource(root, "wildcard.Thing", "package wildcard; class Thing {}");
+			saveSource(root, "wildcardUse.Main", "package wildcardUse; import wildcard.*; class Main extends Thing { public static function main():Void {} }");
+			assertModuleSet(typeFromRoot(root, "wildcardUse.Main"), ["wildcard.Thing", "wildcardUse.Main"],
+				"a package wildcard should demand-load the referenced type instead of depending on unrelated prior indexing");
+
+			saveSource(root, "wildcard.Holder", [
+				"package wildcard;",
+				"class Holder {",
+				"  public static var VALUE:Int = 1;",
+				"  public static function twice(value:Int):Int return value * 2;",
+				"}",
+				"class NestedBase {}"
+			].join("\n"));
+			saveSource(root, "wildcardModuleUse.Main", [
+				"package wildcardModuleUse;",
+				"import wildcard.Holder.*;",
+				"class Main extends NestedBase {",
+				"  public static function main():Void { var value = twice(VALUE); }",
+				"}"
+			].join("\n"));
+			final staticWildcardProgram = typeFromRoot(root, "wildcardModuleUse.Main");
+			assertModuleSet(staticWildcardProgram, ["wildcard.Holder", "wildcardModuleUse.Main"],
+				"a type wildcard should load the owner module for its static members");
+			final invalidWildcardParent = resolvedExtends(staticWildcardProgram, "wildcardModuleUse.Main");
+			assertTrue(invalidWildcardParent != null && invalidWildcardParent.isUnresolved(),
+				"a type wildcard must not make a secondary type from the same module visible");
+
+			saveSource(root, "normalModuleUse.Main",
+				"package normalModuleUse; import wildcard.Holder; class Main extends NestedBase { public static function main():Void {} }");
+			final normalModuleProgram = typeFromRoot(root, "normalModuleUse.Main");
+			assertModuleSet(normalModuleProgram, ["normalModuleUse.Main", "wildcard.Holder"],
+				"a plain module import should load the owner module for a selected secondary type");
+			final normalModuleParent = resolvedExtends(normalModuleProgram, "normalModuleUse.Main");
+			assertTrue(normalModuleParent != null
+				&& normalModuleParent.getNominalIdentity() != null
+				&& normalModuleParent.getNominalIdentity().getCanonicalName() == "wildcard.Holder.NestedBase",
+				"a plain module import should expose the module's secondary type");
+
+			saveSource(root, "resolver.Api", [
+				"package resolver;",
+				"class Api {",
+				"  public static var PI:Int = 3;",
+				"  public static function twice(value:Int):Int return value * 2;",
+				"}"
+			].join("\n"));
+			saveSource(root, "resolverUse.Main", [
+				"package resolverUse;",
+				"import resolver.Api.PI;",
+				"import resolver.Api.twice;",
+				"class Main { public static function main():Void { var value = twice(PI); } }"
+			].join("\n"));
+			final resolverModules = ResolverStage.parseProject([root], "resolverUse.Main");
+			final resolverPaths = [for (module in resolverModules) ResolvedModule.getModulePath(module)];
+			resolverPaths.sort(compareText);
+			assertTrue(resolverPaths.join(",") == "resolver.Api,resolverUse.Main",
+				"two exact static-member imports should load one canonical provider module, not two member-shaped copies: " + resolverPaths.join(","));
 
 			saveSource(root, "generic.Payload", "package generic; class Payload {}");
 			saveSource(root, "generic.GenericBase", "package generic; class GenericBase<T> {}");

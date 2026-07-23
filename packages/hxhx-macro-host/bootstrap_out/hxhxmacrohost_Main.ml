@@ -194,8 +194,8 @@ let loadNativeModule = fun modulePath pluginId -> let tempString = ref ("" : str
     let pid = (StringTools.trim (!tempString1 : string) : string) in (
       ignore (if HxString.length path = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.loadNativeModule: module path is required") ["Dynamic"; "String"]) else ());
       ignore (if HxString.length pid = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.loadNativeModule: plugin id is required") ["Dynamic"; "String"]) else ());
-      let snapshot = (Hxhxmacrohost_NativeMacroModuleDynlink.loadAndCapture (path : string) (pid : string) : string) in let exprs = Obj.magic (Hxhxmacrohost_NativeMacroModuleHostAbi.exprsForPlugin (snapshot : string) (pid : string) (path : string)) in (
-        ignore (let _g = ref 0 in while !_g < HxArray.length exprs do ignore (let expr = (HxArray.get (Obj.magic exprs) (!_g) : string) in (
+      let snapshot = (Hxhxmacrohost_NativeMacroModuleDynlink.loadAndCapture (path : string) (pid : string) : string) in let exprs = Obj.magic (Hxhxmacrohost_NativeMacroModuleHostAbi.exprsForPlugin (snapshot : string) (pid : string) (path : string)) in let _g = ref 0 in (
+        ignore (while !_g < HxArray.length exprs do ignore (let expr = (HxArray.get (Obj.magic exprs) (!_g) : string) in (
           ignore (let __old_88 = !_g in let __new_89 = HxInt.add __old_88 1 in (
             ignore (_g := __new_89);
             __new_89
@@ -205,11 +205,13 @@ let loadNativeModule = fun modulePath pluginId -> let tempString = ref ("" : str
         )) done);
         let payloadParts = Obj.magic (HxArray.create ()) in (
           ignore (HxArray.push payloadParts (Hxhxmacrohost_Protocol.encodeLen ("c" : string) (string_of_int (HxArray.length exprs) : string)));
-          ignore (let _g = ref 0 in let _g1 = HxArray.length exprs in while !_g < _g1 do ignore (let i = let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
-            ignore (_g := __new_91);
-            __old_90
-          ) in HxArray.push payloadParts (Hxhxmacrohost_Protocol.encodeLen ("e" ^ string_of_int i : string) (HxArray.get (Obj.magic exprs) i : string))) done);
-          HxArray.join payloadParts " " (fun x -> x)
+          let _g = ref 0 in let _g1 = HxArray.length exprs in (
+            ignore (while !_g < _g1 do ignore (let i = let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
+              ignore (_g := __new_91);
+              __old_90
+            ) in HxArray.push payloadParts (Hxhxmacrohost_Protocol.encodeLen ("e" ^ string_of_int i : string) (HxArray.get (Obj.magic exprs) i : string))) done);
+            HxArray.join payloadParts " " (fun x -> x)
+          )
         )
       )
     )

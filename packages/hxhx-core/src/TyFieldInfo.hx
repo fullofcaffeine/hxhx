@@ -16,10 +16,11 @@ class TyFieldInfo {
 	final isFinal:Bool;
 	final isInline:Bool;
 	final hasInitializer:Bool;
+	final noImportGlobal:Bool;
 	final canonicalKey:String;
 
 	public function new(owner:TyNominalTypeId, modulePath:String, name:String, type:TyType, isStatic:Bool, isPublic:Bool, isFinal:Bool, isInline:Bool,
-			hasInitializer:Bool) {
+			hasInitializer:Bool, noImportGlobal:Bool = false) {
 		this.owner = owner;
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.name = name == null ? "" : StringTools.trim(name);
@@ -29,6 +30,7 @@ class TyFieldInfo {
 		this.isFinal = isFinal;
 		this.isInline = isInline;
 		this.hasInitializer = hasInitializer;
+		this.noImportGlobal = noImportGlobal;
 		final ownerName = owner == null ? "" : owner.getCanonicalName();
 		canonicalKey = ownerName + "#" + (isStatic ? "static" : "instance") + "#" + this.name;
 		if (ownerName.length == 0 || this.modulePath.length == 0 || this.name.length == 0)
@@ -61,6 +63,10 @@ class TyFieldInfo {
 
 	public function getHasInitializer():Bool
 		return hasInitializer;
+
+	/** Whether `import Owner.*` must withhold this field from bare-name lookup. **/
+	public function getNoImportGlobal():Bool
+		return noImportGlobal;
 
 	public function getCanonicalKey():String
 		return canonicalKey;

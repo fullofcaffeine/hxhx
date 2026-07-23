@@ -35,12 +35,12 @@ class ParserStageNativeDecode {
 			throw "Native frontend: missing/invalid protocol header";
 		}
 		final header = lines[0];
-		if (header != "hxhx_frontend_v=1" && header != "hxhx_frontend_v=2") {
+		if (header != "hxhx_frontend_v=3") {
 			throw "Native frontend: missing/invalid protocol header";
 		}
 
 		var packagePath = "";
-		final imports = new Array<String>();
+		final directives = new Array<HxModuleDirective>();
 		var className = "Unknown";
 		var headerOnly = false;
 		var hasToplevelMain = false;
@@ -81,12 +81,8 @@ class ParserStageNativeDecode {
 				switch (key) {
 					case "package":
 						packagePath = payload;
-					case "imports":
-						if (payload.length > 0) {
-							for (p in payload.split("|"))
-								if (p.length > 0)
-									imports.push(p);
-						}
+					case "directive":
+						directives.push(HxModuleDirectiveProtocol.decode(payload));
 					case "class":
 						className = payload;
 					case "header_only":
@@ -177,7 +173,7 @@ class ParserStageNativeDecode {
 		}
 
 		final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
-		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
+		return new HxModuleDecl(packagePath, directives, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
 	static function fieldHintKey(name:String, isStatic:Bool):String {
@@ -1303,6 +1299,10 @@ class ParserStageNativeDecode {
 		if (looksLikeSwitchCaseFragment(exprText))
 			return ENull;
 
+		final leadingCast = parseLeadingCastWithoutTypeHint(exprText);
+		if (leadingCast != null)
+			return leadingCast;
+
 		final regexLiteral = parseRegexLiteral(exprText);
 		if (regexLiteral != null)
 			return ENew("EReg", [EString(regexLiteral.pattern), EString(regexLiteral.flags)]);
@@ -1368,6 +1368,28 @@ class ParserStageNativeDecode {
 		}
 		return parsed;
 		#end
+	}
+
+	/**
+		Parses `cast value` before handing the remaining expression to `HxParser`.
+
+		The native OCaml bootstrap can currently join the `cast` keyword to the
+		first identifier while its lightweight expression lexer runs. For example,
+		`cast haxe.SysTools.winMetaCharacters` can otherwise become a field access
+		rooted at a made-up identifier named `casthaxe`. Removing the keyword first
+		preserves the same explicit `ECast` node on stage0 and native compiler paths.
+
+		Typed casts written as `cast(value, Type)` remain owned by `HxParser`.
+	**/
+	static function parseLeadingCastWithoutTypeHint(exprText:String):Null<HxExpr> {
+		if (!StringTools.startsWith(exprText, "cast") || exprText.length <= "cast".length)
+			return null;
+		final separator = exprText.charCodeAt("cast".length);
+		final isWhitespace = separator == " ".code || separator == "\t".code || separator == "\n".code || separator == "\r".code;
+		if (!isWhitespace)
+			return null;
+		final innerText = StringTools.trim(exprText.substr("cast".length));
+		return innerText.length == 0 ? null : ECast(parseReturnExprText(innerText), "");
 	}
 
 	static function looksLikeSwitchCaseFragment(exprText:String):Bool {

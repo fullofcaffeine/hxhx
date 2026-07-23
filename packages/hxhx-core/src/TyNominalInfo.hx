@@ -16,11 +16,12 @@ class TyNominalInfo {
 	final staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
 	final instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
 	final declarations:Array<TyDeclarationInfo>;
+	final visibility:HxVisibility;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			declarations:Array<TyDeclarationInfo>) {
+			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public) {
 		this.identity = identity;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
@@ -33,6 +34,7 @@ class TyNominalInfo {
 		this.staticMethodLists = staticMethodLists;
 		this.instanceMethodLists = instanceMethodLists;
 		this.declarations = declarations;
+		this.visibility = visibility;
 	}
 
 	public function getIdentity():TyNominalTypeId
@@ -49,6 +51,10 @@ class TyNominalInfo {
 
 	public function getDeclarations():Array<TyDeclarationInfo>
 		return declarations;
+
+	/** Whether another module may import this top-level type. **/
+	public function getVisibility():HxVisibility
+		return visibility;
 
 	/** Resolve the stable declaration record that owns one indexed signature. **/
 	public function declarationForSignature(signature:TyFunSig):Null<TyDeclarationInfo> {

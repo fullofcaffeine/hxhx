@@ -4,30 +4,54 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable packagePath : string; mutable imports : string HxArray.t; mutable mainClass : TyClassEnv.t }
+type t = { __hx_type : Obj.t; mutable packagePath : string; mutable directives : HxModuleDirective.t HxArray.t; mutable resolvedDirectives : TyModuleDirective.t HxArray.t; mutable mainClass : TyClassEnv.t }
 
-let create = fun packagePath2 imports2 mainClass2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
       (Obj.magic self : t).packagePath <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = Obj.magic imports2 in (
-      (Obj.magic self : t).imports <- __assign_2;
-      __assign_2
-    ));
-    let __assign_3 = Obj.magic mainClass2 in (
-      (Obj.magic self : t).mainClass <- __assign_3;
-      __assign_3
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDirective.t HxArray.t) in (
+      ignore (if directives2 == Obj.magic (HxRuntime.hx_null) then let __assign_2 = Obj.magic (let __arr_3 = HxArray.create () in __arr_3) in (
+        tempRight := __assign_2;
+        __assign_2
+      ) else let __assign_4 = Obj.magic (HxArray.copy directives2) in (
+        tempRight := __assign_4;
+        __assign_4
+      ));
+      ignore (let __assign_5 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).directives <- __assign_5;
+        __assign_5
+      ));
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TyModuleDirective.t HxArray.t) in (
+        ignore (if resolvedDirectives2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in (
+          tempRight1 := __assign_6;
+          __assign_6
+        ) else let __assign_8 = Obj.magic (HxArray.copy resolvedDirectives2) in (
+          tempRight1 := __assign_8;
+          __assign_8
+        ));
+        ignore (let __assign_9 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).resolvedDirectives <- __assign_9;
+          __assign_9
+        ));
+        let __assign_10 = Obj.magic mainClass2 in (
+          (Obj.magic self : t).mainClass <- __assign_10;
+          __assign_10
+        )
+      )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 
-let getImports = fun self () -> (Obj.magic self : t).imports
+let getDirectives = fun self () -> HxArray.copy ((Obj.magic self : t).directives)
+
+let getResolvedDirectives = fun self () -> HxArray.copy ((Obj.magic self : t).resolvedDirectives)
 
 let getMainClass = fun self () -> (Obj.magic self : t).mainClass

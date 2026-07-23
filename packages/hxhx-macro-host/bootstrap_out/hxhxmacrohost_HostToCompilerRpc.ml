@@ -100,9 +100,9 @@ let call = fun hx_method tail -> try let __fallback_result_34 = (
     ignore (HxArray.push __arr_21 tail);
     __arr_21
   )))) : string))) else ());
-  let id = let __old_22 = !nextId in let __new_23 = HxInt.add __old_22 (-1) in (
-    ignore (nextId := __new_23);
-    __old_22
+  let id = let __place_old_22 = !nextId in let __place_new_23 = HxInt.add __place_old_22 (-1) in (
+    nextId := __place_new_23;
+    __place_old_22
   ) in (
     ignore (if traceEnabled () then ignore (let tempString = ref ("" : string) in (
       ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_24 = ("" : string) in (

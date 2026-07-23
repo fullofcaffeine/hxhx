@@ -13,6 +13,7 @@ type hxexpr =
 | ESuper
 | EIdent of string
 | EField of hxexpr * string
+| ENullSafeField of hxexpr * string
 | ECall of hxexpr * hxexpr HxArray.t
 | EMacroExpr of hxexpr * string HxArray.t
 | EMacroType of string
@@ -32,3 +33,9 @@ type hxexpr =
 | ECast of hxexpr * string
 | EUntyped of hxexpr
 | EUnsupported of string
+| EReturn of Obj.t
+| EVars of hxexpr HxArray.t
+| EVariableDeclaration of string * string * Obj.t * HxPos.t * bool * bool
+| EWhile of hxexpr * hxexpr HxArray.t * bool * HxPos.t
+| EBreak of HxPos.t
+| EContinue of HxPos.t

@@ -6,10 +6,9 @@ package hxhx.macro;
 	Why
 	- Runtime `Context.getLocalImports()` is useful for real target macros, especially metadata and
 	  import-resolution helpers in compiler-shaped libraries like `reflaxe.elixir`.
-	- Our current parsed-module representation only stores raw import strings and intentionally drops
-	  alias mode (`import Foo as Bar`) information.
-	- We therefore need a narrower, honest rung that preserves import semantics without widening the
-	  external-host ABI to a full AST transport.
+	- Macro code needs the exact local spelling of imports, including aliases, while the external
+	  macro process deliberately receives only a small request payload instead of the whole parsed module.
+	- This helper preserves that source-level information at the macro-process boundary.
 
 	What
 	- Reads the active source file and scans only the top-of-module `import` / `using` block.
@@ -159,7 +158,7 @@ class MacroLocalImports {
 				}
 			}
 
-			if (!isUsing && acceptKeyword(KAs)) {
+			if (!isUsing && (acceptKeyword(KAs) || acceptKeyword(KIn))) {
 				final aliasToken = readIdentToken();
 				if (aliasToken != null) {
 					alias = aliasToken.name;

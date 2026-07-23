@@ -164,6 +164,8 @@ let getPatterns = fun self () -> HxArray.copy ((Obj.magic self : t).patterns)
 
 let getBoolValue = fun self () -> (Obj.magic self : t).boolValue
 
+let getRequiresOwnerQualification = fun self () -> (Obj.magic self : t).boolValue
+
 let getVariableIsFinal = fun self () -> (Obj.magic self : t).boolValue
 
 let getVariableIsStatic = fun self () -> (Obj.magic self : t).intValue <> 0
@@ -222,10 +224,10 @@ let localRead = fun name hx_type position2 -> create (Obj.magic LocalRead) (Obj.
   __arr_31
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let nameRead = fun name hx_type position2 -> create (Obj.magic NameRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_32 = HxArray.create () in (
+let nameRead = fun name hx_type position2 fieldInfo2 requiresOwnerQualification -> let requiresOwnerQualification = if Obj.repr requiresOwnerQualification == HxRuntime.hx_null then false else requiresOwnerQualification in create (Obj.magic NameRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_32 = HxArray.create () in (
   ignore (HxArray.push __arr_32 name);
   __arr_32
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) requiresOwnerQualification 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic fieldInfo2)
 
 let fieldRead = fun hx_object field hx_type position2 fieldInfo2 -> create (Obj.magic FieldRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_33 = HxArray.create () in (
   ignore (HxArray.push __arr_33 field);
@@ -243,7 +245,7 @@ let nullSafeFieldRead = fun hx_object field hx_type position2 -> create (Obj.mag
   __arr_36
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let call = fun callee arguments declaration2 hx_type position2 -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
+let call = fun callee arguments declaration2 hx_type position2 requiresOwnerQualification -> let requiresOwnerQualification = if Obj.repr requiresOwnerQualification == HxRuntime.hx_null then false else requiresOwnerQualification in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
   ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_37 = Obj.magic (let __arr_38 = HxArray.create () in __arr_38) in (
     tempArray := __assign_37;
     __assign_37
@@ -254,7 +256,7 @@ let call = fun callee arguments declaration2 hx_type position2 -> let tempArray 
   create (Obj.magic Call) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_40 = HxArray.create () in (
     ignore (HxArray.push __arr_40 callee);
     __arr_40
-  )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic declaration2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+  )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) requiresOwnerQualification 0 0.0 (Obj.magic declaration2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 )
 
 let returnExpr = fun expression hx_type position2 -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (

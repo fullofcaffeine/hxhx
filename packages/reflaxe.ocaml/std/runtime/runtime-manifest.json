@@ -159,7 +159,7 @@
     {
       "module": "HxHxNativeLexer",
       "scope": "tooling",
-      "files": [{ "path": "HxHxNativeLexer.ml", "sha256": "79b28b488ce8fdf13a4f6b6b5f8124420afade6409741bf9b3490db2c30da208" }],
+      "files": [{ "path": "HxHxNativeLexer.ml", "sha256": "069df623059772a430868932fb02d77af5d2f41bb3ca05c7fb55a27215173c5a" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["portable"],
@@ -168,7 +168,7 @@
     {
       "module": "HxHxNativeParser",
       "scope": "tooling",
-      "files": [{ "path": "HxHxNativeParser.ml", "sha256": "ea6ebcaa1777586110a154b26b05b1cba1e38cb296dec6824a726a63e124b893" }],
+      "files": [{ "path": "HxHxNativeParser.ml", "sha256": "1ff33394ff1693ac37c286cd0128d3dc0d7b06113a3fe901271cae36fcc1bf4a" }],
       "dependencies": ["HxHxNativeLexer"],
       "duneLibraries": [],
       "profiles": ["portable"],

@@ -24,71 +24,67 @@ let normalize = fun path -> try let __fallback_result_24 = let slash = ("/" : st
       if HxString.equals token ".." && HxArray.length target > 0 && not (HxString.equals (HxArray.get (Obj.magic target) (HxInt.sub (HxArray.length target) 1)) "..") then ignore (HxArray.pop target ()) else ignore (if HxString.equals token "" then ignore (if HxArray.length target > 0 || (let __nullable_9 = HxString.charCodeAt path 0 in if __nullable_9 == HxRuntime.hx_null then false else Obj.obj __nullable_9 = 47) then ignore (HxArray.push target token) else ()) else ignore (if not (HxString.equals token ".") then ignore (HxArray.push target token) else ()))
     )) done);
     let tmp = (HxArray.join target slash (fun x -> x) : string) in let acc = Obj.magic (StringBuf.create ()) in let colon = ref false in let slashes = ref false in let _g_offset = ref 0 in (
-      ignore (while !_g_offset < HxString.length tmp do ignore (let tempNumber = ref (0 : int) in (
-        ignore (let tempNumber1 = ref (0 : int) in (
-          ignore (let s = (tmp : string) in let index = let __old_10 = !_g_offset in let __new_11 = HxInt.add __old_10 1 in (
-            ignore (_g_offset := __new_11);
-            __old_10
-          ) in let c = ref (Obj.obj (HxAnon.get (Obj.repr s) "cca") index) in (
-            ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_12 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
-              c := __assign_12;
-              __assign_12
-            )) else ());
-            let __assign_13 = !c in (
-              tempNumber1 := __assign_13;
-              __assign_13
-            )
-          ));
-          let c = !tempNumber1 in (
-            ignore (if c >= 65536 then ignore (let __old_14 = !_g_offset in let __new_15 = HxInt.add __old_14 1 in (
-              ignore (_g_offset := __new_15);
-              __old_14
-            )) else ());
-            let __assign_16 = c in (
-              tempNumber := __assign_16;
-              __assign_16
-            )
-          )
+      ignore (while !_g_offset < HxString.length tmp do ignore (let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let s = (tmp : string) in let index = let __old_10 = !_g_offset in let __new_11 = HxInt.add __old_10 1 in (
+        ignore (_g_offset := __new_11);
+        __old_10
+      ) in let c = ref (Obj.obj (HxAnon.get (Obj.repr s) "cca") index) in (
+        ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_12 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
+          c := __assign_12;
+          __assign_12
+        )) else ());
+        ignore (let __assign_13 = !c in (
+          tempNumber1 := __assign_13;
+          __assign_13
         ));
-        let c = !tempNumber in match c with
-          | 47 -> ignore (if not (!colon) then ignore (let __assign_19 = true in (
-            slashes := __assign_19;
-            __assign_19
-          )) else ignore (let i = c in (
-            ignore (let __assign_20 = false in (
-              colon := __assign_20;
-              __assign_20
-            ));
-            ignore (if !slashes then ignore ((
-              ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
-              let __assign_21 = false in (
-                slashes := __assign_21;
-                __assign_21
+        let c = !tempNumber1 in (
+          ignore (if c >= 65536 then ignore (let __old_14 = !_g_offset in let __new_15 = HxInt.add __old_14 1 in (
+            ignore (_g_offset := __new_15);
+            __old_14
+          )) else ());
+          ignore (let __assign_16 = c in (
+            tempNumber := __assign_16;
+            __assign_16
+          ));
+          let c = !tempNumber in match c with
+            | 47 -> ignore (if not (!colon) then ignore (let __assign_19 = true in (
+              slashes := __assign_19;
+              __assign_19
+            )) else ignore (let i = c in (
+              ignore (let __assign_20 = false in (
+                colon := __assign_20;
+                __assign_20
+              ));
+              ignore (if !slashes then ignore ((
+                ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
+                let __assign_21 = false in (
+                  slashes := __assign_21;
+                  __assign_21
+                )
+              )) else ());
+              StringBuf.addChar (Obj.magic acc) i
+            )))
+            | 58 -> ignore ((
+              ignore (StringBuf.add (Obj.magic acc) (Obj.repr ":"));
+              let __assign_22 = true in (
+                colon := __assign_22;
+                __assign_22
               )
-            )) else ());
-            StringBuf.addChar (Obj.magic acc) i
-          )))
-          | 58 -> ignore ((
-            ignore (StringBuf.add (Obj.magic acc) (Obj.repr ":"));
-            let __assign_22 = true in (
-              colon := __assign_22;
-              __assign_22
-            )
-          ))
-          | _ -> ignore (let i = c in (
-            ignore (let __assign_17 = false in (
-              colon := __assign_17;
-              __assign_17
-            ));
-            ignore (if !slashes then ignore ((
-              ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
-              let __assign_18 = false in (
-                slashes := __assign_18;
-                __assign_18
-              )
-            )) else ());
-            StringBuf.addChar (Obj.magic acc) i
-          ))
+            ))
+            | _ -> ignore (let i = c in (
+              ignore (let __assign_17 = false in (
+                colon := __assign_17;
+                __assign_17
+              ));
+              ignore (if !slashes then ignore ((
+                ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
+                let __assign_18 = false in (
+                  slashes := __assign_18;
+                  __assign_18
+                )
+              )) else ());
+              StringBuf.addChar (Obj.magic acc) i
+            ))
+        )
       )) done);
       StringBuf.toString (Obj.magic acc) ()
     )

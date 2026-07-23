@@ -207,6 +207,50 @@ class SourceTargetCommon {
 		};
 	}
 
+	/**
+		Return the type selected by shared typing for target support-file discovery.
+
+		A static-member import such as `import model.Api.PI` belongs to `model.Api`
+		even though the field starts with an uppercase letter. Package wildcards and
+		unresolved directives have no concrete provider. No target may reconstruct
+		this answer from source capitalization.
+	**/
+	static function directiveProviderTypePaths(directive:TyModuleDirective):Array<String> {
+		if (directive == null)
+			return [];
+		return [for (provider in directive.getProviders()) provider.getCanonicalName()];
+	}
+
+	/**
+		Return the Haxe source module that declares a resolved provider when it is
+		part of the sealed program.
+
+		A secondary type such as `pack.Tools.Helper` may be declared by module
+		`pack.Tools`. That relationship cannot be recovered from capitalization:
+		package and type segments are both legal with either case in target syntax.
+	**/
+	static function directiveProviderModulePath(program:GenIrProgram, provider:TyNominalTypeId):Null<String> {
+		if (program == null || provider == null)
+			return null;
+		for (typed in program.getTypedModules())
+			for (typedClass in typed.getTypedClasses()) {
+				final info = typedClass.getSemanticInfo();
+				if (info != null && info.getIdentity().equals(provider))
+					return info.getModulePath();
+			}
+		return null;
+	}
+
+	/** Find the typed directives belonging to the backend declaration being rendered. **/
+	static function resolvedDirectives(program:GenIrProgram, declaration:HxModuleDecl):Array<TyModuleDirective> {
+		if (program == null || declaration == null)
+			return [];
+		for (typed in program.getTypedModules())
+			if (typed.getBackendDeclaration() == declaration)
+				return typed.getEnv().getResolvedDirectives();
+		return [];
+	}
+
 	static function artifactKind(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "entry_python";
@@ -568,19 +612,21 @@ class SourceTargetCommon {
 		final nestedByOwner = new Map<String, Array<String>>();
 		final nestedImport = new Map<String, Bool>();
 		for (typed in program.getTypedModules()) {
-			for (rawImport in HxModuleDecl.getImports(typed.getBackendDeclaration())) {
-				final clean = csTypePath(rawImport);
-				imports.push(clean);
-				if (csImportShouldUseOwnerStub(clean)) {
-					final lastDot = clean.lastIndexOf(".");
-					final owner = clean.substr(0, lastDot);
-					final nested = clean.substr(lastDot + 1);
-					nestedImport.set(clean, true);
-					if (!nestedByOwner.exists(owner))
-						nestedByOwner.set(owner, []);
-					final nestedNames = nestedByOwner.get(owner);
-					if (nestedNames.indexOf(nested) < 0)
-						nestedNames.push(nested);
+			for (directive in typed.getEnv().getResolvedDirectives()) {
+				for (provider in directive.getProviders()) {
+					final clean = csTypePath(provider.getCanonicalName());
+					imports.push(clean);
+					if (csImportShouldUseOwnerStub(clean, directiveProviderModulePath(program, provider))) {
+						final lastDot = clean.lastIndexOf(".");
+						final owner = clean.substr(0, lastDot);
+						final nested = clean.substr(lastDot + 1);
+						nestedImport.set(clean, true);
+						if (!nestedByOwner.exists(owner))
+							nestedByOwner.set(owner, []);
+						final nestedNames = nestedByOwner.get(owner);
+						if (nestedNames.indexOf(nested) < 0)
+							nestedNames.push(nested);
+					}
 				}
 			}
 		}
@@ -621,17 +667,15 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function csImportShouldUseOwnerStub(path:String):Bool {
-		if (!csImportStubIsEligible(path) || path.indexOf("*") >= 0)
+	static function csImportShouldUseOwnerStub(path:String, modulePath:Null<String>):Bool {
+		if (!csImportStubIsEligible(path) || path.indexOf("*") >= 0 || modulePath == null)
 			return false;
-		final lastDot = path.lastIndexOf(".");
-		if (lastDot <= 0)
+		final owner = csTypePath(modulePath);
+		final prefix = owner + ".";
+		if (owner.length == 0 || !StringTools.startsWith(path, prefix))
 			return false;
-		final owner = path.substr(0, lastDot);
-		final ownerLeafDot = owner.lastIndexOf(".");
-		final ownerLeaf = ownerLeafDot < 0 ? owner : owner.substr(ownerLeafDot + 1);
-		final first = ownerLeaf.length == 0 ? "" : ownerLeaf.charAt(0);
-		return first >= "A" && first <= "Z";
+		final nested = path.substr(prefix.length);
+		return nested.length > 0 && nested.indexOf(".") < 0;
 	}
 
 	static function emitCsRunciHelperStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
@@ -773,20 +817,21 @@ class SourceTargetCommon {
 		final nestedByOwner = new Map<String, Array<String>>();
 		final nestedImport = new Map<String, Bool>();
 		for (typed in program.getTypedModules()) {
-			final moduleDecl = typed.getBackendDeclaration();
-			for (rawImport in HxModuleDecl.getImports(moduleDecl)) {
-				final clean = javaTypePath(rawImport);
-				imports.push(clean);
-				if (javaImportShouldUseOwnerStub(clean)) {
-					final lastDot = clean.lastIndexOf(".");
-					final owner = clean.substr(0, lastDot);
-					final nested = clean.substr(lastDot + 1);
-					nestedImport.set(clean, true);
-					if (!nestedByOwner.exists(owner))
-						nestedByOwner.set(owner, []);
-					final nestedNames = nestedByOwner.get(owner);
-					if (nestedNames.indexOf(nested) < 0)
-						nestedNames.push(nested);
+			for (directive in typed.getEnv().getResolvedDirectives()) {
+				for (provider in directive.getProviders()) {
+					final clean = javaTypePath(provider.getCanonicalName());
+					imports.push(clean);
+					final modulePath = directiveProviderModulePath(program, provider);
+					if (javaImportShouldUseOwnerStub(clean, modulePath)) {
+						final owner = javaTypePath(modulePath);
+						final nested = clean.substr(owner.length + 1);
+						nestedImport.set(clean, true);
+						if (!nestedByOwner.exists(owner))
+							nestedByOwner.set(owner, []);
+						final nestedNames = nestedByOwner.get(owner);
+						if (nestedNames.indexOf(nested) < 0)
+							nestedNames.push(nested);
+					}
 				}
 			}
 		}
@@ -794,10 +839,8 @@ class SourceTargetCommon {
 			if (seen.exists(owner))
 				continue;
 			final lastDot = owner.lastIndexOf(".");
-			if (lastDot <= 0)
-				continue;
-			final packagePath = owner.substr(0, lastDot);
-			final className = owner.substr(lastDot + 1);
+			final packagePath = lastDot < 0 ? "" : owner.substr(0, lastDot);
+			final className = lastDot < 0 ? owner : owner.substr(lastDot + 1);
 			final path = javaSourcePath(sourceDir, packagePath, className);
 			seen.set(owner, true);
 			if (sys.FileSystem.exists(path)) {
@@ -831,19 +874,15 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function javaImportShouldUseOwnerStub(path:String):Bool {
-		if (!javaImportStubIsEligible(path) || path.indexOf("*") >= 0)
+	static function javaImportShouldUseOwnerStub(path:String, modulePath:Null<String>):Bool {
+		if (!javaImportStubIsEligible(path) || path.indexOf("*") >= 0 || modulePath == null)
 			return false;
-		final lastDot = path.lastIndexOf(".");
-		if (lastDot <= 0)
+		final owner = javaTypePath(modulePath);
+		final prefix = owner + ".";
+		if (owner.length == 0 || !StringTools.startsWith(path, prefix))
 			return false;
-		final owner = path.substr(0, lastDot);
-		final ownerLeafDot = owner.lastIndexOf(".");
-		if (ownerLeafDot < 0)
-			return false;
-		final ownerLeaf = owner.substr(ownerLeafDot + 1);
-		final first = ownerLeaf.length == 0 ? "" : ownerLeaf.charAt(0);
-		return first >= "A" && first <= "Z";
+		final nested = path.substr(prefix.length);
+		return nested.length > 0 && nested.indexOf(".") < 0;
 	}
 
 	static function javaImportStubIsEligible(path:String):Bool {
@@ -7057,17 +7096,38 @@ class SourceTargetCommon {
 					alias != null ? alias : sanitizePhpTypePath(name);
 				}
 			case EField(receiver, field):
-				if (!looksLikeTypePathRoot(field))
-					return null;
-				final prefix = phpStaticTypePathPrefix(receiver);
-				if (prefix == null) {
-					null;
+				final knownPath = phpKnownEmittedQualifiedTypePath(expr);
+				if (knownPath != null) {
+					phpRenderedTypeName(knownPath);
 				} else {
-					sanitizePhpTypePath(prefix + "." + field);
+					if (!looksLikeTypePathRoot(field))
+						return null;
+					final prefix = phpStaticTypePathPrefix(receiver);
+					if (prefix == null)
+						null;
+					else
+						sanitizePhpTypePath(prefix + "." + field);
 				}
 			case _:
 				null;
 		};
+	}
+
+	/** Resolve a structural package path only when it names a class emitted in this program. **/
+	static function phpKnownEmittedQualifiedTypePath(expr:HxExpr):Null<String> {
+		if (phpRenderEmittedTypeNames == null)
+			return null;
+		function flatten(candidate:HxExpr):Null<String> {
+			return switch (candidate) {
+				case EIdent(name): name;
+				case EField(receiver, field):
+					final prefix = flatten(receiver);
+					prefix == null ? null : prefix + "." + field;
+				case _: null;
+			};
+		}
+		final path = flatten(expr);
+		return path != null && path.indexOf(".") > 0 && phpRenderEmittedTypeNames.exists(path) ? path : null;
 	}
 
 	static function phpPackageQualifiedTypeReference(expr:HxExpr):Null<String> {
@@ -10692,13 +10752,102 @@ class SourceTargetCommon {
 		final packagePath = HxModuleDecl.getPackagePath(decl);
 		if (packagePath != null && packagePath.length > 0)
 			out.push("package " + javaTypePath(packagePath) + ";");
-		for (imp in HxModuleDecl.getImports(decl)) {
-			final clean = javaTypePath(imp);
-			if (javaImportPathIsValid(clean)
-				&& !javaImportConflictsWithClass(clean, currentClassName)
-				&& !javaImportTargetsSamePackageEmittedOwner(program, packagePath, clean))
-				out.push("import " + clean + ";");
+		final directives = resolvedDirectives(program, decl);
+		final winningTypeImport = new Map<String, String>();
+		final winningStaticImport = new Map<String, String>();
+		for (offset in 0...directives.length) {
+			final directive = directives[directives.length - 1 - offset];
+			switch (directive.getKind()) {
+				case TypeImport:
+					for (provider in directive.getProviders()) {
+						final localName = directive.getImportedTypeLocalName(provider);
+						if (localName != null && !winningTypeImport.exists(localName))
+							winningTypeImport.set(localName, provider.getCanonicalName());
+					}
+				case StaticMemberImport(memberName):
+					final localName = directive.getStaticLocalName();
+					final provider = directive.getSingleProvider();
+					if (localName != null && provider != null && !winningStaticImport.exists(localName))
+						winningStaticImport.set(localName, provider.getCanonicalName() + "." + memberName);
+				case StaticWildcardImport:
+					final provider = directive.getSingleProvider();
+					if (provider != null)
+						for (memberName in javaImportableStaticMemberNames(program, provider))
+							if (!winningStaticImport.exists(memberName))
+								winningStaticImport.set(memberName, provider.getCanonicalName() + "." + memberName);
+				case PackageWildcardImport | UsingType | Unresolved:
+			}
 		}
+		final emittedImports = new Map<String, Bool>();
+		function appendImport(path:String, isStatic:Bool):Void {
+			if (path == null || path.length == 0)
+				return;
+			final clean = javaTypePath(path);
+			final statement = "import " + (isStatic ? "static " : "") + clean + ";";
+			if (!emittedImports.exists(statement)
+				&& javaImportPathIsValid(clean)
+				&& !javaImportConflictsWithClass(clean, currentClassName)
+				&& !javaImportTargetsSamePackageEmittedOwner(program, packagePath, clean)) {
+				emittedImports.set(statement, true);
+				out.push(statement);
+			}
+		}
+		for (directive in directives) {
+			final source = directive.getSource();
+			switch (directive.getKind()) {
+				case TypeImport:
+					for (provider in directive.getProviders()) {
+						final localName = directive.getImportedTypeLocalName(provider);
+						if (localName != null && winningTypeImport.get(localName) == provider.getCanonicalName())
+							appendImport(provider.getCanonicalName(), false);
+					}
+				case StaticMemberImport(memberName):
+					final provider = directive.getSingleProvider();
+					final localName = directive.getStaticLocalName();
+					if (provider != null
+						&& localName != null
+						&& winningStaticImport.get(localName) == provider.getCanonicalName() + "." + memberName)
+						appendImport(provider.getCanonicalName() + "." + memberName, true);
+				case StaticWildcardImport:
+					final provider = directive.getSingleProvider();
+					if (provider != null)
+						for (memberName in javaImportableStaticMemberNames(program, provider))
+							if (winningStaticImport.get(memberName) == provider.getCanonicalName() + "." + memberName)
+								appendImport(provider.getCanonicalName() + "." + memberName, true);
+				case PackageWildcardImport:
+					appendImport(HxModuleDirective.getPath(source) + ".*", false);
+				case UsingType | Unresolved:
+			}
+		}
+		return out;
+	}
+
+	/** Public static members that Haxe exposes through `import Provider.*`. **/
+	static function javaImportableStaticMemberNames(program:GenIrProgram, provider:TyNominalTypeId):Array<String> {
+		final out = new Array<String>();
+		if (program == null || provider == null)
+			return out;
+		for (typedModule in program.getTypedModules())
+			for (typedClass in typedModule.getTypedClasses()) {
+				final semanticInfo = typedClass.getSemanticInfo();
+				if (semanticInfo == null || !semanticInfo.getIdentity().equals(provider))
+					continue;
+				for (functionDeclaration in HxClassDecl.getFunctions(typedClass.getSourceDeclaration())) {
+					final declaration = semanticInfo.declarationForSource(functionDeclaration);
+					if (declaration != null
+						&& declaration.getIsStatic()
+						&& HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public
+						&& !declaration.getNoImportGlobal()
+						&& out.indexOf(HxFunctionDecl.getName(functionDeclaration)) < 0)
+						out.push(HxFunctionDecl.getName(functionDeclaration));
+				}
+				for (fieldDeclaration in HxClassDecl.getFields(typedClass.getSourceDeclaration())) {
+					final field = semanticInfo.fieldInfo(HxFieldDecl.getName(fieldDeclaration));
+					if (field != null && field.getIsStatic() && field.getIsPublic() && !field.getNoImportGlobal() && out.indexOf(field.getName()) < 0)
+						out.push(field.getName());
+				}
+				return out;
+			}
 		return out;
 	}
 
@@ -10991,15 +11140,17 @@ class SourceTargetCommon {
 		final seen = new Map<String, Bool>();
 		final out = new Array<String>();
 		for (typed in program.getTypedModules()) {
-			for (rawImport in HxModuleDecl.getImports(typed.getBackendDeclaration())) {
-				final clean = javaTypePath(rawImport);
-				if (!StringTools.startsWith(clean, prefix))
-					continue;
-				final nestedName = clean.substr(prefix.length);
-				if (nestedName.length == 0 || nestedName.indexOf(".") >= 0 || nestedName == "*" || seen.exists(nestedName))
-					continue;
-				seen.set(nestedName, true);
-				out.push(nestedName);
+			for (directive in typed.getEnv().getResolvedDirectives()) {
+				for (providerPath in directiveProviderTypePaths(directive)) {
+					final clean = javaTypePath(providerPath);
+					if (!StringTools.startsWith(clean, prefix))
+						continue;
+					final nestedName = clean.substr(prefix.length);
+					if (nestedName.length == 0 || nestedName.indexOf(".") >= 0 || nestedName == "*" || seen.exists(nestedName))
+						continue;
+					seen.set(nestedName, true);
+					out.push(nestedName);
+				}
 			}
 		}
 		return out;
@@ -11298,10 +11449,14 @@ class SourceTargetCommon {
 		appendCsUsing(out, seen, "haxe.io");
 		appendCsUsing(out, seen, "sys");
 		appendCsUsing(out, seen, "sys.io");
-		for (rawImport in HxModuleDecl.getImports(decl)) {
-			final clean = csTypePath(rawImport);
-			final namespacePath = csImportUsingNamespace(clean);
-			appendCsUsing(out, seen, namespacePath);
+		for (directive in resolvedDirectives(program, decl)) {
+			if (directive.getKind().match(UsingType))
+				continue;
+			for (providerPath in directiveProviderTypePaths(directive)) {
+				final clean = csTypePath(providerPath);
+				final namespacePath = csImportUsingNamespace(clean);
+				appendCsUsing(out, seen, namespacePath);
+			}
 		}
 		return out;
 	}
@@ -11370,17 +11525,19 @@ class SourceTargetCommon {
 		final seen = new Map<String, Bool>();
 		final out = new Array<String>();
 		for (typed in program.getTypedModules()) {
-			for (rawImport in HxModuleDecl.getImports(typed.getBackendDeclaration())) {
-				final clean = csTypePath(rawImport);
-				if (!StringTools.startsWith(clean, prefix))
-					continue;
-				final nestedName = clean.substr(prefix.length);
-				if (nestedName.length == 0 || nestedName.indexOf(".") >= 0 || nestedName == "*" || seen.exists(nestedName))
-					continue;
-				if (csNestedImportConflictsWithMember(cls, nestedName))
-					continue;
-				seen.set(nestedName, true);
-				out.push(nestedName);
+			for (directive in typed.getEnv().getResolvedDirectives()) {
+				for (providerPath in directiveProviderTypePaths(directive)) {
+					final clean = csTypePath(providerPath);
+					if (!StringTools.startsWith(clean, prefix))
+						continue;
+					final nestedName = clean.substr(prefix.length);
+					if (nestedName.length == 0 || nestedName.indexOf(".") >= 0 || nestedName == "*" || seen.exists(nestedName))
+						continue;
+					if (csNestedImportConflictsWithMember(cls, nestedName))
+						continue;
+					seen.set(nestedName, true);
+					out.push(nestedName);
+				}
 			}
 		}
 		return out;
@@ -13784,25 +13941,29 @@ class SourceTargetCommon {
 
 	static function phpProgramTypeAliasMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<String> {
 		final aliases = new haxe.ds.StringMap<String>();
-		function addImport(rawImport:String):Void {
-			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+		function addImport(directive:TyModuleDirective):Void {
+			if (directive == null || !directive.getKind().match(TypeImport))
 				return;
-			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
-				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "haxe.io.Bytes" && rawImport != "haxe.io.BytesInput"
-				&& rawImport != "haxe.io.BytesOutput" && rawImport != "haxe.ds.GenericStack" && rawImport != "haxe.crypto.Md5"
-				&& rawImport != "haxe.crypto.Sha1" && rawImport != "haxe.crypto.BaseCode" && rawImport != "haxe.crypto.Base64" && rawImport != "php.Syntax")
-				return;
-			final parts = rawImport.split(".");
-			if (parts.length < 2)
-				return;
-			final shortName = sanitizePhpTypeName(parts[parts.length - 1]);
-			final qualified = sanitizePhpTypePath(rawImport);
-			if (qualified.indexOf("\\") >= 0)
-				aliases.set(shortName, "\\" + qualified);
+			for (provider in directive.getProviders()) {
+				final rawImport = provider.getCanonicalName();
+				final localName = directive.getImportedTypeLocalName(provider);
+				if (localName == null || rawImport.length == 0)
+					continue;
+				if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
+					&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "haxe.io.Bytes"
+					&& rawImport != "haxe.io.BytesInput" && rawImport != "haxe.io.BytesOutput" && rawImport != "haxe.ds.GenericStack"
+					&& rawImport != "haxe.crypto.Md5" && rawImport != "haxe.crypto.Sha1" && rawImport != "haxe.crypto.BaseCode"
+					&& rawImport != "haxe.crypto.Base64" && rawImport != "php.Syntax")
+					continue;
+				final shortName = sanitizePhpTypeName(localName);
+				final qualified = sanitizePhpTypePath(rawImport);
+				if (qualified.indexOf("\\") >= 0)
+					aliases.set(shortName, "\\" + qualified);
+			}
 		}
 		function addImports(moduleDecl:HxModuleDecl):Void {
-			for (rawImport in HxModuleDecl.getImports(moduleDecl))
-				addImport(rawImport);
+			for (directive in resolvedDirectives(program, moduleDecl))
+				addImport(directive);
 		}
 		addImports(decl);
 		for (typed in program.getTypedModules())
@@ -14240,9 +14401,14 @@ class SourceTargetCommon {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
 			final modulePath = pkg == null || pkg.length == 0 ? moduleBase : pkg + "." + moduleBase;
 			for (cls in phpSourceOrderedClasses(parsed, moduleDecl)) {
+				final rawName = HxClassDecl.getName(cls);
 				final ownerTypePath = sanitizePhpTypeName(HxClassDecl.getName(cls));
-				setClassAlias(moduleBase, cls, ownerTypePath);
-				setClassAlias(modulePath, cls, ownerTypePath);
+				if (rawName == moduleBase) {
+					setClassAlias(moduleBase, cls, ownerTypePath);
+					setClassAlias(modulePath, cls, ownerTypePath);
+				}
+				addClassAlias(moduleBase + "." + rawName, cls, ownerTypePath);
+				addClassAlias(modulePath + "." + rawName, cls, ownerTypePath);
 			}
 		}
 
@@ -14251,10 +14417,10 @@ class SourceTargetCommon {
 				out.set(key, methods);
 		}
 
-		function addDeclExtensionContext(moduleDecl:HxModuleDecl):Void {
+		function addDeclExtensionContext(moduleDecl:HxModuleDecl, directives:Array<TyModuleDirective>):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final methods = phpStringExtensionMethodsForModuleClass(moduleDecl, cls, classesByName, ownerByName);
+				final methods = phpStringExtensionMethodsForModuleClass(directives, cls, classesByName, ownerByName);
 				final rawName = HxClassDecl.getName(cls);
 				final shortName = sanitizePhpTypeName(rawName);
 				final fullName = pkg == null || pkg.length == 0 ? rawName : pkg + "." + rawName;
@@ -14270,34 +14436,37 @@ class SourceTargetCommon {
 			addDeclClassAliases(typed.getBackendDeclaration());
 			addParsedModuleAlias(typed.getParsed(), typed.getBackendDeclaration());
 		}
-		addDeclExtensionContext(decl);
+		addDeclExtensionContext(decl, resolvedDirectives(program, decl));
 		for (typed in program.getTypedModules())
-			addDeclExtensionContext(typed.getBackendDeclaration());
+			addDeclExtensionContext(typed.getBackendDeclaration(), typed.getEnv().getResolvedDirectives());
 		return out;
 	}
 
-	static function phpStringExtensionMethodsForModuleClass(moduleDecl:HxModuleDecl, currentClass:HxClassDecl, classesByName:Map<String, HxClassDecl>,
-			ownerByName:Map<String, String>):haxe.ds.StringMap<String> {
+	static function phpStringExtensionMethodsForModuleClass(directives:Array<TyModuleDirective>, currentClass:HxClassDecl,
+			classesByName:Map<String, HxClassDecl>, ownerByName:Map<String, String>):haxe.ds.StringMap<String> {
 		final methods = new haxe.ds.StringMap<String>();
-		for (rawImport in HxModuleDecl.getImports(moduleDecl)) {
-			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+		for (directive in directives) {
+			if (!directive.getKind().match(UsingType))
 				continue;
-			final candidates = phpStringExtensionImportCandidates(rawImport);
-			var cls:HxClassDecl = null;
-			var ownerTypePath:Null<String> = null;
-			for (candidate in candidates) {
-				if (cls == null && classesByName.exists(candidate)) {
-					cls = classesByName.get(candidate);
-					ownerTypePath = ownerByName.exists(candidate) ? ownerByName.get(candidate) : null;
+			for (provider in directive.getProviders()) {
+				final candidates = phpStringExtensionImportCandidates(provider.getCanonicalName());
+				var cls:HxClassDecl = null;
+				var ownerTypePath:Null<String> = null;
+				for (candidate in candidates) {
+					if (cls == null && classesByName.exists(candidate)) {
+						cls = classesByName.get(candidate);
+						ownerTypePath = ownerByName.exists(candidate) ? ownerByName.get(candidate) : null;
+					}
 				}
+				if (cls == null)
+					continue;
+				if (ownerTypePath == null || ownerTypePath.length == 0)
+					ownerTypePath = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final importedMethods = phpStringExtensionMethodsForUsingClass(cls, ownerTypePath, currentClass, classesByName, new Map<String, Bool>());
+				for (name in importedMethods.keys())
+					if (!methods.exists(name))
+						methods.set(name, importedMethods.get(name));
 			}
-			if (cls == null)
-				continue;
-			if (ownerTypePath == null || ownerTypePath.length == 0)
-				ownerTypePath = sanitizePhpTypeName(HxClassDecl.getName(cls));
-			final importedMethods = phpStringExtensionMethodsForUsingClass(cls, ownerTypePath, currentClass, classesByName, new Map<String, Bool>());
-			for (name in importedMethods.keys())
-				methods.set(name, importedMethods.get(name));
 		}
 		return methods;
 	}
@@ -14504,10 +14673,11 @@ class SourceTargetCommon {
 			}
 			final packageMatches = phpShouldEmitSupportPackage(mainPackage, modulePackage);
 			if (!packageMatches) {
-				final emitImportedModuleEnums = phpModuleHasImportedSupportClass(moduleDecl, importedSupportTypeNames);
-				for (cls in HxModuleDecl.getClasses(moduleDecl))
-					if (emitImportedModuleEnums && phpShouldEmitImportedSupportClass(cls))
+				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+					final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+					if (importedSupportTypeNames.exists(className))
 						queueClass(moduleDecl, cls);
+				}
 				return;
 			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl))
@@ -14604,50 +14774,27 @@ class SourceTargetCommon {
 		return normalized == "std/haxe/io/Error.hx" || StringTools.endsWith(normalized, "/std/haxe/io/Error.hx");
 	}
 
-	static function phpShouldEmitImportedSupportClass(cls:HxClassDecl):Bool {
-		var hasEnumMarker = false;
-		var hasEnumCtorList = false;
-		var hasAbstractMarker = false;
-		var hasPublicValue = false;
-		for (meta in HxClassDecl.getMetadata(cls))
-			if (meta == "__hxhx_abstract")
-				hasAbstractMarker = true;
-		for (field in HxClassDecl.getFields(cls)) {
-			final name = HxFieldDecl.getName(field);
-			if (name == "__hx_is_enum")
-				hasEnumMarker = true;
-			else if (name == "__hx_enum_ctors")
-				hasEnumCtorList = true;
-			else if (HxFieldDecl.getIsStatic(field))
-				hasPublicValue = true;
-		}
-		return (hasEnumMarker && hasEnumCtorList) || (hasAbstractMarker && !hasEnumCtorList && hasPublicValue);
-	}
-
-	static function phpModuleHasImportedSupportClass(moduleDecl:HxModuleDecl, importedSupportTypeNames:haxe.ds.StringMap<Bool>):Bool {
-		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-			final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
-			if (importedSupportTypeNames.exists(className) && phpShouldEmitImportedSupportClass(cls))
-				return true;
-		}
-		return false;
-	}
-
 	static function phpProgramImportedSupportTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
 		final names = new haxe.ds.StringMap<Bool>();
-		function addImport(rawImport:String):Void {
-			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+		function addImport(directive:TyModuleDirective):Void {
+			if (directive == null || !directive.getKind().match(TypeImport))
 				return;
-			final parts = rawImport.split(".");
-			if (parts.length == 0)
-				return;
-			final shortName = sanitizePhpTypeName(parts[parts.length - 1]);
-			if (shortName.length > 0)
-				names.set(shortName, true);
+			for (provider in directive.getProviders()) {
+				final localName = directive.getImportedTypeLocalName(provider);
+				if (localName != null) {
+					final shortName = sanitizePhpTypeName(localName);
+					if (shortName.length > 0)
+						names.set(shortName, true);
+				}
+				final providerPath = provider.getCanonicalName();
+				final providerName = sanitizePhpTypeName(providerPath.substr(providerPath.lastIndexOf(".") + 1));
+				if (providerName.length > 0)
+					names.set(providerName, true);
+			}
 		}
 		function addDeclImports(moduleDecl:HxModuleDecl):Void {
-			for (rawImport in HxModuleDecl.getImports(moduleDecl))
-				addImport(rawImport);
+			for (directive in resolvedDirectives(program, moduleDecl))
+				addImport(directive);
 		}
 		addDeclImports(decl);
 		for (typed in program.getTypedModules())

@@ -130,7 +130,8 @@ class ModuleLoader extends LazyTypeLoader {
 
 		Returns the resolved nominal semantic surface or `null` if it still cannot be resolved.
 	**/
-	override public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
+	override public function ensureTypeAvailable(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
+			?resolvedDirectives:Array<TyModuleDirective>):Null<TyNominalInfo> {
 		if (typePath == null)
 			return null;
 		final raw = StringTools.trim(typePath);
@@ -140,12 +141,12 @@ class ModuleLoader extends LazyTypeLoader {
 
 		// Fast path: already indexed.
 		final pkg = packagePath == null ? "" : packagePath;
-		final hit0 = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+		final hit0 = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
 		if (hit0 != null)
 			return hit0;
 
 		// Try deriving candidate module paths from the typing context.
-		final candidates = candidateModulePaths(raw, pkg, imports);
+		final candidates = candidateModulePaths(raw, pkg, directives, resolvedDirectives);
 		if (trace)
 			Sys.println("loader_resolve type=" + raw + " pkg=" + pkg + " candidates=" + candidates.join(","));
 		for (mp in candidates) {
@@ -153,7 +154,7 @@ class ModuleLoader extends LazyTypeLoader {
 				continue;
 			loadModuleByPath(mp);
 
-			final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+			final hit = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
 			if (hit != null)
 				return hit;
 		}
@@ -166,7 +167,7 @@ class ModuleLoader extends LazyTypeLoader {
 				if (!invokeOnMissingType(mp))
 					continue;
 				loadModuleByPath(mp);
-				final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+				final hit = index == null ? null : index.resolveTypePath(raw, pkg, directives, resolvedDirectives);
 				if (hit != null)
 					return hit;
 			}
@@ -175,7 +176,8 @@ class ModuleLoader extends LazyTypeLoader {
 		return null;
 	}
 
-	static function candidateModulePaths(typePath:String, packagePath:String, imports:Array<String>):Array<String> {
+	function candidateModulePaths(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
+			?resolvedDirectives:Array<TyModuleDirective>):Array<String> {
 		final out = new Array<String>();
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		if (raw.length == 0)
@@ -186,19 +188,47 @@ class ModuleLoader extends LazyTypeLoader {
 			out.push(raw);
 
 		// Imported candidates (match by last segment).
-		if (imports != null) {
-			for (imp in imports) {
-				if (imp == null)
-					continue;
-				final s = StringTools.trim(imp);
-				if (s.length == 0)
-					continue;
-				if (StringTools.endsWith(s, ".*"))
-					continue;
-				final parts = s.split(".");
-				final last = parts.length == 0 ? "" : parts[parts.length - 1];
-				if (last == raw)
-					out.push(s);
+		if (resolvedDirectives != null) {
+			for (offset in 0...resolvedDirectives.length) {
+				final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+				final source = directive.getSource();
+				switch (directive.getKind()) {
+					case TypeImport:
+						if (HxModuleDirective.getImportedLocalName(source) == raw)
+							out.push(HxModuleDirective.getPath(source));
+						if (HxModuleDirective.getKind(source).match(ImportNormal) && index != null)
+							for (provider in directive.getProviders()) {
+								final providerInfo = index.getByFullName(provider.getCanonicalName());
+								if (providerInfo != null && providerInfo.getShortName() == raw)
+									out.push(providerInfo.getModulePath());
+							}
+					case PackageWildcardImport:
+						out.push(HxModuleDirective.getPath(source) + "." + raw);
+					case StaticMemberImport(_) | StaticWildcardImport | UsingType | Unresolved:
+				}
+			}
+		} else if (directives != null) {
+			for (offset in 0...directives.length) {
+				final directive = directives[directives.length - 1 - offset];
+				switch (HxModuleDirective.getKind(directive)) {
+					case ImportNormal:
+						if (HxModuleDirective.getImportedLocalName(directive) == raw)
+							out.push(HxModuleDirective.getPath(directive));
+						final importPath = HxModuleDirective.getPath(directive);
+						if (index != null && index.getByModulePath(importPath).length > 0)
+							out.push(importPath);
+					case ImportAlias(_):
+						if (HxModuleDirective.getImportedLocalName(directive) == raw)
+							out.push(HxModuleDirective.getPath(directive));
+					case ImportAll:
+						final importPath = HxModuleDirective.getPath(directive);
+						// An exact type wildcard exposes static members only. When
+						// the provider is already known, do not turn a secondary type
+						// in the same module into a package-style import.
+						if (index == null || index.getByFullName(importPath) == null)
+							out.push(importPath + "." + raw);
+					case Using:
+				}
 			}
 		}
 
@@ -350,20 +380,6 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 	}
 
-	static function normalizeImport(raw:String):String {
-		if (raw == null)
-			return "";
-		var s = StringTools.trim(raw);
-		if (s.length == 0)
-			return "";
-		if (StringTools.startsWith(s, "using "))
-			s = StringTools.trim(s.substr("using ".length));
-		final asIdx = s.indexOf(" as ");
-		if (asIdx >= 0)
-			s = StringTools.trim(s.substr(0, asIdx));
-		return s;
-	}
-
 	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
 		if (source == null || source.length == 0)
 			return [];
@@ -406,8 +422,8 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 
 		final modulePkg = HxModuleDecl.getPackagePath(decl);
-		for (rawImport in HxModuleDecl.getImports(decl)) {
-			final imp = normalizeImport(rawImport);
+		for (directive in HxModuleDecl.getDirectives(decl)) {
+			final imp = HxModuleDirective.getPath(directive);
 			if (imp.length == 0)
 				continue;
 
@@ -427,10 +443,9 @@ class ModuleLoader extends LazyTypeLoader {
 				}
 			}
 
-			if (StringTools.endsWith(resolvedImp, ".*")) {
-				final base = resolvedImp.substr(0, resolvedImp.length - 2);
-				if (resolveModuleFile(base) != null)
-					push(base);
+			if (HxModuleDirective.getKind(directive).match(ImportAll)) {
+				if (resolveModuleFile(resolvedImp) != null)
+					push(resolvedImp);
 				continue;
 			}
 

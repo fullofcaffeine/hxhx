@@ -70,7 +70,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
 		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
 	}
 
@@ -221,7 +221,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
 		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "DateToolsLike"),
 			"ast static_main 0",
 			protocolLine("method", "make|public|1|o|Float|||o:" + structural + "|"),
@@ -245,7 +245,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final structuralNull = "Null<{file:String, pos:Int}>";
 		final source = "class CompilerLike { public static function getDisplayPos():" + structuralNull + " { return null; } }";
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "CompilerLike"),
 			"ast static_main 0",
 			protocolLine("method", "getDisplayPos|public|1||Null||||"),
@@ -277,7 +277,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n");
 		function decodeConstructor(className:String, args:String, argTypes:String):HxFunctionDecl {
 			final encoded = [
-				"hxhx_frontend_v=2",
+				"hxhx_frontend_v=3",
 				protocolLine("class", className),
 				"ast static_main 0",
 				protocolLine("method", "new|public|0|" + args + "|Void|||" + argTypes + "|"),
@@ -12232,7 +12232,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("haxe/display/Protocol.hx",
 				new HxModuleDecl("haxe.display", [], protocolModule, [protocolModule, protocolTimer], false, false)),
 			typedSyntheticModule("haxe/Timer.hx", new HxModuleDecl("haxe", [], haxeTimer, [haxeTimer], false, false)),
-			typedSyntheticModule("utest/TimerConsumer.hx", new HxModuleDecl("utest", ["haxe.Timer"], timerConsumer, [timerConsumer], false, false))
+			typedSyntheticModule("utest/TimerConsumer.hx",
+				new HxModuleDecl("utest", [HxModuleDirective.normalImport("haxe.Timer")], timerConsumer, [timerConsumer], false, false))
 		], false);
 		final timerCollisionLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(timerCollisionProgram);
 		final timerCollisionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(backendClass(timerCollisionProgram, timerConsumer),

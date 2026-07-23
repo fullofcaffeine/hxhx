@@ -18,9 +18,10 @@ class HxClassDecl {
 	public final metadata:Array<String>;
 	public final isInterface:Bool;
 	public final implementsPaths:Array<String>;
+	public final visibility:HxVisibility;
 
 	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
-			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>) {
+			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>, ?visibility:HxVisibility) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
@@ -29,6 +30,7 @@ class HxClassDecl {
 		this.metadata = metadata == null ? [] : metadata;
 		this.isInterface = isInterface == null ? false : isInterface;
 		this.implementsPaths = implementsPaths == null ? [] : implementsPaths;
+		this.visibility = visibility == null ? HxVisibility.Public : visibility;
 	}
 
 	/**
@@ -85,4 +87,8 @@ class HxClassDecl {
 	public static function getImplementsPaths(c:HxClassDecl):Array<String> {
 		return c.implementsPaths;
 	}
+
+	/** Whether another module may import this top-level type. **/
+	public static function getVisibility(c:HxClassDecl):HxVisibility
+		return c.visibility;
 }

@@ -215,14 +215,20 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		assertTrue(reportInt(afterReset, "hxhx_server_report.source_misses") == 1, "reset should make source content cold again");
 		assertTrue(reportInt(afterReset, "hxhx_server_report.parser_misses") == 1, "reset should make parser output cold again");
 
-		// Parsed declarations expose mutable arrays. Reject a changed tree before it
-		// can become a later request's supposedly immutable cache entry.
+		// Module directives are retained as immutable compiler input. A caller may
+		// change the returned array, but that copy must not alter the parsed module.
+		// Other legacy syntax arrays remain mutable during bootstrap, so the cache
+		// still rejects an actual tree change before publication.
 		final integrityCache = new CompilationServerSourceCache();
 		final mutableProvider = integrityCache.openRequest();
 		final integrityPath = mutableProvider.resolveModuleFile([srcDir], "Main");
 		final integritySource = mutableProvider.readSource(integrityPath);
 		final mutatedParsed = mutableProvider.parseFilteredSource(integritySource, integrityPath);
-		HxModuleDecl.getImports(mutatedParsed.getDecl()).push("Injected.Mutation");
+		final directiveCopy = HxModuleDecl.getDirectives(mutatedParsed.getDecl());
+		directiveCopy.push(HxModuleDirective.normalImport("Injected.Mutation"));
+		assertTrue(HxModuleDecl.getDirectives(mutatedParsed.getDecl()).length + 1 == directiveCopy.length,
+			"mutating a returned directive array must not change the parsed module");
+		HxModuleDecl.getClasses(mutatedParsed.getDecl()).push(HxModuleDecl.getMainClass(mutatedParsed.getDecl()));
 		var mutationRejected = false;
 		try {
 			mutableProvider.finish(true);
@@ -244,7 +250,7 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final cachedMutationSource = cachedMutationProvider.readSource(cachedMutationPath);
 		final cachedMutation = cachedMutationProvider.parseFilteredSource(cachedMutationSource, cachedMutationPath);
 		assertTrue(cachedMutationProvider.report().parserHits == 1, "fixture should mutate a previously cached parser tree");
-		HxModuleDecl.getImports(cachedMutation.getDecl()).push("Injected.CachedMutation");
+		HxModuleDecl.getClasses(cachedMutation.getDecl()).push(HxModuleDecl.getMainClass(cachedMutation.getDecl()));
 		var cachedMutationRejected = false;
 		try {
 			cachedMutationProvider.finish(true);

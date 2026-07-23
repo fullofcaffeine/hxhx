@@ -208,9 +208,9 @@ let create = fun message pos2 previous -> let self = ({ __hx_type = HxType.class
       (Obj.magic self : t).pos <- __assign_1;
       __assign_1
     ));
-    let __obj_2 = self in let __old_3 = (Obj.magic __obj_2 : Haxe_Exception.t).__skipStack in let __new_4 = HxInt.add __old_3 1 in (
-      ignore ((Obj.magic __obj_2 : Haxe_Exception.t).__skipStack <- __new_4);
-      __old_3
+    let __place_receiver_2 = self in let __place_old_3 = (__place_receiver_2 : t).__skipStack in let __place_new_4 = HxInt.add __place_old_3 1 in (
+      (__place_receiver_2 : t).__skipStack <- __place_new_4;
+      __place_old_3
     )
   )));
   self
@@ -224,8 +224,8 @@ let __ctor = fun (self : t) message pos2 previous -> ignore (ignore ((
     (Obj.magic self : t).pos <- __assign_1;
     __assign_1
   ));
-  let __obj_2 = self in let __old_3 = (Obj.magic __obj_2 : Haxe_Exception.t).__skipStack in let __new_4 = HxInt.add __old_3 1 in (
-    ignore ((Obj.magic __obj_2 : Haxe_Exception.t).__skipStack <- __new_4);
-    __old_3
+  let __place_receiver_2 = self in let __place_old_3 = (__place_receiver_2 : t).__skipStack in let __place_new_4 = HxInt.add __place_old_3 1 in (
+    (__place_receiver_2 : t).__skipStack <- __place_new_4;
+    __place_old_3
   )
 )))

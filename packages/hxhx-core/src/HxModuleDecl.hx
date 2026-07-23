@@ -9,7 +9,7 @@
 
 	What:
 	- Optional package path (as dotted string, e.g. "a.b.c").
-	- Import list (dotted strings).
+	- Ordered import/using directives with their source-language meaning intact.
 	- One or more top-level class declarations.
 
 	Note
@@ -19,15 +19,18 @@
 **/
 class HxModuleDecl {
 	public final packagePath:String;
-	public final imports:Array<String>;
+
+	final directives:Array<HxModuleDirective>;
+
 	public final mainClass:HxClassDecl;
 	public final classes:Array<HxClassDecl>;
 	public final headerOnly:Bool;
 	public final hasToplevelMain:Bool;
 
-	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, classes:Array<HxClassDecl>, headerOnly:Bool, hasToplevelMain:Bool) {
+	public function new(packagePath:String, directives:Array<HxModuleDirective>, mainClass:HxClassDecl, classes:Array<HxClassDecl>, headerOnly:Bool,
+			hasToplevelMain:Bool) {
 		this.packagePath = packagePath;
-		this.imports = imports;
+		this.directives = directives == null ? [] : directives.copy();
 		this.mainClass = mainClass;
 		// Keep `classes` non-empty and consistent with `mainClass` for downstream stages.
 		if (classes == null || classes.length == 0) {
@@ -59,10 +62,10 @@ class HxModuleDecl {
 	}
 
 	/**
-		Non-inline getter for `imports` (see `getPackagePath` rationale).
+		Non-inline getter for module directives (see `getPackagePath` rationale).
 	**/
-	public static function getImports(m:HxModuleDecl):Array<String> {
-		return m.imports;
+	public static function getDirectives(m:HxModuleDecl):Array<HxModuleDirective> {
+		return m.directives.copy();
 	}
 
 	/**

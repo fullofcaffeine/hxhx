@@ -39,14 +39,14 @@ class CompilerDriver {
 		final ast = ResolvedModule.getParsed(root);
 		final decl = ast.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		final imports = HxModuleDecl.getImports(decl);
+		final directives = HxModuleDecl.getDirectives(decl);
 		final mainClass = HxModuleDecl.getMainClass(decl);
 		Sys.println("parse=ok");
 		Sys.println("modules=" + resolved.length);
 		Sys.println("main=" + mainModule);
 		Sys.println("mainFile=" + ResolvedModule.getFilePath(root));
 		Sys.println("package=" + (pkg.length == 0 ? "<none>" : pkg));
-		Sys.println("imports=" + imports.length);
+		Sys.println("module_directives=" + directives.length);
 		Sys.println("class=" + HxClassDecl.getName(mainClass));
 		Sys.println("hasStaticMain=" + (HxClassDecl.getHasStaticMain(mainClass) ? "yes" : "no"));
 		final fns = HxClassDecl.getFunctions(mainClass);
@@ -121,13 +121,13 @@ class CompilerDriver {
 			final haxeDecl = new HxParser(src).parseModule();
 			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg)
 				throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
-			final haxeImports = HxModuleDecl.getImports(haxeDecl);
-			final parsedImports = HxModuleDecl.getImports(parsed);
-			if (haxeImports.length != parsedImports.length)
-				throw new HxParseError('Fixture ' + label + ': import count differs (native vs haxe)', new HxPos(0, 0, 0));
-			for (i in 0...haxeImports.length) {
-				if (haxeImports[i] != parsedImports[i])
-					throw new HxParseError('Fixture ' + label + ': import differs (native vs haxe)', new HxPos(0, 0, 0));
+			final haxeDirectives = HxModuleDecl.getDirectives(haxeDecl);
+			final parsedDirectives = HxModuleDecl.getDirectives(parsed);
+			if (haxeDirectives.length != parsedDirectives.length)
+				throw new HxParseError('Fixture ' + label + ': module-directive count differs (native vs haxe)', new HxPos(0, 0, 0));
+			for (i in 0...haxeDirectives.length) {
+				if (HxModuleDirective.canonicalIdentity(haxeDirectives[i]) != HxModuleDirective.canonicalIdentity(parsedDirectives[i]))
+					throw new HxParseError('Fixture ' + label + ': module directive differs (native vs haxe)', new HxPos(0, 0, 0));
 			}
 			final haxeMain = HxModuleDecl.getMainClass(haxeDecl);
 			if (HxClassDecl.getName(haxeMain) != HxClassDecl.getName(parsedMain))

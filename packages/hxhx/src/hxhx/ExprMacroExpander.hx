@@ -68,7 +68,7 @@ class ExprMacroExpander {
 			final pm = ResolvedModule.getParsed(m);
 			final decl = pm.getDecl();
 			final modulePkg = HxModuleDecl.getPackagePath(decl);
-			final importMap = buildImportMap(HxModuleDecl.getImports(decl), modulePkg);
+			final importMap = buildImportMap(HxModuleDecl.getDirectives(decl), modulePkg);
 			final cls = HxModuleDecl.getMainClass(decl);
 
 			var changed = false;
@@ -115,7 +115,7 @@ class ExprMacroExpander {
 			}
 
 			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields, HxClassDecl.getExtendsPath(cls),
-				HxClassDecl.getMetadata(cls));
+				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls));
 			final newClasses = new Array<HxClassDecl>();
 			for (c in HxModuleDecl.getClasses(decl)) {
 				if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {
@@ -124,7 +124,7 @@ class ExprMacroExpander {
 					newClasses.push(c);
 				}
 			}
-			final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), newCls, newClasses,
+			final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), newCls, newClasses,
 				HxModuleDecl.getHeaderOnly(decl), HxModuleDecl.getHasToplevelMain(decl));
 			final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
 			final updated = new ResolvedModule(ResolvedModule.getModulePath(m), ResolvedModule.getFilePath(m), newParsed, ResolvedModule.getSourceOrigin(m),
@@ -430,18 +430,17 @@ class ExprMacroExpander {
 		}
 	}
 
-	static function buildImportMap(imports:Array<String>, modulePkg:String):haxe.ds.StringMap<String> {
+	static function buildImportMap(directives:Array<HxModuleDirective>, modulePkg:String):haxe.ds.StringMap<String> {
 		final map = new haxe.ds.StringMap<String>();
-		if (imports == null)
+		if (directives == null)
 			return map;
 
-		for (raw in imports) {
-			if (raw == null)
+		for (directive in directives) {
+			final localName = HxModuleDirective.getImportedLocalName(directive);
+			if (localName == null)
 				continue;
-			final trimmed = StringTools.trim(raw);
+			final trimmed = HxModuleDirective.getPath(directive);
 			if (trimmed.length == 0)
-				continue;
-			if (StringTools.endsWith(trimmed, ".*"))
 				continue;
 
 			final full = {
@@ -455,12 +454,12 @@ class ExprMacroExpander {
 				}
 			};
 
-			final dot = full.lastIndexOf(".");
-			final shortName = dot == -1 ? full : full.substr(dot + 1);
-			if (shortName.length == 0)
+			if (localName.length == 0)
 				continue;
-			if (!map.exists(shortName))
-				map.set(shortName, full);
+			// Haxe resolves a repeated local import name to the last directive.
+			// Overwriting here keeps macro allowlist qualification aligned with the
+			// shared typer instead of preserving the first path by accident.
+			map.set(localName, full);
 		}
 		return map;
 	}

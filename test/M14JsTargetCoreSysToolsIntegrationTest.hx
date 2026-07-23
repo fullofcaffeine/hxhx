@@ -995,7 +995,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final plainField = "HX_CTOR\npublic\n1\n\n";
 		final staticFinal = "HX_CTOR\npublic\n1\n\n\"_hx_constructor\"";
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "Main"),
 			"ast static_main 1",
 			protocolLine("field", plainField),
@@ -1019,7 +1019,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function assertNativeSwitchFieldInitializerDecode():Void {
 		final init = 'switch(Sys.systemName()){case "Windows":["","/","\\\\"];case _:["","/"];} public function setup(){}';
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "TestFileSystem"),
 			"ast static_main 0",
 			protocolLine("field", "tailingSlashes\npublic\n0\n\n" + init),
@@ -1038,6 +1038,30 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				throw "native switch field initializer parsed as unsupported: " + raw;
 			case _:
 				throw "native switch field initializer should decode as switch expression";
+		}
+	}
+
+	static function assertNativeUntypedCastFieldInitializerDecode():Void {
+		final encoded = [
+			"hxhx_frontend_v=3",
+			protocolLine("class", "StringTools"),
+			"ast static_main 0",
+			protocolLine("field", "winMetaCharacters\nprivate\n1\n\ncast haxe.SysTools.winMetaCharacters"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
+		assertTrue(fields.length == 1, "native untyped-cast initializer should decode one field");
+		switch (HxFieldDecl.getInit(fields[0])) {
+			case HxExpr.ECast(HxExpr.EField(HxExpr.EField(HxExpr.EIdent(root), owner), field), typeHint):
+				assertTrue(root == "haxe", "native untyped cast should preserve the haxe package root");
+				assertTrue(owner == "SysTools", "native untyped cast should preserve the owning class");
+				assertTrue(field == "winMetaCharacters", "native untyped cast should preserve the selected field");
+				assertTrue(typeHint == "", "native untyped cast should not invent a target type");
+			case HxExpr.EField(HxExpr.EField(HxExpr.EIdent("casthaxe"), _), _):
+				throw "native untyped cast must not join the cast keyword into a fake `casthaxe` identifier";
+			case _:
+				throw "native untyped-cast initializer should decode as an explicit cast around the field access";
 		}
 	}
 
@@ -1263,6 +1287,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function main():Void {
 		assertNativeStaticFinalDecode();
 		assertNativeSwitchFieldInitializerDecode();
+		assertNativeUntypedCastFieldInitializerDecode();
 		assertNativeSourceNullableHintPreference();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperOperationFields();
@@ -1724,6 +1749,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "__hx_cls_StringTools.slen =", "StringTools local variables should not leak as static fields");
 			assertContains(js, "__hx_cls_StringTools.winMetaCharacters = __hx_cls_haxe_SysTools.winMetaCharacters",
 				"StringTools real static fields should still emit");
+			assertTrue(js.indexOf("var __hx_cls_haxe_SysTools = function") < js.indexOf("__hx_cls_StringTools.winMetaCharacters ="),
+				"haxe.SysTools must be initialized before StringTools reads its static winMetaCharacters field");
 			assertNotContains(js, "__hx_cls_String.prototype.toUpperCase",
 				"native JS String prototype methods should not be re-emitted from unsupported std bodies");
 			assertContains(js, "__hx_cls_Main.HX_CTOR = \"_hx_constructor\"", "static inline final string constants should keep simple runtime initializers");

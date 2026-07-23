@@ -6,6 +6,12 @@ private typedef TyMethodCallResolution = {
 private typedef TypedClassBuildResult = {
 	final classes:Array<TypedClass>;
 	final mainFunctions:Array<TyFunctionEnv>;
+	final resolvedDirectives:Array<TyModuleDirective>;
+};
+
+private typedef TypedClassHeaderTypes = {
+	final extendsType:Null<TyType>;
+	final implementsTypes:Array<TyType>;
 };
 
 /**
@@ -85,6 +91,110 @@ class TyperStage {
 			return null;
 		final identity = type.getNominalIdentity();
 		return identity == null ? index.getByFullName(type.getDisplay()) : index.getByFullName(identity.getCanonicalName());
+	}
+
+	/**
+		Load and return one exact nominal path without accepting a same-short-name fallback.
+
+		A directive path is already fully qualified source input. Accepting the ordinary
+		short-name fallback here could misclassify `model.Api.PI` as an unrelated type
+		named `PI`, which would recreate the backend spelling guess this layer removes.
+	**/
+	static function exactDirectiveProvider(path:String, packagePath:String, sourceDirectives:Array<HxModuleDirective>, index:TyperIndex,
+			loader:ModuleLoader):Null<TyNominalInfo> {
+		if (index == null || path == null || path.length == 0)
+			return null;
+		var provider = index.getByFullName(path);
+		if (provider == null && loader != null) {
+			loader.ensureTypeAvailable(path, packagePath, sourceDirectives);
+			provider = index.getByFullName(path);
+		}
+		return provider != null && provider.getVisibility() == HxVisibility.Public ? provider : null;
+	}
+
+	static function providerDefinesStaticMember(provider:TyNominalInfo, memberName:String):Bool {
+		if (provider == null || memberName == null || memberName.length == 0)
+			return false;
+		final field = provider.fieldInfo(memberName);
+		return (field != null && field.getIsStatic()) || provider.staticMethodCandidates(memberName).length > 0;
+	}
+
+	/** Load one module path and return every type that its current source declares. **/
+	static function moduleDirectiveProviders(path:String, packagePath:String, sourceDirectives:Array<HxModuleDirective>, index:TyperIndex,
+			loader:ModuleLoader):Array<TyNominalInfo> {
+		if (path == null || path.length == 0 || index == null)
+			return [];
+		if (loader != null)
+			loader.ensureTypeAvailable(path, packagePath, sourceDirectives);
+		return index.getByModulePath(path);
+	}
+
+	static function providerIdentities(providers:Array<TyNominalInfo>):Array<TyNominalTypeId> {
+		return providers == null ? [] : [for (provider in providers) provider.getIdentity()];
+	}
+
+	/** Resolve parsed directives once so every target consumes the same Haxe meaning. **/
+	static function resolveModuleDirectives(sourceDirectives:Array<HxModuleDirective>, packagePath:String, index:TyperIndex,
+			loader:ModuleLoader):Array<TyModuleDirective> {
+		final out = new Array<TyModuleDirective>();
+		for (source in sourceDirectives) {
+			final path = HxModuleDirective.getPath(source);
+			switch (HxModuleDirective.getKind(source)) {
+				case Using:
+					final moduleProviders = moduleDirectiveProviders(path, packagePath, sourceDirectives, index, loader);
+					if (moduleProviders.length > 0) {
+						out.push(new TyModuleDirective(source, UsingType, providerIdentities(moduleProviders)));
+					} else {
+						final provider = exactDirectiveProvider(path, packagePath, sourceDirectives, index, loader);
+						out.push(provider == null ? new TyModuleDirective(source,
+							Unresolved) : new TyModuleDirective(source, UsingType, [provider.getIdentity()]));
+					}
+				case ImportAll:
+					final provider = exactDirectiveProvider(path, packagePath, sourceDirectives, index, loader);
+					out.push(provider == null ? new TyModuleDirective(source,
+						PackageWildcardImport) : new TyModuleDirective(source, StaticWildcardImport, [provider.getIdentity()]));
+				case ImportNormal:
+					final moduleProviders = moduleDirectiveProviders(path, packagePath, sourceDirectives, index, loader);
+					if (moduleProviders.length > 0) {
+						out.push(new TyModuleDirective(source, TypeImport, providerIdentities(moduleProviders)));
+						continue;
+					}
+					final exactType = exactDirectiveProvider(path, packagePath, sourceDirectives, index, loader);
+					if (exactType != null) {
+						out.push(new TyModuleDirective(source, TypeImport, [exactType.getIdentity()]));
+						continue;
+					}
+					var separator = path.lastIndexOf(".");
+					var resolved:Null<TyModuleDirective> = null;
+					while (separator > 0 && resolved == null) {
+						final ownerPath = path.substr(0, separator);
+						final memberName = path.substr(separator + 1);
+						final provider = exactDirectiveProvider(ownerPath, packagePath, sourceDirectives, index, loader);
+						if (provider != null && memberName.indexOf(".") < 0 && providerDefinesStaticMember(provider, memberName))
+							resolved = new TyModuleDirective(source, StaticMemberImport(memberName), [provider.getIdentity()]);
+						separator = ownerPath.lastIndexOf(".");
+					}
+					out.push(resolved == null ? new TyModuleDirective(source, Unresolved) : resolved);
+				case ImportAlias(_):
+					final exactType = exactDirectiveProvider(path, packagePath, sourceDirectives, index, loader);
+					if (exactType != null) {
+						out.push(new TyModuleDirective(source, TypeImport, [exactType.getIdentity()]));
+						continue;
+					}
+					var separator = path.lastIndexOf(".");
+					var resolved:Null<TyModuleDirective> = null;
+					while (separator > 0 && resolved == null) {
+						final ownerPath = path.substr(0, separator);
+						final memberName = path.substr(separator + 1);
+						final provider = exactDirectiveProvider(ownerPath, packagePath, sourceDirectives, index, loader);
+						if (provider != null && memberName.indexOf(".") < 0 && providerDefinesStaticMember(provider, memberName))
+							resolved = new TyModuleDirective(source, StaticMemberImport(memberName), [provider.getIdentity()]);
+						separator = ownerPath.lastIndexOf(".");
+					}
+					out.push(resolved == null ? new TyModuleDirective(source, Unresolved) : resolved);
+			}
+		}
+		return out;
 	}
 
 	/**
@@ -173,7 +283,8 @@ class TyperStage {
 			deferProgramLowering:Bool = false):TypedClassBuildResult {
 		final declaration = parsed.getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
-		final imports = HxModuleDecl.getImports(declaration);
+		final directives = HxModuleDecl.getDirectives(declaration);
+		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, index, loader);
 		final mainClass = HxModuleDecl.getMainClass(declaration);
 		final typedClasses = new Array<TypedClass>();
 		var mainFunctions = new Array<TyFunctionEnv>();
@@ -184,8 +295,8 @@ class TyperStage {
 			final classFullName = semanticInfo == null ? ((packagePath == null || packagePath.length == 0) ? className : packagePath
 				+ "."
 				+ className) : semanticInfo.getFullName();
-			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, imports, classFullName, loader);
-			resolveClassHeaderTypes(classDeclaration, context);
+			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, directives, classFullName, loader, resolvedDirectives);
+			final headerTypes = resolveClassHeaderTypes(classDeclaration, context);
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
@@ -193,10 +304,25 @@ class TyperStage {
 				return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
-				return resolveCallDeclaration(callee, arguments, lexicalEnvironment.copyForInference(), context, position);
+				final inferenceEnvironment = lexicalEnvironment.copyForInference();
+				final declaration = resolveCallDeclaration(callee, arguments, inferenceEnvironment, context, position);
+				final importedBareCall = switch (callee) {
+					case EIdent(name) if (declaration != null && lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
+							|| current.staticMethodCandidates(name).length == 0) && context.importedStaticMethod(name) != null;
+					case _: false;
+				};
+				return new TypedCallResolution(declaration, importedBareCall);
 			};
 			final fieldResolver:TypedFieldDeclarationResolver = function(expression, position, lexicalEnvironment) {
-				return resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
+				final field = resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
+				if (field == null)
+					return null;
+				final importedBareField = switch (expression) {
+					case EIdent(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
+							|| current.fieldInfo(name) == null) && context.importedStaticField(name) == field;
+					case _: false;
+				};
+				return new TypedFieldResolution(field, importedBareField);
 			};
 			for (field in HxClassDecl.getFields(classDeclaration)) {
 				final initializer = HxFieldDecl.getInit(field);
@@ -219,12 +345,13 @@ class TyperStage {
 			}
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
-			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions, typedFieldInitializers));
+			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions, typedFieldInitializers, headerTypes.extendsType,
+				headerTypes.implementsTypes));
 		}
 
 		final loweredClasses = index == null
 			|| deferProgramLowering ? typedClasses : TypedAbstractOperatorLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
-		return {classes: loweredClasses, mainFunctions: mainFunctions};
+		return {classes: loweredClasses, mainFunctions: mainFunctions, resolvedDirectives: resolvedDirectives};
 	}
 
 	/**
@@ -235,13 +362,15 @@ class TyperStage {
 		loader find, prepare, and index the owning module without scanning unrelated
 		source files. Parsing the header as a type also discovers generic arguments.
 	**/
-	static function resolveClassHeaderTypes(classDeclaration:HxClassDecl, context:TyperContext):Void {
+	static function resolveClassHeaderTypes(classDeclaration:HxClassDecl, context:TyperContext):TypedClassHeaderTypes {
 		final extendsPath = HxClassDecl.getExtendsPath(classDeclaration);
-		if (extendsPath != null && StringTools.trim(extendsPath).length > 0)
-			resolveTypeInContext(TyType.fromHintText(extendsPath), context);
+		final extendsType = extendsPath != null
+			&& StringTools.trim(extendsPath).length > 0 ? resolveTypeInContext(TyType.fromHintText(extendsPath), context) : null;
+		final implementsTypes = new Array<TyType>();
 		for (implementedPath in HxClassDecl.getImplementsPaths(classDeclaration))
 			if (implementedPath != null && StringTools.trim(implementedPath).length > 0)
-				resolveTypeInContext(TyType.fromHintText(implementedPath), context);
+				implementsTypes.push(resolveTypeInContext(TyType.fromHintText(implementedPath), context));
+		return {extendsType: extendsType, implementsTypes: implementsTypes};
 	}
 
 	/**
@@ -265,11 +394,11 @@ class TyperStage {
 	public static function typeModule(m:ParsedModule):TypedModule {
 		final decl = m.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		final imports = HxModuleDecl.getImports(decl);
+		final directives = HxModuleDecl.getDirectives(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
 		final built = buildTypedClasses(m, null, null, "");
 		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
-		final env = new TyModuleEnv(pkg, imports, classEnv);
+		final env = new TyModuleEnv(pkg, directives, classEnv, built.resolvedDirectives);
 		return new TypedModule(m, env, built.classes);
 	}
 
@@ -284,11 +413,11 @@ class TyperStage {
 		final pm = ResolvedModule.getParsed(m);
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		final imports = HxModuleDecl.getImports(decl);
+		final directives = HxModuleDecl.getDirectives(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
 		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m), deferProgramLowering);
 		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
-		final env = new TyModuleEnv(pkg, imports, classEnv);
+		final env = new TyModuleEnv(pkg, directives, classEnv, built.resolvedDirectives);
 		return new TypedModule(pm, env, built.classes, 1, ResolvedModule.getSourceOrigin(m), ResolvedModule.getConditionalCompilation(m),
 			ResolvedModule.getGeneratedDeclarations(m));
 	}
@@ -742,13 +871,13 @@ class TyperStage {
 		return {type: TyMethodGenericBinding.specializeResult(declaration, signature, argTypes), declaration: declaration};
 	}
 
-	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
-			pos:HxPos):TyMethodCallResolution {
+	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
+			?admittedCandidates:Array<TyFunSig>):TyMethodCallResolution {
 		final argTypes = new Array<TyType>();
 		for (a in args)
 			argTypes.push(inferExprType(a, scope, ctx, pos));
 
-		final candidates = isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field);
+		final candidates = admittedCandidates == null ? (isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field)) : admittedCandidates;
 		if (candidates.length == 0)
 			return {type: TyType.unknown(), declaration: null};
 
@@ -807,7 +936,11 @@ class TyperStage {
 				if (scope.resolveSymbol(name) != null)
 					return null;
 				final owner = ctx.currentClass();
-				return owner == null ? null : resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
+				if (owner != null && owner.staticMethodCandidates(name).length > 0)
+					return resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
+				final importedMethod = ctx.importedStaticMethod(name);
+				return importedMethod == null ? null : resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx,
+					pos, importedMethod.getCandidates()).declaration;
 			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
@@ -879,6 +1012,14 @@ class TyperStage {
 		return functionReferenceType(candidates[0]);
 	}
 
+	static function importedStaticMethodReferenceType(name:String, ctx:TyperContext):Null<TyType> {
+		final importedMethod = ctx.importedStaticMethod(name);
+		if (importedMethod == null)
+			return null;
+		final candidates = importedMethod.getCandidates();
+		return candidates.length == 1 ? functionReferenceType(candidates[0]) : null;
+	}
+
 	/** Resolve a bare field in the current class before treating an uppercase name as a type. **/
 	static function currentFieldReferenceType(name:String, ctx:TyperContext):Null<TyType> {
 		final current = ctx.currentClass();
@@ -894,7 +1035,14 @@ class TyperStage {
 	**/
 	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyFieldInfo> {
 		return switch (expression) {
-			case EIdent(name): scope.resolveSymbol(name) != null || ctx.currentClass() == null ? null : ctx.currentClass().fieldInfo(name);
+			case EIdent(name):
+				if (scope.resolveSymbol(name) != null) {
+					null;
+				} else {
+					final current = ctx.currentClass();
+					final localField = current == null ? null : current.fieldInfo(name);
+					localField == null ? ctx.importedStaticField(name) : localField;
+				}
 			case EField(object, field):
 				final dotted = dottedFieldPath(object);
 				final dottedParts = dotted.split(".");
@@ -945,12 +1093,18 @@ class TyperStage {
 					sym.getType();
 				} else {
 					final fieldType = currentFieldReferenceType(name, ctx);
+					final importedField = fieldType == null ? ctx.importedStaticField(name) : null;
+					final currentMethod = fieldType == null && importedField == null ? currentStaticMethodReferenceType(name, ctx) : null;
 					// Only upper-start simple identifiers can be unqualified Haxe type names in this
 					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
 					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
-					final methodRef = fieldType == null && !isUpperStartName(name) ? currentStaticMethodReferenceType(name, ctx) : null;
+					final methodRef = currentMethod == null
+						&& fieldType == null
+						&& importedField == null ? importedStaticMethodReferenceType(name, ctx) : currentMethod;
 					if (fieldType != null) {
 						fieldType;
+					} else if (importedField != null) {
+						importedField.getType();
 					} else if (methodRef != null) {
 						methodRef;
 					} else {
@@ -1122,10 +1276,16 @@ class TyperStage {
 						// same declaration lookup as the structural typed-call builder so
 						// the expression result retains its nominal semantic type.
 						final owner = scope.resolveSymbol(name) == null ? ctx.currentClass() : null;
-						if (owner != null) {
+						if (owner != null && owner.staticMethodCandidates(name).length > 0) {
 							resolveMethodCall(owner, name, true, args, scope, ctx, pos).type;
 						} else {
-							inferFunctionValueCall(callee, args, scope, ctx, pos);
+							final importedMethod = scope.resolveSymbol(name) == null ? ctx.importedStaticMethod(name) : null;
+							if (importedMethod != null) {
+								resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx, pos,
+									importedMethod.getCandidates()).type;
+							} else {
+								inferFunctionValueCall(callee, args, scope, ctx, pos);
+							}
 						}
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.

@@ -238,7 +238,7 @@ let tokenize (src : string) : string =
       | Some c when is_ident_start c ->
           let text = read_ident () in
           (match text with
-          | "package" | "import" | "using" | "as" | "class"
+          | "package" | "import" | "using" | "as" | "in" | "class"
           | "public" | "private" | "static" | "function" | "return"
           | "var" | "final" | "inline" | "override" | "macro" | "extern"
           | "dynamic" | "new" | "true" | "false" | "null" ->

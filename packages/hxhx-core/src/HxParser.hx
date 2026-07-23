@@ -5238,7 +5238,7 @@ class HxParser {
 	**/
 	public function parseModule(?expectedMainClass:String):HxModuleDecl {
 		var packagePath = "";
-		final imports = new Array<String>();
+		final directives = new Array<HxModuleDirective>();
 		var hasToplevelMain = false;
 		final moduleFields = new Array<HxFieldDecl>();
 
@@ -5253,13 +5253,19 @@ class HxParser {
 			}
 		}
 
-		while (acceptKeyword(KImport) || acceptKeyword(KUsing)) {
+		while (true) {
+			final isImport = if (acceptKeyword(KImport)) true else if (acceptKeyword(KUsing)) false else break;
 			final path = readImportPath();
-			// Accept import aliases (`as` and Haxe's `in`) and ignore the alias for now.
-			if (acceptKeyword(KAs) || acceptKeyword(KIn)) {
-				readIdent("import alias");
+			if (isImport) {
+				if (acceptKeyword(KAs) || acceptKeyword(KIn))
+					directives.push(HxModuleDirective.aliasImport(path, readIdent("import alias")))
+				else if (StringTools.endsWith(path, ".*"))
+					directives.push(HxModuleDirective.wildcardImport(path.substr(0, path.length - 2)))
+				else
+					directives.push(HxModuleDirective.normalImport(path));
+			} else {
+				directives.push(HxModuleDirective.usingDirective(path));
 			}
-			imports.push(path);
 			expect(TSemicolon, "';'");
 		}
 
@@ -5461,7 +5467,8 @@ class HxParser {
 						}
 					}
 
-					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths));
+					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
+						moduleMemberVisibility));
 				// `parseClassMembers` consumes the closing `}`.
 				case TIdent("abstract"):
 					pendingTypeMetadata = [];
@@ -5505,7 +5512,8 @@ class HxParser {
 			final mergedFunctions = moduleFunctions.concat(HxClassDecl.getFunctions(base));
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
-				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base));
+				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base),
+				HxClassDecl.getVisibility(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {
@@ -5518,7 +5526,7 @@ class HxParser {
 				classes.push(chosen);
 		}
 		final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
-		return new HxModuleDecl(packagePath, imports, mainClass, classes, false, hasToplevelMain);
+		return new HxModuleDecl(packagePath, directives, mainClass, classes, false, hasToplevelMain);
 	}
 
 	static function isRestTypeHintText(typeHint:String):Bool {

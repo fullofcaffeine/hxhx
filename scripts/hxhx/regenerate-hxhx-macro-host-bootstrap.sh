@@ -64,7 +64,9 @@ echo "== Updating bootstrap snapshot: $BOOTSTRAP_DIR"
 rm -rf "$BOOTSTRAP_DIR"
 mkdir -p "$BOOTSTRAP_DIR"
 
-# Copy everything except build artifacts, generator sources, and diagnostic reports.
-(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' --exclude='ocaml_profile_report.json' --exclude='ocaml_runtime_plan_report.json' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+# Keep the macro-host snapshot under the same build-report and temporary-artifact
+# policy as the main compiler snapshot. The shared helper owns that exclusion
+# list so new local receipts cannot silently appear in only one bootstrap tree.
+bash "$ROOT/scripts/hxhx/copy-bootstrap-snapshot.sh" "$OUT_DIR" "$BOOTSTRAP_DIR"
 
 echo "OK: regenerated bootstrap snapshot"

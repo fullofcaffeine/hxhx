@@ -76,6 +76,33 @@ let getIsStatic = fun self () -> TyFunSig.getIsStatic (Obj.magic ((Obj.magic sel
 
 let getIsInline = fun self () -> (Obj.magic self : t).isInline
 
+let getNoImportGlobal = fun self () -> try let __fallback_result_19 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+      ignore (_g := __new_14);
+      __new_14
+    ));
+    let tempString = ref ("" : string) in (
+      ignore (if entry == Obj.magic (HxRuntime.hx_null) then let __assign_15 = ("" : string) in (
+        tempString := __assign_15;
+        __assign_15
+      ) else let __assign_16 = (StringTools.trim (entry : string) : string) in (
+        tempString := __assign_16;
+        __assign_16
+      ));
+      let clean = ref (!tempString : string) in (
+        ignore (while StringTools.startsWith (!clean : string) ("@" : string) || StringTools.startsWith (!clean : string) (":" : string) do ignore (let __assign_17 = (HxString.substr (!clean) 1 (-1) : string) in (
+          clean := __assign_17;
+          __assign_17
+        )) done);
+        if HxString.equals (!clean) "noImportGlobal" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      )
+    )
+  )) done);
+  false
+) in Obj.magic __fallback_result_19 with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+
 let getHasBody = fun self () -> HxFunctionDecl.getHasBody (Obj.magic ((Obj.magic self : t).sourceDeclaration))
 
 let getTypeParameters = fun self () -> HxFunctionTypeParamMetadata.typeParamNames (Obj.magic ((Obj.magic self : t).metadata))

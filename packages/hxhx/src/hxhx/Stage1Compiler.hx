@@ -138,25 +138,26 @@ class Stage1Compiler {
 		//
 		// But it is transitive: if `Main` imports `A` and `A` imports `B`, we will attempt
 		// to parse `B` too.
-		final queue = new Array<String>();
-		for (imp in decl.imports)
-			queue.push(imp);
+		final queue = new Array<HxModuleDirective>();
+		for (directive in HxModuleDecl.getDirectives(decl))
+			queue.push(directive);
 
 		final visited = new Map<String, Bool>();
 		var q = 0;
 		while (q < queue.length) {
-			final imp = queue[q++];
-			if (imp == null || imp.length == 0)
+			final directive = queue[q++];
+			final imp = HxModuleDirective.getPath(directive);
+			if (imp.length == 0)
 				continue;
 			if (visited.exists(imp))
 				continue;
 			visited.set(imp, true);
 
-			if (StringTools.endsWith(imp, ".*")) {
+			if (HxModuleDirective.getKind(directive).match(ImportAll)) {
 				// Bootstrap rule: treat `import X.*` as a dependency on module `X`.
 				// This matches upstream patterns like `import unit.Test.*`, where the wildcard
 				// imports types from the *module* (not a directory scan).
-				final base = imp.substr(0, imp.length - 2);
+				final base = imp;
 				// If the base module doesn't exist as a file, treat this as a package-wildcard
 				// import (`import pack.*`) and ignore it for module-graph traversal.
 				final baseResolved = Stage1Resolver.resolveModule(classPaths, base, parsed.cwd);
@@ -165,7 +166,7 @@ class Stage1Compiler {
 					continue;
 				}
 				if (!visited.exists(base))
-					queue.push(base);
+					queue.push(HxModuleDirective.normalImport(base));
 				continue;
 			}
 
@@ -204,8 +205,8 @@ class Stage1Compiler {
 				continue;
 			}
 
-			for (imp2 in impDecl.imports)
-				queue.push(imp2);
+			for (nextDirective in HxModuleDecl.getDirectives(impDecl))
+				queue.push(nextDirective);
 		}
 
 		Sys.println("stage1=ok");

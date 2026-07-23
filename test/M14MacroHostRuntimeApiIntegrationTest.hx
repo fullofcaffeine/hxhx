@@ -137,6 +137,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final localImportsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalImports()");
 			assertContains("local imports String", localImportsOutput, "INormal:String");
 			assertContains("local imports Template alias", localImportsOutput, "IAsName(T):haxe.Template");
+			assertContains("local imports legacy alias", localImportsOutput, "IAsName(LegacyBytes):haxe.io.Bytes");
 			assertContains("local imports wildcard", localImportsOutput, "IAll:haxe.macro");
 			assertContains("local imports define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_IMPORTS"), "IAsName(T):haxe.Template");
 

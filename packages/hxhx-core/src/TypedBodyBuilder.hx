@@ -429,13 +429,19 @@ class TypedBodyBuilder {
 			case ESuper:
 				TypedExpr.superValue(nodeType, position);
 			case EIdent(name):
-				if (environment != null && environment.resolveSymbol(name) != null) TypedExpr.localRead(name, nodeType,
-					position) else TypedExpr.nameRead(name, nodeType, position);
+				if (environment != null && environment.resolveSymbol(name) != null) {
+					TypedExpr.localRead(name, nodeType, position);
+				} else {
+					final fieldResolution = fieldResolver == null
+						|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
+					TypedExpr.nameRead(name, nodeType, position,
+						fieldResolution == null ? null : fieldResolution.getField(), fieldResolution != null && fieldResolution.getRequiresOwnerQualification());
+				}
 			case EField(object, field):
-				final fieldInfo = fieldResolver == null
+				final fieldResolution = fieldResolver == null
 					|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
 				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field, nodeType,
-					position, fieldInfo);
+					position, fieldResolution == null ? null : fieldResolution.getField());
 			case ENullSafeField(object, field):
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field,
 					nodeType, position);
@@ -444,11 +450,11 @@ class TypedBodyBuilder {
 				if (loweredProbe != null) {
 					loweredProbe;
 				} else {
-					final declaration = callResolver == null
-						|| environment == null ? null : callResolver(callee, arguments, diagnosticPosition, environment);
+					final resolution = callResolver == null
+						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
 					TypedExpr.call(buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), declaration, nodeType,
-						position);
+						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), resolution.getDeclaration(),
+						nodeType, position, resolution.getRequiresOwnerQualification());
 				}
 			case EReturn(inner):
 				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver,

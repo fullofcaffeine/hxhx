@@ -23,12 +23,16 @@ class TyperIndex {
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
 	final identityByShortName:StringMap<Array<TyNominalTypeId>>;
+	final identitiesByModulePath:StringMap<Array<TyNominalTypeId>>;
+	final visibilityByFullName:StringMap<HxVisibility>;
 
 	public function new() {
 		byFullName = new StringMap();
 		byShortName = new StringMap();
 		identityByFullName = new StringMap();
 		identityByShortName = new StringMap();
+		identitiesByModulePath = new StringMap();
+		visibilityByFullName = new StringMap();
 	}
 
 	public function getByFullName(fullName:String):Null<TyNominalInfo> {
@@ -42,6 +46,21 @@ class TyperIndex {
 
 	public function getByShortName(shortName:String):Array<TyNominalInfo> {
 		return byShortName.exists(shortName) ? byShortName.get(shortName) : [];
+	}
+
+	/** Return every indexed type declared by one Haxe module in stable order. **/
+	public function getByModulePath(modulePath:String):Array<TyNominalInfo> {
+		if (modulePath == null || modulePath.length == 0)
+			return [];
+		final out = new Array<TyNominalInfo>();
+		if (!identitiesByModulePath.exists(modulePath))
+			return out;
+		for (identity in identitiesByModulePath.get(modulePath)) {
+			final info = byFullName.get(identity.getCanonicalName());
+			if (info != null && info.getVisibility() == HxVisibility.Public)
+				out.push(info);
+		}
+		return out;
 	}
 
 	/**
@@ -173,50 +192,178 @@ class TyperIndex {
 		final declaration = ResolvedModule.getParsed(module).getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
+		final modulePath = canonicalModulePath(packagePath, moduleName);
 		for (classDeclaration in HxModuleDecl.getClasses(declaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
 			if (shortName == null || shortName.length == 0 || shortName == "Unknown")
 				continue;
-			registerIdentity(classFullNameInModule(packagePath, moduleName, shortName), shortName);
+			final identity = registerIdentity(classFullNameInModule(packagePath, moduleName, shortName), shortName);
+			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
+			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
+			var alreadyRegistered = false;
+			for (candidate in moduleIdentities)
+				if (candidate.equals(identity)) {
+					alreadyRegistered = true;
+					break;
+				}
+			if (!alreadyRegistered)
+				moduleIdentities.push(identity);
+			identitiesByModulePath.set(modulePath, moduleIdentities);
 		}
 	}
 
+	function identityFromModuleByShortName(modulePath:String, shortName:String, publicOnly:Bool = false):Null<TyNominalTypeId> {
+		if (!identitiesByModulePath.exists(modulePath))
+			return null;
+		for (identity in identitiesByModulePath.get(modulePath)) {
+			final canonical = identity.getCanonicalName();
+			final dot = canonical.lastIndexOf(".");
+			final candidateShort = dot < 0 ? canonical : canonical.substr(dot + 1);
+			if (candidateShort == shortName && (!publicOnly || identityIsPublic(identity)))
+				return identity;
+		}
+		return null;
+	}
+
+	function identityIsPublic(identity:Null<TyNominalTypeId>):Bool
+		return identity != null
+			&& visibilityByFullName.exists(identity.getCanonicalName())
+			&& visibilityByFullName.get(identity.getCanonicalName()) == HxVisibility.Public;
+
+	function identityVisibleFromModule(identity:Null<TyNominalTypeId>, modulePath:String):Bool {
+		if (identity == null)
+			return false;
+		if (identityIsPublic(identity))
+			return true;
+		if (modulePath == null || modulePath.length == 0 || !identitiesByModulePath.exists(modulePath))
+			return false;
+		for (candidate in identitiesByModulePath.get(modulePath))
+			if (candidate.equals(identity))
+				return true;
+		return false;
+	}
+
+	/**
+		Whether an alias import deliberately withholds a provider's original short
+		name from this module. For example, `import model.User as Account` introduces
+		`Account`, not `User`. This prevents the compiler's temporary global
+		unique-name fallback from silently making `User` visible anyway.
+	**/
+	static function hidesOriginalNameBehindAlias(raw:String, directives:Array<HxModuleDirective>):Bool {
+		if (raw == null || raw.indexOf(".") >= 0 || directives == null)
+			return false;
+		for (directive in directives) {
+			switch (HxModuleDirective.getKind(directive)) {
+				case ImportAlias(alias):
+					final path = HxModuleDirective.getPath(directive);
+					final dot = path.lastIndexOf(".");
+					final originalName = dot < 0 ? path : path.substr(dot + 1);
+					if (originalName == raw && alias != raw)
+						return true;
+				case ImportNormal | ImportAll | Using:
+			}
+		}
+		return false;
+	}
+
+	/** Prevent the temporary unique-name fallback from widening a type wildcard. **/
+	function rawStaticWildcardHidesType(raw:String, directives:Array<HxModuleDirective>):Bool {
+		if (raw == null || directives == null)
+			return false;
+		for (directive in directives)
+			if (HxModuleDirective.getKind(directive).match(ImportAll)) {
+				final providerPath = HxModuleDirective.getPath(directive);
+				if (identityByFullName.exists(providerPath) && identityFromModuleByShortName(providerPath, raw) != null)
+					return true;
+			}
+		return false;
+	}
+
+	function resolvedStaticWildcardHidesType(raw:String, directives:Array<TyModuleDirective>):Bool {
+		if (raw == null || directives == null)
+			return false;
+		for (directive in directives)
+			if (directive.getKind().match(StaticWildcardImport)) {
+				final provider = directive.getSingleProvider();
+				final providerInfo = provider == null ? null : getByFullName(provider.getCanonicalName());
+				if (providerInfo != null)
+					for (moduleType in getByModulePath(providerInfo.getModulePath()))
+						if (moduleType.getShortName() == raw)
+							return true;
+			}
+		return false;
+	}
+
 	/** Resolve one nominal path using local-module, import, package, then unique-short-name evidence. **/
-	function resolveIdentity(typePath:String, packagePath:String, moduleName:Null<String>, imports:Array<String>):Null<TyNominalTypeId> {
+	function resolveIdentity(typePath:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>):Null<TyNominalTypeId> {
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		if (raw.length == 0)
 			return null;
-		if (identityByFullName.exists(raw))
-			return identityByFullName.get(raw);
+		final currentModulePath = canonicalModulePath(packagePath, moduleName);
+		if (identityByFullName.exists(raw)) {
+			final direct = identityByFullName.get(raw);
+			if (identityVisibleFromModule(direct, currentModulePath))
+				return direct;
+		}
 
 		final inModule = classFullNameInModule(packagePath, moduleName, raw);
 		if (identityByFullName.exists(inModule))
 			return identityByFullName.get(inModule);
-		if (imports != null) {
-			for (importPath in imports) {
-				final cleanImport = importPath == null ? "" : StringTools.trim(importPath);
-				if (cleanImport.length == 0)
-					continue;
-				if (StringTools.endsWith(cleanImport, ".*")) {
-					final wildcardCandidate = cleanImport.substr(0, cleanImport.length - 1) + raw;
-					if (identityByFullName.exists(wildcardCandidate))
-						return identityByFullName.get(wildcardCandidate);
-					continue;
+		if (directives != null) {
+			for (offset in 0...directives.length) {
+				final directive = directives[directives.length - 1 - offset];
+				final importPath = HxModuleDirective.getPath(directive);
+				switch (HxModuleDirective.getKind(directive)) {
+					case ImportNormal:
+						if (HxModuleDirective.getImportedLocalName(directive) == raw && identityByFullName.exists(importPath)) {
+							final imported = identityByFullName.get(importPath);
+							if (identityIsPublic(imported))
+								return imported;
+						}
+						// A plain import of a module's main type also exposes the
+						// other public types declared by that module. Class statics
+						// are a different namespace and are not exposed here.
+						final moduleType = identityFromModuleByShortName(importPath, raw, true);
+						if (moduleType != null)
+							return moduleType;
+					case ImportAlias(_):
+						if (HxModuleDirective.getImportedLocalName(directive) == raw && identityByFullName.exists(importPath)) {
+							final imported = identityByFullName.get(importPath);
+							if (identityIsPublic(imported))
+								return imported;
+						}
+					case ImportAll:
+						// `import Type.*` exposes the type's static members, not
+						// secondary types declared in the same module. Only a path
+						// that is not an exact known type is a package wildcard here.
+						if (!identityByFullName.exists(importPath)) {
+							final wildcardCandidate = importPath + "." + raw;
+							if (identityByFullName.exists(wildcardCandidate)) {
+								final imported = identityByFullName.get(wildcardCandidate);
+								if (identityIsPublic(imported))
+									return imported;
+							}
+						}
+					case Using:
 				}
-				final dot = cleanImport.lastIndexOf(".");
-				final importedShortName = dot < 0 ? cleanImport : cleanImport.substr(dot + 1);
-				if (importedShortName == raw && identityByFullName.exists(cleanImport))
-					return identityByFullName.get(cleanImport);
 			}
 		}
 
 		final inPackage = packagePath == null
 			|| StringTools.trim(packagePath).length == 0 ? raw : StringTools.trim(packagePath) + "." + raw;
-		if (identityByFullName.exists(inPackage))
-			return identityByFullName.get(inPackage);
+		if (identityByFullName.exists(inPackage)) {
+			final packageIdentity = identityByFullName.get(inPackage);
+			if (identityVisibleFromModule(packageIdentity, currentModulePath))
+				return packageIdentity;
+		}
+		if (hidesOriginalNameBehindAlias(raw, directives) || rawStaticWildcardHidesType(raw, directives))
+			return null;
 
 		final shortName = raw.indexOf(".") < 0 ? raw : raw.substr(raw.lastIndexOf(".") + 1);
-		final candidates = identityByShortName.exists(shortName) ? identityByShortName.get(shortName) : [];
+		final candidates = identityByShortName.exists(shortName) ? [
+			for (candidate in identityByShortName.get(shortName))
+				if (identityVisibleFromModule(candidate, currentModulePath)) candidate
+		] : [];
 		return candidates.length == 1 ? candidates[0] : null;
 	}
 
@@ -224,20 +371,21 @@ class TyperIndex {
 		Replace unresolved type-hint nodes with type parameters or registered nominal
 		identities while preserving nested arguments and nullable structure.
 	**/
-	function resolveSemanticType(type:TyType, packagePath:String, moduleName:Null<String>, imports:Array<String>, parameterNames:StringMap<Bool>):TyType {
+	function resolveSemanticType(type:TyType, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
+			parameterNames:StringMap<Bool>):TyType {
 		if (type == null)
 			return TyType.unknown();
 		if (type.isNullable()) {
 			final inner = type.getNullableInner();
-			return TyType.nullable(resolveSemanticType(inner, packagePath, moduleName, imports, parameterNames), type.getDisplay());
+			return TyType.nullable(resolveSemanticType(inner, packagePath, moduleName, directives, parameterNames), type.getDisplay());
 		}
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
 			return TyType.functionType([
 				for (argument in type.getFunctionArguments())
-					resolveSemanticType(argument, packagePath, moduleName, imports, parameterNames)
+					resolveSemanticType(argument, packagePath, moduleName, directives, parameterNames)
 			],
-				result == null ? TyType.unknown() : resolveSemanticType(result, packagePath, moduleName, imports, parameterNames), type.getDisplay());
+				result == null ? TyType.unknown() : resolveSemanticType(result, packagePath, moduleName, directives, parameterNames), type.getDisplay());
 		}
 		if (!type.isUnresolved())
 			return type;
@@ -245,19 +393,19 @@ class TyperIndex {
 		final rawPath = type.getUnresolvedPath();
 		final args = [
 			for (arg in type.getTypeArguments())
-				resolveSemanticType(arg, packagePath, moduleName, imports, parameterNames)
+				resolveSemanticType(arg, packagePath, moduleName, directives, parameterNames)
 		];
 		if (args.length == 0 && parameterNames.exists(rawPath))
 			return TyType.typeParameter(rawPath);
-		final identity = resolveIdentity(rawPath, packagePath, moduleName, imports);
+		final identity = resolveIdentity(rawPath, packagePath, moduleName, directives);
 		return identity == null ? TyType.unresolved(rawPath, args, type.getDisplay()) : TyType.nominal(identity, args, type.getDisplay());
 	}
 
-	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, imports:Array<String>, typeParams:Array<String>):TyType {
+	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>, typeParams:Array<String>):TyType {
 		final names = new StringMap<Bool>();
 		for (name in typeParams)
 			names.set(name, true);
-		return resolveSemanticType(TyType.fromHintText(hint), packagePath, moduleName, imports, names);
+		return resolveSemanticType(TyType.fromHintText(hint), packagePath, moduleName, directives, names);
 	}
 
 	static function addMethod(primary:StringMap<TyFunSig>, all:StringMap<Array<TyFunSig>>, signature:TyFunSig):Void {
@@ -453,7 +601,7 @@ class TyperIndex {
 		final packagePath = HxModuleDecl.getPackagePath(moduleDeclaration);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
-		final imports = HxModuleDecl.getImports(moduleDeclaration);
+		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
 
 		for (classDeclaration in HxModuleDecl.getClasses(moduleDeclaration)) {
 			final shortName = HxClassDecl.getName(classDeclaration);
@@ -467,13 +615,14 @@ class TyperIndex {
 			final fields = new StringMap<TyFieldInfo>();
 			final properties = new StringMap<TyPropertyInfo>();
 			for (field in HxClassDecl.getFields(classDeclaration)) {
-				final fieldType = semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, imports, params);
+				final fieldType = semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, directives, params);
 				final fieldName = HxFieldDecl.getName(field);
 				fields.set(fieldName,
 					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
 						HxFieldDecl.getVisibility(field) == HxVisibility.Public, HxFieldDecl.getIsFinal(field),
 						hasMetadata(HxFieldDecl.getMetadata(field), "inline"), HxFieldDecl.getInit(field) != null || StringTools.trim(HxFieldDecl.getInitText(field))
-						.length > 0));
+						.length > 0,
+						hasMetadata(HxFieldDecl.getMetadata(field), "noImportGlobal")));
 				final getter = HxFieldDecl.getPropertyGet(field);
 				final setter = HxFieldDecl.getPropertySet(field);
 				if (getter.length > 0 || setter.length > 0)
@@ -498,14 +647,14 @@ class TyperIndex {
 				final argRest = new Array<Bool>();
 				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
 					argNames.push(HxFunctionArg.getName(argument));
-					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, imports, functionParams));
+					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams));
 					argOptional.push(HxFunctionArg.getIsOptional(argument));
 					argRest.push(HxFunctionArg.getIsRest(argument));
 				}
 
 				final returnType = functionName == "new" ? TyType.nominal(identity,
 					[for (name in params) TyType.typeParameter(name)]) : semanticType(HxFunctionDecl.getReturnTypeHint(functionDeclaration), packagePath,
-						moduleName, imports, functionParams);
+						moduleName, directives, functionParams);
 				final signature = new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType,
 					HxFunctionDecl.getPos(functionDeclaration));
 				if (isStatic)
@@ -523,22 +672,22 @@ class TyperIndex {
 
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {
 				final underlyingHint = metadataValue(classMetadata, "__hxhx_abstract_underlying");
-				final underlying = semanticType(underlyingHint == null ? "" : underlyingHint, packagePath, moduleName, imports, params);
+				final underlying = semanticType(underlyingHint == null ? "" : underlyingHint, packagePath, moduleName, directives, params);
 				final implicitFromTypes = [
 					for (hint in metadataValues(classMetadata, "__hxhx_abstract_from"))
-						semanticType(hint, packagePath, moduleName, imports, params)
+						semanticType(hint, packagePath, moduleName, directives, params)
 				];
 				final implicitToTypes = [
 					for (hint in metadataValues(classMetadata, "__hxhx_abstract_to"))
-						semanticType(hint, packagePath, moduleName, imports, params)
+						semanticType(hint, packagePath, moduleName, directives, params)
 				];
 				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
-					declarations, underlying, params, implicitFromTypes, implicitToTypes);
+					declarations, underlying, params, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration));
 				catalogOperators(info, ResolvedModule.getFilePath(module));
 				addNominal(info);
 			} else {
 				addNominal(new TyClassInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
-					declarations));
+					declarations, HxClassDecl.getVisibility(classDeclaration)));
 			}
 		}
 	}
@@ -581,7 +730,8 @@ class TyperIndex {
 		return info == null ? [] : info.getBinaryOperators(op);
 	}
 
-	public function resolveTypePath(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
+	public function resolveTypePath(typePath:String, packagePath:String, directives:Array<HxModuleDirective>, ?resolvedDirectives:Array<TyModuleDirective>,
+			?currentModulePath:String):Null<TyNominalInfo> {
 		if (typePath == null)
 			return null;
 		final raw = StringTools.trim(typePath);
@@ -589,19 +739,61 @@ class TyperIndex {
 			return null;
 		if (raw.indexOf(".") >= 0) {
 			final direct = getByFullName(raw);
-			if (direct != null)
+			if (typeVisibleFromModule(direct, currentModulePath))
 				return direct;
 		}
-		if (imports != null) {
-			for (importPath in imports) {
-				if (importPath == null || importPath.length == 0)
-					continue;
-				final parts = importPath.split(".");
-				final last = parts.length == 0 ? "" : parts[parts.length - 1];
-				if (last == raw) {
-					final hit = getByFullName(importPath);
-					if (hit != null)
-						return hit;
+		if (resolvedDirectives != null) {
+			for (offset in 0...resolvedDirectives.length) {
+				final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+				final source = directive.getSource();
+				switch (directive.getKind()) {
+					case TypeImport:
+						if (HxModuleDirective.getImportedLocalName(source) == raw) {
+							final sourcePath = HxModuleDirective.getPath(source);
+							final hit = getByFullName(sourcePath);
+							if (typeVisibleFromModule(hit, currentModulePath))
+								return hit;
+						}
+						if (HxModuleDirective.getKind(source).match(ImportNormal))
+							for (provider in directive.getProviders()) {
+								final providerInfo = getByFullName(provider.getCanonicalName());
+								if (providerInfo != null && providerInfo.getShortName() == raw)
+									return providerInfo;
+							}
+					case PackageWildcardImport:
+						final hit = getByFullName(HxModuleDirective.getPath(source) + "." + raw);
+						if (typeVisibleFromModule(hit, currentModulePath))
+							return hit;
+					case StaticMemberImport(_) | StaticWildcardImport | UsingType | Unresolved:
+				}
+			}
+		} else if (directives != null) {
+			for (offset in 0...directives.length) {
+				final directive = directives[directives.length - 1 - offset];
+				final importPath = HxModuleDirective.getPath(directive);
+				switch (HxModuleDirective.getKind(directive)) {
+					case ImportNormal:
+						if (HxModuleDirective.getImportedLocalName(directive) == raw) {
+							final hit = getByFullName(importPath);
+							if (typeVisibleFromModule(hit, currentModulePath))
+								return hit;
+						}
+						for (moduleType in getByModulePath(importPath))
+							if (moduleType.getShortName() == raw)
+								return moduleType;
+					case ImportAlias(_):
+						if (HxModuleDirective.getImportedLocalName(directive) == raw) {
+							final hit = getByFullName(importPath);
+							if (typeVisibleFromModule(hit, currentModulePath))
+								return hit;
+						}
+					case ImportAll:
+						if (getByFullName(importPath) == null) {
+							final hit = getByFullName(importPath + "." + raw);
+							if (typeVisibleFromModule(hit, currentModulePath))
+								return hit;
+						}
+					case Using:
 				}
 			}
 		}
@@ -611,7 +803,7 @@ class TyperIndex {
 			var current = packageName;
 			while (true) {
 				final hit = getByFullName(current + "." + raw);
-				if (hit != null)
+				if (typeVisibleFromModule(hit, currentModulePath))
 					return hit;
 				final dot = current.lastIndexOf(".");
 				if (dot < 0)
@@ -619,8 +811,23 @@ class TyperIndex {
 				current = current.substr(0, dot);
 			}
 		}
-		final alternatives = getByShortName(raw);
+		if (hidesOriginalNameBehindAlias(raw, directives)
+			|| rawStaticWildcardHidesType(raw, directives)
+			|| resolvedStaticWildcardHidesType(raw, resolvedDirectives))
+			return null;
+		final alternatives = [
+			for (candidate in getByShortName(raw))
+				if (typeVisibleFromModule(candidate, currentModulePath)) candidate
+		];
 		return alternatives.length == 1 ? alternatives[0] : null;
+	}
+
+	static function typeVisibleFromModule(info:Null<TyNominalInfo>, currentModulePath:Null<String>):Bool {
+		if (info == null)
+			return false;
+		if (info.getVisibility() == HxVisibility.Public)
+			return true;
+		return currentModulePath != null && currentModulePath.length > 0 && info.getModulePath() == currentModulePath;
 	}
 
 	/** Deterministic backend-independent summary used by focused identity tests. **/

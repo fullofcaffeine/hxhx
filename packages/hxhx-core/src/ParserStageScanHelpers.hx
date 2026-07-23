@@ -56,6 +56,7 @@ class ParserStageScanHelpers {
 		var braceDepth = 0;
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
+		var pendingTypeVisibility = HxVisibility.Public;
 		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
 			final colon = scanNextToken(source, j);
@@ -119,13 +120,24 @@ class ParserStageScanHelpers {
 			if (braceDepth != 0)
 				continue;
 			if (t.text != "class" && t.text != "interface") {
-				if (t.text == "private" || t.text == "extern" || t.text == "final")
+				if (t.text == "private") {
+					pendingTypeVisibility = HxVisibility.Private;
+					continue;
+				}
+				if (t.text == "public") {
+					pendingTypeVisibility = HxVisibility.Public;
+					continue;
+				}
+				if (t.text == "extern" || t.text == "final")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final classMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final classVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
@@ -154,7 +166,7 @@ class ParserStageScanHelpers {
 			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
 				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
-					header.implementsPaths));
+					header.implementsPaths, classVisibility));
 		}
 
 		return out;
@@ -377,6 +389,7 @@ class ParserStageScanHelpers {
 		var braceDepth = 0;
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
+		var pendingTypeVisibility = HxVisibility.Public;
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -400,13 +413,24 @@ class ParserStageScanHelpers {
 			if (braceDepth != 0)
 				continue;
 			if (t.text != "enum") {
-				if (t.text == "private" || t.text == "extern")
+				if (t.text == "private") {
+					pendingTypeVisibility = HxVisibility.Private;
+					continue;
+				}
+				if (t.text == "public") {
+					pendingTypeVisibility = HxVisibility.Public;
+					continue;
+				}
+				if (t.text == "extern")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final enumMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final enumVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			// enum [abstract] <Name> ...
 			var isEnumAbstract = false;
@@ -495,7 +519,7 @@ class ParserStageScanHelpers {
 			}
 
 			final classMetadata = isEnumAbstract ? enumMetadata.concat(["__hxhx_abstract"]) : enumMetadata;
-			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility));
 		}
 
 		return out;
@@ -536,6 +560,7 @@ class ParserStageScanHelpers {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeVisibility = HxVisibility.Public;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -552,8 +577,21 @@ class ParserStageScanHelpers {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "typedef")
+			if (t.text == "private") {
+				pendingTypeVisibility = HxVisibility.Private;
 				continue;
+			}
+			if (t.text == "public") {
+				pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			if (t.text != "typedef") {
+				if (t.text != "extern")
+					pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			final typeVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			var nameTok = scanNextToken(source, i);
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -574,7 +612,7 @@ class ParserStageScanHelpers {
 			final scanned = scanTypedefShape(source, i);
 			i = scanned.nextPos;
 			final metadata = typeParams.params.length == 0 ? ["__hxhx_typedef"] : ["__hxhx_typedef", "__hxhx_type_params=" + typeParams.params.join(",")];
-			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata));
+			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata, false, [], typeVisibility));
 		}
 
 		return out;
@@ -859,6 +897,7 @@ class ParserStageScanHelpers {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeVisibility = HxVisibility.Public;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -875,7 +914,18 @@ class ParserStageScanHelpers {
 
 			if (braceDepth != 0)
 				continue;
+			if (t.text == "private") {
+				pendingTypeVisibility = HxVisibility.Private;
+				continue;
+			}
+			if (t.text == "public") {
+				pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			if (t.text == "extern" || t.text == "final")
+				continue;
 			if (t.text == "enum") {
+				pendingTypeVisibility = HxVisibility.Public;
 				// Skip full top-level enum blocks so `enum abstract` isn't treated as a regular abstract.
 				var enumNameTok = scanNextToken(source, i);
 				while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
@@ -911,8 +961,12 @@ class ParserStageScanHelpers {
 				}
 				continue;
 			}
-			if (t.text != "abstract")
+			if (t.text != "abstract") {
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
+			}
+			final abstractVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			var nameTok = scanNextToken(source, i);
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -956,7 +1010,7 @@ class ParserStageScanHelpers {
 					metadata.push("__hxhx_abstract_from=" + fromType);
 				for (toType in abstractConversions.toTypes)
 					metadata.push("__hxhx_abstract_to=" + toType);
-				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
+				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata, false, [], abstractVisibility));
 			}
 		}
 

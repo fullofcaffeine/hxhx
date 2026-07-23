@@ -20,7 +20,10 @@ class ParsedModuleIntegrity {
 
 	static function addModule(out:StringBuf, module:HxModuleDecl):Void {
 		add(out, HxModuleDecl.getPackagePath(module));
-		addStrings(out, HxModuleDecl.getImports(module));
+		final directives = HxModuleDecl.getDirectives(module);
+		add(out, Std.string(directives.length));
+		for (directive in directives)
+			add(out, HxModuleDirective.canonicalIdentity(directive));
 		add(out, HxModuleDecl.getHeaderOnly(module) ? "header" : "complete");
 		add(out, HxModuleDecl.getHasToplevelMain(module) ? "toplevel-main" : "class-main");
 		final classes = HxModuleDecl.getClasses(module);
@@ -34,6 +37,7 @@ class ParsedModuleIntegrity {
 		add(out, HxClassDecl.getHasStaticMain(parsedClass) ? "static-main" : "no-static-main");
 		add(out, HxClassDecl.getExtendsPath(parsedClass));
 		add(out, HxClassDecl.getIsInterface(parsedClass) ? "interface" : "class");
+		add(out, HxClassDecl.getVisibility(parsedClass) == HxVisibility.Public ? "public" : "private");
 		addStrings(out, HxClassDecl.getImplementsPaths(parsedClass));
 		addStrings(out, HxClassDecl.getMetadata(parsedClass));
 

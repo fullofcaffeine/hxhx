@@ -487,8 +487,8 @@ let afterEntrypoint = fun ret -> ignore (try (
         ignore (Hxhxmacrohost_MacroRuntime.clearCurrentBuildFieldSnapshot ());
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
-      let emittedFields = Obj.magic (HxArray.create ()) in let seenByName = HxMap.create_string () in (
-        ignore (let _g = ref 0 in try while !_g < HxArray.length (!arr) do try ignore (let raw = HxArray.get (Obj.magic (!arr)) (!_g) in (
+      let emittedFields = Obj.magic (HxArray.create ()) in let seenByName = HxMap.create_string () in let _g = ref 0 in (
+        ignore (try while !_g < HxArray.length (!arr) do try ignore (let raw = HxArray.get (Obj.magic (!arr)) (!_g) in (
           ignore (let __old_74 = !_g in let __new_75 = HxInt.add __old_74 1 in (
             ignore (_g := __new_75);
             __new_75
@@ -497,14 +497,16 @@ let afterEntrypoint = fun ret -> ignore (try (
           ignore (if not (HxAnon.has raw "name") || not (HxAnon.has raw "kind") then raise (HxRuntime.Hx_continue) else ());
           let f = raw in (
             ignore (if f == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get f "name") == Obj.magic (HxRuntime.hx_null) || HxString.length (Obj.obj (HxAnon.get f "name")) = 0 then raise (HxRuntime.Hx_continue) else ());
-            let tempBool = ref (false : bool) in (
-              ignore (let key = (Obj.obj (HxAnon.get f "name") : string) in let __assign_76 = HxMap.exists_string seenByName key in (
+            let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get f "name") : string) in (
+              ignore (let __assign_76 = HxMap.exists_string seenByName key in (
                 tempBool := __assign_76;
                 __assign_76
               ));
               ignore (if !tempBool then raise (HxRuntime.Hx_continue) else ());
-              ignore (let key = (Obj.obj (HxAnon.get f "name") : string) in HxMap.set_string seenByName key true);
-              HxArray.push emittedFields f
+              let key = (Obj.obj (HxAnon.get f "name") : string) in (
+                ignore (HxMap.set_string seenByName key true);
+                HxArray.push emittedFields f
+              )
             )
           )
         )) with
@@ -514,8 +516,8 @@ let afterEntrypoint = fun ret -> ignore (try (
           ignore (Hxhxmacrohost_MacroRuntime.clearCurrentBuildFieldSnapshot ());
           raise (HxRuntime.Hx_return (Obj.repr ()))
         )) else ());
-        let lines = Obj.magic (HxArray.create ()) in (
-          ignore (let _g = ref 0 in while !_g < HxArray.length emittedFields do ignore (let f = HxArray.get (Obj.magic emittedFields) (!_g) in (
+        let lines = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+          ignore (while !_g < HxArray.length emittedFields do ignore (let f = HxArray.get (Obj.magic emittedFields) (!_g) in (
             ignore (let __old_77 = !_g in let __new_78 = HxInt.add __old_77 1 in (
               ignore (_g := __new_78);
               __new_78

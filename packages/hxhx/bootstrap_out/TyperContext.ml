@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable loader : LazyTypeLoader.t; mutable filePath : string; mutable modulePath : string; mutable packagePath : string; mutable imports : string HxArray.t; mutable classFullName : string }
+type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable loader : LazyTypeLoader.t; mutable filePath : string; mutable modulePath : string; mutable packagePath : string; mutable directives : HxModuleDirective.t HxArray.t; mutable resolvedDirectives : TyModuleDirective.t HxArray.t; mutable classFullName : string }
 
-let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullName2 loader2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t) in (
+let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFullName2 loader2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic index2 in (
       (Obj.magic self : t).index <- __assign_1;
@@ -52,29 +52,42 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
             (Obj.magic self : t).packagePath <- __assign_11;
             __assign_11
           ));
-          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-            ignore (if imports2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
+          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDirective.t HxArray.t) in (
+            ignore (if directives2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
               tempRight3 := __assign_12;
               __assign_12
-            ) else let __assign_14 = Obj.magic imports2 in (
+            ) else let __assign_14 = Obj.magic (HxArray.copy directives2) in (
               tempRight3 := __assign_14;
               __assign_14
             ));
             ignore (let __assign_15 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).imports <- __assign_15;
+              (Obj.magic self : t).directives <- __assign_15;
               __assign_15
             ));
-            let tempRight4 = ref ("" : string) in (
-              ignore (if classFullName2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
+            let tempRight4 = ref (Obj.magic (HxRuntime.hx_null) : TyModuleDirective.t HxArray.t) in (
+              ignore (if resolvedDirectives2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in (
                 tempRight4 := __assign_16;
                 __assign_16
-              ) else let __assign_17 = (classFullName2 : string) in (
-                tempRight4 := __assign_17;
-                __assign_17
-              ));
-              let __assign_18 = (!tempRight4 : string) in (
-                (Obj.magic self : t).classFullName <- __assign_18;
+              ) else let __assign_18 = Obj.magic (HxArray.copy resolvedDirectives2) in (
+                tempRight4 := __assign_18;
                 __assign_18
+              ));
+              ignore (let __assign_19 = Obj.magic (!tempRight4) in (
+                (Obj.magic self : t).resolvedDirectives <- __assign_19;
+                __assign_19
+              ));
+              let tempRight5 = ref ("" : string) in (
+                ignore (if classFullName2 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
+                  tempRight5 := __assign_20;
+                  __assign_20
+                ) else let __assign_21 = (classFullName2 : string) in (
+                  tempRight5 := __assign_21;
+                  __assign_21
+                ));
+                let __assign_22 = (!tempRight5 : string) in (
+                  (Obj.magic self : t).classFullName <- __assign_22;
+                  __assign_22
+                )
               )
             )
           )
@@ -85,7 +98,7 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t)
 
 let getIndex = fun self () -> (Obj.magic self : t).index
 
@@ -95,35 +108,182 @@ let getModulePath = fun self () -> (Obj.magic self : t).modulePath
 
 let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 
-let getImports = fun self () -> (Obj.magic self : t).imports
+let getDirectives = fun self () -> HxArray.copy ((Obj.magic self : t).directives)
+
+let getResolvedDirectives = fun self () -> HxArray.copy ((Obj.magic self : t).resolvedDirectives)
 
 let getClassFullName = fun self () -> (Obj.magic self : t).classFullName
 
-let resolveType = fun self (typePath : string) -> try let __fallback_result_23 = (
+let resolveType = fun self (typePath : string) -> try let __fallback_result_27 = (
   ignore (if (Obj.magic self : t).index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let hit = Obj.magic (TyperIndex.resolveTypePath (Obj.magic ((Obj.magic self : t).index)) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).imports))) in (
+  let hit = Obj.magic (TyperIndex.resolveTypePath (Obj.magic ((Obj.magic self : t).index)) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).directives)) (Obj.magic ((Obj.magic self : t).resolvedDirectives)) ((Obj.magic self : t).modulePath : string)) in (
     ignore (if hit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hit))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
-      ignore (if (Obj.magic self : t).loader == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-        tempResult := __assign_19;
-        __assign_19
-      ) else let __assign_20 = Obj.magic (Obj.magic (let __obj_21 = (Obj.magic self : t).loader in (Obj.magic __obj_21 : LazyTypeLoader.t).ensureTypeAvailable (Obj.magic __obj_21) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).imports)))) in (
-        tempResult := __assign_20;
-        __assign_20
+      ignore (if (Obj.magic self : t).loader == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempResult := __assign_23;
+        __assign_23
+      ) else let __assign_24 = Obj.magic (Obj.magic (let __obj_25 = (Obj.magic self : t).loader in (Obj.magic __obj_25 : LazyTypeLoader.t).ensureTypeAvailable (Obj.magic __obj_25) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).directives)) (Obj.magic ((Obj.magic self : t).resolvedDirectives)))) in (
+        tempResult := __assign_24;
+        __assign_24
       ));
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_23 with
-  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
+) in Obj.magic __fallback_result_27 with
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26
 
 let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
-  ignore (if HxString.length ((Obj.magic self : t).classFullName) = 0 then let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_24;
-    __assign_24
-  ) else let __assign_25 = Obj.magic (Obj.magic (resolveType (Obj.magic self) ((Obj.magic self : t).classFullName : string))) in (
-    tempResult := __assign_25;
-    __assign_25
+  ignore (if HxString.length ((Obj.magic self : t).classFullName) = 0 then let __assign_28 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_28;
+    __assign_28
+  ) else let __assign_29 = Obj.magic (Obj.magic (resolveType (Obj.magic self) ((Obj.magic self : t).classFullName : string))) in (
+    tempResult := __assign_29;
+    __assign_29
   ));
   !tempResult
 )
+
+let resolvedProvider = fun self (directive : TyModuleDirective.t) -> try let __fallback_result_33 = (
+  ignore (if directive == Obj.magic (HxRuntime.hx_null) || (Obj.magic self : t).index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+  let provider = Obj.magic (TyModuleDirective.getSingleProvider (Obj.magic directive) ()) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
+    ignore (if provider == Obj.magic (HxRuntime.hx_null) then let __assign_30 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempResult := __assign_30;
+      __assign_30
+    ) else let __assign_31 = Obj.magic (Obj.magic (TyperIndex.getByFullName (Obj.magic ((Obj.magic self : t).index)) (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string))) in (
+      tempResult := __assign_31;
+      __assign_31
+    ));
+    !tempResult
+  )
+) in Obj.magic __fallback_result_33 with
+  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
+
+let importedStaticField = fun self (name : string) -> try let __fallback_result_45 = let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).resolvedDirectives) in (
+  ignore (try while !_g < _g1 do try ignore (let offset = let __old_34 = !_g in let __new_35 = HxInt.add __old_34 1 in (
+    ignore (_g := __new_35);
+    __old_34
+  ) in let directive = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).resolvedDirectives)) (HxInt.sub (HxInt.sub (HxArray.length ((Obj.magic self : t).resolvedDirectives)) 1) offset)) in let provider = Obj.magic (resolvedProvider (Obj.magic self) (Obj.magic directive)) in (
+    ignore (if provider == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+    let tempBool = ref (false : bool) in (
+      ignore (let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in match _g2 with
+        | TyModuleDirectiveKind.StaticMemberImport _p0 -> let _g3 = (_p0 : string) in let memberName = (_g3 : string) in let __assign_36 = HxString.equals (TyModuleDirective.getStaticLocalName (Obj.magic directive) ()) name && HxString.length memberName > 0 in (
+          tempBool := __assign_36;
+          __assign_36
+        )
+        | TyModuleDirectiveKind.StaticWildcardImport -> let __assign_37 = true in (
+          tempBool := __assign_37;
+          __assign_37
+        )
+        | _ -> let __assign_38 = false in (
+          tempBool := __assign_38;
+          __assign_38
+        ));
+      let admitsName = !tempBool in (
+        ignore (if not (admitsName) then raise (HxRuntime.Hx_continue) else ());
+        let tempMaybeTyFieldInfo = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
+          ignore (let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in if (match _g2 with
+            | TyModuleDirectiveKind.TypeImport -> 0
+            | TyModuleDirectiveKind.StaticMemberImport _ -> 1
+            | TyModuleDirectiveKind.StaticWildcardImport -> 2
+            | TyModuleDirectiveKind.PackageWildcardImport -> 3
+            | TyModuleDirectiveKind.UsingType -> 4
+            | TyModuleDirectiveKind.Unresolved -> 5) = 1 then let _g3 = (match _g2 with
+            | TyModuleDirectiveKind.StaticMemberImport __enum_param_39 -> __enum_param_39
+            | _ -> failwith "Unexpected enum parameter" : string) in let memberName = (_g3 : string) in let __assign_40 = Obj.magic (Obj.magic ((Obj.magic provider : TyNominalInfo.t).fieldInfo (Obj.magic provider) (memberName : string))) in (
+            tempMaybeTyFieldInfo := __assign_40;
+            __assign_40
+          ) else let __assign_41 = Obj.magic (Obj.magic ((Obj.magic provider : TyNominalInfo.t).fieldInfo (Obj.magic provider) (name : string))) in (
+            tempMaybeTyFieldInfo := __assign_41;
+            __assign_41
+          ));
+          let field = Obj.magic (!tempMaybeTyFieldInfo) in let tempLeft = ref (false : bool) in let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in (
+            ignore (if (match _g2 with
+              | TyModuleDirectiveKind.TypeImport -> 0
+              | TyModuleDirectiveKind.StaticMemberImport _ -> 1
+              | TyModuleDirectiveKind.StaticWildcardImport -> 2
+              | TyModuleDirectiveKind.PackageWildcardImport -> 3
+              | TyModuleDirectiveKind.UsingType -> 4
+              | TyModuleDirectiveKind.Unresolved -> 5) = 2 then let __assign_42 = true in (
+              tempLeft := __assign_42;
+              __assign_42
+            ) else let __assign_43 = false in (
+              tempLeft := __assign_43;
+              __assign_43
+            ));
+            let excludedByWildcard = !tempLeft && field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.getNoImportGlobal (Obj.magic field) () in if field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.getIsStatic (Obj.magic field) () && not (excludedByWildcard) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic field))) else ()
+          )
+        )
+      )
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_45 with
+  | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44
+
+let importedStaticMethod = fun self (name : string) -> try let __fallback_result_60 = let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).resolvedDirectives) in (
+  ignore (try while !_g < _g1 do try ignore (let offset = let __old_46 = !_g in let __new_47 = HxInt.add __old_46 1 in (
+    ignore (_g := __new_47);
+    __old_46
+  ) in let directive = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).resolvedDirectives)) (HxInt.sub (HxInt.sub (HxArray.length ((Obj.magic self : t).resolvedDirectives)) 1) offset)) in let provider = Obj.magic (resolvedProvider (Obj.magic self) (Obj.magic directive)) in (
+    ignore (if provider == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+    let tempString = ref ("" : string) in (
+      ignore (let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in match _g2 with
+        | TyModuleDirectiveKind.StaticMemberImport _p0 -> let _g3 = (_p0 : string) in let exactName = (_g3 : string) in if HxString.equals (TyModuleDirective.getStaticLocalName (Obj.magic directive) ()) name then let __assign_49 = (exactName : string) in (
+          tempString := __assign_49;
+          __assign_49
+        ) else let __assign_50 = ("" : string) in (
+          tempString := __assign_50;
+          __assign_50
+        )
+        | TyModuleDirectiveKind.StaticWildcardImport -> let __assign_51 = (name : string) in (
+          tempString := __assign_51;
+          __assign_51
+        )
+        | _ -> let __assign_48 = ("" : string) in (
+          tempString := __assign_48;
+          __assign_48
+        ));
+      let memberName = (!tempString : string) in (
+        ignore (if HxString.length memberName = 0 then raise (HxRuntime.Hx_continue) else ());
+        let candidates = Obj.magic ((Obj.magic provider : TyNominalInfo.t).staticMethodCandidates (Obj.magic provider) (memberName : string)) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in let tempBool = ref (false : bool) in let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in (
+          ignore (if (match _g2 with
+            | TyModuleDirectiveKind.TypeImport -> 0
+            | TyModuleDirectiveKind.StaticMemberImport _ -> 1
+            | TyModuleDirectiveKind.StaticWildcardImport -> 2
+            | TyModuleDirectiveKind.PackageWildcardImport -> 3
+            | TyModuleDirectiveKind.UsingType -> 4
+            | TyModuleDirectiveKind.Unresolved -> 5) = 2 then let __assign_52 = true in (
+            tempBool := __assign_52;
+            __assign_52
+          ) else let __assign_53 = false in (
+            tempBool := __assign_53;
+            __assign_53
+          ));
+          ignore (if !tempBool then let _g2 = Obj.magic (let __arr_54 = HxArray.create () in __arr_54) in let _g3 = ref 0 in (
+            ignore (while !_g3 < HxArray.length candidates do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates) (!_g3)) in (
+              ignore (let __old_55 = !_g3 in let __new_56 = HxInt.add __old_55 1 in (
+                ignore (_g3 := __new_56);
+                __new_56
+              ));
+              if (Obj.magic provider : TyNominalInfo.t).declarationForSignature (Obj.magic provider) (Obj.magic candidate) == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getNoImportGlobal (Obj.magic ((Obj.magic provider : TyNominalInfo.t).declarationForSignature (Obj.magic provider) (Obj.magic candidate))) ()) then ignore (HxArray.push _g2 candidate) else ()
+            )) done);
+            let __assign_57 = Obj.magic _g2 in (
+              tempArray := __assign_57;
+              __assign_57
+            )
+          ) else let __assign_58 = Obj.magic candidates in (
+            tempArray := __assign_58;
+            __assign_58
+          ));
+          let eligible = Obj.magic (!tempArray) in if HxArray.length eligible > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyImportedStaticMethod.create (Obj.magic provider) (memberName : string) (Obj.magic eligible))))) else ()
+        )
+      )
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59

@@ -11,6 +11,118 @@ class TypedBodySource {
 		return position == null ? HxPos.unknown() : position;
 
 	/**
+		Render the exact type selected by shared typing as a Haxe-shaped hint for
+		backends that still consume the source projection. In particular, an import
+		alias such as `Service` becomes its canonical provider path `model.Api` so a
+		target does not need to repeat Haxe name resolution.
+	**/
+	static function canonicalTypeHint(type:TyType):String {
+		if (type == null)
+			return "";
+		if (type.isNullable()) {
+			final inner = type.getNullableInner();
+			return "Null<" + (inner == null ? "Dynamic" : canonicalTypeHint(inner)) + ">";
+		}
+		if (type.isFunction()) {
+			final arguments = [for (argument in type.getFunctionArguments()) canonicalTypeHint(argument)];
+			final result = type.getFunctionReturn();
+			return "(" + arguments.join(",") + ")->" + (result == null ? "Dynamic" : canonicalTypeHint(result));
+		}
+		final identity = type.getNominalIdentity();
+		if (identity != null) {
+			final arguments = type.getTypeArguments();
+			return identity.getCanonicalName()
+				+ (arguments.length == 0 ? "" : "<" + [for (argument in arguments) canonicalTypeHint(argument)].join(",") + ">");
+		}
+		if (type.isUnresolved()) {
+			final arguments = type.getTypeArguments();
+			return type.getUnresolvedPath() + (arguments.length == 0 ? "" : "<" + [for (argument in arguments) canonicalTypeHint(argument)].join(",") + ">");
+		}
+		return type.getDisplay();
+	}
+
+	static function containsNominalType(type:TyType):Bool {
+		if (type == null)
+			return false;
+		if (type.getNominalIdentity() != null)
+			return true;
+		if (type.isNullable())
+			return containsNominalType(type.getNullableInner());
+		if (type.isFunction()) {
+			for (argument in type.getFunctionArguments())
+				if (containsNominalType(argument))
+					return true;
+			return containsNominalType(type.getFunctionReturn());
+		}
+		for (argument in type.getTypeArguments())
+			if (containsNominalType(argument))
+				return true;
+		return false;
+	}
+
+	static function simpleTypeName(path:String):String {
+		if (path == null)
+			return "";
+		final dot = path.lastIndexOf(".");
+		return dot < 0 ? path : path.substr(dot + 1);
+	}
+
+	static function sourceTypeBase(display:String):String {
+		var value = StringTools.trim(display == null ? "" : display);
+		final generic = value.indexOf("<");
+		if (generic >= 0)
+			value = StringTools.trim(value.substr(0, generic));
+		return simpleTypeName(value);
+	}
+
+	/** Whether a source hint contains a local alias rather than the provider's real type name. **/
+	static function containsAliasSpelling(type:TyType):Bool {
+		if (type == null)
+			return false;
+		final identity = type.getNominalIdentity();
+		if (identity != null && sourceTypeBase(type.getDisplay()) != simpleTypeName(identity.getCanonicalName()))
+			return true;
+		if (type.isNullable() && containsAliasSpelling(type.getNullableInner()))
+			return true;
+		if (type.isFunction()) {
+			for (argument in type.getFunctionArguments())
+				if (containsAliasSpelling(argument))
+					return true;
+			if (containsAliasSpelling(type.getFunctionReturn()))
+				return true;
+		}
+		for (argument in type.getTypeArguments())
+			if (containsAliasSpelling(argument))
+				return true;
+		return false;
+	}
+
+	static function resolvedNameWhenAliased(sourceName:String, identity:Null<TyNominalTypeId>):String {
+		if (identity == null || sourceTypeBase(sourceName) == simpleTypeName(identity.getCanonicalName()))
+			return sourceName;
+		return identity.getCanonicalName();
+	}
+
+	/**
+		Build a structural expression for the provider selected by alias resolution.
+
+		A qualified provider such as `model.Api` is represented as `model` followed by
+		an `Api` field access. Keeping the path structural lets each target render its
+		own package or namespace syntax; storing the whole path in one identifier would
+		instead produce invalid names such as `model_Api` in Python.
+	**/
+	static function resolvedTypeExpression(sourceName:String, identity:Null<TyNominalTypeId>):HxExpr {
+		final resolved = resolvedNameWhenAliased(sourceName, identity);
+		if (resolved == sourceName || resolved.indexOf(".") < 0)
+			return EIdent(resolved);
+		final parts = resolved.split(".");
+		var expression:HxExpr = EIdent(parts.shift());
+		for (part in parts)
+			expression = EField(expression, part);
+		return expression;
+	}
+
+	/**
 		Preserve whether a local type was actually written in source.
 
 		A constructor keeps its semantic nominal type on the typed expression, but
@@ -22,7 +134,11 @@ class TypedBodySource {
 	**/
 	static function variableTypeHint(sourceHint:String, initializer:Null<TypedExpr>):String {
 		final typeHint = sourceHint == null ? "" : sourceHint;
-		if (StringTools.trim(typeHint).length > 0 || initializer == null || initializer.getType().getNominalIdentity() == null)
+		if (StringTools.trim(typeHint).length > 0)
+			return initializer != null
+				&& containsNominalType(initializer.getType())
+				&& containsAliasSpelling(initializer.getType()) ? canonicalTypeHint(initializer.getType()) : typeHint;
+		if (initializer == null || initializer.getType().getNominalIdentity() == null)
 			return typeHint;
 		return switch (initializer.getTag()) {
 			case NewValue: typeHint;
@@ -84,15 +200,42 @@ class TypedBodySource {
 			case ThisValue: EThis;
 			case SuperValue: ESuper;
 			case LocalRead: EIdent(texts[0]);
-			case NameRead: EIdent(texts[0]);
-			case FieldRead: EField(expression(expressions[0]), texts[0]);
+			case NameRead:
+				final nameField = typedExpression.getFieldInfo();
+				if (nameField != null) {
+					typedExpression.getRequiresOwnerQualification() ? EField(resolvedTypeExpression("", nameField.getOwner()),
+						nameField.getName()) : EIdent(texts[0]);
+				} else {
+					final identity = typedExpression.getType().getNominalIdentity();
+					resolvedTypeExpression(texts[0], identity);
+				}
+			case FieldRead:
+				var receiver = expression(expressions[0]);
+				final field = typedExpression.getFieldInfo();
+				if (field != null && field.getIsStatic()) {
+					switch (receiver) {
+						case EIdent(name): receiver = resolvedTypeExpression(name, field.getOwner());
+						case _:
+					}
+				}
+				EField(receiver, texts[0]);
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0]), texts[0]);
 			case Call:
 				final callee = expression(expressions[0]);
 				final arguments = expressionTail(expressions, 1);
 				final declaration = typedExpression.getDeclaration();
 				if (declaration == null || declaration.getIsStatic()) {
-					ECall(callee, arguments);
+					if (declaration != null) {
+						switch (callee) {
+							case EIdent(_) if (typedExpression.getRequiresOwnerQualification()):
+								ECall(EField(resolvedTypeExpression("", declaration.getOwner()), declaration.getSignature().getName()), arguments);
+							case EField(EIdent(name), method):
+								ECall(EField(resolvedTypeExpression(name, declaration.getOwner()), method), arguments);
+							case _: ECall(callee, arguments);
+						}
+					} else {
+						ECall(callee, arguments);
+					}
 				} else {
 					switch (callee) {
 						case EField(receiver, method):
@@ -126,7 +269,9 @@ class TypedBodySource {
 			case MacroType: EMacroType(texts[0]);
 			case Lambda: ELambda(texts.copy(), expression(expressions[0]));
 			case SwitchExpr: ESwitch(expression(expressions[0]), typedExpression.getPatterns(), expressionTail(expressions, 1));
-			case NewValue: ENew(texts[0], expressionTail(expressions, 0));
+			case NewValue:
+				final identity = typedExpression.getType().getNominalIdentity();
+				ENew(resolvedNameWhenAliased(texts[0], identity), expressionTail(expressions, 0));
 			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0]));
 			case Binary: EBinop(texts[0], expression(expressions[0]), expression(expressions[1]));
 			case Assign: EBinop("=", expression(expressions[0]), expression(expressions[1]));
@@ -203,20 +348,72 @@ class TypedBodySource {
 
 	public static function functionDeclaration(typedFunction:TypedFunction):HxFunctionDecl {
 		final source = typedFunction.getSourceDeclaration();
-		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source),
-			HxFunctionDecl.getArgs(source), HxFunctionDecl.getReturnTypeHint(source), statements(typedFunction.getBody()),
-			HxFunctionDecl.getReturnStringLiteral(source), HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source),
-			HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
+		var arguments = HxFunctionDecl.getArgs(source);
+		var returnTypeHint = HxFunctionDecl.getReturnTypeHint(source);
+		final declaration = typedFunction.getDeclaration();
+		if (declaration != null) {
+			final signature = declaration.getSignature();
+			final semanticArguments = signature.getArgs();
+			arguments = [
+				for (index in 0...arguments.length) {
+					final argument = arguments[index];
+					final sourceHint = HxFunctionArg.getTypeHint(argument);
+					final renderedHint = sourceHint.length == 0
+						|| HxFunctionArg.getIsRest(argument)
+						|| index >= semanticArguments.length
+						|| !containsAliasSpelling(semanticArguments[index]) ? sourceHint : canonicalTypeHint(semanticArguments[index]);
+					new HxFunctionArg(HxFunctionArg.getName(argument), renderedHint, HxFunctionArg.getDefaultValue(argument),
+						HxFunctionArg.getIsOptional(argument), HxFunctionArg.getIsRest(argument), HxFunctionArg.getDefaultValueText(argument));
+				}
+			];
+			if (returnTypeHint.length > 0 && containsAliasSpelling(signature.getReturnType()))
+				returnTypeHint = canonicalTypeHint(signature.getReturnType());
+		}
+		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source), arguments,
+			returnTypeHint, statements(typedFunction.getBody()), HxFunctionDecl.getReturnStringLiteral(source), HxFunctionDecl.getMetadata(source),
+			HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
+	}
+
+	/** Project one field from its resolved type and typed initializer when available. **/
+	static function fieldDeclaration(source:HxFieldDecl, semanticInfo:Null<TyNominalInfo>, initializer:Null<TypedExpr>):HxFieldDecl {
+		var typeHint = HxFieldDecl.getTypeHint(source);
+		if (typeHint.length > 0 && semanticInfo != null) {
+			final fieldInfo = semanticInfo.fieldInfo(HxFieldDecl.getName(source));
+			if (fieldInfo != null && containsAliasSpelling(fieldInfo.getType()))
+				typeHint = canonicalTypeHint(fieldInfo.getType());
+		}
+		final projectedInitializer = initializer == null ? HxFieldDecl.getInit(source) : expression(initializer);
+		return new HxFieldDecl(HxFieldDecl.getName(source), HxFieldDecl.getVisibility(source), HxFieldDecl.getIsStatic(source), typeHint,
+			projectedInitializer, HxFieldDecl.getMetadata(source), HxFieldDecl.getPos(source), HxFieldDecl.getEndPos(source), HxFieldDecl.getIsFinal(source),
+			HxFieldDecl.getPropertyGet(source), HxFieldDecl.getPropertySet(source), initializer == null ? HxFieldDecl.getInitText(source) : "");
 	}
 
 	public static function classDeclaration(typedClass:TypedClass):HxClassDecl {
 		final source = typedClass.getSourceDeclaration();
+		var extendsPath = HxClassDecl.getExtendsPath(source);
+		final resolvedExtends = typedClass.getResolvedExtends();
+		if (resolvedExtends != null && containsAliasSpelling(resolvedExtends))
+			extendsPath = canonicalTypeHint(resolvedExtends);
+		final sourceImplements = HxClassDecl.getImplementsPaths(source);
+		final resolvedImplements = typedClass.getResolvedImplements();
+		final implementsPaths = [
+			for (index in 0...sourceImplements.length) {
+				final resolved = index < resolvedImplements.length ? resolvedImplements[index] : null;
+				resolved != null
+			&& containsAliasSpelling(resolved) ? canonicalTypeHint(resolved) : sourceImplements[index];
+			}
+		];
+		final initializerByField = new Map<String, TypedExpr>();
+		for (initializer in typedClass.getFieldInitializers())
+			initializerByField.set(initializer.getField().getName(), initializer.getExpression());
 		return new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), [
 			for (typedFunction in typedClass.getFunctions())
 				functionDeclaration(typedFunction)
-		],
-			HxClassDecl.getFields(source), HxClassDecl.getExtendsPath(source), HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source),
-			HxClassDecl.getImplementsPaths(source));
+		], [
+			for (field in HxClassDecl.getFields(source))
+				fieldDeclaration(field, typedClass.getSemanticInfo(), initializerByField.get(HxFieldDecl.getName(field)))
+		], extendsPath,
+			HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source), implementsPaths, HxClassDecl.getVisibility(source));
 	}
 
 	/** Build the declaration/signature projection consumed during backend migration. **/
@@ -241,7 +438,7 @@ class TypedBodySource {
 		}
 		if (mainClass == null)
 			throw "typed module projection is missing its main declaration";
-		return new HxModuleDecl(HxModuleDecl.getPackagePath(source), HxModuleDecl.getImports(source), mainClass, classes, HxModuleDecl.getHeaderOnly(source),
-			HxModuleDecl.getHasToplevelMain(source));
+		return new HxModuleDecl(HxModuleDecl.getPackagePath(source), HxModuleDecl.getDirectives(source), mainClass, classes,
+			HxModuleDecl.getHeaderOnly(source), HxModuleDecl.getHasToplevelMain(source));
 	}
 }

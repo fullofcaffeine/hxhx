@@ -122,8 +122,14 @@ class TypedExpr {
 	public static function localRead(name:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(LocalRead, type, position, [name]);
 
-	public static function nameRead(name:String, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(NameRead, type, position, [name]);
+	/**
+		Preserve a non-local name and, when typing selected a current-class field,
+		carry that exact field with the read. This distinguishes a value such as
+		`root:TreeNode` from the type name `TreeNode`; both have the same nominal
+		result type, but only the latter may be rewritten through an import alias.
+	**/
+	public static function nameRead(name:String, type:TyType, position:Null<HxPos>, ?fieldInfo:TyFieldInfo, requiresOwnerQualification:Bool = false):TypedExpr
+		return new TypedExpr(NameRead, type, position, [name], null, null, requiresOwnerQualification, 0, 0.0, null, null, null, null, fieldInfo);
 
 	public static function fieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>, ?fieldInfo:TyFieldInfo):TypedExpr
 		return new TypedExpr(FieldRead, type, position, [field], [object], null, false, 0, 0.0, null, null, null, null, fieldInfo);
@@ -132,8 +138,10 @@ class TypedExpr {
 	public static function nullSafeFieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(NullSafeFieldRead, type, position, [field], [object]);
 
-	public static function call(callee:TypedExpr, arguments:Array<TypedExpr>, declaration:Null<TyDeclarationInfo>, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, false, 0, 0.0, declaration);
+	public static function call(callee:TypedExpr, arguments:Array<TypedExpr>, declaration:Null<TyDeclarationInfo>, type:TyType, position:Null<HxPos>,
+			requiresOwnerQualification:Bool = false):TypedExpr
+		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, requiresOwnerQualification, 0, 0.0,
+			declaration);
 
 	/** Preserve a nested source return until macro expansion consumes it or emission rejects it. **/
 	public static function returnExpr(expression:Null<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
@@ -251,6 +259,10 @@ class TypedExpr {
 	public function getBoolValue():Bool
 		return boolValue;
 
+	/** Whether a bare imported field/call must be projected through its exact owner. **/
+	public function getRequiresOwnerQualification():Bool
+		return boolValue;
+
 	/** Whether a `VariableDeclaration` was written with `final`. **/
 	public function getVariableIsFinal():Bool
 		return boolValue;
@@ -277,7 +289,7 @@ class TypedExpr {
 	public function getOpaqueKind():Null<TypedOpaqueExprKind>
 		return opaqueKind;
 
-	/** Exact declaration selected by typing for a field read, when the current typed subset can resolve it. **/
+	/** Exact declaration selected for a bare or receiver-qualified field read, when the current typed subset can resolve it. **/
 	public function getFieldInfo():Null<TyFieldInfo>
 		return fieldInfo;
 

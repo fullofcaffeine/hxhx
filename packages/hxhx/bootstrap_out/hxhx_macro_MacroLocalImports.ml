@@ -203,7 +203,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
               scanningPath := __assign_34;
               __assign_34
             ))) done);
-            ignore (if not (isUsing) && acceptKeyword (Obj.magic (HxKeyword.KAs)) then ignore (let aliasToken = readIdentToken () in if aliasToken != Obj.magic (HxRuntime.hx_null) then ignore ((
+            ignore (if not (isUsing) && (acceptKeyword (Obj.magic (HxKeyword.KAs)) || acceptKeyword (Obj.magic (HxKeyword.KIn))) then ignore (let aliasToken = readIdentToken () in if aliasToken != Obj.magic (HxRuntime.hx_null) then ignore ((
               ignore (let __assign_35 = Obj.magic (Obj.obj (HxAnon.get aliasToken "name") : string) in (
                 alias := __assign_35;
                 __assign_35

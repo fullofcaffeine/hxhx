@@ -269,6 +269,7 @@ class ResolverStage {
 			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
+		final visitedSourceFiles = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
@@ -302,6 +303,10 @@ class ResolverStage {
 			final filePath = resolution.filePath;
 			if (filePath == null)
 				throw "import_missing " + modulePath;
+			final selectedFileKey = Path.normalize(filePath);
+			if (visitedSourceFiles.exists(selectedFileKey))
+				continue;
+			visitedSourceFiles.set(selectedFileKey, true);
 
 			final source = sources.readSource(filePath);
 			if (source == null)
@@ -324,7 +329,12 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
+			final decl = parsed.getDecl();
+			final modulePkg = HxModuleDecl.getPackagePath(decl);
+			final moduleName = Path.withoutExtension(Path.withoutDirectory(filePath));
+			final canonicalModulePath = modulePkg == null || modulePkg.length == 0 ? moduleName : modulePkg + "." + moduleName;
+			visited.set(canonicalModulePath, true);
+			out.push(new ResolvedModule(canonicalModulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
 		}
 		return out;
 	}
@@ -342,6 +352,7 @@ class ResolverStage {
 			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
+		final visitedSourceFiles = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
@@ -387,6 +398,10 @@ class ResolverStage {
 			final filePath = resolution.filePath;
 			if (filePath == null)
 				throw "import_missing " + modulePath;
+			final selectedFileKey = Path.normalize(filePath);
+			if (visitedSourceFiles.exists(selectedFileKey))
+				continue;
+			visitedSourceFiles.set(selectedFileKey, true);
 
 			final source = sources.readSource(filePath);
 			if (source == null)
@@ -423,15 +438,17 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
-
 			final decl = parsed.getDecl();
 			final modulePkg = HxModuleDecl.getPackagePath(decl);
+			final moduleName = Path.withoutExtension(Path.withoutDirectory(filePath));
+			final canonicalModulePath = modulePkg == null || modulePkg.length == 0 ? moduleName : modulePkg + "." + moduleName;
+			visited.set(canonicalModulePath, true);
+			out.push(new ResolvedModule(canonicalModulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
 
 			final deps = new Array<String>();
 
-			for (rawImport in HxModuleDecl.getImports(decl)) {
-				final imp = normalizeImport(rawImport);
+			for (directive in HxModuleDecl.getDirectives(decl)) {
+				final imp = HxModuleDirective.getPath(directive);
 				if (imp.length == 0)
 					continue;
 
@@ -464,12 +481,11 @@ class ResolverStage {
 					}
 				}
 
-				if (StringTools.endsWith(resolvedImp, ".*")) {
-					final base = resolvedImp.substr(0, resolvedImp.length - 2);
+				if (HxModuleDirective.getKind(directive).match(ImportAll)) {
 					// If the base module doesn't exist as a file, treat this as a package-wildcard import
 					// (`import pack.*`) and ignore it for graph traversal.
-					if (sources.resolveModuleFile(classPaths, base) != null)
-						deps.push(base);
+					if (sources.resolveModuleFile(classPaths, resolvedImp) != null)
+						deps.push(resolvedImp);
 					continue;
 				}
 
@@ -483,10 +499,10 @@ class ResolverStage {
 			// like `unit.TestJava` during `--interp` bring-up).
 			final traceDeps = traceResolverDepsEnabled();
 			if (resolveImplicitSamePackageTypesEnabled()) {
-				for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
+				for (dep in implicitSamePackageDeps(filteredSource, canonicalModulePath, decl)) {
 					final exists = sources.resolveModuleFile(classPaths, dep) != null;
 					if (traceDeps)
-						Sys.println("resolver_samepkg_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+						Sys.println("resolver_samepkg_dep module=" + canonicalModulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 					if (exists)
 						deps.push(dep);
 				}
@@ -495,7 +511,7 @@ class ResolverStage {
 			for (dep in implicitQualifiedTypeDeps(filteredSource, effectiveDefines)) {
 				final exists = sources.resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
-					Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+					Sys.println("resolver_qualified_dep module=" + canonicalModulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 				if (exists)
 					deps.push(dep);
 			}
@@ -503,7 +519,7 @@ class ResolverStage {
 			for (dep in implicitUtestAddCasesDeps(filteredSource, classPaths, sources)) {
 				final exists = sources.resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
-					Sys.println("resolver_utest_addcases_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+					Sys.println("resolver_utest_addcases_dep module=" + canonicalModulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 				if (exists)
 					deps.push(dep);
 			}
@@ -518,25 +534,5 @@ class ResolverStage {
 			}
 		}
 		return out;
-	}
-
-	static function normalizeImport(raw:String):String {
-		if (raw == null)
-			return "";
-		var s = StringTools.trim(raw);
-		if (s.length == 0)
-			return "";
-
-		// Native parser may provide "using Foo" (future-proofing).
-		if (StringTools.startsWith(s, "using ")) {
-			s = StringTools.trim(s.substr("using ".length));
-		}
-
-		// Parser may provide "Foo as Bar"; alias is ignored for resolution.
-		final asIdx = s.indexOf(" as ");
-		if (asIdx >= 0)
-			s = StringTools.trim(s.substr(0, asIdx));
-
-		return s;
 	}
 }

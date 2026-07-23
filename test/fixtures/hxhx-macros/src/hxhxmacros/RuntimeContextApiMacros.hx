@@ -2,6 +2,7 @@ package hxhxmacros;
 
 import String;
 import haxe.Template as T;
+import haxe.io.Bytes in LegacyBytes;
 import haxe.io.Bytes;
 import sys.io.File;
 
@@ -400,6 +401,8 @@ class RuntimeContextApiMacros {
 			Context.fatalError("runtime macro local-import probe: missing String import in " + summary, pos);
 		if (rendered.indexOf("IAsName(T):haxe.Template") < 0)
 			Context.fatalError("runtime macro local-import probe: missing aliased Template import in " + summary, pos);
+		if (rendered.indexOf("IAsName(LegacyBytes):haxe.io.Bytes") < 0)
+			Context.fatalError("runtime macro local-import probe: missing legacy-spelling alias in " + summary, pos);
 		if (rendered.indexOf("IAll:haxe.macro") < 0)
 			Context.fatalError("runtime macro local-import probe: missing wildcard haxe.macro import in " + summary, pos);
 

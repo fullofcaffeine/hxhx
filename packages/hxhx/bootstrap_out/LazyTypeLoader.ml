@@ -4,24 +4,25 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> string HxArray.t -> TyNominalInfo.t }
+type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> HxModuleDirective.t HxArray.t -> TyModuleDirective.t HxArray.t -> TyNominalInfo.t }
 
 let __ctor = fun (self : t) () -> ignore ((
   ignore self;
   ignore ()
 ))
 
-let ensureTypeAvailable__impl = fun (self : t) (typePath : string) (packagePath : string) (imports : string HxArray.t) -> (
+let ensureTypeAvailable__impl = fun (self : t) (typePath : string) (packagePath : string) (directives : HxModuleDirective.t HxArray.t) (resolvedDirectives : TyModuleDirective.t HxArray.t) -> (
   ignore self;
   try let __fallback_result_2 = (
     ignore (if HxString.equals typePath "__hxhx_never__" || HxString.equals packagePath "__hxhx_never__" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-    ignore (if imports != Obj.magic (HxRuntime.hx_null) && HxArray.length imports = -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+    ignore (if directives != Obj.magic (HxRuntime.hx_null) && HxArray.length directives = -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+    ignore (if resolvedDirectives != Obj.magic (HxRuntime.hx_null) && HxArray.length resolvedDirectives = -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
     Obj.magic (HxRuntime.hx_null)
   ) in Obj.magic __fallback_result_2 with
     | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "LazyTypeLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "LazyTypeLoader"; ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t) in (
   ignore ((
     ignore self;
     ignore ()
@@ -29,4 +30,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "LazyTypeLoader";
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "LazyTypeLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "LazyTypeLoader"; ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t)

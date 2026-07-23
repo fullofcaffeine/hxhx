@@ -19,11 +19,30 @@ let addGeneratedField = fun () -> ignore (try let modulePath = (Hxhxmacrohost_ap
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_BUILD_RAN" : string) ("1" : string));
-  let members = (HxArray.join (let __arr_1 = HxArray.create () in (
-    ignore (HxArray.push __arr_1 "public static function generated():Void {");
-    ignore (HxArray.push __arr_1 "  trace(\"from_hxhx_build_macro\");");
-    ignore (HxArray.push __arr_1 "}");
-    __arr_1
-  )) "\n" (fun x -> x) : string) in Hxhxmacrohost_api_Compiler.emitBuildFields (modulePath : string) (members : string)
+  let variant = (Hxhxmacrohost_api_Context.definedValue ("HXHX_BUILD_VARIANT" : string) : string) in let tempString = ref ("" : string) in (
+    ignore (match variant with
+      | "int" -> let __assign_3 = ("public static function generated_answer():Int return 42;" : string) in (
+        tempString := __assign_3;
+        __assign_3
+      )
+      | "int-body" -> let __assign_4 = ("public static function generated_answer():Int return 43;" : string) in (
+        tempString := __assign_4;
+        __assign_4
+      )
+      | "string" -> let __assign_5 = ("public static function generated_answer():String return \"private-generated-value\";" : string) in (
+        tempString := __assign_5;
+        __assign_5
+      )
+      | _ -> let __assign_1 = (HxArray.join (let __arr_2 = HxArray.create () in (
+        ignore (HxArray.push __arr_2 "public static function generated():Void {");
+        ignore (HxArray.push __arr_2 "  trace(\"from_hxhx_build_macro\");");
+        ignore (HxArray.push __arr_2 "}");
+        __arr_2
+      )) "\n" (fun x -> x) : string) in (
+        tempString := __assign_1;
+        __assign_1
+      ));
+    Hxhxmacrohost_api_Compiler.emitBuildFields (modulePath : string) (!tempString : string)
+  )
 ) with
-  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2)
+  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6)

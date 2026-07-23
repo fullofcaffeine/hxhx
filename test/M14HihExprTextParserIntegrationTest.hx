@@ -8,6 +8,22 @@ class M14HihExprTextParserIntegrationTest {
 			fail(msg);
 	}
 
+	static function nativeAstRecord(key:String, payload:String):String {
+		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
+			"\t", "\\t");
+		return "ast " + key + " " + escaped.length + ":" + escaped;
+	}
+
+	static function assertDirectiveRejected(payload:String, label:String):Void {
+		var rejected = false;
+		try {
+			HxModuleDirectiveProtocol.decode(payload);
+		} catch (_:Dynamic) {
+			rejected = true;
+		}
+		assertTrue(rejected, "native directive decoder accepted " + label);
+	}
+
 	static function assertPushTryCatchRaw(stmts:Array<HxStmt>, msg:String):Void {
 		assertTrue(stmts.length == 1, msg + ": expected one push statement");
 		switch (stmts[0]) {
@@ -609,11 +625,70 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected char-code switch statement");
 		}
 
-		final importInAliasDecl = new HxParser("package python.internal;\nimport python.Syntax.code in py;\nclass ImportInAlias {}\n")
-			.parseModule("ImportInAlias");
-		final importInAliasImports = HxModuleDecl.getImports(importInAliasDecl);
-		assertTrue(importInAliasImports.length == 1, "expected import-in alias to preserve one import");
-		assertTrue(importInAliasImports[0] == "python.Syntax.code", "expected import-in alias path without alias");
+		final importInAliasDecl = new HxParser([
+			"package python.internal;",
+			"import python.Syntax;",
+			"import python.Syntax.staticValue;",
+			"import python.Syntax.code in py;",
+			"import python.Syntax.value as valueAlias;",
+			"import python.Syntax.*;",
+			"using python.NativeArray;",
+			"class ImportInAlias {}",
+			""
+		].join("\n")).parseModule("ImportInAlias");
+		final importInAliasDirectives = HxModuleDecl.getDirectives(importInAliasDecl);
+		final importIdentities = [
+			for (directive in importInAliasDirectives)
+				HxModuleDirective.canonicalIdentity(directive)
+		];
+		assertTrue(importIdentities.join("|") == "import-normal:python.Syntax|import-normal:python.Syntax.staticValue|import-alias:python.Syntax.code:py|import-alias:python.Syntax.value:valueAlias|import-all:python.Syntax|using:python.NativeArray",
+			"expected normal, legacy/current alias, wildcard, and using declarations to retain their distinct meanings: "
+			+ importIdentities.join("|"));
+
+		final nativeDirectiveDecl = ParserStageNativeDecode.decodeNativeProtocol([
+			"hxhx_frontend_v=3",
+			nativeAstRecord("package", "python.internal"),
+			nativeAstRecord("directive", "import-normal\npython.Syntax\n"),
+			nativeAstRecord("directive", "import-normal\npython.Syntax.staticValue\n"),
+			nativeAstRecord("directive", "import-alias\npython.Syntax.code\npy"),
+			nativeAstRecord("directive", "import-all\npython.Syntax\n"),
+			nativeAstRecord("directive", "using\npython.NativeArray\n"),
+			nativeAstRecord("class", "NativeDirectives"),
+			nativeAstRecord("header_only", "0"),
+			nativeAstRecord("toplevel_main", "0"),
+			"ast static_main 0",
+			"ok"
+		].join("\n"));
+		final nativeDirectiveIdentities = [
+			for (directive in HxModuleDecl.getDirectives(nativeDirectiveDecl))
+				HxModuleDirective.canonicalIdentity(directive)
+		];
+		assertTrue(nativeDirectiveIdentities.join("|") == "import-normal:python.Syntax|import-normal:python.Syntax.staticValue|import-alias:python.Syntax.code:py|import-all:python.Syntax|using:python.NativeArray",
+			"expected native protocol v3 to preserve the same directive meanings: "
+			+ nativeDirectiveIdentities.join("|"));
+		final detachedDirectives = HxModuleDecl.getDirectives(nativeDirectiveDecl);
+		detachedDirectives.resize(0);
+		assertTrue(HxModuleDecl.getDirectives(nativeDirectiveDecl).length == 5,
+			"callers must not be able to mutate a parsed module's retained directive list through its getter");
+		assertDirectiveRejected("import-normal\npython.Syntax\nunexpected", "an alias on an ordinary import");
+		assertDirectiveRejected("import-all\npython.Syntax.*\n", "a wildcard encoded in both the kind and path");
+		assertDirectiveRejected("import-alias\npython.Syntax\n", "an aliased import without a local name");
+		assertDirectiveRejected("using\npython.NativeArray\nunexpected", "an alias on a using directive");
+		assertDirectiveRejected("import-normal\npython..Syntax\n", "a path with an empty segment");
+		assertDirectiveRejected("import-normal\npython.Syntax bad\n", "a path segment containing whitespace");
+		assertDirectiveRejected("import-normal\npython.Syntax/value\n", "a path segment containing a slash");
+		assertDirectiveRejected("import-normal\npython.9Syntax\n", "a path segment beginning with a digit");
+		assertDirectiveRejected("import-normal\npython.bad-name\n", "a path segment containing an operator");
+		assertDirectiveRejected("import-alias\npython.Syntax\n9Alias", "an alias beginning with a digit");
+		assertDirectiveRejected("import-alias\npython.Syntax\nbad-name", "an alias containing an operator");
+		var rejectedStringOnlyProtocol = false;
+		try {
+			ParserStageNativeDecode.decodeNativeProtocol("hxhx_frontend_v=2\nast imports 0:\nast class 4:Main\nok");
+		} catch (error:Dynamic) {
+			rejectedStringOnlyProtocol = Std.string(error).indexOf("missing/invalid protocol header") >= 0;
+		}
+		assertTrue(rejectedStringOnlyProtocol,
+			"the decoder must reject protocol v2 instead of silently accepting imports that have already lost their aliases");
 
 		final switchNoSemicolonThenElseIfStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case _: false; }\nif (result && expected != null) { result = check(); } else if (stdout.length > 0) { println(stdout.toString()); }");
 		assertTrue(switchNoSemicolonThenElseIfStmts.length == 2, "expected no-semicolon switch initializer before if/else-if to parse as two statements");

@@ -613,7 +613,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
 		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
 	}
 

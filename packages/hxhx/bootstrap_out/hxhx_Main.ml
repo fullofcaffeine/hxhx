@@ -658,7 +658,7 @@ let main = fun () -> ignore (try let args = Obj.magic (HxSys.args ()) in (
                     ignore _hx;
                     ()
                   ) else raise (__exn_137)) else ());
-                let decl = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null)))) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let imports = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let toplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in (
+                let decl = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null)))) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let toplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in (
                   ignore (print_endline "parse=ok");
                   let tempString1 = ref ("" : string) in (
                     ignore (if HxString.length pkg = 0 then let __assign_138 = ("<none>" : string) in (
@@ -669,7 +669,8 @@ let main = fun () -> ignore (try let args = Obj.magic (HxSys.args ()) in (
                       __assign_139
                     ));
                     ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
-                    ignore (print_endline ("imports=" ^ string_of_int (HxArray.length imports)));
+                    ignore (print_endline ("imports=" ^ string_of_int (HxArray.length (HxArray.filter directives (HxModuleDirective.isImport)))));
+                    ignore (print_endline ("usings=" ^ string_of_int (HxArray.length (HxArray.filter directives (fun directive -> not (HxModuleDirective.isImport (Obj.magic directive)))))));
                     ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls))));
                     let tempString2 = ref ("" : string) in (
                       ignore (if HxClassDecl.getHasStaticMain (Obj.magic cls) then let __assign_140 = ("yes" : string) in (

@@ -344,6 +344,48 @@ class JsNativeClassInstanceMain {
 }
 HX
 
+mkdir -p "$tmpdir/src/model"
+cat >"$tmpdir/src/model/Api.hx" <<'HX'
+package model;
+
+class Api {
+  public static var label:String = "service";
+  public var value:Int;
+
+  public function new(value:Int) {
+    this.value = value;
+  }
+
+  public static function twice(value:Int):Int {
+    return value * 2;
+  }
+}
+HX
+
+cat >"$tmpdir/src/model/Base.hx" <<'HX'
+package model;
+
+class Base {
+  public function new() {}
+
+  public function inherited():String {
+    return "base";
+  }
+}
+HX
+
+cat >"$tmpdir/src/JsNativeImportAliasMain.hx" <<'HX'
+import model.Api as Service;
+import model.Base as Parent;
+
+class JsNativeImportAliasMain extends Parent {
+  static function main() {
+    var services:Array<Service> = [new Service(4)];
+    Sys.println("js-native-alias:" + new JsNativeImportAliasMain().inherited() + ":" + Service.label + ":" + Service.twice(services[0].value));
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
 class JsNativeEnumReflectionMain {
   static function main() {
@@ -580,6 +622,22 @@ if [ "$has_js_native_target" -eq 1 ]; then
   echo "$out" | grep -q "^run=ok$"
   echo "$out" | grep -q "^js-native:6$"
   test -f "$tmpdir/out_js_native_emit/main.js"
+
+  echo "== Builtin fast-path target: import aliases retain resolved type identity"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --js "$tmpdir/out_js_import_alias/main.js" -cp "$tmpdir/src" -main JsNativeImportAliasMain --hxhx-out "$tmpdir/out_js_import_alias")"
+  echo "$out" | grep -q "^stage3=ok$"
+  echo "$out" | grep -q "^artifact=$tmpdir/out_js_import_alias/main.js$"
+  echo "$out" | grep -q "^run=ok$"
+  echo "$out" | grep -q "^js-native-alias:base:service:8$"
+  test -f "$tmpdir/out_js_import_alias/main.js"
+  if grep -q "__hx_cls_Service" "$tmpdir/out_js_import_alias/main.js"; then
+    echo "Generated JS must use the resolved model.Api identity rather than inventing a Service class." >&2
+    exit 1
+  fi
+  if grep -q "__hx_cls_Parent" "$tmpdir/out_js_import_alias/main.js"; then
+    echo "Generated JS must use the resolved model.Base identity rather than inventing a Parent class." >&2
+    exit 1
+  fi
 
   echo "== Builtin fast-path target: js-native compound assignment expressions"
   out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN"  --js "$tmpdir/out_js_native_compound/main.js" -cp "$tmpdir/src" -main JsNativeCompoundAssignMain --hxhx-out "$tmpdir/out_js_native_compound")"
@@ -2231,11 +2289,17 @@ echo "== Stage3 bring-up: type-only checks full graph"
 type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"
 echo "$out" | grep -q "^resolved_modules="
-echo "$out" | grep -q "^typed_modules="
+echo "$out" | grep -q "^resolved_modules=6$"
+echo "$out" | grep -q "^typed_modules=11$"
 echo "$out" | grep -q "^header_only_modules=0$"
 parsed_methods_total="$(printf "%s\n" "$out" | sed -n 's/^parsed_methods_total=//p')"
-if ! printf "%s\n" "$parsed_methods_total" | grep -Eq '^[0-9]+$' || [ "$parsed_methods_total" -lt 100 ]; then
-  echo "Expected Stage3 type-only full graph to parse at least 100 method bodies, got: ${parsed_methods_total:-missing}" >&2
+# This fixture has 95 real method bodies under the pinned Haxe 4.3.7 stdlib.
+# Keep a narrow allowance for intentional fixture growth without accepting the
+# old false-positive graph, which parsed Math.hx three extra times under the
+# made-up module names Math.NEGATIVE_INFINITY, Math.NaN, and
+# Math.POSITIVE_INFINITY and inflated this count to 167.
+if ! printf "%s\n" "$parsed_methods_total" | grep -Eq '^[0-9]+$' || [ "$parsed_methods_total" -lt 90 ] || [ "$parsed_methods_total" -gt 110 ]; then
+  echo "Expected Stage3 type-only full graph to parse 90-110 real method bodies, got: ${parsed_methods_total:-missing}" >&2
   printf "%s\n" "$out" >&2
   exit 1
 fi

@@ -21,7 +21,8 @@
 class LazyTypeLoader {
 	public function new() {}
 
-	public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
+	public function ensureTypeAvailable(typePath:String, packagePath:String, directives:Array<HxModuleDirective>,
+			?resolvedDirectives:Array<TyModuleDirective>):Null<TyNominalInfo> {
 		// Default no-op implementation.
 		//
 		// Note (OCaml backend):
@@ -29,7 +30,9 @@ class LazyTypeLoader {
 		// parameters "used" so generated OCaml doesn't trip unused-var warnings.
 		if (typePath == "__hxhx_never__" || packagePath == "__hxhx_never__")
 			return null;
-		if (imports != null && imports.length == -1)
+		if (directives != null && directives.length == -1)
+			return null;
+		if (resolvedDirectives != null && resolvedDirectives.length == -1)
 			return null;
 		return null;
 	}

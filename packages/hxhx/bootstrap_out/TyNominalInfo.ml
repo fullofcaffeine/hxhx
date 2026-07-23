@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable identity : TyNominalTypeId.t; mutable shortName : string; mutable modulePath : string; mutable fields : TyFieldInfo.t HxMap.string_map; mutable properties : TyPropertyInfo.t HxMap.string_map; mutable staticMethods : TyFunSig.t HxMap.string_map; mutable instanceMethods : TyFunSig.t HxMap.string_map; mutable staticMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable instanceMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable declarations : TyDeclarationInfo.t HxArray.t; getIdentity : Obj.t -> unit -> TyNominalTypeId.t; getFullName : Obj.t -> unit -> string; getShortName : Obj.t -> unit -> string; getModulePath : Obj.t -> unit -> string; getDeclarations : Obj.t -> unit -> TyDeclarationInfo.t HxArray.t; declarationForSignature : Obj.t -> TyFunSig.t -> TyDeclarationInfo.t; declarationForSource : Obj.t -> HxFunctionDecl.t -> TyDeclarationInfo.t; hasField : Obj.t -> string -> bool; fieldType : Obj.t -> string -> TyType.t; fieldInfo : Obj.t -> string -> TyFieldInfo.t; propertyInfo : Obj.t -> string -> TyPropertyInfo.t; staticMethod : Obj.t -> string -> TyFunSig.t; instanceMethod : Obj.t -> string -> TyFunSig.t; staticMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; instanceMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable identity : TyNominalTypeId.t; mutable shortName : string; mutable modulePath : string; mutable fields : TyFieldInfo.t HxMap.string_map; mutable properties : TyPropertyInfo.t HxMap.string_map; mutable staticMethods : TyFunSig.t HxMap.string_map; mutable instanceMethods : TyFunSig.t HxMap.string_map; mutable staticMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable instanceMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable declarations : TyDeclarationInfo.t HxArray.t; mutable visibility : HxVisibility.hxvisibility; getIdentity : Obj.t -> unit -> TyNominalTypeId.t; getFullName : Obj.t -> unit -> string; getShortName : Obj.t -> unit -> string; getModulePath : Obj.t -> unit -> string; getDeclarations : Obj.t -> unit -> TyDeclarationInfo.t HxArray.t; getVisibility : Obj.t -> unit -> HxVisibility.hxvisibility; declarationForSignature : Obj.t -> TyFunSig.t -> TyDeclarationInfo.t; declarationForSource : Obj.t -> HxFunctionDecl.t -> TyDeclarationInfo.t; hasField : Obj.t -> string -> bool; fieldType : Obj.t -> string -> TyType.t; fieldInfo : Obj.t -> string -> TyFieldInfo.t; propertyInfo : Obj.t -> string -> TyPropertyInfo.t; staticMethod : Obj.t -> string -> TyFunSig.t; instanceMethod : Obj.t -> string -> TyFunSig.t; staticMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; instanceMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t }
 
-let __ctor = fun (self : t) identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 -> ignore (ignore ((
+let __ctor = fun (self : t) identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 visibility2 -> ignore (let visibility2 = if Obj.repr visibility2 == HxRuntime.hx_null then Obj.magic (HxVisibility.Public) else visibility2 in ignore ((
   ignore (let __assign_1 = Obj.magic identity2 in (
     (Obj.magic self : t).identity <- __assign_1;
     __assign_1
@@ -43,9 +43,13 @@ let __ctor = fun (self : t) identity2 shortName2 modulePath2 fields2 properties2
     (Obj.magic self : t).instanceMethodLists <- __assign_9;
     __assign_9
   ));
-  let __assign_10 = Obj.magic declarations2 in (
+  ignore (let __assign_10 = Obj.magic declarations2 in (
     (Obj.magic self : t).declarations <- __assign_10;
     __assign_10
+  ));
+  let __assign_11 = Obj.magic visibility2 in (
+    (Obj.magic self : t).visibility <- __assign_11;
+    __assign_11
   )
 )))
 
@@ -59,117 +63,119 @@ let getModulePath__impl = fun (self : t) () -> (Obj.magic self : t).modulePath
 
 let getDeclarations__impl = fun (self : t) () -> (Obj.magic self : t).declarations
 
-let declarationForSignature__impl = fun (self : t) (signature : TyFunSig.t) -> try let __fallback_result_14 = (
+let getVisibility__impl = fun (self : t) () -> (Obj.magic self : t).visibility
+
+let declarationForSignature__impl = fun (self : t) (signature : TyFunSig.t) -> try let __fallback_result_15 = (
   ignore (if signature == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).declarations) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-        ignore (_g := __new_12);
-        __new_12
+      ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+        ignore (_g := __new_13);
+        __new_13
       ));
       if Obj.repr (TyDeclarationInfo.getSignature (Obj.magic declaration) ()) == Obj.repr signature then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic declaration))) else ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic __fallback_result_14 with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
-let declarationForSource__impl = fun (self : t) (source : HxFunctionDecl.t) -> try let __fallback_result_18 = (
+let declarationForSource__impl = fun (self : t) (source : HxFunctionDecl.t) -> try let __fallback_result_19 = (
   ignore (if source == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).declarations) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-        ignore (_g := __new_16);
-        __new_16
+      ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+        ignore (_g := __new_17);
+        __new_17
       ));
       if Obj.repr (TyDeclarationInfo.getSourceDeclaration (Obj.magic declaration) ()) == Obj.repr source then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic declaration))) else ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic __fallback_result_18 with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+) in Obj.magic __fallback_result_19 with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
 let hasField__impl = fun (self : t) (name : string) -> HxMap.exists_string ((Obj.magic self : t).fields) name
 
 let fieldType__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_19 = Obj.magic (Obj.magic (TyFieldInfo.getType (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) ())) in (
-    tempResult := __assign_19;
-    __assign_19
-  ) else let __assign_20 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_20 = Obj.magic (Obj.magic (TyFieldInfo.getType (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) ())) in (
     tempResult := __assign_20;
     __assign_20
+  ) else let __assign_21 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_21;
+    __assign_21
   ));
   !tempResult
 )
 
 let fieldInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_21 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) in (
-    tempResult := __assign_21;
-    __assign_21
-  ) else let __assign_22 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_22 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) in (
     tempResult := __assign_22;
     __assign_22
+  ) else let __assign_23 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_23;
+    __assign_23
   ));
   !tempResult
 )
 
 let propertyInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyPropertyInfo.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).properties) name then let __assign_23 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).properties) name)) in (
-    tempResult := __assign_23;
-    __assign_23
-  ) else let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).properties) name then let __assign_24 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).properties) name)) in (
     tempResult := __assign_24;
     __assign_24
+  ) else let __assign_25 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_25;
+    __assign_25
   ));
   !tempResult
 )
 
 let staticMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethods) name then let __assign_25 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethods) name)) in (
-    tempResult := __assign_25;
-    __assign_25
-  ) else let __assign_26 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethods) name then let __assign_26 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethods) name)) in (
     tempResult := __assign_26;
     __assign_26
+  ) else let __assign_27 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_27;
+    __assign_27
   ));
   !tempResult
 )
 
 let instanceMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethods) name then let __assign_27 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethods) name)) in (
-    tempResult := __assign_27;
-    __assign_27
-  ) else let __assign_28 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethods) name then let __assign_28 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethods) name)) in (
     tempResult := __assign_28;
     __assign_28
+  ) else let __assign_29 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_29;
+    __assign_29
   ));
   !tempResult
 )
 
 let staticMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethodLists) name then let __assign_29 = Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethodLists) name) in (
-    tempResult := __assign_29;
-    __assign_29
-  ) else let __assign_30 = Obj.magic (let __arr_31 = HxArray.create () in __arr_31) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethodLists) name then let __assign_30 = Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethodLists) name) in (
     tempResult := __assign_30;
     __assign_30
+  ) else let __assign_31 = Obj.magic (let __arr_32 = HxArray.create () in __arr_32) in (
+    tempResult := __assign_31;
+    __assign_31
   ));
   !tempResult
 )
 
 let instanceMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethodLists) name then let __assign_32 = Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethodLists) name) in (
-    tempResult := __assign_32;
-    __assign_32
-  ) else let __assign_33 = Obj.magic (let __arr_34 = HxArray.create () in __arr_34) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethodLists) name then let __assign_33 = Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethodLists) name) in (
     tempResult := __assign_33;
     __assign_33
+  ) else let __assign_34 = Obj.magic (let __arr_35 = HxArray.create () in __arr_35) in (
+    tempResult := __assign_34;
+    __assign_34
   ));
   !tempResult
 )
 
-let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 -> let self = ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
-  ignore (ignore ((
+let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 visibility2 -> let self = ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
+  ignore (let visibility2 = if Obj.repr visibility2 == HxRuntime.hx_null then Obj.magic (HxVisibility.Public) else visibility2 in ignore ((
     ignore (let __assign_1 = Obj.magic identity2 in (
       (Obj.magic self : t).identity <- __assign_1;
       __assign_1
@@ -206,12 +212,16 @@ let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMeth
       (Obj.magic self : t).instanceMethodLists <- __assign_9;
       __assign_9
     ));
-    let __assign_10 = Obj.magic declarations2 in (
+    ignore (let __assign_10 = Obj.magic declarations2 in (
       (Obj.magic self : t).declarations <- __assign_10;
       __assign_10
+    ));
+    let __assign_11 = Obj.magic visibility2 in (
+      (Obj.magic self : t).visibility <- __assign_11;
+      __assign_11
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t)

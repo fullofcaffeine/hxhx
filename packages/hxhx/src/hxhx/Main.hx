@@ -650,12 +650,13 @@ class Main {
 			}
 			final decl = ParserStage.parse(src).getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
-			final imports = HxModuleDecl.getImports(decl);
+			final directives = HxModuleDecl.getDirectives(decl);
 			final cls = HxModuleDecl.getMainClass(decl);
 			final toplevelMain = HxModuleDecl.getHasToplevelMain(decl);
 			Sys.println("parse=ok");
 			Sys.println("package=" + (pkg.length == 0 ? "<none>" : pkg));
-			Sys.println("imports=" + imports.length);
+			Sys.println("imports=" + directives.filter(HxModuleDirective.isImport).length);
+			Sys.println("usings=" + directives.filter(directive -> !HxModuleDirective.isImport(directive)).length);
 			Sys.println("class=" + HxClassDecl.getName(cls));
 			Sys.println("hasStaticMain=" + (HxClassDecl.getHasStaticMain(cls) ? "yes" : "no"));
 			Sys.println("hasToplevelMain=" + (toplevelMain ? "yes" : "no"));

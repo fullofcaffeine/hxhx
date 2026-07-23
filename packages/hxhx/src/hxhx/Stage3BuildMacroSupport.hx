@@ -82,11 +82,12 @@ class Stage3BuildMacroSupport {
 			mergedFields.push(field);
 
 		final newClass = new HxClassDecl(HxClassDecl.getName(oldClass), HxClassDecl.getHasStaticMain(oldClass), mergedFunctions, mergedFields,
-			HxClassDecl.getExtendsPath(oldClass), HxClassDecl.getMetadata(oldClass));
+			HxClassDecl.getExtendsPath(oldClass), HxClassDecl.getMetadata(oldClass), HxClassDecl.getIsInterface(oldClass),
+			HxClassDecl.getImplementsPaths(oldClass), HxClassDecl.getVisibility(oldClass));
 		final newClasses = new Array<HxClassDecl>();
 		for (candidate in HxModuleDecl.getClasses(oldDeclaration))
 			newClasses.push(HxClassDecl.getName(candidate) == HxClassDecl.getName(oldClass) ? newClass : candidate);
-		final newDeclaration = new HxModuleDecl(HxModuleDecl.getPackagePath(oldDeclaration), HxModuleDecl.getImports(oldDeclaration), newClass, newClasses,
+		final newDeclaration = new HxModuleDecl(HxModuleDecl.getPackagePath(oldDeclaration), HxModuleDecl.getDirectives(oldDeclaration), newClass, newClasses,
 			HxModuleDecl.getHeaderOnly(oldDeclaration), HxModuleDecl.getHasToplevelMain(oldDeclaration));
 		final newParsed = new ParsedModule(parsed.getSource(), newDeclaration, parsed.getFilePath());
 		return new ResolvedModule(ResolvedModule.getModulePath(module), ResolvedModule.getFilePath(module), newParsed, ResolvedModule.getSourceOrigin(module),

@@ -15,11 +15,11 @@
 
    Protocol:
    - Lexer stream (from `HxHxNativeLexer`): `hxhx_frontend_v=1`
-   - Parser stream (this module output): `hxhx_frontend_v=2`
+   - Parser stream (this module output): `hxhx_frontend_v=3`
    - Token line: `tok <kind> <index> <line> <col> <len>:<payload>`
    - AST lines:
      - `ast package <len>:<payload>`
-     - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
+     - `ast directive <len>:<payload>`      (`kind\npath\nalias`)
      - `ast class <len>:<payload>`
      - `ast static_main 0|1`
      - `ast field <len>:<payload>`           (payload is `name\\nvis\\nstatic\\ntypehint\\ninitexpr`)
@@ -45,7 +45,40 @@ type token =
   | Sym of char * pos
   | Eof of pos
 
+type module_directive_kind =
+  | Import_normal
+  | Import_alias of string
+  | Import_all
+  | Using
+
+type module_directive = {
+  directive_path : string;
+  directive_kind : module_directive_kind;
+}
+
 exception Parse_error of pos * string
+
+let module_directive (is_import : bool) (path : string) (alias : string option) :
+    module_directive =
+  let path_length = Stdlib.String.length path in
+  let wildcard =
+    path_length >= 2 && Stdlib.String.sub path (path_length - 2) 2 = ".*"
+  in
+  let normalized_path =
+    if wildcard then Stdlib.String.sub path 0 (Stdlib.String.length path - 2)
+    else path
+  in
+  if is_import then
+    {
+      directive_path = normalized_path;
+      directive_kind =
+        (match alias with
+        | Some name -> Import_alias name
+        | None -> if wildcard then Import_all else Import_normal);
+    }
+  else if wildcard then
+    raise (Parse_error ({ index = 0; line = 0; col = 0 }, "using does not accept a wildcard"))
+  else { directive_path = normalized_path; directive_kind = Using }
 
 type visibility = Public | Private
 
@@ -221,7 +254,7 @@ let token_eq_sym (t : token) (c : char) : bool =
 
 let parse_module_from_tokens (src : string) (toks : token array)
     (expected_main_class : string option) :
-    (string * string list * bool * string * bool * method_decl list * field_decl list) =
+    (string * module_directive list * bool * string * bool * method_decl list * field_decl list) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
@@ -296,7 +329,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
   in
 
   let package_path = ref "" in
-  let imports = ref [] in
+  let directives = ref [] in
   let has_toplevel_main = ref false in
 
   if token_eq_kw (cur ()) "package" then (
@@ -310,15 +343,16 @@ let parse_module_from_tokens (src : string) (toks : token array)
       expect_sym ';'));
 
   while token_eq_kw (cur ()) "import" || token_eq_kw (cur ()) "using" do
-    (* For Stage2 bring-up we treat `using` like `import` and just record the module path.
-       The typing stage can decide how to interpret it later. *)
+    let is_import = token_eq_kw (cur ()) "import" in
     bump ();
     let path = read_import_path () in
-    (* Support `import Foo.Bar as Baz;` (ignore alias for now). *)
-    if token_eq_kw (cur ()) "as" then (
-      bump ();
-      ignore (read_ident ()));
-    imports := !imports @ [ path ];
+    let alias =
+      if is_import && (token_eq_kw (cur ()) "as" || token_eq_kw (cur ()) "in") then (
+        bump ();
+        Some (read_ident ()))
+      else None
+    in
+    directives := !directives @ [ module_directive is_import path alias ];
     expect_sym ';'
   done;
 
@@ -1119,7 +1153,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     | Some (n, sm, ms, fs) -> (n, sm, ms, fs)
   in
 
-  (!package_path, !imports, !has_toplevel_main, class_name, has_static_main, methods, fields)
+  (!package_path, !directives, !has_toplevel_main, class_name, has_static_main, methods, fields)
 
 (* Best-effort header-only parser for upstream-scale modules.
 
@@ -1136,7 +1170,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
    - Ignores everything else.
 *)
 let parse_module_header_only (toks : token array) (expected_main_class : string option) :
-    (string * string list * bool * string) =
+    (string * module_directive list * bool * string) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
@@ -1212,7 +1246,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
   in
 
   let package_path = ref "" in
-  let imports = ref [] in
+  let directives = ref [] in
   let has_toplevel_main = ref false in
 
   if token_eq_kw (cur ()) "package" then (
@@ -1223,12 +1257,16 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
       skip_until_semicolon ()));
 
   while token_eq_kw (cur ()) "import" || token_eq_kw (cur ()) "using" do
+    let is_import = token_eq_kw (cur ()) "import" in
     bump ();
     let path = read_import_path () in
-    if token_eq_kw (cur ()) "as" then (
-      bump ();
-      ignore (read_ident_opt ()));
-    if path <> "" then imports := !imports @ [ path ];
+    let alias =
+      if is_import && (token_eq_kw (cur ()) "as" || token_eq_kw (cur ()) "in") then (
+        bump ();
+        read_ident_opt ())
+      else None
+    in
+    if path <> "" then directives := !directives @ [ module_directive is_import path alias ];
     skip_until_semicolon ()
   done;
 
@@ -1270,26 +1308,38 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
         match Stdlib.List.rev !class_names with [] -> "Unknown" | x :: _ -> x)
   in
 
-  (!package_path, !imports, !has_toplevel_main, picked)
+  (!package_path, !directives, !has_toplevel_main, picked)
 
-let encode_ast_lines (package_path : string) (imports : string list)
+let encode_ast_lines (package_path : string) (directives : module_directive list)
     (class_name : string) (header_only : bool) (has_toplevel_main : bool)
     (has_static_main : bool) (methods : method_decl list) (fields : field_decl list) : string =
   let pkg_enc = escape_payload package_path in
-  let imports_payload = Stdlib.String.concat "|" imports in
-  let imports_enc = escape_payload imports_payload in
   let cls_enc = escape_payload class_name in
   let header_only_s = if header_only then "1" else "0" in
   let toplevel_s = if has_toplevel_main then "1" else "0" in
   let base =
     [
       Printf.sprintf "ast package %d:%s" (Stdlib.String.length pkg_enc) pkg_enc;
-      Printf.sprintf "ast imports %d:%s" (Stdlib.String.length imports_enc) imports_enc;
       Printf.sprintf "ast class %d:%s" (Stdlib.String.length cls_enc) cls_enc;
       Printf.sprintf "ast header_only 1:%s" header_only_s;
       Printf.sprintf "ast toplevel_main 1:%s" toplevel_s;
       "ast static_main " ^ if has_static_main then "1" else "0";
     ]
+  in
+  let directive_lines =
+    Stdlib.List.map
+      (fun directive ->
+        let kind, alias =
+          match directive.directive_kind with
+          | Import_normal -> ("import-normal", "")
+          | Import_alias name -> ("import-alias", name)
+          | Import_all -> ("import-all", "")
+          | Using -> ("using", "")
+        in
+        let payload = kind ^ "\n" ^ directive.directive_path ^ "\n" ^ alias in
+        let encoded = escape_payload payload in
+        Printf.sprintf "ast directive %d:%s" (Stdlib.String.length encoded) encoded)
+      directives
   in
   let method_lines =
     Stdlib.List.map
@@ -1382,7 +1432,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
                Some (Printf.sprintf "ast method_body %d:%s" (Stdlib.String.length enc) enc))
   in
   Stdlib.String.concat "\n"
-    (base @ field_lines @ static_final_lines @ method_lines @ body_lines)
+    (base @ directive_lines @ field_lines @ static_final_lines @ method_lines @ body_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
@@ -1413,12 +1463,12 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
     | Error msg ->
         Stdlib.String.concat "\n"
           [
-            "hxhx_frontend_v=2";
+            "hxhx_frontend_v=3";
             encode_err_line { index = 0; line = 0; col = 0 } msg;
           ]
     | Ok ((_toks, Some _err_line)) ->
         (* Lexer already emitted a protocol error; pass it through under parser protocol header. *)
-        Stdlib.String.concat "\n" [ "hxhx_frontend_v=2"; strip_terminal_ok lex_stream ]
+        Stdlib.String.concat "\n" [ "hxhx_frontend_v=3"; strip_terminal_ok lex_stream ]
     | Ok ((toks, None)) -> (
         let base = strip_terminal_ok lex_stream in
         try
@@ -1427,7 +1477,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
           in
           Stdlib.String.concat "\n"
             [
-              "hxhx_frontend_v=2";
+              "hxhx_frontend_v=3";
               base;
               encode_ast_lines package_path imports class_name false has_toplevel_main
                 has_static_main methods fields;
@@ -1443,7 +1493,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               in
               Stdlib.String.concat "\n"
                 [
-                  "hxhx_frontend_v=2";
+                  "hxhx_frontend_v=3";
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
                     false [] [];
@@ -1451,7 +1501,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                 ]
             else
               Stdlib.String.concat "\n"
-                [ "hxhx_frontend_v=2"; base; encode_err_line p msg ]
+                [ "hxhx_frontend_v=3"; base; encode_err_line p msg ]
         | _exn ->
             if header_only_enabled () then
               let package_path, imports, has_toplevel_main, class_name =
@@ -1459,7 +1509,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               in
               Stdlib.String.concat "\n"
                 [
-                  "hxhx_frontend_v=2";
+                  "hxhx_frontend_v=3";
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
                     false [] [];
@@ -1469,7 +1519,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               (* Surface the failure as a parse error to keep Stage1 deterministic. *)
               Stdlib.String.concat "\n"
                 [
-                  "hxhx_frontend_v=2";
+                  "hxhx_frontend_v=3";
                   base;
                   encode_err_line { index = 0; line = 0; col = 0 }
                     "HxHxNativeParser: failed to parse module";
@@ -1477,7 +1527,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
   with exn ->
     Stdlib.String.concat "\n"
       [
-        "hxhx_frontend_v=2";
+        "hxhx_frontend_v=3";
         encode_err_line { index = 0; line = 0; col = 0 } (Printexc.to_string exn);
       ]
 

@@ -51,6 +51,18 @@ class TyDeclarationInfo {
 	public function getIsInline():Bool
 		return isInline;
 
+	/** Whether `import Owner.*` must withhold this method from bare-name lookup. **/
+	public function getNoImportGlobal():Bool {
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			if (clean == "noImportGlobal")
+				return true;
+		}
+		return false;
+	}
+
 	/** Whether the declaration supplies Haxe code instead of target-native `;` behavior. */
 	public function getHasBody():Bool
 		return HxFunctionDecl.getHasBody(sourceDeclaration);

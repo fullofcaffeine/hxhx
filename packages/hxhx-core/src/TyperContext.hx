@@ -20,17 +20,19 @@ class TyperContext {
 	final filePath:String;
 	final modulePath:String;
 	final packagePath:String;
-	final imports:Array<String>;
+	final directives:Array<HxModuleDirective>;
+	final resolvedDirectives:Array<TyModuleDirective>;
 	final classFullName:String;
 
-	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, imports:Array<String>, classFullName:String,
-			?loader:LazyTypeLoader) {
+	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, directives:Array<HxModuleDirective>, classFullName:String,
+			?loader:LazyTypeLoader, ?resolvedDirectives:Array<TyModuleDirective>) {
 		this.index = index;
 		this.loader = loader;
 		this.filePath = filePath == null || filePath.length == 0 ? "<unknown>" : filePath;
 		this.modulePath = modulePath == null ? "" : modulePath;
 		this.packagePath = packagePath == null ? "" : packagePath;
-		this.imports = imports == null ? [] : imports;
+		this.directives = directives == null ? [] : directives.copy();
+		this.resolvedDirectives = resolvedDirectives == null ? [] : resolvedDirectives.copy();
 		this.classFullName = classFullName == null ? "" : classFullName;
 	}
 
@@ -54,8 +56,11 @@ class TyperContext {
 	public function getPackagePath():String
 		return packagePath;
 
-	public function getImports():Array<String>
-		return imports;
+	public function getDirectives():Array<HxModuleDirective>
+		return directives.copy();
+
+	public function getResolvedDirectives():Array<TyModuleDirective>
+		return resolvedDirectives.copy();
 
 	public function getClassFullName():String
 		return classFullName;
@@ -63,13 +68,71 @@ class TyperContext {
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
-		final hit = index.resolveTypePath(typePath, packagePath, imports);
+		final hit = index.resolveTypePath(typePath, packagePath, directives, resolvedDirectives, modulePath);
 		if (hit != null)
 			return hit;
-		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, imports);
+		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, directives, resolvedDirectives);
 	}
 
 	public function currentClass():Null<TyNominalInfo> {
 		return classFullName.length == 0 ? null : resolveType(classFullName);
+	}
+
+	function resolvedProvider(directive:TyModuleDirective):Null<TyNominalInfo> {
+		if (directive == null || index == null)
+			return null;
+		final provider = directive.getSingleProvider();
+		return provider == null ? null : index.getByFullName(provider.getCanonicalName());
+	}
+
+	/** Resolve a bare name introduced by an exact or wildcard static import. **/
+	public function importedStaticField(name:String):Null<TyFieldInfo> {
+		for (offset in 0...resolvedDirectives.length) {
+			final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+			final provider = resolvedProvider(directive);
+			if (provider == null)
+				continue;
+			final admitsName = switch (directive.getKind()) {
+				case StaticMemberImport(memberName): directive.getStaticLocalName() == name && memberName.length > 0;
+				case StaticWildcardImport: true;
+				case TypeImport | PackageWildcardImport | UsingType | Unresolved: false;
+			};
+			if (!admitsName)
+				continue;
+			final field = switch (directive.getKind()) {
+				case StaticMemberImport(memberName): provider.fieldInfo(memberName);
+				case _: provider.fieldInfo(name);
+			};
+			final excludedByWildcard = directive.getKind().match(StaticWildcardImport) && field != null && field.getNoImportGlobal();
+			if (field != null && field.getIsStatic() && !excludedByWildcard)
+				return field;
+		}
+		return null;
+	}
+
+	/** Resolve one bare imported method without separating its owner from its original name. **/
+	public function importedStaticMethod(name:String):Null<TyImportedStaticMethod> {
+		for (offset in 0...resolvedDirectives.length) {
+			final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+			final provider = resolvedProvider(directive);
+			if (provider == null)
+				continue;
+			final memberName = switch (directive.getKind()) {
+				case StaticMemberImport(exactName) if (directive.getStaticLocalName() == name): exactName;
+				case StaticWildcardImport: name;
+				case _: "";
+			};
+			if (memberName.length == 0)
+				continue;
+			final candidates = provider.staticMethodCandidates(memberName);
+			final eligible = directive.getKind().match(StaticWildcardImport) ? [
+				for (candidate in candidates)
+					if (provider.declarationForSignature(candidate) == null
+						|| !provider.declarationForSignature(candidate).getNoImportGlobal()) candidate
+			] : candidates;
+			if (eligible.length > 0)
+				return new TyImportedStaticMethod(provider, memberName, eligible);
+		}
+		return null;
 	}
 }

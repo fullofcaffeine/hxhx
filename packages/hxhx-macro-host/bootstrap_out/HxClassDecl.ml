@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t; mutable isInterface : bool; mutable implementsPaths : string HxArray.t }
+type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t; mutable isInterface : bool; mutable implementsPaths : string HxArray.t; mutable visibility : HxVisibility.hxvisibility }
 
-let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 visibility2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -84,9 +84,22 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
                   tempRight5 := __assign_24;
                   __assign_24
                 ));
-                let __assign_25 = Obj.magic (!tempRight5) in (
+                ignore (let __assign_25 = Obj.magic (!tempRight5) in (
                   (Obj.magic self : t).implementsPaths <- __assign_25;
                   __assign_25
+                ));
+                let tempRight6 = ref (Obj.magic (HxRuntime.hx_null) : HxVisibility.hxvisibility) in (
+                  ignore (if visibility2 == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (HxVisibility.Public) in (
+                    tempRight6 := __assign_26;
+                    __assign_26
+                  ) else let __assign_27 = Obj.obj (HxEnum.unbox_or_obj "HxVisibility" visibility2) in (
+                    tempRight6 := __assign_27;
+                    __assign_27
+                  ));
+                  let __assign_28 = Obj.magic (!tempRight6) in (
+                    (Obj.magic self : t).visibility <- __assign_28;
+                    __assign_28
+                  )
                 )
               )
             )
@@ -98,7 +111,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun c -> (Obj.magic c : t).name
 
@@ -115,3 +128,5 @@ let getMetadata = fun c -> (Obj.magic c : t).metadata
 let getIsInterface = fun c -> (Obj.magic c : t).isInterface
 
 let getImplementsPaths = fun c -> (Obj.magic c : t).implementsPaths
+
+let getVisibility = fun c -> (Obj.magic c : t).visibility

@@ -151,8 +151,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
 		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
+	}
+
+	/**
+		Replace only the resolved import facts on a fully typed synthetic fixture.
+
+		Some source-target smoke programs deliberately omit their external libraries
+		and ask the backend to generate compile-only support classes. Production typing
+		resolves these imports from real modules; a synthetic fixture must state the
+		same facts explicitly instead of asking a target to guess from capitalization.
+	**/
+	static function withResolvedDirectives(typed:TypedModule, resolvedDirectives:Array<TyModuleDirective>):TypedModule {
+		final previous = typed.getEnv();
+		final env = new TyModuleEnv(previous.getPackagePath(), previous.getDirectives(), previous.getMainClass(), resolvedDirectives);
+		return new TypedModule(typed.getParsed(), env, typed.getTypedClasses(), typed.getRevision(), typed.getSourceOrigin(),
+			typed.getConditionalCompilation(), typed.getGeneratedDeclarations());
 	}
 
 	static function unsupportedDoWhileProgram():GenIrProgram {
@@ -583,11 +598,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  NeverShowSuccessResults;",
 			"}",
 		].join("\n");
+		final resolved = [
+			new ResolvedModule("Main", "tests/sys/Main.hx", ParserStage.parse(mainSrc, "tests/sys/Main.hx")),
+			new ResolvedModule("utest.Runner", "tests/.haxelib/utest/git/src/utest/Runner.hx",
+				ParserStage.parse(runnerSrc, "tests/.haxelib/utest/git/src/utest/Runner.hx")),
+			new ResolvedModule("utest.ui.Report", "tests/.haxelib/utest/git/src/utest/ui/Report.hx",
+				ParserStage.parse(reportSrc, "tests/.haxelib/utest/git/src/utest/ui/Report.hx")),
+			new ResolvedModule("utest.ui.common.HeaderDisplayMode", "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx",
+				ParserStage.parse(modesSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx")),
+		];
+		final index = TyperIndex.build(resolved);
 		return MacroStage.expandProgram([
-			TyperStage.typeModule(ParserStage.parse(mainSrc, "tests/sys/Main.hx")),
-			TyperStage.typeModule(ParserStage.parse(runnerSrc, "tests/.haxelib/utest/git/src/utest/Runner.hx")),
-			TyperStage.typeModule(ParserStage.parse(reportSrc, "tests/.haxelib/utest/git/src/utest/ui/Report.hx")),
-			TyperStage.typeModule(ParserStage.parse(modesSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx")),
+			for (module in resolved)
+				TyperStage.typeResolvedModule(module, index)
 		], []);
 	}
 
@@ -595,16 +618,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
 			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
 		final mainClass = new HxClassDecl("Main", true, [mainFn], []);
-		final imports = [
+		final directives = [
 			"utest.Runner",
 			"utest.ui.Report",
 			"utest.ui.common.HeaderDisplayMode",
 			"utest.ui.common.SuccessResultsDisplayMode",
 			"haxe.Serializer"
-		];
-		final mainDecl = new HxModuleDecl("", imports, mainClass, [mainClass], false, false);
+		].map(HxModuleDirective.normalImport);
+		final mainDecl = new HxModuleDecl("", directives, mainClass, [mainClass], false, false);
 		final mainParsed = new ParsedModule("", mainDecl, "tests/sys/Main.hx");
-		final mainTyped = new TypedModule(mainParsed, new TyModuleEnv("", [], new TyClassEnv("Main", [])));
+		final resolvedDirectives = [
+			for (directive in directives)
+				new TyModuleDirective(directive, TypeImport, [new TyNominalTypeId(HxModuleDirective.getPath(directive))])
+		];
+		final mainTyped = new TypedModule(mainParsed, new TyModuleEnv("", directives, new TyClassEnv("Main", []), resolvedDirectives));
 		return new MacroExpandedProgram([mainTyped], false, []);
 	}
 
@@ -1033,11 +1060,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
+		final resolved = [
+			new ResolvedModule("UnicodeSequences", "UnicodeSequences.hx", ParserStage.parse(unicodeSrc, "UnicodeSequences.hx")),
+			new ResolvedModule("UtilityProcess", "UtilityProcess.hx", ParserStage.parse(utilitySrc, "UtilityProcess.hx")),
+			new ResolvedModule("TestUnicode", "TestUnicode.hx", ParserStage.parse(testSrc, "TestUnicode.hx")),
+			new ResolvedModule("Main", "Main.hx", ParserStage.parse(mainSrc, "Main.hx")),
+		];
+		final index = TyperIndex.build(resolved);
 		return MacroStage.expandProgram([
-			TyperStage.typeModule(ParserStage.parse(unicodeSrc, "UnicodeSequences.hx")),
-			TyperStage.typeModule(ParserStage.parse(utilitySrc, "UtilityProcess.hx")),
-			TyperStage.typeModule(ParserStage.parse(testSrc, "TestUnicode.hx")),
-			TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx")),
+			for (module in resolved)
+				TyperStage.typeResolvedModule(module, index)
 		], []);
 	}
 
@@ -1637,7 +1669,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
 			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -1670,7 +1702,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
 			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -1746,7 +1778,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final baseDecl = parsed.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final helpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, [main].concat(helpers),
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, [main].concat(helpers),
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -1963,7 +1995,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "Main"),
 			"ast static_main 1",
 			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
@@ -2020,7 +2052,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("package", "unit"),
 			protocolLine("class", "unit.TestNullCoalescing"),
 			"ast static_main 1",
@@ -3406,7 +3438,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
+		final externalTypePaths = [
+			"haxe.ds.List",
+			"haxe.io.Bytes",
+			"haxe.CallStack",
+			"utest.ui.common.IReport",
+			"MyClass.UsingBase"
+		];
+		final resolvedDirectives = [
+			for (directive in HxModuleDecl.getDirectives(parsed.getDecl())) {
+				final path = HxModuleDirective.getPath(directive);
+				externalTypePaths.indexOf(path) >= 0 ? new TyModuleDirective(directive, TypeImport,
+					[new TyNominalTypeId(path)]) : new TyModuleDirective(directive, Unresolved);
+			}
+		];
+		final typed = withResolvedDirectives(TyperStage.typeModule(parsed), resolvedDirectives);
 		return MacroStage.expandProgram([typed], []);
 	}
 
@@ -3673,7 +3719,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
 			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -3696,7 +3742,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final baseDecl = parsedMain.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(mainSrc, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typedMain = TyperStage.typeModule(new ParsedModule(mainSrc, enriched, "unit/TestGADT.hx"));
 		final otherSrc = ["package other;", "class Expr {", "  public function new() {}", "}",].join("\n");
@@ -3726,7 +3772,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final stdBaseDecl = parsedStd.getDecl();
 		final stdMain = HxModuleDecl.getMainClass(stdBaseDecl);
 		final stdClasses = [stdMain].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(stdSrc, HxClassDecl.getName(stdMain)));
-		final stdDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(stdBaseDecl), HxModuleDecl.getImports(stdBaseDecl), stdMain, stdClasses,
+		final stdDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(stdBaseDecl), HxModuleDecl.getDirectives(stdBaseDecl), stdMain, stdClasses,
 			HxModuleDecl.getHeaderOnly(stdBaseDecl), HxModuleDecl.getHasToplevelMain(stdBaseDecl));
 		final typedStd = typedSyntheticModule("std/haxe/display/Display.hx", stdDecl);
 		return MacroStage.expandProgram([typedMain, typedStd], []);
@@ -3763,7 +3809,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
 			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -4370,7 +4416,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final baseDecl = parsed.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
@@ -4665,7 +4711,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final baseDecl = parsedMain.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
 		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(mainSrc, HxClassDecl.getName(main)));
-		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getDirectives(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typedMain = TyperStage.typeModule(new ParsedModule(mainSrc, enriched, "unit/MyClass.hx"));
 		final otherSrc = [
@@ -4679,7 +4725,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final otherBaseDecl = parsedOther.getDecl();
 		final otherMain = HxModuleDecl.getMainClass(otherBaseDecl);
 		final otherClasses = [otherMain].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(otherSrc, HxClassDecl.getName(otherMain)));
-		final otherEnriched = new HxModuleDecl(HxModuleDecl.getPackagePath(otherBaseDecl), HxModuleDecl.getImports(otherBaseDecl), otherMain, otherClasses,
+		final otherEnriched = new HxModuleDecl(HxModuleDecl.getPackagePath(otherBaseDecl), HxModuleDecl.getDirectives(otherBaseDecl), otherMain, otherClasses,
 			HxModuleDecl.getHeaderOnly(otherBaseDecl), HxModuleDecl.getHasToplevelMain(otherBaseDecl));
 		final typedOther = TyperStage.typeModule(new ParsedModule(otherSrc, otherEnriched, "other/Other.hx"));
 		return MacroStage.expandProgram([typedOther, typedMain], []);
@@ -10400,7 +10446,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function assertNativeProtocolOptionalArgDecode():Void {
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "Test"),
 			"ast static_main 0",
 			protocolLine("method", "eq|private|0|a,b,?pos|Void|||a:Dynamic,b:Dynamic,?pos:haxe.PosInfos|"),
@@ -10423,7 +10469,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "Runner"),
 			"ast static_main 0",
 			protocolLine("method",
@@ -10453,7 +10499,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "BaseConstrOpt"),
 			"ast static_main 0",
 			protocolLine("method", "new|public|0|s,i,b|Void|||s:String,i:Int,b:Bool|"),
@@ -10493,7 +10539,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "unit.Main"),
 			"ast static_main 1",
 			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
@@ -10519,7 +10565,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}"
 		].join("\n");
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "Iterators"),
 			"ast static_main 0",
 			protocolLine("method", "next|private|0||String||||\"first\""),

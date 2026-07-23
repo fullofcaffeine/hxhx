@@ -127,6 +127,7 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		final generated = MacroRuntimeMode.openSession(MacroRuntimeMode.INPROC);
 		assertEq("expr macro expansion", generated.expandExpr("hxhxmacros.ExprMacroShim.hello()"), "\"HELLO\"");
 		final nestedReturnSource = [
+			"import hxhxmacros.ExprMacroShim as ExpansionSource;",
 			"class NestedReturnMacroArgument {",
 			"  function run():String {",
 			"    shouldFail(return hxhxmacros.ExprMacroShim.hello());",
@@ -137,11 +138,32 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		final nestedReturnResolved = new ResolvedModule("NestedReturnMacroArgument", "NestedReturnMacroArgument.hx", nestedReturnParsed);
 		final nestedReturnExpansion = ExprMacroExpander.expandResolvedModules([nestedReturnResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
 		assertIntEq("nested return macro expansion count", nestedReturnExpansion.expandedCount, 1);
+		final originalDirectives = HxModuleDecl.getDirectives(nestedReturnParsed.getDecl()).map(HxModuleDirective.canonicalIdentity);
+		final expandedDirectives = HxModuleDecl.getDirectives(ResolvedModule.getParsed(nestedReturnExpansion.modules[0]).getDecl())
+			.map(HxModuleDirective.canonicalIdentity);
+		assertEq("expression macro import preservation", expandedDirectives.join("|"), originalDirectives.join("|"));
 		final nestedReturnClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedReturnExpansion.modules[0]).getDecl());
 		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedReturnClass)[0])) {
 			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(EString("HELLO"))]), _)]:
 			case body:
 				fail("expression macro expansion lost the return wrapper around its expanded child: " + Std.string(body));
+		}
+		final collidingImportSource = [
+			"import wrong.ExprMacroShim as ExpansionSource;",
+			"import hxhxmacros.ExprMacroShim as ExpansionSource;",
+			"class CollidingExpressionMacroImport {",
+			"  function run():String return ExpansionSource.hello();",
+			"}"
+		].join("\n");
+		final collidingImportParsed = ParserStage.parse(collidingImportSource, "CollidingExpressionMacroImport.hx");
+		final collidingImportResolved = new ResolvedModule("CollidingExpressionMacroImport", "CollidingExpressionMacroImport.hx", collidingImportParsed);
+		final collidingImportExpansion = ExprMacroExpander.expandResolvedModules([collidingImportResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("later expression-macro import wins", collidingImportExpansion.expandedCount, 1);
+		final collidingImportClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(collidingImportExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(collidingImportClass)[0])) {
+			case [SReturn(EString("HELLO"), _)]:
+			case body:
+				fail("the expression-macro import map did not select the later alias: " + Std.string(body));
 		}
 		final nestedVariableSource = [
 			"class NestedVariableMacroArgument {",

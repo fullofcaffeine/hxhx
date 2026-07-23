@@ -723,6 +723,32 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(keptBlankHint, "unbound method generic became a false source-level local annotation");
 	}
 
+	/** A field's nominal value type must not make its variable name look like a type alias. **/
+	static function assertNominalFieldReadRemainsAValue():Void {
+		final filePath = "checks/NominalFieldRead.hx";
+		final parsed = ParserStage.parse([
+			"class TreeNode {}",
+			"class NominalFieldRead {",
+			"  var root:TreeNode;",
+			"  function read():TreeNode return root;",
+			"}",
+		].join("\n"), filePath);
+		final resolved = new ResolvedModule("NominalFieldRead", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["checks"], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		final body = findFunction(findClass(typed, "NominalFieldRead"), "read").getBody();
+		final result = body.getStatements()[0].getExpressions()[0];
+		assertTrue(result.getTag() == TypedExprTag.NameRead
+			&& result.getFieldInfo() != null, "bare nominal field read lost its selected field declaration");
+		switch (TypedBodySource.expression(result)) {
+			case EIdent("root"):
+			case _:
+				throw "nominal field value was rewritten as its TreeNode type";
+		}
+	}
+
 	static function main():Void {
 		final filePath = "checks/TypedBodyMain.hx";
 		final source = [
@@ -786,6 +812,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertConditionalElseIfStructure();
 		assertStrictInstanceMethodCallee();
 		assertMethodGenericResultSpecialization();
+		assertNominalFieldReadRemainsAValue();
 		assertOpaqueGuard();
 		assertReturnMacroArgumentStructure();
 		assertVariableDeclarationMacroArgumentStructure();

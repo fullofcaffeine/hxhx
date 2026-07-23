@@ -58,9 +58,9 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable h : listnode_t; mutable length : int }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.ds.List"; h = Obj.magic (HxRuntime.hx_null); length = 0 } : t) in (
-  ignore (ignore (let __assign_1 = 0 in (
-    (Obj.magic self : t).length <- __assign_1;
-    __assign_1
+  ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
+    (__place_receiver_1 : t).length <- __place_rhs_2;
+    __place_rhs_2
   )));
   self
 )

@@ -113,8 +113,8 @@ let getConfiguration = fun () -> try let __fallback_result_42 = let payload = (H
       tempString := __assign_24;
       __assign_24
     ));
-    let argsCount = parseNonNegativeInt (!tempString : string) 0 in (
-      ignore (let _g = ref 0 in let _g1 = argsCount in while !_g < _g1 do ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+    let argsCount = parseNonNegativeInt (!tempString : string) 0 in let _g = ref 0 in let _g1 = argsCount in (
+      ignore (while !_g < _g1 do ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
         ignore (_g := __new_26);
         __old_25
       ) in let key = ("a" ^ string_of_int i : string) in if HxMap.exists_string parts key then ignore (HxArray.push args (HxMap.get_string parts key)) else ()) done);
@@ -126,8 +126,8 @@ let getConfiguration = fun () -> try let __fallback_result_42 = let payload = (H
           tempString1 := __assign_28;
           __assign_28
         ));
-        let stdCount = parseNonNegativeInt (!tempString1 : string) 0 in (
-          ignore (let _g = ref 0 in let _g1 = stdCount in while !_g < _g1 do ignore (let i = let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
+        let stdCount = parseNonNegativeInt (!tempString1 : string) 0 in let _g = ref 0 in let _g1 = stdCount in (
+          ignore (while !_g < _g1 do ignore (let i = let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
             ignore (_g := __new_30);
             __old_29
           ) in let key = ("s" ^ string_of_int i : string) in if HxMap.exists_string parts key then ignore (HxArray.push stdPath (HxMap.get_string parts key)) else ()) done);

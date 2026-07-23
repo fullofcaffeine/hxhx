@@ -43,7 +43,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 	static function assertNativeReturnCaseFragmentDecode():Void {
 		final encoded = [
-			"hxhx_frontend_v=2",
+			"hxhx_frontend_v=3",
 			protocolLine("class", "PrinterLike"),
 			"ast static_main 0",
 			protocolLine("method", 'printOp|public|0|op|String|||op:Dynamic|case OpIncrement: "++";\n\t\t\tcase OpDecrement: "--";'),

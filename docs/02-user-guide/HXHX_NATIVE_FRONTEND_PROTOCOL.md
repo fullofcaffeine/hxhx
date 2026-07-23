@@ -5,15 +5,18 @@ This document defines the **wire format** used by the “native frontend” hook
 - `packages/reflaxe.ocaml/std/runtime/HxHxNativeLexer.ml`
 - `packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml`
 
-The goal is to keep the lexer/parser in **native OCaml** initially (as suggested by upstream Haxe bootstrapping plans),
-while letting the rest of the compiler pipeline live in **Haxe**.
+The native OCaml code reads Haxe source and sends a compact summary back to the
+Haxe-authored compiler. This is a bootstrap bridge: the compiler model and all
+decisions about Haxe program behavior remain owned by Haxe code.
 
 ## Scope
 
 This protocol is a **bootstrap seam**, not a long-term public API yet:
 
-- It must be **stable enough** to iterate quickly without breaking Stage 2.
-- It must be **versioned** so we can evolve it compatibly.
+- It must be **versioned** so its producer and consumer cannot silently disagree.
+- A protocol change is a hard cut: update the OCaml producer and Haxe decoder
+  together, then regenerate the native compiler. An older decoder is rejected
+  instead of guessing what a newer record means.
 - It must be **dependency-free** (no JSON libs on the OCaml side; no custom parsers on the Haxe side).
 
 ## Bootstrap knobs (non-protocol)
@@ -28,7 +31,7 @@ compiler was built with `-D hih_native_parser`.
 
 Why this exists:
 
-- Protocol v1 is intentionally *summary-only*: even in non-`header_only` mode it does **not** transmit full
+- The parser protocol is intentionally *summary-oriented*: even in non-`header_only` mode it does **not** transmit full
   statement bodies as a structured AST.
 - Some bring-up rungs (notably Stage 3 `--hxhx-emit-full-bodies`) need statement bodies so we can validate
   lowering end-to-end.
@@ -45,7 +48,7 @@ When set to `1`/`true`/`yes`, `HxHxNativeParser.parse_module_decl` enables a **b
 
 - If the full token-based parser fails (or throws), the native side attempts to still return:
   - `ast package ...` (best-effort)
-  - `ast imports ...` (best-effort)
+  - one `ast directive ...` record for each recognized `import` or `using` declaration (best-effort)
   - `ast class ...` (best-effort; may remain `Unknown`)
 - It returns `ok` with an empty method list (no `ast method` records) rather than `err`.
 
@@ -65,21 +68,24 @@ Important:
 Parser output starts with a header line:
 
 ```
-hxhx_frontend_v=2
+hxhx_frontend_v=3
 ```
 
 Notes:
 
 - The lexer-only stream (`HxHxNativeLexer.tokenize`) still uses `hxhx_frontend_v=1`.
-- The Haxe decoder accepts both v1 and v2 during bring-up.
+- The parser decoder accepts only version 3. Version 2 reduced imports to path
+  strings and therefore lost aliases; accepting both formats would reintroduce
+  two meanings for the same compiler input.
 
 Future versions must:
 
 - keep the header (`hxhx_frontend_v=<n>`)
-- only add new record types or optional fields in a backward-compatible way
-- avoid changing the meaning of existing records for the same version number
+- avoid changing the meaning of an existing version number; and
+- change producer, decoder, focused fixtures, and generated bootstrap artifacts
+  in the same reviewable slice.
 
-## Records (v1/v2)
+## Records (parser protocol v3)
 
 Records are newline-delimited. Payloads are always **single-line** due to escaping (see below).
 
@@ -107,7 +113,7 @@ These are appended by the native parser (not the lexer):
 
 ```
 ast package <len>:<payload>
-ast imports <len>:<payload>
+ast directive <len>:<payload>
 ast class <len>:<payload>
 ast header_only <len>:<payload>
 ast toplevel_main <len>:<payload>
@@ -118,10 +124,68 @@ ast method <len>:<payload>
 ast method_body <len>:<payload>
 ```
 
-Notes:
+### Module-directive record
 
-- `ast imports` uses a `|` separator for now (bootstrap convenience).
-- Longer-term we’ll likely replace this with a structured list record.
+A **module directive** is the compiler's stored description of one top-of-file
+`import` or `using` declaration. There is one record per declaration, in source
+order. After unescaping, its payload has exactly three lines:
+
+```text
+<kind>
+<path>
+<alias>
+```
+
+`<kind>` is one of:
+
+- `import-normal` — an ordinary import, including a static-member path;
+- `import-alias` — an import written with `as` or the legacy `in` spelling;
+- `import-all` — a wildcard import; or
+- `using` — an extension-method provider, not an ordinary imported type.
+
+`<path>` never ends in `.*`; wildcard behavior is carried by the kind. `<alias>`
+is non-empty only for `import-alias`. Keeping these meanings separate prevents
+valid code such as `import model.Api as Service; new Service()` from losing the
+local name before type checking.
+
+The decoder rejects a record when these fields disagree—for example, a normal
+import carrying an alias, an alias record with an empty local name, a wildcard
+encoded in both the kind and the path, or a path with an empty segment. The
+current bootstrap lexer accepts ASCII letters and `_` at the start of each
+segment, followed by those characters or digits. This decoder check mirrors
+that current lexer subset; it is not a claim that broader Haxe identifier
+support is permanently out of scope. Once decoded, the parsed module copies the
+ordered directive list and returns copies to callers. Later compiler stages can
+read the same facts, but cannot silently change the parser's retained input by
+mutating an exposed array.
+
+This wire record preserves what the user wrote; it does not guess what the path
+refers to. Shared type checking makes that decision after the referenced module
+has been loaded. For example:
+
+```haxe
+import model.Api.PI;
+```
+
+could name a type called `PI` or the static field `PI` on `model.Api`. The
+spelling and capitalization are not enough to decide safely. Type checking
+records one of these results instead:
+
+- an exact imported type;
+- one named static field or method and its owning type;
+- all static members of one type;
+- all eligible types from a package;
+- an extension-method provider from `using`; or
+- unresolved, which later validation can report instead of inventing target
+  syntax.
+
+Targets consume that resolved record. For the example above, Java emits
+`import static model.Api.PI;` only when shared typing proved that `PI` is a
+static member. This keeps Java, C#, OCaml, and the other targets from each
+implementing a different capitalization heuristic.
+
+Other AST-summary notes:
+
 - `ast class` reports the **selected “main class”** for the module. Selection is:
   - deterministic when the caller uses `parse_module_decl_with_expected(src, expectedMainClass)`, and
   - best-effort heuristic when the caller uses `parse_module_decl(src)` (currently: last `class` in file).
@@ -131,7 +195,7 @@ Notes:
 - `ast toplevel_main` is a bootstrap hint:
   - payload is `0` or `1`
   - `1` means the module contains a toplevel `function main(...)` (no class required)
-- `ast field` is the general class-field record (v2):
+- `ast field` is the general class-field record:
   - Includes both static and non-static `var` declarations.
   - Payload format (after unescaping):
     - line 1: field name

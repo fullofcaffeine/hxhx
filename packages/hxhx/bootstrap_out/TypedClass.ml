@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable sourceDeclaration : HxClassDecl.t; mutable semanticInfo : TyNominalInfo.t; mutable functions : TypedFunction.t HxArray.t; mutable fieldInitializers : TypedFieldInitializer.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable sourceDeclaration : HxClassDecl.t; mutable semanticInfo : TyNominalInfo.t; mutable resolvedExtends : TyType.t; mutable resolvedImplements : TyType.t HxArray.t; mutable functions : TypedFunction.t HxArray.t; mutable fieldInitializers : TypedFieldInitializer.t HxArray.t }
 
-let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 -> let self = ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 resolvedExtends2 resolvedImplements2 -> let self = ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); resolvedExtends = Obj.magic (HxRuntime.hx_null); resolvedImplements = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic sourceDeclaration2 in (
       (Obj.magic self : t).sourceDeclaration <- __assign_1;
@@ -16,29 +16,46 @@ let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 
       (Obj.magic self : t).semanticInfo <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in (
-      ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else let __assign_5 = Obj.magic (HxArray.copy functions2) in (
-        tempRight := __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).functions <- __assign_6;
+    ignore (let __assign_3 = Obj.magic resolvedExtends2 in (
+      (Obj.magic self : t).resolvedExtends <- __assign_3;
+      __assign_3
+    ));
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
+      ignore (if resolvedImplements2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
+        tempRight := __assign_4;
+        __assign_4
+      ) else let __assign_6 = Obj.magic (HxArray.copy resolvedImplements2) in (
+        tempRight := __assign_6;
         __assign_6
       ));
-      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TypedFieldInitializer.t HxArray.t) in (
-        ignore (if fieldInitializers2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
-          tempRight1 := __assign_7;
-          __assign_7
-        ) else let __assign_9 = Obj.magic (HxArray.copy fieldInitializers2) in (
-          tempRight1 := __assign_9;
-          __assign_9
-        ));
-        let __assign_10 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).fieldInitializers <- __assign_10;
+      ignore (let __assign_7 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).resolvedImplements <- __assign_7;
+        __assign_7
+      ));
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in (
+        ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
+          tempRight1 := __assign_8;
+          __assign_8
+        ) else let __assign_10 = Obj.magic (HxArray.copy functions2) in (
+          tempRight1 := __assign_10;
           __assign_10
+        ));
+        ignore (let __assign_11 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).functions <- __assign_11;
+          __assign_11
+        ));
+        let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : TypedFieldInitializer.t HxArray.t) in (
+          ignore (if fieldInitializers2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
+            tempRight2 := __assign_12;
+            __assign_12
+          ) else let __assign_14 = Obj.magic (HxArray.copy fieldInitializers2) in (
+            tempRight2 := __assign_14;
+            __assign_14
+          ));
+          let __assign_15 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).fieldInitializers <- __assign_15;
+            __assign_15
+          )
         )
       )
     )
@@ -46,14 +63,18 @@ let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); resolvedExtends = Obj.magic (HxRuntime.hx_null); resolvedImplements = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getSourceDeclaration = fun self () -> (Obj.magic self : t).sourceDeclaration
 
 let getSemanticInfo = fun self () -> (Obj.magic self : t).semanticInfo
 
+let getResolvedExtends = fun self () -> (Obj.magic self : t).resolvedExtends
+
+let getResolvedImplements = fun self () -> HxArray.copy ((Obj.magic self : t).resolvedImplements)
+
 let getFunctions = fun self () -> HxArray.copy ((Obj.magic self : t).functions)
 
 let getFieldInitializers = fun self () -> HxArray.copy ((Obj.magic self : t).fieldInitializers)
 
-let withFunctions = fun self (loweredFunctions : TypedFunction.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).semanticInfo)) (Obj.magic loweredFunctions) (Obj.magic ((Obj.magic self : t).fieldInitializers))
+let withFunctions = fun self (loweredFunctions : TypedFunction.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).semanticInfo)) (Obj.magic loweredFunctions) (Obj.magic ((Obj.magic self : t).fieldInitializers)) (Obj.magic ((Obj.magic self : t).resolvedExtends)) (Obj.magic ((Obj.magic self : t).resolvedImplements))

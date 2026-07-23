@@ -16,9 +16,9 @@ let serializeString = fun self (s : string) -> ignore (ignore (try let x = HxMap
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) x);
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (HxMap.set_string ((Obj.magic self : t).shash) s (let __obj_7 = self in let __old_8 = (Obj.magic __obj_7 : t).scount in let __new_9 = HxInt.add __old_8 1 in (
-    ignore ((Obj.magic __obj_7 : t).scount <- __new_9);
-    __old_8
+  ignore (HxMap.set_string ((Obj.magic self : t).shash) s (let __place_receiver_8 = self in let __place_old_9 = (__place_receiver_8 : t).scount in let __place_new_10 = HxInt.add __place_old_9 1 in (
+    (__place_receiver_8 : t).scount <- __place_new_10;
+    __place_old_9
   )));
   ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "y"));
   let s = (StringTools._urlEncodeOcaml (s : string) : string) in (
@@ -27,12 +27,12 @@ let serializeString = fun self (s : string) -> ignore (ignore (try let x = HxMap
     StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr s)
   )
 ) with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10))
+  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11))
 
-let serializeRef = fun self (v : Obj.t) -> try let __fallback_result_14 = let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).cache) in (
-  ignore (while !_g < _g1 do ignore (let i = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-    ignore (_g := __new_12);
-    __old_11
+let serializeRef = fun self (v : Obj.t) -> try let __fallback_result_15 = let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).cache) in (
+  ignore (while !_g < _g1 do ignore (let i = let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+    ignore (_g := __new_13);
+    __old_12
   ) in if HxRuntime.dynamic_equals (HxArray.get (Obj.magic ((Obj.magic self : t).cache)) i) v then ignore ((
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "r"));
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr i));
@@ -40,8 +40,8 @@ let serializeRef = fun self (v : Obj.t) -> try let __fallback_result_14 = let _g
   )) else ()) done);
   ignore (HxArray.push ((Obj.magic self : t).cache) v);
   false
-) in Obj.magic __fallback_result_14 with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let hx_USE_CACHE = ref (false : bool)
 
@@ -69,9 +69,9 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.Serializer"
       (Obj.magic self : t).shash <- __assign_5;
       __assign_5
     ));
-    let __assign_6 = 0 in (
-      (Obj.magic self : t).scount <- __assign_6;
-      __assign_6
+    let __place_receiver_6 = self in let __place_rhs_7 = 0 in (
+      (__place_receiver_6 : t).scount <- __place_rhs_7;
+      __place_rhs_7
     )
   )));
   self
@@ -83,18 +83,18 @@ let hx_BASE64_CODES = ref (Obj.magic (HxRuntime.hx_null) : Obj.t)
 
 let rec serializeFields = fun self (v : Obj.t) -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic (HxAnon.fields v) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let f = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-      ignore (_g := __new_16);
-      __new_16
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
     ));
     ignore (serializeString (Obj.magic self) (f : string));
     serialize (Obj.magic self) (Obj.obj (HxAnon.get v (HxString.toStdString f)))
   )) done);
   StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "g")
 )))
-and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (let __typeof_v_17 = v in if HxRuntime.is_null __typeof_v_17 then Type.TNull else if HxRuntime.is_boxed_bool __typeof_v_17 then Type.TBool else if Obj.is_int __typeof_v_17 then Type.TInt else if Obj.tag __typeof_v_17 = Obj.double_tag then Type.TFloat else if Obj.tag __typeof_v_17 = Obj.string_tag then Type.TClass (HxType.class_ "String") else if Obj.tag __typeof_v_17 = Obj.closure_tag then Type.TFunction else match HxEnum.name_opt __typeof_v_17 with
-  | Some __enum_name_18 -> Type.TEnum (HxType.enum_ __enum_name_18)
-  | _ -> let __cls_19 = HxType.getClass __typeof_v_17 in if HxRuntime.is_null __cls_19 then Type.TObject else Type.TClass __cls_19) in match _g with
+and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (let __typeof_v_18 = v in if HxRuntime.is_null __typeof_v_18 then Type.TNull else if HxRuntime.is_boxed_bool __typeof_v_18 then Type.TBool else if Obj.is_int __typeof_v_18 then Type.TInt else if Obj.tag __typeof_v_18 = Obj.double_tag then Type.TFloat else if Obj.tag __typeof_v_18 = Obj.string_tag then Type.TClass (HxType.class_ "String") else if Obj.tag __typeof_v_18 = Obj.closure_tag then Type.TFunction else match HxEnum.name_opt __typeof_v_18 with
+  | Some __enum_name_19 -> Type.TEnum (HxType.enum_ __enum_name_19)
+  | _ -> let __cls_20 = HxType.getClass __typeof_v_18 in if HxRuntime.is_null __cls_20 then Type.TObject else Type.TClass __cls_20) in match _g with
   | Type.TNull -> ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "n"))
   | Type.TInt -> ignore (let v2 = Obj.obj v in (
     ignore (if v2 = 0 then ignore ((
@@ -105,12 +105,12 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
     StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr v2)
   ))
   | Type.TFloat -> ignore (let v2 = Obj.obj v in if Math.isNaN v2 then ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "k")) else ignore (if not (Math.isFinite v2) then ignore (let tempString = ref ("" : string) in (
-    ignore (if v2 < float_of_int 0 then let __assign_20 = ("m" : string) in (
-      tempString := __assign_20;
-      __assign_20
-    ) else let __assign_21 = ("p" : string) in (
+    ignore (if v2 < float_of_int 0 then let __assign_21 = ("m" : string) in (
       tempString := __assign_21;
       __assign_21
+    ) else let __assign_22 = ("p" : string) in (
+      tempString := __assign_22;
+      __assign_22
     ));
     StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (!tempString))
   )) else ignore ((
@@ -118,12 +118,12 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
     StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr v2)
   ))))
   | Type.TBool -> ignore (let tempString1 = ref ("" : string) in (
-    ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic v) then let __assign_22 = ("t" : string) in (
-      tempString1 := __assign_22;
-      __assign_22
-    ) else let __assign_23 = ("f" : string) in (
+    ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic v) then let __assign_23 = ("t" : string) in (
       tempString1 := __assign_23;
       __assign_23
+    ) else let __assign_24 = ("f" : string) in (
+      tempString1 := __assign_24;
+      __assign_24
     ));
     StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (!tempString1))
   ))
@@ -145,24 +145,24 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
     ignore (if (Obj.magic self : t).useCache && serializeRef (Obj.magic self) v then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    let __switch_25 = c in if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "Array") then ignore (let ucount = ref 0 in (
+    let __switch_26 = c in if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "Array") then ignore (let ucount = ref 0 in (
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "a"));
-      let l = Obj.obj (HxAnon.get v "length") in (
-        ignore (let _g3 = ref 0 in let _g1 = l in while !_g3 < _g1 do ignore (let i = let __old_64 = !_g3 in let __new_65 = HxInt.add __old_64 1 in (
-          ignore (_g3 := __new_65);
-          __old_64
-        ) in if HxArray.get (Obj.magic v) i == Obj.magic (HxRuntime.hx_null) then ignore (let __old_66 = !ucount in let __new_67 = HxInt.add __old_66 1 in (
-          ignore (ucount := __new_67);
-          __old_66
+      let l = Obj.obj (HxAnon.get v "length") in let _g3 = ref 0 in let _g1 = l in (
+        ignore (while !_g3 < _g1 do ignore (let i = let __old_65 = !_g3 in let __new_66 = HxInt.add __old_65 1 in (
+          ignore (_g3 := __new_66);
+          __old_65
+        ) in if HxArray.get (Obj.magic v) i == Obj.magic (HxRuntime.hx_null) then ignore (let __old_67 = !ucount in let __new_68 = HxInt.add __old_67 1 in (
+          ignore (ucount := __new_68);
+          __old_67
         )) else ignore ((
           ignore (if !ucount > 0 then ignore ((
             ignore (if !ucount = 1 then ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "n")) else ignore ((
               ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "u"));
               StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (!ucount))
             )));
-            let __assign_68 = 0 in (
-              ucount := __assign_68;
-              __assign_68
+            let __assign_69 = 0 in (
+              ucount := __assign_69;
+              __assign_69
             )
           )) else ());
           serialize (Obj.magic self) (Obj.repr (HxArray.get (Obj.magic v) i))
@@ -173,115 +173,115 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
         ))) else ());
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "h")
       )
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "Date") then ignore (let d = Obj.magic v in (
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "Date") then ignore (let d = Obj.magic v in (
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "v"));
       StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (Date.getTime (Obj.magic d) ()))
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "haxe.ds.IntMap") then ignore ((
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "haxe.ds.IntMap") then ignore ((
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "q"));
-      let v2 = Obj.magic v in (
-        ignore (let k = HxIterator.of_array (HxMap.keys_int v2) in while (let __iter_62 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_62)) () do ignore (let k2 = (let __iter_63 = k in fun () -> HxIterator.next (Obj.magic __iter_63)) () in (
+      let v2 = Obj.magic v in let k = HxIterator.of_array (HxMap.keys_int v2) in (
+        ignore (while (let __iter_63 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_63)) () do ignore (let k2 = (let __iter_64 = k in fun () -> HxIterator.next (Obj.magic __iter_64)) () in (
           ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr ":"));
           ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr k2));
           serialize (Obj.magic self) (HxMap.get_int v2 k2)
         )) done);
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "h")
       )
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "haxe.ds.List") then ignore ((
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "haxe.ds.List") then ignore ((
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "l"));
       let v2 = Obj.magic v in let _g_head = ref (Obj.magic (HxRuntime.hx_null) : Haxe_ds_List.listnode_t) in let head = Obj.magic ((Obj.magic v2 : Haxe_ds_List.t).h) in (
-        ignore (let __assign_59 = Obj.magic head in (
-          _g_head := __assign_59;
-          __assign_59
+        ignore (let __assign_60 = Obj.magic head in (
+          _g_head := __assign_60;
+          __assign_60
         ));
-        ignore (while !_g_head != Obj.magic (HxRuntime.hx_null) do ignore (let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-          ignore (let hx_val = (Obj.magic (!_g_head) : Haxe_ds_List.listnode_t).item in (
-            ignore (let __assign_60 = Obj.magic ((Obj.magic (!_g_head) : Haxe_ds_List.listnode_t).next) in (
-              _g_head := __assign_60;
-              __assign_60
-            ));
-            let __assign_61 = Obj.magic hx_val in (
-              tempVar := __assign_61;
-              __assign_61
-            )
+        ignore (while !_g_head != Obj.magic (HxRuntime.hx_null) do ignore (let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let hx_val = (Obj.magic (!_g_head) : Haxe_ds_List.listnode_t).item in (
+          ignore (let __assign_61 = Obj.magic ((Obj.magic (!_g_head) : Haxe_ds_List.listnode_t).next) in (
+            _g_head := __assign_61;
+            __assign_61
+          ));
+          ignore (let __assign_62 = Obj.magic hx_val in (
+            tempVar := __assign_62;
+            __assign_62
           ));
           let i = Obj.magic (!tempVar) in serialize (Obj.magic self) (Obj.repr i)
         )) done);
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "h")
       )
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "haxe.ds.ObjectMap") then ignore ((
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "haxe.ds.ObjectMap") then ignore ((
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "M"));
-      let v2 = Obj.magic v in (
-        ignore (let k = HxIterator.of_array (HxMap.keys_object v2) in while (let __iter_57 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_57)) () do ignore (let k2 = (let __iter_58 = k in fun () -> HxIterator.next (Obj.magic __iter_58)) () in (
+      let v2 = Obj.magic v in let k = HxIterator.of_array (HxMap.keys_object v2) in (
+        ignore (while (let __iter_58 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_58)) () do ignore (let k2 = (let __iter_59 = k in fun () -> HxIterator.next (Obj.magic __iter_59)) () in (
           ignore (serialize (Obj.magic self) (Obj.repr k2));
           serialize (Obj.magic self) (HxMap.get_object v2 k2)
         )) done);
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "h")
       )
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "haxe.ds.StringMap") then ignore ((
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "haxe.ds.StringMap") then ignore ((
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "b"));
-      let v2 = Obj.magic v in (
-        ignore (let k = HxIterator.of_array (HxMap.keys_string v2) in while (let __iter_55 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_55)) () do ignore (let k2 = ((let __iter_56 = k in fun () -> HxIterator.next (Obj.magic __iter_56)) () : string) in (
+      let v2 = Obj.magic v in let k = HxIterator.of_array (HxMap.keys_string v2) in (
+        ignore (while (let __iter_56 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_56)) () do ignore (let k2 = ((let __iter_57 = k in fun () -> HxIterator.next (Obj.magic __iter_57)) () : string) in (
           ignore (serializeString (Obj.magic self) (k2 : string));
           serialize (Obj.magic self) (HxMap.get_string v2 k2)
         )) done);
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "h")
       )
-    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_25) (HxType.class_ "haxe.io.Bytes") then ignore (let v2 = Obj.magic v in (
+    )) else if HxRuntime.dynamic_equals (Obj.repr __switch_26) (HxType.class_ "haxe.io.Bytes") then ignore (let v2 = Obj.magic v in (
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "s"));
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (Math.ceil (float_of_int (HxInt.mul (HxBytes.length v2) 8) /. float_of_int 6))));
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr ":"));
       let i = ref 0 in let max = HxInt.sub (HxBytes.length v2) 2 in let b64 = ref (Obj.repr (!hx_BASE64_CODES)) in (
-        ignore (if Obj.magic (!b64) == Obj.magic (HxRuntime.hx_null) then ignore (let length = HxString.length (!hx_BASE64) in let this1 = Obj.magic (let __arr_26 = HxArray.create () in __arr_26) in (
-          ignore (let __recv_27 = this1 in let __assign_28 = length in (
-            HxArray.resize __recv_27 __assign_28;
-            __assign_28
+        ignore (if Obj.magic (!b64) == Obj.magic (HxRuntime.hx_null) then ignore (let length = HxString.length (!hx_BASE64) in let this1 = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in (
+          ignore (let __recv_28 = this1 in let __assign_29 = length in (
+            HxArray.resize __recv_28 __assign_29;
+            __assign_29
           ));
           let tempRight = this1 in (
-            ignore (let __assign_29 = Obj.magic (Obj.repr tempRight) in (
-              b64 := __assign_29;
-              __assign_29
+            ignore (let __assign_30 = Obj.magic (Obj.repr tempRight) in (
+              b64 := __assign_30;
+              __assign_30
             ));
-            ignore (let _g3 = ref 0 in let _g1 = HxString.length (!hx_BASE64) in while !_g3 < _g1 do ignore (let i2 = let __old_30 = !_g3 in let __new_31 = HxInt.add __old_30 1 in (
-              ignore (_g3 := __new_31);
-              __old_30
-            ) in let hx_val = HxString.charCodeAt (!hx_BASE64) i2 in let __assign_32 = hx_val in HxArray.set (Obj.magic (Obj.magic (!b64))) i2 __assign_32) done);
-            let __assign_33 = Obj.repr (Obj.magic (!b64)) in (
-              hx_BASE64_CODES := __assign_33;
-              __assign_33
+            let _g3 = ref 0 in let _g1 = HxString.length (!hx_BASE64) in (
+              ignore (while !_g3 < _g1 do ignore (let i2 = let __old_31 = !_g3 in let __new_32 = HxInt.add __old_31 1 in (
+                ignore (_g3 := __new_32);
+                __old_31
+              ) in let hx_val = HxString.charCodeAt (!hx_BASE64) i2 in let __assign_33 = hx_val in HxArray.set (Obj.magic (Obj.magic (!b64))) i2 __assign_33) done);
+              let __assign_34 = Obj.repr (Obj.magic (!b64)) in (
+                hx_BASE64_CODES := __assign_34;
+                __assign_34
+              )
             )
           )
         )) else ());
-        ignore (while !i < max do ignore (let b1 = HxBytes.get v2 (let __old_34 = !i in let __new_35 = HxInt.add __old_34 1 in (
-          ignore (i := __new_35);
-          __old_34
-        )) in let b2 = HxBytes.get v2 (let __old_36 = !i in let __new_37 = HxInt.add __old_36 1 in (
-          ignore (i := __new_37);
-          __old_36
-        )) in let b3 = HxBytes.get v2 (let __old_38 = !i in let __new_39 = HxInt.add __old_38 1 in (
-          ignore (i := __new_39);
-          __old_38
+        ignore (while !i < max do ignore (let b1 = HxBytes.get v2 (let __old_35 = !i in let __new_36 = HxInt.add __old_35 1 in (
+          ignore (i := __new_36);
+          __old_35
+        )) in let b2 = HxBytes.get v2 (let __old_37 = !i in let __new_38 = HxInt.add __old_37 1 in (
+          ignore (i := __new_38);
+          __old_37
+        )) in let b3 = HxBytes.get v2 (let __old_39 = !i in let __new_40 = HxInt.add __old_39 1 in (
+          ignore (i := __new_40);
+          __old_39
         )) in (
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_40 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_40 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_40));
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_41 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b1 4) (HxInt.shr b2 4)) 63) in if __nullable_int_41 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_41));
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_42 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b2 2) (HxInt.shr b3 6)) 63) in if __nullable_int_42 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_42));
-          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_43 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand b3 63) in if __nullable_int_43 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_43)
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_41 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_41 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_41));
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_42 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b1 4) (HxInt.shr b2 4)) 63) in if __nullable_int_42 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_42));
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_43 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b2 2) (HxInt.shr b3 6)) 63) in if __nullable_int_43 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_43));
+          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_44 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand b3 63) in if __nullable_int_44 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_44)
         )) done);
-        if !i = max then ignore (let b1 = HxBytes.get v2 (let __old_44 = !i in let __new_45 = HxInt.add __old_44 1 in (
-          ignore (i := __new_45);
-          __old_44
-        )) in let b2 = HxBytes.get v2 (let __old_46 = !i in let __new_47 = HxInt.add __old_46 1 in (
-          ignore (i := __new_47);
-          __old_46
+        if !i = max then ignore (let b1 = HxBytes.get v2 (let __old_45 = !i in let __new_46 = HxInt.add __old_45 1 in (
+          ignore (i := __new_46);
+          __old_45
+        )) in let b2 = HxBytes.get v2 (let __old_47 = !i in let __new_48 = HxInt.add __old_47 1 in (
+          ignore (i := __new_48);
+          __old_47
         )) in (
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_48 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_48 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_48));
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_49 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b1 4) (HxInt.shr b2 4)) 63) in if __nullable_int_49 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_49));
-          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_50 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.shl b2 2) 63) in if __nullable_int_50 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_50)
-        )) else ignore (if !i = HxInt.add max 1 then ignore (let b1 = HxBytes.get v2 (let __old_51 = !i in let __new_52 = HxInt.add __old_51 1 in (
-          ignore (i := __new_52);
-          __old_51
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_49 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_49 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_49));
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_50 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.logor (HxInt.shl b1 4) (HxInt.shr b2 4)) 63) in if __nullable_int_50 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_50));
+          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_51 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.shl b2 2) 63) in if __nullable_int_51 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_51)
+        )) else ignore (if !i = HxInt.add max 1 then ignore (let b1 = HxBytes.get v2 (let __old_52 = !i in let __new_53 = HxInt.add __old_52 1 in (
+          ignore (i := __new_53);
+          __old_52
         )) in (
-          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_53 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_53 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_53));
-          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_54 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.shl b1 4) 63) in if __nullable_int_54 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_54)
+          ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_54 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.shr b1 2) in if __nullable_int_54 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_54));
+          StringBuf.addChar (Obj.magic ((Obj.magic self : t).buf)) (let __nullable_int_55 = HxArray.get (Obj.magic (Obj.magic (!b64))) (HxInt.logand (HxInt.shl b1 4) 63) in if __nullable_int_55 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_55)
         )) else ())
       )
     )) else ignore ((
@@ -290,9 +290,9 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
         ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "C"));
         ignore (serializeString (Obj.magic self) (HxType.getClassName c : string));
         ignore (if (Obj.magic self : t).useCache then ignore (HxArray.push ((Obj.magic self : t).cache) v) else ());
-        ignore (let __dyn_args_24 = HxArray.create () in (
-          ignore (HxArray.push __dyn_args_24 (Obj.repr self));
-          Obj.obj (HxReflect.callMethod (HxRuntime.hx_null) (Obj.repr (Obj.obj (HxAnon.get (Obj.repr v) "hxSerialize"))) __dyn_args_24)
+        ignore (let __dyn_args_25 = HxArray.create () in (
+          ignore (HxArray.push __dyn_args_25 (Obj.repr self));
+          Obj.obj (HxReflect.callMethod (HxRuntime.hx_null) (Obj.repr (Obj.obj (HxAnon.get (Obj.repr v) "hxSerialize"))) __dyn_args_25)
         ));
         StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr "g")
       )) else ignore ((
@@ -309,12 +309,12 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
       HxArray.pop ((Obj.magic self : t).cache) ()
     )) else ());
     let tempString2 = ref ("" : string) in (
-      ignore (if (Obj.magic self : t).useEnumIndex then let __assign_69 = ("j" : string) in (
-        tempString2 := __assign_69;
-        __assign_69
-      ) else let __assign_70 = ("w" : string) in (
+      ignore (if (Obj.magic self : t).useEnumIndex then let __assign_70 = ("j" : string) in (
         tempString2 := __assign_70;
         __assign_70
+      ) else let __assign_71 = ("w" : string) in (
+        tempString2 := __assign_71;
+        __assign_71
       ));
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (!tempString2)));
       ignore (serializeString (Obj.magic self) (HxType.getEnumName e : string));
@@ -325,16 +325,18 @@ and serialize = fun self (v : Obj.t) -> ignore (ignore (try let _g = Obj.magic (
       ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr ":"));
       let l = Obj.obj (HxAnon.get v "length") in (
         ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buf)) (Obj.repr (HxInt.sub l 2)));
-        ignore (let _g3 = ref 2 in let _g1 = l in while !_g3 < _g1 do ignore (let i = let __old_71 = !_g3 in let __new_72 = HxInt.add __old_71 1 in (
-          ignore (_g3 := __new_72);
-          __old_71
-        ) in serialize (Obj.magic self) (Obj.repr (HxArray.get (Obj.magic v) i))) done);
-        if (Obj.magic self : t).useCache then ignore (HxArray.push ((Obj.magic self : t).cache) v) else ()
+        let _g3 = ref 2 in let _g1 = l in (
+          ignore (while !_g3 < _g1 do ignore (let i = let __old_72 = !_g3 in let __new_73 = HxInt.add __old_72 1 in (
+            ignore (_g3 := __new_73);
+            __old_72
+          ) in serialize (Obj.magic self) (Obj.repr (HxArray.get (Obj.magic v) i))) done);
+          if (Obj.magic self : t).useCache then ignore (HxArray.push ((Obj.magic self : t).cache) v) else ()
+        )
       )
     )
   ))
   | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Cannot serialize " ^ HxString.toStdString (HxRuntime.dynamic_toStdString v))) ["Dynamic"; "String"]) with
-  | HxRuntime.Hx_return __ret_73 -> Obj.obj __ret_73))
+  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74))
 
 let run = fun v -> let s = Obj.magic (create ()) in (
   ignore (serialize (Obj.magic s) v);

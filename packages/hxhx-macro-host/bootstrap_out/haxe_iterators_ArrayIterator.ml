@@ -8,13 +8,13 @@ type t = { __hx_type : Obj.t; mutable array : Obj.t HxArray.t; mutable current :
 
 let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (HxRuntime.hx_null); current = 0 } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = 0 in (
-      (Obj.magic self : t).current <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
+      (__place_receiver_1 : t).current <- __place_rhs_2;
+      __place_rhs_2
     ));
-    let __assign_2 = Obj.magic array2 in (
-      (Obj.magic self : t).array <- __assign_2;
-      __assign_2
+    let __assign_3 = Obj.magic array2 in (
+      (Obj.magic self : t).array <- __assign_3;
+      __assign_3
     )
   )));
   self
@@ -24,7 +24,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterat
 
 let hasNext = fun self () -> (Obj.magic self : t).current < HxArray.length ((Obj.magic self : t).array)
 
-let next = fun self () -> HxArray.get (Obj.magic ((Obj.magic self : t).array)) (let __obj_3 = self in let __old_4 = (Obj.magic __obj_3 : t).current in let __new_5 = HxInt.add __old_4 1 in (
-  ignore ((Obj.magic __obj_3 : t).current <- __new_5);
-  __old_4
+let next = fun self () -> HxArray.get (Obj.magic ((Obj.magic self : t).array)) (let __place_receiver_4 = self in let __place_old_5 = (__place_receiver_4 : t).current in let __place_new_6 = HxInt.add __place_old_5 1 in (
+  (__place_receiver_4 : t).current <- __place_new_6;
+  __place_old_5
 ))

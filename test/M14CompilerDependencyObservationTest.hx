@@ -91,6 +91,19 @@ class M14CompilerDependencyObservationTest {
 		throw 'missing typed function $modulePath.$functionName';
 	}
 
+	static function visitExpression(expression:TypedExpr, visit:TypedExpr->Void):Void {
+		visit(expression);
+		for (child in expression.getExpressions())
+			visitExpression(child, visit);
+	}
+
+	static function visitStatement(statement:TypedStmt, visit:TypedExpr->Void):Void {
+		for (expression in statement.getExpressions())
+			visitExpression(expression, visit);
+		for (child in statement.getStatements())
+			visitStatement(child, visit);
+	}
+
 	static function main():Void {
 		final apiA = [
 			"class Api {",
@@ -110,13 +123,86 @@ class M14CompilerDependencyObservationTest {
 		].join("\n");
 		final first = typedProgram(apiA, mainSource);
 		final snapshot = CompilerDependencyCollector.collect(first.modules, first.index);
-		assertTrue(hasEdge(snapshot, CompilerDependencyKind.ModuleResolution, "import:Api"), "explicit import should record the selected provider module");
+		assertTrue(hasEdge(snapshot, CompilerDependencyKind.ModuleResolution, "import-normal:Api"),
+			"an ordinary import should record both its source meaning and selected provider module");
 		assertTrue(hasEdge(snapshot, CompilerDependencyKind.PublicInterface, "answer"), "ordinary call should depend on the selected public declaration");
 		assertTrue(hasEdge(snapshot, CompilerDependencyKind.InlineImplementation, "twice"), "inline call should depend on the selected declaration body");
-		assertTrue(edgePhase(snapshot, CompilerDependencyKind.ModuleResolution, "import:Api") == "module-resolution",
+		assertTrue(edgePhase(snapshot, CompilerDependencyKind.ModuleResolution, "import-normal:Api") == "module-resolution",
 			"an import dependency should name module resolution as its owning compiler phase");
 		assertTrue(edgePhase(snapshot, CompilerDependencyKind.PublicInterface, "answer") == "shared-typing",
 			"an exact call dependency should name shared typing as its owning compiler phase");
+
+		final aliasProgram = typedSources([
+			{
+				modulePath: "model.Api",
+				filePath: "model/Api.hx",
+				source: [
+					"package model;",
+					"class Api {",
+					"  public static var count:Int = 3;",
+					"  public function new() {}",
+					"  public static function make():Api return new Api();",
+					"}"
+				].join("\n")
+			},
+			{
+				modulePath: "AliasMain",
+				filePath: "AliasMain.hx",
+				source: [
+					"import model.Api as Service;",
+					"import model.Api.count;",
+					"using model.Api;",
+					"class AliasMain {",
+					"  public static var cached:Service;",
+					"  public static function use(items:Array<Service>):Service {",
+					"    var created:Service = new Service();",
+					"    var made:Service = Service.make();",
+					"    var count:Int = Service.count;",
+					"    return created;",
+					"  }",
+					"}"
+				].join("\n")
+			}
+		]);
+		final aliasMainInfo = aliasProgram.index.getByFullName("AliasMain");
+		assertTrue(aliasMainInfo.fieldType("cached").getSemanticKey().indexOf("nominal:model.Api") >= 0,
+			"an alias used as a field type should retain the provider's exact semantic type");
+		final aliasUse = aliasMainInfo.getDeclarations().filter(declaration -> declaration.getSignature().getName() == "use")[0];
+		assertTrue(aliasUse.getSignature().getArgs()[0].getSemanticKey().indexOf("nominal:model.Api") >= 0,
+			"an alias nested inside a generic argument should retain the provider's exact semantic type");
+		assertTrue(aliasUse.getSignature()
+			.getReturnType()
+			.getSemanticKey()
+			.indexOf("nominal:model.Api") >= 0,
+			"an alias used as a return type should retain the provider's exact semantic type");
+		var sawAliasConstructor = false;
+		var sawAliasStaticCall = false;
+		var sawAliasStaticField = false;
+		final aliasFunction = aliasProgram.modules.filter(module ->
+			CompilerTypedModuleRevision.semanticModulePath(module) == "AliasMain")[0].getTypedClasses()[0].getFunctions()
+		.filter(fn -> HxFunctionDecl.getName(fn.getSourceDeclaration()) == "use")[0];
+		for (statement in aliasFunction.getBody().getStatements())
+			visitStatement(statement, expression -> {
+				final nominal = expression.getType().getNominalIdentity();
+				if (expression.getTag() == NewValue && nominal != null && nominal.getCanonicalName() == "model.Api")
+					sawAliasConstructor = true;
+				final declaration = expression.getDeclaration();
+				if (expression.getTag() == Call && declaration != null && declaration.getOwner().getCanonicalName() == "model.Api")
+					sawAliasStaticCall = true;
+				final field = expression.getFieldInfo();
+				if (field != null && field.getOwner().getCanonicalName() == "model.Api" && field.getName() == "count")
+					sawAliasStaticField = true;
+			});
+		assertTrue(sawAliasConstructor, "an aliased constructor should bind to the imported provider type");
+		assertTrue(sawAliasStaticCall, "a static call through an alias should bind to the provider declaration");
+		assertTrue(sawAliasStaticField, "a static field read through an alias should bind to the provider field");
+		final aliasSnapshot = CompilerDependencyCollector.collect(aliasProgram.modules, aliasProgram.index);
+		assertTrue(hasEdgeBetween(aliasSnapshot, "AliasMain", "model.Api", CompilerDependencyKind.ModuleResolution, "import-alias:model.Api:Service"),
+			"an alias dependency should name its selected provider and local source name deterministically");
+		assertTrue(hasEdgeBetween(aliasSnapshot, "AliasMain", "model.Api", CompilerDependencyKind.ModuleResolution, "import-normal:model.Api.count"),
+			"a static-member import should depend on the type that owns the selected member");
+		assertTrue(hasEdgeBetween(aliasSnapshot, "AliasMain", "model.Api", CompilerDependencyKind.ModuleResolution, "using:model.Api"),
+			"a using directive should depend on its extension-provider type without becoming an ordinary type import");
 
 		final resolvedTypeProgram = typedSources([
 			{modulePath: "Model", filePath: "Model.hx", source: "class Model {}"},

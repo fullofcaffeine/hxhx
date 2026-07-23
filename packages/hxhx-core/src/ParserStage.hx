@@ -631,7 +631,7 @@ class ParserStage {
 							return cls;
 						staticPatchApplied = true;
 						return new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields, extendsPath,
-							classMetadata, isInterface, implementsPaths);
+							classMetadata, isInterface, implementsPaths, HxClassDecl.getVisibility(cls));
 					}
 
 					// Some upstream modules have a non-class main type (notably enums).
@@ -737,7 +737,7 @@ class ParserStage {
 							if (changed || (topHasMain && !mainHasMain)) {
 								main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main) || topHasMain, functions,
 									HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main),
-									HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
+									HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main), HxClassDecl.getVisibility(main));
 								staticPatchApplied = true;
 							}
 						}
@@ -749,7 +749,7 @@ class ParserStage {
 							final fallbackName = expectedMainClass != null && expectedMainClass.length > 0 ? expectedMainClass : "Unknown";
 							main = new HxClassDecl(fallbackName, HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
 								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main),
-								HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
+								HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main), HxClassDecl.getVisibility(main));
 							mainName = fallbackName;
 						}
 						final existingFieldNames:Map<String, Bool> = new Map();
@@ -773,7 +773,7 @@ class ParserStage {
 								mergedFields.push(f);
 							main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
 								mergedFields, HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main), HxClassDecl.getIsInterface(main),
-								HxClassDecl.getImplementsPaths(main));
+								HxClassDecl.getImplementsPaths(main), HxClassDecl.getVisibility(main));
 							staticPatchApplied = true;
 						}
 					}
@@ -845,7 +845,7 @@ class ParserStage {
 					for (c in abstractDecls)
 						pushUnique(c);
 
-					return new HxModuleDecl(HxModuleDecl.getPackagePath(nativeDecl), HxModuleDecl.getImports(nativeDecl), main, classes,
+					return new HxModuleDecl(HxModuleDecl.getPackagePath(nativeDecl), HxModuleDecl.getDirectives(nativeDecl), main, classes,
 						HxModuleDecl.getHeaderOnly(nativeDecl), HxModuleDecl.getHasToplevelMain(nativeDecl));
 				}
 
@@ -1063,7 +1063,8 @@ class ParserStage {
 			if (overlayChanged)
 				changed = true;
 			return overlayChanged ? new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields,
-				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls)) : cls;
+				HxClassDecl.getExtendsPath(cls), metadata, HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls),
+				HxClassDecl.getVisibility(cls)) : cls;
 		}
 
 		var main = HxModuleDecl.getMainClass(parsed);
@@ -1120,7 +1121,7 @@ class ParserStage {
 			}
 		}
 
-		return changed ? new HxModuleDecl(HxModuleDecl.getPackagePath(parsed), HxModuleDecl.getImports(parsed), main, classes,
+		return changed ? new HxModuleDecl(HxModuleDecl.getPackagePath(parsed), HxModuleDecl.getDirectives(parsed), main, classes,
 			HxModuleDecl.getHeaderOnly(parsed), HxModuleDecl.getHasToplevelMain(parsed)) : parsed;
 	}
 
@@ -1213,6 +1214,7 @@ class ParserStage {
 		var braceDepth = 0;
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
+		var pendingTypeVisibility = HxVisibility.Public;
 		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
 			final colon = scanNextToken(source, j);
@@ -1276,13 +1278,24 @@ class ParserStage {
 			if (braceDepth != 0)
 				continue;
 			if (t.text != "class" && t.text != "interface") {
-				if (t.text == "private" || t.text == "extern" || t.text == "final")
+				if (t.text == "private") {
+					pendingTypeVisibility = HxVisibility.Private;
+					continue;
+				}
+				if (t.text == "public") {
+					pendingTypeVisibility = HxVisibility.Public;
+					continue;
+				}
+				if (t.text == "extern" || t.text == "final")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final classMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final classVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
@@ -1311,7 +1324,7 @@ class ParserStage {
 			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
 				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
-					header.implementsPaths));
+					header.implementsPaths, classVisibility));
 		}
 
 		return out;
@@ -1492,6 +1505,7 @@ class ParserStage {
 		var braceDepth = 0;
 		var i = 0;
 		var pendingTypeMetadata = new Array<String>();
+		var pendingTypeVisibility = HxVisibility.Public;
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -1515,13 +1529,24 @@ class ParserStage {
 			if (braceDepth != 0)
 				continue;
 			if (t.text != "enum") {
-				if (t.text == "private" || t.text == "extern")
+				if (t.text == "private") {
+					pendingTypeVisibility = HxVisibility.Private;
+					continue;
+				}
+				if (t.text == "public") {
+					pendingTypeVisibility = HxVisibility.Public;
+					continue;
+				}
+				if (t.text == "extern")
 					continue;
 				pendingTypeMetadata = [];
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
 			}
 			final enumMetadata = pendingTypeMetadata.copy();
 			pendingTypeMetadata = [];
+			final enumVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			// enum [abstract] <Name> ...
 			var isEnumAbstract = false;
@@ -1610,7 +1635,7 @@ class ParserStage {
 			}
 
 			final classMetadata = isEnumAbstract ? enumMetadata.concat(["__hxhx_abstract"]) : enumMetadata;
-			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata, false, [], enumVisibility));
 		}
 
 		return out;
@@ -1651,6 +1676,7 @@ class ParserStage {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeVisibility = HxVisibility.Public;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -1667,8 +1693,21 @@ class ParserStage {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "typedef")
+			if (t.text == "private") {
+				pendingTypeVisibility = HxVisibility.Private;
 				continue;
+			}
+			if (t.text == "public") {
+				pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			if (t.text != "typedef") {
+				if (t.text != "extern")
+					pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			final typeVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			var nameTok = scanNextToken(source, i);
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -1689,7 +1728,7 @@ class ParserStage {
 			final scanned = scanTypedefShape(source, i);
 			i = scanned.nextPos;
 			final metadata = typeParams.params.length == 0 ? ["__hxhx_typedef"] : ["__hxhx_typedef", "__hxhx_type_params=" + typeParams.params.join(",")];
-			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata));
+			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata, false, [], typeVisibility));
 		}
 
 		return out;
@@ -1974,6 +2013,7 @@ class ParserStage {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeVisibility = HxVisibility.Public;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -1990,7 +2030,18 @@ class ParserStage {
 
 			if (braceDepth != 0)
 				continue;
+			if (t.text == "private") {
+				pendingTypeVisibility = HxVisibility.Private;
+				continue;
+			}
+			if (t.text == "public") {
+				pendingTypeVisibility = HxVisibility.Public;
+				continue;
+			}
+			if (t.text == "extern" || t.text == "final")
+				continue;
 			if (t.text == "enum") {
+				pendingTypeVisibility = HxVisibility.Public;
 				// Skip full top-level enum blocks so `enum abstract` isn't treated as a regular abstract.
 				var enumNameTok = scanNextToken(source, i);
 				while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
@@ -2026,8 +2077,12 @@ class ParserStage {
 				}
 				continue;
 			}
-			if (t.text != "abstract")
+			if (t.text != "abstract") {
+				pendingTypeVisibility = HxVisibility.Public;
 				continue;
+			}
+			final abstractVisibility = pendingTypeVisibility;
+			pendingTypeVisibility = HxVisibility.Public;
 
 			var nameTok = scanNextToken(source, i);
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -2071,7 +2126,7 @@ class ParserStage {
 					metadata.push("__hxhx_abstract_from=" + fromType);
 				for (toType in abstractConversions.toTypes)
 					metadata.push("__hxhx_abstract_to=" + toType);
-				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
+				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata, false, [], abstractVisibility));
 			}
 		}
 
@@ -3465,12 +3520,12 @@ class ParserStage {
 			throw "Native frontend: missing/invalid protocol header";
 		}
 		final header = lines[0];
-		if (header != "hxhx_frontend_v=1" && header != "hxhx_frontend_v=2") {
+		if (header != "hxhx_frontend_v=3") {
 			throw "Native frontend: missing/invalid protocol header";
 		}
 
 		var packagePath = "";
-		final imports = new Array<String>();
+		final directives = new Array<HxModuleDirective>();
 		var className = "Unknown";
 		var headerOnly = false;
 		var hasToplevelMain = false;
@@ -3511,12 +3566,8 @@ class ParserStage {
 				switch (key) {
 					case "package":
 						packagePath = payload;
-					case "imports":
-						if (payload.length > 0) {
-							for (p in payload.split("|"))
-								if (p.length > 0)
-									imports.push(p);
-						}
+					case "directive":
+						directives.push(HxModuleDirectiveProtocol.decode(payload));
 					case "class":
 						className = payload;
 					case "header_only":
@@ -3605,7 +3656,7 @@ class ParserStage {
 		}
 
 		final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
-		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
+		return new HxModuleDecl(packagePath, directives, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
 	static function findMatchingParen(source:String, open:Int):Int {
@@ -4515,6 +4566,10 @@ class ParserStage {
 		if (looksLikeSwitchCaseFragment(s))
 			return ENull;
 
+		final leadingCast = parseLeadingCastWithoutTypeHint(s);
+		if (leadingCast != null)
+			return leadingCast;
+
 		final regexLiteral = parseRegexLiteral(s);
 		if (regexLiteral != null)
 			return ENew("EReg", [EString(regexLiteral.pattern), EString(regexLiteral.flags)]);
@@ -4578,6 +4633,28 @@ class ParserStage {
 			EUnsupported(s);
 		}
 		#end
+	}
+
+	/**
+		Parses `cast value` before handing the remaining expression to `HxParser`.
+
+		The native OCaml bootstrap can currently join the `cast` keyword to the
+		first identifier while its lightweight expression lexer runs. For example,
+		`cast haxe.SysTools.winMetaCharacters` can otherwise become a field access
+		rooted at a made-up identifier named `casthaxe`. Removing the keyword first
+		preserves the same explicit `ECast` node on stage0 and native compiler paths.
+
+		Typed casts written as `cast(value, Type)` remain owned by `HxParser`.
+	**/
+	static function parseLeadingCastWithoutTypeHint(exprText:String):Null<HxExpr> {
+		if (!StringTools.startsWith(exprText, "cast") || exprText.length <= "cast".length)
+			return null;
+		final separator = exprText.charCodeAt("cast".length);
+		final isWhitespace = separator == " ".code || separator == "\t".code || separator == "\n".code || separator == "\r".code;
+		if (!isWhitespace)
+			return null;
+		final innerText = StringTools.trim(exprText.substr("cast".length));
+		return innerText.length == 0 ? null : ECast(parseReturnExprText(innerText), "");
 	}
 
 	static function looksLikeSwitchCaseFragment(exprText:String):Bool {
