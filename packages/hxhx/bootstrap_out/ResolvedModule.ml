@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable modulePath : string; mutable filePath : string; mutable parsed : ParsedModule.t }
+type t = { __hx_type : Obj.t; mutable modulePath : string; mutable filePath : string; mutable parsed : ParsedModule.t; mutable sourceOrigin : CompilerModuleOrigin.t }
 
-let create = fun modulePath2 filePath2 parsed2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (modulePath2 : string) in (
       (Obj.magic self : t).modulePath <- __assign_1;
@@ -16,18 +16,33 @@ let create = fun modulePath2 filePath2 parsed2 -> let self = ({ __hx_type = HxTy
       (Obj.magic self : t).filePath <- __assign_2;
       __assign_2
     ));
-    let __assign_3 = Obj.magic parsed2 in (
+    ignore (let __assign_3 = Obj.magic parsed2 in (
       (Obj.magic self : t).parsed <- __assign_3;
       __assign_3
+    ));
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerModuleOrigin.t) in (
+      ignore (if sourceOrigin2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (CompilerModuleOrigin.synthetic (modulePath2 : string)) in (
+        tempRight := __assign_4;
+        __assign_4
+      ) else let __assign_5 = Obj.magic sourceOrigin2 in (
+        tempRight := __assign_5;
+        __assign_5
+      ));
+      let __assign_6 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).sourceOrigin <- __assign_6;
+        __assign_6
+      )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getParsed = fun m -> (Obj.magic m : t).parsed
 
 let getFilePath = fun m -> (Obj.magic m : t).filePath
 
 let getModulePath = fun m -> (Obj.magic m : t).modulePath
+
+let getSourceOrigin = fun m -> (Obj.magic m : t).sourceOrigin

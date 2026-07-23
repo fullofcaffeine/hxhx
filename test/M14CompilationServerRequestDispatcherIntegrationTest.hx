@@ -28,11 +28,11 @@ private class RecordingCompilerSourceProvider {
 	}
 
 	public function provider():CompilerSourceProvider
-		return CompilerSourceProvider.fromCallbacks(resolveModuleFile, readSource, parseFilteredSource, readDirectory, isFile, prepareFinish, finish, report);
+		return CompilerSourceProvider.fromCallbacks(resolveModule, readSource, parseFilteredSource, readDirectory, isFile, prepareFinish, finish, report);
 
-	public function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
+	public function resolveModule(classPaths:Array<String>, modulePath:String):CompilerModuleResolution {
 		resolveCalls += 1;
-		return delegate.resolveModuleFile(classPaths, modulePath);
+		return delegate.resolveModule(classPaths, modulePath);
 	}
 
 	public function readSource(filePath:String):Null<String> {

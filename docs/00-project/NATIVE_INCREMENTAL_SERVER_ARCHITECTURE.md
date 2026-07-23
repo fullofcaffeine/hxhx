@@ -151,9 +151,12 @@ fails the request instead of becoming a stale hit.
 ### Typed-module and dependency observations
 
 When `--hxhx-server-report` is present, hxhx observes the complete typed program
-after typing and generation hooks have finished. It records two identities for
-each module:
+after typing and generation hooks have finished. It records four related
+identities for each module:
 
+- the **source revision** says whether that module's direct input changed;
+- the **source-origin revision** says which ordered class-path entry supplied
+  the module, using a logical Haxe module name instead of an absolute file path;
 - the **public-interface revision** describes declarations another module can
   use, such as public function signatures; and
 - the **implementation revision** additionally describes the complete source
@@ -179,14 +182,43 @@ from generated code or capitalization. The typed field-read node also carries
 that selected record, so fully qualified paths such as `pkg.Api.label` do not
 depend on retyping the intermediate `pkg.Api` child. Function bodies and
 structurally typed field initializers both contribute exact constant-read edges.
-Constant initializer text belongs to the implementation revision when the public field
-type is written and resolved. If that type is absent or still unknown, the
-public identity conservatively retains the initializer because changing it may
-also change the type callers see. It does not yet prove complete invalidation
-for generated declarations, macro observations, feature/DCE state, static
-initialization, target/profile changes, inherited or abstract-forwarded fields,
-enum-abstract values, unsupported initializer structures, or module-origin
-changes such as class-path shadowing. Imported static fields such as
+Constant initializer text belongs to the implementation revision when the
+public field type is written and resolved. If that type is absent or still
+unknown, the public identity conservatively retains the initializer because
+changing it may also change the type callers see.
+
+Module lookup now keeps its complete typed result until a resolved module is
+created. The resulting **source origin** is a small record such as
+`Api@classpath[1]`: it says that the logical module `Api` came from the second
+entry in the ordered class-path list. It never contains the developer's
+absolute workspace path. A secondary-type lookup such as `pack.Mod.SubType`
+normalizes to the source module `pack.Mod` when it selects `pack/Mod.hx`; if a
+new direct `pack/Mod/SubType.hx` wins later, the source origin changes.
+In-memory test helpers use an explicit `@synthetic` origin that cannot collide
+with a real class-path entry.
+
+This distinction catches a subtle case that source hashing alone cannot:
+
+```text
+-cp high -cp low
+
+high/Api.hx   // newly added, text is currently identical
+low/Api.hx
+```
+
+Even though both files contain equal bytes, the selected compiler input moved
+from `Api@classpath[1]` to `Api@classpath[0]`. Observation mode rechecks `Api`
+and reports that direct reason. It does not claim that callers consumed a new
+interface or body when those semantic revisions are still equal. If the newly
+selected file also changes a public signature or an inline/constant body, the
+existing dependency edges propagate that stronger change normally. Adding,
+renaming, removing, restoring, and replacing a secondary-type fallback are
+covered by focused source-cache and real wait-server sequences.
+
+The observer does not yet prove complete invalidation for generated
+declarations, macro observations, feature/DCE state, static initialization,
+target/profile changes, inherited or abstract-forwarded fields, enum-abstract
+values, or unsupported initializer structures. Imported static fields such as
 `import Api.label; ... label` also remain deferred until the typer carries an
 exact import binding. The enum names for those future edge families reserve
 typed vocabulary; they are not a claim that collection is already complete.
@@ -220,9 +252,10 @@ The observer compares the current successful snapshot with the previous
 successful snapshot for the exact compiler argument list. Public-interface
 changes propagate through all recorded callers. Body-only changes propagate
 only through edges that consume the implementation, such as inline calls.
-Reports are sorted and path-neutral. The short `display31-v1` fingerprint shown
-to a user is only a readable nondeterminism check; it is not collision-resistant
-and never authorizes reuse.
+Source-origin-only changes recheck the selected module without pretending equal
+interfaces or bodies changed. Reports are sorted and path-neutral. The short
+`display31-v1` fingerprint shown to a user is only a readable nondeterminism
+check; it is not collision-resistant and never authorizes reuse.
 
 Observation is opt-in so an ordinary server request does not pay this graph
 construction cost before typed-module reuse exists. Failed, cancelled, or

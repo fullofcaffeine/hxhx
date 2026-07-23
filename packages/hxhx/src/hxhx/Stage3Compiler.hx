@@ -664,7 +664,7 @@ class Stage3Compiler {
 				final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(oldDecl), HxModuleDecl.getImports(oldDecl), newCls, newClasses,
 					HxModuleDecl.getHeaderOnly(oldDecl), HxModuleDecl.getHasToplevelMain(oldDecl));
 				final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
-				out2.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(m), newParsed));
+				out2.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(m), newParsed, ResolvedModule.getSourceOrigin(m)));
 			}
 			resolvedForTyping = out2;
 		} else if (typeOnly && anyBuildMacros) {

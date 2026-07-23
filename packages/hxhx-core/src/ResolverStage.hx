@@ -298,7 +298,8 @@ class ResolverStage {
 				continue;
 			visited.set(modulePath, true);
 
-			final filePath = sources.resolveModuleFile(classPaths, modulePath);
+			final resolution = sources.resolveModule(classPaths, modulePath);
+			final filePath = resolution.filePath;
 			if (filePath == null)
 				throw "import_missing " + modulePath;
 
@@ -322,7 +323,7 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed));
+			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath)));
 		}
 		return out;
 	}
@@ -381,7 +382,8 @@ class ResolverStage {
 				continue;
 			visited.set(modulePath, true);
 
-			final filePath = sources.resolveModuleFile(classPaths, modulePath);
+			final resolution = sources.resolveModule(classPaths, modulePath);
+			final filePath = resolution.filePath;
 			if (filePath == null)
 				throw "import_missing " + modulePath;
 
@@ -419,7 +421,7 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed));
+			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath)));
 
 			final decl = parsed.getDecl();
 			final modulePkg = HxModuleDecl.getPackagePath(decl);

@@ -269,6 +269,7 @@
 		"CompilerRequestStaticState.ml",
 		"CompilerObservationFingerprint.ml",
 		"CompilerModuleResolution.ml",
+		"CompilerModuleOrigin.ml",
 		"CompilerDriver.ml",
 		"CompilerDependencySnapshot.ml",
 		"CompilerDependencyPhaseTools.ml",

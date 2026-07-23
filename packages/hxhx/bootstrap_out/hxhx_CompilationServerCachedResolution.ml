@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable key : string; mutable lookupIdentity : string; mutable observationRevision : string; mutable filePath : string; mutable retainedBytesEstimate : int }
+type t = { __hx_type : Obj.t; mutable key : string; mutable lookupIdentity : string; mutable observationRevision : string; mutable filePath : string; mutable selectedClassPathIndex : int; mutable usedSecondaryTypeFallback : bool; mutable retainedBytesEstimate : int }
 
-let create = fun key2 lookupIdentity2 observationRevision2 filePath2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = ""; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); retainedBytesEstimate = 0 } : t) in (
+let create = fun key2 lookupIdentity2 observationRevision2 filePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = ""; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (key2 : string) in (
       (Obj.magic self : t).key <- __assign_1;
@@ -24,12 +24,20 @@ let create = fun key2 lookupIdentity2 observationRevision2 filePath2 retainedByt
       (Obj.magic self : t).filePath <- __assign_4;
       __assign_4
     ));
-    let __place_receiver_5 = self in let __place_rhs_6 = retainedBytesEstimate2 in (
-      (__place_receiver_5 : t).retainedBytesEstimate <- __place_rhs_6;
+    ignore (let __place_receiver_5 = self in let __place_rhs_6 = selectedClassPathIndex2 in (
+      (__place_receiver_5 : t).selectedClassPathIndex <- __place_rhs_6;
       __place_rhs_6
+    ));
+    ignore (let __assign_7 = usedSecondaryTypeFallback2 in (
+      (Obj.magic self : t).usedSecondaryTypeFallback <- __assign_7;
+      __assign_7
+    ));
+    let __place_receiver_8 = self in let __place_rhs_9 = retainedBytesEstimate2 in (
+      (__place_receiver_8 : t).retainedBytesEstimate <- __place_rhs_9;
+      __place_rhs_9
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = ""; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); retainedBytesEstimate = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = ""; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t)

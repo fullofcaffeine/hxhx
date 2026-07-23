@@ -14,7 +14,7 @@
 	filesystem/parser implementation.
 **/
 class CompilerSourceProvider {
-	var resolveModuleFileCallback:(classPaths:Array<String>, modulePath:String) -> Null<String>;
+	var resolveModuleCallback:(classPaths:Array<String>, modulePath:String) -> CompilerModuleResolution;
 	var readSourceCallback:(filePath:String) -> Null<String>;
 	var parseFilteredSourceCallback:(filteredSource:String, filePath:String) -> ParsedModule;
 	var readDirectoryCallback:(path:String) -> Array<String>;
@@ -33,8 +33,7 @@ class CompilerSourceProvider {
 		prepareFinishCallback = filesystem.prepareFinish;
 		finishCallback = filesystem.finish;
 		reportCallback = filesystem.report;
-		resolveModuleFileCallback = (classPaths,
-			modulePath) -> CompilerSourceResolver.resolve(readDirectoryCallback, isFileCallback, classPaths, modulePath).filePath;
+		resolveModuleCallback = (classPaths, modulePath) -> CompilerSourceResolver.resolve(readDirectoryCallback, isFileCallback, classPaths, modulePath);
 	}
 
 	/**
@@ -43,15 +42,15 @@ class CompilerSourceProvider {
 		The callbacks are a typed adapter boundary, not a second compiler owner.
 		They may reuse values only after their identities and lifetimes are checked.
 	**/
-	public static function fromCallbacks(resolveModuleFile:(classPaths:Array<String>, modulePath:String) -> Null<String>,
+	public static function fromCallbacks(resolveModule:(classPaths:Array<String>, modulePath:String) -> CompilerModuleResolution,
 			readSource:(filePath:String) -> Null<String>, parseFilteredSource:(filteredSource:String, filePath:String) -> ParsedModule,
 			readDirectory:(path:String) -> Array<String>, isFile:(path:String) -> Bool, prepareFinish:(requestSucceeded:Bool) -> Void,
 			finish:(requestSucceeded:Bool) -> Void, report:() -> CompilerSourceProviderReport):CompilerSourceProvider {
-		if (resolveModuleFile == null || readSource == null || parseFilteredSource == null || readDirectory == null || isFile == null || finish == null
+		if (resolveModule == null || readSource == null || parseFilteredSource == null || readDirectory == null || isFile == null || finish == null
 			|| prepareFinish == null || report == null)
 			throw "compiler source provider callbacks must all be present";
 		final provider = new CompilerSourceProvider();
-		provider.resolveModuleFileCallback = resolveModuleFile;
+		provider.resolveModuleCallback = resolveModule;
 		provider.readSourceCallback = readSource;
 		provider.parseFilteredSourceCallback = parseFilteredSource;
 		provider.readDirectoryCallback = readDirectory;
@@ -62,9 +61,14 @@ class CompilerSourceProvider {
 		return provider;
 	}
 
-	/** Resolve a Haxe module against ordered class paths using exact filename case. **/
+	/** Resolve a Haxe module and preserve the exact path-selection facts. **/
+	public function resolveModule(classPaths:Array<String>, modulePath:String):CompilerModuleResolution {
+		return resolveModuleCallback(classPaths, modulePath);
+	}
+
+	/** Convenience view for existence checks that do not construct a resolved module. **/
 	public function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
-		return resolveModuleFileCallback(classPaths, modulePath);
+		return resolveModule(classPaths, modulePath).filePath;
 	}
 
 	/** Read one selected source file, or return null when it cannot be read. **/

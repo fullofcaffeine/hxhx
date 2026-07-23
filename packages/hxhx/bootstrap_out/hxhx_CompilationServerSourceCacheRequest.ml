@@ -245,9 +245,9 @@ let finish = fun self (requestSucceeded : bool) -> ignore (ignore (try (
 ) with
   | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48))
 
-let assertResolutionMatches = fun entry resolution -> ignore (if not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity) ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity)) || not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).observationRevision) ((Obj.magic resolution : CompilerModuleResolution.t).observationRevision)) || not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath) ((Obj.magic resolution : CompilerModuleResolution.t).filePath)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "hxhx: cached module lookup does not match current filesystem observations") ["Dynamic"; "String"]) else ())
+let assertResolutionMatches = fun entry resolution -> ignore (if not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity) ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity)) || not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).observationRevision) ((Obj.magic resolution : CompilerModuleResolution.t).observationRevision)) || not (HxString.equals ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath) ((Obj.magic resolution : CompilerModuleResolution.t).filePath)) || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).selectedClassPathIndex <> (Obj.magic resolution : CompilerModuleResolution.t).selectedClassPathIndex || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).usedSecondaryTypeFallback <> (Obj.magic resolution : CompilerModuleResolution.t).usedSecondaryTypeFallback then ignore (HxType.hx_throw_typed_rtti (Obj.repr "hxhx: cached module lookup does not match current filesystem observations") ["Dynamic"; "String"]) else ())
 
-let resolveModuleFile = fun self (classPaths : string HxArray.t) (modulePath : string) -> try let __fallback_result_23 = (
+let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : string) -> try let __fallback_result_23 = (
   ignore (ensureOpen (Obj.magic self) ());
   let resolution = Obj.magic (CompilerSourceResolver.resolve (fun a0 -> readDirectory self a0) (fun a0 -> isFile self a0) (Obj.magic classPaths) (modulePath : string)) in let key = (CompilerCacheIdentity.encode (Obj.magic (let __arr_19 = HxArray.create () in (
     ignore (HxArray.push __arr_19 "resolution-entry-v2");
@@ -257,14 +257,14 @@ let resolveModuleFile = fun self (classPaths : string HxArray.t) (modulePath : s
   ))) : string) in let staged = Obj.magic (HxMap.get_string ((Obj.magic self : t).stagedResolutions) key) in (
     ignore (if staged != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (assertResolutionMatches (Obj.magic staged) (Obj.magic resolution));
-      raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic staged : Hxhx_CompilationServerCachedResolution.t).filePath)))
+      raise (HxRuntime.Hx_return (Obj.repr resolution))
     )) else ());
     let cached = Obj.magic ((Obj.magic self : t).findResolutionCallback (key : string)) in (
       ignore (if cached != Obj.magic (HxRuntime.hx_null) then ignore ((
         ignore (assertResolutionMatches (Obj.magic cached) (Obj.magic resolution));
         ignore (HxMap.set_string ((Obj.magic self : t).stagedResolutions) key cached);
         ignore (CompilerSourceProviderReport.recordResolutionHit (Obj.magic ((Obj.magic self : t).providerReport)) ());
-        raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic cached : Hxhx_CompilationServerCachedResolution.t).filePath)))
+        raise (HxRuntime.Hx_return (Obj.repr resolution))
       )) else ());
       ignore (CompilerSourceProviderReport.recordResolutionMiss (Obj.magic ((Obj.magic self : t).providerReport)) ((Obj.magic self : t).resolutionMissReasonCallback ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity : string) (key : string) ((Obj.magic resolution : CompilerModuleResolution.t).filePath : string) : string));
       let tempNumber = ref (0 : int) in (
@@ -276,14 +276,16 @@ let resolveModuleFile = fun self (classPaths : string HxArray.t) (modulePath : s
           __assign_21
         ));
         let retainedBytesEstimate = HxInt.add (HxInt.add (HxInt.add (HxString.length ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity)) (HxString.length ((Obj.magic resolution : CompilerModuleResolution.t).observationRevision))) (!tempNumber)) 256 in (
-          ignore (HxMap.set_string ((Obj.magic self : t).stagedResolutions) key (Hxhx_CompilationServerCachedResolution.create (key : string) ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity : string) ((Obj.magic resolution : CompilerModuleResolution.t).observationRevision : string) ((Obj.magic resolution : CompilerModuleResolution.t).filePath : string) retainedBytesEstimate));
-          (Obj.magic resolution : CompilerModuleResolution.t).filePath
+          ignore (HxMap.set_string ((Obj.magic self : t).stagedResolutions) key (Hxhx_CompilationServerCachedResolution.create (key : string) ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity : string) ((Obj.magic resolution : CompilerModuleResolution.t).observationRevision : string) ((Obj.magic resolution : CompilerModuleResolution.t).filePath : string) ((Obj.magic resolution : CompilerModuleResolution.t).selectedClassPathIndex) ((Obj.magic resolution : CompilerModuleResolution.t).usedSecondaryTypeFallback) retainedBytesEstimate));
+          resolution
         )
       )
     )
   )
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
+
+let resolveModuleFile = fun self (classPaths : string HxArray.t) (modulePath : string) -> (Obj.magic (resolveModule (Obj.magic self) (Obj.magic classPaths) (modulePath : string)) : CompilerModuleResolution.t).filePath
 
 let normalizePath = fun path -> Haxe_io_Path.normalize (HxFileSystem.absolutePath path : string)
 
@@ -390,7 +392,7 @@ let parseFilteredSource = fun self (filteredSource : string) (filePath : string)
   | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
 
 let provider = fun self () -> (
-  ignore (if (Obj.magic self : t).providerView == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_18 = Obj.magic (CompilerSourceProvider.fromCallbacks (fun a0 a1 -> resolveModuleFile self a0 a1) (fun a0 -> readSource self a0) (fun a0 a1 -> parseFilteredSource self a0 a1) (fun a0 -> readDirectory self a0) (fun a0 -> isFile self a0) (fun a0 -> prepareFinish self a0) (fun a0 -> finish self a0) (fun () -> report self ())) in (
+  ignore (if (Obj.magic self : t).providerView == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_18 = Obj.magic (CompilerSourceProvider.fromCallbacks (fun a0 a1 -> resolveModule self a0 a1) (fun a0 -> readSource self a0) (fun a0 a1 -> parseFilteredSource self a0 a1) (fun a0 -> readDirectory self a0) (fun a0 -> isFile self a0) (fun a0 -> prepareFinish self a0) (fun a0 -> finish self a0) (fun () -> report self ())) in (
     (Obj.magic self : t).providerView <- __assign_18;
     __assign_18
   )) else ());

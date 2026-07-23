@@ -4,9 +4,11 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable publicInterfaceChanges : string HxArray.t; mutable implementationChanges : string HxArray.t; mutable invalidations : CompilerDependencyInvalidation.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable sourceOriginChanges : string HxArray.t; mutable publicInterfaceChanges : string HxArray.t; mutable implementationChanges : string HxArray.t; mutable invalidations : CompilerDependencyInvalidation.t HxArray.t }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyComparison"; publicInterfaceChanges = Obj.magic (HxRuntime.hx_null); implementationChanges = Obj.magic (HxRuntime.hx_null); invalidations = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyComparison"; sourceOriginChanges = Obj.magic (HxRuntime.hx_null); publicInterfaceChanges = Obj.magic (HxRuntime.hx_null); implementationChanges = Obj.magic (HxRuntime.hx_null); invalidations = Obj.magic (HxRuntime.hx_null) } : t)
+
+let getSourceOriginChanges = fun self () -> HxArray.copy ((Obj.magic self : t).sourceOriginChanges)
 
 let getPublicInterfaceChanges = fun self () -> HxArray.copy ((Obj.magic self : t).publicInterfaceChanges)
 
@@ -14,51 +16,51 @@ let getImplementationChanges = fun self () -> HxArray.copy ((Obj.magic self : t)
 
 let getInvalidations = fun self () -> HxArray.copy ((Obj.magic self : t).invalidations)
 
-let isAffected = fun self (modulePath : string) -> try let __fallback_result_10 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).invalidations) in (
+let isAffected = fun self (modulePath : string) -> try let __fallback_result_11 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).invalidations) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let invalidation = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
-      ignore (_g := __new_8);
-      __new_8
+    ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+      ignore (_g := __new_9);
+      __new_9
     ));
     if HxString.equals ((Obj.magic invalidation : CompilerDependencyInvalidation.t).modulePath) modulePath then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_11 with
+  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let reasonFor = fun self (modulePath : string) -> try let __fallback_result_14 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).invalidations) in (
+let reasonFor = fun self (modulePath : string) -> try let __fallback_result_15 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).invalidations) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let invalidation = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-      ignore (_g := __new_12);
-      __new_12
+    ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+      ignore (_g := __new_13);
+      __new_13
     ));
     if HxString.equals ((Obj.magic invalidation : CompilerDependencyInvalidation.t).modulePath) modulePath then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic invalidation))) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_14 with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_18 = -1 in (
-    tempResult := __assign_18;
-    __assign_18
-  ) else if left > right then let __assign_19 = 1 in (
+  ignore (if left < right then let __assign_19 = -1 in (
     tempResult := __assign_19;
     __assign_19
-  ) else let __assign_20 = 0 in (
+  ) else if left > right then let __assign_20 = 1 in (
     tempResult := __assign_20;
     __assign_20
+  ) else let __assign_21 = 0 in (
+    tempResult := __assign_21;
+    __assign_21
   ));
   !tempResult
 )
 
 let sortedCopy = fun values -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
-    tempArray := __assign_15;
-    __assign_15
-  ) else let __assign_17 = Obj.magic (HxArray.copy values) in (
-    tempArray := __assign_17;
-    __assign_17
+  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in (
+    tempArray := __assign_16;
+    __assign_16
+  ) else let __assign_18 = Obj.magic (HxArray.copy values) in (
+    tempArray := __assign_18;
+    __assign_18
   ));
   ignore (HxArray.sort (!tempArray) compareText);
   !tempArray
@@ -66,27 +68,31 @@ let sortedCopy = fun values -> let tempArray = ref (Obj.magic (HxRuntime.hx_null
 
 let compareInvalidations = fun left right -> compareText ((Obj.magic left : CompilerDependencyInvalidation.t).modulePath : string) ((Obj.magic right : CompilerDependencyInvalidation.t).modulePath : string)
 
-let create = fun publicInterfaceChanges2 implementationChanges2 invalidations2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyComparison"; publicInterfaceChanges = Obj.magic (HxRuntime.hx_null); implementationChanges = Obj.magic (HxRuntime.hx_null); invalidations = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun sourceOriginChanges2 publicInterfaceChanges2 implementationChanges2 invalidations2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyComparison"; sourceOriginChanges = Obj.magic (HxRuntime.hx_null); publicInterfaceChanges = Obj.magic (HxRuntime.hx_null); implementationChanges = Obj.magic (HxRuntime.hx_null); invalidations = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = Obj.magic (sortedCopy (Obj.magic publicInterfaceChanges2)) in (
-      (Obj.magic self : t).publicInterfaceChanges <- __assign_1;
+    ignore (let __assign_1 = Obj.magic (sortedCopy (Obj.magic sourceOriginChanges2)) in (
+      (Obj.magic self : t).sourceOriginChanges <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = Obj.magic (sortedCopy (Obj.magic implementationChanges2)) in (
-      (Obj.magic self : t).implementationChanges <- __assign_2;
+    ignore (let __assign_2 = Obj.magic (sortedCopy (Obj.magic publicInterfaceChanges2)) in (
+      (Obj.magic self : t).publicInterfaceChanges <- __assign_2;
       __assign_2
     ));
+    ignore (let __assign_3 = Obj.magic (sortedCopy (Obj.magic implementationChanges2)) in (
+      (Obj.magic self : t).implementationChanges <- __assign_3;
+      __assign_3
+    ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerDependencyInvalidation.t HxArray.t) in (
-      ignore (if invalidations2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else let __assign_5 = Obj.magic (HxArray.copy invalidations2) in (
-        tempRight := __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).invalidations <- __assign_6;
+      ignore (if invalidations2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
+        tempRight := __assign_4;
+        __assign_4
+      ) else let __assign_6 = Obj.magic (HxArray.copy invalidations2) in (
+        tempRight := __assign_6;
         __assign_6
+      ));
+      ignore (let __assign_7 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).invalidations <- __assign_7;
+        __assign_7
       ));
       HxArray.sort ((Obj.magic self : t).invalidations) compareInvalidations
     )

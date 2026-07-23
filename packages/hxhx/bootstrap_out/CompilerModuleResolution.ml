@@ -33,3 +33,8 @@ let create = fun lookupIdentity2 observationRevision2 filePath2 selectedClassPat
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleResolution"; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false } : t)
+
+let toOrigin = fun self (requestedModulePath : string) -> (
+  ignore (if (Obj.magic self : t).filePath == Obj.magic (HxRuntime.hx_null) || (Obj.magic self : t).selectedClassPathIndex < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing module resolution has no source origin") ["Dynamic"; "String"]) else ());
+  CompilerModuleOrigin.create (requestedModulePath : string) ((Obj.magic self : t).selectedClassPathIndex) ((Obj.magic self : t).usedSecondaryTypeFallback) (Obj.magic (HxRuntime.hx_null))
+)

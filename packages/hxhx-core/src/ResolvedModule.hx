@@ -11,6 +11,8 @@
 	- `modulePath`: logical Haxe module path (e.g. `demo.Util`).
 	- `filePath`: the resolved `.hx` file path on disk (relative or absolute).
 	- `parsed`: the `ParsedModule` produced by `ParserStage`.
+	- `sourceOrigin`: the logical source module and class-path slot that won,
+	  without retaining an absolute path in dependency/cache identity.
 
 	How:
 	- `ResolverStage` is responsible for constructing these by searching `-cp`
@@ -20,11 +22,13 @@ class ResolvedModule {
 	public final modulePath:String;
 	public final filePath:String;
 	public final parsed:ParsedModule;
+	public final sourceOrigin:CompilerModuleOrigin;
 
-	public function new(modulePath:String, filePath:String, parsed:ParsedModule) {
+	public function new(modulePath:String, filePath:String, parsed:ParsedModule, ?sourceOrigin:CompilerModuleOrigin) {
 		this.modulePath = modulePath;
 		this.filePath = filePath;
 		this.parsed = parsed;
+		this.sourceOrigin = sourceOrigin == null ? CompilerModuleOrigin.synthetic(modulePath) : sourceOrigin;
 	}
 
 	/**
@@ -54,5 +58,10 @@ class ResolvedModule {
 	**/
 	public static function getModulePath(m:ResolvedModule):String {
 		return m.modulePath;
+	}
+
+	/** Path-safe class-path origin selected before parsing this module. **/
+	public static function getSourceOrigin(m:ResolvedModule):CompilerModuleOrigin {
+		return m.sourceOrigin;
 	}
 }

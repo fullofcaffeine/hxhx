@@ -127,7 +127,7 @@ class ExprMacroExpander {
 			final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), newCls, newClasses,
 				HxModuleDecl.getHeaderOnly(decl), HxModuleDecl.getHasToplevelMain(decl));
 			final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
-			final updated = new ResolvedModule(ResolvedModule.getModulePath(m), ResolvedModule.getFilePath(m), newParsed);
+			final updated = new ResolvedModule(ResolvedModule.getModulePath(m), ResolvedModule.getFilePath(m), newParsed, ResolvedModule.getSourceOrigin(m));
 			out.push(updated);
 
 			if (trace) {

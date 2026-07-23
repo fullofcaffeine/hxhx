@@ -5,16 +5,22 @@
 	prove whether the future cache would have invalidated every affected module.
 **/
 class CompilerDependencyComparison {
+	final sourceOriginChanges:Array<String>;
 	final publicInterfaceChanges:Array<String>;
 	final implementationChanges:Array<String>;
 	final invalidations:Array<CompilerDependencyInvalidation>;
 
-	public function new(publicInterfaceChanges:Array<String>, implementationChanges:Array<String>, invalidations:Array<CompilerDependencyInvalidation>) {
+	public function new(sourceOriginChanges:Array<String>, publicInterfaceChanges:Array<String>, implementationChanges:Array<String>,
+			invalidations:Array<CompilerDependencyInvalidation>) {
+		this.sourceOriginChanges = sortedCopy(sourceOriginChanges);
 		this.publicInterfaceChanges = sortedCopy(publicInterfaceChanges);
 		this.implementationChanges = sortedCopy(implementationChanges);
 		this.invalidations = invalidations == null ? [] : invalidations.copy();
 		this.invalidations.sort(compareInvalidations);
 	}
+
+	public function getSourceOriginChanges():Array<String>
+		return sourceOriginChanges.copy();
 
 	public function getPublicInterfaceChanges():Array<String>
 		return publicInterfaceChanges.copy();

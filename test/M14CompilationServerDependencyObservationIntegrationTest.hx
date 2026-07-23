@@ -72,6 +72,17 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		return value;
 	}
 
+	static function reportValue(result:String, key:String):String {
+		final marker = key + "=";
+		final start = result.indexOf(marker);
+		assertTrue(start >= 0, "server report should contain " + key);
+		final valueStart = start + marker.length;
+		var end = result.indexOf("\n", valueStart);
+		if (end < 0)
+			end = result.length;
+		return StringTools.trim(result.substring(valueStart, end));
+	}
+
 	static function apiSource(returnType:String, bodyValue:String):String {
 		return [
 			"class Api {",
@@ -160,6 +171,110 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		controlProbe.finish(false);
 	}
 
+	/** Prove that the real wait-server path retains class-path origin without reporting host paths. **/
+	static function verifySourceOriginShadowing(root:String):Void {
+		final shadowRoot = haxe.io.Path.join([root, "origin-shadowing"]);
+		final high = haxe.io.Path.join([shadowRoot, "high"]);
+		final low = haxe.io.Path.join([shadowRoot, "low"]);
+		ensureDirectory(high);
+		ensureDirectory(low);
+		final lowApi = haxe.io.Path.join([low, "Api.hx"]);
+		final highApi = haxe.io.Path.join([high, "Api.hx"]);
+		File.saveContent(lowApi, apiSource("Int", "42"));
+		File.saveContent(haxe.io.Path.join([low, "Main.hx"]),
+			"import Api; class Main { public static function main():Void { var answer:Dynamic = Api.answer(); } }");
+		final args = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"-cp",
+			high,
+			"-cp",
+			low,
+			"-main",
+			"Main"
+		];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+		final lowerWire = wire(compile(sourceCache, dependencyCatalog, args));
+		final lowerSnapshot = reportValue(lowerWire, "hxhx_server_report.dependency_snapshot");
+
+		File.saveContent(highApi, apiSource("Int", "42"));
+		final equalBytesShadowWire = wire(compile(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(equalBytesShadowWire, "hxhx_server_report.dependency_source_origin_changes") == 1,
+			"an equal-byte higher-priority provider should still change Api's source origin");
+		assertTrue(reportInt(equalBytesShadowWire, "hxhx_server_report.dependency_public_changes") == 0
+			&& reportInt(equalBytesShadowWire, "hxhx_server_report.dependency_implementation_changes") == 0,
+			"equal bytes from a different origin should not pretend the Haxe interface or implementation changed");
+		assertTrue(reportInt(equalBytesShadowWire, "hxhx_server_report.dependency_predicted_invalidations") == 1
+			&& equalBytesShadowWire.indexOf("source-origin-changed:Api:Api@classpath[1]->Api@classpath[0]") >= 0,
+			"origin-only replacement should recheck Api and explain the path-safe class-path change");
+		assertTrue(equalBytesShadowWire.indexOf(shadowRoot) < 0, "ordinary dependency reports must not include the temporary workspace path");
+
+		File.saveContent(highApi, apiSource("String", '"higher"'));
+		final changedShadowWire = wire(compile(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(changedShadowWire, "hxhx_server_report.dependency_public_changes") == 1
+			&& changedShadowWire.indexOf(".module=Main") >= 0,
+			"a public change in the selected provider should continue through Main's real dependency edge");
+
+		FileSystem.rename(highApi, haxe.io.Path.join([high, "MovedApi.hx"]));
+		final restoredWire = wire(compile(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(restoredWire, "hxhx_server_report.dependency_source_origin_changes") == 1,
+			"renaming the higher-priority source away should restore the lower provider");
+		assertTrue(reportValue(restoredWire, "hxhx_server_report.dependency_snapshot") == lowerSnapshot,
+			"returning to the original source and origin should reproduce the original snapshot fingerprint");
+	}
+
+	/** Prove that a new direct module file replaces secondary-type fallback safely. **/
+	static function verifySecondaryTypeReplacement(root:String):Void {
+		final sourceRoot = haxe.io.Path.join([root, "origin-secondary-type"]);
+		final packageRoot = haxe.io.Path.join([sourceRoot, "pack"]);
+		final directModuleRoot = haxe.io.Path.join([packageRoot, "Mod"]);
+		ensureDirectory(packageRoot);
+		File.saveContent(haxe.io.Path.join([packageRoot, "Mod.hx"]), [
+			"package pack;",
+			"class Mod {}",
+			"class SubType { public static function value():Int return 7; }"
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([sourceRoot, "Main.hx"]),
+			"import pack.Mod.SubType; class Main { public static function main():Void { var value:Dynamic = SubType.value(); } }");
+		final args = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"-cp",
+			sourceRoot,
+			"-main",
+			"Main"
+		];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+		final fallbackReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!fallbackReply.isError, "secondary-type fallback should compile before a direct file exists");
+		final fallbackWire = wire(fallbackReply);
+		final fallbackSnapshot = reportValue(fallbackWire, "hxhx_server_report.dependency_snapshot");
+
+		ensureDirectory(directModuleRoot);
+		final directPath = haxe.io.Path.join([directModuleRoot, "SubType.hx"]);
+		File.saveContent(directPath, 'package pack.Mod; class SubType { public static function value():String return "direct"; }');
+		final directReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!directReply.isError, "direct module should compile after replacing secondary-type fallback");
+		final directWire = wire(directReply);
+		assertTrue(reportInt(directWire, "hxhx_server_report.dependency_source_origin_changes") > 0,
+			"adding the direct module should report that module lookup selected a different source");
+		assertTrue(directWire.indexOf("source-origin-changed:") >= 0 && directWire.indexOf(".module=Main") >= 0,
+			"the direct-file replacement should name its direct origin cause and recheck the caller through a dependency edge");
+		assertTrue(directWire.indexOf(sourceRoot) < 0,
+			"the secondary-to-direct report should identify logical modules without exposing the temporary workspace path");
+
+		FileSystem.deleteFile(directPath);
+		final restoredReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!restoredReply.isError, "secondary-type fallback should compile after removing the direct module");
+		final restoredWire = wire(restoredReply);
+		assertTrue(reportValue(restoredWire, "hxhx_server_report.dependency_snapshot") == fallbackSnapshot,
+			"removing the direct file should restore the exact secondary-type snapshot");
+	}
+
 	static function main():Void {
 		final root = ".tmp/m14_compilation_server_dependency_observation";
 		deleteRecursive(root);
@@ -190,6 +305,8 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 
 		var failure:Null<String> = null;
 		try {
+			verifySourceOriginShadowing(root);
+			verifySecondaryTypeReplacement(root);
 			final withoutReportArgs = args.filter(argument -> argument != "--hxhx-server-report");
 			final withoutReport = wire(compile(sourceCache, dependencyCatalog, withoutReportArgs));
 			assertTrue(withoutReport.indexOf("hxhx_server_report.dependency_observation") == -1,

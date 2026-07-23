@@ -22,4 +22,11 @@ class CompilerModuleResolution {
 		this.selectedClassPathIndex = selectedClassPathIndex;
 		this.usedSecondaryTypeFallback = usedSecondaryTypeFallback;
 	}
+
+	/** Convert one successful lookup into the path-safe origin carried through typing. **/
+	public function toOrigin(requestedModulePath:String):CompilerModuleOrigin {
+		if (filePath == null || selectedClassPathIndex < 0)
+			throw "missing module resolution has no source origin";
+		return new CompilerModuleOrigin(requestedModulePath, selectedClassPathIndex, usedSecondaryTypeFallback);
+	}
 }

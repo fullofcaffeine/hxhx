@@ -99,8 +99,17 @@ class M14CompilationServerSourceCacheIntegrationTest {
 
 		final fallbackProvider = new CompilerSourceProvider();
 		final missingClassPath = haxe.io.Path.join([root, "generated-source-not-created-yet"]);
-		assertEquals(fallbackProvider.resolveModuleFile([missingClassPath, srcDir], "pack.Mod.SubType"), modulePath,
-			"a class path that does not exist yet should behave like an empty directory");
+		final fallbackResolution = fallbackProvider.resolveModule([missingClassPath, srcDir], "pack.Mod.SubType");
+		assertEquals(fallbackResolution.filePath, modulePath, "a class path that does not exist yet should behave like an empty directory");
+		assertTrue(fallbackResolution.selectedClassPathIndex == 1 && fallbackResolution.usedSecondaryTypeFallback,
+			"the authoritative lookup result should retain the winning class-path slot and secondary-type fallback");
+		final sameSlotFallbackOrigin = fallbackProvider.resolveModule([srcDir], "pack.Mod.SubType").toOrigin("pack.Mod.SubType");
+		assertTrue(sameSlotFallbackOrigin.sourceModulePath == "pack.Mod",
+			"a secondary-type lookup should identify the source module that owns the selected file");
+		assertTrue(sameSlotFallbackOrigin.getSourceIdentity() == CompilerModuleOrigin.direct("pack.Mod", 0).getSourceIdentity(),
+			"direct and secondary-type lookups should share an identity when they select the same source module and class-path slot");
+		assertTrue(CompilerModuleOrigin.synthetic("pack.Mod").getSourceIdentity() != CompilerModuleOrigin.direct("pack.Mod", 0).getSourceIdentity(),
+			"a test-only synthetic origin must not collide with a real class-path source");
 		assertTrue(fallbackProvider.resolveModuleFile([srcDir], "pack.mod.SubType") == null, "module lookup should preserve exact filename case");
 		fallbackProvider.finish(true);
 
@@ -120,8 +129,12 @@ class M14CompilationServerSourceCacheIntegrationTest {
 		final directPath = haxe.io.Path.join([directDir, "SubType.hx"]);
 		File.saveContent(directPath, "package pack.Mod; class SubType {}\n");
 		final directProvider = new CompilerSourceProvider();
-		assertEquals(directProvider.resolveModuleFile([srcDir], "pack.Mod.SubType"), directPath,
-			"direct module file should take precedence over secondary-type fallback");
+		final directResolution = directProvider.resolveModule([srcDir], "pack.Mod.SubType");
+		assertEquals(directResolution.filePath, directPath, "direct module file should take precedence over secondary-type fallback");
+		assertTrue(directResolution.selectedClassPathIndex == 0 && !directResolution.usedSecondaryTypeFallback,
+			"direct lookup should retain its own path-safe source-selection facts");
+		assertTrue(sameSlotFallbackOrigin.getSourceIdentity() != directResolution.toOrigin("pack.Mod.SubType").getSourceIdentity(),
+			"a direct module that replaces a secondary-type fallback should have a different source origin even in the same class-path slot");
 		directProvider.finish(true);
 	}
 

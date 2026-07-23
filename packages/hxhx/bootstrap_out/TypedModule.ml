@@ -4,9 +4,51 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyModuleEnv.t; mutable typedClasses : TypedClass.t HxArray.t; mutable revision : int; mutable backendDeclaration : HxModuleDecl.t }
+type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyModuleEnv.t; mutable typedClasses : TypedClass.t HxArray.t; mutable revision : int; mutable sourceOrigin : CompilerModuleOrigin.t; mutable backendDeclaration : HxModuleDecl.t }
 
-let create = fun parsed2 env2 typedClasses2 revision2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t) in (
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; sourceOrigin = Obj.magic (HxRuntime.hx_null); backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t)
+
+let getParsed = fun self () -> (Obj.magic self : t).parsed
+
+let getEnv = fun self () -> (Obj.magic self : t).env
+
+let getTypedClasses = fun self () -> HxArray.copy ((Obj.magic self : t).typedClasses)
+
+let getRevision = fun self () -> (Obj.magic self : t).revision
+
+let getSourceOrigin = fun self () -> (Obj.magic self : t).sourceOrigin
+
+let getBackendDeclaration = fun self () -> (Obj.magic self : t).backendDeclaration
+
+let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
+  ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
+  let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typedClasses) in while !_g < HxArray.length _g1 do ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
+      ignore (_g := __new_15);
+      __new_15
+    ));
+    let _g2 = ref 0 in let _g3 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g3 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+      ignore (let __old_16 = !_g2 in let __new_17 = HxInt.add __old_16 1 in (
+        ignore (_g2 := __new_17);
+        __new_17
+      ));
+      TypedFunction.assertParsedBodyCurrent (Obj.magic typedFunction) ()
+    )) done
+  )) done
+)))
+
+let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed2) ()) in let packagePath = (StringTools.trim (HxModuleDecl.getPackagePath (Obj.magic declaration) : string) : string) in let fileName = (Haxe_io_Path.withoutExtension (Haxe_io_Path.withoutDirectory (ParsedModule.getFilePath (Obj.magic parsed2) () : string) : string) : string) in let tempString = ref ("" : string) in (
+  ignore (if HxString.length packagePath = 0 then let __assign_18 = (fileName : string) in (
+    tempString := __assign_18;
+    __assign_18
+  ) else let __assign_19 = ((HxString.toStdString packagePath ^ ".") ^ HxString.toStdString fileName : string) in (
+    tempString := __assign_19;
+    __assign_19
+  ));
+  CompilerModuleOrigin.synthetic (!tempString : string)
+)
+
+let create = fun parsed2 env2 typedClasses2 revision2 sourceOrigin2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; sourceOrigin = Obj.magic (HxRuntime.hx_null); backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (let revision2 = if Obj.repr revision2 == HxRuntime.hx_null then 1 else revision2 in ignore ((
     ignore (let __assign_1 = Obj.magic parsed2 in (
       (Obj.magic self : t).parsed <- __assign_1;
@@ -40,10 +82,23 @@ let create = fun parsed2 env2 typedClasses2 revision2 -> let self = ({ __hx_type
           (__place_receiver_8 : t).revision <- __place_rhs_9;
           __place_rhs_9
         ));
-        ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
-        let __assign_10 = Obj.magic (TypedBodySource.moduleDeclaration (Obj.magic parsed2) (Obj.magic ((Obj.magic self : t).typedClasses))) in (
-          (Obj.magic self : t).backendDeclaration <- __assign_10;
-          __assign_10
+        let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : CompilerModuleOrigin.t) in (
+          ignore (if sourceOrigin2 == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (syntheticSourceOrigin (Obj.magic parsed2)) in (
+            tempRight1 := __assign_10;
+            __assign_10
+          ) else let __assign_11 = Obj.magic sourceOrigin2 in (
+            tempRight1 := __assign_11;
+            __assign_11
+          ));
+          ignore (let __assign_12 = Obj.magic (!tempRight1) in (
+            (Obj.magic self : t).sourceOrigin <- __assign_12;
+            __assign_12
+          ));
+          ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
+          let __assign_13 = Obj.magic (TypedBodySource.moduleDeclaration (Obj.magic parsed2) (Obj.magic ((Obj.magic self : t).typedClasses))) in (
+            (Obj.magic self : t).backendDeclaration <- __assign_13;
+            __assign_13
+          )
         )
       )
     )
@@ -51,33 +106,4 @@ let create = fun parsed2 env2 typedClasses2 revision2 -> let self = ({ __hx_type
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t)
-
-let getParsed = fun self () -> (Obj.magic self : t).parsed
-
-let getEnv = fun self () -> (Obj.magic self : t).env
-
-let getTypedClasses = fun self () -> HxArray.copy ((Obj.magic self : t).typedClasses)
-
-let getRevision = fun self () -> (Obj.magic self : t).revision
-
-let withTypedClasses = fun self (classes : TypedClass.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).parsed)) (Obj.magic ((Obj.magic self : t).env)) (Obj.magic classes) (HxInt.add ((Obj.magic self : t).revision) 1)
-
-let getBackendDeclaration = fun self () -> (Obj.magic self : t).backendDeclaration
-
-let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
-  ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
-  let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typedClasses) in while !_g < HxArray.length _g1 do ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-      ignore (_g := __new_12);
-      __new_12
-    ));
-    let _g2 = ref 0 in let _g3 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g3 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-      ignore (let __old_13 = !_g2 in let __new_14 = HxInt.add __old_13 1 in (
-        ignore (_g2 := __new_14);
-        __new_14
-      ));
-      TypedFunction.assertParsedBodyCurrent (Obj.magic typedFunction) ()
-    )) done
-  )) done
-)))
+let withTypedClasses = fun self (classes : TypedClass.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).parsed)) (Obj.magic ((Obj.magic self : t).env)) (Obj.magic classes) (HxInt.add ((Obj.magic self : t).revision) 1) (Obj.magic ((Obj.magic self : t).sourceOrigin))

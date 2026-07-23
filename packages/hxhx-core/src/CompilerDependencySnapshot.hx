@@ -38,11 +38,13 @@ class CompilerDependencySnapshot {
 
 	static function buildCanonicalIdentity(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>):String {
 		final values = new Array<Null<String>>();
-		values.push("compiler-dependency-snapshot-v2");
+		values.push("compiler-dependency-snapshot-v3");
 		values.push(Std.string(modules.length));
 		for (module in modules) {
 			values.push(module.modulePath);
 			values.push(module.sourceRevision);
+			values.push(module.sourceOriginRevision);
+			values.push(module.sourceOriginDescription);
 			values.push(module.publicInterfaceRevision);
 			values.push(module.implementationRevision);
 		}
@@ -68,6 +70,8 @@ class CompilerDependencySnapshot {
 				continue;
 			}
 			final equivalent = previous.sourceRevision == module.sourceRevision
+				&& previous.sourceOriginRevision == module.sourceOriginRevision
+				&& previous.sourceOriginDescription == module.sourceOriginDescription
 				&& previous.publicInterfaceRevision == module.publicInterfaceRevision
 				&& previous.implementationRevision == module.implementationRevision;
 			if (!equivalent)

@@ -19,10 +19,13 @@ class M14CompilerDependencyEditSequenceTest {
 			throw message;
 	}
 
-	static function snapshot(sources:Array<DependencyEditSource>, reverseModules:Bool = false):CompilerDependencySnapshot {
+	static function snapshot(sources:Array<DependencyEditSource>, reverseModules:Bool = false, ?originIndexByModule:StringMap<Int>):CompilerDependencySnapshot {
 		final resolved = [
-			for (source in sources)
-				new ResolvedModule(source.modulePath, source.filePath, ParserStage.parse(source.source, source.filePath))
+			for (source in sources) {
+				final selectedIndex = originIndexByModule == null ? null : originIndexByModule.get(source.modulePath);
+				new ResolvedModule(source.modulePath, source.filePath, ParserStage.parse(source.source, source.filePath),
+					CompilerModuleOrigin.direct(source.modulePath, selectedIndex == null ? 0 : selectedIndex));
+			}
 		];
 		final index = TyperIndex.build(resolved);
 		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
@@ -168,6 +171,22 @@ class M14CompilerDependencyEditSequenceTest {
 		final bodyB = snapshot(sharedSources(sharedBodyB));
 		final bodyComparison = CompilerDependencyInvalidator.compare(publicA, bodyB);
 		assertTrue(affected(bodyComparison) == "Shared", "an ordinary body-only edit should not invalidate signature-only callers");
+
+		final movedOriginIndexes = new StringMap<Int>();
+		movedOriginIndexes.set("Shared", 1);
+		final sameBytesDifferentOrigin = snapshot(sharedSources(sharedA), false, movedOriginIndexes);
+		final originComparison = CompilerDependencyInvalidator.compare(publicA, sameBytesDifferentOrigin);
+		assertTrue(originComparison.getSourceOriginChanges().join(",") == "Shared",
+			"the observer should distinguish equal source bytes selected from a different class-path slot");
+		assertTrue(affected(originComparison) == "Shared",
+			"an origin-only change should recheck the selected module without pretending its callers consumed different semantics");
+		final originReason = originComparison.reasonFor("Shared");
+		assertTrue(originReason != null
+			&& originReason.describe().indexOf("source-origin-changed:Shared:Shared@classpath[0]->Shared@classpath[1]") >= 0,
+			"the direct reason should explain the logical origin change without an absolute filesystem path");
+		final originalOriginAgain = snapshot(sharedSources(sharedA));
+		assertTrue(publicA.getCanonicalIdentity() == originalOriginAgain.getCanonicalIdentity(),
+			"returning to the original source origin should reproduce the original dependency snapshot");
 
 		final inlineA = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 1; }"));
 		final inlineB = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 2; }"));

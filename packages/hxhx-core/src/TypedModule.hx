@@ -1,8 +1,9 @@
 /**
 	One immutable typed module revision.
 
-	Parsed declarations remain available for imports, metadata, diagnostics, and
-	source provenance. Function-body semantics live in `typedClasses`; backends
+	Parsed declarations remain available for imports, metadata, and diagnostics.
+	`sourceOrigin` carries path-safe compiler provenance separately. Function-body
+	semantics live in `typedClasses`; backends
 	must not re-read bodies through `getParsed()`. A module is sealed at
 	construction and rejects parsed-body mutation until it is retyped as a new
 	revision.
@@ -12,13 +13,15 @@ class TypedModule {
 	final env:TyModuleEnv;
 	final typedClasses:Array<TypedClass>;
 	final revision:Int;
+	final sourceOrigin:CompilerModuleOrigin;
 	final backendDeclaration:HxModuleDecl;
 
-	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1) {
+	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin) {
 		this.parsed = parsed;
 		this.env = env;
 		this.typedClasses = (typedClasses == null ? TypedBodyBuilder.buildFallbackModule(parsed, env) : typedClasses).copy();
 		this.revision = revision <= 0 ? 1 : revision;
+		this.sourceOrigin = sourceOrigin == null ? syntheticSourceOrigin(parsed) : sourceOrigin;
 		TypedBodyInvariant.assertClasses(this.typedClasses);
 		this.backendDeclaration = TypedBodySource.moduleDeclaration(parsed, this.typedClasses);
 	}
@@ -39,9 +42,13 @@ class TypedModule {
 		return revision;
 	}
 
+	/** Return the path-safe source origin selected before this module was typed. **/
+	public function getSourceOrigin():CompilerModuleOrigin
+		return sourceOrigin;
+
 	/** Return the next immutable semantic revision after a shared typed-body pass. **/
 	public function withTypedClasses(classes:Array<TypedClass>):TypedModule {
-		return new TypedModule(parsed, env, classes, revision + 1);
+		return new TypedModule(parsed, env, classes, revision + 1, sourceOrigin);
 	}
 
 	/**
@@ -64,5 +71,12 @@ class TypedModule {
 		for (typedClass in typedClasses)
 			for (typedFunction in typedClass.getFunctions())
 				typedFunction.assertParsedBodyCurrent();
+	}
+
+	static function syntheticSourceOrigin(parsed:ParsedModule):CompilerModuleOrigin {
+		final declaration = parsed.getDecl();
+		final packagePath = StringTools.trim(HxModuleDecl.getPackagePath(declaration));
+		final fileName = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(parsed.getFilePath()));
+		return CompilerModuleOrigin.synthetic(packagePath.length == 0 ? fileName : packagePath + "." + fileName);
 	}
 }

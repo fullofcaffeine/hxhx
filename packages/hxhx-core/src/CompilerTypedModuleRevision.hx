@@ -8,6 +8,10 @@ import TypedStmt.TypedStmtTag;
 	The source revision identifies the module whose input changed directly. This
 	keeps a caller whose typed output changed from pretending to be the cause of
 	its own invalidation. The invalidator must reach that caller through an edge.
+	The separate source-origin revision identifies the winning class-path slot and
+	logical source module without embedding an absolute path. Equal bytes selected
+	from a different source origin therefore recheck the provider without claiming
+	that its public interface or implementation changed.
 
 	The public-interface revision contains the resolved class and member signatures
 	that another module can consume. The implementation revision additionally
@@ -24,14 +28,19 @@ import TypedStmt.TypedStmtTag;
 class CompilerTypedModuleRevision {
 	public final modulePath:String;
 	public final sourceRevision:String;
+	public final sourceOriginRevision:String;
+	public final sourceOriginDescription:String;
 	public final publicInterfaceRevision:String;
 	public final implementationRevision:String;
 
-	public function new(modulePath:String, publicInterfaceRevision:String, implementationRevision:String, ?sourceRevision:String) {
+	public function new(modulePath:String, publicInterfaceRevision:String, implementationRevision:String, ?sourceRevision:String,
+			?sourceOriginRevision:String, ?sourceOriginDescription:String) {
 		this.modulePath = normalize(modulePath);
 		this.publicInterfaceRevision = publicInterfaceRevision == null ? "" : publicInterfaceRevision;
 		this.implementationRevision = implementationRevision == null ? "" : implementationRevision;
 		this.sourceRevision = sourceRevision == null ? this.implementationRevision : sourceRevision;
+		this.sourceOriginRevision = sourceOriginRevision == null ? CompilerCacheIdentity.encode(["synthetic-module-origin-v1", this.modulePath]) : sourceOriginRevision;
+		this.sourceOriginDescription = sourceOriginDescription == null ? this.modulePath + "@synthetic" : sourceOriginDescription;
 		if (this.modulePath.length == 0)
 			throw "typed module revision requires a module path";
 	}
@@ -41,7 +50,10 @@ class CompilerTypedModuleRevision {
 			throw "cannot observe a null typed module";
 		final parsed = module.getParsed();
 		final modulePath = semanticModulePath(module);
-		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v1", modulePath, parsed.getSource()]);
+		final sourceOrigin = module.getSourceOrigin();
+		final sourceOriginRevision = sourceOrigin.getSourceIdentity();
+		final sourceOriginDescription = sourceOrigin.describeSource();
+		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
 		publicFacts.push("typed-module-public-interface-v2");
 		publicFacts.push(modulePath);
@@ -72,7 +84,8 @@ class CompilerTypedModuleRevision {
 			}
 		}
 		final implementationRevision = CompilerCacheIdentity.encode(implementationFacts);
-		return new CompilerTypedModuleRevision(modulePath, publicRevision, implementationRevision, sourceRevision);
+		return new CompilerTypedModuleRevision(modulePath, publicRevision, implementationRevision, sourceRevision, sourceOriginRevision,
+			sourceOriginDescription);
 	}
 
 	public static function semanticModulePath(module:TypedModule):String {
@@ -100,22 +113,33 @@ class CompilerTypedModuleRevision {
 		if (normalizedPath.length == 0 || contributions == null || contributions.length == 0)
 			throw "typed module revision merge requires a module path and at least one contribution";
 		final sourceValues = new Array<String>();
+		final sourceOriginValues = new Array<String>();
+		final sourceOriginDescriptions = new Array<String>();
 		final publicValues = new Array<String>();
 		final implementationValues = new Array<String>();
 		for (contribution in contributions) {
 			if (contribution == null || contribution.modulePath != normalizedPath)
 				throw "typed module revision merge received a contribution for a different module";
 			sourceValues.push(contribution.sourceRevision);
+			sourceOriginValues.push(contribution.sourceOriginRevision);
+			sourceOriginDescriptions.push(contribution.sourceOriginDescription);
 			publicValues.push(contribution.publicInterfaceRevision);
 			implementationValues.push(contribution.implementationRevision);
 		}
 		final uniqueSourceValues = uniqueSorted(sourceValues);
 		if (uniqueSourceValues.length != 1)
 			throw 'typed module revision merge received conflicting source revisions for ${normalizedPath}';
+		final uniqueSourceOriginValues = uniqueSorted(sourceOriginValues);
+		if (uniqueSourceOriginValues.length != 1)
+			throw 'typed module revision merge received conflicting source origins for ${normalizedPath}';
+		final uniqueSourceOriginDescriptions = uniqueSorted(sourceOriginDescriptions);
+		if (uniqueSourceOriginDescriptions.length != 1)
+			throw 'typed module revision merge received conflicting source-origin descriptions for ${normalizedPath}';
 		final sourceRevision = uniqueSourceValues[0];
 		final publicRevision = CompilerCacheIdentity.encode(["typed-module-public-interface-set-v1", normalizedPath].concat(uniqueSorted(publicValues)));
 		final implementationRevision = CompilerCacheIdentity.encode(["typed-module-implementation-set-v1", normalizedPath].concat(uniqueSorted(implementationValues)));
-		return new CompilerTypedModuleRevision(normalizedPath, publicRevision, implementationRevision, sourceRevision);
+		return new CompilerTypedModuleRevision(normalizedPath, publicRevision, implementationRevision, sourceRevision, uniqueSourceOriginValues[0],
+			uniqueSourceOriginDescriptions[0]);
 	}
 
 	static function addPublicClassFacts(out:Array<Null<String>>, typedClass:TypedClass, index:Null<TyperIndex>, packagePath:String,

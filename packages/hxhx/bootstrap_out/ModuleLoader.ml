@@ -120,7 +120,7 @@ let drainNewModules__impl = fun (self : t) () -> try let __fallback_result_29 = 
 let loadModuleByPath__impl = fun (self : t) (modulePath : string) -> ignore (ignore (try let _gthis = Obj.magic self in (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (if HxMap.exists_string ((Obj.magic self : t).visited) modulePath then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let trace = HxString.equals (HxSys.getEnv "HXHX_TRACE_MODULE_LOADER") "1" in let filePath = ((Obj.magic self : t).resolveModuleFile (Obj.magic self) (modulePath : string) : string) in (
+  let trace = HxString.equals (HxSys.getEnv "HXHX_TRACE_MODULE_LOADER") "1" in let resolution = Obj.magic (CompilerSourceProvider.resolveModule (Obj.magic ((Obj.magic self : t).sourceProvider)) (Obj.magic ((Obj.magic self : t).classPaths)) (modulePath : string)) in let filePath = ((Obj.magic resolution : CompilerModuleResolution.t).filePath : string) in (
     ignore (if filePath == Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (if trace then ignore (print_endline ("loader_load miss module=" ^ HxString.toStdString modulePath)) else ());
       raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -195,7 +195,7 @@ let loadModuleByPath__impl = fun (self : t) (modulePath : string) -> ignore (ign
               ignore (if trace then ignore (print_endline ((("loader_load parse_failed module=" ^ HxString.toStdString modulePath) ^ " file=") ^ HxString.toStdString filePath)) else ());
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            let rm = Obj.magic (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed)) in (
+            let rm = Obj.magic (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string)))) in (
               ignore (HxArray.push ((Obj.magic self : t).pending) rm);
               ignore (if trace then ignore (print_endline ((("loader_load ok module=" ^ HxString.toStdString modulePath) ^ " file=") ^ HxString.toStdString filePath)) else ());
               ignore (if (Obj.magic self : t).index != Obj.magic (HxRuntime.hx_null) then ignore (TyperIndex.addResolvedModule (Obj.magic ((Obj.magic self : t).index)) (Obj.magic rm)) else ());

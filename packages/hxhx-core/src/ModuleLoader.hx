@@ -231,7 +231,8 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
-		final filePath = resolveModuleFile(modulePath);
+		final resolution = sourceProvider.resolveModule(classPaths, modulePath);
+		final filePath = resolution.filePath;
 		if (filePath == null) {
 			if (trace)
 				Sys.println("loader_load miss module=" + modulePath);
@@ -284,7 +285,7 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final rm = new ResolvedModule(modulePath, filePath, parsed);
+		final rm = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath));
 		pending.push(rm);
 		if (trace)
 			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);

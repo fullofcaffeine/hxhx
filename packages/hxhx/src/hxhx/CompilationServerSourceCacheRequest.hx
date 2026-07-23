@@ -58,26 +58,26 @@ class CompilationServerSourceCacheRequest {
 
 	public function provider():CompilerSourceProvider {
 		if (providerView == null)
-			providerView = CompilerSourceProvider.fromCallbacks(resolveModuleFile, readSource, parseFilteredSource, readDirectory, isFile, prepareFinish,
-				finish, report);
+			providerView = CompilerSourceProvider.fromCallbacks(resolveModule, readSource, parseFilteredSource, readDirectory, isFile, prepareFinish, finish,
+				report);
 		return providerView;
 	}
 
-	public function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
+	public function resolveModule(classPaths:Array<String>, modulePath:String):CompilerModuleResolution {
 		ensureOpen();
 		final resolution = CompilerSourceResolver.resolve(readDirectory, isFile, classPaths, modulePath);
 		final key = CompilerCacheIdentity.encode(["resolution-entry-v2", resolution.lookupIdentity, resolution.observationRevision]);
 		final staged = stagedResolutions.get(key);
 		if (staged != null) {
 			assertResolutionMatches(staged, resolution);
-			return staged.filePath;
+			return resolution;
 		}
 		final cached = findResolutionCallback(key);
 		if (cached != null) {
 			assertResolutionMatches(cached, resolution);
 			stagedResolutions.set(key, cached);
 			providerReport.recordResolutionHit();
-			return cached.filePath;
+			return resolution;
 		}
 
 		providerReport.recordResolutionMiss(resolutionMissReasonCallback(resolution.lookupIdentity, key, resolution.filePath));
@@ -86,9 +86,13 @@ class CompilationServerSourceCacheRequest {
 			+ (resolution.filePath == null ? 0 : resolution.filePath.length)
 			+ 256;
 		stagedResolutions.set(key,
-			new CompilationServerCachedResolution(key, resolution.lookupIdentity, resolution.observationRevision, resolution.filePath, retainedBytesEstimate));
-		return resolution.filePath;
+			new CompilationServerCachedResolution(key, resolution.lookupIdentity, resolution.observationRevision, resolution.filePath,
+				resolution.selectedClassPathIndex, resolution.usedSecondaryTypeFallback, retainedBytesEstimate));
+		return resolution;
 	}
+
+	public function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String>
+		return resolveModule(classPaths, modulePath).filePath;
 
 	public function readSource(filePath:String):Null<String> {
 		ensureOpen();
@@ -257,7 +261,9 @@ class CompilationServerSourceCacheRequest {
 	static function assertResolutionMatches(entry:CompilationServerCachedResolution, resolution:CompilerModuleResolution):Void {
 		if (entry.lookupIdentity != resolution.lookupIdentity
 			|| entry.observationRevision != resolution.observationRevision
-			|| entry.filePath != resolution.filePath)
+			|| entry.filePath != resolution.filePath
+			|| entry.selectedClassPathIndex != resolution.selectedClassPathIndex
+			|| entry.usedSecondaryTypeFallback != resolution.usedSecondaryTypeFallback)
 			throw "hxhx: cached module lookup does not match current filesystem observations";
 	}
 

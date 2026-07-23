@@ -14,8 +14,11 @@
 	future typed-module cache needs while observation mode continues to type all
 	modules normally. Configuration, macro, generated, and target-owned causes need
 	their own future direct-change revisions before this model can authorize reuse.
+	An origin-only change rechecks the selected module but does not propagate when
+	its public interface and implementation are byte-for-byte equivalent.
 **/
 class CompilerDependencyInvalidator {
+	static inline final SOURCE_ORIGIN_CHANGE:Int = 0;
 	static inline final IMPLEMENTATION_CHANGE:Int = 1;
 	static inline final PUBLIC_INTERFACE_CHANGE:Int = 2;
 
@@ -25,15 +28,21 @@ class CompilerDependencyInvalidator {
 		final previousModules = moduleMap(previous);
 		final currentModules = moduleMap(current);
 		final moduleNames = unionModuleNames(previousModules, currentModules);
+		final sourceOriginChanges = new Array<String>();
 		final publicChanges = new Array<String>();
 		final implementationChanges = new Array<String>();
 		final directSourceChanged = new haxe.ds.StringMap<Bool>();
+		final sourceOriginChanged = new haxe.ds.StringMap<Bool>();
 		final publicChanged = new haxe.ds.StringMap<Bool>();
 		final implementationChanged = new haxe.ds.StringMap<Bool>();
 
 		for (modulePath in moduleNames) {
 			final before = previousModules.get(modulePath);
 			final after = currentModules.get(modulePath);
+			if (before == null || after == null || before.sourceOriginRevision != after.sourceOriginRevision) {
+				sourceOriginChanges.push(modulePath);
+				sourceOriginChanged.set(modulePath, true);
+			}
 			if (before == null || after == null || before.publicInterfaceRevision != after.publicInterfaceRevision) {
 				publicChanges.push(modulePath);
 				publicChanged.set(modulePath, true);
@@ -53,7 +62,15 @@ class CompilerDependencyInvalidator {
 		for (modulePath in moduleNames) {
 			if (!directSourceChanged.exists(modulePath))
 				continue;
-			if (publicChanged.exists(modulePath)) {
+			if (sourceOriginChanged.exists(modulePath)) {
+				final before = previousModules.get(modulePath);
+				final after = currentModules.get(modulePath);
+				final strength = publicChanged.exists(modulePath) ? PUBLIC_INTERFACE_CHANGE : (implementationChanged.exists(modulePath) ? IMPLEMENTATION_CHANGE : SOURCE_ORIGIN_CHANGE);
+				final beforeOrigin = before == null ? "<missing>" : before.sourceOriginDescription;
+				final afterOrigin = after == null ? "<missing>" : after.sourceOriginDescription;
+				mark(modulePath, strength, ["source-origin-changed:" + modulePath + ":" + beforeOrigin + "->" + afterOrigin], strengthByModule,
+					reasonByModule, queue);
+			} else if (publicChanged.exists(modulePath)) {
 				mark(modulePath, PUBLIC_INTERFACE_CHANGE, ["public-interface-changed:" + modulePath], strengthByModule, reasonByModule, queue);
 			} else if (implementationChanged.exists(modulePath)) {
 				mark(modulePath, IMPLEMENTATION_CHANGE, ["implementation-changed:" + modulePath], strengthByModule, reasonByModule, queue);
@@ -67,6 +84,8 @@ class CompilerDependencyInvalidator {
 			final providerReason = reasonByModule.get(providerModule);
 			final edges = reverseEdges.get(providerModule);
 			if (providerStrength == null || providerReason == null || edges == null)
+				continue;
+			if (providerStrength == SOURCE_ORIGIN_CHANGE)
 				continue;
 			for (edge in edges) {
 				if (providerStrength == IMPLEMENTATION_CHANGE && !CompilerDependencyKindTools.consumesImplementation(edge.kind))
@@ -88,7 +107,7 @@ class CompilerDependencyInvalidator {
 		final invalidations = new Array<CompilerDependencyInvalidation>();
 		for (modulePath in strengthByModule.keys())
 			invalidations.push(new CompilerDependencyInvalidation(modulePath, reasonByModule.get(modulePath)));
-		return new CompilerDependencyComparison(publicChanges, implementationChanges, invalidations);
+		return new CompilerDependencyComparison(sourceOriginChanges, publicChanges, implementationChanges, invalidations);
 	}
 
 	static function mark(modulePath:String, strength:Int, reason:Array<String>, strengthByModule:haxe.ds.StringMap<Int>,
