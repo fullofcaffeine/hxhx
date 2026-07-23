@@ -147,6 +147,18 @@ class M14CompilerDependencyEditSequenceTest {
 	static function reasons(comparison:CompilerDependencyComparison):String
 		return [for (invalidation in comparison.getInvalidations()) invalidation.describe()].join("\n");
 
+	static function conditionalObservation(value:String):CompilerConditionalCompilationObservation {
+		final defines = new StringMap<String>();
+		defines.set("build_mode", value);
+		return HxConditionalCompilation.filterSourceObserved([
+			'#if build_mode == "enabled"',
+			"class ConditionalProvider {}",
+			"#else",
+			"class ConditionalProvider {}",
+			"#end"
+		].join("\n"), defines).getObservation();
+	}
+
 	static function main():Void {
 		final sharedA = "class Shared { public static function ordinary():Int return 1; }";
 		final sharedPublicB = 'class Shared { public static function ordinary():String return "one"; }';
@@ -187,6 +199,56 @@ class M14CompilerDependencyEditSequenceTest {
 		final originalOriginAgain = snapshot(sharedSources(sharedA));
 		assertTrue(publicA.getCanonicalIdentity() == originalOriginAgain.getCanonicalIdentity(),
 			"returning to the original source origin should reproduce the original dependency snapshot");
+
+		final conditionalAObservation = conditionalObservation("private-a");
+		final conditionalBObservation = conditionalObservation("private-b");
+		final conditionalARevision = new CompilerTypedModuleRevision("ConditionalProvider", "public-same", "implementation-same", "source-same", null, null,
+			conditionalAObservation);
+		final conditionalBRevision = new CompilerTypedModuleRevision("ConditionalProvider", "public-same", "implementation-same", "source-same", null, null,
+			conditionalBObservation);
+		final conditionalA = new CompilerDependencySnapshot([conditionalARevision], []);
+		final conditionalB = new CompilerDependencySnapshot([conditionalBRevision], []);
+		final addedWithoutConditions = CompilerDependencyInvalidator.compare(new CompilerDependencySnapshot([], []),
+			new CompilerDependencySnapshot([new CompilerTypedModuleRevision("Added", "public", "implementation", "source")], []));
+		assertTrue(addedWithoutConditions.getConditionalCompilationChanges().length == 0,
+			"adding a module with no #if expressions should not be mislabeled as a conditional-compilation change");
+		final conditionalComparison = CompilerDependencyInvalidator.compare(conditionalA, conditionalB);
+		assertTrue(conditionalComparison.getConditionalCompilationChanges().join(",") == "ConditionalProvider",
+			"changing an evaluated compile-time define should be reported even when the selected parsed and typed module is identical");
+		assertTrue(affected(conditionalComparison) == "ConditionalProvider",
+			"an input-only conditional change should recheck its provider without pretending unchanged callers consumed new semantics");
+		final conditionalReason = reasons(conditionalComparison);
+		assertTrue(conditionalReason.indexOf("conditional-compilation-changed:ConditionalProvider:build_mode") >= 0,
+			"the direct reason should name the evaluated define key");
+		assertTrue(conditionalReason.indexOf("private-a") < 0 && conditionalReason.indexOf("private-b") < 0,
+			"conditional invalidation reasons must not reveal raw define values");
+		assertTrue(conditionalA.getCanonicalIdentity().indexOf("private-a") < 0
+			&& conditionalB.getCanonicalIdentity().indexOf("private-b") < 0,
+			"the long-lived dependency identity must not retain raw define values outside reports either");
+
+		final conditionalConsumer = new CompilerTypedModuleRevision("ConditionalConsumer", "consumer-public", "consumer-implementation", "consumer-source");
+		final conditionalPublicB = new CompilerTypedModuleRevision("ConditionalProvider", "public-b", "implementation-b", "source-b", null, null,
+			conditionalBObservation);
+		final conditionalEdge = new CompilerDependencyEdge("ConditionalConsumer", "ConditionalProvider", CompilerDependencyPhase.SharedTyping,
+			CompilerDependencyKind.PublicInterface, "declaration:ConditionalProvider.answer");
+		final conditionalPublicBefore = new CompilerDependencySnapshot([conditionalARevision, conditionalConsumer], [conditionalEdge]);
+		final conditionalPublicAfter = new CompilerDependencySnapshot([conditionalPublicB, conditionalConsumer], [conditionalEdge]);
+		final conditionalPublicComparison = CompilerDependencyInvalidator.compare(conditionalPublicBefore, conditionalPublicAfter);
+		assertTrue(affected(conditionalPublicComparison) == "ConditionalConsumer,ConditionalProvider",
+			"a conditional choice that changes the public interface should continue through ordinary caller dependencies");
+		final conditionalConsumerReason = conditionalPublicComparison.reasonFor("ConditionalConsumer");
+		assertTrue(conditionalConsumerReason != null
+			&& conditionalConsumerReason.describe().indexOf("conditional-compilation-changed:ConditionalProvider:build_mode") >= 0
+			&& conditionalConsumerReason.describe().indexOf("public-interface:ConditionalConsumer->ConditionalProvider") >= 0,
+			"a propagated reason should retain both the compile-time input cause and the caller edge");
+		final conditionalAAgain = new CompilerDependencySnapshot([
+			new CompilerTypedModuleRevision("ConditionalProvider", "public-same", "implementation-same", "source-same", null, null,
+				conditionalObservation("private-a"))
+		], []);
+		assertTrue(conditionalA.getCanonicalIdentity() == conditionalAAgain.getCanonicalIdentity(),
+			"returning to exact conditional revision A should reproduce its dependency snapshot");
+		assertTrue(reasons(CompilerDependencyInvalidator.compare(conditionalB, conditionalAAgain)) == conditionalReason,
+			"conditional A-to-B-to-A comparisons should reproduce deterministic path-safe reasons");
 
 		final inlineA = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 1; }"));
 		final inlineB = snapshot(inlineSources("class Shared { public static inline function embedded():Int return 2; }"));

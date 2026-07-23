@@ -68,8 +68,37 @@ class HxConditionalCompilation {
 		  the same active surface.
 	**/
 	public static function filterSource(source:String, defines:haxe.ds.StringMap<String>):String {
+		return filterSourceInternal(source, defines, false).getFilteredSource();
+	}
+
+	/**
+		Filter source and retain only the compile-time definition facts actually read.
+
+		The returned observation is request-specific and intentionally separate from
+		cached parsed syntax. Raw definition values are reduced to one-way revisions
+		before they leave this evaluator.
+	**/
+	public static function filterSourceObserved(source:String, defines:haxe.ds.StringMap<String>):CompilerConditionalCompilationResult {
+		return filterSourceInternal(source, defines, true);
+	}
+
+	static function filterSourceInternal(source:String, defines:haxe.ds.StringMap<String>, observeInputs:Bool):CompilerConditionalCompilationResult {
+		final decisions = new Array<CompilerConditionalDecision>();
+		function evaluate(expression:String):Bool {
+			if (!observeInputs)
+				return evalExpr(expression, defines);
+			final accessByName = new haxe.ds.StringMap<CompilerConditionalDefineAccess>();
+			final result = evalExpr(expression, defines, accessByName);
+			final inputs = [
+				for (name in accessByName.keys())
+					CompilerConditionalDefineInput.fromDefines(name, accessByName.get(name), defines)
+			];
+			decisions.push(CompilerConditionalDecision.fromEvaluation(expression, result, inputs));
+			return result;
+		}
+
 		if (source == null || source.length == 0)
-			return source;
+			return new CompilerConditionalCompilationResult(source, new CompilerConditionalCompilationObservation(decisions));
 
 		final lines = splitLinesPreserveNewlines(source);
 		final out = new StringBuf();
@@ -105,7 +134,7 @@ class HxConditionalCompilation {
 				// Non-goals
 				// - Full nested inline preprocessing.
 				// - Correct handling inside strings/comments (best-effort heuristics only).
-				final inlineFiltered = filterInlineConditionals(line, defines);
+				final inlineFiltered = filterInlineConditionals(line, evaluate);
 				out.add(inlineFiltered == null ? line : inlineFiltered);
 				continue;
 			}
@@ -118,7 +147,7 @@ class HxConditionalCompilation {
 
 			switch (directive.kind) {
 				case "if":
-					final cond = outerActive && evalExpr(directive.expr, defines);
+					final cond = outerActive && evaluate(directive.expr);
 					stack.push({parentActive: outerActive, branchActive: cond, seenTrue: cond});
 				case "elseif":
 					if (stack.length == 0) {
@@ -130,7 +159,7 @@ class HxConditionalCompilation {
 						} else if (top.seenTrue) {
 							top.branchActive = false;
 						} else {
-							final cond = evalExpr(directive.expr, defines);
+							final cond = evaluate(directive.expr);
 							top.branchActive = cond;
 							if (cond)
 								top.seenTrue = true;
@@ -162,7 +191,7 @@ class HxConditionalCompilation {
 			}
 		}
 
-		return out.toString();
+		return new CompilerConditionalCompilationResult(out.toString(), new CompilerConditionalCompilationObservation(decisions));
 	}
 
 	/**
@@ -274,7 +303,7 @@ class HxConditionalCompilation {
 
 		Returns `null` if the line does not contain a supported inline construct.
 	**/
-	private static function filterInlineConditionals(line:String, defines:haxe.ds.StringMap<String>):Null<String> {
+	private static function filterInlineConditionals(line:String, evaluate:String->Bool):Null<String> {
 		if (line == null || line.length == 0)
 			return null;
 		// Fast-path: avoid scanning most lines.
@@ -348,7 +377,7 @@ class HxConditionalCompilation {
 		var keepStart = -1;
 		var keepEnd = -1;
 		for (branch in branches) {
-			if (branch.cond == null || evalExpr(branch.cond, defines)) {
+			if (branch.cond == null || evaluate(branch.cond)) {
 				keepStart = branch.start;
 				keepEnd = branch.end;
 				break;
@@ -601,8 +630,9 @@ class HxConditionalCompilation {
 
 	// --- Expression evaluator (small subset) ---
 
-	private static function evalExpr(expr:String, defines:haxe.ds.StringMap<String>):Bool {
-		final p = new ExprParser(expr == null ? "" : expr, defines);
+	private static function evalExpr(expr:String, defines:haxe.ds.StringMap<String>,
+			?observedAccessByName:haxe.ds.StringMap<CompilerConditionalDefineAccess>):Bool {
+		final p = new ExprParser(expr == null ? "" : expr, defines, observedAccessByName);
 		return p.parse();
 	}
 }
@@ -752,11 +782,13 @@ private class ExprLexer {
 private class ExprParser {
 	final lex:ExprLexer;
 	final defines:haxe.ds.StringMap<String>;
+	final observedAccessByName:Null<haxe.ds.StringMap<CompilerConditionalDefineAccess>>;
 	var cur:Token;
 
-	public function new(expr:String, defines:haxe.ds.StringMap<String>) {
+	public function new(expr:String, defines:haxe.ds.StringMap<String>, ?observedAccessByName:haxe.ds.StringMap<CompilerConditionalDefineAccess>) {
 		this.lex = new ExprLexer(expr);
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
+		this.observedAccessByName = observedAccessByName;
 		this.cur = lex.next();
 	}
 
@@ -838,6 +870,7 @@ private class ExprParser {
 			}
 			if (cur.match(TRParen))
 				bump();
+			observe(key, CompilerConditionalDefineAccess.Presence);
 			return key.length > 0 && defines.exists(key);
 		}
 
@@ -852,6 +885,7 @@ private class ExprParser {
 				final lit = parseStringLit();
 				(definedValue(name) != lit);
 			case _:
+				observe(name, CompilerConditionalDefineAccess.Presence);
 				defines.exists(name);
 		}
 	}
@@ -873,6 +907,15 @@ private class ExprParser {
 	function definedValue(name:String):String {
 		if (name == null || name.length == 0)
 			return "";
+		observe(name, CompilerConditionalDefineAccess.Value);
 		return defines.exists(name) ? defines.get(name) : "";
+	}
+
+	inline function observe(name:String, access:CompilerConditionalDefineAccess):Void {
+		if (observedAccessByName == null || name == null || name.length == 0)
+			return;
+		final previous = observedAccessByName.get(name);
+		if (previous == null || access == CompilerConditionalDefineAccess.Value)
+			observedAccessByName.set(name, access);
 	}
 }

@@ -350,24 +350,64 @@ let doEncode = fun self (m : int HxArray.t) (l : int) -> (
   )
 )
 
+let hex = fun self (a : int HxArray.t) -> (
+  ignore self;
+  let str = ref ("" : string) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length a do ignore (let num = HxArray.get (Obj.magic a) (!_g) in (
+      ignore (let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
+        ignore (_g := __new_82);
+        __new_82
+      ));
+      str := HxString.toStdString (!str) ^ HxString.toStdString (StringTools.hex num (Obj.repr 8))
+    )) done);
+    HxString.toLowerCase (!str) ()
+  )
+)
+
+let str2blks = fun s -> let s2 = Obj.magic (HxBytes.ofString s ()) in let nblk = HxInt.add (HxInt.shr (HxInt.add (HxBytes.length s2) 8) 6) 1 in let blks = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxInt.mul nblk 16 in (
+  ignore (while !_g < _g1 do ignore (let i = let __old_93 = !_g in let __new_94 = HxInt.add __old_93 1 in (
+    ignore (_g := __new_94);
+    __old_93
+  ) in let __place_array_95 = blks in let __place_index_96 = i in let __place_rhs_97 = 0 in (
+    ignore (HxArray.set (__place_array_95 : int HxArray.t) (__place_index_96 : int) __place_rhs_97);
+    __place_rhs_97
+  )) done);
+  let _g = ref 0 in let _g1 = HxBytes.length s2 in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_98 = !_g in let __new_99 = HxInt.add __old_98 1 in (
+      ignore (_g := __new_99);
+      __old_98
+    ) in let p = HxInt.shr i 2 in let __arr_100 = Obj.magic blks in let __idx_101 = p in HxArray.set __arr_100 __idx_101 (HxInt.logor (HxArray.get __arr_100 __idx_101) (HxInt.shl (HxBytes.get s2 i) (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3))))) done);
+    let i = HxBytes.length s2 in let p = HxInt.shr i 2 in (
+      ignore (let __arr_102 = Obj.magic blks in let __idx_103 = p in HxArray.set __arr_102 __idx_103 (HxInt.logor (HxArray.get __arr_102 __idx_103) (HxInt.shl 128 (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3)))));
+      ignore (let __place_array_104 = blks in let __place_index_105 = HxInt.sub (HxInt.mul nblk 16) 1 in let __place_rhs_106 = HxInt.mul (HxBytes.length s2) 8 in (
+        ignore (HxArray.set (__place_array_104 : int HxArray.t) (__place_index_105 : int) __place_rhs_106);
+        __place_rhs_106
+      ));
+      blks
+    )
+  )
+)
+
+let encode = fun s -> let sh = Obj.magic (create ()) in let h = Obj.magic (doEncode (Obj.magic sh) (Obj.magic (str2blks (s : string))) (HxInt.mul (HxString.length s) 8)) in hex (Obj.magic sh) (Obj.magic h)
+
 let bytes2blks = fun b -> let nblk = HxInt.add (HxInt.shr (HxInt.add (HxBytes.length b) 8) 6) 1 in let blks = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxInt.mul nblk 16 in (
-  ignore (while !_g < _g1 do ignore (let i = let __old_91 = !_g in let __new_92 = HxInt.add __old_91 1 in (
-    ignore (_g := __new_92);
-    __old_91
-  ) in let __place_array_93 = blks in let __place_index_94 = i in let __place_rhs_95 = 0 in (
-    ignore (HxArray.set (__place_array_93 : int HxArray.t) (__place_index_94 : int) __place_rhs_95);
-    __place_rhs_95
+  ignore (while !_g < _g1 do ignore (let i = let __old_107 = !_g in let __new_108 = HxInt.add __old_107 1 in (
+    ignore (_g := __new_108);
+    __old_107
+  ) in let __place_array_109 = blks in let __place_index_110 = i in let __place_rhs_111 = 0 in (
+    ignore (HxArray.set (__place_array_109 : int HxArray.t) (__place_index_110 : int) __place_rhs_111);
+    __place_rhs_111
   )) done);
   let _g = ref 0 in let _g1 = HxBytes.length b in (
-    ignore (while !_g < _g1 do ignore (let i = let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
-      ignore (_g := __new_97);
-      __old_96
-    ) in let p = HxInt.shr i 2 in let __arr_98 = Obj.magic blks in let __idx_99 = p in HxArray.set __arr_98 __idx_99 (HxInt.logor (HxArray.get __arr_98 __idx_99) (HxInt.shl (HxBytes.get b i) (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3))))) done);
+    ignore (while !_g < _g1 do ignore (let i = let __old_112 = !_g in let __new_113 = HxInt.add __old_112 1 in (
+      ignore (_g := __new_113);
+      __old_112
+    ) in let p = HxInt.shr i 2 in let __arr_114 = Obj.magic blks in let __idx_115 = p in HxArray.set __arr_114 __idx_115 (HxInt.logor (HxArray.get __arr_114 __idx_115) (HxInt.shl (HxBytes.get b i) (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3))))) done);
     let i = HxBytes.length b in let p = HxInt.shr i 2 in (
-      ignore (let __arr_100 = Obj.magic blks in let __idx_101 = p in HxArray.set __arr_100 __idx_101 (HxInt.logor (HxArray.get __arr_100 __idx_101) (HxInt.shl 128 (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3)))));
-      ignore (let __place_array_102 = blks in let __place_index_103 = HxInt.sub (HxInt.mul nblk 16) 1 in let __place_rhs_104 = HxInt.mul (HxBytes.length b) 8 in (
-        ignore (HxArray.set (__place_array_102 : int HxArray.t) (__place_index_103 : int) __place_rhs_104);
-        __place_rhs_104
+      ignore (let __arr_116 = Obj.magic blks in let __idx_117 = p in HxArray.set __arr_116 __idx_117 (HxInt.logor (HxArray.get __arr_116 __idx_117) (HxInt.shl 128 (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3)))));
+      ignore (let __place_array_118 = blks in let __place_index_119 = HxInt.sub (HxInt.mul nblk 16) 1 in let __place_rhs_120 = HxInt.mul (HxBytes.length b) 8 in (
+        ignore (HxArray.set (__place_array_118 : int HxArray.t) (__place_index_119 : int) __place_rhs_120);
+        __place_rhs_120
       ));
       blks
     )
@@ -375,25 +415,25 @@ let bytes2blks = fun b -> let nblk = HxInt.add (HxInt.shr (HxInt.add (HxBytes.le
 )
 
 let make = fun b -> let h = Obj.magic (doEncode (Obj.magic (create ())) (Obj.magic (bytes2blks (Obj.magic b))) (HxInt.mul (HxBytes.length b) 8)) in let out = Obj.magic (HxBytes.alloc 32) in let p = ref 0 in let _g = ref 0 in (
-  ignore (while !_g < 8 do ignore (let i = let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
-    ignore (_g := __new_82);
-    __old_81
+  ignore (while !_g < 8 do ignore (let i = let __old_83 = !_g in let __new_84 = HxInt.add __old_83 1 in (
+    ignore (_g := __new_84);
+    __old_83
   ) in (
-    ignore (HxBytes.set out (let __old_83 = !p in let __new_84 = HxInt.add __old_83 1 in (
-      ignore (p := __new_84);
-      __old_83
-    )) (HxInt.ushr (HxArray.get (Obj.magic h) i) 24));
     ignore (HxBytes.set out (let __old_85 = !p in let __new_86 = HxInt.add __old_85 1 in (
       ignore (p := __new_86);
       __old_85
-    )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 16) 255));
+    )) (HxInt.ushr (HxArray.get (Obj.magic h) i) 24));
     ignore (HxBytes.set out (let __old_87 = !p in let __new_88 = HxInt.add __old_87 1 in (
       ignore (p := __new_88);
       __old_87
-    )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 8) 255));
-    HxBytes.set out (let __old_89 = !p in let __new_90 = HxInt.add __old_89 1 in (
+    )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 16) 255));
+    ignore (HxBytes.set out (let __old_89 = !p in let __new_90 = HxInt.add __old_89 1 in (
       ignore (p := __new_90);
       __old_89
+    )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 8) 255));
+    HxBytes.set out (let __old_91 = !p in let __new_92 = HxInt.add __old_91 1 in (
+      ignore (p := __new_92);
+      __old_91
     )) (HxInt.logand (HxArray.get (Obj.magic h) i) 255)
   )) done);
   out

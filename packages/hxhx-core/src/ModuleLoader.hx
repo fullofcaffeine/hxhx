@@ -271,7 +271,8 @@ class ModuleLoader extends LazyTypeLoader {
 				m.set("eval", "1");
 			m;
 		})() : defines;
-		final filtered = HxConditionalCompilation.filterSource(source, effectiveDefines);
+		final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
+		final filtered = conditional.getFilteredSource();
 		final parsed = try {
 			sourceProvider.parseFilteredSource(filtered, filePath);
 		} catch (_:HxParseError) {
@@ -285,7 +286,7 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final rm = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath));
+		final rm = new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation());
 		pending.push(rm);
 		if (trace)
 			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);

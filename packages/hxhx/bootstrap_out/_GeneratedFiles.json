@@ -281,6 +281,11 @@
 		"CompilerDependencyEdge.ml",
 		"CompilerDependencyComparison.ml",
 		"CompilerDependencyCollector.ml",
+		"CompilerConditionalDefineInput.ml",
+		"CompilerConditionalDefineAccess.ml",
+		"CompilerConditionalDecision.ml",
+		"CompilerConditionalCompilationResult.ml",
+		"CompilerConditionalCompilationObservation.ml",
 		"CompilerCacheIdentity.ml",
 		"CSharpNoEmitDiagnostics.ml",
 		"Any.ml"

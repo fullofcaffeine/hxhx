@@ -6,6 +6,7 @@ class CompilerDependencyKindTools {
 			case PublicInterface: "public-interface";
 			case InlineImplementation: "inline-implementation";
 			case ConstantValue: "constant-value";
+			case ConditionalCompilation: "conditional-compilation";
 			case GeneratedDeclaration: "generated-declaration";
 			case StaticInitialization: "static-initialization";
 			case FeatureSelection: "feature-selection";
@@ -18,6 +19,7 @@ class CompilerDependencyKindTools {
 		return switch (kind) {
 			case InlineImplementation: true;
 			case ConstantValue: true;
+			case ConditionalCompilation: false;
 			case GeneratedDeclaration: true;
 			case StaticInitialization: true;
 			case FeatureSelection: true;

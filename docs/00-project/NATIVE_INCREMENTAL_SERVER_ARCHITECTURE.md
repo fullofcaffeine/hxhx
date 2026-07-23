@@ -143,6 +143,23 @@ The parser key includes:
 This means a `-D` change can reuse equal on-disk bytes while correctly missing
 the parsed-module cache when it changes the active `#if` branch.
 
+The parser key deliberately does not include every define. Instead, hxhx also
+records which defines each `#if` expression actually evaluated. A plain
+`#if enabled` depends only on whether `enabled` exists; `#if mode == "debug"`
+also depends on a SHA-256 digest of `mode`'s value. The digest lets later
+requests notice a change without retaining the original configuration text.
+Short-circuited operands and unrelated defines are not recorded. Raw define
+values are never stored in the dependency report or long-lived dependency
+snapshot. This lets an equal filtered source remain a parser hit without
+allowing a future typed-module cache to overlook a relevant build-configuration
+change.
+
+This is separate from **feature selection**. Conditional compilation chooses
+which source text exists through `#if` before parsing. Feature selection later
+decides whether declarations marked with `@:ifFeature` are reachable. The two
+mechanisms have different inputs and invalidation rules, so the dependency
+model gives them different names instead of treating both as a generic flag.
+
 The parser model contains arrays that Haxe types cannot make deeply read-only.
 hxhx therefore records a deterministic structural description after parsing,
 checks it again before publication, and checks it on every reuse. A changed tree
@@ -151,12 +168,15 @@ fails the request instead of becoming a stale hit.
 ### Typed-module and dependency observations
 
 When `--hxhx-server-report` is present, hxhx observes the complete typed program
-after typing and generation hooks have finished. It records four related
+after typing and generation hooks have finished. It records five related
 identities for each module:
 
 - the **source revision** says whether that module's direct input changed;
 - the **source-origin revision** says which ordered class-path entry supplied
   the module, using a logical Haxe module name instead of an absolute file path;
+- the **conditional-compilation observation** says which `#if` expressions ran,
+  which define keys they actually read, and which branches they selected,
+  without retaining raw define values;
 - the **public-interface revision** describes declarations another module can
   use, such as public function signatures; and
 - the **implementation revision** additionally describes the complete source
@@ -253,7 +273,11 @@ successful snapshot for the exact compiler argument list. Public-interface
 changes propagate through all recorded callers. Body-only changes propagate
 only through edges that consume the implementation, such as inline calls.
 Source-origin-only changes recheck the selected module without pretending equal
-interfaces or bodies changed. Reports are sorted and path-neutral. The short
+interfaces or bodies changed. A conditional-compilation-only change likewise
+rechecks the selected module; if the selected branch changes its public
+interface or implementation, the existing typed edges propagate that stronger
+change. Reports name changed define keys but never their raw values, and remain
+sorted and path-neutral. The short
 `display31-v1` fingerprint shown to a user is only a readable nondeterminism
 check; it is not collision-resistant and never authorizes reuse.
 
@@ -344,6 +368,11 @@ sequences. Together they cover:
 - ordinary body edits versus public-signature and inline-body edits;
 - shared providers with several callers and a two-hop inline consumer;
 - exact A to B to A snapshot and reason-path reproduction;
+- unrelated and short-circuited defines preserving parser and dependency
+  identities;
+- presence-only versus value-sensitive `#if` inputs;
+- condition changes that stay local when typed behavior is equal and propagate
+  through callers when the selected public interface changes;
 - predicted caller invalidation without skipping normal typing;
 - opt-in reporting, successful publication, failure discard, and reset.
 
@@ -387,7 +416,8 @@ set against clean recompilation across the full edit matrix. Only then may the
 project admit sealed typed-module reuse. A **sealed typed module** means a
 completed, validated type-checking result that later requests can read but not
 mutate. It needs deterministic public-API, implementation, body,
-configuration, macro, and dependency revisions before admission.
+configuration (including more than conditional compilation), macro, and
+dependency revisions before admission.
 
 Macros, compiler transforms, native plugins, target plans, display recovery,
 parallel requests, and persistent storage remain outside this first cache.

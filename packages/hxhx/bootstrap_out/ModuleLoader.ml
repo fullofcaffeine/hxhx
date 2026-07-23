@@ -156,7 +156,7 @@ let loadModuleByPath__impl = fun (self : t) (modulePath : string) -> ignore (ign
           tempStringMap := __assign_52;
           __assign_52
         ));
-        let filtered = (HxConditionalCompilation.filterSource (source : string) (Obj.magic (!tempStringMap)) : string) in let tempMaybeParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
+        let conditional = Obj.magic (HxConditionalCompilation.filterSourceObserved (source : string) (Obj.magic (!tempStringMap))) in let filtered = (CompilerConditionalCompilationResult.getFilteredSource (Obj.magic conditional) () : string) in let tempMaybeParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
           ignore (try let __assign_53 = Obj.magic (Obj.magic (CompilerSourceProvider.parseFilteredSource (Obj.magic ((Obj.magic self : t).sourceProvider)) (filtered : string) (filePath : string))) in (
             tempMaybeParsedModule := __assign_53;
             __assign_53
@@ -195,7 +195,7 @@ let loadModuleByPath__impl = fun (self : t) (modulePath : string) -> ignore (ign
               ignore (if trace then ignore (print_endline ((("loader_load parse_failed module=" ^ HxString.toStdString modulePath) ^ " file=") ^ HxString.toStdString filePath)) else ());
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            let rm = Obj.magic (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string)))) in (
+            let rm = Obj.magic (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string))) (Obj.magic (CompilerConditionalCompilationResult.getObservation (Obj.magic conditional) ()))) in (
               ignore (HxArray.push ((Obj.magic self : t).pending) rm);
               ignore (if trace then ignore (print_endline ((("loader_load ok module=" ^ HxString.toStdString modulePath) ^ " file=") ^ HxString.toStdString filePath)) else ());
               ignore (if (Obj.magic self : t).index != Obj.magic (HxRuntime.hx_null) then ignore (TyperIndex.addResolvedModule (Obj.magic ((Obj.magic self : t).index)) (Obj.magic rm)) else ());

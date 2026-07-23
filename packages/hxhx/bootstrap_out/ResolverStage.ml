@@ -306,7 +306,7 @@ let parseProjectRootsShallow = fun classPaths roots defines sourceProvider -> tr
                     tempMaybeStringMap1 := __assign_73;
                     __assign_73
                   ));
-                  let effectiveDefines = Obj.magic (!tempMaybeStringMap1) in let filteredSource = (HxConditionalCompilation.filterSource (source : string) (Obj.magic effectiveDefines) : string) in let tempParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
+                  let effectiveDefines = Obj.magic (!tempMaybeStringMap1) in let conditional = Obj.magic (HxConditionalCompilation.filterSourceObserved (source : string) (Obj.magic effectiveDefines)) in let filteredSource = (CompilerConditionalCompilationResult.getFilteredSource (Obj.magic conditional) () : string) in let tempParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
                     ignore (try let __assign_74 = Obj.magic (CompilerSourceProvider.parseFilteredSource (Obj.magic sources) (filteredSource : string) (filePath : string)) in (
                       tempParsedModule := __assign_74;
                       __assign_74
@@ -328,7 +328,7 @@ let parseProjectRootsShallow = fun classPaths roots defines sourceProvider -> tr
                         ignore e;
                         HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString e)) ["Dynamic"; "String"]
                       ) else raise (__exn_78));
-                    let parsed = Obj.magic (!tempParsedModule) in HxArray.push out (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string))))
+                    let parsed = Obj.magic (!tempParsedModule) in HxArray.push out (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string))) (Obj.magic (CompilerConditionalCompilationResult.getObservation (Obj.magic conditional) ())))
                   )
                 )
               )
@@ -426,7 +426,7 @@ let parseProjectRoots = fun classPaths roots defines sourceProvider -> let out =
                 tempMaybeStringMap1 := __assign_93;
                 __assign_93
               ));
-              let effectiveDefines = Obj.magic (!tempMaybeStringMap1) in let filteredSource = (HxConditionalCompilation.filterSource (source : string) (Obj.magic effectiveDefines) : string) in let tempParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
+              let effectiveDefines = Obj.magic (!tempMaybeStringMap1) in let conditional = Obj.magic (HxConditionalCompilation.filterSourceObserved (source : string) (Obj.magic effectiveDefines)) in let filteredSource = (CompilerConditionalCompilationResult.getFilteredSource (Obj.magic conditional) () : string) in let tempParsedModule = ref (Obj.magic (HxRuntime.hx_null) : ParsedModule.t) in (
                 ignore (try let __assign_94 = Obj.magic (CompilerSourceProvider.parseFilteredSource (Obj.magic sources) (filteredSource : string) (filePath : string)) in (
                   tempParsedModule := __assign_94;
                   __assign_94
@@ -449,7 +449,7 @@ let parseProjectRoots = fun classPaths roots defines sourceProvider -> let out =
                     HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString e)) ["Dynamic"; "String"]
                   ) else raise (__exn_98));
                 let parsed = Obj.magic (!tempParsedModule) in (
-                  ignore (HxArray.push out (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string)))));
+                  ignore (HxArray.push out (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed) (Obj.magic (CompilerModuleResolution.toOrigin (Obj.magic resolution) (modulePath : string))) (Obj.magic (CompilerConditionalCompilationResult.getObservation (Obj.magic conditional) ()))));
                   let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let modulePkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let deps = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in (
                     ignore (try while !_g < HxArray.length _g1 do try ignore (let rawImport = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                       ignore (let __old_99 = !_g in let __new_100 = HxInt.add __old_99 1 in (

@@ -275,6 +275,76 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"removing the direct file should restore the exact secondary-type snapshot");
 	}
 
+	/**
+		Prove that evaluated `#if` inputs are tracked without making all defines parser inputs.
+
+		The request always names the same hxml file, while the test edits that file's
+		defines. This models a long-lived editor/build-server invocation whose project
+		configuration changes between requests.
+	**/
+	static function verifyConditionalCompilation(root:String):Void {
+		final conditionalRoot = haxe.io.Path.join([root, "conditional-compilation"]);
+		ensureDirectory(conditionalRoot);
+		final absoluteConditionalRoot = FileSystem.absolutePath(conditionalRoot);
+		final apiPath = haxe.io.Path.join([conditionalRoot, "Api.hx"]);
+		final hxmlPath = haxe.io.Path.join([conditionalRoot, "build.hxml"]);
+		File.saveContent(apiPath, [
+			"class Api {",
+			"  #if enabled",
+			"  public static function answer():Int return 42;",
+			"  #else",
+			'  public static function answer():String return "fallback";',
+			"  #end",
+			"}"
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([conditionalRoot, "Main.hx"]),
+			"class Main { public static function main():Void { var answer:Dynamic = Api.answer(); } }");
+		final args = ["--hxhx-no-run", "--hxhx-no-emit", "--hxhx-server-report", hxmlPath];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+		function writeBuild(enabled:Bool, unrelatedValue:String):Void {
+			final lines = ["-cp " + absoluteConditionalRoot, "-main Main", "-D unrelated=" + unrelatedValue];
+			if (enabled)
+				lines.push("-D enabled=private-enabled-value");
+			File.saveContent(hxmlPath, lines.join("\n") + "\n");
+		}
+
+		writeBuild(true, "private-unrelated-a");
+		final firstReply = compile(sourceCache, dependencyCatalog, args);
+		final firstWire = wire(firstReply);
+		assertTrue(!firstReply.isError, "conditional-compilation baseline should compile: " + firstWire);
+		final firstSnapshot = reportValue(firstWire, "hxhx_server_report.dependency_snapshot");
+
+		writeBuild(true, "private-unrelated-b");
+		final unrelatedWire = wire(compile(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.parser_hits") > 0,
+			"changing a define that no conditional expression reads should keep matching parser results reusable");
+		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.dependency_conditional_compilation_changes") == 0
+			&& reportInt(unrelatedWire, "hxhx_server_report.dependency_predicted_invalidations") == 0,
+			"an unrelated define should not pretend that an evaluated compile-time choice changed");
+
+		writeBuild(false, "private-unrelated-b");
+		final changedWire = wire(compile(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(changedWire, "hxhx_server_report.dependency_conditional_compilation_changes") == 1,
+			"changing an evaluated define should identify one conditionally compiled module");
+		assertTrue(reportInt(changedWire, "hxhx_server_report.dependency_public_changes") == 1,
+			"selecting the other Api branch should report its changed public return type");
+		assertTrue(changedWire.indexOf("conditional-compilation-changed:Api:enabled") >= 0 && changedWire.indexOf(".module=Main") >= 0,
+			"the server should explain the define key and recheck the caller through Api's public dependency");
+		assertTrue(changedWire.indexOf("private-enabled-value") < 0
+			&& changedWire.indexOf("private-unrelated-a") < 0
+			&& changedWire.indexOf("private-unrelated-b") < 0,
+			"ordinary reports must never reveal raw define values");
+		assertTrue(changedWire.indexOf(conditionalRoot) < 0, "ordinary conditional-compilation reports must not expose the workspace path");
+
+		writeBuild(true, "private-unrelated-a");
+		final restoredReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!restoredReply.isError, "restored conditional-compilation baseline should compile");
+		final restoredWire = wire(restoredReply);
+		assertTrue(reportValue(restoredWire, "hxhx_server_report.dependency_snapshot") == firstSnapshot,
+			"returning to exact conditional revision A should reproduce the original typed-program observation");
+	}
+
 	static function main():Void {
 		final root = ".tmp/m14_compilation_server_dependency_observation";
 		deleteRecursive(root);
@@ -307,6 +377,7 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		try {
 			verifySourceOriginShadowing(root);
 			verifySecondaryTypeReplacement(root);
+			verifyConditionalCompilation(root);
 			final withoutReportArgs = args.filter(argument -> argument != "--hxhx-server-report");
 			final withoutReport = wire(compile(sourceCache, dependencyCatalog, withoutReportArgs));
 			assertTrue(withoutReport.indexOf("hxhx_server_report.dependency_observation") == -1,

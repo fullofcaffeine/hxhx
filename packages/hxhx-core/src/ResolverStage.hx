@@ -315,7 +315,8 @@ class ResolverStage {
 					m.set("eval", "1");
 				m;
 			})() : definesMap;
-			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
+			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
+			final filteredSource = conditional.getFilteredSource();
 			final parsed = try {
 				sources.parseFilteredSource(filteredSource, filePath);
 			} catch (e:HxParseError) {
@@ -323,7 +324,7 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath)));
+			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
 		}
 		return out;
 	}
@@ -412,7 +413,8 @@ class ResolverStage {
 					m.set("eval", "1");
 				m;
 			})() : definesMap;
-			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
+			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
+			final filteredSource = conditional.getFilteredSource();
 
 			final parsed = try {
 				sources.parseFilteredSource(filteredSource, filePath);
@@ -421,7 +423,7 @@ class ResolverStage {
 			} catch (e:String) {
 				throw "parse_failed " + filePath + ": " + e;
 			}
-			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath)));
+			out.push(new ResolvedModule(modulePath, filePath, parsed, resolution.toOrigin(modulePath), conditional.getObservation()));
 
 			final decl = parsed.getDecl();
 			final modulePkg = HxModuleDecl.getPackagePath(decl);

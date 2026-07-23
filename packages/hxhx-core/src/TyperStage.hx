@@ -271,7 +271,7 @@ class TyperStage {
 		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m), deferProgramLowering);
 		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
 		final env = new TyModuleEnv(pkg, imports, classEnv);
-		return new TypedModule(pm, env, built.classes, 1, ResolvedModule.getSourceOrigin(m));
+		return new TypedModule(pm, env, built.classes, 1, ResolvedModule.getSourceOrigin(m), ResolvedModule.getConditionalCompilation(m));
 	}
 
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext):TyFunctionEnv {

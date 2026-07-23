@@ -291,6 +291,77 @@ class M14ConditionalCompilationIntegrationTest {
 		ParserStage.parse(filtered, "ConditionalAsyncProbe.hx");
 	}
 
+	static function testConditionalObservation():Void {
+		assertTrue(CompilerDependencyKindTools.name(CompilerDependencyKind.ConditionalCompilation) == "conditional-compilation"
+			&& CompilerDependencyKindTools.name(CompilerDependencyKind.FeatureSelection) == "feature-selection",
+			"conditional compilation should have distinct vocabulary from later @:ifFeature and DCE selection work");
+		final source = [
+			"class ConditionalObservation {",
+			"  #if enabled || fallback",
+			"  static final mode = 1;",
+			"  #elseif mode == \"debug\"",
+			"  static final mode = 2;",
+			"  #else",
+			"  static final mode = 3;",
+			"  #end",
+			"}",
+		].join("\n");
+
+		final enabledDefines = new StringMap<String>();
+		enabledDefines.set("enabled", "private-value-not-for-reports");
+		enabledDefines.set("fallback", "another-private-value");
+		enabledDefines.set("unrelated", "a");
+		final enabled = HxConditionalCompilation.filterSourceObserved(source, enabledDefines);
+		assertContains(enabled.getFilteredSource(), "static final mode = 1", "observed filtering should keep the selected branch");
+		assertTrue(enabled.getObservation().getObservedDefineNames().join(",") == "enabled",
+			"short-circuit observation should record only the definition that was read");
+
+		final unrelatedChange = new StringMap<String>();
+		unrelatedChange.set("enabled", "private-value-not-for-reports");
+		unrelatedChange.set("fallback", "changed-but-still-short-circuited");
+		unrelatedChange.set("unrelated", "b");
+		final unchanged = HxConditionalCompilation.filterSourceObserved(source, unrelatedChange);
+		assertTrue(unchanged.getObservation().getCanonicalIdentity() == enabled.getObservation().getCanonicalIdentity(),
+			"unused and short-circuited definition changes should not change conditional observation");
+		final presenceOnlyValueChange = new StringMap<String>();
+		presenceOnlyValueChange.set("enabled", "different-private-value");
+		final samePresence = HxConditionalCompilation.filterSourceObserved(source, presenceOnlyValueChange);
+		assertTrue(samePresence.getObservation().getCanonicalIdentity() == enabled.getObservation().getCanonicalIdentity(),
+			"a plain #if name check should depend on presence rather than over-invalidating on an unused value change");
+
+		final fallbackDefines = new StringMap<String>();
+		fallbackDefines.set("fallback", "1");
+		fallbackDefines.set("mode", "debug");
+		final fallback = HxConditionalCompilation.filterSourceObserved(source, fallbackDefines);
+		assertTrue(fallback.getObservation().getObservedDefineNames().join(",") == "enabled,fallback",
+			"evaluation should record the fallback definition after the first operand becomes false");
+		assertTrue(fallback.getObservation().changedDefineNames(enabled.getObservation()).join(",") == "enabled,fallback",
+			"comparison should name changed definition keys without exposing values");
+		assertTrue(fallback.getObservation().getCanonicalIdentity() != enabled.getObservation().getCanonicalIdentity(),
+			"a changed conditional input set should produce a new observation identity");
+		final debugDefines = new StringMap<String>();
+		debugDefines.set("mode", "debug");
+		final releaseDefines = new StringMap<String>();
+		releaseDefines.set("mode", "release");
+		final debug = HxConditionalCompilation.filterSourceObserved(source, debugDefines);
+		final release = HxConditionalCompilation.filterSourceObserved(source, releaseDefines);
+		assertTrue(debug.getObservation().getCanonicalIdentity() != release.getObservation().getCanonicalIdentity()
+			&& release.getObservation().changedDefineNames(debug.getObservation()).join(",") == "mode",
+			"an equality check should retain a private value revision and report only its changed key");
+
+		final restored = HxConditionalCompilation.filterSourceObserved(source, enabledDefines);
+		assertTrue(restored.getObservation().getCanonicalIdentity() == enabled.getObservation().getCanonicalIdentity(),
+			"exact A to B to A conditional input should reproduce the original observation");
+
+		final plain = HxConditionalCompilation.filterSourceObserved("class Plain {}", unrelatedChange);
+		assertTrue(plain.getObservation().getObservedDefineNames().length == 0, "source without conditional directives should observe no definitions");
+		assertTrue(plain.getObservation()
+			.getCanonicalIdentity() == HxConditionalCompilation.filterSourceObserved("class Plain {}", enabledDefines)
+			.getObservation()
+			.getCanonicalIdentity(),
+			"unrelated definitions should not affect source without conditional directives");
+	}
+
 	static function main():Void {
 		final inlineElseIf = 'if (#if flash Flash.path() #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) keep();';
 		final jsFiltered = HxConditionalCompilation.filterSource(inlineElseIf, defines(["js"]));
@@ -308,5 +379,6 @@ class M14ConditionalCompilationIntegrationTest {
 		testActiveNativeLibraryExternImports();
 		testInlineInactiveModifierKeepsSuffix();
 		testBlockConditionalEndWithSemicolonAfterInlineGuard();
+		testConditionalObservation();
 	}
 }

@@ -14,14 +14,17 @@ class TypedModule {
 	final typedClasses:Array<TypedClass>;
 	final revision:Int;
 	final sourceOrigin:CompilerModuleOrigin;
+	final conditionalCompilation:CompilerConditionalCompilationObservation;
 	final backendDeclaration:HxModuleDecl;
 
-	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin) {
+	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin,
+			?conditionalCompilation:CompilerConditionalCompilationObservation) {
 		this.parsed = parsed;
 		this.env = env;
 		this.typedClasses = (typedClasses == null ? TypedBodyBuilder.buildFallbackModule(parsed, env) : typedClasses).copy();
 		this.revision = revision <= 0 ? 1 : revision;
 		this.sourceOrigin = sourceOrigin == null ? syntheticSourceOrigin(parsed) : sourceOrigin;
+		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
 		TypedBodyInvariant.assertClasses(this.typedClasses);
 		this.backendDeclaration = TypedBodySource.moduleDeclaration(parsed, this.typedClasses);
 	}
@@ -46,9 +49,13 @@ class TypedModule {
 	public function getSourceOrigin():CompilerModuleOrigin
 		return sourceOrigin;
 
+	/** Compile-time `#if` choices that produced this typed module's parsed input. **/
+	public function getConditionalCompilation():CompilerConditionalCompilationObservation
+		return conditionalCompilation;
+
 	/** Return the next immutable semantic revision after a shared typed-body pass. **/
 	public function withTypedClasses(classes:Array<TypedClass>):TypedModule {
-		return new TypedModule(parsed, env, classes, revision + 1, sourceOrigin);
+		return new TypedModule(parsed, env, classes, revision + 1, sourceOrigin, conditionalCompilation);
 	}
 
 	/**

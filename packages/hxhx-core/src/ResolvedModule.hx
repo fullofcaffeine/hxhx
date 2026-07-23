@@ -13,6 +13,8 @@
 	- `parsed`: the `ParsedModule` produced by `ParserStage`.
 	- `sourceOrigin`: the logical source module and class-path slot that won,
 	  without retaining an absolute path in dependency/cache identity.
+	- `conditionalCompilation`: request-specific `#if` choices kept separately
+	  from reusable parsed syntax.
 
 	How:
 	- `ResolverStage` is responsible for constructing these by searching `-cp`
@@ -23,12 +25,15 @@ class ResolvedModule {
 	public final filePath:String;
 	public final parsed:ParsedModule;
 	public final sourceOrigin:CompilerModuleOrigin;
+	public final conditionalCompilation:CompilerConditionalCompilationObservation;
 
-	public function new(modulePath:String, filePath:String, parsed:ParsedModule, ?sourceOrigin:CompilerModuleOrigin) {
+	public function new(modulePath:String, filePath:String, parsed:ParsedModule, ?sourceOrigin:CompilerModuleOrigin,
+			?conditionalCompilation:CompilerConditionalCompilationObservation) {
 		this.modulePath = modulePath;
 		this.filePath = filePath;
 		this.parsed = parsed;
 		this.sourceOrigin = sourceOrigin == null ? CompilerModuleOrigin.synthetic(modulePath) : sourceOrigin;
+		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
 	}
 
 	/**
@@ -63,5 +68,10 @@ class ResolvedModule {
 	/** Path-safe class-path origin selected before parsing this module. **/
 	public static function getSourceOrigin(m:ResolvedModule):CompilerModuleOrigin {
 		return m.sourceOrigin;
+	}
+
+	/** Request-specific conditional choices used before parsing this module. **/
+	public static function getConditionalCompilation(m:ResolvedModule):CompilerConditionalCompilationObservation {
+		return m.conditionalCompilation;
 	}
 }

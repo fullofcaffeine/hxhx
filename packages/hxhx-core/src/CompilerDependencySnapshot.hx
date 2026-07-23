@@ -6,7 +6,8 @@
 	so equivalent compilations produce the same observation independent of map
 	iteration order. Equivalent repeated observations of one logical module are
 	coalesced. Two observations that reuse a module name but disagree on source,
-	public interface, or implementation fail instead of silently overwriting one.
+	conditional-compilation choices, public interface, or implementation fail
+	instead of silently overwriting one.
 **/
 class CompilerDependencySnapshot {
 	final modules:Array<CompilerTypedModuleRevision>;
@@ -45,6 +46,7 @@ class CompilerDependencySnapshot {
 			values.push(module.sourceRevision);
 			values.push(module.sourceOriginRevision);
 			values.push(module.sourceOriginDescription);
+			values.push(module.conditionalCompilation.getCanonicalIdentity());
 			values.push(module.publicInterfaceRevision);
 			values.push(module.implementationRevision);
 		}
@@ -72,6 +74,7 @@ class CompilerDependencySnapshot {
 			final equivalent = previous.sourceRevision == module.sourceRevision
 				&& previous.sourceOriginRevision == module.sourceOriginRevision
 				&& previous.sourceOriginDescription == module.sourceOriginDescription
+				&& previous.conditionalCompilation.getCanonicalIdentity() == module.conditionalCompilation.getCanonicalIdentity()
 				&& previous.publicInterfaceRevision == module.publicInterfaceRevision
 				&& previous.implementationRevision == module.implementationRevision;
 			if (!equivalent)

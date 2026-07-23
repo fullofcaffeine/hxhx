@@ -6,6 +6,8 @@
 	typed output may already reflect its provider's change, but it must still be
 	reached through a recorded edge instead of predicting itself.
 
+	A compile-time condition change rechecks the module even when it selects the same
+	parsed source. Reports name only the changed define keys, never their values.
 	Public-interface changes propagate through every reverse dependency. A body-only
 	change propagates only through edges that explicitly consume implementation,
 	such as an inline call or an embeddable constant read. When a consumer's own
@@ -29,10 +31,12 @@ class CompilerDependencyInvalidator {
 		final currentModules = moduleMap(current);
 		final moduleNames = unionModuleNames(previousModules, currentModules);
 		final sourceOriginChanges = new Array<String>();
+		final conditionalCompilationChanges = new Array<String>();
 		final publicChanges = new Array<String>();
 		final implementationChanges = new Array<String>();
 		final directSourceChanged = new haxe.ds.StringMap<Bool>();
 		final sourceOriginChanged = new haxe.ds.StringMap<Bool>();
+		final conditionalCompilationChanged = new haxe.ds.StringMap<Bool>();
 		final publicChanged = new haxe.ds.StringMap<Bool>();
 		final implementationChanged = new haxe.ds.StringMap<Bool>();
 
@@ -43,6 +47,12 @@ class CompilerDependencyInvalidator {
 				sourceOriginChanges.push(modulePath);
 				sourceOriginChanged.set(modulePath, true);
 			}
+			if (before != null
+				&& after != null
+				&& before.conditionalCompilation.getCanonicalIdentity() != after.conditionalCompilation.getCanonicalIdentity()) {
+				conditionalCompilationChanges.push(modulePath);
+				conditionalCompilationChanged.set(modulePath, true);
+			}
 			if (before == null || after == null || before.publicInterfaceRevision != after.publicInterfaceRevision) {
 				publicChanges.push(modulePath);
 				publicChanged.set(modulePath, true);
@@ -51,7 +61,10 @@ class CompilerDependencyInvalidator {
 				implementationChanges.push(modulePath);
 				implementationChanged.set(modulePath, true);
 			}
-			if (before == null || after == null || before.sourceRevision != after.sourceRevision)
+			if (before == null
+				|| after == null
+				|| before.sourceRevision != after.sourceRevision
+				|| conditionalCompilationChanged.exists(modulePath))
 				directSourceChanged.set(modulePath, true);
 		}
 
@@ -70,6 +83,13 @@ class CompilerDependencyInvalidator {
 				final afterOrigin = after == null ? "<missing>" : after.sourceOriginDescription;
 				mark(modulePath, strength, ["source-origin-changed:" + modulePath + ":" + beforeOrigin + "->" + afterOrigin], strengthByModule,
 					reasonByModule, queue);
+			} else if (conditionalCompilationChanged.exists(modulePath)) {
+				final before = previousModules.get(modulePath);
+				final after = currentModules.get(modulePath);
+				final strength = publicChanged.exists(modulePath) ? PUBLIC_INTERFACE_CHANGE : (implementationChanged.exists(modulePath) ? IMPLEMENTATION_CHANGE : SOURCE_ORIGIN_CHANGE);
+				final changedNames = after == null ? [] : after.conditionalCompilation.changedDefineNames(before == null ? null : before.conditionalCompilation);
+				final description = changedNames.length == 0 ? "<selection>" : changedNames.join(",");
+				mark(modulePath, strength, ["conditional-compilation-changed:" + modulePath + ":" + description], strengthByModule, reasonByModule, queue);
 			} else if (publicChanged.exists(modulePath)) {
 				mark(modulePath, PUBLIC_INTERFACE_CHANGE, ["public-interface-changed:" + modulePath], strengthByModule, reasonByModule, queue);
 			} else if (implementationChanged.exists(modulePath)) {
@@ -107,7 +127,7 @@ class CompilerDependencyInvalidator {
 		final invalidations = new Array<CompilerDependencyInvalidation>();
 		for (modulePath in strengthByModule.keys())
 			invalidations.push(new CompilerDependencyInvalidation(modulePath, reasonByModule.get(modulePath)));
-		return new CompilerDependencyComparison(sourceOriginChanges, publicChanges, implementationChanges, invalidations);
+		return new CompilerDependencyComparison(sourceOriginChanges, conditionalCompilationChanges, publicChanges, implementationChanges, invalidations);
 	}
 
 	static function mark(modulePath:String, strength:Int, reason:Array<String>, strengthByModule:haxe.ds.StringMap<Int>,

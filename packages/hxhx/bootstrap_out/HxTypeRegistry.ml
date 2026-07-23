@@ -5,6 +5,10 @@
 let init () : unit =
   ignore (HxType.class_ "CSharpNoEmitDiagnostics");
   ignore (HxType.class_ "CompilerCacheIdentity");
+  ignore (HxType.class_ "CompilerConditionalCompilationObservation");
+  ignore (HxType.class_ "CompilerConditionalCompilationResult");
+  ignore (HxType.class_ "CompilerConditionalDecision");
+  ignore (HxType.class_ "CompilerConditionalDefineInput");
   ignore (HxType.class_ "CompilerDependencyCollector");
   ignore (HxType.class_ "CompilerDependencyComparison");
   ignore (HxType.class_ "CompilerDependencyEdge");
@@ -268,6 +272,7 @@ let init () : unit =
   ignore (HxType.class_ "sys.thread.NoEventLoopException");
   ignore (HxType.class_ "sys.thread.RegularEvent");
   ignore (HxType.class_ "sys.thread.Thread");
+  ignore (HxType.enum_ "CompilerConditionalDefineAccess");
   ignore (HxType.enum_ "CompilerDependencyKind");
   ignore (HxType.enum_ "CompilerDependencyPhase");
   ignore (HxType.enum_ "HxDefaultValue");
@@ -288,7 +293,8 @@ let init () : unit =
   ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
-  HxType.register_enum_ctors "CompilerDependencyKind" [ "ModuleResolution"; "PublicInterface"; "InlineImplementation"; "ConstantValue"; "GeneratedDeclaration"; "StaticInitialization"; "FeatureSelection"; "TargetNeutralProgram" ];
+  HxType.register_enum_ctors "CompilerConditionalDefineAccess" [ "Presence"; "Value" ];
+  HxType.register_enum_ctors "CompilerDependencyKind" [ "ModuleResolution"; "PublicInterface"; "InlineImplementation"; "ConstantValue"; "ConditionalCompilation"; "GeneratedDeclaration"; "StaticInitialization"; "FeatureSelection"; "TargetNeutralProgram" ];
   HxType.register_enum_ctors "CompilerDependencyPhase" [ "ModuleResolution"; "SharedTyping" ];
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ENullSafeField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported"; "EReturn"; "EVars"; "EVariableDeclaration"; "EWhile"; "EBreak"; "EContinue" ];
@@ -308,6 +314,12 @@ let init () : unit =
   HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctors "hxhx.macro._MacroHostClient.MacroHostReadResult" [ "ReadLine"; "ReadEof"; "ReadError" ];
   HxType.register_enum_ctors "sys.thread.NextEventTime" [ "Now"; "Never"; "AnyTime"; "At" ];
+  HxType.register_enum_ctor "CompilerConditionalDefineAccess" "Presence" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerConditionalDefineAccess.Presence)
+  );
+  HxType.register_enum_ctor "CompilerConditionalDefineAccess" "Value" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerConditionalDefineAccess.Value)
+  );
   HxType.register_enum_ctor "CompilerDependencyKind" "ModuleResolution" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyKind.ModuleResolution)
   );
@@ -319,6 +331,9 @@ let init () : unit =
   );
   HxType.register_enum_ctor "CompilerDependencyKind" "ConstantValue" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyKind.ConstantValue)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "ConditionalCompilation" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.ConditionalCompilation)
   );
   HxType.register_enum_ctor "CompilerDependencyKind" "GeneratedDeclaration" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyKind.GeneratedDeclaration)
@@ -1248,16 +1263,42 @@ let init () : unit =
   HxType.register_class_ctor "CompilerCacheIdentity" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerCacheIdentity.create ())
   );
+  HxType.register_class_ctor "CompilerConditionalCompilationObservation" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'decisions' for CompilerConditionalCompilationObservation" in
+    Obj.repr (CompilerConditionalCompilationObservation.create a0)
+  );
+  HxType.register_class_ctor "CompilerConditionalCompilationResult" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'filteredSource' for CompilerConditionalCompilationResult" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'observation' for CompilerConditionalCompilationResult" in
+    Obj.repr (CompilerConditionalCompilationResult.create a0 a1)
+  );
+  HxType.register_class_ctor "CompilerConditionalDecision" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'expressionRevision' for CompilerConditionalDecision" in
+    let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'result' for CompilerConditionalDecision" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'inputs' for CompilerConditionalDecision" in
+    Obj.repr (CompilerConditionalDecision.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "CompilerConditionalDefineInput" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for CompilerConditionalDefineInput" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'access' for CompilerConditionalDefineInput" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'observedInputRevision' for CompilerConditionalDefineInput" in
+    Obj.repr (CompilerConditionalDefineInput.create a0 a1 a2)
+  );
   HxType.register_class_ctor "CompilerDependencyCollector" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyCollector.create ())
   );
   HxType.register_class_ctor "CompilerDependencyComparison" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'sourceOriginChanges' for CompilerDependencyComparison" in
-    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceChanges' for CompilerDependencyComparison" in
-    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'implementationChanges' for CompilerDependencyComparison" in
-    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'invalidations' for CompilerDependencyComparison" in
-    Obj.repr (CompilerDependencyComparison.create a0 a1 a2 a3)
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'conditionalCompilationChanges' for CompilerDependencyComparison" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceChanges' for CompilerDependencyComparison" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'implementationChanges' for CompilerDependencyComparison" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'invalidations' for CompilerDependencyComparison" in
+    Obj.repr (CompilerDependencyComparison.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "CompilerDependencyEdge" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1334,7 +1375,8 @@ let init () : unit =
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
     let a5 = if len > 5 then Obj.obj ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (CompilerTypedModuleRevision.create a0 a1 a2 a3 a4 a5)
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (CompilerTypedModuleRevision.create a0 a1 a2 a3 a4 a5 a6)
   );
   HxType.register_class_ctor "EmitterCallSigIndex" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (EmitterCallSigIndex.create ())
@@ -1538,7 +1580,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'filePath' for ResolvedModule" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'parsed' for ResolvedModule" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (ResolvedModule.create a0 a1 a2 a3)
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (ResolvedModule.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "ResolverStage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (ResolverStage.create ())
@@ -1820,7 +1863,8 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else Obj.magic HxRuntime.hx_null in
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (TypedModule.create a0 a1 a2 a3 a4)
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TypedModule.create a0 a1 a2 a3 a4 a5)
   );
   HxType.register_class_ctor "TypedStmt" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1898,7 +1942,8 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'expr' for _HxConditionalCompilation.ExprParser" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'defines' for _HxConditionalCompilation.ExprParser" in
-    Obj.repr (HxConditionalCompilation.exprparser_create a0 a1)
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxConditionalCompilation.exprparser_create a0 a1 a2)
   );
   HxType.register_class_ctor "_HxExprVarDecl.HxExprVarDecl_Impl_" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxExprVarDecl.create ())
@@ -2560,6 +2605,10 @@ let init () : unit =
   );
   HxType.register_class_empty_ctor "CSharpNoEmitDiagnostics" (fun () -> Obj.repr (CSharpNoEmitDiagnostics.__empty ()));
   HxType.register_class_empty_ctor "CompilerCacheIdentity" (fun () -> Obj.repr (CompilerCacheIdentity.__empty ()));
+  HxType.register_class_empty_ctor "CompilerConditionalCompilationObservation" (fun () -> Obj.repr (CompilerConditionalCompilationObservation.__empty ()));
+  HxType.register_class_empty_ctor "CompilerConditionalCompilationResult" (fun () -> Obj.repr (CompilerConditionalCompilationResult.__empty ()));
+  HxType.register_class_empty_ctor "CompilerConditionalDecision" (fun () -> Obj.repr (CompilerConditionalDecision.__empty ()));
+  HxType.register_class_empty_ctor "CompilerConditionalDefineInput" (fun () -> Obj.repr (CompilerConditionalDefineInput.__empty ()));
   HxType.register_class_empty_ctor "CompilerDependencyCollector" (fun () -> Obj.repr (CompilerDependencyCollector.__empty ()));
   HxType.register_class_empty_ctor "CompilerDependencyComparison" (fun () -> Obj.repr (CompilerDependencyComparison.__empty ()));
   HxType.register_class_empty_ctor "CompilerDependencyEdge" (fun () -> Obj.repr (CompilerDependencyEdge.__empty ()));
@@ -2822,9 +2871,17 @@ let init () : unit =
   HxType.register_class_static_fields "CSharpNoEmitDiagnostics" [ "appendAssemblyMetadataDiagnostics"; "appendIncompatibleConstraintDiagnostics"; "appendUsingMetadataDiagnostics"; "assemblyMetadataDiagnostic"; "diagnosticFileName"; "diagnosticForParsed"; "diagnosticForResolved"; "diagnosticPath"; "hasNamedPackage"; "incompatibleConstraintDiagnosticForLine"; "incompatibleConstraintDiagnosticForParsed"; "incompatibleConstraintDiagnosticForResolved"; "isTypeDeclarationLine"; "nextSignificantTypeLineIndex"; "usingMetadataDiagnostic" ];
   HxType.register_class_instance_fields "CompilerCacheIdentity" [];
   HxType.register_class_static_fields "CompilerCacheIdentity" [ "encode" ];
+  HxType.register_class_instance_fields "CompilerConditionalCompilationObservation" [ "canonicalIdentity"; "changedDefineNames"; "decisions"; "getCanonicalIdentity"; "getObservedDefineNames"; "inputIdentitiesByName" ];
+  HxType.register_class_static_fields "CompilerConditionalCompilationObservation" [ "compareText"; "empty"; "sameIdentities" ];
+  HxType.register_class_instance_fields "CompilerConditionalCompilationResult" [ "filteredSource"; "getFilteredSource"; "getObservation"; "observation" ];
+  HxType.register_class_static_fields "CompilerConditionalCompilationResult" [];
+  HxType.register_class_instance_fields "CompilerConditionalDecision" [ "canonicalIdentity"; "expressionRevision"; "getCanonicalIdentity"; "getInputs"; "inputs"; "result" ];
+  HxType.register_class_static_fields "CompilerConditionalDecision" [ "compareText"; "fromEvaluation"; "normalizeInputs" ];
+  HxType.register_class_instance_fields "CompilerConditionalDefineInput" [ "access"; "accessKey"; "canonicalKey"; "getObservedInputRevision"; "name"; "observedInputRevision" ];
+  HxType.register_class_static_fields "CompilerConditionalDefineInput" [ "fromDefines" ];
   HxType.register_class_instance_fields "CompilerDependencyCollector" [];
   HxType.register_class_static_fields "CompilerDependencyCollector" [ "addEdge"; "collect"; "collectConstantRead"; "collectExpression"; "collectModuleEdges"; "collectResolvedPath"; "collectStatement"; "collectType"; "compareText"; "normalizeImport" ];
-  HxType.register_class_instance_fields "CompilerDependencyComparison" [ "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "getSourceOriginChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor"; "sourceOriginChanges" ];
+  HxType.register_class_instance_fields "CompilerDependencyComparison" [ "conditionalCompilationChanges"; "getConditionalCompilationChanges"; "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "getSourceOriginChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor"; "sourceOriginChanges" ];
   HxType.register_class_static_fields "CompilerDependencyComparison" [ "compareInvalidations"; "compareText"; "sortedCopy" ];
   HxType.register_class_instance_fields "CompilerDependencyEdge" [ "canonicalKey"; "consumerModule"; "describe"; "factIdentity"; "kind"; "phase"; "providerModule" ];
   HxType.register_class_static_fields "CompilerDependencyEdge" [ "normalize" ];
@@ -2854,7 +2911,7 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerSourceProviderReport" [ "compareStrings" ];
   HxType.register_class_instance_fields "CompilerSourceResolver" [];
   HxType.register_class_static_fields "CompilerSourceResolver" [ "compareStrings"; "contains"; "find"; "missing"; "normalizePath"; "observationRevision"; "resolve" ];
-  HxType.register_class_instance_fields "CompilerTypedModuleRevision" [ "implementationRevision"; "modulePath"; "publicInterfaceRevision"; "sourceOriginDescription"; "sourceOriginRevision"; "sourceRevision" ];
+  HxType.register_class_instance_fields "CompilerTypedModuleRevision" [ "conditionalCompilation"; "implementationRevision"; "modulePath"; "publicInterfaceRevision"; "sourceOriginDescription"; "sourceOriginRevision"; "sourceRevision" ];
   HxType.register_class_static_fields "CompilerTypedModuleRevision" [ "addBools"; "addPattern"; "addPublicClassFacts"; "addResolvedTypePath"; "addStrings"; "addTypedExpression"; "addTypedStatement"; "addTypes"; "compareText"; "expressionTagName"; "fromTypedModule"; "mergeContributions"; "normalize"; "opaqueKindName"; "semanticModulePath"; "statementTagName"; "unaryFixityName"; "unaryOperatorName"; "uniqueSorted" ];
   HxType.register_class_instance_fields "EmitterCallSigIndex" [];
   HxType.register_class_static_fields "EmitterCallSigIndex" [ "get" ];
@@ -2879,7 +2936,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxClassDecl" [ "extendsPath"; "fields"; "functions"; "hasStaticMain"; "implementsPaths"; "isInterface"; "metadata"; "name" ];
   HxType.register_class_static_fields "HxClassDecl" [ "getExtendsPath"; "getFields"; "getFunctions"; "getHasStaticMain"; "getImplementsPaths"; "getIsInterface"; "getMetadata"; "getName" ];
   HxType.register_class_instance_fields "HxConditionalCompilation" [];
-  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterInlineConditionals"; "filterSource"; "findDirectiveTokenOutsideStrings"; "findTokenOutsideStrings"; "hasAnyKnownTargetDefine"; "isActiveNativeLibraryExternPath"; "isActiveTargetNativeExternPath"; "isInactiveTargetQualifiedTypePath"; "isKnownTargetPackageRoot"; "isLineWs"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "parseInlineCondEnd"; "skipStringLiteral"; "splitLinesPreserveNewlines"; "stripLineCommentOutsideStrings" ];
+  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterInlineConditionals"; "filterSource"; "filterSourceInternal"; "filterSourceObserved"; "findDirectiveTokenOutsideStrings"; "findTokenOutsideStrings"; "hasAnyKnownTargetDefine"; "isActiveNativeLibraryExternPath"; "isActiveTargetNativeExternPath"; "isInactiveTargetQualifiedTypePath"; "isKnownTargetPackageRoot"; "isLineWs"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "parseInlineCondEnd"; "skipStringLiteral"; "splitLinesPreserveNewlines"; "stripLineCommentOutsideStrings" ];
   HxType.register_class_instance_fields "HxDefineMap" [];
   HxType.register_class_static_fields "HxDefineMap" [ "addRawDefine"; "fromRawDefines"; "mergeInto" ];
   HxType.register_class_instance_fields "HxFieldDecl" [ "endPos"; "init"; "initText"; "isFinal"; "isStatic"; "metadata"; "name"; "pos"; "propertyGet"; "propertySet"; "typeHint"; "visibility" ];
@@ -2928,8 +2985,8 @@ let init () : unit =
   HxType.register_class_static_fields "ParserStageNativeDecode" [ "balancedSwitchEnd"; "compactTypeHint"; "decodeFieldPayload"; "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "defaultValueFromText"; "expectedTypeName"; "fieldHintKey"; "findFieldTypeHintEnd"; "findFunctionBodyStart"; "findMatchingParen"; "findTopLevelEquals"; "isErasedFunctionTypeHintText"; "isErasedStructuralFallbackTypeHint"; "isFunctionTypeHintText"; "isGenericTypeVariableHintText"; "isKnownConcreteTypeHintText"; "isStructuralTypeHintText"; "looksLikeSwitchCaseFragment"; "normalizeCompactedFunctionReturnExpr"; "normalizeMethodReturnTypeHint"; "parseDecInt"; "parseRegexLiteral"; "parseReturnExprIdentPart"; "parseReturnExprText"; "parseSourceSignatureArgs"; "protocolArgNames"; "readSourceReturnHint"; "scanClassFieldTypeHints"; "scanFieldTypeHintAfterVar"; "scanSourceFieldTypeHints"; "scanUntilToken"; "skipQuotedSource"; "skipToFieldBoundary"; "sourceArgHintByName"; "sourceArgHintsMatchNames"; "sourceArgTypeHintIsMoreSpecific"; "sourceFieldTypeHintByName"; "sourceFieldTypeHints"; "sourceFunctionNameMatches"; "sourceFunctionTypeMetadata"; "sourceIdentifierPart"; "sourceSignatureArgHints"; "sourceSignatureReturnHint"; "sourceTypeHintIsMoreSpecific"; "splitN"; "splitTopLevelComma"; "stripNewTypeParams"; "throwFromErrLine"; "trimCapturedFieldInitializer"; "unescapePayload" ];
   HxType.register_class_instance_fields "ParserStageScanHelpers" [];
   HxType.register_class_static_fields "ParserStageScanHelpers" [ "expressionBodyKeywordStartsWithoutReturn"; "functionTypeParamsMetadata"; "hasUnsupportedExpr"; "hasUnsupportedStmt"; "hasUnsupportedStmtList"; "isTypedefFieldModifier"; "leadingWhitespaceLength"; "parseModuleStaticInitExpr"; "parseSimpleInitExpr"; "posFromIndex"; "scanAbstractHeaderConversions"; "scanAbstractUnderlyingType"; "scanAnonymousTypedefFields"; "scanBalancedBlock"; "scanClassBodyForStatics"; "scanClassHeader"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanFieldDeclarationEnd"; "scanFieldInitializer"; "scanFieldPropertyAccessors"; "scanFieldTypeHint"; "scanFunctionBody"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanModuleStaticFields"; "scanNextFieldNameToken"; "scanNextToken"; "scanTypeParameterNames"; "scanTypedefRhsShape"; "scanTypedefShape"; "scannedStaticBodyIsSafe"; "skipMetadataPayload"; "skipQuotedSource"; "skipTypedefDeclaration"; "skipTypedefField"; "typeParamsMetadata" ];
-  HxType.register_class_instance_fields "ResolvedModule" [ "filePath"; "modulePath"; "parsed"; "sourceOrigin" ];
-  HxType.register_class_static_fields "ResolvedModule" [ "getFilePath"; "getModulePath"; "getParsed"; "getSourceOrigin" ];
+  HxType.register_class_instance_fields "ResolvedModule" [ "conditionalCompilation"; "filePath"; "modulePath"; "parsed"; "sourceOrigin" ];
+  HxType.register_class_static_fields "ResolvedModule" [ "getConditionalCompilation"; "getFilePath"; "getModulePath"; "getParsed"; "getSourceOrigin" ];
   HxType.register_class_instance_fields "ResolverStage" [];
   HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "implicitUtestAddCasesDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "parseProjectRootsShallow"; "resolveImplicitSamePackageTypesEnabled"; "traceResolverDepsEnabled"; "withImplicitCwdClassPath" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
@@ -3006,7 +3063,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedFunction" [];
   HxType.register_class_instance_fields "TypedFunctionBody" [ "getSourceFingerprint"; "getStatements"; "sourceFingerprint"; "statements" ];
   HxType.register_class_static_fields "TypedFunctionBody" [];
-  HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclaration"; "env"; "getBackendDeclaration"; "getEnv"; "getParsed"; "getRevision"; "getSourceOrigin"; "getTypedClasses"; "parsed"; "revision"; "sourceOrigin"; "typedClasses"; "withTypedClasses" ];
+  HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclaration"; "conditionalCompilation"; "env"; "getBackendDeclaration"; "getConditionalCompilation"; "getEnv"; "getParsed"; "getRevision"; "getSourceOrigin"; "getTypedClasses"; "parsed"; "revision"; "sourceOrigin"; "typedClasses"; "withTypedClasses" ];
   HxType.register_class_static_fields "TypedModule" [ "syntheticSourceOrigin" ];
   HxType.register_class_instance_fields "TypedStmt" [ "catchNames"; "catchTypeHints"; "expressions"; "getCatchNames"; "getCatchTypeHints"; "getExpressions"; "getMetadata"; "getNames"; "getPatterns"; "getPosition"; "getStatements"; "getTag"; "metadata"; "names"; "patterns"; "position"; "statements"; "tag"; "withChildren" ];
   HxType.register_class_static_fields "TypedStmt" [ "block"; "breakStmt"; "continueStmt"; "doWhile"; "expressionStmt"; "forIn"; "forKeyValue"; "ifStmt"; "returnValue"; "returnVoid"; "switchStmt"; "throwStmt"; "tryStmt"; "variable"; "whileStmt" ];
@@ -3030,7 +3087,7 @@ let init () : unit =
   HxType.register_class_static_fields "_EmitterStage._PortableMetalizationScope" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprLexer" [ "bump"; "eof"; "i"; "isIdentCont"; "isIdentStart"; "isWs"; "next"; "peek"; "readIdent"; "readString"; "s"; "skipWs" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprLexer" [];
-  HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];
+  HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "observe"; "observedAccessByName"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprParser" [];
   HxType.register_class_instance_fields "_HxExprVarDecl.HxExprVarDecl_Impl_" [];
   HxType.register_class_static_fields "_HxExprVarDecl.HxExprVarDecl_Impl_" [ "getInitializer"; "getIsFinal"; "getIsStatic"; "getName"; "getPosition"; "getTypeHint"; "invalidMessage"; "make" ];
@@ -3361,6 +3418,10 @@ let init () : unit =
   HxType.register_class_super "sys.thread.NoEventLoopException" (HxType.class_ "haxe.Exception");
   HxType.register_class_tags "CSharpNoEmitDiagnostics" [ "CSharpNoEmitDiagnostics" ];
   HxType.register_class_tags "CompilerCacheIdentity" [ "CompilerCacheIdentity" ];
+  HxType.register_class_tags "CompilerConditionalCompilationObservation" [ "CompilerConditionalCompilationObservation" ];
+  HxType.register_class_tags "CompilerConditionalCompilationResult" [ "CompilerConditionalCompilationResult" ];
+  HxType.register_class_tags "CompilerConditionalDecision" [ "CompilerConditionalDecision" ];
+  HxType.register_class_tags "CompilerConditionalDefineInput" [ "CompilerConditionalDefineInput" ];
   HxType.register_class_tags "CompilerDependencyCollector" [ "CompilerDependencyCollector" ];
   HxType.register_class_tags "CompilerDependencyComparison" [ "CompilerDependencyComparison" ];
   HxType.register_class_tags "CompilerDependencyEdge" [ "CompilerDependencyEdge" ];

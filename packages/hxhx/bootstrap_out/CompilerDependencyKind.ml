@@ -7,6 +7,7 @@ type compilerdependencykind =
 | PublicInterface
 | InlineImplementation
 | ConstantValue
+| ConditionalCompilation
 | GeneratedDeclaration
 | StaticInitialization
 | FeatureSelection
