@@ -224,6 +224,35 @@ Cross-check pages:
 - Portable stdlib parity evidence and per-module coverage:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
+### Six-month convergence checkpoint
+
+The compiler does not need a whole rewrite, but one duplicate target path must
+be removed before it can support the strongest product claims. Native `hxhx`
+currently calls a Stage3 OCaml emitter that makes target decisions separately
+from standalone `reflaxe.ocaml`.
+
+The shortest accepted route is:
+
+1. finish stable frontend identities, request isolation, and dependency facts;
+2. finish fail-closed standalone `reflaxe.ocaml` representation, calls,
+   control, runtime, and output ownership;
+3. make native `hxhx` call that exact target implementation instead of the
+   Stage3 semantic emitter for the combined product;
+4. close Full1 failures by their shared root cause on one candidate,
+   independently of that OCaml hard cut because OCaml output is not in the
+   declared Full1 target scope; and
+5. admit typed-module reuse only after clean-versus-warm, failure/reset,
+   memory, and end-to-end speed evidence.
+
+Typed-cache development does not technically wait for every Full1 target. It
+may proceed once its direct safety gates pass and the active-work cap allows
+it, but it cannot imply Full1 readiness. M22 and general customization
+implementation remain deferred until Full1 and the shared-target hard cut.
+
+The checked reasoning, local corrections, non-claims, and stop conditions are
+in
+`docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`.
+
 ### Current Full1 candidate closure (epic title M17)
 
 - Status: In progress
@@ -234,6 +263,12 @@ Meaning in plain terms:
 - This is the current candidate-level proof that the declared Haxe `4.3.7`
   scope, required targets, macros, performance, and release evidence all agree
   for one exact commit.
+- It does not depend on `haxe_ocaml-38gsp.1`. That hard cut belongs to the
+  combined `hxhx + reflaxe.ocaml` product and later M22 work; adding it here
+  would silently expand the declared Full1 target scope.
+- Any code path used for a declared Full1 behavior must still pass its exact
+  behavior gate. A placeholder, generated-output repair, or unexplained
+  fallback is not evidence by itself.
 - It remains the active release priority. Post-Full1 SDK implementation cannot
   weaken, replace, or count toward this evidence.
 - The epic title uses M17, but historical Beads also used the
@@ -243,8 +278,8 @@ Meaning in plain terms:
 
 ### M22. Native Reflaxe Compiler SDK
 
-- Status: Planned; implementation and support claim blocked by Full1 and the
-  release-grade stage0-free `hxhx + reflaxe.ocaml` product
+- Status: Architecture retained; implementation deferred and support claim
+  blocked by Full1 plus the authentic shared-target hard cut
 - Bead: `haxe_ocaml-bomhr`
 - Contract child: `haxe_ocaml-bomhr.1` (complete)
 
@@ -258,6 +293,9 @@ Meaning in plain terms:
 - M22.1 contract work was allowed to proceed while Full1 closes and is now
   complete, but no M22 implementation or support evidence counts toward the
   Full1 release.
+- `haxe_ocaml-38gsp.1` must first prove that native `hxhx` invokes the actual
+  standalone target. M22 must not freeze a new program envelope or host-service
+  API around the temporary Stage3 semantic path.
 - M22 is the first unused historical milestone label. M18 through M21 already
   belong to earlier builtin and Stage2/3/4 work, so those records remain intact.
 

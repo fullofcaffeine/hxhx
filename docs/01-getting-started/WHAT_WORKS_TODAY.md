@@ -12,12 +12,12 @@ If you need deeper architectural details, use:
 | Workflow | Command shape | Current status | Notes |
 | --- | --- | --- | --- |
 | Upstream Haxe + `reflaxe.ocaml` | `haxe -lib reflaxe.ocaml ...` | Working | Compatibility-first baseline path. |
-| `hxhx` + `reflaxe.ocaml` | `hxhx --ocaml ...` with `reflaxe.ocaml` validation/promotion docs | Experimental | Use for native compiler and hosting evidence, not as the default production route. |
+| `hxhx` + `reflaxe.ocaml` | `hxhx --ocaml ...` with `reflaxe.ocaml` validation/promotion docs | Experimental | The current target wrapper delegates to the separate Stage3 emitter, not standalone `reflaxe.ocaml`; use it for native compiler and hosting evidence, not as the default production route. |
 | `hxhx` compat lane | `hxhx --ocaml-eval ...` / `hxhx --compat --js out.js ...` | Working | Delegates runtime compile to stage0 upstream `haxe`. |
-| `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped native lane) | Non-delegating runtime lane; use `HXHX_FORBID_STAGE0=1` for strict checks. |
+| `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped bootstrap lane) | Non-delegating runtime lane through Stage3 OCaml emission; use `HXHX_FORBID_STAGE0=1` for strict checks. This is not yet the standalone target hard cut. |
 | `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
-| One native Reflaxe plugin for stock Haxe and `hxhx` | Planned M22 ABI | Not implemented | Current stock-Haxe eval-host and `hxhx` artifacts are host-specific. M22 requires one payload and prefers one identical binary; evidence-gated thin loader shells are the only packaging fallback. |
+| One native Reflaxe plugin for stock Haxe and `hxhx` | Planned M22 ABI | Deferred | Current stock-Haxe eval-host and `hxhx` artifacts are host-specific. M22 implementation waits for Full1 and the authentic shared-target hard cut; it still requires one payload and prefers one identical binary. |
 | Native macro module loading | `macro.loadNativeModule` / `macro.runNativeExpr` | Working (promoted-module rung) | ABI/version validation is enforced before registration. |
 
 A useful milestone, but not the finish line: strict/full M7 run `29321576340`

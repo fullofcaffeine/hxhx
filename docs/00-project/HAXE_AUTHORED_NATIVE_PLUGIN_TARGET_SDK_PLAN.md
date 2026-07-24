@@ -1,6 +1,7 @@
 # Haxe-Authored Native Plugin and Target SDK Plan
 
-- Status: architecture review candidate; no support or readiness claim
+- Status: architecture review candidate retained; implementation deferred until
+  Full1 and the authentic shared-target hard cut; no support or readiness claim
 - Prepared: 2026-07-18
 - Compiler-transform owner: `haxe_ocaml-h5jta.1`
 - Backend/target owner: `haxe_ocaml-bomhr` (M22)
@@ -27,6 +28,12 @@ emit artifacts.
 
 This is a planning contract. It does not mean that either cross-host native
 profile is available today, and it does not move a README readiness bar.
+
+The six-month checkpoint pauses implementation even though the product goal
+remains accepted. Native `hxhx` must first call the real standalone
+`reflaxe.ocaml` target through `haxe_ocaml-38gsp.1`, and Full1 must stabilize
+the baseline compiler. This avoids building transform and backend SDK contracts
+on top of a temporary second OCaml semantic implementation.
 
 ## Product promise
 

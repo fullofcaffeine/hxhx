@@ -7,6 +7,8 @@ Short version:
 
 - use upstream `haxe + reflaxe.ocaml` for the production-candidate OCaml output path today
 - use `hxhx + reflaxe.ocaml` when you are validating native `hxhx` compiler behavior, plugin hosting, or promotion infrastructure
+- understand that the current native `hxhx --ocaml` target calls the separate
+  Stage3 emitter; it does not yet execute standalone `reflaxe.ocaml`
 - do not treat `hxhx + reflaxe.ocaml` as the default production route until the Full 1.0 gates pass
 - do not enable warm Reflaxe compilation-server reuse; see
   `docs/01-getting-started/COMPILATION_SERVER.md` for the current safe workflows
@@ -15,6 +17,13 @@ Short version:
 
 The supported `hxhx + reflaxe.ocaml` surface today is an experimental validation
 surface, not the default production route.
+
+The name describes the intended product direction, not current implementation
+convergence. Native `hxhx` currently enters `OcamlTargetCore`, which delegates
+target behavior to Stage3 `EmitterStage`. Standalone `reflaxe.ocaml` owns a
+different lowering/runtime/output pipeline. Until `haxe_ocaml-38gsp.1` removes
+that split, the native route is bootstrap and diagnostic evidence rather than
+proof that one target implementation serves both hosts.
 
 It is useful for:
 
@@ -48,7 +57,7 @@ native hosting behavior.
 Evidence that exists:
 
 - standalone upstream `haxe + reflaxe.ocaml` product readiness is tracked by
-  `haxe.ocaml-ro10` and documented in
+  current product owner `haxe_ocaml-s7jry` and documented in
   `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 - the Reflaxe promotion matrix is tracked by `haxe.ocaml-rpmx` and documented in
   `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
@@ -58,13 +67,19 @@ Evidence that exists:
 
 Evidence still required before calling `hxhx + reflaxe.ocaml` production-ready:
 
+- standalone `reflaxe.ocaml` must complete its fail-closed representation,
+  call/conversion, control, and runtime prerequisites under
+  `haxe_ocaml-s7jry`
+- `haxe_ocaml-38gsp.1` must route native `hxhx` through that actual standalone
+  target without Stage3 semantic output repair
 - strict `hxhx` Haxe `4.3.7` equivalence gates must pass under
   `haxe.ocaml-f1cl`
 - upstream-derived Full 1.0 suite and target gates must pass without hidden
   stage0 fallback under `haxe.ocaml-f1cl.3`
-- release go/no-go and release-claim enforcement must close under
-  `haxe.ocaml-f1cl.6` and `haxe.ocaml-f1cl.7`
-- performance parity or better must remain auditable under `haxe.ocaml-f1cl.5`
+- release go/no-go and release-claim enforcement must compose current
+  same-candidate evidence under `haxe.ocaml-f1cl`
+- performance parity or better must remain auditable under
+  `haxe_ocaml-u6esu`
 
 The closed promotion and plugin proofs are necessary evidence, but they are not
 enough by themselves. They prove important host/plugin seams; they do not prove
@@ -104,7 +119,9 @@ For a production app today:
 
 - default to upstream `haxe + reflaxe.ocaml`
 - keep `hxhx + reflaxe.ocaml` as validation or migration evidence
-- cite `hxhx + reflaxe.ocaml` as production-ready only after the Full 1.0 owner beads have current passing evidence
+- cite `hxhx + reflaxe.ocaml` as production-ready only after the standalone
+  target, authentic hard cut, and Full1 owner Beads have current passing
+  evidence
 
 Related docs:
 

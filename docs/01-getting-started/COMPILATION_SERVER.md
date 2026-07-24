@@ -17,10 +17,11 @@ This guide explains Haxe's compilation server, how it relates to
   can reuse exact source text, checked module-file lookup results, and parsed
   Haxe modules. Its opt-in report can also compare an initial set of
   typed-module dependencies and predict which modules a future cache would
-  need to check again for the currently covered imports, types, and calls. It
-  does not yet reuse type-checking, macros, target generation, or native build
-  results, so it is still an experimental server rather than a complete
-  incremental compiler.
+  need to check again for the currently covered imports, types, calls, embedded
+  constants, source origins, conditional-compilation choices, and generated
+  declarations. It does not yet reuse type-checking, macros, target generation,
+  or native build results, so it is still an experimental server rather than a
+  complete incremental compiler.
 - For safe iteration today, use fresh-Haxe `reflaxe.ocaml` generation plus
   Dune's incremental OCaml build, or build `hxhx` from the committed bootstrap
   snapshot. Use the documented fingerprint skip when the inputs are unchanged.
@@ -142,7 +143,7 @@ These are different products and should not be confused:
 | Server | What runs | Current purpose | Incremental status |
 | --- | --- | --- | --- |
 | Upstream Haxe server | Haxe 4.3.7 started with `--wait` | Upstream compilation and editor/display requests | Haxe owns real parsed/typed module reuse. Warm Reflaxe target output is not yet supported here. |
-| Native `hxhx` server | A compiled `hxhx` process | Protocol, compiler bring-up, and measured incremental-cache development | Exact source/module-lookup/parser reuse exists. Initial opt-in dependency observation covers imports, resolved types, and ordinary/inline calls, but typing and later compiler stages still rerun. |
+| Native `hxhx` server | A compiled `hxhx` process | Protocol, compiler bring-up, and measured incremental-cache development | Exact source/module-lookup/parser reuse exists. Opt-in dependency observation now also covers imports, resolved types, ordinary/inline calls, embedded constants, source origins, conditional-compilation choices, and generated declarations, but typing and later compiler stages still rerun. |
 
 **Transport** means how a request reaches a long-lived process. **Incremental
 compilation** means the compiler also knows exactly which previous results are
@@ -217,12 +218,19 @@ initial predictions. They do not yet independently derive the complete
 affected-module set for every Haxe feature, and the
 predictions do not currently skip typing.
 
-The observer is not yet a complete typed-cache safety proof. It still needs
-coverage for constants, generated declarations, macro observations,
-feature/DCE state, static initialization, target/profile changes, and source
-origin changes such as class-path shadowing. Until those cases and their edit
-sequences pass clean-versus-warm comparison, hxhx must continue type checking
-every module.
+The observer is not yet a complete typed-cache safety proof. Constants,
+generated declarations, conditional-compilation choices, and selected source
+origins now have focused observation coverage. The complete contract still
+needs macro observations, feature/DCE state, static initialization,
+target/profile behavior, and the full cross-feature edit matrix. Until those
+cases pass clean-versus-warm comparison, hxhx must continue type checking every
+module.
+
+`haxe_ocaml-850ii.32.5` owns the later typed-module admission gate. It can begin
+after its direct identity, request-state, dependency, differential, failure,
+reset, memory, and performance prerequisites pass; it does not technically
+wait for unrelated Full1 target rows. Completing it still cannot imply Full1
+readiness.
 
 Dependency observation runs only when `--hxhx-server-report` is present. This
 keeps ordinary experimental requests from paying its current full-program

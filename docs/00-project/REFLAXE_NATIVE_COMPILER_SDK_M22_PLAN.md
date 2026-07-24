@@ -1,6 +1,7 @@
 # M22 Native Reflaxe Compiler SDK Plan
 
-- Status: accepted planning contract; no SDK capability or support claim
+- Status: accepted planning contract; implementation deferred until Full1 and
+  the authentic shared-target hard cut; no SDK capability or support claim
 - Date: 2026-07-15; shared-host ABI amendment accepted 2026-07-18
 - Owner: `haxe_ocaml-bomhr`
 - Architecture contract: `haxe_ocaml-bomhr.1`
@@ -12,6 +13,13 @@ This page is a planning contract. It describes what M22 must prove before the
 repository can call the Native Reflaxe Compiler SDK supported. It does not
 describe functionality available today, change an ABI version, authorize a
 release claim, or increase any README readiness bar.
+
+The six-month checkpoint keeps this design but changes its schedule. M22
+implementation must not begin while native `hxhx` still reaches the independent
+Stage3 OCaml emitter. `haxe_ocaml-38gsp.1` must first prove that native `hxhx`
+feeds the actual standalone `reflaxe.ocaml` target implementation, and Full1
+must satisfy the existing prerequisite. This prevents M22 from freezing host
+services or a program envelope around a temporary second semantic target.
 
 ## 1. Plain-language goal
 

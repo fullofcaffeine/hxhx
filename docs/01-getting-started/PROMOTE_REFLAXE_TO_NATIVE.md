@@ -5,7 +5,8 @@
 > planned Haxe-authored compiler-plugin workflow and Coro-class proof are
 > documented in
 > [`HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`](../00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md).
-> That cross-host workflow is not implemented yet.
+> That cross-host workflow is not implemented yet. Its implementation is
+> deferred until Full1 and the authentic standalone-target hard cut.
 
 This guide explains two common goals from scratch:
 
@@ -165,7 +166,10 @@ For architecture and layering:
 ## Planned M22 — one plugin payload for stock Haxe and `hxhx`
 
 M22 plans the next product step, but none of the commands in this section exist
-yet. Keep using Paths A, B, and C above as current truth.
+yet. Implementation is deferred until Full1 and `haxe_ocaml-38gsp.1` prove
+that native `hxhx` uses the actual standalone target implementation. Keep using
+Paths A, B, and C above as current truth; the current builtin route is not
+evidence that this future shared core already exists.
 
 The future product keeps one host-neutral core, one versioned plugin ABI, and
 one promoted payload:

@@ -37,7 +37,8 @@ Current planning owners:
   place/evaluation lowering `haxe_ocaml-9v1va` and semantic fail-closed runtime
   ownership `haxe_ocaml-0uwin`)
 - `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
-  (completed definition foundation: `haxe.ocaml-n5ae`)
+  (completed definition foundation: `haxe.ocaml-n5ae`; authentic shared-target
+  hard cut: `haxe_ocaml-38gsp.1`)
 - repository extraction decision: `haxe_ocaml-ipm6h`; keep the monorepo for
   now, prepare an artifact-based boundary, and split only after the technical
   gates and a measured product/maintenance trigger pass. After a split,
@@ -70,6 +71,52 @@ TypeScript/Go-style workflows on representative workloads, measured together
 with Dune's native artifact reuse. Architecture and cache hits alone do not
 move readiness. See
 `docs/00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`.
+
+### Current convergence priorities and product boundaries
+
+The six-month architecture checkpoint found one critical ownership problem:
+native `hxhx` currently reaches an OCaml target wrapper that calls the
+independent Stage3 `EmitterStage`; it does not yet run the standalone
+`reflaxe.ocaml` implementation. A shared identifier is not proof of one target.
+The checked disposition is in
+`docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`.
+
+The convergence priorities are:
+
+1. trustworthy frontend identities, source facts, request isolation, and
+   dependency observation;
+2. fail-closed standalone `reflaxe.ocaml` representation, calls, control,
+   runtime, and output ownership;
+3. native `hxhx` feeding that same standalone target implementation for the
+   combined product;
+4. Full1 closure by root semantic family on one exact candidate, independently
+   of the OCaml hard cut because OCaml output is not in the declared Full1
+   target scope;
+5. typed-module reuse after its direct clean-build differential and memory
+   gates, without waiting for unrelated Full1 target closure; and
+6. M22 and general customization implementation.
+
+The first two fronts can proceed in parallel, and Full1 continues through its
+own declared target matrix without waiting for step 3. Stage3 remains useful
+for bootstrap and diagnosis, but new Stage3-only OCaml semantic repairs cannot
+earn standalone or shared-target readiness. If a Stage3-generated artifact is
+used in a Full1 behavior test, that behavior still has to pass its exact
+Full1 gate; the repair is not evidence by itself. An unsafe OCaml boundary is
+not forbidden merely because it uses `Obj.magic`; it must have an explicit
+typed representation reason, validation, and tests rather than serving as a
+placeholder or silent fallback.
+
+Until step 3 is complete, no more than three P0 implementation fronts should be
+active at once: frontend/request/dependency facts, standalone target safety,
+and the current integration or Full1 root-family owner. Product aggregates and
+deferred planning records may remain open without authorizing simultaneous
+implementation.
+
+Full1 is not a technical cache-key input. Typed-reuse implementation may start
+before Full1 closes once lexical identity, request isolation, dependency
+observation, source/parser reuse, clean-versus-warm comparison, failure/reset
+behavior, and memory bounds pass. It cannot imply Full1 readiness, and default
+use in Full1 evidence still needs the same-candidate differential matrix.
 
 ### AI-assisted native promotion for any Haxe software
 
@@ -375,6 +422,11 @@ Current planning owners:
 - Haxe-family variation workflow:
   `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 
+The architecture remains accepted, but `haxe_ocaml-h5jta` and
+`haxe_ocaml-h5jta.1` implementation are deferred until Full1 and the authentic
+shared-target hard cut. Their documents remain planning inputs, not current
+product capability.
+
 ## Goal 5: Haxe-family compiler variations
 
 Sometimes a project needs more than a plugin: it may need a custom Haxe-family language, policy set, target bundle, or distribution.
@@ -518,6 +570,11 @@ gain typed-program mutation authority from that shared substrate.
 M22 is planning only today. Current stock-Haxe eval-host and `hxhx` native
 plugin artifacts remain host-specific and are not interchangeable. The new
 shared ABI requirement adds no present SDK capability or support statement.
+Implementation is explicitly deferred until Full1 and
+`haxe_ocaml-38gsp.1` prove that native `hxhx` can use the real standalone
+target implementation. This prevents the SDK from freezing a second target
+input, service model, or artifact contract around the temporary Stage3
+semantic path.
 
 ## Operating Rule
 

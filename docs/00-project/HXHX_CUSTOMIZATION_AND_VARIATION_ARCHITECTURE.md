@@ -1,7 +1,8 @@
 # hxhx Customization And Variation Architecture
 
 Last prepared: 2026-07-18
-Status: architecture design for `haxe.ocaml-vary.4`; no production-readiness claim
+Status: accepted architecture foundation; implementation deferred until Full1
+and the authentic shared-target hard cut; no production-readiness claim
 
 Related beads:
 
@@ -36,6 +37,13 @@ This design builds on the accepted Reflaxe boundary:
 
 The accepted boundary is recorded in
 [`ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`](ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md).
+
+The six-month checkpoint preserves this architecture but defers the
+post-Full1 product work under `haxe_ocaml-h5jta` and
+`haxe_ocaml-h5jta.1`. Full1 and `haxe_ocaml-38gsp.1` must first establish the
+baseline compiler facts and one authentic standalone OCaml target path. Until
+then, this document guides future ownership but does not authorize another
+snapshot, patch, cache, or native-artifact implementation.
 
 ## Definitions
 

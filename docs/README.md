@@ -44,6 +44,10 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   server, including request isolation, cache revisions, invalidation, plugins,
   performance, and documentation gates:
   `docs/00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`
+- Accepted six-month architecture and roadmap disposition, including the
+  standalone-OCaml-target hard cut, corrected Stage3 evidence, critical-path
+  sequencing, and typed-cache admission boundary:
+  `docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`
 - Maintained Reflaxe fork, upstream-sync, PR, CI, and pin policy:
   `docs/00-project/REFLAXE_INTEGRATION_FORK_POLICY.md`
 - First place/assignment lowering inventory and upstream evaluation oracle:

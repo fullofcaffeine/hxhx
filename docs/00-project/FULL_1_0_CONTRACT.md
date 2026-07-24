@@ -1,6 +1,6 @@
 # Full 1.0 Contract (vs Scoped 1.0)
 
-Last audited: 2026-07-13
+Last audited: 2026-07-23
 
 This page is the canonical definition boundary for release claims:
 
@@ -52,6 +52,31 @@ Full 1.0 is a stricter claim than Scoped 1.0. It requires:
 - plugin parity markers,
 - upstream-relative performance parity gate,
 - release RC aggregation marker.
+
+For any code path offered as evidence for a declared Full1 behavior, it also
+requires authentic compiler behavior rather than a target-output repair that
+merely lets the next tool run. In particular:
+
+- a backend may consume the source-shaped projection built from sealed typed
+  bodies during migration, but it must not recover semantics from the original
+  parser body;
+- Stage3 placeholder modules, generated-file semantic rewrites, or unexplained
+  fallback values cannot by themselves satisfy a Full1 row;
+- an unsafe native implementation cast may remain only when its typed
+  representation boundary, reason, permitted profile, validation, and behavior
+  tests are explicit; and
+- three consecutive source-shaped patches in one failure family trigger a
+  review of the shared parser, resolver, typer, lowered-model, runtime, or
+  toolchain owner before another leaf fix proceeds.
+
+`haxe.ocaml-f1cl.3.11` owns that root-family classification. The accepted
+six-month disposition is
+`docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`.
+
+The native `hxhx + reflaxe.ocaml` hard cut is separately owned by
+`haxe_ocaml-38gsp.1`. It is required for that combined product and later M22
+work, but it is not a target or generator in the declared Full1 scope and is
+not a prerequisite for closing `haxe.ocaml-f1cl`.
 
 ### Exactly which targets and generators are included?
 

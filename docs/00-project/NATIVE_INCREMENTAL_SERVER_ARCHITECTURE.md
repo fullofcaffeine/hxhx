@@ -432,6 +432,21 @@ public APIs, implementations, function bodies, configuration (including more
 than conditional compilation), broader macro inputs and effects, and module
 dependencies.
 
+`haxe_ocaml-850ii.32.5` owns that admission decision. In addition to the
+designed edit matrix, it requires a scheduled seeded 10,000-edit differential,
+failure/cancellation/reset isolation, a bounded memory plateau, explainable
+invalidation, and a material p95 improvement for the complete request after
+validation overhead. The stress count is supporting breadth, not a substitute
+for designed dependency cases, and absolute latency budgets remain
+report-only until fixed-host baselines exist.
+
+Full1 is not part of a typed-cache key and is not a technical prerequisite for
+opt-in typed-reuse development. A cache hit claims equivalence to a clean run
+of the same candidate, not that the clean candidate already implements every
+declared Full1 behavior. Typed reuse still cannot imply Full1 readiness, and a
+server used in Full1 evidence must pass the same-candidate clean-versus-warm
+matrix.
+
 Macro-result reuse, compiler transforms, native plugins, target plans, display
 recovery, parallel requests, and persistent storage remain outside this first cache.
 Uncertainty is always a miss. No later layer may make the printer, transport, or
@@ -440,6 +455,8 @@ cache catalog a second owner of Haxe behavior.
 ## Related tracks
 
 - `haxe_ocaml-850ii.32`: native hxhx server and cache.
+- `haxe_ocaml-850ii.32.5`: sealed typed-module reuse admission after the
+  identity, dependency, lifecycle, differential, memory, and latency gates.
 - `haxe_ocaml-850ii.33`: safely use upstream Haxe 4.3.7's existing compilation
   server with complete Reflaxe target state.
 

@@ -1,23 +1,27 @@
 # reflaxe.ocaml 1.0 Contract
 
-Last audited: 2026-07-19
+Last audited: 2026-07-23
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
 Current release authorization: **no-go**. The existing
 `RO_PRODUCTION_READY:PASS` aggregate proves the historical declared
 example/package/performance bundle. Following the accepted native-power and
-target-lowering review, it is necessary but not sufficient for a 1.0 release:
-`haxe_ocaml-9v1va` must establish the first validated place/evaluation lowering
-slice, `haxe_ocaml-0uwin` must make runtime requirements fail closed, and this
-aggregate must then open that semantic-safety evidence. Existing package,
-matrix, documentation, and performance receipts remain valid within their
-recorded scope; they are not revoked or silently reinterpreted.
+target-lowering and six-month architecture reviews, it is necessary but not
+sufficient for a 1.0 release. The target must complete one validated semantic
+path for place/evaluation (`haxe_ocaml-9v1va`, completed), representation,
+storage, and capture (`haxe_ocaml-9bome`), calls and conversions
+(`haxe_ocaml-taef5`), structured control effects (`haxe_ocaml-w32h3`), and
+fail-closed runtime ownership (`haxe_ocaml-0uwin`). This aggregate must then
+open those results. Existing package, matrix, documentation, and performance
+receipts remain valid within their recorded scope; they are not revoked or
+silently reinterpreted.
 
 Accepted architecture checkpoint:
 
 - `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
 - `docs/00-project/ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md`
+- `docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`
 
 It is deliberately separate from:
 
@@ -149,6 +153,14 @@ Required semantic-safety prerequisites before release authorization:
 - an upstream-Haxe-oracle-backed place/evaluation/assignment slice is sealed
   before target syntax, including explicit occurrence counts and deterministic
   unsupported diagnostics (`haxe_ocaml-9v1va`);
+- representation, local storage, closure capture, nullability, boxing, and
+  boundary carriers come from one immutable registry rather than independent
+  compiler and builder guesses (`haxe_ocaml-9bome`);
+- resolved calls, labels, optional arguments, callbacks, coercions, and
+  conversions use one typed call contract (`haxe_ocaml-taef5`);
+- returns, throws, catches, loops, and other admitted non-local control behavior
+  are explicit before target syntax and fail when the declared OCaml target
+  model cannot represent them (`haxe_ocaml-w32h3`);
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);
@@ -158,7 +170,9 @@ Required semantic-safety prerequisites before release authorization:
 These prerequisites do not make the full future native-power roadmap a 1.0
 blocker. Generated bindings, advanced adapters, curated exported libraries,
 and one upstream-Haxe/`hxhx` target core block only a public scope that claims
-those capabilities.
+those capabilities. The first standalone 1.0 must still state its actual typed
+OCaml-library interop scope; expanding that scope is a separate product
+decision, not a silent implication of native output.
 
 Supporting evidence:
 

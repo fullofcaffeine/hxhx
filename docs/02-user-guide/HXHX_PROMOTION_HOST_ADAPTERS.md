@@ -17,6 +17,11 @@ Compatibility target:
 - planned M22 hard cutover: one versioned ABI and promoted plugin payload for
   stock Haxe and `hxhx`, with identical binary packaging attempted first
 
+M22 implementation is currently deferred until Full1 and
+`haxe_ocaml-38gsp.1`. The adapter constraints below define the future
+boundary; they do not claim that today's Stage3 builtin path already runs the
+standalone `reflaxe.ocaml` target core.
+
 Scaffold entrypoint:
 
 ```bash
