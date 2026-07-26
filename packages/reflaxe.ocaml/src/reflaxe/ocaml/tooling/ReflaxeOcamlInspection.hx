@@ -8,6 +8,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
@@ -15,6 +16,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntime;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
 
 using StringTools;
 
@@ -66,7 +68,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 5,
+			schemaVersion: 6,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -77,7 +79,7 @@ class ReflaxeOcamlInspection {
 			lowering: lowering,
 			representation: representation,
 			consistencyErrors: consistencyErrors,
-			unavailable: unavailableCapabilities(),
+			unavailable: unavailableCapabilities(lowering),
 			summary: {
 				valid: errorCount == 0,
 				exitCode: errorCount == 0 ? 0 : 1,
@@ -87,6 +89,8 @@ class ReflaxeOcamlInspection {
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length,
 				representationDecisionCount: representation.decisions.length,
+				localConversionCount: lowering.localConversions.length,
+				unsafeOperationCount: lowering.unsafeOperations.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -122,6 +126,13 @@ class ReflaxeOcamlInspection {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
 			}
+			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
+			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
+			for (operation in report.lowering.unsafeOperations) {
+				lines.push('  - ${operation.sourceFile} bytes ${operation.sourceMin}-${operation.sourceMax} ${operation.operation}: ${operation.inputSemanticTypeId}/${operation.inputCarrierTypeId} -> ${operation.outputSemanticTypeId}/${operation.outputCarrierTypeId}');
+				lines.push('    proof ${operation.proofId}: ${operation.proofClaim}');
+				lines.push('    profiles: ${operation.profileEligibility.join(", ")}; function=${operation.functionId}; body=${operation.bodyRevision}; pipeline=${operation.pipelineRevision}');
+			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
 				lines.push('  - ${entry.moduleId}.${entry.ownerTypeName}.${entry.fieldName}: ${entry.semanticTypeId} -> ${entry.carrierTypeId} (${entry.declarationSite})');
@@ -144,9 +155,9 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		lines.push("");
-		lines.push("Not available yet (never inferred from generated text):");
+		lines.push("Incomplete or unavailable (never inferred from generated text):");
 		for (capability in report.unavailable) {
-			lines.push('  - ${capability.label}: ${capability.reason}');
+			lines.push('  - ${capability.label} [${capability.status}]: ${capability.reason}');
 		}
 		lines.push("");
 		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
@@ -272,6 +283,11 @@ class ReflaxeOcamlInspection {
 					plans: [],
 					representation: representationFailure("not-enabled", path,
 						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
+					localConversionRevision: null,
+					localConversions: [],
+					unsafeOperationCompleteness: null,
+					unsafeOperationRevision: null,
+					unsafeOperations: [],
 					staticStorageRevision: null,
 					staticStorage: [],
 					scope: "typed-place-assignment-and-update-family",
@@ -282,8 +298,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 11) {
-						throw 'Unsupported lowering report schema $version; expected 11.';
+					if (version != 12) {
+						throw 'Unsupported lowering report schema $version; expected 12.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -297,6 +313,8 @@ class ReflaxeOcamlInspection {
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
+					final localConversions = inspectLocalConversions(value);
+					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
@@ -308,10 +326,15 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						representation: representation,
+						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
+						localConversions: localConversions,
+						unsafeOperationCompleteness: requiredString(value, "unsafeOperationCompleteness"),
+						unsafeOperationRevision: requiredSha256Revision(value, "unsafeOperationRevision"),
+						unsafeOperations: unsafeOperations,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-assignment-and-update-family",
-						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"} tied to those Haxe operations; it is not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -392,7 +415,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-and-array-int-v3")
+		if (scope != "exact-int-array-int-and-null-int-locals-v4")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -459,8 +482,104 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact-Int or direct Array<Int> carrier decision${decisions.length == 1 ? "" : "s"}; generic, nullable, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Null<Int> carrier decision${decisions.length == 1 ? "" : "s"}; generic, other nullable types, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
 		};
+	}
+
+	static function inspectLocalConversions(value:Dynamic):Array<InspectionLocalConversion> {
+		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v1")
+			throw "Unsupported local conversion report model.";
+		final raw = requiredArray(value, "localConversions");
+		if (raw.length != requiredInt(value, "localConversionCount"))
+			throw "Local conversion count does not match its inventory.";
+		final seen:Map<String, Bool> = [];
+		final conversions = [
+			for (entry in raw) {
+				final source = requiredObject(entry, "source");
+				final unsafe = Reflect.field(entry, "unsafeOperation");
+				final result:InspectionLocalConversion = {
+					id: requiredString(entry, "id"),
+					localId: requiredInt(entry, "localId"),
+					role: requiredString(entry, "role"),
+					sourceFile: requiredString(source, "file"),
+					sourceMin: requiredInt(source, "min"),
+					sourceMax: requiredInt(source, "max"),
+					inputSemanticTypeId: requiredString(entry, "inputSemanticTypeId"),
+					inputCarrierTypeId: requiredString(entry, "inputCarrierTypeId"),
+					outputSemanticTypeId: requiredString(entry, "outputSemanticTypeId"),
+					outputCarrierTypeId: requiredString(entry, "outputCarrierTypeId"),
+					conversion: requiredString(entry, "conversion"),
+					reason: requiredString(entry, "reason"),
+					proofId: requiredString(entry, "proofId"),
+					proofClaim: requiredString(entry, "proofClaim"),
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					functionId: requiredString(entry, "functionId"),
+					programRevision: requiredString(entry, "programRevision"),
+					bodyRevision: requiredString(entry, "bodyRevision"),
+					pipelineRevision: requiredString(entry, "pipelineRevision"),
+					unsafeOperationId: unsafe == null ? null : requiredString(unsafe, "id")
+				};
+				if (seen.exists(result.id)) throw 'Local conversion report contains duplicate identity "${result.id}".';
+				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
+				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
+				seen.set(result.id, true);
+				result;
+			}
+		];
+		conversions.sort((left, right) -> compareStrings(left.id, right.id));
+		return conversions;
+	}
+
+	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
+		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
+			throw "Unsupported unsafe-operation report model.";
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-local-slice-only")
+			throw "Unsupported unsafe-operation completeness claim.";
+		final raw = requiredArray(value, "unsafeOperations");
+		if (raw.length != requiredInt(value, "unsafeOperationCount"))
+			throw "Unsafe-operation count does not match its inventory.";
+		final conversionById:Map<String, InspectionLocalConversion> = [];
+		for (conversion in conversions)
+			conversionById.set(conversion.id, conversion);
+		final seen:Map<String, Bool> = [];
+		final operations = [
+			for (entry in raw) {
+				final source = requiredObject(entry, "source");
+				final result:InspectionUnsafeOperation = {
+					id: requiredString(entry, "id"),
+					conversionId: requiredString(entry, "conversionId"),
+					operation: requiredString(entry, "operation"),
+					sourceFile: requiredString(source, "file"),
+					sourceMin: requiredInt(source, "min"),
+					sourceMax: requiredInt(source, "max"),
+					inputSemanticTypeId: requiredString(entry, "inputSemanticTypeId"),
+					inputCarrierTypeId: requiredString(entry, "inputCarrierTypeId"),
+					outputSemanticTypeId: requiredString(entry, "outputSemanticTypeId"),
+					outputCarrierTypeId: requiredString(entry, "outputCarrierTypeId"),
+					reason: requiredString(entry, "reason"),
+					proofId: requiredString(entry, "proofId"),
+					proofClaim: requiredString(entry, "proofClaim"),
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					functionId: requiredString(entry, "functionId"),
+					programRevision: requiredString(entry, "programRevision"),
+					bodyRevision: requiredString(entry, "bodyRevision"),
+					pipelineRevision: requiredString(entry, "pipelineRevision")
+				};
+				final conversion = conversionById.get(result.conversionId);
+				if (conversion == null
+					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed local conversion.';
+				if (seen.exists(result.id)) throw 'Unsafe-operation report contains duplicate identity "${result.id}".';
+				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Unsafe operation "${result.id}" has an invalid source span.';
+				if (result.profileEligibility.length == 0) throw 'Unsafe operation "${result.id}" has no eligible profile.';
+				seen.set(result.id, true);
+				result;
+			}
+		];
+		for (conversion in conversions)
+			if (conversion.unsafeOperationId != null && !seen.exists(conversion.unsafeOperationId))
+				throw 'Local conversion "${conversion.id}" refers to a missing unsafe operation.';
+		operations.sort((left, right) -> compareStrings(left.id, right.id));
+		return operations;
 	}
 
 	static function representationDecision(value:Dynamic):InspectionRepresentationDecision {
@@ -661,12 +780,17 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
-	static function unavailableCapabilities():Array<InspectionUnavailableCapability> {
+	static function unavailableCapabilities(lowering:InspectionLowering):Array<InspectionUnavailableCapability> {
 		return [
 			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
 				"A checked partial report now covers core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates; other compiler paths still need explicit explanations."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
-			unavailable("raw-unsafe", "Raw and unsafe operation inventory", "The compiler does not yet emit an owned raw/Obj.magic proof inventory."),
+			{
+				id: "raw-unsafe",
+				label: "Whole-program raw and unsafe operation inventory",
+				status: lowering.status == "present" ? "partial" : "unavailable",
+				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact Null<Int> locals; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the first exact Null<Int> local slice is not available."
+			},
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
 			unavailable("export-abi", "Curated public OCaml export ABI", "Inferred .mli files are not a stable export contract.")
 		];
@@ -853,6 +977,11 @@ class ReflaxeOcamlInspection {
 			admittedInputRevision: null,
 			plans: [],
 			representation: representationFailure("invalid", path, message),
+			localConversionRevision: null,
+			localConversions: [],
+			unsafeOperationCompleteness: null,
+			unsafeOperationRevision: null,
+			unsafeOperations: [],
 			staticStorageRevision: null,
 			staticStorage: [],
 			scope: "typed-place-assignment-and-update-family",
@@ -868,7 +997,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-and-array-int-v3",
+			scope: "exact-int-array-int-and-null-int-locals-v4",
 			message: message
 		};
 	}

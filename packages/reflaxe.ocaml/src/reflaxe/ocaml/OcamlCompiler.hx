@@ -1970,7 +1970,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
-				staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), staticStoragePlan.reportEntries(),
+				staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

@@ -4,17 +4,12 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
-
-/** Exact function/body context required when consuming a sealed function plan. */
-typedef OcamlFunctionPlanBinding = {
-	final functionId:String;
-	final programRevision:String;
-	final bodyRevision:String;
-	final pipelineRevision:String;
-}
 
 /** One validated target plan that is immutable after its function is sealed. */
 typedef OcamlSealedPlacePlan = {
@@ -41,12 +36,13 @@ private typedef OcamlSealedFunctionRecord = {
 	Owns revision-bound lowered plans between final typed preprocessing and syntax.
 
 	A new compilation request clears the registry. Each function is planned and
-	validated once, then its place operations and local-storage choices are sealed
-	against the exact body revision. A mismatch is an internal compiler error,
-	never a request to reconstruct source semantics during emission.
+	validated once, then its place operations, local-storage choices, and
+	occurrence-bound carrier conversions are sealed against the exact body
+	revision. A mismatch is an internal compiler error, never a request to
+	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v5";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v6";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -206,6 +202,38 @@ class OcamlFunctionPlanRegistry {
 		final originIds = (originsByFunction.get(functionId) ?? []).copy();
 		originIds.sort(Reflect.compare);
 		return [for (originId in originIds) cast plansByOrigin.get(originId)];
+	}
+
+	/** Returns every sealed local conversion in deterministic identity order. */
+	public function localConversions():Array<OcamlLocalConversionDecision> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final conversions:Array<OcamlLocalConversionDecision> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (conversion in sealed.plan.localRepresentations.conversions())
+					conversions.push(conversion);
+			}
+		}
+		conversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return conversions;
+	}
+
+	/** Returns the proof-backed unsafe operations owned by sealed local plans. */
+	public function unsafeOperations():Array<OcamlUnsafeOperationRecord> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final operations:Array<OcamlUnsafeOperationRecord> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (operation in sealed.plan.localRepresentations.unsafeOperations())
+					operations.push(operation);
+			}
+		}
+		operations.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return operations;
 	}
 
 	/** Explains a missing or stale lookup instead of allowing emission to guess. */

@@ -1,0 +1,19 @@
+initial=null
+assigned=5
+copy=4
+nested=null
+effect:replacement:6
+nested-replaced=7
+mutable=3
+captured-first=2
+captured-null=-1
+captured-replaced=9
+alias-stays-null=true
+coalesced=12
+refined=8
+switch-null=null
+switch-value=3
+effect:order:10
+ordered=11
+effects=2
+OK null_int_local_conversions

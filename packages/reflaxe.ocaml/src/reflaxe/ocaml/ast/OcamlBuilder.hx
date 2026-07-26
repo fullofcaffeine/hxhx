@@ -26,10 +26,12 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
-import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
@@ -218,6 +220,128 @@ class OcamlBuilder {
 	}
 
 	/**
+		Resolves one exact occurrence-bound conversion from the sealed function plan.
+
+		The caller supplies the typed input/output shape only to validate that the
+		final body still matches its seal. The stored conversion remains the sole
+		answer for whether syntax preserves, boxes, or checks the value.
+	**/
+	function requireLocalConversion(localId:Int, role:OcamlLocalConversionRole, expression:TypedExpr, inputSemanticTypeId:String, inputCarrierTypeId:String,
+			outputSemanticTypeId:String, outputCarrierTypeId:String):OcamlLocalConversionDecision {
+		final binding = currentFunctionPlanBinding;
+		if (binding == null)
+			return localStorageInvariant('local $localId requires an occurrence conversion outside a sealed function body', expression.pos);
+		final plan = activeLocalRepresentationPlan(expression.pos);
+		if (plan == null)
+			return localStorageInvariant('local $localId requires an occurrence conversion without a sealed representation plan', expression.pos);
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final conversion = plan.conversionFor(binding, localId, role, source);
+		if (conversion == null) {
+			final occurrenceId = OcamlLocalRepresentationPlan.occurrenceId(binding, localId, role, source);
+			return localStorageInvariant('local $localId has no sealed $role conversion for occurrence "$occurrenceId"', expression.pos);
+		}
+		if (conversion.inputSemanticTypeId != inputSemanticTypeId
+			|| conversion.inputCarrierTypeId != inputCarrierTypeId
+			|| conversion.outputSemanticTypeId != outputSemanticTypeId
+			|| conversion.outputCarrierTypeId != outputCarrierTypeId) {
+			return
+				localStorageInvariant('local $localId occurrence "${conversion.id}" expects ${conversion.inputSemanticTypeId}/${conversion.inputCarrierTypeId} -> ${conversion.outputSemanticTypeId}/${conversion.outputCarrierTypeId}, but the final typed occurrence is $inputSemanticTypeId/$inputCarrierTypeId -> $outputSemanticTypeId/$outputCarrierTypeId',
+				expression.pos);
+		}
+		return conversion;
+	}
+
+	/** Returns the typed carrier entering an exact `Null<Int>` local write. */
+	function nullIntWriteInput(expression:TypedExpr):Null<{semanticTypeId:String, carrierTypeId:String}> {
+		return switch (unwrap(expression).expr) {
+			case TConst(TNull): {semanticTypeId: "Null<Int>", carrierTypeId: "Obj.t"};
+			case TConst(TInt(_)): {semanticTypeId: "Int", carrierTypeId: "int"};
+			case _:
+				if (OcamlRepresentationRegistry.isExactInt(expression.t)) {
+					{semanticTypeId: "Int", carrierTypeId: "int"};
+				} else if (OcamlRepresentationRegistry.isExactNullInt(expression.t)) {
+					{semanticTypeId: "Null<Int>", carrierTypeId: "Obj.t"};
+				} else {
+					null;
+				}
+		}
+	}
+
+	/** Mechanically applies one sealed initializer/assignment conversion. */
+	function buildNullIntWrite(localId:Int, role:OcamlLocalConversionRole, rhs:TypedExpr):OcamlExpr {
+		final input = nullIntWriteInput(rhs);
+		if (input == null)
+			return localStorageInvariant('local $localId received an unsupported exact Null<Int> input after final planning', rhs.pos);
+		final conversion = requireLocalConversion(localId, role, rhs, input.semanticTypeId, input.carrierTypeId, "Null<Int>", "Obj.t");
+		return switch (conversion.conversion) {
+			case PreserveNullableIntCarrier:
+				buildExpr(rhs);
+			case BoxExactIntToNullableInt:
+				final value = switch (unwrap(rhs).expr) {
+					case TConst(c = TInt(_)): OcamlExpr.EConst(buildConst(c));
+					case _: buildExpr(rhs);
+				}
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
+			case LegacyCoercion, Identity, CheckedUnboxNullableInt:
+				localStorageInvariant('local $localId occurrence "${conversion.id}" selected invalid write conversion ${conversion.conversion}', rhs.pos);
+		}
+	}
+
+	/** Mechanically applies one sealed exact `Null<Int>` local read conversion. */
+	function buildNullIntRead(local:TVar, expression:TypedExpr, base:OcamlExpr):OcamlExpr {
+		final outputSemanticTypeId = if (OcamlRepresentationRegistry.isExactNullInt(expression.t)) {
+			"Null<Int>";
+		} else if (OcamlRepresentationRegistry.isExactInt(expression.t)) {
+			"Int";
+		} else {
+			return localStorageInvariant('local ${local.id} has unsupported typed read ${TypeTools.toString(expression.t)} after final planning',
+				expression.pos);
+		}
+		final outputCarrierTypeId = outputSemanticTypeId == "Int" ? "int" : "Obj.t";
+		final conversion = requireLocalConversion(local.id, OcamlLocalConversionRole.Read, expression, "Null<Int>", "Obj.t", outputSemanticTypeId,
+			outputCarrierTypeId);
+		return switch (conversion.conversion) {
+			case PreserveNullableIntCarrier:
+				base;
+			case CheckedUnboxNullableInt:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [base]);
+			case LegacyCoercion, Identity, BoxExactIntToNullableInt:
+				localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid read conversion ${conversion.conversion}',
+					expression.pos);
+		}
+	}
+
+	/**
+		Consumes a checked-read conversion when an exact `Null<Int>` local is used
+		as a numeric `Int` operand.
+
+		The generic nullable fallback maps null to zero. Admitted locals bypass
+		that fallback: the sealed occurrence requires `nullable_int_unwrap`, which
+		rejects the null sentinel and records the unsafe carrier boundary.
+	**/
+	function buildCheckedNullableIntOperand(expression:TypedExpr):Null<OcamlExpr> {
+		final unwrapped = unwrap(expression);
+		return switch (unwrapped.expr) {
+			case TLocal(local):
+				final representation = plannedLocalRepresentation(local.id, expression.pos);
+				if (representation == null || representation.semanticTypeId != "Null<Int>") {
+					null;
+				} else {
+					final conversion = requireLocalConversion(local.id, OcamlLocalConversionRole.Read, expression, "Null<Int>", "Obj.t", "Int", "int");
+					switch (conversion.conversion) {
+						case CheckedUnboxNullableInt:
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildLocal(local, expression.pos)]);
+						case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt:
+							localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid numeric-read conversion ${conversion.conversion}',
+								expression.pos);
+					}
+				}
+			case _:
+				null;
+		}
+	}
+
+	/**
 		Consumes the initializer conversion sealed with one local representation.
 
 		Identity is admitted only when final typed planning already proved that the
@@ -225,6 +349,9 @@ class OcamlBuilder {
 		the value directly instead of falling through the generic same-class cast.
 	**/
 	function coerceLocalInitializer(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final representation = plannedLocalRepresentation(localId, rhs.pos);
+		if (representation != null && representation.semanticTypeId == "Null<Int>")
+			return buildNullIntWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
@@ -241,6 +368,8 @@ class OcamlBuilder {
 				}
 			case OcamlLocalCarrierConversion.LegacyCoercion, null:
 				coerceForAssignment(lhsType, rhs);
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt:
+				localStorageInvariant('local $localId leaked an occurrence-only Null<Int> conversion into its initializer summary', rhs.pos);
 		}
 	}
 
@@ -252,6 +381,9 @@ class OcamlBuilder {
 		body, so this path never reclassifies the Haxe type.
 	**/
 	function coerceLocalAssignment(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final representation = plannedLocalRepresentation(localId, rhs.pos);
+		if (representation != null && representation.semanticTypeId == "Null<Int>")
+			return buildNullIntWrite(localId, OcamlLocalConversionRole.Assignment, rhs);
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
@@ -268,6 +400,8 @@ class OcamlBuilder {
 				}
 			case OcamlLocalCarrierConversion.LegacyCoercion, null:
 				coerceForAssignment(lhsType, rhs);
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt:
+				localStorageInvariant('local $localId leaked an occurrence-only Null<Int> conversion into its assignment summary', rhs.pos);
 		}
 	}
 
@@ -1103,7 +1237,10 @@ class OcamlBuilder {
 				// Locals may therefore be *stored* using the nullable representation (`Obj.t`)
 				// but *used* in a non-nullable primitive context, which must be coerced to the
 				// correct OCaml primitive type at the usage site.
-				final base = buildLocal(v);
+				final base = buildLocal(v, e.pos);
+				final plannedRepresentation = plannedLocalRepresentation(v.id, e.pos);
+				if (plannedRepresentation != null && plannedRepresentation.semanticTypeId == "Null<Int>")
+					return buildNullIntRead(v, e, base);
 				final varKind = nullablePrimitiveKind(v.t);
 				final useKind = nullablePrimitiveKind(e.t);
 
@@ -3893,14 +4030,21 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildLocal(v:TVar):OcamlExpr {
+	function buildLocal(v:TVar, ?position:Position):OcamlExpr {
 		final name = renameVar(v.name);
 		final isRef = isRefLocalId(v.id);
 		if (!isRef) {
 			return OcamlExpr.EIdent(name);
 		}
 		final deref = OcamlExpr.EUnop(OcamlUnop.Deref, OcamlExpr.EIdent(name));
-		return isObjRefLocalId(v.id) ? OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [deref]) : deref;
+		if (!isObjRefLocalId(v.id))
+			return deref;
+		if (position != null) {
+			final representation = plannedLocalRepresentation(v.id, position);
+			if (representation != null && representation.semanticTypeId == "Null<Int>")
+				return deref;
+		}
+		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [deref]);
 	}
 
 	inline function isNullableStdArrayType(t:Type):Bool {
@@ -3935,6 +4079,9 @@ class OcamlBuilder {
 							rawExpr;
 						case OcamlLocalCarrierConversion.LegacyCoercion, null:
 							legacyArrayReceiverCoercion(rawExpr);
+						case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt:
+							localStorageInvariant('array receiver local ${local.id} leaked an occurrence-only Null<Int> conversion into its read summary',
+								receiver.pos);
 					}
 				}
 			case _:
@@ -4063,7 +4210,11 @@ class OcamlBuilder {
 		}
 
 		inline function toIntExpr(expr:TypedExpr):OcamlExpr {
-			return nullablePrimitiveKind(expr.t) == "int" ? safeUnboxNullableInt(buildExpr(expr)) : buildExpr(expr);
+			if (nullablePrimitiveKind(expr.t) == "int") {
+				final checked = buildCheckedNullableIntOperand(expr);
+				return checked != null ? checked : safeUnboxNullableInt(buildExpr(expr));
+			}
+			return buildExpr(expr);
 		}
 
 		inline function toFloatExpr(expr:TypedExpr):OcamlExpr {
@@ -4071,7 +4222,8 @@ class OcamlBuilder {
 				case "float":
 					safeUnboxNullableFloat(buildExpr(expr));
 				case "int":
-					OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [safeUnboxNullableInt(buildExpr(expr))]);
+					final checked = buildCheckedNullableIntOperand(expr);
+					OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [checked != null ? checked : safeUnboxNullableInt(buildExpr(expr))]);
 				case _:
 					if (isIntType(expr.t)) {
 						OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(expr)]);
@@ -4231,13 +4383,15 @@ class OcamlBuilder {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						final tmp = freshTmp("assign");
 						var rhs = coerceLocalAssignment(v.id, v.t, e2);
+						final localRepresentation = plannedLocalRepresentation(v.id, e2.pos);
+						final exactNullIntCarrier = localRepresentation != null && localRepresentation.semanticTypeId == "Null<Int>";
 						final lhsRefObjSlot = isObjRefLocalId(v.id) || switch (followNoAbstracts(unwrapNullType(v.t))) {
 							case TDynamic(_):
 								true;
 							case TAbstract(_, _) if (isStdAnyAbstract(v.t)):
 								true;
 							case _: isNullableEnumType(v.t) != null || (unwrapNullType(v.t) != v.t && nullablePrimitiveKind(v.t) == null);
-						} if (lhsRefObjSlot) {
+						} if (lhsRefObjSlot && !exactNullIntCarrier) {
 							rhs = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [rhs]);
 						}
 						if (isWeakRefLocalId(v.id)) {

@@ -40,6 +40,12 @@ class RepresentationRegistryFixture {
 		assertTrue(OcamlRepresentationRegistry.isExactInt(Context.typeof(macro(0 : Int))), "the built-in non-null Int should be admitted");
 		assertTrue(!OcamlRepresentationRegistry.isExactInt(Context.typeof(macro(0.0 : Float))), "Float should remain outside the first slice");
 		assertTrue(!OcamlRepresentationRegistry.isExactInt(Context.typeof(macro(null : Null<Int>))), "nullable Int should remain outside the first slice");
+		assertTrue(OcamlRepresentationRegistry.isExactNullInt(Context.typeof(macro(null : Null<Int>))),
+			"the direct core Null<Int> wrapper should be admitted by its dedicated predicate");
+		assertTrue(!OcamlRepresentationRegistry.isExactNullInt(Context.typeof(macro(null : Null<Float>))),
+			"Null<Float> should remain outside the exact Null<Int> slice");
+		assertTrue(!OcamlRepresentationRegistry.isExactNullInt(Context.typeof(macro(null : Null<IntAlias>))),
+			"Null<IntAlias> should need its own proof instead of following the typedef implicitly");
 		assertTrue(OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Int>))), "the direct nominal Array<Int> should be admitted");
 		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Float>))),
 			"Array<Float> should remain outside the exact Array<Int> slice");
@@ -66,6 +72,9 @@ class RepresentationRegistryFixture {
 		final arrayInternal = registry.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		final arrayMutable = registry.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final arrayCaptured = registry.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		final nullableInternal = registry.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+		final nullableMutable = registry.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
+		final nullableCaptured = registry.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);
 		assertTrue(mutable.semanticTypeId == "Int" && mutable.carrierTypeId == "int", "exact Int storage should use the direct OCaml int carrier");
 		assertTrue(mutable.proof.id == "direct-exact-int-storage-64-v1"
 			&& mutable.proof.claim.indexOf("still require HxInt") >= 0
@@ -96,12 +105,23 @@ class RepresentationRegistryFixture {
 		assertTrue(arrayInternal.proof.id == "direct-array-int-reference-carrier-v2"
 			&& arrayInternal.proof.claim.indexOf("does not admit generic") >= 0,
 			"the Array<Int> proof should name its narrow boundary instead of generalizing all arrays");
+		assertTrue(nullableInternal.semanticTypeId == "Null<Int>"
+			&& nullableInternal.carrierTypeId == "Obj.t"
+			&& nullableInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
+			&& nullableInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
+			"exact Null<Int> locals should use the runtime-sentinel Obj.t carrier");
+		assertTrue(nullableInternal.proof.id == "nullable-int-obj-carrier-v1"
+			&& nullableInternal.proof.claim.indexOf("does not admit other Null<T> families, fields, calls, or ABI crossings") >= 0,
+			"the nullable carrier proof should state its local-only boundary");
+		assertTrue(nullableMutable.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& nullableCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
+			"mutable and captured Null<Int> values should put replacement mutation in their shared local cells");
 		assertTrue(registry.require(mutable.id, "program:representation-fixture").revision == mutable.revision,
 			"an exact-program lookup should return the selected decision");
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 6, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 9, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -114,6 +134,8 @@ class RepresentationRegistryFixture {
 		expectFailure("stale program", "registry belongs to", () -> registry.require(internal.id, "program:older"));
 		expectFailure("unsupported Array<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
 			() -> registry.selectExactArrayInt(OcamlRepresentationDomain.InstanceField));
+		expectFailure("unsupported Null<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
+			() -> registry.selectExactNullInt(OcamlRepresentationDomain.InstanceField));
 		expectFailure("conflicting carrier", "cannot also use Obj.t", () -> registry.register({
 			semanticTypeId: mutable.semanticTypeId,
 			domain: mutable.domain,
@@ -137,6 +159,9 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		registryAgain.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+		registryAgain.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);
 		assertTrue(registryAgain.revision() == registry.revision(), "registration order should not change the registry revision");
 
 		registry.beginProgram("program:new-request");

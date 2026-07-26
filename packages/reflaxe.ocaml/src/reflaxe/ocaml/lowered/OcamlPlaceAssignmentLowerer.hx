@@ -11,7 +11,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReport;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
-import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {

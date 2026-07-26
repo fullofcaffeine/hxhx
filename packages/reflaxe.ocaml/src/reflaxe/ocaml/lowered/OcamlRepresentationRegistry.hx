@@ -23,10 +23,10 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	function plans, place plans, reports, and syntax construction cannot silently
 	choose different carriers. The admitted scope covers exact `Int` plus
 	internal, mutable-local, and captured-local carriers for direct nominal
-	`Array<Int>`.
+	`Array<Int>` and exact core `Null<Int>`.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v3";
+	public static inline final MODEL_REVISION = "ocaml-representation-v4";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -92,6 +92,20 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/**
+		Returns whether a type is exactly the core `Null<Int>` representation.
+
+		Typedefs, user abstracts, monomorphs, and other nullable primitive families
+		are intentionally excluded. Their carrier or conversion proof can differ.
+	**/
+	public static function isExactNullInt(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, [TAbstract(innerRef, _)]): final abstractType = abstractRef.get(); final innerType = innerRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && innerType.pack.length == 0 && innerType.name == "Int";
+			case _:
+				false;
+		}
+	}
+
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
@@ -148,6 +162,39 @@ class OcamlRepresentationRegistry {
 			proof: {
 				id: "direct-array-int-reference-carrier-v2",
 				claim: "HxArray.t is the target runtime's mutable reference-bearing array container. The surrounding binding or ref cell owns replacement of the whole carrier, while the carrier owns shared element mutation. Reusing that exact carrier preserves reference identity and aliases; Haxe null remains a separately converted runtime sentinel. This proof does not admit generic, nullable, typedef, abstract, Vector, field, or ABI representations."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Registers the nullable primitive carrier used by exact `Null<Int>` locals.
+
+		The representation decision owns the carrier only. The function-local
+		conversion plan separately proves whether each occurrence preserves the
+		carrier, boxes an exact Int, or performs a checked non-null read.
+	**/
+	public function selectExactNullInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: exact Null<Int> is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+		};
+		return register({
+			semanticTypeId: "Null<Int>",
+			domain: domain,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: storageMutationPolicy,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
+			reason: exactNullIntReason(domain),
+			proof: {
+				id: "nullable-int-obj-carrier-v1",
+				claim: "One Obj.t carrier can distinguish HxRuntime.hx_null from every boxed OCaml int that represents a Haxe Int. The carrier is valid only with occurrence-bound proofs for sentinel preservation, exact-Int boxing, and checked non-null reads; it does not admit other Null<T> families, fields, calls, or ABI crossings."
 			},
 			profileEligibility: ["metal", "portable"]
 		});
@@ -248,6 +295,19 @@ class OcamlRepresentationRegistry {
 				"An exact Array<Int> captured local stores the direct HxArray container in the ref cell shared with nested functions; the cell owns replacement and each HxArray owns shared element mutation.";
 			case InstanceField, StaticField, ArrayElement:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-int-domain]: no exact Array<Int> local reason exists for $domain';
+		}
+	}
+
+	static function exactNullIntReason(domain:OcamlRepresentationDomain):String {
+		return switch (domain) {
+			case InternalValue:
+				"An exact Null<Int> immutable binding uses Obj.t so one carrier can preserve Haxe null and boxed Int values across source rebindings.";
+			case MutableLocalStorage:
+				"An exact Null<Int> mutable local stores its Obj.t carrier in one ref cell; the cell owns replacement while occurrence plans own boxing and checked reads.";
+			case CapturedLocalStorage:
+				"An exact Null<Int> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans own every carrier crossing.";
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> local reason exists for $domain';
 		}
 	}
 

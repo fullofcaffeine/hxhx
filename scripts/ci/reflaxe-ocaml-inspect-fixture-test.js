@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 5)
+	assert.strictEqual(report.schemaVersion, 6)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -72,6 +72,15 @@ try {
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
 	assert.strictEqual(report.lowering.scope, 'typed-place-assignment-and-update-family')
 	assert(report.lowering.message.includes('not a whole-program IR'))
+	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
+	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
+	assert.strictEqual(report.lowering.unsafeOperationCompleteness, 'exact-null-int-local-slice-only')
+	assert.match(report.lowering.localConversionRevision, sha256Revision)
+	assert.match(report.lowering.unsafeOperationRevision, sha256Revision)
+	assert(report.lowering.localConversions.length > 0)
+	assert(report.lowering.unsafeOperations.every(operation =>
+		report.lowering.localConversions.some(conversion =>
+			conversion.id === operation.conversionId && conversion.unsafeOperationId === operation.id)))
 	assert.strictEqual(report.lowering.staticStorage.length, report.summary.staticStorageCount)
 	assert.match(report.lowering.staticStorageRevision, sha256Revision)
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleValue'
@@ -81,7 +90,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-and-array-int-v3')
+	assert.strictEqual(report.representation.scope, 'exact-int-array-int-and-null-int-locals-v4')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
@@ -221,9 +230,10 @@ try {
 			assert(file.bytes > 0)
 		}
 	}
-	for (const id of ['semantic-runtime-manifest', 'native-dependencies', 'raw-unsafe', 'bindings', 'export-abi']) {
+	for (const id of ['semantic-runtime-manifest', 'native-dependencies', 'bindings', 'export-abi']) {
 		assert(report.unavailable.some(capability => capability.id === id && capability.status === 'unavailable'))
 	}
+	assert(report.unavailable.some(capability => capability.id === 'raw-unsafe' && capability.status === 'partial'))
 	assert(!report.unavailable.some(capability => capability.id === 'program-representation'))
 
 	const human = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering'])
@@ -236,6 +246,8 @@ try {
 	assert(human.stdout.includes('HxRuntime:'))
 	assert(human.stdout.includes('assignment/update family only'))
 	assert(human.stdout.includes('[PASS] Program representation registry:'))
+	assert(human.stdout.includes('[PASS] Local carrier conversions:'))
+	assert(human.stdout.includes('[PARTIAL] Unsafe carrier proof ledger:'))
 	assert(human.stdout.includes('[PASS] Mutable static storage:'))
 	assert(human.stdout.includes('REFLAXE_OCAML_INSPECT:PASS'))
 
@@ -308,8 +320,24 @@ try {
 	assert.strictEqual(missingRequirementReport.lowering.status, 'invalid')
 	assert(missingRequirementReport.lowering.message.includes(`refers to missing runtime requirement "${removedRequirement.id}"`))
 	fs.writeFileSync(loweringPath, loweringBytes)
+	const missingUnsafeValue = JSON.parse(loweringBytes)
+	const removedUnsafe = missingUnsafeValue.unsafeOperations.pop()
+	if (removedUnsafe) {
+		missingUnsafeValue.unsafeOperationCount -= 1
+		fs.writeFileSync(loweringPath, JSON.stringify(missingUnsafeValue, null, 2) + '\n')
+		const missingUnsafe = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+		assert.strictEqual(missingUnsafe.status, 1)
+		const missingUnsafeReport = JSON.parse(missingUnsafe.stdout)
+		assert.strictEqual(missingUnsafeReport.lowering.status, 'invalid')
+		assert(missingUnsafeReport.lowering.message.includes('refers to a missing unsafe operation'))
+		fs.writeFileSync(loweringPath, loweringBytes)
+	}
 	const missingRepresentationValue = JSON.parse(loweringBytes)
-	const removedRepresentation = missingRepresentationValue.representations.pop()
+	const referencedRepresentationId = missingRepresentationValue.plans[0].place.representationId
+	const removedRepresentationIndex = missingRepresentationValue.representations.findIndex(
+		representation => representation.id === referencedRepresentationId)
+	assert(removedRepresentationIndex >= 0)
+	const [removedRepresentation] = missingRepresentationValue.representations.splice(removedRepresentationIndex, 1)
 	missingRepresentationValue.representationCount -= 1
 	fs.writeFileSync(loweringPath, JSON.stringify(missingRepresentationValue, null, 2) + '\n')
 	const missingRepresentation = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])

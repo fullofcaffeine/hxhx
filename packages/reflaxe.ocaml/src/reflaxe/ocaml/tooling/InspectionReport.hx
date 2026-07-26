@@ -197,6 +197,52 @@ typedef InspectionRepresentation = {
 	final message:String;
 }
 
+/** One occurrence-bound carrier conversion selected before OCaml syntax. **/
+typedef InspectionLocalConversion = {
+	final id:String;
+	final localId:Int;
+	final role:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final conversion:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+	final unsafeOperationId:Null<String>;
+}
+
+/** One admitted unsafe carrier operation and the proof that owns it. **/
+typedef InspectionUnsafeOperation = {
+	final id:String;
+	final conversionId:String;
+	final operation:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One mutable static cell selected before generated type values are emitted. **/
 typedef InspectionStaticStorageEntry = {
 	final id:String;
@@ -232,6 +278,11 @@ typedef InspectionLowering = {
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
 	final representation:InspectionRepresentation;
+	final localConversionRevision:Null<String>;
+	final localConversions:Array<InspectionLocalConversion>;
+	final unsafeOperationCompleteness:Null<String>;
+	final unsafeOperationRevision:Null<String>;
+	final unsafeOperations:Array<InspectionUnsafeOperation>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -256,6 +307,8 @@ typedef InspectionSummary = {
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
+	final localConversionCount:Int;
+	final unsafeOperationCount:Int;
 	final staticStorageCount:Int;
 }
 

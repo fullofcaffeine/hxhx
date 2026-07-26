@@ -92,6 +92,15 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		Dynamic box or representation wrapper.
 	**/
 	final DirectRuntimeContainer = "direct-runtime-container";
+
+	/**
+		Primitive values are boxed only when they enter this nullable carrier.
+
+		The carrier itself is `Obj.t`: it preserves the shared Haxe null sentinel
+		and boxed non-null primitive values. A separate occurrence plan must prove
+		every box, carrier-preserving copy, and checked non-null read.
+	**/
+	final NullablePrimitiveCarrier = "nullable-primitive-carrier";
 }
 
 /** A named, reviewable claim supporting one representation choice. */

@@ -629,7 +629,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 5
+	if (scaffoldInspectionReport.schemaVersion !== 6
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
@@ -643,7 +643,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
 		|| scaffoldInspectionReport.representation?.status !== 'present'
-		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-and-array-int-v3'
+		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-array-int-and-null-int-locals-v4'
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
 		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.staticStorageCount)

@@ -10,12 +10,20 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKin
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
-/** Writes the deterministic inspection artifact for sealed lowered place nodes. */
+/**
+	Writes the deterministic report for sealed representation and lowering facts.
+
+	The report exposes place operations, local carrier crossings, the admitted
+	unsafe-operation proofs that own those crossings, static storage, and their
+	runtime requirements. It never infers those facts from generated OCaml text.
+**/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
 
@@ -30,7 +38,8 @@ class OcamlLoweringReportWriter {
 	}
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
-			representations:Array<OcamlRepresentationDecision>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
+			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
+			unsafeOperations:Array<OcamlUnsafeOperationRecord>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
 			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -93,14 +102,44 @@ class OcamlLoweringReportWriter {
 		final canonicalPlans = haxe.Json.stringify(sorted);
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
+		final sortedLocalConversions = localConversions.copy();
+		sortedLocalConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final sortedUnsafeOperations = unsafeOperations.copy();
+		sortedUnsafeOperations.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final unsafeByConversionId:Map<String, OcamlUnsafeOperationRecord> = [];
+		for (operation in sortedUnsafeOperations) {
+			if (unsafeByConversionId.exists(operation.conversionId))
+				throw 'Unsafe-operation ledger contains more than one proof for conversion "${operation.conversionId}".';
+			unsafeByConversionId.set(operation.conversionId, operation);
+		}
+		for (conversion in sortedLocalConversions) {
+			final operation = unsafeByConversionId.get(conversion.id);
+			if ((conversion.unsafeOperation == null) != (operation == null))
+				throw 'Local conversion "${conversion.id}" and the unsafe-operation ledger disagree about proof ownership.';
+			if (conversion.unsafeOperation != null && conversion.unsafeOperation.id != operation.id)
+				throw 'Local conversion "${conversion.id}" names unsafe proof "${conversion.unsafeOperation.id}", but the ledger contains "${operation.id}".';
+		}
+		if (sortedUnsafeOperations.length != sortedLocalConversions.filter(conversion -> conversion.unsafeOperation != null).length)
+			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local conversion.";
+		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
+		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
 		final report = {
-			schemaVersion: 11,
+			schemaVersion: 12,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
-			representationScope: "exact-int-and-array-int-v3",
+			representationScope: "exact-int-array-int-and-null-int-locals-v4",
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
+			localConversionModel: "typed-ocaml-local-carrier-conversions-v1",
+			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
+			localConversionCount: sortedLocalConversions.length,
+			localConversions: sortedLocalConversions,
+			unsafeOperationModel: "proof-backed-admitted-unsafe-operations-v1",
+			unsafeOperationCompleteness: "exact-null-int-local-slice-only",
+			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
+			unsafeOperationCount: sortedUnsafeOperations.length,
+			unsafeOperations: sortedUnsafeOperations,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,

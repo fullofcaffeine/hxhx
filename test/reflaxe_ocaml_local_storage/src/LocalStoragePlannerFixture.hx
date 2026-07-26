@@ -3,8 +3,12 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationKind;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageDecision;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageKind;
@@ -265,6 +269,101 @@ class LocalStoragePlannerFixture {
 		}
 		assertTrue(unmigratedFloatCount == 1,
 			"the mutated Float local should be explicitly marked as unmigrated instead of being silently reclassified during syntax construction");
+		final nullIntInput = Context.typeExpr(macro {
+			var internal:Null<Int> = null;
+			internal = 4;
+			final copied:Null<Int> = internal;
+			var mutable:Null<Int> = null;
+			if (copied != null) {
+				mutable = 2;
+			}
+			var captured:Null<Int> = 1;
+			final replaceCaptured = (next:Null<Int>) -> captured = next;
+			replaceCaptured(copied);
+			var refined:Null<Int> = 7;
+			if (refined != null) {
+				refined + 1;
+			}
+			mutable == null ? captured : mutable;
+		});
+		final nullIntStorage = OcamlLocalStoragePlanner.planExpression(nullIntInput);
+		final nullIntBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|null-int-locals",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:null-int-locals-v1",
+			pipelineRevision: "ocaml-function-plans-v6"
+		};
+		final nullIntPlan = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
+		final nullIntReferences = nullIntPlan.references().filter(reference -> reference.semanticTypeId == "Null<Int>");
+		assertTrue(nullIntReferences.length == 5, "every exact Null<Int> declaration in the focused body should reference one sealed program representation");
+		assertTrue(nullIntReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 3
+			&& nullIntReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1
+			&& nullIntReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"exact Null<Int> declarations should distinguish internal, mutable, and captured local storage");
+		final nullIntConversions = nullIntPlan.conversions();
+		assertTrue(nullIntConversions.filter(conversion -> conversion.role == OcamlLocalConversionRole.Initializer
+			&& conversion.conversion == OcamlLocalCarrierConversion.PreserveNullableIntCarrier)
+			.length > 0,
+			"null and existing nullable initializers should preserve the selected Obj.t carrier");
+		assertTrue(nullIntConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactIntToNullableInt).length > 0,
+			"exact Int writes should seal one Obj.repr carrier conversion");
+		assertTrue(nullIntConversions.filter(conversion -> conversion.role == OcamlLocalConversionRole.Read
+			&& conversion.conversion == OcamlLocalCarrierConversion.CheckedUnboxNullableInt)
+			.length > 0,
+			"a numeric read should seal one checked nullable-to-Int conversion");
+		final nullIntUnsafe = nullIntPlan.unsafeOperations();
+		assertTrue(nullIntUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprExactInt).length > 0
+			&& nullIntUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.CheckedNullableIntUnwrap).length > 0,
+			"the focused plan should own proof records for both admitted unsafe carrier operations");
+		final nullIntPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
+		assertTrue(nullIntPlanAgain.revision == nullIntPlan.revision
+			&& nullIntPlanAgain.conversions()
+				.map(conversion -> conversion.id)
+				.join(",") == nullIntConversions.map(conversion -> conversion.id)
+				.join(","),
+			"planning the same typed body twice should preserve occurrence identities and the local representation revision");
+		final returnedConversion = nullIntConversions[0];
+		Reflect.setField(returnedConversion, "proofId", "changed-by-caller");
+		assertTrue(nullIntPlan.conversions()[0].proofId != "changed-by-caller", "mutating a returned conversion must not change the sealed occurrence plan");
+		final duplicateConversion = nullIntPlan.conversions()[0];
+		final duplicateReference = nullIntPlan.referenceFor(duplicateConversion.localId);
+		assertTrue(duplicateReference != null, "the duplicate-conversion fixture should retain its local representation");
+		final duplicateDecision:OcamlLocalRepresentationDecision = {
+			localId: duplicateConversion.localId,
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(duplicateReference.representationId, duplicateReference.semanticTypeId,
+				duplicateReference.domain),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		};
+		expectFailure("duplicate local conversion", "duplicate-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([duplicateDecision], [duplicateConversion, duplicateConversion]));
+		final wrongCarrier:Dynamic = Reflect.copy(duplicateConversion);
+		Reflect.setField(wrongCarrier, "inputCarrierTypeId", "wrong-carrier");
+		expectFailure("wrong local conversion carrier", "wrong-conversion-carrier",
+			() -> new OcamlLocalRepresentationPlan([duplicateDecision], [cast wrongCarrier]));
+		final unsafeConversion = nullIntConversions.filter(conversion -> conversion.unsafeOperation != null)[0];
+		final mismatchedUnsafe:Dynamic = Reflect.copy(unsafeConversion);
+		final unsafeProof:Dynamic = Reflect.copy(unsafeConversion.unsafeOperation);
+		Reflect.setField(unsafeProof, "proofId", "wrong-proof");
+		Reflect.setField(mismatchedUnsafe, "unsafeOperation", unsafeProof);
+		expectFailure("mismatched unsafe proof", "unsafe-proof-mismatch", () -> new OcamlLocalRepresentationPlan([
+			{
+				localId: unsafeConversion.localId,
+				choice: cast nullIntPlan.choiceFor(unsafeConversion.localId),
+				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+			}
+		], [cast mismatchedUnsafe]));
+		final changedBinding:OcamlFunctionPlanBinding = {
+			functionId: nullIntBinding.functionId,
+			programRevision: nullIntBinding.programRevision,
+			bodyRevision: "body:stale",
+			pipelineRevision: nullIntBinding.pipelineRevision
+		};
+		assertTrue(nullIntPlan.conversionFor(changedBinding, duplicateConversion.localId, duplicateConversion.role, duplicateConversion.source) == null,
+			"a stale body binding must not resolve an occurrence conversion");
 		final nullableArrayInput = Context.typeExpr(macro {
 			final nullable:Array<Int> = null;
 			nullable;
