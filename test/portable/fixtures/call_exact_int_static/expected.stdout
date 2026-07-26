@@ -42,4 +42,12 @@ mixed-decision-box
 mixed-fallback-exact
 mixed-many-callee
 mixed-many-boxed=84
+zero-int-callee
+zero-int=17
+zero-bool-callee
+zero-bool=false
+zero-null-int-callee
+zero-null-int=true
+zero-null-bool-callee
+zero-null-bool=true
 instance=6

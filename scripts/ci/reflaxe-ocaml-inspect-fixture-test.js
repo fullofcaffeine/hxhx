@@ -87,8 +87,14 @@ try {
 	assert(report.lowering.calls.every(call =>
 		report.lowering.callableBoundaries.some(boundary =>
 			boundary.calleeId === call.calleeId
-			&& boundary.arguments[0].outputRepresentationId === call.arguments[0].outputRepresentationId
+			&& boundary.arguments.length === call.arguments.length
+			&& call.arguments.every((argument, index) =>
+				boundary.arguments[index].outputRepresentationId === argument.outputRepresentationId)
 			&& boundary.result.inputRepresentationId === call.result.inputRepresentationId)))
+	assert(report.lowering.calls.some(call =>
+		call.arguments.length === 0
+		&& call.evaluationSchedule.length === 1
+		&& call.evaluationSchedule[0].kind === 'invoke-callee'))
 	assert.strictEqual(report.lowering.staticStorage.length, report.summary.staticStorageCount)
 	assert.match(report.lowering.staticStorageRevision, sha256Revision)
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleValue'

@@ -219,7 +219,8 @@ class OcamlBuilder {
 		}
 		if (!invocationSeen || materialized.length != arguments.length)
 			return callPlanInvariant('call "${call.id}" did not materialize every source argument before invocation', position);
-		var out = OcamlExpr.EApp(target, applicationArguments);
+		final targetArguments = applicationArguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : applicationArguments;
+		var out = OcamlExpr.EApp(target, targetArguments);
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
@@ -6648,7 +6649,7 @@ class OcamlBuilder {
 			for (index in 0...args.length)
 				requireCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index', bodyExpr.pos);
 			requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
-			[
+			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...args.length)
 					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), OcamlTypeExpr.TIdent(callableBoundary.arguments[index].outputCarrierTypeId))
 			];

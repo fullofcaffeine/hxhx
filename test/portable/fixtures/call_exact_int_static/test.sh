@@ -5,9 +5,10 @@ arithmetic_source="out/Arithmetic.ml"
 nullable_source="out/NullableCalls.ml"
 bool_source="out/BoolCalls.ml"
 mixed_source="out/MixedCalls.ml"
+zero_source="out/ZeroArgCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$zero_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -116,11 +117,25 @@ if grep -Eq 'Obj\.repr \(Obj\.repr \((exactMixedFlag|exactMixedFallback) \(\)\)\
 	echo "The positive-arity signature matrix must not box an exact primitive argument twice" >&2
 	exit 1
 fi
+for zero_method in exactCount exactFlag nullableCount nullableFlag; do
+	if ! grep -q "^let ${zero_method} = fun () ->" "$zero_source"; then
+		echo "The zero-argument callable ${zero_method} must use an explicit OCaml unit parameter" >&2
+		exit 1
+	fi
+	if ! grep -Eq "ZeroArgCalls\\.${zero_method} \\(\\)" "$main_source"; then
+		echo "The zero-argument call ${zero_method} must invoke its target with OCaml unit" >&2
+		exit 1
+	fi
+done
+if grep -Eq 'ZeroArgCalls\.(exactCount|exactFlag|nullableCount|nullableFlag)([^ (]|$)' "$main_source"; then
+	echo "A zero-argument source call must not lower to a bare OCaml function value" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v5') {
+if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v6') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -174,6 +189,29 @@ if (report.calls.some(call => call.proofId !== signatureProofId)
 }
 verifyCalls('increment', 1, signatureProofId, 1)
 verifyCalls('add', 2, signatureProofId, 2)
+function verifyZeroCall(fieldName, semanticTypeId, carrierTypeId) {
+	const calls = report.calls?.filter(item => item.sourceTypeName === 'ZeroArgCalls' && item.sourceFieldName === fieldName) ?? []
+	const boundary = report.callableBoundaries?.find(
+		item => item.sourceTypeName === 'ZeroArgCalls' && item.sourceFieldName === fieldName
+	)
+	if (calls.length !== 1 || !boundary
+		|| calls[0].proofId !== signatureProofId
+		|| calls[0].arguments?.length !== 0
+		|| !isIdentity(calls[0].result, semanticTypeId, carrierTypeId)
+		|| calls[0].evaluationSchedule?.length !== 1
+		|| calls[0].evaluationSchedule[0]?.kind !== 'invoke-callee'
+		|| calls[0].evaluationSchedule[0]?.argumentIndex !== null
+		|| calls[0].evaluationSchedule[0]?.slotId !== null
+		|| boundary.proofId !== signatureProofId
+		|| boundary.arguments?.length !== 0
+		|| !isIdentity(boundary.result, semanticTypeId, carrierTypeId)) {
+		throw new Error(`the lowering report did not seal zero-argument call ${fieldName} with its exact ${semanticTypeId} result`)
+	}
+}
+verifyZeroCall('exactCount', 'Int', 'int')
+verifyZeroCall('exactFlag', 'Bool', 'bool')
+verifyZeroCall('nullableCount', 'Null<Int>', 'Obj.t')
+verifyZeroCall('nullableFlag', 'Null<Bool>', 'Obj.t')
 
 const nullableCalls = report.calls?.filter(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity') ?? []
 const nullableBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity')
@@ -406,7 +444,7 @@ node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (!report.summary?.valid) {
-	throw new Error('reflaxe.ocaml inspection rejected the positive-arity lowering report')
+	throw new Error('reflaxe.ocaml inspection rejected the sealed call report')
 }
 const calls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'chooseMany') ?? []
 const boundary = report.lowering?.callableBoundaries?.find(
@@ -414,6 +452,16 @@ const boundary = report.lowering?.callableBoundaries?.find(
 )
 if (calls.length !== 2 || calls.some(call => call.arguments?.length !== 4) || boundary?.arguments?.length !== 4) {
 	throw new Error('reflaxe.ocaml inspection did not preserve the four-argument call and callable boundary')
+}
+const zeroCalls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'ZeroArgCalls') ?? []
+const zeroBoundaries = report.lowering?.callableBoundaries?.filter(item => item.sourceTypeName === 'ZeroArgCalls') ?? []
+if (zeroCalls.length !== 4
+	|| zeroCalls.some(call => call.arguments?.length !== 0
+		|| call.evaluationSchedule?.length !== 1
+		|| call.evaluationSchedule[0]?.kind !== 'invoke-callee')
+	|| zeroBoundaries.length !== 4
+	|| zeroBoundaries.some(item => item.arguments?.length !== 0)) {
+	throw new Error('reflaxe.ocaml inspection did not preserve the zero-argument calls and callable boundaries')
 }
 NODE
 

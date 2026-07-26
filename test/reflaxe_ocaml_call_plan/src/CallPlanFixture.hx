@@ -44,6 +44,8 @@ class CallPlanFixture {
 	static inline final MIXED_CALLEE_ID = "MixedCalls|MixedCalls::choose";
 	static inline final MIXED_PRESERVE_CALL_ID = "call:mixed-preserve-fixture";
 	static inline final MIXED_BOX_CALL_ID = "call:mixed-box-fixture";
+	static inline final ZERO_CALLEE_ID = "ZeroArgCalls|ZeroArgCalls::exactCount";
+	static inline final ZERO_CALL_ID = "call:zero-argument-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -213,6 +215,25 @@ class CallPlanFixture {
 		};
 	}
 
+	static function zeroArgumentDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:zero-argument-fixture",
+			calleeId: ZERO_CALLEE_ID,
+			sourceModuleId: "ZeroArgCalls",
+			sourceTypeName: "ZeroArgCalls",
+			sourceFieldName: "exactCount",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture zero-argument signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture zero-argument signature",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
 	static function nullableDeclaration():OcamlCallableDeclarationPlan {
 		return {
 			id: "callable-declaration:nullable-fixture",
@@ -337,6 +358,29 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function zeroArgumentCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: ZERO_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 18, max: 19},
+			calleeId: ZERO_CALLEE_ID,
+			sourceModuleId: "ZeroArgCalls",
+			sourceTypeName: "ZeroArgCalls",
+			sourceFieldName: "exactCount",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [],
+			result: value(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(ZERO_CALL_ID, 0),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture zero-argument signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture zero-argument signature",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -501,6 +545,27 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function zeroArgumentBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:zero-argument-fixture",
+			calleeId: ZERO_CALLEE_ID,
+			sourceModuleId: "ZeroArgCalls",
+			sourceTypeName: "ZeroArgCalls",
+			sourceFieldName: "exactCount",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture zero-argument signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture zero-argument signature",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
 			bodyRevision: callee.bodyRevision,
@@ -723,6 +788,36 @@ class CallPlanFixture {
 		]);
 		expectThrows("invalid-plan", () -> mixedRegistry.requireCallableDeclaration(reorderedMixedArguments));
 
+		final zeroCaller = binding("Main|Main::zeroArgumentCalls", "body:zero-argument-caller");
+		final zeroCallee = binding("ZeroArgCalls|ZeroArgCalls::exactCount", "body:zero-argument-callee");
+		final selectedZeroArgumentCall = zeroArgumentCall(zeroCaller);
+		final zeroArgumentRegistry = new OcamlFunctionPlanRegistry();
+		zeroArgumentRegistry.beginProgram(PROGRAM_REVISION);
+		zeroArgumentRegistry.registerCallableDeclaration(zeroArgumentDeclaration());
+		zeroArgumentRegistry.requireCallableDeclaration(selectedZeroArgumentCall);
+		seal(zeroArgumentRegistry, zeroCaller, new OcamlCallPlan([selectedZeroArgumentCall]), null);
+		seal(zeroArgumentRegistry, zeroCallee, new OcamlCallPlan([]), zeroArgumentBoundary(zeroCallee));
+		zeroArgumentRegistry.validateCallGraph();
+		final zeroSchedule = selectedZeroArgumentCall.evaluationSchedule;
+		if (zeroSchedule.length != 1
+			|| zeroSchedule[0].kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| zeroSchedule[0].argumentIndex != null
+			|| zeroSchedule[0].slotId != null) {
+			Context.error("The zero-argument call schedule must contain only one invocation step.", Context.currentPos());
+		}
+		expectThrows("invalid-plan", () -> OcamlCallPlan.evaluationSchedule(ZERO_CALL_ID, -1));
+		final zeroMissingInvocation = copyCall(selectedZeroArgumentCall, null, null, null, null, null, []);
+		expectThrows("invalid-plan", () -> zeroArgumentRegistry.requireCallableDeclaration(zeroMissingInvocation));
+		final zeroUnexpectedMaterialization = copyCall(selectedZeroArgumentCall, null, null, null, null, null, [
+			{
+				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: 0,
+				slotId: OcamlCallPlan.argumentSlotId(ZERO_CALL_ID, 0)
+			},
+			zeroSchedule[0]
+		]);
+		expectThrows("invalid-plan", () -> zeroArgumentRegistry.requireCallableDeclaration(zeroUnexpectedMaterialization));
+
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
 
@@ -770,8 +865,8 @@ class CallPlanFixture {
 		final skippedFirstArgument = copyCall(selectedTwoArgumentCall, null, null, null, null, null, [twoSchedule[1], twoSchedule[2]]);
 		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(skippedFirstArgument));
 
-		final zeroArgumentCall = copyCall(selectedCall, null, null, []);
-		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(zeroArgumentCall));
+		final missingRequiredArgument = copyCall(selectedCall, null, null, [], null, null, OcamlCallPlan.evaluationSchedule(CALL_ID, 0));
+		expectThrows("declaration-mismatch", () -> registry.requireCallableDeclaration(missingRequiredArgument));
 
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{

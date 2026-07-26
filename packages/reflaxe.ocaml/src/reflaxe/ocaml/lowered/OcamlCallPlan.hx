@@ -92,9 +92,11 @@ typedef OcamlCallableDeclarationPlan = {
 /**
 	The callable shape exported by one exact final Haxe function body.
 
-	This boundary deliberately admits ordinary static methods whose one or more
-	required arguments and result independently use the closed exact `Int`,
-	`Bool`, `Null<Int>`, or `Null<Bool>` representation matrix. Later call kinds
+	This boundary deliberately admits ordinary static methods whose required
+	arguments and result independently use the closed exact `Int`, `Bool`,
+	`Null<Int>`, or `Null<Bool>` representation matrix. The argument vector may
+	be empty; OCaml's synthetic unit parameter is added mechanically at the
+	syntax boundary and is not represented as a Haxe argument. Later call kinds
 	extend the planner rather than teaching the syntax builder new rules.
 **/
 typedef OcamlCallableBoundaryPlan = {
@@ -142,9 +144,11 @@ typedef OcamlCallDecision = {
 	Immutable call inventory for one final function body.
 
 	The syntax builder can resolve an admitted occurrence by its normalized source
-	span, but it cannot add, replace, or infer a decision. A span collision is
-	rejected during planning because an ambiguous lookup would otherwise invite a
-	fallback semantic choice during emission.
+	span and exact typed callee shape, but it cannot add, replace, or infer a
+	decision. The callee check matters because Haxe can assign the same source
+	span to a nested call and its enclosing call. A source-only lookup could
+	therefore apply a zero-argument plan to a different call that has arguments.
+	Plan-to-plan span collisions are also rejected during construction.
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v1";
@@ -169,7 +173,16 @@ class OcamlCallPlan {
 	/** Returns one admitted call by its exact final-body source occurrence. */
 	public function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		final decision = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos)));
-		return decision == null ? null : copyDecision(decision);
+		return decision == null || !matchesTypedOccurrence(decision, expression) ? null : copyDecision(decision);
+	}
+
+	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == decision.arguments.length && OcamlCallPlanner.calleeId(classRef.get(),
+					fieldRef.get()) == decision.calleeId;
+			case _:
+				false;
+		}
 	}
 
 	/** Returns whether one exact argument preserves the sealed `Null<Bool>` carrier. */
@@ -447,8 +460,6 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe callee identity';
 		if (kind != OcamlCallKind.DirectStaticHaxeMethod)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
-		if (arguments.length < 1)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must have at least one admitted argument';
 		for (index in 0...arguments.length)
 			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
 		requireDirectStaticValue(result, -1, '$owner result');
@@ -511,7 +522,7 @@ class OcamlCallPlan {
 
 	/** Builds the complete closed schedule for one admitted direct call. */
 	public static function evaluationSchedule(callId:String, argumentCount:Int):Array<OcamlCallEvaluationStep> {
-		if (argumentCount < 1)
+		if (argumentCount < 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported direct-call arity $argumentCount';
 		final schedule:Array<OcamlCallEvaluationStep> = [
 			for (index in 0...argumentCount)
@@ -537,8 +548,8 @@ class OcamlCallPlan {
 /**
 	Selects the first closed typed-call kind from final Haxe expressions.
 
-	Only an ordinary, non-extern, non-generic static method whose one or more
-	required arguments and result independently select exact `Int`, `Bool`,
+	Only an ordinary, non-extern, non-generic static method whose required
+	arguments and result independently select exact `Int`, `Bool`,
 	`Null<Int>`, or `Null<Bool>` representations is admitted. Everything else is
 	left explicitly unmigrated for a later call-kind or representation slice.
 **/
@@ -593,7 +604,7 @@ class OcamlCallPlanner {
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		return switch (expression.expr) {
-			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (arguments.length >= 1):
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
 				final declaration = declarationFor(classType, field, representations, binding.programRevision, binding.pipelineRevision);
@@ -725,8 +736,7 @@ class OcamlCallPlanner {
 	static function admittedSignature(field:ClassField):Null<{argumentTypes:Array<Type>, resultType:Type}> {
 		return switch (TypeTools.follow(field.type)) {
 			case TFun(arguments, result)
-				if (arguments.length >= 1
-					&& Lambda.foreach(arguments, argument -> !argument.opt && semanticTypeId(argument.t) != null)
+				if (Lambda.foreach(arguments, argument -> !argument.opt && semanticTypeId(argument.t) != null)
 					&& semanticTypeId(result) != null):
 				{argumentTypes: arguments.map(argument -> argument.t), resultType: result};
 			case _:

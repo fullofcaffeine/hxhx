@@ -101,6 +101,11 @@ class Main {
 		Sys.println("mixed-many-preserved=" + (preservedMany == null ? -1 : preservedMany));
 		final boxedMany = MixedCalls.chooseMany(mixedCount("many-box", 84), exactMixedFlag(), mixedDecision("box", true), exactMixedFallback());
 		Sys.println("mixed-many-boxed=" + (boxedMany == null ? -1 : boxedMany));
+		Sys.println("zero-int=" + ZeroArgCalls.exactCount());
+		Sys.println(ZeroArgCalls.exactFlag() ? "zero-bool=true" : "zero-bool=false");
+		Sys.println("zero-null-int=" + (ZeroArgCalls.nullableCount() == null));
+		final zeroNullableFlag = ZeroArgCalls.nullableFlag();
+		Sys.println(zeroNullableFlag == null ? "zero-null-bool=missing" : (zeroNullableFlag ? "zero-null-bool=true" : "zero-null-bool=false"));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }
