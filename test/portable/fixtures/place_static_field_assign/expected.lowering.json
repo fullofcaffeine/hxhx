@@ -7,12 +7,39 @@
   "localConversions": [
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49636,
-      "bodyRevision": "12:6a6cae85b5a339d4b63707f7e0b9a609b109cceb3444f632257d8129052538c9",
+      "localId": 54684,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:018504594e631d0de7e4dd3379291e42",
+      "source": {
+        "min": 5526,
+        "max": 5527,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54396,
+      "bodyRevision": "12:34f910c031bd8dde98457258d333ececd909ba2a2e820056c5b44d49ad5d06a0",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:0186e3ebf8224e38ed5abb5282826d45",
+      "id": "local-conversion:09192a8972099a5a0a2d23579044d668",
       "source": {
         "min": 2902,
         "max": 2903,
@@ -21,7 +48,7 @@
       "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -34,795 +61,12 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
+      "localId": 54632,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:03558b97544d54b22257acad506618a7",
-      "source": {
-        "min": 20529,
-        "max": 20533,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49919,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:046304ffd2dd02d165f49be739b16597",
-      "source": {
-        "min": 5326,
-        "max": 5329,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:05800aaf9c5ac601b36de6a288ec3557",
-      "source": {
-        "min": 20553,
-        "max": 20557,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49873,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:078c4381be12cb7f57804dc112ed4ced",
-      "source": {
-        "min": 4875,
-        "max": 4877,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49636,
-      "bodyRevision": "12:6a6cae85b5a339d4b63707f7e0b9a609b109cceb3444f632257d8129052538c9",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:099f1eb884197fd1ee94e249be920b9e",
-      "source": {
-        "min": 2859,
-        "max": 2877,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:0c1855386f6cad0ee41ad14ec22b0a91",
-      "source": {
-        "min": 20390,
-        "max": 20394,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49858,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:150b3592698e08b70d993460a0852845",
-      "source": {
-        "min": 4676,
-        "max": 4680,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:28240e088b8e94dd78cdbb1078f5dbeb",
-      "source": {
-        "min": 20505,
-        "max": 20509,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49924,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:2fd3ad5714edd0afcb32a5c6af72f6eb",
-      "source": {
-        "min": 5526,
-        "max": 5527,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49924,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:3b07bc0ed8cbda208fa9e9f983490dcd",
-      "source": {
-        "min": 5526,
-        "max": 5527,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:3cc8692b901de06242a0546a71445fcd",
-      "source": {
-        "min": 20456,
-        "max": 20460,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49785,
-      "bodyRevision": "12:b07600d3ca4d6561f2eefab4fa3a1adcfa5e61f6b5ae663fe10bc2ba17c16f3c",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:3e24bff0b4dc27ffc26a488bb27f8387",
-      "source": {
-        "min": 2407,
-        "max": 2408,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49915,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:3e5fc3082825c69812ad4fe67b88cf4a",
-      "source": {
-        "min": 5129,
-        "max": 5132,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49636,
-      "bodyRevision": "12:6a6cae85b5a339d4b63707f7e0b9a609b109cceb3444f632257d8129052538c9",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:49025751152865f2341933173e061c63",
-      "source": {
-        "min": 2886,
-        "max": 2887,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
-      },
-      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49919,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:4da27beb88febdce782be5fe03af367e",
-      "source": {
-        "min": 5276,
-        "max": 5279,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49872,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:601767357783a03d76783d23d044bf71",
-      "source": {
-        "min": 4865,
-        "max": 4867,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49857,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:62a098df588340264668e18c2fc6a3d3",
-      "source": {
-        "min": 4684,
-        "max": 4688,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:6b32f4e090112990f444d9dfaf1a138b",
-      "source": {
-        "min": 20306,
-        "max": 20332,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49871,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:72287d9614d93bf12a61ffd04a3c292e",
-      "source": {
-        "min": 4865,
-        "max": 4867,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49870,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:743e3f74c968c64134aaec7816e537a4",
-      "source": {
-        "min": 4846,
-        "max": 4848,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:82580911264a2b63bfac48ecdb21e00d",
-      "source": {
-        "min": 20577,
-        "max": 20581,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49873,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:8cead2bf8b86f8b27a3e05c7c7b92b16",
-      "source": {
-        "min": 4846,
-        "max": 4848,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 48733,
-      "bodyRevision": "12:3865fec74c43786b5796a6652c8be18efd326264927a41956756a155d7918b8f",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:96192484f627f6654847f0a0531358f0",
-      "source": {
-        "min": 9263,
-        "max": 9264,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49871,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:9c60364d9920e87eaba36b42d03a18fa",
-      "source": {
-        "min": 4865,
-        "max": 4867,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49785,
-      "bodyRevision": "12:b07600d3ca4d6561f2eefab4fa3a1adcfa5e61f6b5ae663fe10bc2ba17c16f3c",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:a0e7967158d0c4f156a24ba1519a3484",
-      "source": {
-        "min": 2380,
-        "max": 2398,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49870,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:a8575891c5792d1062fed16f8bded171",
-      "source": {
-        "min": 4846,
-        "max": 4848,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49853,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:b68baacc421fea69243fbf7f6938469e",
-      "source": {
-        "min": 4632,
-        "max": 4636,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 48733,
-      "bodyRevision": "12:3865fec74c43786b5796a6652c8be18efd326264927a41956756a155d7918b8f",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:bfcb2eb88a266f66e2e851e60a6b117d",
-      "source": {
-        "min": 9234,
-        "max": 9251,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49785,
-      "bodyRevision": "12:b07600d3ca4d6561f2eefab4fa3a1adcfa5e61f6b5ae663fe10bc2ba17c16f3c",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:c777a2be28da4acc989c51735129178e",
-      "source": {
-        "min": 2423,
-        "max": 2424,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49872,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:cd4c79ef8041b2a589d1fc2ec06b559e",
+      "id": "local-conversion:1bab4c089177958f548f7ea04332f1b7",
       "source": {
         "min": 4881,
         "max": 4883,
@@ -831,7 +75,7 @@
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -844,21 +88,21 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:cdb859c240dac0ba2f0f300c3b64cd3a",
+      "id": "local-conversion:1c8911e82efd248e9f7570d85a9e80dc",
       "source": {
-        "min": 20410,
-        "max": 20414,
+        "min": 20577,
+        "max": 20581,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -871,147 +115,12 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 48733,
-      "bodyRevision": "12:3865fec74c43786b5796a6652c8be18efd326264927a41956756a155d7918b8f",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:cdf254a85b00847cb7d72e11e3a7719a",
-      "source": {
-        "min": 9272,
-        "max": 9273,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:d2d0e0c7465f6a13954aac75e6efe962",
-      "source": {
-        "min": 20364,
-        "max": 20368,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49853,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:d6898dbd24410abb9ee5a840e8097a1a",
-      "source": {
-        "min": 4632,
-        "max": 4636,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49925,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:dfa34c9784437f1c8247c233f5b8201a",
-      "source": {
-        "min": 5526,
-        "max": 5527,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:e17901518fe9df512c8d7221367204d0",
-      "source": {
-        "min": 20344,
-        "max": 20348,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:e66313e6de36734921665cc5fa72ed4c",
+      "id": "local-conversion:2e104cdd98533e086bbb3d14c6f1eb47",
       "source": {
         "min": 20436,
         "max": 20440,
@@ -1020,7 +129,7 @@
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1033,39 +142,12 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49919,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
+      "localId": 54609,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
+      "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:ec8de18c8f145ce1c7e36c98a2b0fa1d",
-      "source": {
-        "min": 5129,
-        "max": 5132,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49849,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:ecfa2effec350fadabb9fdfb2ff03785",
+      "id": "local-conversion:352b280c06c1e6da8b025e815988890e",
       "source": {
         "min": 4596,
         "max": 4600,
@@ -1074,7 +156,7 @@
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1087,21 +169,21 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49925,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
+      "localId": 54685,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
+      "role": "initializer",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:f0742fc53a52229b3abdf997d24fa622",
+      "id": "local-conversion:44ffb849df3c194b2809ee17553fd184",
       "source": {
-        "min": 5571,
-        "max": 5572,
+        "min": 5526,
+        "max": 5527,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
       },
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1114,48 +196,21 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49858,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "initializer",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:f0d8d90c88c6df3ff461686d4a3963e0",
-      "source": {
-        "min": 4596,
-        "max": 4600,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
-      },
-      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
-      "inputCarrierTypeId": "Obj.t",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "conversion": "preserve-nullable-int-carrier",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "inputSemanticTypeId": "Null<Int>",
-      "unsafeOperation": null,
-      "outputCarrierTypeId": "Obj.t"
-    },
-    {
-      "outputSemanticTypeId": "Null<Int>",
-      "localId": 49071,
-      "bodyRevision": "12:513de45d122ea9eb3e232ac8cbb83b574d7313ce1541f5140e39271d377b5cea",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:f240b5dbd768d0eebadd8602e8ceb9e2",
+      "id": "local-conversion:513af69b8c6ff3bd913db9e55f5d6e6b",
       "source": {
-        "min": 20481,
-        "max": 20485,
+        "min": 20344,
+        "max": 20348,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1168,21 +223,21 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 48733,
-      "bodyRevision": "12:3865fec74c43786b5796a6652c8be18efd326264927a41956756a155d7918b8f",
+      "localId": 54633,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "role": "read",
+      "role": "initializer",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:f516b979eef995ce8480d22e8d4c3155",
+      "id": "local-conversion:56ca8df2642789a14a96c44b5d9c4725",
       "source": {
-        "min": 9283,
-        "max": 9284,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+        "min": 4846,
+        "max": 4848,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
       },
-      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1195,21 +250,21 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49915,
-      "bodyRevision": "12:e32ef64aa4eb1f30c62feb4398127b9fe26d06fbcdb0cf93ba9b5bc2fd71cafe",
+      "localId": 54679,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:f82fa75b4f3495563f3cb41be889e47e",
+      "id": "local-conversion:581c39c4ff838dad8277c38e2da76564",
       "source": {
-        "min": 5129,
-        "max": 5132,
+        "min": 5326,
+        "max": 5329,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
       },
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1222,12 +277,39 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49857,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
+      "localId": 54396,
+      "bodyRevision": "12:34f910c031bd8dde98457258d333ececd909ba2a2e820056c5b44d49ad5d06a0",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "initializer",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:fd6c9d3fd406bb2d7cd362b15555dc55",
+      "id": "local-conversion:59193a02d870837925ce6bd2221fab61",
+      "source": {
+        "min": 2859,
+        "max": 2877,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54613,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:5fdddafa06a2227e6b184c025402468b",
       "source": {
         "min": 4632,
         "max": 4636,
@@ -1236,7 +318,7 @@
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1249,12 +331,579 @@
     },
     {
       "outputSemanticTypeId": "Null<Int>",
-      "localId": 49849,
-      "bodyRevision": "12:4351187d08a7f14664a6109bebd958abb3e86cf8201cb3b671ddb27d81cd7752",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
       "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
       "role": "read",
       "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "id": "local-conversion:fe2f015cf818694151d629d715ba9d09",
+      "id": "local-conversion:61d96a08e09c27ac4c092839e922f381",
+      "source": {
+        "min": 20364,
+        "max": 20368,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54617,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:62bcf9a0d1dc5af1a2d26bc03cfea056",
+      "source": {
+        "min": 4632,
+        "max": 4636,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:68b713ede98bb33458ccbc0ea61e4b22",
+      "source": {
+        "min": 20553,
+        "max": 20557,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54613,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:6909a4c47352617e5fa48c3955937cd0",
+      "source": {
+        "min": 4632,
+        "max": 4636,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53493,
+      "bodyRevision": "12:35860f3255aee16b60384231fb6b12c41de66169288fa4471b39c510bbff19da",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:6f7e3dc2b2fb46f06df941ef5661cfa4",
+      "source": {
+        "min": 9272,
+        "max": 9273,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:70816c13eb67528d01c380afdf9182ee",
+      "source": {
+        "min": 20306,
+        "max": 20332,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54631,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:7296504812b6320d093bab6859eef625",
+      "source": {
+        "min": 4865,
+        "max": 4867,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54618,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:79a7b0478c93d1bc2a210bd6051c33b4",
+      "source": {
+        "min": 4676,
+        "max": 4680,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54617,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:7a74f90af21f8a318961afebef4e25b1",
+      "source": {
+        "min": 4684,
+        "max": 4688,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53493,
+      "bodyRevision": "12:35860f3255aee16b60384231fb6b12c41de66169288fa4471b39c510bbff19da",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:80410c0662fce6015099836587477620",
+      "source": {
+        "min": 9283,
+        "max": 9284,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54630,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:8158b20e96d35bff17b7eb8ee2bff2cc",
+      "source": {
+        "min": 4846,
+        "max": 4848,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54545,
+      "bodyRevision": "12:af47ff3563027c9f43666f8b68bc39b453b15f388c678365a66bea93f0ff5ecd",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:85f1737432a4515f5333181bef369fcc",
+      "source": {
+        "min": 2407,
+        "max": 2408,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54633,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:88af61a26c29fe44008c7c5d9dda389d",
+      "source": {
+        "min": 4875,
+        "max": 4877,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54632,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:8943f7663478ff8e41ac71cdcd1af12d",
+      "source": {
+        "min": 4865,
+        "max": 4867,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54685,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:8a8c11b7e7575617827ead96b2fa20b0",
+      "source": {
+        "min": 5571,
+        "max": 5572,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53493,
+      "bodyRevision": "12:35860f3255aee16b60384231fb6b12c41de66169288fa4471b39c510bbff19da",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:8df2580f45f2bfe7e14e8e25681f3b06",
+      "source": {
+        "min": 9263,
+        "max": 9264,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54545,
+      "bodyRevision": "12:af47ff3563027c9f43666f8b68bc39b453b15f388c678365a66bea93f0ff5ecd",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:9676c60e77cdb63a47953c03e4bd099b",
+      "source": {
+        "min": 2423,
+        "max": 2424,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:9ce4544f7f797523f06cf621075b3da6",
+      "source": {
+        "min": 20410,
+        "max": 20414,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54684,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:a3d4f9594196e0f10cf422aa7a3ca11a",
+      "source": {
+        "min": 5526,
+        "max": 5527,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54675,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:a4788e77b5492e52cf27409a6d78cd73",
+      "source": {
+        "min": 5129,
+        "max": 5132,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54396,
+      "bodyRevision": "12:34f910c031bd8dde98457258d333ececd909ba2a2e820056c5b44d49ad5d06a0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:a8be22384251b8baf35d62e7a8ac12a9",
+      "source": {
+        "min": 2886,
+        "max": 2887,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx"
+      },
+      "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54609,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:ab7fe077cf007eadb5e0442eba18ca58",
       "source": {
         "min": 4596,
         "max": 4600,
@@ -1263,7 +912,358 @@
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
       "inputCarrierTypeId": "Obj.t",
       "proofId": "nullable-int-carrier-preserve-v1",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:b43761352edfbe9552b0ca8998e78058",
+      "source": {
+        "min": 20390,
+        "max": 20394,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54679,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:b73a0d7a088f9daeb1cb2dc3a1fbf8af",
+      "source": {
+        "min": 5129,
+        "max": 5132,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54618,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:ba3a36197e31161b920aacf577327463",
+      "source": {
+        "min": 4596,
+        "max": 4600,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54675,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:c46a79a928d3ce064313bd826573be82",
+      "source": {
+        "min": 5129,
+        "max": 5132,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53493,
+      "bodyRevision": "12:35860f3255aee16b60384231fb6b12c41de66169288fa4471b39c510bbff19da",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:d09ba42505870f00fb476cf798fe61bf",
+      "source": {
+        "min": 9234,
+        "max": 9251,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:d86184c1ecc8330d846491d1b3387acd",
+      "source": {
+        "min": 20456,
+        "max": 20460,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:dc18f8bb09f7802ce83e6390cc67ecd6",
+      "source": {
+        "min": 20505,
+        "max": 20509,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54679,
+      "bodyRevision": "12:4b3b515910b4d927c522974e022a5d452f9c43b927596b0171d0bc7bdf1ba76e",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:eeff37bc7fc00daae4309f6a7bc2f4cf",
+      "source": {
+        "min": 5276,
+        "max": 5279,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|itemToString|generics:0|required:StringBuf,required:haxe.StackItem->Void",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:f03ec43fd48b6d8c6e3cd4072f65d506",
+      "source": {
+        "min": 20529,
+        "max": 20533,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 53831,
+      "bodyRevision": "12:0ccd2c8075b5d54db9c4ecfdc79c611fea8e9cf15e50ae1b0108620e97eff70f",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:f335cec2bd1530d0ec58b38b86bf8747",
+      "source": {
+        "min": 20481,
+        "max": 20485,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54630,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:f7e0b97fe6602f09d213da9cc6b47300",
+      "source": {
+        "min": 4846,
+        "max": 4848,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54631,
+      "bodyRevision": "12:b298d8338f507df0d926985ed849208340b9fc9badbb28e3a46f0f739bed47c0",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "read",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:f8ef73892c81c95f25b5c7e9fa524a3c",
+      "source": {
+        "min": 4865,
+        "max": 4867,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "conversion": "preserve-nullable-int-carrier",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "inputSemanticTypeId": "Null<Int>",
+      "unsafeOperation": null,
+      "outputCarrierTypeId": "Obj.t"
+    },
+    {
+      "outputSemanticTypeId": "Null<Int>",
+      "localId": 54545,
+      "bodyRevision": "12:af47ff3563027c9f43666f8b68bc39b453b15f388c678365a66bea93f0ff5ecd",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "role": "initializer",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "id": "local-conversion:ffe20aab3710e9cbc237c92f9f63cf15",
+      "source": {
+        "min": 2380,
+        "max": 2398,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx"
+      },
+      "functionId": "haxe.CallStack|CallStack_Impl_|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
+      "inputCarrierTypeId": "Obj.t",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "conversion": "preserve-nullable-int-carrier",
       "profileEligibility": [
         "metal",
@@ -1601,13 +1601,13 @@
     }
   ],
   "runtimeRequirementCount": 13,
-  "schemaVersion": 17,
+  "schemaVersion": 18,
   "unsafeOperationCount": 0,
   "unsafeOperationRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "callableBoundaryCount": 3,
   "representationCount": 12,
   "staticStorageRevision": "sha256:9787a724f5ea31810202297137d6d8e4dea136f550fd99cf707cdb33f4ae6715",
-  "callModel": "typed-ocaml-directional-call-boundary-v7",
+  "callModel": "typed-ocaml-directional-call-boundary-v8",
   "localConversionModel": "typed-ocaml-local-carrier-conversions-v1",
   "representations": [
     {
@@ -1917,7 +1917,7 @@
     {
       "bodyRevision": "12:a0b37c56c51a08e1d17d2ea8ad7afc6b8aac295c8e183cc95b757a80bb8d2f8a",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with required arguments [] and result Bool independently selects one sealed internal carrier for each boundary value. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Bool independently selects one sealed internal carrier for each boundary value. At most one trailing Null<Int> or Null<Bool> parameter may be optional. Its final straight-line Bool body value crosses into the exported Bool carrier via identity.",
       "sourceFieldName": "rhsBool",
       "id": "callable-boundary:d55f1bdcdb37308b7690d9aa",
       "calleeId": "Main|Main::rhsBool",
@@ -1925,7 +1925,7 @@
       "functionId": "Main|Main|static|function|rhsBool|generics:0|->Bool",
       "proofId": "direct-static-representation-signature-v1",
       "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "profileEligibility": [
         "metal",
         "portable"
@@ -1934,6 +1934,7 @@
       "sourceModuleId": "Main",
       "arguments": [],
       "result": {
+        "parameterOptional": false,
         "inputRepresentationId": "representation:Bool:internal-value",
         "outputSemanticTypeId": "Bool",
         "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
@@ -1949,7 +1950,7 @@
     {
       "bodyRevision": "12:7a1dbbe1506d8b39cdd65b5b4172128dca300b441cbee7063c25019ab9f852b4",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with required arguments [] and result Int independently selects one sealed internal carrier for each boundary value. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each boundary value. At most one trailing Null<Int> or Null<Bool> parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "rhsMutatingLocal",
       "id": "callable-boundary:b6f5b0c4e502d66b2a814b09",
       "calleeId": "Main|Main::rhsMutatingLocal",
@@ -1957,7 +1958,7 @@
       "functionId": "Main|Main|static|function|rhsMutatingLocal|generics:0|->Int",
       "proofId": "direct-static-representation-signature-v1",
       "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "profileEligibility": [
         "metal",
         "portable"
@@ -1966,6 +1967,7 @@
       "sourceModuleId": "Main",
       "arguments": [],
       "result": {
+        "parameterOptional": false,
         "inputRepresentationId": "representation:Int:internal-value",
         "outputSemanticTypeId": "Int",
         "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
@@ -1981,7 +1983,7 @@
     {
       "bodyRevision": "12:636477ba8a8b46222b077543bdedb5b09baaaf10630f6d4553fa53cbe204ad9a",
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
-      "reason": "An ordinary static Haxe method with required arguments [] and result Int independently selects one sealed internal carrier for each boundary value. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
+      "reason": "An ordinary static Haxe method with arguments [] and result Int independently selects one sealed internal carrier for each boundary value. At most one trailing Null<Int> or Null<Bool> parameter may be optional. Its final straight-line Int body value crosses into the exported Int carrier via identity.",
       "sourceFieldName": "rhsMutatingQualified",
       "id": "callable-boundary:97bd1a7b8b8fa1bbaf103c0c",
       "calleeId": "Main|Main::rhsMutatingQualified",
@@ -1989,7 +1991,7 @@
       "functionId": "Main|Main|static|function|rhsMutatingQualified|generics:0|->Int",
       "proofId": "direct-static-representation-signature-v1",
       "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "profileEligibility": [
         "metal",
         "portable"
@@ -1998,6 +2000,7 @@
       "sourceModuleId": "Main",
       "arguments": [],
       "result": {
+        "parameterOptional": false,
         "inputRepresentationId": "representation:Int:internal-value",
         "outputSemanticTypeId": "Int",
         "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
@@ -2014,9 +2017,10 @@
   "admittedInputRevision": "sha256:4185edcffd6e5929793decdc3bcbce1ca8301827be37251a318771333dd1f43e",
   "calls": [
     {
-      "bodyRevision": "12:600932f981fae9a5d2f26a656bfba7444e4d15b964f55f7a4116f905b2bc34b8",
+      "bodyRevision": "12:224d06ab8e4f8583ea5637c1e10a2cdd480f028bc69a2dbb94ab0b8cd6c55e67",
       "evaluationSchedule": [
         {
+          "sourceArgumentIndex": null,
           "slotId": null,
           "argumentIndex": null,
           "kind": "invoke-callee"
@@ -2024,19 +2028,19 @@
       ],
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
       "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [], and its exact Int result carrier is preserved.",
-      "sourceFieldName": "rhsMutatingLocal",
-      "id": "call:2ff0f0726173347c9910718b",
+      "sourceFieldName": "rhsMutatingQualified",
+      "id": "call:185ef3f61de14dac5c6ac3b4",
       "source": {
-        "min": 1541,
-        "max": 1559,
+        "min": 2649,
+        "max": 2671,
         "file": "src/Main.hx"
       },
-      "calleeId": "Main|Main::rhsMutatingLocal",
+      "calleeId": "Main|Main::rhsMutatingQualified",
       "kind": "direct-static-haxe-method",
       "functionId": "Main|Main|static|function|main|generics:0|->Void",
       "proofId": "direct-static-representation-signature-v1",
       "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "profileEligibility": [
         "metal",
         "portable"
@@ -2045,6 +2049,7 @@
       "sourceModuleId": "Main",
       "arguments": [],
       "result": {
+        "parameterOptional": false,
         "inputRepresentationId": "representation:Int:internal-value",
         "outputSemanticTypeId": "Int",
         "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
@@ -2058,9 +2063,56 @@
       }
     },
     {
-      "bodyRevision": "12:600932f981fae9a5d2f26a656bfba7444e4d15b964f55f7a4116f905b2bc34b8",
+      "bodyRevision": "12:224d06ab8e4f8583ea5637c1e10a2cdd480f028bc69a2dbb94ab0b8cd6c55e67",
       "evaluationSchedule": [
         {
+          "sourceArgumentIndex": null,
+          "slotId": null,
+          "argumentIndex": null,
+          "kind": "invoke-callee"
+        }
+      ],
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [], and its exact Int result carrier is preserved.",
+      "sourceFieldName": "rhsMutatingLocal",
+      "id": "call:3f440b723fcdac71146c1e0e",
+      "source": {
+        "min": 1541,
+        "max": 1559,
+        "file": "src/Main.hx"
+      },
+      "calleeId": "Main|Main::rhsMutatingLocal",
+      "kind": "direct-static-haxe-method",
+      "functionId": "Main|Main|static|function|main|generics:0|->Void",
+      "proofId": "direct-static-representation-signature-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v17",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
+      "sourceModuleId": "Main",
+      "arguments": [],
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Int:internal-value",
+        "outputSemanticTypeId": "Int",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "int",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Int",
+        "index": -1,
+        "outputCarrierTypeId": "int"
+      }
+    },
+    {
+      "bodyRevision": "12:224d06ab8e4f8583ea5637c1e10a2cdd480f028bc69a2dbb94ab0b8cd6c55e67",
+      "evaluationSchedule": [
+        {
+          "sourceArgumentIndex": null,
           "slotId": null,
           "argumentIndex": null,
           "kind": "invoke-callee"
@@ -2069,7 +2121,7 @@
       "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
       "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [], and its exact Bool result carrier is preserved.",
       "sourceFieldName": "rhsBool",
-      "id": "call:4ebc6afd723154bc512deffd",
+      "id": "call:c05d8251298838338d4b74d1",
       "source": {
         "min": 1182,
         "max": 1191,
@@ -2080,7 +2132,7 @@
       "functionId": "Main|Main|static|function|main|generics:0|->Void",
       "proofId": "direct-static-representation-signature-v1",
       "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
+      "pipelineRevision": "ocaml-function-plans-v17",
       "profileEligibility": [
         "metal",
         "portable"
@@ -2089,6 +2141,7 @@
       "sourceModuleId": "Main",
       "arguments": [],
       "result": {
+        "parameterOptional": false,
         "inputRepresentationId": "representation:Bool:internal-value",
         "outputSemanticTypeId": "Bool",
         "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
@@ -2100,58 +2153,14 @@
         "index": -1,
         "outputCarrierTypeId": "bool"
       }
-    },
-    {
-      "bodyRevision": "12:600932f981fae9a5d2f26a656bfba7444e4d15b964f55f7a4116f905b2bc34b8",
-      "evaluationSchedule": [
-        {
-          "slotId": null,
-          "argumentIndex": null,
-          "kind": "invoke-callee"
-        }
-      ],
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [], and its exact Int result carrier is preserved.",
-      "sourceFieldName": "rhsMutatingQualified",
-      "id": "call:d984a56b38e399aba4098cca",
-      "source": {
-        "min": 2649,
-        "max": 2671,
-        "file": "src/Main.hx"
-      },
-      "calleeId": "Main|Main::rhsMutatingQualified",
-      "kind": "direct-static-haxe-method",
-      "functionId": "Main|Main|static|function|main|generics:0|->Void",
-      "proofId": "direct-static-representation-signature-v1",
-      "sourceTypeName": "Main",
-      "pipelineRevision": "ocaml-function-plans-v16",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "0ad3f22eeb2f31857ac7ef5bdfb44a0bd4116b86009f053146adbe7a4ce31c23",
-      "sourceModuleId": "Main",
-      "arguments": [],
-      "result": {
-        "inputRepresentationId": "representation:Int:internal-value",
-        "outputSemanticTypeId": "Int",
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "inputCarrierTypeId": "int",
-        "proofId": "identity-call-carrier-v1",
-        "outputRepresentationId": "representation:Int:internal-value",
-        "conversion": "identity",
-        "inputSemanticTypeId": "Int",
-        "index": -1,
-        "outputCarrierTypeId": "int"
-      }
     }
   ],
   "callCount": 3,
   "runtimeRequirementRevision": "sha256:5dc0135dcd5738d69ecc0d023409d704b20102ac914cf64ae820a7064de6c3d5",
-  "callRevision": "sha256:00261d95f7c4309f46abd35b641a52de1a3e9e5f1fa6b3dff7fd8cba6a2bf6ce",
+  "callRevision": "sha256:72b30f4fc529dd76fe3a6826e6534e11f1a5850c8e06490d176a41cd058e8376",
   "unsafeOperationCompleteness": "exact-null-int-and-null-bool-local-slices-only",
   "planCount": 20,
-  "localConversionRevision": "sha256:ef170983d14e52263b3400088ee33d9cd17659cf1ea71a012e1255dd803515a0",
+  "localConversionRevision": "sha256:96b171b9c8d0a251c5b3b32fe8838d4dfc060534ec197baf85a5c8c984ea700e",
   "representationModel": "typed-ocaml-program-representation",
   "runtimeRequirements": [
     {

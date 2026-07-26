@@ -30,6 +30,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
@@ -175,6 +176,19 @@ class OcamlBuilder {
 				built;
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+				callPlanInvariant('call argument ${value.index} claims an omitted conversion but received a source expression', expression.pos);
+		}
+	}
+
+	/** Materializes the selected null carrier for one omitted optional parameter. */
+	function buildPlannedOmittedArgument(value:OcamlCallValuePlan, position:Position):OcamlExpr {
+		requireCallValue(value, value.index, 'omitted call argument ${value.index}', position);
+		return switch (value.conversion) {
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+			case _:
+				callPlanInvariant('call argument ${value.index} has no sealed omitted-argument conversion', position);
 		}
 	}
 
@@ -186,6 +200,8 @@ class OcamlBuilder {
 				body;
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+				callPlanInvariant("a callable result cannot use an omitted-argument conversion", position);
 		}
 	}
 
@@ -202,8 +218,13 @@ class OcamlBuilder {
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
-		if (arguments.length != call.arguments.length)
-			return callPlanInvariant('call "${call.id}" has ${arguments.length} source arguments but its sealed plan has ${call.arguments.length}', position);
+		final suppliedArgumentCount = call.arguments.filter(argument -> argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+			&& argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableBool)
+			.length;
+		if (arguments.length != suppliedArgumentCount)
+			return
+				callPlanInvariant('call "${call.id}" has ${arguments.length} source arguments but its sealed plan expects $suppliedArgumentCount supplied arguments',
+					position);
 
 		final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId);
 		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
@@ -217,10 +238,34 @@ class OcamlBuilder {
 			switch (step.kind) {
 				case OcamlCallEvaluationStepKind.MaterializeArgument:
 					final argumentIndex = step.argumentIndex;
-					if (argumentIndex == null || argumentIndex < 0 || argumentIndex >= arguments.length || step.slotId == null)
+					final sourceArgumentIndex = step.sourceArgumentIndex;
+					if (argumentIndex == null
+						|| argumentIndex < 0
+						|| argumentIndex >= call.arguments.length
+						|| sourceArgumentIndex == null
+						|| sourceArgumentIndex < 0
+						|| sourceArgumentIndex >= arguments.length
+						|| step.slotId == null)
 						return callPlanInvariant('call "${call.id}" has an invalid materialization step', position);
 					final name = freshTmp("call_arg_" + argumentIndex);
-					materialized.push({name: name, value: buildPlannedCallArgument(call.arguments[argumentIndex], arguments[argumentIndex])});
+					materialized.push({
+						name: name,
+						value: buildPlannedCallArgument(call.arguments[argumentIndex], arguments[sourceArgumentIndex])
+					});
+					applicationArguments.push(OcamlExpr.EIdent(name));
+				case OcamlCallEvaluationStepKind.MaterializeOmittedArgument:
+					final argumentIndex = step.argumentIndex;
+					if (argumentIndex == null
+						|| argumentIndex < 0
+						|| argumentIndex >= call.arguments.length
+						|| step.sourceArgumentIndex != null
+						|| step.slotId == null)
+						return callPlanInvariant('call "${call.id}" has an invalid omitted-argument materialization step', position);
+					final name = freshTmp("call_arg_" + argumentIndex);
+					materialized.push({
+						name: name,
+						value: buildPlannedOmittedArgument(call.arguments[argumentIndex], position)
+					});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.InvokeCallee:
 					if (invocationSeen)
@@ -228,8 +273,8 @@ class OcamlBuilder {
 					invocationSeen = true;
 			}
 		}
-		if (!invocationSeen || materialized.length != arguments.length)
-			return callPlanInvariant('call "${call.id}" did not materialize every source argument before invocation', position);
+		if (!invocationSeen || materialized.length != call.arguments.length)
+			return callPlanInvariant('call "${call.id}" did not materialize every callable parameter before invocation', position);
 		final targetArguments = applicationArguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : applicationArguments;
 		var out = OcamlExpr.EApp(target, targetArguments);
 		for (offset in 0...materialized.length) {
@@ -1362,6 +1407,10 @@ class OcamlBuilder {
 		final built:OcamlExpr = switch (e.expr) {
 			case TCall(_, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, arguments, e.pos);
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
+				if (functionPlanRegistry.hasOptionalCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):
+				callPlanInvariant('admitted call "${OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get())}" reached syntax without its sealed occurrence plan',
+					e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):

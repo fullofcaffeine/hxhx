@@ -46,10 +46,14 @@ class CallPlanFixture {
 	static inline final MIXED_BOX_CALL_ID = "call:mixed-box-fixture";
 	static inline final ZERO_CALLEE_ID = "ZeroArgCalls|ZeroArgCalls::exactCount";
 	static inline final ZERO_CALL_ID = "call:zero-argument-fixture";
+	static inline final OPTIONAL_CALLEE_ID = "OptionalCalls|OptionalCalls::optionalInt";
+	static inline final OPTIONAL_OMITTED_CALL_ID = "call:optional-omitted-fixture";
+	static inline final OPTIONAL_SUPPLIED_CALL_ID = "call:optional-supplied-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
 			index: index,
+			parameterOptional: false,
 			inputSemanticTypeId: "Int",
 			inputCarrierTypeId: "int",
 			inputRepresentationId: "representation:Int:internal-value",
@@ -65,6 +69,7 @@ class CallPlanFixture {
 	static function nullableValue(index:Int):OcamlCallValuePlan {
 		return {
 			index: index,
+			parameterOptional: false,
 			inputSemanticTypeId: "Null<Int>",
 			inputCarrierTypeId: "Obj.t",
 			inputRepresentationId: "representation:Null<Int>:internal-value",
@@ -77,9 +82,61 @@ class CallPlanFixture {
 		};
 	}
 
+	static function optionalNullableValue(index:Int):OcamlCallValuePlan {
+		final selected = nullableValue(index);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: selected.conversion,
+			proofId: selected.proofId,
+			proofClaim: selected.proofClaim
+		};
+	}
+
+	static function omittedOptionalNullableValue(index:Int):OcamlCallValuePlan {
+		final selected = optionalNullableValue(index);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: OcamlCallCarrierConversion.MaterializeOmittedNullableInt,
+			proofId: "omitted-nullable-int-call-materialization-v1",
+			proofClaim: "fixture omitted optional Null<Int>"
+		};
+	}
+
+	static function suppliedOptionalNullableValue(index:Int):OcamlCallValuePlan {
+		final selected = nullableArgument(index, OcamlCallCarrierConversion.PreserveNullableIntCarrier);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: selected.conversion,
+			proofId: selected.proofId,
+			proofClaim: selected.proofClaim
+		};
+	}
+
 	static function boolValue(index:Int):OcamlCallValuePlan {
 		return {
 			index: index,
+			parameterOptional: false,
 			inputSemanticTypeId: "Bool",
 			inputCarrierTypeId: "bool",
 			inputRepresentationId: "representation:Bool:internal-value",
@@ -97,6 +154,7 @@ class CallPlanFixture {
 			case PreserveNullableIntCarrier:
 				{
 					index: index,
+					parameterOptional: false,
 					inputSemanticTypeId: "Null<Int>",
 					inputCarrierTypeId: "Obj.t",
 					inputRepresentationId: "representation:Null<Int>:internal-value",
@@ -110,6 +168,7 @@ class CallPlanFixture {
 			case BoxExactIntToNullableInt:
 				{
 					index: index,
+					parameterOptional: false,
 					inputSemanticTypeId: "Int",
 					inputCarrierTypeId: "int",
 					inputRepresentationId: "representation:Int:internal-value",
@@ -122,7 +181,7 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
-			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool:
+			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -130,6 +189,7 @@ class CallPlanFixture {
 	static function nullableBoolValue(index:Int):OcamlCallValuePlan {
 		return {
 			index: index,
+			parameterOptional: false,
 			inputSemanticTypeId: "Null<Bool>",
 			inputCarrierTypeId: "Obj.t",
 			inputRepresentationId: "representation:Null<Bool>:internal-value",
@@ -147,6 +207,7 @@ class CallPlanFixture {
 			case PreserveNullableBoolCarrier:
 				{
 					index: index,
+					parameterOptional: false,
 					inputSemanticTypeId: "Null<Bool>",
 					inputCarrierTypeId: "Obj.t",
 					inputRepresentationId: "representation:Null<Bool>:internal-value",
@@ -160,6 +221,7 @@ class CallPlanFixture {
 			case BoxExactBoolToNullableBool:
 				{
 					index: index,
+					parameterOptional: false,
 					inputSemanticTypeId: "Bool",
 					inputCarrierTypeId: "bool",
 					inputRepresentationId: "representation:Bool:internal-value",
@@ -172,7 +234,7 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
-			case PreserveNullableIntCarrier, BoxExactIntToNullableInt:
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}
@@ -305,6 +367,25 @@ class CallPlanFixture {
 			reason: "fixture mixed signature",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture mixed signature",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
+	static function optionalDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:optional-fixture",
+			calleeId: OPTIONAL_CALLEE_ID,
+			sourceModuleId: "OptionalCalls",
+			sourceTypeName: "OptionalCalls",
+			sourceFieldName: "optionalInt",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [optionalNullableValue(0)],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture optional signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture optional signature",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
 		};
@@ -486,6 +567,30 @@ class CallPlanFixture {
 		};
 	}
 
+	static function optionalCall(caller:OcamlFunctionPlanBinding, omitted:Bool):OcamlCallDecision {
+		final id = omitted ? OPTIONAL_OMITTED_CALL_ID : OPTIONAL_SUPPLIED_CALL_ID;
+		return {
+			id: id,
+			source: {file: "CallPlanFixture.hx", min: omitted ? 20 : 22, max: omitted ? 21 : 23},
+			calleeId: OPTIONAL_CALLEE_ID,
+			sourceModuleId: "OptionalCalls",
+			sourceTypeName: "OptionalCalls",
+			sourceFieldName: "optionalInt",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [omitted ? omittedOptionalNullableValue(0) : suppliedOptionalNullableValue(0)],
+			result: value(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1, omitted ? [0] : []),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture optional call",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture optional call",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
 	static function copyCall(source:OcamlCallDecision, ?calleeId:String, ?kind:OcamlCallKind, ?arguments:Array<OcamlCallValuePlan>,
 			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>):OcamlCallDecision {
 		return {
@@ -657,6 +762,27 @@ class CallPlanFixture {
 		};
 	}
 
+	static function optionalBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:optional-fixture",
+			calleeId: OPTIONAL_CALLEE_ID,
+			sourceModuleId: "OptionalCalls",
+			sourceTypeName: "OptionalCalls",
+			sourceFieldName: "optionalInt",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [optionalNullableValue(0)],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture optional signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture optional signature",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
 	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan,
 			callable:Null<OcamlCallableBoundaryPlan>):Void {
 		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), calls, callable);
@@ -803,6 +929,7 @@ class CallPlanFixture {
 		if (zeroSchedule.length != 1
 			|| zeroSchedule[0].kind != OcamlCallEvaluationStepKind.InvokeCallee
 			|| zeroSchedule[0].argumentIndex != null
+			|| zeroSchedule[0].sourceArgumentIndex != null
 			|| zeroSchedule[0].slotId != null) {
 			Context.error("The zero-argument call schedule must contain only one invocation step.", Context.currentPos());
 		}
@@ -813,11 +940,82 @@ class CallPlanFixture {
 			{
 				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
 				argumentIndex: 0,
+				sourceArgumentIndex: 0,
 				slotId: OcamlCallPlan.argumentSlotId(ZERO_CALL_ID, 0)
 			},
 			zeroSchedule[0]
 		]);
 		expectThrows("invalid-plan", () -> zeroArgumentRegistry.requireCallableDeclaration(zeroUnexpectedMaterialization));
+
+		final optionalCaller = binding("Main|Main::optionalCalls", "body:optional-caller");
+		final optionalCallee = binding("OptionalCalls|OptionalCalls::optionalInt", "body:optional-callee");
+		final omittedOptionalCall = optionalCall(optionalCaller, true);
+		final suppliedOptionalCall = optionalCall(optionalCaller, false);
+		final optionalRegistry = new OcamlFunctionPlanRegistry();
+		optionalRegistry.beginProgram(PROGRAM_REVISION);
+		if (optionalRegistry.hasCallableDeclaration(OPTIONAL_CALLEE_ID))
+			Context.error("The optional declaration guard reported an unregistered callable.", Context.currentPos());
+		if (optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))
+			Context.error("The optional hard-cut guard reported an unregistered callable.", Context.currentPos());
+		optionalRegistry.registerCallableDeclaration(optionalDeclaration());
+		if (!optionalRegistry.hasCallableDeclaration(OPTIONAL_CALLEE_ID))
+			Context.error("The optional declaration guard did not expose the registered callable.", Context.currentPos());
+		if (!optionalRegistry.hasOptionalCallableDeclaration(OPTIONAL_CALLEE_ID))
+			Context.error("The optional hard-cut guard did not expose the registered optional callable.", Context.currentPos());
+		if (registry.hasOptionalCallableDeclaration(CALLEE_ID))
+			Context.error("The optional hard-cut guard incorrectly selected a required-argument callable.", Context.currentPos());
+		optionalRegistry.requireCallableDeclaration(omittedOptionalCall);
+		optionalRegistry.requireCallableDeclaration(suppliedOptionalCall);
+		seal(optionalRegistry, optionalCaller, new OcamlCallPlan([omittedOptionalCall, suppliedOptionalCall]), null);
+		seal(optionalRegistry, optionalCallee, new OcamlCallPlan([]), optionalBoundary(optionalCallee));
+		optionalRegistry.validateCallGraph();
+
+		final omittedSchedule = omittedOptionalCall.evaluationSchedule;
+		if (omittedSchedule.length != 2
+			|| omittedSchedule[0].kind != OcamlCallEvaluationStepKind.MaterializeOmittedArgument
+			|| omittedSchedule[0].argumentIndex != 0
+			|| omittedSchedule[0].sourceArgumentIndex != null
+			|| omittedSchedule[0].slotId != OcamlCallPlan.argumentSlotId(OPTIONAL_OMITTED_CALL_ID, 0)
+			|| omittedSchedule[1].kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| omittedSchedule[1].sourceArgumentIndex != null) {
+			Context.error("The omitted optional call did not retain one source-free carrier materialization before invocation.", Context.currentPos());
+		}
+		final suppliedSchedule = suppliedOptionalCall.evaluationSchedule;
+		if (suppliedSchedule[0].kind != OcamlCallEvaluationStepKind.MaterializeArgument || suppliedSchedule[0].sourceArgumentIndex != 0) {
+			Context.error("The supplied optional call did not retain source argument zero.", Context.currentPos());
+		}
+		expectThrows("invalid-plan", () -> OcamlCallPlan.evaluationSchedule(OPTIONAL_OMITTED_CALL_ID, 1, [1]));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.evaluationSchedule(OPTIONAL_OMITTED_CALL_ID, 1, [0, 0]));
+
+		final omittedWithoutOptional = OcamlCallPlan.copyValue(omittedOptionalCall.arguments[0]);
+		Reflect.setField(omittedWithoutOptional, "parameterOptional", false);
+		expectThrows("invalid-plan", () -> optionalRegistry.requireCallableDeclaration(copyCall(omittedOptionalCall, null, null, [omittedWithoutOptional])));
+
+		final omittedWithSourceStep = copyCall(omittedOptionalCall, null, null, null, null, null, [
+			{
+				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: 0,
+				sourceArgumentIndex: 0,
+				slotId: OcamlCallPlan.argumentSlotId(OPTIONAL_OMITTED_CALL_ID, 0)
+			},
+			omittedSchedule[1]
+		]);
+		expectThrows("invalid-plan", () -> optionalRegistry.requireCallableDeclaration(omittedWithSourceStep));
+
+		final suppliedWithoutSourceStep = copyCall(suppliedOptionalCall, null, null, null, null, null, [
+			{
+				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: 0,
+				sourceArgumentIndex: null,
+				slotId: OcamlCallPlan.argumentSlotId(OPTIONAL_SUPPLIED_CALL_ID, 0)
+			},
+			suppliedSchedule[1]
+		]);
+		expectThrows("invalid-plan", () -> optionalRegistry.requireCallableDeclaration(suppliedWithoutSourceStep));
+
+		final nonTrailingOptionalDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
+		Reflect.setField(nonTrailingOptionalDeclaration, "arguments", [optionalNullableValue(0), value(1)]);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalDeclaration));
 
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
@@ -843,6 +1041,7 @@ class CallPlanFixture {
 			{
 				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
 				argumentIndex: 1,
+				sourceArgumentIndex: 1,
 				slotId: OcamlCallPlan.argumentSlotId(CALL_ID, 1)
 			},
 			invocation
@@ -852,6 +1051,7 @@ class CallPlanFixture {
 			{
 				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
 				argumentIndex: 0,
+				sourceArgumentIndex: 0,
 				slotId: "call-argument-slot:wrong"
 			},
 			invocation
@@ -872,6 +1072,7 @@ class CallPlanFixture {
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
+				parameterOptional: false,
 				inputSemanticTypeId: "Float",
 				inputCarrierTypeId: "int",
 				inputRepresentationId: "representation:Int:internal-value",
@@ -888,6 +1089,7 @@ class CallPlanFixture {
 		final wrongCarrier = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
+				parameterOptional: false,
 				inputSemanticTypeId: "Int",
 				inputCarrierTypeId: "Obj.t",
 				inputRepresentationId: "representation:Int:internal-value",
@@ -904,6 +1106,7 @@ class CallPlanFixture {
 		final wrongConversion = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
+				parameterOptional: false,
 				inputSemanticTypeId: "Int",
 				inputCarrierTypeId: "int",
 				inputRepresentationId: "representation:Int:internal-value",

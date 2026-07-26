@@ -25,23 +25,29 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final BoxExactIntToNullableInt = "box-exact-int-to-nullable-int";
 	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
+	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
+	final MaterializeOmittedNullableBool = "materialize-omitted-nullable-bool";
 }
 
 /** The only runtime actions admitted in a direct-call evaluation schedule. */
 enum abstract OcamlCallEvaluationStepKind(String) from String to String {
 	final MaterializeArgument = "materialize-argument";
+	final MaterializeOmittedArgument = "materialize-omitted-argument";
 	final InvokeCallee = "invoke-callee";
 }
 
 /**
 	One typed source-order step that must complete before the call can run.
 
-	A materialization step owns one source argument index and one stable
-	plan-local carrier slot. The final invocation step deliberately owns neither.
+	A supplied materialization step names both the callable parameter and the
+	source argument. An omitted optional parameter has no source argument, but
+	still owns one stable plan-local carrier slot. The final invocation step
+	deliberately owns neither.
 **/
 typedef OcamlCallEvaluationStep = {
 	final kind:OcamlCallEvaluationStepKind;
 	final argumentIndex:Null<Int>;
+	final sourceArgumentIndex:Null<Int>;
 	final slotId:Null<String>;
 }
 
@@ -56,6 +62,7 @@ typedef OcamlCallEvaluationStep = {
 **/
 typedef OcamlCallValuePlan = {
 	final index:Int;
+	final parameterOptional:Bool;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;
 	final inputRepresentationId:String;
@@ -179,11 +186,22 @@ class OcamlCallPlan {
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
 		return switch (expression.expr) {
-			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == decision.arguments.length && OcamlCallPlanner.calleeId(classRef.get(),
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == suppliedArgumentCount(decision.arguments) && OcamlCallPlanner.calleeId(classRef.get(),
 					fieldRef.get()) == decision.calleeId;
 			case _:
 				false;
 		}
+	}
+
+	static function suppliedArgumentCount(arguments:Array<OcamlCallValuePlan>):Int {
+		var count = 0;
+		for (argument in arguments) {
+			if (argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+				&& argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableBool) {
+				count += 1;
+			}
+		}
+		return count;
 	}
 
 	/** Returns whether one exact argument preserves the sealed `Null<Bool>` carrier. */
@@ -237,6 +255,7 @@ class OcamlCallPlan {
 	static function valueFingerprint(value:OcamlCallValuePlan):String {
 		return [
 			Std.string(value.index),
+			Std.string(value.parameterOptional),
 			value.inputSemanticTypeId,
 			value.inputCarrierTypeId,
 			value.inputRepresentationId,
@@ -253,6 +272,7 @@ class OcamlCallPlan {
 		return [
 			(step.kind : String),
 			step.argumentIndex == null ? "" : Std.string(step.argumentIndex),
+			step.sourceArgumentIndex == null ? "" : Std.string(step.sourceArgumentIndex),
 			step.slotId ?? ""
 		].join(":");
 	}
@@ -323,6 +343,7 @@ class OcamlCallPlan {
 	public static function copyValue(value:OcamlCallValuePlan):OcamlCallValuePlan {
 		return {
 			index: value.index,
+			parameterOptional: value.parameterOptional,
 			inputSemanticTypeId: value.inputSemanticTypeId,
 			inputCarrierTypeId: value.inputCarrierTypeId,
 			inputRepresentationId: value.inputRepresentationId,
@@ -339,6 +360,7 @@ class OcamlCallPlan {
 		return {
 			kind: step.kind,
 			argumentIndex: step.argumentIndex,
+			sourceArgumentIndex: step.sourceArgumentIndex,
 			slotId: step.slotId
 		};
 	}
@@ -346,6 +368,7 @@ class OcamlCallPlan {
 	/** Returns whether two values describe the same complete sealed crossing. */
 	public static function sameValue(left:OcamlCallValuePlan, right:OcamlCallValuePlan):Bool {
 		return left.index == right.index
+			&& left.parameterOptional == right.parameterOptional
 			&& left.inputSemanticTypeId == right.inputSemanticTypeId
 			&& left.inputCarrierTypeId == right.inputCarrierTypeId
 			&& left.inputRepresentationId == right.inputRepresentationId
@@ -366,6 +389,7 @@ class OcamlCallPlan {
 	**/
 	public static function sameCallableBoundary(callValue:OcamlCallValuePlan, boundaryValue:OcamlCallValuePlan, isResult:Bool):Bool {
 		return callValue.index == boundaryValue.index
+			&& callValue.parameterOptional == boundaryValue.parameterOptional
 			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
 				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
 				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId
@@ -376,6 +400,7 @@ class OcamlCallPlan {
 	/** Returns whether a callable definition exports its declared result carrier. */
 	public static function sameBoundaryDeclaration(boundaryValue:OcamlCallValuePlan, declarationValue:OcamlCallValuePlan):Bool {
 		return boundaryValue.index == declarationValue.index
+			&& boundaryValue.parameterOptional == declarationValue.parameterOptional
 			&& boundaryValue.outputSemanticTypeId == declarationValue.inputSemanticTypeId
 			&& boundaryValue.outputCarrierTypeId == declarationValue.inputCarrierTypeId
 			&& boundaryValue.outputRepresentationId == declarationValue.inputRepresentationId;
@@ -419,6 +444,20 @@ class OcamlCallPlan {
 					|| value.proofId != "nullable-bool-call-box-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Bool -> bool once into exact Null<Bool> -> Obj.t';
 				}
+			case MaterializeOmittedNullableInt:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "omitted-nullable-int-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional Null<Int> carrier';
+				}
+			case MaterializeOmittedNullableBool:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "omitted-nullable-bool-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional Null<Bool> carrier';
+				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported conversion "${value.conversion}"';
 		}
@@ -452,16 +491,26 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid source occurrence';
 		if (call.evaluationSchedule.length != call.arguments.length + 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid evaluation schedule';
+		var sourceArgumentIndex = 0;
 		for (index in 0...call.arguments.length) {
+			final argument = call.arguments[index];
 			final step = call.evaluationSchedule[index];
-			if (step.kind != OcamlCallEvaluationStepKind.MaterializeArgument
+			final omitted = argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+				|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool;
+			final expectedKind = omitted ? OcamlCallEvaluationStepKind.MaterializeOmittedArgument : OcamlCallEvaluationStepKind.MaterializeArgument;
+			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
+			if (step.kind != expectedKind
 				|| step.argumentIndex != index
+				|| step.sourceArgumentIndex != expectedSourceIndex
 				|| step.slotId != argumentSlotId(call.id, index)) {
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid argument materialization at schedule index $index';
 			}
 		}
 		final invocation = call.evaluationSchedule[call.evaluationSchedule.length - 1];
-		if (invocation.kind != OcamlCallEvaluationStepKind.InvokeCallee || invocation.argumentIndex != null || invocation.slotId != null)
+		if (invocation.kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| invocation.argumentIndex != null
+			|| invocation.sourceArgumentIndex != null
+			|| invocation.slotId != null)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid invocation step';
 	}
 
@@ -485,6 +534,17 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
 		for (index in 0...arguments.length)
 			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
+		var optionalSeen = false;
+		for (index in 0...arguments.length) {
+			final argument = arguments[index];
+			if (argument.parameterOptional) {
+				if (optionalSeen || index != arguments.length - 1 || !isNullableSemanticType(argument.outputSemanticTypeId))
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported optional-parameter shape';
+				optionalSeen = true;
+			}
+		}
+		if (result.parameterOptional)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner result cannot be an optional parameter';
 		requireDirectStaticValue(result, -1, '$owner result');
 		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported profile inventory';
@@ -530,20 +590,31 @@ class OcamlCallPlan {
 	}
 
 	/** Builds the complete closed schedule for one admitted direct call. */
-	public static function evaluationSchedule(callId:String, argumentCount:Int):Array<OcamlCallEvaluationStep> {
+	public static function evaluationSchedule(callId:String, argumentCount:Int, ?omittedArgumentIndices:Array<Int>):Array<OcamlCallEvaluationStep> {
 		if (argumentCount < 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported direct-call arity $argumentCount';
-		final schedule:Array<OcamlCallEvaluationStep> = [
-			for (index in 0...argumentCount)
-				{
-					kind: OcamlCallEvaluationStepKind.MaterializeArgument,
-					argumentIndex: index,
-					slotId: argumentSlotId(callId, index)
-				}
-		];
+		final omitted = omittedArgumentIndices ?? [];
+		final omittedByIndex:Map<Int, Bool> = [];
+		for (index in omitted) {
+			if (index < 0 || index >= argumentCount || omittedByIndex.exists(index))
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "$callId" has an invalid omitted argument index $index';
+			omittedByIndex.set(index, true);
+		}
+		final schedule:Array<OcamlCallEvaluationStep> = [];
+		var sourceArgumentIndex = 0;
+		for (index in 0...argumentCount) {
+			final isOmitted = omittedByIndex.exists(index);
+			schedule.push({
+				kind: isOmitted ? OcamlCallEvaluationStepKind.MaterializeOmittedArgument : OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: index,
+				sourceArgumentIndex: isOmitted ? null : sourceArgumentIndex++,
+				slotId: argumentSlotId(callId, index)
+			});
+		}
 		schedule.push({
 			kind: OcamlCallEvaluationStepKind.InvokeCallee,
 			argumentIndex: null,
+			sourceArgumentIndex: null,
 			slotId: null
 		});
 		return schedule;
@@ -752,7 +823,7 @@ class OcamlCallPlanner {
 						kind: declaration.kind,
 						arguments: plannedArguments,
 						result: OcamlCallPlan.copyValue(declaration.result),
-						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, arguments.length),
+						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length, omittedArgumentIndices(plannedArguments)),
 						profileEligibility: ["metal", "portable"],
 						reason: callReason(plannedArguments, declaration.result),
 						proofId: declaration.proofId,
@@ -770,7 +841,10 @@ class OcamlCallPlanner {
 
 	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>,
 			representations:OcamlRepresentationRegistry):Null<Array<OcamlCallValuePlan>> {
-		if (arguments.length != boundaryValues.length)
+		final omittedTrailingOptional = arguments.length + 1 == boundaryValues.length
+			&& boundaryValues.length > 0
+			&& boundaryValues[boundaryValues.length - 1].parameterOptional;
+		if (arguments.length != boundaryValues.length && !omittedTrailingOptional)
 			return null;
 		final planned:Array<OcamlCallValuePlan> = [];
 		for (index in 0...arguments.length) {
@@ -781,9 +855,9 @@ class OcamlCallPlanner {
 				return null;
 			if (input.semanticTypeId == output.semanticTypeId) {
 				if (output.semanticTypeId == "Null<Int>") {
-					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableIntCarrier));
+					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableIntCarrier, boundary.parameterOptional));
 				} else if (output.semanticTypeId == "Null<Bool>") {
-					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableBoolCarrier));
+					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableBoolCarrier, boundary.parameterOptional));
 				} else {
 					if (boundary.inputRepresentationId != input.id || boundary.outputRepresentationId != output.id)
 						return null;
@@ -791,14 +865,34 @@ class OcamlCallPlanner {
 					planned.push(identity);
 				}
 			} else if (input.semanticTypeId == "Int" && output.semanticTypeId == "Null<Int>") {
-				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactIntToNullableInt));
+				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactIntToNullableInt, boundary.parameterOptional));
 			} else if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>") {
-				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool));
+				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool, boundary.parameterOptional));
 			} else {
 				return null;
 			}
 		}
+		if (omittedTrailingOptional) {
+			final boundary = boundaryValues[boundaryValues.length - 1];
+			final representation = representationForSemanticType(boundary.outputSemanticTypeId, representations);
+			if (representation == null)
+				return null;
+			final conversion = switch (boundary.outputSemanticTypeId) {
+				case "Null<Int>": OcamlCallCarrierConversion.MaterializeOmittedNullableInt;
+				case "Null<Bool>": OcamlCallCarrierConversion.MaterializeOmittedNullableBool;
+				case _: return null;
+			}
+			planned.push(crossingValue(boundary.index, representation, representation, conversion, true));
+		}
 		return planned;
+	}
+
+	static function omittedArgumentIndices(arguments:Array<OcamlCallValuePlan>):Array<Int> {
+		return [
+			for (argument in arguments)
+				if (argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+					|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool) argument.index
+		];
 	}
 
 	static function sameResultExpressionType(type:Type, result:OcamlCallValuePlan):Bool {
@@ -806,7 +900,8 @@ class OcamlCallPlanner {
 	}
 
 	static function callReason(arguments:Array<OcamlCallValuePlan>, result:OcamlCallValuePlan):String {
-		final conversions = arguments.map(argument -> '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
+		final conversions = arguments.map(argument -> argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+			|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool ? 'omitted optional ${argument.outputSemanticTypeId} via ${argument.conversion}' : '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
 		return
 			'The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [${conversions.join(", ")}], and its exact ${result.outputSemanticTypeId} result carrier is preserved.';
 	}
@@ -822,8 +917,8 @@ class OcamlCallPlanner {
 		if (signature == null)
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
-		for (argumentType in signature.argumentTypes) {
-			final representation = representationFor(argumentType, representations);
+		for (argument in signature.arguments) {
+			final representation = representationFor(argument.type, representations);
 			if (representation == null)
 				return null;
 			argumentRepresentations.push(representation);
@@ -842,11 +937,11 @@ class OcamlCallPlanner {
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [
 				for (index in 0...argumentRepresentations.length)
-					identityValue(index, argumentRepresentations[index])
+					identityValue(index, argumentRepresentations[index], signature.arguments[index].optional)
 			],
 			result: identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: 'An ordinary static Haxe method with required arguments [$semanticSignature] and result ${resultRepresentation.semanticTypeId} independently selects one sealed internal carrier for each boundary value.',
+			reason: 'An ordinary static Haxe method with arguments [$semanticSignature] and result ${resultRepresentation.semanticTypeId} independently selects one sealed internal carrier for each boundary value. At most one trailing Null<Int> or Null<Bool> parameter may be optional.',
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "The closed direct-static signature matrix independently selects each declared argument and result representation. Every call occurrence must match those callable carriers and materialize its source arguments in index order before invocation.",
 			programRevision: programRevision,
@@ -854,12 +949,35 @@ class OcamlCallPlanner {
 		};
 	}
 
-	static function admittedSignature(field:ClassField):Null<{argumentTypes:Array<Type>, resultType:Type}> {
+	static function admittedSignature(field:ClassField):Null<{arguments:Array<{type:Type, optional:Bool}>, resultType:Type}> {
 		return switch (TypeTools.follow(field.type)) {
-			case TFun(arguments, result)
-				if (Lambda.foreach(arguments, argument -> !argument.opt && semanticTypeId(argument.t) != null)
-					&& semanticTypeId(result) != null):
-				{argumentTypes: arguments.map(argument -> argument.t), resultType: result};
+			case TFun(arguments, result) if (semanticTypeId(result) != null):
+				var optionalCount = 0;
+				var valid = true;
+				for (index in 0...arguments.length) {
+					final argument = arguments[index];
+					final semanticType = semanticTypeId(argument.t);
+					if (semanticType == null) {
+						valid = false;
+						break;
+					}
+					if (argument.opt) {
+						optionalCount += 1;
+						if (optionalCount > 1
+							|| index != arguments.length - 1
+							|| (semanticType != "Null<Int>" && semanticType != "Null<Bool>")) {
+							valid = false;
+							break;
+						}
+					}
+				}
+				valid ? {
+					arguments: arguments.map(argument -> {
+						type: argument.t,
+						optional: argument.opt
+					}),
+					resultType: result
+				} : null;
 			case _:
 				null;
 		}
@@ -913,9 +1031,10 @@ class OcamlCallPlanner {
 		return classType.module + "|" + packagePath + classType.name + "::" + field.name;
 	}
 
-	static function identityValue(index:Int, representation:OcamlRepresentationDecision):OcamlCallValuePlan {
+	static function identityValue(index:Int, representation:OcamlRepresentationDecision, parameterOptional:Bool = false):OcamlCallValuePlan {
 		return {
 			index: index,
+			parameterOptional: parameterOptional,
 			inputSemanticTypeId: representation.semanticTypeId,
 			inputCarrierTypeId: representation.carrierTypeId,
 			inputRepresentationId: representation.id,
@@ -928,8 +1047,8 @@ class OcamlCallPlanner {
 		};
 	}
 
-	static function crossingValue(index:Int, input:OcamlRepresentationDecision, output:OcamlRepresentationDecision,
-			conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+	static function crossingValue(index:Int, input:OcamlRepresentationDecision, output:OcamlRepresentationDecision, conversion:OcamlCallCarrierConversion,
+			parameterOptional:Bool = false):OcamlCallValuePlan {
 		final proof = switch (conversion) {
 			case PreserveNullableIntCarrier: {
 					id: "nullable-int-call-carrier-preserve-v1",
@@ -947,11 +1066,20 @@ class OcamlCallPlanner {
 					id: "nullable-bool-call-box-v1",
 					claim: "The source value produces exact Bool in OCaml bool; one Obj.repr operation stores that value in the selected exact Null<Bool> Obj.t boundary carrier."
 				};
+			case MaterializeOmittedNullableInt: {
+					id: "omitted-nullable-int-call-materialization-v1",
+					claim: "The Haxe call omits one trailing optional Null<Int> parameter, so the sealed schedule materializes the selected null Obj.t carrier without evaluating a source expression."
+				};
+			case MaterializeOmittedNullableBool: {
+					id: "omitted-nullable-bool-call-materialization-v1",
+					claim: "The Haxe call omits one trailing optional Null<Bool> parameter, so the sealed schedule materializes the selected null Obj.t carrier without evaluating a source expression."
+				};
 			case Identity:
 				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a directional call crossing cannot use the identity helper";
 		}
 		return {
 			index: index,
+			parameterOptional: parameterOptional,
 			inputSemanticTypeId: input.semanticTypeId,
 			inputCarrierTypeId: input.carrierTypeId,
 			inputRepresentationId: input.id,

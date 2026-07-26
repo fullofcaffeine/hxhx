@@ -47,7 +47,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v16";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v17";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -230,6 +230,22 @@ class OcamlFunctionPlanRegistry {
 		if (declaredCallableByCallee.exists(declaration.calleeId))
 			throw 'reflaxe.ocaml [ocaml-call:duplicate-declaration]: callee "${declaration.calleeId}" has more than one typed declaration';
 		declaredCallableByCallee.set(declaration.calleeId, OcamlCallPlan.copyDeclaration(declaration));
+	}
+
+	/**
+		Reports whether the complete typed program admitted one callable identity.
+
+		This read-only query lets lifecycle and invariant tests distinguish the
+		complete declaration catalog from later sealed definition boundaries.
+	**/
+	public function hasCallableDeclaration(calleeId:String):Bool {
+		return declaredCallableByCallee.exists(calleeId);
+	}
+
+	/** Returns whether one declaration needs the sealed optional-call hard cut. */
+	public function hasOptionalCallableDeclaration(calleeId:String):Bool {
+		final declaration = declaredCallableByCallee.get(calleeId);
+		return declaration != null && Lambda.exists(declaration.arguments, argument -> argument.parameterOptional);
 	}
 
 	/**

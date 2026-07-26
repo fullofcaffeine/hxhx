@@ -1,0 +1,9 @@
+-cp optional-negative-src
+-main OptionalOccurrenceRejected
+--no-output
+
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=optional-negative-out
+-D ocaml_no_build

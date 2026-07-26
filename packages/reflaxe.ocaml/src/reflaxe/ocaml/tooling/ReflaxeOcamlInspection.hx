@@ -318,8 +318,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 17) {
-						throw 'Unsupported lowering report schema $version; expected 17.';
+					if (version != 18) {
+						throw 'Unsupported lowering report schema $version; expected 18.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -368,7 +368,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v7")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v8")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -432,6 +432,7 @@ class ReflaxeOcamlInspection {
 		final conversion = requiredString(value, "conversion");
 		return {
 			index: requiredInt(value, "index"),
+			parameterOptional: requiredBool(value, "parameterOptional"),
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
 			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
 			inputRepresentationId: requiredString(value, "inputRepresentationId"),
@@ -457,6 +458,8 @@ class ReflaxeOcamlInspection {
 		final result = callValue(requiredObject(value, "result"));
 		if (result.index != -1)
 			throw 'Typed-call result has index ${result.index} instead of -1.';
+		if (result.parameterOptional)
+			throw "Typed-call result cannot be an optional parameter.";
 		return result;
 	}
 
@@ -471,7 +474,7 @@ class ReflaxeOcamlInspection {
 		final source = requiredObject(value, "source");
 		final id = requiredString(value, "id");
 		final arguments = callValues(value, "arguments");
-		final schedule = callEvaluationSchedule(value, id, arguments.length);
+		final schedule = callEvaluationSchedule(value, id, arguments);
 		return {
 			id: id,
 			sourceFile: requiredString(source, "file"),
@@ -496,25 +499,37 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
-	static function callEvaluationSchedule(value:Dynamic, callId:String, argumentCount:Int):Array<InspectionCallEvaluationStep> {
+	static function callEvaluationSchedule(value:Dynamic, callId:String, arguments:Array<InspectionCallValue>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
 				{
 					kind: requiredString(entry, "kind"),
 					argumentIndex: optionalInt(entry, "argumentIndex"),
+					sourceArgumentIndex: optionalInt(entry, "sourceArgumentIndex"),
 					slotId: optionalString(entry, "slotId")
 				}
 		];
-		if (schedule.length != argumentCount + 1)
+		if (schedule.length != arguments.length + 1)
 			throw 'Call "$callId" has an unsupported evaluation-schedule length.';
-		for (index in 0...argumentCount) {
+		var sourceArgumentIndex = 0;
+		for (index in 0...arguments.length) {
 			final step = schedule[index];
+			final omitted = arguments[index].conversion == "materialize-omitted-nullable-int"
+				|| arguments[index].conversion == "materialize-omitted-nullable-bool";
+			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
+			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
-			if (step.kind != "materialize-argument" || step.argumentIndex != index || step.slotId != expectedSlot)
+			if (step.kind != expectedKind
+				|| step.argumentIndex != index
+				|| step.sourceArgumentIndex != expectedSourceIndex
+				|| step.slotId != expectedSlot)
 				throw 'Call "$callId" has an invalid materialization at schedule index $index.';
 		}
 		final invocation = schedule[schedule.length - 1];
-		if (invocation.kind != "invoke-callee" || invocation.argumentIndex != null || invocation.slotId != null)
+		if (invocation.kind != "invoke-callee"
+			|| invocation.argumentIndex != null
+			|| invocation.sourceArgumentIndex != null
+			|| invocation.slotId != null)
 			throw 'Call "$callId" has an invalid invocation step.';
 		return schedule;
 	}
@@ -576,6 +591,20 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-bool-call-box-v1")
 					throw '$owner has an invalid exact Bool-to-Null<Bool> boxing crossing.';
+			case "materialize-omitted-nullable-int":
+				if (!value.parameterOptional
+					|| !sameSides
+					|| value.inputSemanticTypeId != "Null<Int>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "omitted-nullable-int-call-materialization-v1")
+					throw '$owner has an invalid omitted optional Null<Int> materialization.';
+			case "materialize-omitted-nullable-bool":
+				if (!value.parameterOptional
+					|| !sameSides
+					|| value.inputSemanticTypeId != "Null<Bool>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "omitted-nullable-bool-call-materialization-v1")
+					throw '$owner has an invalid omitted optional Null<Bool> materialization.';
 			case _:
 				throw '$owner has unsupported conversion "${value.conversion}".';
 		}
@@ -591,7 +620,11 @@ class ReflaxeOcamlInspection {
 		}
 		if (!isCallableBoundary && result.conversion != "identity")
 			throw '$owner must preserve the exact exported result carrier at the call occurrence.';
-		for (argument in arguments) {
+		if (result.parameterOptional)
+			throw '$owner result cannot be an optional parameter.';
+		var optionalCount = 0;
+		for (index in 0...arguments.length) {
+			final argument = arguments[index];
 			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
 				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
 				throw '$owner contains an argument outside the closed direct-static representation matrix.';
@@ -602,6 +635,14 @@ class ReflaxeOcamlInspection {
 				&& (argument.outputSemanticTypeId == "Null<Int>" || argument.outputSemanticTypeId == "Null<Bool>")
 				&& argument.conversion == "identity") {
 				throw '$owner must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive.';
+			}
+			if (argument.parameterOptional) {
+				optionalCount += 1;
+				if (optionalCount > 1
+					|| index != arguments.length - 1
+					|| (argument.outputSemanticTypeId != "Null<Int>" && argument.outputSemanticTypeId != "Null<Bool>")) {
+					throw '$owner has an unsupported optional-parameter shape.';
+				}
 			}
 		}
 	}
@@ -634,6 +675,7 @@ class ReflaxeOcamlInspection {
 
 	static function sameCallableBoundary(callValue:InspectionCallValue, boundaryValue:InspectionCallValue, isResult:Bool):Bool {
 		return callValue.index == boundaryValue.index
+			&& callValue.parameterOptional == boundaryValue.parameterOptional
 			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
 				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
 				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId

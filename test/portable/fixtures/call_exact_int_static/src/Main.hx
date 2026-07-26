@@ -65,6 +65,26 @@ class Main {
 		return 7;
 	}
 
+	static function optionalIntSource():Int {
+		Sys.println("optional-int-source");
+		return 11;
+	}
+
+	static function observeOptionalInt(value:Null<Int>):Null<Int> {
+		Sys.println("optional-int-existing");
+		return value;
+	}
+
+	static function optionalBoolSource():Bool {
+		Sys.println("optional-bool-source");
+		return true;
+	}
+
+	static function observeOptionalBool(value:Null<Bool>):Null<Bool> {
+		Sys.println("optional-bool-existing");
+		return value;
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -106,6 +126,16 @@ class Main {
 		Sys.println("zero-null-int=" + (ZeroArgCalls.nullableCount() == null));
 		final zeroNullableFlag = ZeroArgCalls.nullableFlag();
 		Sys.println(zeroNullableFlag == null ? "zero-null-bool=missing" : (zeroNullableFlag ? "zero-null-bool=true" : "zero-null-bool=false"));
+		Sys.println("optional-int-omitted=" + OptionalCalls.optionalInt());
+		Sys.println("optional-int-null=" + OptionalCalls.optionalInt(null));
+		Sys.println("optional-int-exact=" + OptionalCalls.optionalInt(optionalIntSource()));
+		final existingOptionalInt:Null<Int> = 12;
+		Sys.println("optional-int-existing-value=" + OptionalCalls.optionalInt(observeOptionalInt(existingOptionalInt)));
+		Sys.println(OptionalCalls.optionalBool() ? "optional-bool-omitted=true" : "optional-bool-omitted=false");
+		Sys.println(OptionalCalls.optionalBool(null) ? "optional-bool-null=true" : "optional-bool-null=false");
+		Sys.println(OptionalCalls.optionalBool(optionalBoolSource()) ? "optional-bool-exact=true" : "optional-bool-exact=false");
+		final existingOptionalBool:Null<Bool> = false;
+		Sys.println(OptionalCalls.optionalBool(observeOptionalBool(existingOptionalBool)) ? "optional-bool-existing-value=true" : "optional-bool-existing-value=false");
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

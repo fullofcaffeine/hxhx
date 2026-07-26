@@ -6,9 +6,10 @@ nullable_source="out/NullableCalls.ml"
 bool_source="out/BoolCalls.ml"
 mixed_source="out/MixedCalls.ml"
 zero_source="out/ZeroArgCalls.ml"
+optional_source="out/OptionalCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$zero_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$zero_source" ] || [ ! -f "$optional_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -139,6 +140,25 @@ if grep -Eq 'let result.*Obj\.t|Obj\.repr \(Obj\.repr' "$zero_source"; then
 	echo "The callable result conversion must not rely on an intermediate local or box twice" >&2
 	exit 1
 fi
+if ! grep -q '^let optionalInt = fun (value : Obj.t) ->' "$optional_source" \
+	|| ! grep -q '^let optionalBool = fun (value : Obj.t) ->' "$optional_source"; then
+	echo "Optional Int and Bool declarations must expose their Haxe Null<T> boundary as Obj.t" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = HxRuntime\.hx_null in OptionalCalls\.optionalInt __call_arg_0_[0-9]+' "$main_source" \
+	|| ! grep -Eq 'let __call_arg_0_[0-9]+ = HxRuntime\.hx_null in OptionalCalls\.optionalBool __call_arg_0_[0-9]+' "$main_source"; then
+	echo "Omitted optional primitive arguments must materialize the selected null carrier before invocation" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(optionalIntSource \(\)\) in OptionalCalls\.optionalInt __call_arg_0_[0-9]+' "$main_source" \
+	|| ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(optionalBoolSource \(\)\) in OptionalCalls\.optionalBool __call_arg_0_[0-9]+' "$main_source"; then
+	echo "Supplied exact optional primitive arguments must be evaluated once and boxed once" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.repr \(Obj\.repr \(optional(Int|Bool)Source \(\)\)\)' "$main_source"; then
+	echo "A supplied optional primitive argument must not be boxed twice" >&2
+	exit 1
+fi
 
 negative_log="$(mktemp)"
 rm -rf negative-out
@@ -160,10 +180,31 @@ if [ -f negative-out/ResultControlRejected.ml ]; then
 fi
 rm -f "$negative_log"
 
+optional_negative_log="$(mktemp)"
+rm -rf optional-negative-out
+if haxe optional-negative.hxml >"$optional_negative_log" 2>&1; then
+	echo "An optional static-initializer call unexpectedly fell back to builder-time argument padding" >&2
+	rm -f "$optional_negative_log"
+	exit 1
+fi
+if ! grep -Fq '[ocaml-call:plan-invariant]' "$optional_negative_log" \
+	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$optional_negative_log"; then
+	echo "The unplanned optional call did not report the stable hard-cut diagnostic" >&2
+	cat "$optional_negative_log" >&2
+	rm -f "$optional_negative_log"
+	exit 1
+fi
+if [ -f optional-negative-out/OptionalOccurrenceRejected.ml ]; then
+	echo "The unplanned optional call reached OCaml module output" >&2
+	rm -f "$optional_negative_log"
+	exit 1
+fi
+rm -f "$optional_negative_log"
+
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 17 || report.callModel !== 'typed-ocaml-directional-call-boundary-v7') {
+if (report.schemaVersion !== 18 || report.callModel !== 'typed-ocaml-directional-call-boundary-v8') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -224,6 +265,43 @@ const signatureProofId = 'direct-static-representation-signature-v1'
 if (report.calls.some(call => call.proofId !== signatureProofId)
 	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
+}
+for (const owner of [...report.calls, ...report.callableBoundaries]) {
+	if (owner.result?.parameterOptional !== false) {
+		throw new Error(`call owner ${owner.id} marked its result as an optional parameter`)
+	}
+	const optionalArguments = owner.arguments?.filter(argument => argument.parameterOptional) ?? []
+	if (optionalArguments.length > 1
+		|| (optionalArguments.length === 1
+			&& (owner.sourceTypeName !== 'OptionalCalls'
+				|| optionalArguments[0].index !== owner.arguments.length - 1))) {
+		throw new Error(`call owner ${owner.id} has an unsupported optional-parameter shape`)
+	}
+	if (owner.sourceTypeName !== 'OptionalCalls' && owner.arguments?.some(argument => argument.parameterOptional !== false)) {
+		throw new Error(`non-optional call owner ${owner.id} changed parameter optionality`)
+	}
+}
+for (const call of report.calls) {
+	let sourceArgumentIndex = 0
+	for (let index = 0; index < call.arguments.length; index++) {
+		const argument = call.arguments[index]
+		const omitted = argument.conversion === 'materialize-omitted-nullable-int'
+			|| argument.conversion === 'materialize-omitted-nullable-bool'
+		const step = call.evaluationSchedule?.[index]
+		if (step?.kind !== (omitted ? 'materialize-omitted-argument' : 'materialize-argument')
+			|| step.argumentIndex !== index
+			|| step.sourceArgumentIndex !== (omitted ? null : sourceArgumentIndex++)
+			|| typeof step.slotId !== 'string') {
+			throw new Error(`call ${call.id} has an invalid parameter/source argument schedule at index ${index}`)
+		}
+	}
+	const invocation = call.evaluationSchedule?.[call.arguments.length]
+	if (invocation?.kind !== 'invoke-callee'
+		|| invocation.argumentIndex !== null
+		|| invocation.sourceArgumentIndex !== null
+		|| invocation.slotId !== null) {
+		throw new Error(`call ${call.id} has an invalid final invocation step`)
+	}
 }
 verifyCalls('increment', 1, signatureProofId, 1)
 verifyCalls('add', 2, signatureProofId, 2)
@@ -461,6 +539,57 @@ for (const call of positiveArityCalls) {
 		throw new Error('the positive-arity call did not invoke exactly once after all argument bindings')
 	}
 }
+function verifyOptionalCalls(fieldName, semanticTypeId, resultSemanticTypeId, resultCarrierTypeId) {
+	const calls = report.calls?.filter(item => item.sourceTypeName === 'OptionalCalls' && item.sourceFieldName === fieldName) ?? []
+	const boundary = report.callableBoundaries?.find(
+		item => item.sourceTypeName === 'OptionalCalls' && item.sourceFieldName === fieldName
+	)
+	const suffix = semanticTypeId === 'Null<Int>' ? 'int' : 'bool'
+	if (calls.length !== 4 || !boundary
+		|| boundary.arguments?.length !== 1
+		|| boundary.arguments[0]?.parameterOptional !== true
+		|| !isIdentity(boundary.arguments[0], semanticTypeId, 'Obj.t')
+		|| !isIdentity(boundary.result, resultSemanticTypeId, resultCarrierTypeId)) {
+		throw new Error(`the lowering report did not seal optional ${fieldName} with its full callable shape`)
+	}
+	const omitted = calls.filter(call => call.arguments?.[0]?.conversion === `materialize-omitted-nullable-${suffix}`)
+	const preserved = calls.filter(call => call.arguments?.[0]?.conversion === `preserve-nullable-${suffix}-carrier`)
+	const boxed = calls.filter(call => call.arguments?.[0]?.conversion === `box-exact-${suffix}-to-nullable-${suffix}`)
+	if (omitted.length !== 1 || preserved.length !== 2 || boxed.length !== 1) {
+		throw new Error(`optional ${fieldName} did not distinguish omission, explicit/nullable values, and an exact primitive`)
+	}
+	const omittedCall = omitted[0]
+	const omittedArgument = omittedCall.arguments[0]
+	if (omittedArgument.parameterOptional !== true
+		|| omittedArgument.proofId !== `omitted-nullable-${suffix}-call-materialization-v1`
+		|| omittedCall.evaluationSchedule?.length !== 2
+		|| omittedCall.evaluationSchedule[0]?.kind !== 'materialize-omitted-argument'
+		|| omittedCall.evaluationSchedule[0]?.argumentIndex !== 0
+		|| omittedCall.evaluationSchedule[0]?.sourceArgumentIndex !== null
+		|| typeof omittedCall.evaluationSchedule[0]?.slotId !== 'string') {
+		throw new Error(`optional ${fieldName} omission does not own one source-free null-carrier materialization`)
+	}
+	for (const call of [...preserved, ...boxed]) {
+		if (call.arguments[0]?.parameterOptional !== true
+			|| call.evaluationSchedule?.length !== 2
+			|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
+			|| call.evaluationSchedule[0]?.argumentIndex !== 0
+			|| call.evaluationSchedule[0]?.sourceArgumentIndex !== 0) {
+			throw new Error(`supplied optional ${fieldName} did not retain its source argument materialization`)
+		}
+	}
+	for (const call of calls) {
+		const invocation = call.evaluationSchedule?.[1]
+		if (invocation?.kind !== 'invoke-callee'
+			|| invocation.argumentIndex !== null
+			|| invocation.sourceArgumentIndex !== null
+			|| invocation.slotId !== null) {
+			throw new Error(`optional ${fieldName} did not invoke exactly once after materialization`)
+		}
+	}
+}
+verifyOptionalCalls('optionalInt', 'Null<Int>', 'Int', 'int')
+verifyOptionalCalls('optionalBool', 'Null<Bool>', 'Bool', 'bool')
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
 	throw new Error('an instance method entered the first direct-static call kind')
@@ -500,6 +629,15 @@ if (zeroCalls.length !== 4
 	|| zeroBoundaries.length !== 4
 	|| zeroBoundaries.some(item => item.arguments?.length !== 0)) {
 	throw new Error('reflaxe.ocaml inspection did not preserve the zero-argument calls and callable boundaries')
+}
+const optionalCalls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'OptionalCalls') ?? []
+const optionalBoundaries = report.lowering?.callableBoundaries?.filter(item => item.sourceTypeName === 'OptionalCalls') ?? []
+if (optionalCalls.length !== 8
+	|| optionalBoundaries.length !== 2
+	|| optionalBoundaries.some(item => item.arguments?.length !== 1 || item.arguments[0]?.parameterOptional !== true)
+	|| optionalCalls.filter(call => call.evaluationSchedule?.[0]?.kind === 'materialize-omitted-argument').length !== 2
+	|| optionalCalls.some(call => call.arguments?.[0]?.parameterOptional !== true)) {
+	throw new Error('reflaxe.ocaml inspection did not preserve optional primitive presence and callable shape')
 }
 NODE
 

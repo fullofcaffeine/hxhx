@@ -247,6 +247,7 @@ typedef InspectionUnsafeOperation = {
 /** One directional argument or result crossing selected by the typed call plan. **/
 typedef InspectionCallValue = {
 	final index:Int;
+	final parameterOptional:Bool;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;
 	final inputRepresentationId:String;
@@ -262,6 +263,7 @@ typedef InspectionCallValue = {
 typedef InspectionCallEvaluationStep = {
 	final kind:String;
 	final argumentIndex:Null<Int>;
+	final sourceArgumentIndex:Null<Int>;
 	final slotId:Null<String>;
 }
 
