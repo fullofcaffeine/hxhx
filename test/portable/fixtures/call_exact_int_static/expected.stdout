@@ -15,4 +15,11 @@ nullable-boxed=9
 bool-source
 bool-callee
 bool-result=false
+nullable-bool-callee
+nullable-bool-preserved-null=true
+nullable-bool-callee
+nullable-bool-preserved-false=false
+bool-source
+nullable-bool-callee
+nullable-bool-boxed=true
 instance=6

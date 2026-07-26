@@ -96,7 +96,8 @@ class OcamlLocalRepresentationPlanner {
 
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, storage:OcamlLocalStoragePlan, representations:OcamlRepresentationRegistry,
-			?binding:OcamlFunctionPlanBinding):OcamlLocalRepresentationPlan {
+			?binding:OcamlFunctionPlanBinding, ?preservesNullableBoolArgument:(TypedExpr, Int) -> Bool,
+			?producesNullableBool:TypedExpr->Bool):OcamlLocalRepresentationPlan {
 		final typeByLocalId:Map<Int, Type> = [];
 		final declaredLocalIds:Map<Int, Bool> = [];
 		final identityBoolInitializerByLocalId:Map<Int, Bool> = [];
@@ -177,7 +178,7 @@ class OcamlLocalRepresentationPlanner {
 		}
 
 		function addNullBoolWrite(localId:Int, role:OcamlLocalConversionRole, value:TypedExpr):Void {
-			final input = nullBoolWriteInput(value, declaredLocalIds);
+			final input = nullBoolWriteInput(value, declaredLocalIds, producesNullableBool);
 			if (input == null) {
 				unsupportedNullableLocalIds.set(localId, true);
 				return;
@@ -235,6 +236,10 @@ class OcamlLocalRepresentationPlanner {
 					unsupportedNullableLocalIds.set(local.id, true);
 				case _:
 			}
+		}
+
+		function isPlannedNullableBoolArgument(callExpression:TypedExpr, argumentIndex:Int):Bool {
+			return preservesNullableBoolArgument != null && preservesNullableBoolArgument(callExpression, argumentIndex);
 		}
 
 		var visit:TypedExpr->Void = null;
@@ -349,8 +354,10 @@ class OcamlLocalRepresentationPlanner {
 					visitChildren = false;
 				case TCall(callee, arguments):
 					visit(callee);
-					for (argument in arguments) {
-						rejectDirectNullBoolBoundary(argument);
+					for (index in 0...arguments.length) {
+						final argument = arguments[index];
+						if (!isPlannedNullableBoolArgument(current, index))
+							rejectDirectNullBoolBoundary(argument);
 						visit(argument);
 					}
 					visitChildren = false;
@@ -641,7 +648,7 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
-	static function nullBoolWriteInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>):Null<{
+	static function nullBoolWriteInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>, producesNullableBool:Null<TypedExpr->Bool>):Null<{
 		semanticTypeId:String,
 		carrierTypeId:String,
 		sourceLocalId:Null<Int>,
@@ -672,6 +679,17 @@ class OcamlLocalRepresentationPlanner {
 					sourceLocalId: local.id,
 					conversion: OcamlLocalCarrierConversion.BoxExactBoolToNullableBool
 				};
+			case TCall(_, _):
+				if (producesNullableBool != null && producesNullableBool(unwrapTransparent(expression))) {
+					{
+						semanticTypeId: "Null<Bool>",
+						carrierTypeId: "Obj.t",
+						sourceLocalId: null,
+						conversion: OcamlLocalCarrierConversion.PreserveNullableBoolCarrier
+					};
+				} else {
+					null;
+				}
 			case _:
 				null;
 		}

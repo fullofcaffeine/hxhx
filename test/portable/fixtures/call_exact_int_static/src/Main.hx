@@ -52,6 +52,14 @@ class Main {
 		Sys.println("nullable-boxed=" + (boxed == null ? -1 : boxed));
 		final boolResult = BoolCalls.negate(observedBoolInput());
 		Sys.println(boolResult ? "bool-result=true" : "bool-result=false");
+		final existingNullBool:Null<Bool> = null;
+		final preservedNullBool = BoolCalls.identityNullable(existingNullBool);
+		Sys.println("nullable-bool-preserved-null=" + (preservedNullBool == null));
+		final existingFalseBool:Null<Bool> = false;
+		final preservedFalseBool = BoolCalls.identityNullable(existingFalseBool);
+		Sys.println(preservedFalseBool == null ? "nullable-bool-preserved-false=missing" : (preservedFalseBool ? "nullable-bool-preserved-false=true" : "nullable-bool-preserved-false=false"));
+		final boxedTrueBool = BoolCalls.identityNullable(observedBoolInput());
+		Sys.println(boxedTrueBool == null ? "nullable-bool-boxed=missing" : (boxedTrueBool ? "nullable-bool-boxed=true" : "nullable-bool-boxed=false"));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

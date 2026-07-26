@@ -171,9 +171,9 @@ class OcamlBuilder {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
 		final built = buildExpr(expression);
 		return switch (value.conversion) {
-			case Identity, PreserveNullableIntCarrier:
+			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier:
 				built;
-			case BoxExactIntToNullableInt:
+			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 		}
 	}
@@ -377,6 +377,12 @@ class OcamlBuilder {
 							carrierTypeId: "bool"
 						};
 				};
+			case TCall(_, _):
+				if (currentCallPlan != null && currentCallPlan.producesNullableBool(expression)) {
+					{semanticTypeId: "Null<Bool>", carrierTypeId: "Obj.t"};
+				} else {
+					null;
+				}
 			case _:
 				null;
 		}

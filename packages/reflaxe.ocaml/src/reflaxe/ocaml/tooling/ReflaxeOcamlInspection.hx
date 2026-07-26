@@ -566,6 +566,19 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-int-call-box-v1")
 					throw '$owner has an invalid exact Int-to-Null<Int> boxing crossing.';
+			case "preserve-nullable-bool-carrier":
+				if (!sameSides
+					|| value.inputSemanticTypeId != "Null<Bool>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "nullable-bool-call-carrier-preserve-v1")
+					throw '$owner has an invalid exact Null<Bool> carrier-preserving crossing.';
+			case "box-exact-bool-to-nullable-bool":
+				if (value.inputSemanticTypeId != "Bool"
+					|| value.inputCarrierTypeId != "bool"
+					|| value.outputSemanticTypeId != "Null<Bool>"
+					|| value.outputCarrierTypeId != "Obj.t"
+					|| value.proofId != "nullable-bool-call-box-v1")
+					throw '$owner has an invalid exact Bool-to-Null<Bool> boxing crossing.';
 			case _:
 				throw '$owner has unsupported conversion "${value.conversion}".';
 		}
@@ -605,14 +618,30 @@ class ReflaxeOcamlInspection {
 			&& result.conversion == "identity"
 			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Int>", "Obj.t")
 			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Int>", "Obj.t");
-		if (!nullableIntFamily || proofId != "direct-one-nullable-int-static-call-v1")
-			throw '$owner does not match an admitted exact Int, Bool, or Null<Int> direct-call family.';
+		if (nullableIntFamily && proofId == "direct-one-nullable-int-static-call-v1") {
+			if (requiresIdentityBoundary) {
+				if (arguments[0].conversion != "identity")
+					throw '$owner must describe an identity carrier value.';
+			} else if (arguments[0].conversion != "preserve-nullable-int-carrier"
+				&& arguments[0].conversion != "box-exact-int-to-nullable-int") {
+				throw '$owner must explicitly preserve an existing Null<Int> carrier or box one exact Int.';
+			}
+			return;
+		}
+
+		final nullableBoolFamily = arguments.length == 1
+			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Null<Bool>", "Obj.t")
+			&& result.conversion == "identity"
+			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Bool>", "Obj.t")
+			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Bool>", "Obj.t");
+		if (!nullableBoolFamily || proofId != "direct-one-nullable-bool-static-call-v1")
+			throw '$owner does not match an admitted exact Int, Bool, Null<Int>, or Null<Bool> direct-call family.';
 		if (requiresIdentityBoundary) {
 			if (arguments[0].conversion != "identity")
 				throw '$owner must describe an identity carrier value.';
-		} else if (arguments[0].conversion != "preserve-nullable-int-carrier"
-			&& arguments[0].conversion != "box-exact-int-to-nullable-int") {
-			throw '$owner must explicitly preserve an existing Null<Int> carrier or box one exact Int.';
+		} else if (arguments[0].conversion != "preserve-nullable-bool-carrier"
+			&& arguments[0].conversion != "box-exact-bool-to-nullable-bool") {
+			throw '$owner must explicitly preserve an existing Null<Bool> carrier or box one exact Bool.';
 		}
 	}
 

@@ -67,6 +67,22 @@ if grep -Eq 'Obj\.(magic|repr|obj) \(BoolCalls\.negate|BoolCalls\.negate \(Obj\.
 	echo "The exact Bool call boundary must remain a direct bool identity crossing" >&2
 	exit 1
 fi
+if ! grep -q '^let identityNullable = fun (value : Obj.t) ->' "$bool_source"; then
+	echo "The exact Null<Bool> callable boundary must annotate its OCaml parameter as Obj.t" >&2
+	exit 1
+fi
+if [ "$(grep -Ec 'let __call_arg_0_[0-9]+ = existing(Null|False)Bool in BoolCalls\.identityNullable __call_arg_0_[0-9]+' "$main_source")" -ne 2 ]; then
+	echo "Existing null and false Null<Bool> carriers must cross the callable boundary without another box" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(observedBoolInput \(\)\) in BoolCalls\.identityNullable __call_arg_0_[0-9]+' "$main_source"; then
+	echo "An exact Bool source must be evaluated once and boxed once before the Null<Bool> call" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.repr \(Obj\.repr \(observedBoolInput \(\)\)\)' "$main_source"; then
+	echo "The exact Bool-to-Null<Bool> call crossing must not box its argument twice" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
@@ -183,6 +199,63 @@ if (boolCall.proofId !== 'direct-one-bool-static-call-v1'
 	|| typeof boolCall.evaluationSchedule[0]?.slotId !== 'string'
 	|| boolCall.evaluationSchedule[1]?.kind !== 'invoke-callee') {
 	throw new Error('the exact Bool call did not retain its identity crossing and evaluate-before-invoke schedule')
+}
+const nullableBoolCalls = report.calls?.filter(
+	item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'identityNullable'
+) ?? []
+const nullableBoolBoundary = report.callableBoundaries?.find(
+	item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'identityNullable'
+)
+if (nullableBoolCalls.length !== 3 || !nullableBoolBoundary
+	|| nullableBoolBoundary.proofId !== 'direct-one-nullable-bool-static-call-v1'
+	|| nullableBoolBoundary.arguments?.length !== 1
+	|| !isIdentity(nullableBoolBoundary.arguments[0], 'Null<Bool>', 'Obj.t')
+	|| !isIdentity(nullableBoolBoundary.result, 'Null<Bool>', 'Obj.t')) {
+	throw new Error('the lowering report did not seal the exact Null<Bool> callable definition')
+}
+const nullableBoolPreserves = nullableBoolCalls.filter(
+	call => call.arguments?.[0]?.conversion === 'preserve-nullable-bool-carrier'
+)
+if (nullableBoolPreserves.length !== 2 || nullableBoolPreserves.some(call =>
+	call.arguments[0].inputSemanticTypeId !== 'Null<Bool>'
+	|| call.arguments[0].inputCarrierTypeId !== 'Obj.t'
+	|| call.arguments[0].inputRepresentationId !== 'representation:Null<Bool>:internal-value'
+	|| call.arguments[0].outputSemanticTypeId !== 'Null<Bool>'
+	|| call.arguments[0].outputCarrierTypeId !== 'Obj.t'
+	|| call.arguments[0].outputRepresentationId !== 'representation:Null<Bool>:internal-value'
+	|| call.arguments[0].proofId !== 'nullable-bool-call-carrier-preserve-v1'
+	|| !isIdentity(call.result, 'Null<Bool>', 'Obj.t'))) {
+	throw new Error('the existing nullable Bool arguments were not recorded as exact carrier-preserving crossings')
+}
+const nullableBoolBoxes = nullableBoolCalls.filter(
+	call => call.arguments?.[0]?.conversion === 'box-exact-bool-to-nullable-bool'
+)
+if (nullableBoolBoxes.length !== 1) {
+	throw new Error('the lowering report must contain exactly one Bool-to-Null<Bool> box crossing')
+}
+const nullableBoolBox = nullableBoolBoxes[0]
+if (nullableBoolBox.arguments[0].inputSemanticTypeId !== 'Bool'
+	|| nullableBoolBox.arguments[0].inputCarrierTypeId !== 'bool'
+	|| nullableBoolBox.arguments[0].inputRepresentationId !== 'representation:Bool:internal-value'
+	|| nullableBoolBox.arguments[0].outputSemanticTypeId !== 'Null<Bool>'
+	|| nullableBoolBox.arguments[0].outputCarrierTypeId !== 'Obj.t'
+	|| nullableBoolBox.arguments[0].outputRepresentationId !== 'representation:Null<Bool>:internal-value'
+	|| nullableBoolBox.arguments[0].proofId !== 'nullable-bool-call-box-v1'
+	|| !isIdentity(nullableBoolBox.result, 'Null<Bool>', 'Obj.t')) {
+	throw new Error('the exact Bool argument was not recorded as one directional box into Null<Bool>')
+}
+for (const call of nullableBoolCalls) {
+	if (call.proofId !== 'direct-one-nullable-bool-static-call-v1'
+		|| call.arguments?.length !== 1
+		|| call.evaluationSchedule?.length !== 2
+		|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
+		|| call.evaluationSchedule[0]?.argumentIndex !== 0
+		|| typeof call.evaluationSchedule[0]?.slotId !== 'string'
+		|| call.evaluationSchedule[1]?.kind !== 'invoke-callee'
+		|| call.evaluationSchedule[1]?.argumentIndex !== null
+		|| call.evaluationSchedule[1]?.slotId !== null) {
+		throw new Error('the exact Null<Bool> call does not materialize its argument before invocation')
+	}
 }
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {

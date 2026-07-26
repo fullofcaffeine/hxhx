@@ -4,4 +4,9 @@ class BoolCalls {
 		Sys.println("bool-callee");
 		return !value;
 	}
+
+	public static function identityNullable(value:Null<Bool>):Null<Bool> {
+		Sys.println("nullable-bool-callee");
+		return value;
+	}
 }
