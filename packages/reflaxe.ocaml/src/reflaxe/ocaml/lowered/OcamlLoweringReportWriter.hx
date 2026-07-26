@@ -127,7 +127,7 @@ class OcamlLoweringReportWriter {
 			schemaVersion: 13,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
-			representationScope: "exact-int-bool-array-int-and-nullable-primitive-locals-v6",
+			representationScope: "exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7",
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,

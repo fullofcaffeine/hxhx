@@ -1,10 +1,15 @@
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Type;
+import reflaxe.ocaml.ast.OcamlConst;
+import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
@@ -77,6 +82,8 @@ class RepresentationRegistryFixture {
 		final mutable = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final internal = registry.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		final captured = registry.selectExactInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		final instanceField = registry.selectExactInt(OcamlRepresentationDomain.InstanceField);
+		final staticField = registry.selectExactInt(OcamlRepresentationDomain.StaticField);
 		final boolInternal = registry.selectExactBool(OcamlRepresentationDomain.InternalValue);
 		final boolMutable = registry.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
 		final boolCaptured = registry.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
@@ -103,11 +110,26 @@ class RepresentationRegistryFixture {
 		assertTrue(captured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
 			"a captured Int should use the one cell shared with nested functions");
 		assertTrue(mutable.id == "representation:Int:mutable-local-storage", "representation identities should be semantic and program independent");
+		assertTrue(instanceField.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactIntZero
+			&& staticField.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactIntZero,
+			"exact Int fields should carry the same explicit Haxe zero-default policy");
+		final instanceMaterialization = OcamlFieldRepresentationMaterializer.materializeExactInt(instanceField, OcamlRepresentationDomain.InstanceField);
+		final carrierIsInt = switch (instanceMaterialization.carrierType) {
+			case TIdent("int"): true;
+			case _: false;
+		}
+		final defaultIsZero = switch (instanceMaterialization.implicitDefault) {
+			case EConst(CInt(0)): true;
+			case _: false;
+		}
+		assertTrue(carrierIsInt && defaultIsZero, "an exact Int instance field should materialize directly as OCaml int with a zero default");
 		assertTrue(boolInternal.semanticTypeId == "Bool"
 			&& boolInternal.carrierTypeId == "bool"
 			&& boolInternal.nullPolicy == OcamlRepresentationNullPolicy.NonNull
 			&& boolInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectUnboxed,
 			"exact Bool locals should use the direct non-null OCaml bool carrier");
+		assertTrue(boolInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactBoolFalse,
+			"exact Bool decisions should record their semantic false default even though field storage is not admitted yet");
 		assertTrue(boolInternal.proof.id == "direct-exact-bool-local-v1"
 			&& boolInternal.proof.claim.indexOf("does not admit nullable values, fields, calls, operators, native boundaries, or public ABI") >= 0,
 			"the exact Bool proof should state its local-only boundary");
@@ -116,6 +138,8 @@ class RepresentationRegistryFixture {
 			"mutable and captured Bool values should put replacement mutation in their shared local cells");
 		assertTrue(arrayInternal.semanticTypeId == "Array<Int>" && arrayInternal.carrierTypeId == "int HxArray.t",
 			"the direct Array<Int> internal value should use the typed HxArray carrier");
+		assertTrue(arrayInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			"the local Array<Int> carrier should not imply a field default");
 		assertTrue(arrayInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
 			&& arrayInternal.identityPolicy == OcamlRepresentationIdentityPolicy.ReferenceIdentity
 			&& arrayInternal.aliasingPolicy == OcamlRepresentationAliasingPolicy.SharedReferenceAliases
@@ -135,6 +159,8 @@ class RepresentationRegistryFixture {
 			&& nullableInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
 			&& nullableInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
 			"exact Null<Int> locals should use the runtime-sentinel Obj.t carrier");
+		assertTrue(nullableInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
+			"the nullable-Int decision should record its runtime null sentinel");
 		assertTrue(nullableInternal.proof.id == "nullable-int-obj-carrier-v1"
 			&& nullableInternal.proof.claim.indexOf("does not admit other Null<T> families, fields, calls, or ABI crossings") >= 0,
 			"the nullable carrier proof should state its local-only boundary");
@@ -146,6 +172,8 @@ class RepresentationRegistryFixture {
 			&& nullableBoolInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
 			&& nullableBoolInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
 			"exact Null<Bool> locals should preserve null, false, and true in the runtime-sentinel Obj.t carrier");
+		assertTrue(nullableBoolInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
+			"the nullable-Bool decision should record its runtime null sentinel");
 		assertTrue(nullableBoolInternal.proof.id == "nullable-bool-obj-carrier-v1"
 			&& nullableBoolInternal.proof.claim.indexOf("three distinct Haxe Null<Bool> values") >= 0,
 			"the nullable-Bool proof should state the three-state local-only boundary");
@@ -157,13 +185,21 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 15, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 17, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
 		mutable.profileEligibility.push("changed-by-caller");
 		assertTrue(registry.require(mutable.id, "program:representation-fixture").profileEligibility.join(",") == "metal,portable",
 			"mutating a returned profile list must not change the retained decision");
+		expectFailure("wrong field domain", "wrong-domain",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactInt(mutable, OcamlRepresentationDomain.InstanceField));
+		Reflect.setField(instanceField, "implicitDefaultPolicy", OcamlRepresentationImplicitDefaultPolicy.NotAdmitted);
+		expectFailure("wrong field default", "unsupported-decision",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactInt(instanceField, OcamlRepresentationDomain.InstanceField));
+		assertTrue(registry.require(instanceField.id, "program:representation-fixture")
+			.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactIntZero,
+			"mutating a returned default policy must not change the retained decision");
 
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
@@ -186,6 +222,7 @@ class RepresentationRegistryFixture {
 			storageMutationPolicy: mutable.storageMutationPolicy,
 			valueMutationPolicy: mutable.valueMutationPolicy,
 			boxingPolicy: mutable.boxingPolicy,
+			implicitDefaultPolicy: mutable.implicitDefaultPolicy,
 			reason: mutable.reason,
 			proof: mutable.proof,
 			profileEligibility: mutable.profileEligibility
@@ -196,6 +233,8 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactInt(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectExactInt(OcamlRepresentationDomain.InstanceField);
+		registryAgain.selectExactInt(OcamlRepresentationDomain.StaticField);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);

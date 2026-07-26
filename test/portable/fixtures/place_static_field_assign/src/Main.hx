@@ -25,6 +25,7 @@ class Main {
 
 	static function main():Void {
 		Sys.println(SameModuleWorker.run());
+		Sys.println("omitted=" + ExternalHolder.omitted);
 
 		final localResult = localValue = rhs("rhs_local", 7);
 		Sys.println("local=" + localResult + " final=" + localValue + " events=" + events.join(","));

@@ -92,7 +92,7 @@ typedef OcamlStaticStorageReportEntry = {
 	late forward declaration.
 **/
 class OcamlStaticStoragePlan {
-	public static inline final MODEL_REVISION = "ocaml-static-storage-v2";
+	public static inline final MODEL_REVISION = "ocaml-static-storage-v3";
 
 	var currentProgramRevision:Null<String> = null;
 	var sealed:Bool = false;
@@ -342,6 +342,12 @@ class OcamlStaticStoragePlan {
 			throw "reflaxe.ocaml [ocaml-static-storage:invalid-type-order]: owner type order must be non-negative";
 		if (selection.declarationSite == OcamlStaticStorageDeclarationSite.ModulePrelude && selection.representationId == null) {
 			throw "reflaxe.ocaml [ocaml-static-storage:missing-representation]: a module-prelude cell needs the program representation decision that makes its early carrier safe";
+		}
+		if (selection.kind == OcamlStaticStorageKind.Variable
+			&& selection.semanticTypeId == "Int"
+			&& selection.carrierTypeId == "int"
+			&& selection.representationId == null) {
+			throw "reflaxe.ocaml [ocaml-static-storage:missing-exact-int-representation]: every exact-Int static cell needs its program representation decision, regardless of declaration site";
 		}
 		if (selection.declarationSite == OcamlStaticStorageDeclarationSite.TypePrelude) {
 			if (selection.declarationTypeName == null || selection.declarationTypeName.length == 0 || selection.declarationTypeOrder < 0)

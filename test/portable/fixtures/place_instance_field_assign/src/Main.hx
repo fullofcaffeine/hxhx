@@ -14,6 +14,7 @@ class Main {
 	}
 
 	static function main():Void {
+		Sys.println("initial=" + holder.value);
 		final result = receiver().value = rhs();
 		Sys.println("result=" + result + " final=" + holder.value + " events=" + events.join(",") + " abstract=" + abstractControl());
 

@@ -50,6 +50,8 @@ import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
+import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
+import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -505,11 +507,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case FVar(_, _): OcamlStaticStorageKind.Variable;
 						case _: continue;
 					}
+					final representation = kind == OcamlStaticStorageKind.Variable
+						&& OcamlRepresentationRegistry.isExactInt(field.type) ? representationRegistry.selectExactInt(OcamlRepresentationDomain.StaticField) : null;
+					final representedField = representation == null ? null : OcamlFieldRepresentationMaterializer.materializeExactInt(representation,
+						OcamlRepresentationDomain.StaticField);
 					final previousModuleId = ctx.currentModuleId;
 					final previousTypeName = ctx.currentTypeName;
 					ctx.currentModuleId = moduleId;
 					ctx.currentTypeName = classType.name;
-					final carrierType = ocamlTypeExprFromHaxeType(field.type);
+					final carrierType = representedField == null ? ocamlTypeExprFromHaxeType(field.type) : representedField.carrierType;
 					ctx.currentModuleId = previousModuleId;
 					ctx.currentTypeName = previousTypeName;
 					final useModulePrelude = kind == OcamlStaticStorageKind.Variable
@@ -523,13 +529,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final useTypePrelude = !useModulePrelude && concrete.length > 1 && latestCarrierDependency <= typeOrder;
 					final declarationTypeOrder = useTypePrelude ? Std.int(Math.max(0, latestCarrierDependency)) : -1;
 					final declarationTypeName = useTypePrelude ? ordered[declarationTypeOrder].classType.name : null;
-					final representation = useModulePrelude ? representationRegistry.selectExactInt(OcamlRepresentationDomain.StaticField) : null;
 					staticStoragePlan.register({
 						moduleId: moduleId,
 						ownerTypeName: classType.name,
 						fieldName: field.name,
 						targetValueName: ctx.scopedValueName(moduleId, classType.name, field.name),
-						semanticTypeId: TypeTools.toString(field.type),
+						semanticTypeId: representation == null ? TypeTools.toString(field.type) : representation.semanticTypeId,
 						carrierTypeId: representation != null ? representation.carrierTypeId : printer.printType(carrierType),
 						fieldType: field.type,
 						carrierType: carrierType,
@@ -560,11 +565,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				continue;
 			if (entry.representationId == null)
 				staticStorageInvariant('module-prelude cell "${entry.key}" has no representation decision');
-			final representation = representationRegistry.require(entry.representationId, entry.programRevision);
-			if (representation.semanticTypeId != entry.semanticTypeId || representation.carrierTypeId != entry.carrierTypeId) {
-				staticStorageInvariant('module-prelude cell "${entry.key}" expects ${entry.semanticTypeId} on ${entry.carrierTypeId}, but ${representation.id} selects ${representation.semanticTypeId} on ${representation.carrierTypeId}');
-			}
-			final initialValue = OcamlExpr.EAnnot(defaultValueForType(entry.fieldType), entry.carrierType);
+			final representedField = requireStaticFieldRepresentation(entry);
+			if (representedField == null)
+				staticStorageInvariant('module-prelude cell "${entry.key}" did not resolve its exact field representation');
+			final initialValue = OcamlExpr.EAnnot(representedField.implicitDefault, representedField.carrierType);
 			items.push(OcamlModuleItem.ILet([
 				{
 					name: entry.targetValueName,
@@ -902,10 +906,51 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		if (entry.kind != expectedKind)
 			return staticStorageInvariant('"${entry.key}" was planned as ${entry.kind}, but type emission requires $expectedKind');
-		final actualCarrier = printer.printType(ocamlTypeExprFromHaxeType(field.type));
+		final representedField = requireStaticFieldRepresentation(entry);
+		final actualCarrier = printer.printType(representedField == null ? ocamlTypeExprFromHaxeType(field.type) : representedField.carrierType);
 		if (entry.carrierTypeId != actualCarrier)
 			return staticStorageInvariant('"${entry.key}" was planned with carrier ${entry.carrierTypeId}, but type emission selected $actualCarrier');
 		return entry;
+	}
+
+	/** Resolves one sealed exact-Int static field without asking the legacy type mapper. */
+	function requireStaticFieldRepresentation(entry:OcamlStaticStorageEntry):Null<OcamlFieldRepresentationMaterialization> {
+		if (entry.representationId == null)
+			return null;
+		final decision = try {
+			representationRegistry.require(entry.representationId, entry.programRevision);
+		} catch (error:Dynamic) {
+			return staticStorageInvariant(Std.string(error));
+		}
+		if (decision.semanticTypeId != entry.semanticTypeId || decision.carrierTypeId != entry.carrierTypeId) {
+			return
+				staticStorageInvariant('"${entry.key}" expects ${entry.semanticTypeId} on ${entry.carrierTypeId}, but ${decision.id} selects ${decision.semanticTypeId} on ${decision.carrierTypeId}');
+		}
+		return try {
+			OcamlFieldRepresentationMaterializer.materializeExactInt(decision, OcamlRepresentationDomain.StaticField);
+		} catch (error:Dynamic) {
+			staticStorageInvariant(Std.string(error));
+		}
+	}
+
+	/** Selects the admitted exact-Int instance-field representation, when applicable. */
+	function exactIntInstanceField(type:Type):Null<OcamlFieldRepresentationMaterialization> {
+		if (!OcamlRepresentationRegistry.isExactInt(type))
+			return null;
+		final decision = representationRegistry.selectExactInt(OcamlRepresentationDomain.InstanceField);
+		return OcamlFieldRepresentationMaterializer.materializeExactInt(decision, OcamlRepresentationDomain.InstanceField);
+	}
+
+	/** Returns one instance field's selected carrier or the explicitly unmigrated mapper. */
+	function instanceFieldCarrier(type:Type):OcamlTypeExpr {
+		final represented = exactIntInstanceField(type);
+		return represented == null ? ocamlTypeExprFromHaxeType(type) : represented.carrierType;
+	}
+
+	/** Returns one instance field's selected implicit default or the unmigrated default mapper. */
+	function instanceFieldDefault(type:Type):OcamlExpr {
+		final represented = exactIntInstanceField(type);
+		return represented == null ? defaultValueForType(type) : represented.implicitDefault;
 	}
 
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
@@ -1432,7 +1477,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							typeFields.push({
 								name: ctx.ocamlRecordLabel(entry.name),
 								isMutable: true,
-								typ: ocamlTypeExprFromHaxeType(entry.field.type)
+								typ: instanceFieldCarrier(entry.field.type)
 							});
 						case "method":
 							final info = dispatchMethodDecl.get(entry.name);
@@ -1452,7 +1497,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						typeFields.push({
 							name: ctx.ocamlRecordLabel(v.field.name),
 							isMutable: true,
-							typ: ocamlTypeExprFromHaxeType(v.field.type)
+							typ: instanceFieldCarrier(v.field.type)
 						});
 					}
 				}
@@ -1565,7 +1610,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							case "var":
 								final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
 								final value = init != null ? builder.buildStandaloneExpr(init,
-									OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(entry.field.type);
+									OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(entry.field.type);
 								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case "method":
 								final info = dispatchMethodDecl.get(entry.name);
@@ -1582,7 +1627,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					for (v in instanceVarsLocal) {
 						final init = v.findDefaultExpr();
 						final value = init != null ? builder.buildStandaloneExpr(init,
-							OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(v.field.type);
+							OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(v.field.type);
 						fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 					}
 					if (isDispatchInstance) {
@@ -1859,9 +1904,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// Static var initializers are stored on the field itself (not in the constructor pre-assignments
 			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
 			final init = v.field.expr();
-			final initT = ocamlTypeExprFromHaxeType(v.field.type);
+			final representedStatic = storage == null ? null : requireStaticFieldRepresentation(storage);
+			final initT = representedStatic == null ? ocamlTypeExprFromHaxeType(v.field.type) : representedStatic.carrierType;
 			final compiledInitFromFieldType = init != null ? builder.buildStandaloneExprForAssignment(v.field.type, init,
-				OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(v.field.type);
+				OcamlLocalStoragePlanner.planExpression(init)) : (representedStatic == null ? defaultValueForType(v.field.type) : representedStatic.implicitDefault);
 			final compiledInit = switch (initT) {
 				case OcamlTypeExpr.TIdent("Obj.t"):
 					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [compiledInitFromFieldType]);
@@ -1891,7 +1937,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		for (entry in staticStoragePlan.entriesForModule(classType.module)) {
 			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.TypePrelude || entry.declarationTypeName != classType.name)
 				continue;
-			final initialValue = OcamlExpr.EAnnot(defaultValueForType(entry.fieldType), entry.carrierType);
+			final representedField = requireStaticFieldRepresentation(entry);
+			final initialValue = OcamlExpr.EAnnot(representedField == null ? defaultValueForType(entry.fieldType) : representedField.implicitDefault,
+				representedField == null ? entry.carrierType : representedField.carrierType);
 			items.push(OcamlModuleItem.ILet([
 				{
 					name: entry.targetValueName,

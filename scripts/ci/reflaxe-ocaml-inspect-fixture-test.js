@@ -90,12 +90,13 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-array-int-and-nullable-primitive-locals-v6')
+	assert.strictEqual(report.representation.scope, 'exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
 		&& decision.nullPolicy === 'non-null'
-		&& decision.boxingPolicy === 'direct-unboxed'))
+		&& decision.boxingPolicy === 'direct-unboxed'
+		&& decision.implicitDefaultPolicy === 'exact-int-zero'))
 	const update = report.lowering.plans.find(plan => plan.nodeKind === 'static-int-update')
 	assert(update)
 	assert.strictEqual(update.semanticTypeId, 'Int')

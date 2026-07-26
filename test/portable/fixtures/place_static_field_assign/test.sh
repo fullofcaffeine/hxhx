@@ -2,8 +2,10 @@
 set -euo pipefail
 
 source_file="out/Main.ml"
-if [ ! -f "$source_file" ]; then
-	echo "Missing generated source: $source_file" >&2
+external_source_file="out/ExternalHolder.ml"
+report_file="out/ocaml_lowering_report.json"
+if [ ! -f "$source_file" ] || [ ! -f "$external_source_file" ] || [ ! -f "$report_file" ]; then
+	echo "Missing generated static-field source or lowering report" >&2
 	exit 1
 fi
 
@@ -34,5 +36,24 @@ if [ "$object_type_line" -ge "$object_declaration_line" ] || [ "$object_declarat
 	echo "The class-valued static cell must be declared once after its carrier type and before SameModuleWorker values" >&2
 	exit 1
 fi
+
+if ! grep -q '^let omitted = ref (0 : int)$' "$external_source_file"; then
+	echo "An omitted exact Int static must use the selected int carrier and zero default" >&2
+	exit 1
+fi
+
+node - "$report_file" <<'NODE'
+const fs = require('fs')
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+const decision = report.representations.find(item => item.id === 'representation:Int:static-field')
+const external = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omitted')
+if (!decision
+	|| decision.carrierTypeId !== 'int'
+	|| decision.implicitDefaultPolicy !== 'exact-int-zero'
+	|| !external
+	|| external.representationId !== decision.id) {
+	throw new Error('the lowering report did not preserve the exact Int static carrier/default decision')
+}
+NODE
 
 echo "STATIC_STORAGE_SOURCE_SHAPE:PASS"

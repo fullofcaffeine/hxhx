@@ -415,7 +415,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-array-int-and-nullable-primitive-locals-v6")
+		if (scope != "exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -482,7 +482,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Null<Int>/Null<Bool> carrier decision${decisions.length == 1 ? "" : "s"}; generic, other nullable types, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Bool/Null<Int>/Null<Bool> carrier decision${decisions.length == 1 ? "" : "s"}. Exact-Int instance/static fields also carry their implicit-zero policy; generic, other nullable, abstract, Dynamic, broader field, and ABI domains remain outside this slice.'
 		};
 	}
 
@@ -601,6 +601,7 @@ class ReflaxeOcamlInspection {
 			storageMutationPolicy: requiredString(value, "storageMutationPolicy"),
 			valueMutationPolicy: requiredString(value, "valueMutationPolicy"),
 			boxingPolicy: requiredString(value, "boxingPolicy"),
+			implicitDefaultPolicy: requiredString(value, "implicitDefaultPolicy"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(proof, "id"),
 			proofClaim: requiredString(proof, "claim"),
@@ -997,7 +998,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-array-int-and-nullable-primitive-locals-v6",
+			scope: "exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7",
 			message: message
 		};
 	}

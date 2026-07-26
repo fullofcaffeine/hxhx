@@ -79,7 +79,7 @@ try {
 	assert.strictEqual(appInspection.buildTiming.duneCacheHitsMeasured, false)
 	assert.strictEqual(appInspection.lowering.status, 'present')
 	assert.strictEqual(appInspection.representation.status, 'present')
-	assert.strictEqual(appInspection.representation.scope, 'exact-int-bool-array-int-and-nullable-primitive-locals-v6')
+	assert.strictEqual(appInspection.representation.scope, 'exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7')
 	assert(appInspection.summary.representationDecisionCount > 0)
 	assert.strictEqual(appInspection.lowering.staticStorage.length, appInspection.summary.staticStorageCount)
 	assert(!appInspection.unavailable.some(capability => capability.id === 'program-representation'))

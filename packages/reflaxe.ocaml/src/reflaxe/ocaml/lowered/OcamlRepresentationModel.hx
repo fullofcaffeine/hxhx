@@ -103,6 +103,27 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 	final NullablePrimitiveCarrier = "nullable-primitive-carrier";
 }
 
+/**
+	Which value Haxe supplies when storage has no explicit initializer.
+
+	The policy is semantic metadata. A focused materializer may turn an admitted
+	field policy into target syntax only after the representation decision has
+	been resolved for the current program.
+**/
+enum abstract OcamlRepresentationImplicitDefaultPolicy(String) from String to String {
+	/** This representation has not admitted implicit storage initialization. */
+	final NotAdmitted = "not-admitted";
+
+	/** Exact Haxe `Int` storage starts at integer zero. */
+	final ExactIntZero = "exact-int-zero";
+
+	/** Exact Haxe `Bool` storage starts at false. */
+	final ExactBoolFalse = "exact-bool-false";
+
+	/** Nullable primitive storage starts at the canonical Haxe null sentinel. */
+	final RuntimeNullSentinel = "runtime-null-sentinel";
+}
+
 /** A named, reviewable claim supporting one representation choice. */
 typedef OcamlRepresentationProof = {
 	final id:String;
@@ -120,6 +141,7 @@ typedef OcamlRepresentationSelection = {
 	final storageMutationPolicy:OcamlRepresentationStorageMutationPolicy;
 	final valueMutationPolicy:OcamlRepresentationValueMutationPolicy;
 	final boxingPolicy:OcamlRepresentationBoxingPolicy;
+	final implicitDefaultPolicy:OcamlRepresentationImplicitDefaultPolicy;
 	final reason:String;
 	final proof:OcamlRepresentationProof;
 	final profileEligibility:Array<String>;

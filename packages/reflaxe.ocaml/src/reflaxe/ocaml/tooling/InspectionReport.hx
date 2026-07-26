@@ -179,6 +179,7 @@ typedef InspectionRepresentationDecision = {
 	final storageMutationPolicy:String;
 	final valueMutationPolicy:String;
 	final boxingPolicy:String;
+	final implicitDefaultPolicy:String;
 	final reason:String;
 	final proofId:String;
 	final proofClaim:String;

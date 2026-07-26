@@ -10,6 +10,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationProof;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
@@ -28,7 +29,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>`.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v6";
+	public static inline final MODEL_REVISION = "ocaml-representation-v7";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -167,6 +168,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.ExactIntZero,
 			reason: exactIntReason(domain),
 			proof: {
 				id: "direct-exact-int-storage-64-v1",
@@ -200,6 +202,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.ExactBoolFalse,
 			reason: exactBoolReason(domain),
 			proof: {
 				id: "direct-exact-bool-local-v1",
@@ -233,6 +236,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
 			reason: exactArrayIntReason(domain),
 			proof: {
 				id: "direct-array-int-reference-carrier-v2",
@@ -290,6 +294,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
 			reason: reason,
 			proof: proof,
 			profileEligibility: ["metal", "portable"]
@@ -324,6 +329,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: canonical.storageMutationPolicy,
 			valueMutationPolicy: canonical.valueMutationPolicy,
 			boxingPolicy: canonical.boxingPolicy,
+			implicitDefaultPolicy: canonical.implicitDefaultPolicy,
 			reason: canonical.reason,
 			proof: canonical.proof,
 			profileEligibility: canonical.profileEligibility
@@ -485,6 +491,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: selection.storageMutationPolicy,
 			valueMutationPolicy: selection.valueMutationPolicy,
 			boxingPolicy: selection.boxingPolicy,
+			implicitDefaultPolicy: selection.implicitDefaultPolicy,
 			reason: selection.reason,
 			proof: {
 				id: selection.proof.id,
@@ -506,6 +513,7 @@ class OcamlRepresentationRegistry {
 			(selection.storageMutationPolicy : String),
 			(selection.valueMutationPolicy : String),
 			(selection.boxingPolicy : String),
+			(selection.implicitDefaultPolicy : String),
 			selection.reason,
 			selection.proof.id,
 			selection.proof.claim,
@@ -528,6 +536,7 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: decision.storageMutationPolicy,
 			valueMutationPolicy: decision.valueMutationPolicy,
 			boxingPolicy: decision.boxingPolicy,
+			implicitDefaultPolicy: decision.implicitDefaultPolicy,
 			reason: decision.reason,
 			proof: {
 				id: decision.proof.id,

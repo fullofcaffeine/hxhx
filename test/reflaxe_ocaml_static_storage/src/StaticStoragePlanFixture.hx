@@ -46,7 +46,7 @@ class StaticStoragePlanFixture {
 			initializationOrder: order,
 			hasInitializer: true,
 			initializerDependencyKeys: [],
-			representationId: declarationSite == OcamlStaticStorageDeclarationSite.ModulePrelude ? "representation:Int:static-field" : null
+			representationId: "representation:Int:static-field"
 		});
 	}
 
@@ -101,8 +101,11 @@ class StaticStoragePlanFixture {
 		assertTrue(value.targetValueName == "value"
 			&& value.semanticTypeId == "Int"
 			&& value.carrierTypeId == "int"
+			&& value.representationId == "representation:Int:static-field"
 			&& value.initializationId == "static-initialization:Main::Main::value",
 			"the plan should retain stable owner, target, type, carrier, and initialization identities");
+		assertTrue(plan.require("Main", "Worker", "counter").representationId == "representation:Int:static-field",
+			"an owner-binding exact Int cell should retain the same representation decision as an early module cell");
 		expectFailure("sealed mutation", "cannot change",
 			() -> registerInt(plan, "Later", "value", "later_value", 2, OcamlStaticStorageDeclarationSite.OwnerBinding));
 		expectFailure("missing entry", "no pre-emission storage decision", () -> plan.require("Main", "Missing", "value"));
@@ -146,7 +149,7 @@ class StaticStoragePlanFixture {
 			initializationOrder: 0,
 			hasInitializer: true,
 			initializerDependencyKeys: [OcamlStaticStoragePlan.key("B", "B", "value")],
-			representationId: null
+			representationId: "representation:Int:static-field"
 		});
 		cycle.register({
 			moduleId: "B",
@@ -166,9 +169,61 @@ class StaticStoragePlanFixture {
 			initializationOrder: 0,
 			hasInitializer: true,
 			initializerDependencyKeys: [OcamlStaticStoragePlan.key("A", "A", "value")],
-			representationId: null
+			representationId: "representation:Int:static-field"
 		});
 		expectFailure("initializer cycle", "initializer-cycle", () -> cycle.seal());
+
+		final missingRepresentation = new OcamlStaticStoragePlan();
+		missingRepresentation.beginProgram("program:static-storage-missing-representation");
+		missingRepresentation.registerTypeOrder("Main", "Main", 0);
+		expectFailure("missing exact Int representation", "missing-exact-int-representation", () -> missingRepresentation.register({
+			moduleId: "Main",
+			ownerTypeName: "Main",
+			fieldName: "value",
+			targetValueName: "value",
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			fieldType: Context.typeof(macro(0 : Int)),
+			carrierType: OcamlTypeExpr.TIdent("int"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: null
+		}));
+
+		final typePreludeInt = new OcamlStaticStoragePlan();
+		typePreludeInt.beginProgram("program:static-storage-type-prelude-int");
+		typePreludeInt.registerTypeOrder("Main", "Worker", 0);
+		typePreludeInt.registerTypeOrder("Main", "Main", 1);
+		typePreludeInt.register({
+			moduleId: "Main",
+			ownerTypeName: "Main",
+			fieldName: "value",
+			targetValueName: "value",
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			fieldType: Context.typeof(macro(0 : Int)),
+			carrierType: OcamlTypeExpr.TIdent("int"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.TypePrelude,
+			declarationTypeName: "Worker",
+			declarationTypeOrder: 0,
+			ownerTypeOrder: 1,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: "representation:Int:static-field"
+		});
+		typePreludeInt.seal();
+		assertTrue(typePreludeInt.require("Main", "Main", "value").representationId == "representation:Int:static-field",
+			"a type-prelude exact Int cell should preserve the same representation decision");
 
 		final repeated = new OcamlStaticStoragePlan();
 		repeated.beginProgram("program:static-storage-fixture");
