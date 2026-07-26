@@ -42,7 +42,7 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 15
+if (report.schemaVersion !== 16
 	|| report.representationScope !== 'exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'

@@ -2,9 +2,10 @@
 set -euo pipefail
 
 arithmetic_source="out/Arithmetic.ml"
+nullable_source="out/NullableCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -37,10 +38,39 @@ if grep -q 'Obj.magic.*Arithmetic.increment\\|Arithmetic.increment.*Obj.magic' "
 	echo "The exact Int call boundary must not introduce Obj.magic" >&2
 	exit 1
 fi
+if ! grep -q '^let identity = fun (value : Obj.t) ->' "$nullable_source"; then
+	echo "The exact Null<Int> callable boundary must annotate its OCaml parameter as Obj.t" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = existing in NullableCalls\.identity __call_arg_0_[0-9]+' "$main_source"; then
+	echo "An existing Null<Int> carrier must cross the callable boundary without another box" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(observedNullableInput \(\)\) in NullableCalls\.identity __call_arg_0_[0-9]+' "$main_source"; then
+	echo "An exact Int source must be evaluated once and boxed once before the Null<Int> call" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.repr \(Obj\.repr \(observedNullableInput \(\)\)\)' "$main_source"; then
+	echo "The exact Int-to-Null<Int> call crossing must not box its argument twice" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v3') {
+	throw new Error('the lowering report does not expose the directional call-boundary schema')
+}
+function isIdentity(value, semanticTypeId, carrierTypeId) {
+	return value?.inputSemanticTypeId === semanticTypeId
+		&& value?.inputCarrierTypeId === carrierTypeId
+		&& value?.inputRepresentationId === `representation:${semanticTypeId}:internal-value`
+		&& value?.outputSemanticTypeId === semanticTypeId
+		&& value?.outputCarrierTypeId === carrierTypeId
+		&& value?.outputRepresentationId === `representation:${semanticTypeId}:internal-value`
+		&& value?.conversion === 'identity'
+		&& value?.proofId === 'identity-call-carrier-v1'
+}
 function verifyCalls(fieldName, arity, proofId, expectedCount) {
 	const calls = report.calls?.filter(item => item.sourceTypeName === 'Arithmetic' && item.sourceFieldName === fieldName) ?? []
 	if (calls.length !== expectedCount) {
@@ -51,11 +81,8 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		if (call.kind !== 'direct-static-haxe-method'
 			|| call.arguments?.length !== arity
 			|| call.arguments.some((argument, index) => argument.index !== index
-				|| argument.semanticTypeId !== 'Int'
-				|| argument.carrierTypeId !== 'int'
-				|| argument.conversion !== 'identity')
-			|| call.result?.semanticTypeId !== 'Int'
-			|| call.result?.carrierTypeId !== 'int'
+				|| !isIdentity(argument, 'Int', 'int'))
+			|| !isIdentity(call.result, 'Int', 'int')
 			|| call.proofId !== proofId
 			|| call.evaluationSchedule?.length !== arity + 1) {
 			throw new Error(`the lowering report did not preserve the exact ${arity}-argument Int call decision`)
@@ -72,8 +99,8 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		}
 		if (!boundary
 			|| boundary.arguments?.length !== arity
-			|| boundary.arguments.some((argument, index) => argument.representationId !== call.arguments[index].representationId)
-			|| boundary.result?.representationId !== call.result.representationId) {
+			|| boundary.arguments.some((argument, index) => argument.outputRepresentationId !== call.arguments[index].outputRepresentationId)
+			|| boundary.result?.inputRepresentationId !== call.result.inputRepresentationId) {
 			throw new Error(`call ${fieldName} does not match an independently sealed callable definition`)
 		}
 	}
@@ -81,10 +108,46 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 verifyCalls('increment', 1, 'direct-one-int-static-call-v1', 1)
 verifyCalls('add', 2, 'direct-two-int-static-call-v1', 2)
 
-for (const excluded of ['identity']) {
-	if (report.calls.some(item => item.sourceFieldName === excluded)
-		|| report.callableBoundaries.some(item => item.sourceFieldName === excluded)) {
-		throw new Error(`non-admitted static method ${excluded} entered the exact direct-call family`)
+const nullableCalls = report.calls?.filter(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity') ?? []
+const nullableBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity')
+if (nullableCalls.length !== 2 || !nullableBoundary
+	|| nullableBoundary.proofId !== 'direct-one-nullable-int-static-call-v1'
+	|| nullableBoundary.arguments?.length !== 1
+	|| !isIdentity(nullableBoundary.arguments[0], 'Null<Int>', 'Obj.t')
+	|| !isIdentity(nullableBoundary.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the lowering report did not seal the exact Null<Int> callable definition')
+}
+const preserveCall = nullableCalls.find(call => call.arguments?.[0]?.conversion === 'preserve-nullable-int-carrier')
+if (!preserveCall
+	|| preserveCall.arguments[0].inputSemanticTypeId !== 'Null<Int>'
+	|| preserveCall.arguments[0].inputCarrierTypeId !== 'Obj.t'
+	|| preserveCall.arguments[0].outputSemanticTypeId !== 'Null<Int>'
+	|| preserveCall.arguments[0].outputCarrierTypeId !== 'Obj.t'
+	|| preserveCall.arguments[0].proofId !== 'nullable-int-call-carrier-preserve-v1'
+	|| !isIdentity(preserveCall.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the existing nullable argument was not recorded as an exact carrier-preserving crossing')
+}
+const boxCall = nullableCalls.find(call => call.arguments?.[0]?.conversion === 'box-exact-int-to-nullable-int')
+if (!boxCall
+	|| boxCall.arguments[0].inputSemanticTypeId !== 'Int'
+	|| boxCall.arguments[0].inputCarrierTypeId !== 'int'
+	|| boxCall.arguments[0].inputRepresentationId !== 'representation:Int:internal-value'
+	|| boxCall.arguments[0].outputSemanticTypeId !== 'Null<Int>'
+	|| boxCall.arguments[0].outputCarrierTypeId !== 'Obj.t'
+	|| boxCall.arguments[0].outputRepresentationId !== 'representation:Null<Int>:internal-value'
+	|| boxCall.arguments[0].proofId !== 'nullable-int-call-box-v1'
+	|| !isIdentity(boxCall.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the exact Int argument was not recorded as one directional box into Null<Int>')
+}
+for (const call of nullableCalls) {
+	if (call.proofId !== 'direct-one-nullable-int-static-call-v1'
+		|| call.arguments?.length !== 1
+		|| call.evaluationSchedule?.length !== 2
+		|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
+		|| call.evaluationSchedule[0]?.argumentIndex !== 0
+		|| typeof call.evaluationSchedule[0]?.slotId !== 'string'
+		|| call.evaluationSchedule[1]?.kind !== 'invoke-callee') {
+		throw new Error('the exact Null<Int> call does not materialize its argument before invocation')
 	}
 }
 if (report.calls.some(item => item.sourceTypeName === 'Counter')

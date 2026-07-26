@@ -161,15 +161,22 @@ class OcamlFunctionPlanSealer {
 	}
 
 	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {
+		validateCallValueSide(value.inputRepresentationId, value.inputSemanticTypeId, value.inputCarrierTypeId, programRevision, owner + " input", position);
+		validateCallValueSide(value.outputRepresentationId, value.outputSemanticTypeId, value.outputCarrierTypeId, programRevision, owner + " output",
+			position);
+	}
+
+	function validateCallValueSide(representationId:String, semanticTypeId:String, carrierTypeId:String, programRevision:String, owner:String,
+			position:Position):Void {
 		final decision = try {
-			representations.require(value.representationId, programRevision);
+			representations.require(representationId, programRevision);
 		} catch (error:Dynamic) {
 			fail(Std.string(error), position);
 		}
-		if (decision.semanticTypeId != value.semanticTypeId
-			|| decision.carrierTypeId != value.carrierTypeId
+		if (decision.semanticTypeId != semanticTypeId
+			|| decision.carrierTypeId != carrierTypeId
 			|| decision.domain != OcamlRepresentationDomain.InternalValue) {
-			fail('$owner expects ${value.semanticTypeId} -> ${value.carrierTypeId} in ${OcamlRepresentationDomain.InternalValue}, but ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}',
+			fail('$owner expects $semanticTypeId -> $carrierTypeId in ${OcamlRepresentationDomain.InternalValue}, but ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}',
 				position);
 		}
 	}

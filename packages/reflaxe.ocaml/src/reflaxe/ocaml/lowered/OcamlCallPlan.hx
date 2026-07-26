@@ -21,6 +21,8 @@ enum abstract OcamlCallKind(String) from String to String {
 /** How one represented value crosses an admitted call boundary. */
 enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final Identity = "identity";
+	final PreserveNullableIntCarrier = "preserve-nullable-int-carrier";
+	final BoxExactIntToNullableInt = "box-exact-int-to-nullable-int";
 }
 
 /** The only runtime actions admitted in a direct-call evaluation schedule. */
@@ -41,13 +43,25 @@ typedef OcamlCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
-/** One argument or result shape fixed by the typed call contract. */
+/**
+	One directional argument or result crossing fixed by the typed call contract.
+
+	Arguments flow from the source-expression representation into the callable
+	boundary. Results flow from the callable boundary into the call-expression
+	representation. Declaration and final-boundary values use identical input and
+	output representations because they describe the function's carrier itself.
+**/
 typedef OcamlCallValuePlan = {
 	final index:Int;
-	final semanticTypeId:String;
-	final carrierTypeId:String;
-	final representationId:String;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final inputRepresentationId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
 	final conversion:OcamlCallCarrierConversion;
+	final proofId:String;
+	final proofClaim:String;
 }
 
 /**
@@ -76,9 +90,9 @@ typedef OcamlCallableDeclarationPlan = {
 /**
 	The callable shape exported by one exact final Haxe function body.
 
-	This boundary deliberately admits only ordinary static methods with one or
-	two exact `Int` parameters and an exact `Int` result. Later call families
-	extend the closed planner rather than teaching the syntax builder new rules.
+	This boundary deliberately admits ordinary static methods in the closed exact
+	`Int` and `Null<Int>` families. Later call families extend the planner rather
+	than teaching the syntax builder new rules.
 **/
 typedef OcamlCallableBoundaryPlan = {
 	final id:String;
@@ -180,10 +194,15 @@ class OcamlCallPlan {
 	static function valueFingerprint(value:OcamlCallValuePlan):String {
 		return [
 			Std.string(value.index),
-			value.semanticTypeId,
-			value.carrierTypeId,
-			value.representationId,
-			(value.conversion : String)
+			value.inputSemanticTypeId,
+			value.inputCarrierTypeId,
+			value.inputRepresentationId,
+			value.outputSemanticTypeId,
+			value.outputCarrierTypeId,
+			value.outputRepresentationId,
+			(value.conversion : String),
+			value.proofId,
+			value.proofClaim
 		].join(":");
 	}
 
@@ -261,10 +280,15 @@ class OcamlCallPlan {
 	public static function copyValue(value:OcamlCallValuePlan):OcamlCallValuePlan {
 		return {
 			index: value.index,
-			semanticTypeId: value.semanticTypeId,
-			carrierTypeId: value.carrierTypeId,
-			representationId: value.representationId,
-			conversion: value.conversion
+			inputSemanticTypeId: value.inputSemanticTypeId,
+			inputCarrierTypeId: value.inputCarrierTypeId,
+			inputRepresentationId: value.inputRepresentationId,
+			outputSemanticTypeId: value.outputSemanticTypeId,
+			outputCarrierTypeId: value.outputCarrierTypeId,
+			outputRepresentationId: value.outputRepresentationId,
+			conversion: value.conversion,
+			proofId: value.proofId,
+			proofClaim: value.proofClaim
 		};
 	}
 
@@ -276,37 +300,73 @@ class OcamlCallPlan {
 		};
 	}
 
-	/** Returns whether two call-boundary values describe the same sealed crossing. */
+	/** Returns whether two values describe the same complete sealed crossing. */
 	public static function sameValue(left:OcamlCallValuePlan, right:OcamlCallValuePlan):Bool {
 		return left.index == right.index
-			&& left.semanticTypeId == right.semanticTypeId
-			&& left.carrierTypeId == right.carrierTypeId
-			&& left.representationId == right.representationId
-			&& left.conversion == right.conversion;
+			&& left.inputSemanticTypeId == right.inputSemanticTypeId
+			&& left.inputCarrierTypeId == right.inputCarrierTypeId
+			&& left.inputRepresentationId == right.inputRepresentationId
+			&& left.outputSemanticTypeId == right.outputSemanticTypeId
+			&& left.outputCarrierTypeId == right.outputCarrierTypeId
+			&& left.outputRepresentationId == right.outputRepresentationId
+			&& left.conversion == right.conversion
+			&& left.proofId == right.proofId
+			&& left.proofClaim == right.proofClaim;
 	}
 
-	/** Rejects a corrupted value record outside the closed direct-static family. */
-	public static function requireDirectStaticIntValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
-		if (value.index != expectedIndex
-			|| value.semanticTypeId != "Int"
-			|| value.carrierTypeId != "int"
-			|| value.representationId != "representation:Int:internal-value"
-			|| value.conversion != OcamlCallCarrierConversion.Identity) {
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must select exact Int -> int through the internal-value representation and identity conversion';
+	/**
+		Returns whether a call occurrence agrees with one callable carrier.
+
+		For an argument, the call's output is the value entering the function. For
+		a result, the call's input is the value produced by the function.
+	**/
+	public static function sameCallableBoundary(callValue:OcamlCallValuePlan, boundaryValue:OcamlCallValuePlan, isResult:Bool):Bool {
+		return callValue.index == boundaryValue.index
+			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.inputSemanticTypeId
+				&& callValue.inputCarrierTypeId == boundaryValue.inputCarrierTypeId
+				&& callValue.inputRepresentationId == boundaryValue.inputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.outputSemanticTypeId
+					&& callValue.outputCarrierTypeId == boundaryValue.outputCarrierTypeId
+					&& callValue.outputRepresentationId == boundaryValue.outputRepresentationId));
+	}
+
+	/** Rejects a corrupted value outside the closed direct-static families. */
+	public static function requireDirectStaticValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
+		if (value.index != expectedIndex || value.proofId.length == 0 || value.proofClaim.length == 0)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid index or empty conversion proof';
+		switch (value.conversion) {
+			case Identity:
+				if (!sameRepresentationSides(value)
+					|| (!isExactIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+						&& !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))
+					|| value.proofId != "identity-call-carrier-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
+				}
+			case PreserveNullableIntCarrier:
+				if (!sameRepresentationSides(value)
+					|| !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "nullable-int-call-carrier-preserve-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must preserve one exact Null<Int> Obj.t carrier';
+				}
+			case BoxExactIntToNullableInt:
+				if (!isExactIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| !isExactNullIntSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
+					|| value.proofId != "nullable-int-call-box-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Int -> int once into exact Null<Int> -> Obj.t';
+				}
 		}
 	}
 
 	/** Rejects a corrupted program-wide declaration before it enters the catalog. */
-	public static function requireDirectStaticIntDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
-		requireDirectStaticIntCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName,
-			declaration.kind, declaration.arguments, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId,
-			declaration.proofClaim, declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"');
+	public static function requireDirectStaticDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
+		requireDirectStaticCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
+			declaration.arguments, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId, declaration.proofClaim,
+			declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"', true);
 	}
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
-	public static function requireDirectStaticIntCall(call:OcamlCallDecision):Void {
-		requireDirectStaticIntCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.result,
-			call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"');
+	public static function requireDirectStaticCall(call:OcamlCallDecision):Void {
+		requireDirectStaticCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.result,
+			call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"', false);
 		if (call.functionId.length == 0 || call.bodyRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an empty caller or body revision';
 		if (call.source.file.length == 0 || call.source.min < 0 || call.source.max < call.source.min)
@@ -327,17 +387,17 @@ class OcamlCallPlan {
 	}
 
 	/** Rejects a corrupted final callable boundary before publication. */
-	public static function requireDirectStaticIntBoundary(boundary:OcamlCallableBoundaryPlan):Void {
-		requireDirectStaticIntCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind,
+	public static function requireDirectStaticBoundary(boundary:OcamlCallableBoundaryPlan):Void {
+		requireDirectStaticCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind,
 			boundary.arguments, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
-			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"');
+			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"', true);
 		if (boundary.functionId.length == 0 || boundary.bodyRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" has an empty function or body revision';
 	}
 
-	static function requireDirectStaticIntCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
+	static function requireDirectStaticCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
 			arguments:Array<OcamlCallValuePlan>, result:OcamlCallValuePlan, profileEligibility:Array<String>, reason:String, proofId:String,
-			proofClaim:String, programRevision:String, pipelineRevision:String, owner:String):Void {
+			proofClaim:String, programRevision:String, pipelineRevision:String, owner:String, requiresIdentityBoundary:Bool):Void {
 		if (calleeId.length == 0 || sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe callee identity';
 		if (kind != OcamlCallKind.DirectStaticHaxeMethod)
@@ -345,14 +405,62 @@ class OcamlCallPlan {
 		if (arguments.length < 1 || arguments.length > 2)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has ${arguments.length} arguments outside the admitted arities 1 and 2';
 		for (index in 0...arguments.length)
-			requireDirectStaticIntValue(arguments[index], index, '$owner argument $index');
-		requireDirectStaticIntValue(result, -1, '$owner result');
+			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
+		requireDirectStaticValue(result, -1, '$owner result');
+		if (requiresIdentityBoundary
+			&& (!Lambda.foreach(arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
+				|| result.conversion != OcamlCallCarrierConversion.Identity)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner describes a callable boundary and must use identity carrier records';
+		}
 		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported profile inventory';
-		if (reason.length == 0 || proofId != proofIdForArity(arguments.length) || proofClaim.length == 0)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete direct-static Int proof';
+		final expectedProofId = familyProofId(arguments, result);
+		if (reason.length == 0 || proofId != expectedProofId || proofClaim.length == 0)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete or mismatched direct-static family proof';
+		if (!requiresIdentityBoundary
+			&& expectedProofId == "direct-one-nullable-int-static-call-v1"
+			&& arguments[0].conversion == OcamlCallCarrierConversion.Identity) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must explicitly preserve an existing Null<Int> carrier or box one exact Int';
+		}
 		if (programRevision.length == 0 || pipelineRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty program or pipeline revision';
+	}
+
+	static function sameRepresentationSides(value:OcamlCallValuePlan):Bool {
+		return value.inputSemanticTypeId == value.outputSemanticTypeId
+			&& value.inputCarrierTypeId == value.outputCarrierTypeId
+			&& value.inputRepresentationId == value.outputRepresentationId;
+	}
+
+	static function isExactIntSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId == "Int" && carrierTypeId == "int" && representationId == "representation:Int:internal-value";
+	}
+
+	static function isExactNullIntSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId == "Null<Int>" && carrierTypeId == "Obj.t" && representationId == "representation:Null<Int>:internal-value";
+	}
+
+	static function familyProofId(arguments:Array<OcamlCallValuePlan>, result:OcamlCallValuePlan):String {
+		final exactIntFamily = Lambda.foreach(arguments,
+			value -> isExactIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+				&& isExactIntSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
+				&& value.conversion == OcamlCallCarrierConversion.Identity)
+			&& isExactIntSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			&& isExactIntSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (exactIntFamily)
+			return proofIdForArity(arguments.length);
+		final nullableIntFamily = arguments.length == 1
+			&& isExactNullIntSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId)
+			&& (arguments[0].conversion == OcamlCallCarrierConversion.PreserveNullableIntCarrier
+				|| arguments[0].conversion == OcamlCallCarrierConversion.BoxExactIntToNullableInt
+				|| arguments[0].conversion == OcamlCallCarrierConversion.Identity)
+			&& isExactNullIntSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			&& isExactNullIntSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (nullableIntFamily)
+			return "direct-one-nullable-int-static-call-v1";
+		throw "reflaxe.ocaml [ocaml-call:invalid-plan]: no admitted direct-static family matches the sealed value crossings";
 	}
 
 	/** Returns the stable plan-local carrier slot for one source argument. */
@@ -458,9 +566,8 @@ class OcamlCallPlanner {
 				final classType = classRef.get();
 				final field = fieldRef.get();
 				final declaration = declarationFor(classType, field, representations, binding.programRevision, binding.pipelineRevision);
-				if (declaration == null
-					|| !Lambda.foreach(arguments, argument -> OcamlRepresentationRegistry.isExactInt(argument.t))
-					|| !OcamlRepresentationRegistry.isExactInt(expression.t)) {
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				if (declaration == null || plannedArguments == null || !sameResultExpressionType(expression.t, declaration.result)) {
 					null;
 				} else {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
@@ -480,13 +587,13 @@ class OcamlCallPlanner {
 						sourceTypeName: declaration.sourceTypeName,
 						sourceFieldName: declaration.sourceFieldName,
 						kind: declaration.kind,
-						arguments: declaration.arguments.map(OcamlCallPlan.copyValue),
+						arguments: plannedArguments,
 						result: OcamlCallPlan.copyValue(declaration.result),
 						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, arguments.length),
 						profileEligibility: ["metal", "portable"],
-						reason: 'The typed Haxe expression resolves to one ordinary static method with ${arguments.length} exact Int argument${arguments.length == 1 ? "" : "s"} and exact Int result.',
-						proofId: OcamlCallPlan.proofIdForArity(arguments.length),
-						proofClaim: "Each selected exact Int representation is an identity crossing for one direct Haxe static call. Materializing every source argument in index order before invocation preserves Haxe evaluation order without relying on OCaml application order.",
+						reason: callReason(plannedArguments, declaration.result),
+						proofId: declaration.proofId,
+						proofClaim: declaration.proofClaim,
 						functionId: binding.functionId,
 						programRevision: binding.programRevision,
 						bodyRevision: binding.bodyRevision,
@@ -498,6 +605,57 @@ class OcamlCallPlanner {
 		}
 	}
 
+	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>,
+			representations:OcamlRepresentationRegistry):Null<Array<OcamlCallValuePlan>> {
+		if (arguments.length != boundaryValues.length)
+			return null;
+		final planned:Array<OcamlCallValuePlan> = [];
+		for (index in 0...arguments.length) {
+			final boundary = boundaryValues[index];
+			if (boundary.outputSemanticTypeId == "Int") {
+				if (!OcamlRepresentationRegistry.isExactInt(arguments[index].t))
+					return null;
+				planned.push(OcamlCallPlan.copyValue(boundary));
+			} else if (boundary.outputSemanticTypeId == "Null<Int>") {
+				final input = if (OcamlRepresentationRegistry.isExactNullInt(arguments[index].t)) {
+					representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+				} else if (OcamlRepresentationRegistry.isExactInt(arguments[index].t)) {
+					representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+				} else {
+					return null;
+				}
+				final output = representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+				final conversion = input.semanticTypeId == "Int" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.PreserveNullableIntCarrier;
+				planned.push(crossingValue(index, input, output, conversion));
+			} else {
+				return null;
+			}
+		}
+		return planned;
+	}
+
+	static function sameResultExpressionType(type:Type, result:OcamlCallValuePlan):Bool {
+		return switch (result.outputSemanticTypeId) {
+			case "Int": OcamlRepresentationRegistry.isExactInt(type);
+			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(type);
+			case _: false;
+		}
+	}
+
+	static function callReason(arguments:Array<OcamlCallValuePlan>, result:OcamlCallValuePlan):String {
+		if (result.outputSemanticTypeId == "Int")
+			return
+				'The typed Haxe expression resolves to one ordinary static method with ${arguments.length} exact Int identity argument${arguments.length == 1 ? "" : "s"} and exact Int result.';
+		return switch (arguments[0].conversion) {
+			case PreserveNullableIntCarrier:
+				"The typed Haxe expression passes an existing exact Null<Int> carrier into one ordinary static Null<Int> method and preserves its nullable result.";
+			case BoxExactIntToNullableInt:
+				"The typed Haxe expression passes one exact Int into an ordinary static Null<Int> method, so the argument is boxed once before invocation and the nullable result carrier is preserved.";
+			case Identity:
+				"The typed Haxe expression resolves to one ordinary static Null<Int> method with an identity boundary.";
+		}
+	}
+
 	/** Selects one program-wide callable declaration before module syntax starts. */
 	public static function declarationFor(classType:ClassType, field:ClassField, representations:OcamlRepresentationRegistry, programRevision:String,
 			pipelineRevision:String):Null<OcamlCallableDeclarationPlan> {
@@ -505,11 +663,17 @@ class OcamlCallPlanner {
 			|| !ordinaryMethod(field)) {
 			return null;
 		}
-		final signature = exactIntSignature(field);
+		final signature = admittedSignature(field);
 		if (signature == null)
 			return null;
-		final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+		final representation = switch (signature.family) {
+			case "exact-int": representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			case "exact-null-int": representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+			case _: return null;
+		}
 		final selectedCalleeId = calleeId(classType, field);
+		final proofId = signature.family == "exact-int" ? OcamlCallPlan.proofIdForArity(signature.argumentCount) : "direct-one-nullable-int-static-call-v1";
+		final proofClaim = signature.family == "exact-int" ? "Each selected exact Int representation is an identity crossing for one direct Haxe static call. Materializing every source argument in index order before invocation preserves Haxe evaluation order without relying on OCaml application order." : "The callable accepts and returns the sealed exact Null<Int> Obj.t carrier. Each caller must either preserve that carrier or box one exact Int before invocation, and the nullable result remains in the same carrier.";
 		return {
 			id: "callable-declaration:" + Sha256.encode(selectedCalleeId).substr(0, 24),
 			calleeId: selectedCalleeId,
@@ -517,25 +681,31 @@ class OcamlCallPlanner {
 			sourceTypeName: classType.name,
 			sourceFieldName: field.name,
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
-			arguments: [for (index in 0...signature.arguments.length) valuePlan(index, representation)],
-			result: valuePlan(-1, representation),
+			arguments: [for (index in 0...signature.argumentCount) identityValue(index, representation)],
+			result: identityValue(-1, representation),
 			profileEligibility: ["metal", "portable"],
-			reason: 'An ordinary static Haxe method with ${signature.arguments.length} exact Int argument${signature.arguments.length == 1 ? "" : "s"} and exact Int result uses the direct internal int carrier at both definition and call boundaries.',
-			proofId: OcamlCallPlan.proofIdForArity(signature.arguments.length),
-			proofClaim: "Each selected exact Int representation is an identity crossing for one direct Haxe static call. Materializing every source argument in index order before invocation preserves Haxe evaluation order without relying on OCaml application order.",
+			reason: signature.family == "exact-int" ? 'An ordinary static Haxe method with ${signature.argumentCount} exact Int argument${signature.argumentCount == 1 ? "" : "s"} and exact Int result uses the direct internal int carrier at both definition and call boundaries.' : "An ordinary static Haxe method with one exact Null<Int> parameter and result uses the sealed internal Obj.t carrier at its definition boundary.",
+			proofId: proofId,
+			proofClaim: proofClaim,
 			programRevision: programRevision,
 			pipelineRevision: pipelineRevision
 		};
 	}
 
-	static function exactIntSignature(field:ClassField):Null<{arguments:Array<Type>, result:Type}> {
+	static function admittedSignature(field:ClassField):Null<{family:String, argumentCount:Int}> {
 		return switch (TypeTools.follow(field.type)) {
 			case TFun(arguments, result)
 				if (arguments.length >= 1
 					&& arguments.length <= 2
 					&& Lambda.foreach(arguments, argument -> !argument.opt && OcamlRepresentationRegistry.isExactInt(argument.t))
 					&& OcamlRepresentationRegistry.isExactInt(result)):
-				{arguments: arguments.map(argument -> argument.t), result: result};
+				{family: "exact-int", argumentCount: arguments.length};
+			case TFun(arguments, result)
+				if (arguments.length == 1
+					&& !arguments[0].opt
+					&& OcamlRepresentationRegistry.isExactNullInt(arguments[0].t)
+					&& OcamlRepresentationRegistry.isExactNullInt(result)):
+				{family: "exact-null-int", argumentCount: 1};
 			case _:
 				null;
 		}
@@ -562,13 +732,46 @@ class OcamlCallPlanner {
 		return classType.module + "|" + packagePath + classType.name + "::" + field.name;
 	}
 
-	static function valuePlan(index:Int, representation:OcamlRepresentationDecision):OcamlCallValuePlan {
+	static function identityValue(index:Int, representation:OcamlRepresentationDecision):OcamlCallValuePlan {
 		return {
 			index: index,
-			semanticTypeId: representation.semanticTypeId,
-			carrierTypeId: representation.carrierTypeId,
-			representationId: representation.id,
-			conversion: OcamlCallCarrierConversion.Identity
+			inputSemanticTypeId: representation.semanticTypeId,
+			inputCarrierTypeId: representation.carrierTypeId,
+			inputRepresentationId: representation.id,
+			outputSemanticTypeId: representation.semanticTypeId,
+			outputCarrierTypeId: representation.carrierTypeId,
+			outputRepresentationId: representation.id,
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion."
+		};
+	}
+
+	static function crossingValue(index:Int, input:OcamlRepresentationDecision, output:OcamlRepresentationDecision,
+			conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		final proof = switch (conversion) {
+			case PreserveNullableIntCarrier: {
+					id: "nullable-int-call-carrier-preserve-v1",
+					claim: "The source argument already produces the selected exact Null<Int> Obj.t carrier, so the call preserves it without another box."
+				};
+			case BoxExactIntToNullableInt: {
+					id: "nullable-int-call-box-v1",
+					claim: "The source argument produces exact Int in OCaml int; one Obj.repr operation stores that value in the selected exact Null<Int> Obj.t parameter carrier."
+				};
+			case Identity:
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a directional call crossing cannot use the identity helper";
+		}
+		return {
+			index: index,
+			inputSemanticTypeId: input.semanticTypeId,
+			inputCarrierTypeId: input.carrierTypeId,
+			inputRepresentationId: input.id,
+			outputSemanticTypeId: output.semanticTypeId,
+			outputCarrierTypeId: output.carrierTypeId,
+			outputRepresentationId: output.id,
+			conversion: conversion,
+			proofId: proof.id,
+			proofClaim: proof.claim
 		};
 	}
 }

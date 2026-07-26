@@ -244,13 +244,18 @@ typedef InspectionUnsafeOperation = {
 	final pipelineRevision:String;
 }
 
-/** One argument or result carrier selected by the typed call plan. **/
+/** One directional argument or result crossing selected by the typed call plan. **/
 typedef InspectionCallValue = {
 	final index:Int;
-	final semanticTypeId:String;
-	final carrierTypeId:String;
-	final representationId:String;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final inputRepresentationId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
 	final conversion:String;
+	final proofId:String;
+	final proofClaim:String;
 }
 
 /** One validated source-order action in a typed direct-call schedule. **/

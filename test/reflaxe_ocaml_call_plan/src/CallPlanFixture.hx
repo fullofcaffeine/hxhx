@@ -31,14 +31,70 @@ class CallPlanFixture {
 	static inline final CALL_ID = "call:fixture";
 	static inline final TWO_CALLEE_ID = "Arithmetic|Arithmetic::add";
 	static inline final TWO_CALL_ID = "call:two-argument-fixture";
+	static inline final NULLABLE_CALLEE_ID = "NullableCalls|NullableCalls::identity";
+	static inline final NULLABLE_PRESERVE_CALL_ID = "call:nullable-preserve-fixture";
+	static inline final NULLABLE_BOX_CALL_ID = "call:nullable-box-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
 			index: index,
-			semanticTypeId: "Int",
-			carrierTypeId: "int",
-			representationId: "representation:Int:internal-value",
-			conversion: OcamlCallCarrierConversion.Identity
+			inputSemanticTypeId: "Int",
+			inputCarrierTypeId: "int",
+			inputRepresentationId: "representation:Int:internal-value",
+			outputSemanticTypeId: "Int",
+			outputCarrierTypeId: "int",
+			outputRepresentationId: "representation:Int:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture identity"
+		};
+	}
+
+	static function nullableValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			inputSemanticTypeId: "Null<Int>",
+			inputCarrierTypeId: "Obj.t",
+			inputRepresentationId: "representation:Null<Int>:internal-value",
+			outputSemanticTypeId: "Null<Int>",
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: "representation:Null<Int>:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture nullable identity"
+		};
+	}
+
+	static function nullableArgument(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		return switch (conversion) {
+			case PreserveNullableIntCarrier:
+				{
+					index: index,
+					inputSemanticTypeId: "Null<Int>",
+					inputCarrierTypeId: "Obj.t",
+					inputRepresentationId: "representation:Null<Int>:internal-value",
+					outputSemanticTypeId: "Null<Int>",
+					outputCarrierTypeId: "Obj.t",
+					outputRepresentationId: "representation:Null<Int>:internal-value",
+					conversion: conversion,
+					proofId: "nullable-int-call-carrier-preserve-v1",
+					proofClaim: "fixture nullable preserve"
+				};
+			case BoxExactIntToNullableInt:
+				{
+					index: index,
+					inputSemanticTypeId: "Int",
+					inputCarrierTypeId: "int",
+					inputRepresentationId: "representation:Int:internal-value",
+					outputSemanticTypeId: "Null<Int>",
+					outputCarrierTypeId: "Obj.t",
+					outputRepresentationId: "representation:Null<Int>:internal-value",
+					conversion: conversion,
+					proofId: "nullable-int-call-box-v1",
+					proofClaim: "fixture nullable box"
+				};
+			case Identity:
+				throw "fixture nullable occurrence must select preserve or box";
 		};
 	}
 
@@ -74,6 +130,25 @@ class CallPlanFixture {
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-two-int-static-call-v1",
+			proofClaim: "fixture",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
+	static function nullableDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:nullable-fixture",
+			calleeId: NULLABLE_CALLEE_ID,
+			sourceModuleId: "NullableCalls",
+			sourceTypeName: "NullableCalls",
+			sourceFieldName: "identity",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [nullableValue(0)],
+			result: nullableValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-nullable-int-static-call-v1",
 			proofClaim: "fixture",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
@@ -127,6 +202,29 @@ class CallPlanFixture {
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-two-int-static-call-v1",
+			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function nullableCall(caller:OcamlFunctionPlanBinding, id:String, sourceMin:Int, conversion:OcamlCallCarrierConversion):OcamlCallDecision {
+		return {
+			id: id,
+			source: {file: "CallPlanFixture.hx", min: sourceMin, max: sourceMin + 1},
+			calleeId: NULLABLE_CALLEE_ID,
+			sourceModuleId: "NullableCalls",
+			sourceTypeName: "NullableCalls",
+			sourceFieldName: "identity",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [nullableArgument(0, conversion)],
+			result: nullableValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-nullable-int-static-call-v1",
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -193,6 +291,27 @@ class CallPlanFixture {
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-two-int-static-call-v1",
+			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function nullableBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:nullable-fixture",
+			calleeId: NULLABLE_CALLEE_ID,
+			sourceModuleId: "NullableCalls",
+			sourceTypeName: "NullableCalls",
+			sourceFieldName: "identity",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [nullableValue(0)],
+			result: nullableValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-nullable-int-static-call-v1",
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -268,6 +387,19 @@ class CallPlanFixture {
 		seal(twoArgumentRegistry, twoArgumentCallee, new OcamlCallPlan([]), twoArgumentBoundary(twoArgumentCallee));
 		twoArgumentRegistry.validateCallGraph();
 
+		final nullableCaller = binding("Main|Main::nullableCalls", "body:nullable-caller");
+		final nullableCallee = binding("NullableCalls|NullableCalls::identity", "body:nullable-callee");
+		final preserveNullableCall = nullableCall(nullableCaller, NULLABLE_PRESERVE_CALL_ID, 4, OcamlCallCarrierConversion.PreserveNullableIntCarrier);
+		final boxNullableCall = nullableCall(nullableCaller, NULLABLE_BOX_CALL_ID, 6, OcamlCallCarrierConversion.BoxExactIntToNullableInt);
+		final nullableRegistry = new OcamlFunctionPlanRegistry();
+		nullableRegistry.beginProgram(PROGRAM_REVISION);
+		nullableRegistry.registerCallableDeclaration(nullableDeclaration());
+		nullableRegistry.requireCallableDeclaration(preserveNullableCall);
+		nullableRegistry.requireCallableDeclaration(boxNullableCall);
+		seal(nullableRegistry, nullableCaller, new OcamlCallPlan([preserveNullableCall, boxNullableCall]), null);
+		seal(nullableRegistry, nullableCallee, new OcamlCallPlan([]), nullableBoundary(nullableCallee));
+		nullableRegistry.validateCallGraph();
+
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
 
@@ -318,10 +450,15 @@ class CallPlanFixture {
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
-				semanticTypeId: "Float",
-				carrierTypeId: "int",
-				representationId: "representation:Int:internal-value",
-				conversion: OcamlCallCarrierConversion.Identity
+				inputSemanticTypeId: "Float",
+				inputCarrierTypeId: "int",
+				inputRepresentationId: "representation:Int:internal-value",
+				outputSemanticTypeId: "Int",
+				outputCarrierTypeId: "int",
+				outputRepresentationId: "representation:Int:internal-value",
+				conversion: OcamlCallCarrierConversion.Identity,
+				proofId: "identity-call-carrier-v1",
+				proofClaim: "fixture"
 			}
 		]);
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongSemanticType));
@@ -329,10 +466,15 @@ class CallPlanFixture {
 		final wrongCarrier = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
-				semanticTypeId: "Int",
-				carrierTypeId: "Obj.t",
-				representationId: "representation:Int:internal-value",
-				conversion: OcamlCallCarrierConversion.Identity
+				inputSemanticTypeId: "Int",
+				inputCarrierTypeId: "Obj.t",
+				inputRepresentationId: "representation:Int:internal-value",
+				outputSemanticTypeId: "Int",
+				outputCarrierTypeId: "Obj.t",
+				outputRepresentationId: "representation:Int:internal-value",
+				conversion: OcamlCallCarrierConversion.Identity,
+				proofId: "identity-call-carrier-v1",
+				proofClaim: "fixture"
 			}
 		]);
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongCarrier));
@@ -340,13 +482,52 @@ class CallPlanFixture {
 		final wrongConversion = copyCall(selectedCall, null, null, [
 			{
 				index: 0,
-				semanticTypeId: "Int",
-				carrierTypeId: "int",
-				representationId: "representation:Int:internal-value",
-				conversion: cast "box"
+				inputSemanticTypeId: "Int",
+				inputCarrierTypeId: "int",
+				inputRepresentationId: "representation:Int:internal-value",
+				outputSemanticTypeId: "Int",
+				outputCarrierTypeId: "int",
+				outputRepresentationId: "representation:Int:internal-value",
+				conversion: cast "box",
+				proofId: "identity-call-carrier-v1",
+				proofClaim: "fixture"
 			}
 		]);
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongConversion));
+
+		final missingNullableConversionValue = OcamlCallPlan.copyValue(boxNullableCall.arguments[0]);
+		Reflect.setField(missingNullableConversionValue, "conversion", "");
+		final missingNullableConversion = copyCall(boxNullableCall, null, null, [missingNullableConversionValue]);
+		expectThrows("invalid-plan", () -> nullableRegistry.requireCallableDeclaration(missingNullableConversion));
+
+		final ambiguousNullableIdentity = copyCall(preserveNullableCall, null, null, [nullableValue(0)]);
+		expectThrows("invalid-plan", () -> nullableRegistry.requireCallableDeclaration(ambiguousNullableIdentity));
+
+		final wrongNullableProofValue = OcamlCallPlan.copyValue(boxNullableCall.arguments[0]);
+		Reflect.setField(wrongNullableProofValue, "proofId", "wrong-proof");
+		final wrongNullableProof = copyCall(boxNullableCall, null, null, [wrongNullableProofValue]);
+		expectThrows("invalid-plan", () -> nullableRegistry.requireCallableDeclaration(wrongNullableProof));
+
+		final doubleBoxValue = OcamlCallPlan.copyValue(boxNullableCall.arguments[0]);
+		Reflect.setField(doubleBoxValue, "inputSemanticTypeId", "Null<Int>");
+		Reflect.setField(doubleBoxValue, "inputCarrierTypeId", "Obj.t");
+		Reflect.setField(doubleBoxValue, "inputRepresentationId", "representation:Null<Int>:internal-value");
+		final doubleBoxCall = copyCall(boxNullableCall, null, null, [doubleBoxValue]);
+		expectThrows("invalid-plan", () -> nullableRegistry.requireCallableDeclaration(doubleBoxCall));
+
+		final wrongNullableDirectionValue = OcamlCallPlan.copyValue(preserveNullableCall.arguments[0]);
+		Reflect.setField(wrongNullableDirectionValue, "outputSemanticTypeId", "Int");
+		Reflect.setField(wrongNullableDirectionValue, "outputCarrierTypeId", "int");
+		Reflect.setField(wrongNullableDirectionValue, "outputRepresentationId", "representation:Int:internal-value");
+		final wrongNullableDirection = copyCall(preserveNullableCall, null, null, [wrongNullableDirectionValue]);
+		expectThrows("invalid-plan", () -> nullableRegistry.requireCallableDeclaration(wrongNullableDirection));
+
+		final conflictingNullableBoundary = nullableBoundary(nullableCallee);
+		Reflect.setField(conflictingNullableBoundary.arguments[0], "outputCarrierTypeId", "int");
+		final conflictingNullableRegistry = new OcamlFunctionPlanRegistry();
+		conflictingNullableRegistry.beginProgram(PROGRAM_REVISION);
+		conflictingNullableRegistry.registerCallableDeclaration(nullableDeclaration());
+		expectThrows("invalid-plan", () -> seal(conflictingNullableRegistry, nullableCallee, new OcamlCallPlan([]), conflictingNullableBoundary));
 
 		final staleCaller = copyCall(selectedCall, null, null, null, null, "body:stale");
 		final staleCallerRegistry = new OcamlFunctionPlanRegistry();

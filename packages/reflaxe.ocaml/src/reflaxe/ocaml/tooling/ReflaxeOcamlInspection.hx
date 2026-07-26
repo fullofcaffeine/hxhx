@@ -73,7 +73,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 9,
+			schemaVersion: 10,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -144,8 +144,10 @@ class ReflaxeOcamlInspection {
 			for (call in report.lowering.calls) {
 				lines.push('  - ${call.sourceFile} bytes ${call.sourceMin}-${call.sourceMax}: ${call.calleeId}');
 				final schedule = call.evaluationSchedule.map(step -> step.argumentIndex == null ? step.kind : '${step.kind}:${step.argumentIndex}');
-				final arguments = call.arguments.map(argument -> '${argument.semanticTypeId}/${argument.carrierTypeId}').join(", ");
-				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> ${call.result.semanticTypeId}/${call.result.carrierTypeId}');
+				final arguments = call.arguments.map(argument ->
+					'${argument.inputSemanticTypeId}/${argument.inputCarrierTypeId} -${argument.conversion}-> ${argument.outputSemanticTypeId}/${argument.outputCarrierTypeId}')
+					.join(", ");
+				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> ${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -315,8 +317,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 15) {
-						throw 'Unsupported lowering report schema $version; expected 15.';
+					if (version != 16) {
+						throw 'Unsupported lowering report schema $version; expected 16.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -365,7 +367,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-call-boundary-v2")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v3")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -388,6 +390,7 @@ class ReflaxeOcamlInspection {
 			for (index in 0...boundary.arguments.length)
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
+			validateCallFamily(boundary.arguments, boundary.result, boundary.proofId, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
 		}
@@ -401,6 +404,7 @@ class ReflaxeOcamlInspection {
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			validateCallValue(call.result, representationById, 'Call "${call.id}" result');
+			validateCallFamily(call.arguments, call.result, call.proofId, false, 'Call "${call.id}"');
 			final boundary = boundaryByCallee.get(call.calleeId);
 			if (boundary == null)
 				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
@@ -409,11 +413,11 @@ class ReflaxeOcamlInspection {
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
 				|| boundary.arguments.length != call.arguments.length
-				|| !sameCallValue(boundary.result, call.result)) {
+				|| !sameCallableBoundary(call.result, boundary.result, true)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 			for (index in 0...call.arguments.length) {
-				if (!sameCallValue(boundary.arguments[index], call.arguments[index]))
+				if (!sameCallableBoundary(call.arguments[index], boundary.arguments[index], false))
 					throw 'Call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}".';
 			}
 			callIds.set(call.id, true);
@@ -425,14 +429,19 @@ class ReflaxeOcamlInspection {
 
 	static function callValue(value:Dynamic):InspectionCallValue {
 		final conversion = requiredString(value, "conversion");
-		if (conversion != "identity")
+		if (conversion != "identity" && conversion != "preserve-nullable-int-carrier" && conversion != "box-exact-int-to-nullable-int")
 			throw 'Unsupported typed-call carrier conversion "$conversion".';
 		return {
 			index: requiredInt(value, "index"),
-			semanticTypeId: requiredString(value, "semanticTypeId"),
-			carrierTypeId: requiredString(value, "carrierTypeId"),
-			representationId: requiredString(value, "representationId"),
-			conversion: conversion
+			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
+			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
+			inputRepresentationId: requiredString(value, "inputRepresentationId"),
+			outputSemanticTypeId: requiredString(value, "outputSemanticTypeId"),
+			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			conversion: conversion,
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
 		};
 	}
 
@@ -535,22 +544,91 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateCallValue(value:InspectionCallValue, representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
-		final representation = representations.get(value.representationId);
-		if (representation == null)
-			throw '$owner refers to missing representation "${value.representationId}".';
-		if (representation.semanticTypeId != value.semanticTypeId
-			|| representation.carrierTypeId != value.carrierTypeId
-			|| representation.domain != "internal-value") {
-			throw '$owner expects ${value.semanticTypeId} -> ${value.carrierTypeId} in internal-value, but representation ${representation.id} selects ${representation.semanticTypeId} -> ${representation.carrierTypeId} in ${representation.domain}.';
+		validateCallValueSide(value.inputRepresentationId, value.inputSemanticTypeId, value.inputCarrierTypeId, representations, owner + " input");
+		validateCallValueSide(value.outputRepresentationId, value.outputSemanticTypeId, value.outputCarrierTypeId, representations, owner + " output");
+		final sameSides = value.inputSemanticTypeId == value.outputSemanticTypeId
+			&& value.inputCarrierTypeId == value.outputCarrierTypeId
+			&& value.inputRepresentationId == value.outputRepresentationId;
+		switch (value.conversion) {
+			case "identity":
+				if (!sameSides || value.proofId != "identity-call-carrier-v1")
+					throw '$owner has an invalid identity crossing.';
+			case "preserve-nullable-int-carrier":
+				if (!sameSides
+					|| value.inputSemanticTypeId != "Null<Int>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "nullable-int-call-carrier-preserve-v1")
+					throw '$owner has an invalid exact Null<Int> carrier-preserving crossing.';
+			case "box-exact-int-to-nullable-int":
+				if (value.inputSemanticTypeId != "Int"
+					|| value.inputCarrierTypeId != "int"
+					|| value.outputSemanticTypeId != "Null<Int>"
+					|| value.outputCarrierTypeId != "Obj.t"
+					|| value.proofId != "nullable-int-call-box-v1")
+					throw '$owner has an invalid exact Int-to-Null<Int> boxing crossing.';
+			case _:
+				throw '$owner has unsupported conversion "${value.conversion}".';
 		}
 	}
 
-	static function sameCallValue(left:InspectionCallValue, right:InspectionCallValue):Bool {
-		return left.index == right.index
-			&& left.semanticTypeId == right.semanticTypeId
-			&& left.carrierTypeId == right.carrierTypeId
-			&& left.representationId == right.representationId
-			&& left.conversion == right.conversion;
+	static function validateCallFamily(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, requiresIdentityBoundary:Bool,
+			owner:String):Void {
+		final exactIntFamily = Lambda.foreach(arguments,
+			value -> value.conversion == "identity"
+				&& isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Int", "int")
+				&& isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Int", "int"))
+			&& result.conversion == "identity"
+			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Int", "int")
+			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Int", "int");
+		if (exactIntFamily) {
+			final expectedProofId = arguments.length == 1 ? "direct-one-int-static-call-v1" : "direct-two-int-static-call-v1";
+			if (proofId != expectedProofId)
+				throw '$owner has proof "$proofId" instead of "$expectedProofId".';
+			return;
+		}
+
+		final nullableIntFamily = arguments.length == 1
+			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Null<Int>", "Obj.t")
+			&& result.conversion == "identity"
+			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Int>", "Obj.t")
+			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Int>", "Obj.t");
+		if (!nullableIntFamily || proofId != "direct-one-nullable-int-static-call-v1")
+			throw '$owner does not match an admitted exact Int or Null<Int> direct-call family.';
+		if (requiresIdentityBoundary) {
+			if (arguments[0].conversion != "identity")
+				throw '$owner must describe an identity carrier value.';
+		} else if (arguments[0].conversion != "preserve-nullable-int-carrier"
+			&& arguments[0].conversion != "box-exact-int-to-nullable-int") {
+			throw '$owner must explicitly preserve an existing Null<Int> carrier or box one exact Int.';
+		}
+	}
+
+	static function isCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String, expectedSemanticTypeId:String,
+			expectedCarrierTypeId:String):Bool {
+		return semanticTypeId == expectedSemanticTypeId
+			&& carrierTypeId == expectedCarrierTypeId
+			&& representationId == 'representation:$expectedSemanticTypeId:internal-value';
+	}
+
+	static function validateCallValueSide(representationId:String, semanticTypeId:String, carrierTypeId:String,
+			representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
+		final representation = representations.get(representationId);
+		if (representation == null)
+			throw '$owner refers to missing representation "$representationId".';
+		if (representation.semanticTypeId != semanticTypeId
+			|| representation.carrierTypeId != carrierTypeId
+			|| representation.domain != "internal-value") {
+			throw '$owner expects $semanticTypeId -> $carrierTypeId in internal-value, but representation ${representation.id} selects ${representation.semanticTypeId} -> ${representation.carrierTypeId} in ${representation.domain}.';
+		}
+	}
+
+	static function sameCallableBoundary(callValue:InspectionCallValue, boundaryValue:InspectionCallValue, isResult:Bool):Bool {
+		return callValue.index == boundaryValue.index
+			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.inputSemanticTypeId
+				&& callValue.inputCarrierTypeId == boundaryValue.inputCarrierTypeId
+				&& callValue.inputRepresentationId == boundaryValue.inputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.outputSemanticTypeId
+					&& callValue.outputCarrierTypeId == boundaryValue.outputCarrierTypeId
+					&& callValue.outputRepresentationId == boundaryValue.outputRepresentationId));
 	}
 
 	static function inspectStaticStorage(value:Dynamic, representation:InspectionRepresentation):Array<InspectionStaticStorageEntry> {

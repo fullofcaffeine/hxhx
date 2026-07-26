@@ -7,4 +7,9 @@ two-callee
 two=12
 throw-first
 caught=-1
+nullable-callee
+nullable-preserved-null=true
+nullable-int-source
+nullable-callee
+nullable-boxed=9
 instance=6

@@ -47,7 +47,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v9";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v10";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -196,12 +196,12 @@ class OcamlFunctionPlanRegistry {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		for (call in calls.decisions()) {
-			OcamlCallPlan.requireDirectStaticIntCall(call);
+			OcamlCallPlan.requireDirectStaticCall(call);
 			requireCallBinding(call, binding);
 			requireCallableDeclaration(call);
 		}
 		if (callableBoundary != null) {
-			OcamlCallPlan.requireDirectStaticIntBoundary(callableBoundary);
+			OcamlCallPlan.requireDirectStaticBoundary(callableBoundary);
 			requireBoundaryBinding(callableBoundary, binding);
 			requireDeclarationMatch(callableBoundary);
 			if (callableByCallee.exists(callableBoundary.calleeId))
@@ -224,7 +224,7 @@ class OcamlFunctionPlanRegistry {
 
 	/** Registers one complete typed callable declaration before module emission. */
 	public function registerCallableDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
-		OcamlCallPlan.requireDirectStaticIntDeclaration(declaration);
+		OcamlCallPlan.requireDirectStaticDeclaration(declaration);
 		if (declaration.programRevision != currentProgramRevision || declaration.pipelineRevision != PIPELINE_REVISION)
 			throw 'reflaxe.ocaml [ocaml-call:stale-declaration]: callable declaration "${declaration.id}" does not belong to $currentProgramRevision/$PIPELINE_REVISION';
 		if (declaredCallableByCallee.exists(declaration.calleeId))
@@ -240,7 +240,7 @@ class OcamlFunctionPlanRegistry {
 		builder constructs target code for that occurrence.
 	**/
 	public function requireCallableDeclaration(call:OcamlCallDecision):OcamlCallableDeclarationPlan {
-		OcamlCallPlan.requireDirectStaticIntCall(call);
+		OcamlCallPlan.requireDirectStaticCall(call);
 		final declaration = declaredCallableByCallee.get(call.calleeId);
 		if (declaration == null)
 			throw 'reflaxe.ocaml [ocaml-call:missing-declaration]: call "${call.id}" refers to "${call.calleeId}", but the complete typed program has no admitted declaration';
@@ -249,11 +249,11 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != call.sourceModuleId
 			|| declaration.sourceTypeName != call.sourceTypeName
 			|| declaration.sourceFieldName != call.sourceFieldName
-			|| !OcamlCallPlan.sameValue(declaration.result, call.result)) {
+			|| !OcamlCallPlan.sameCallableBoundary(call.result, declaration.result, true)) {
 			throw 'reflaxe.ocaml [ocaml-call:declaration-mismatch]: call "${call.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...call.arguments.length) {
-			if (!OcamlCallPlan.sameValue(declaration.arguments[index], call.arguments[index]))
+			if (!OcamlCallPlan.sameCallableBoundary(call.arguments[index], declaration.arguments[index], false))
 				throw 'reflaxe.ocaml [ocaml-call:declaration-argument-mismatch]: call "${call.id}" argument $index disagrees with typed declaration "${declaration.id}"';
 		}
 		return OcamlCallPlan.copyDeclaration(declaration);
@@ -301,11 +301,11 @@ class OcamlFunctionPlanRegistry {
 		}
 		if (boundary.kind != call.kind
 			|| boundary.arguments.length != call.arguments.length
-			|| !OcamlCallPlan.sameValue(boundary.result, call.result)) {
+			|| !OcamlCallPlan.sameCallableBoundary(call.result, boundary.result, true)) {
 			throw 'reflaxe.ocaml [ocaml-call:callable-mismatch]: call "${call.id}" disagrees with callable boundary "${boundary.id}"';
 		}
 		for (index in 0...call.arguments.length) {
-			if (!OcamlCallPlan.sameValue(boundary.arguments[index], call.arguments[index]))
+			if (!OcamlCallPlan.sameCallableBoundary(call.arguments[index], boundary.arguments[index], false))
 				throw 'reflaxe.ocaml [ocaml-call:argument-mismatch]: call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}"';
 		}
 		return OcamlCallPlan.copyBoundary(boundary);

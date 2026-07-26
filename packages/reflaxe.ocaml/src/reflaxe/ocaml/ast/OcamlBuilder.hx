@@ -26,6 +26,7 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
@@ -157,11 +158,23 @@ class OcamlBuilder {
 		throw diagnostic;
 	}
 
-	function requireIdentityIntCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
+	function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
 		try {
-			OcamlCallPlan.requireDirectStaticIntValue(value, expectedIndex, owner);
+			OcamlCallPlan.requireDirectStaticValue(value, expectedIndex, owner);
 		} catch (error:Dynamic) {
 			callPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Mechanically applies one conversion already selected by the call plan. */
+	function buildPlannedCallArgument(value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
+		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
+		final built = buildExpr(expression);
+		return switch (value.conversion) {
+			case Identity, PreserveNullableIntCarrier:
+				built;
+			case BoxExactIntToNullableInt:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 		}
 	}
 
@@ -173,7 +186,7 @@ class OcamlBuilder {
 	**/
 	function buildPlannedCall(call:OcamlCallDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
-			OcamlCallPlan.requireDirectStaticIntCall(call);
+			OcamlCallPlan.requireDirectStaticCall(call);
 			functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
@@ -196,7 +209,7 @@ class OcamlBuilder {
 					if (argumentIndex == null || argumentIndex < 0 || argumentIndex >= arguments.length || step.slotId == null)
 						return callPlanInvariant('call "${call.id}" has an invalid materialization step', position);
 					final name = freshTmp("call_arg_" + argumentIndex);
-					materialized.push({name: name, value: buildExpr(arguments[argumentIndex])});
+					materialized.push({name: name, value: buildPlannedCallArgument(call.arguments[argumentIndex], arguments[argumentIndex])});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.InvokeCallee:
 					if (invocationSeen)
@@ -6627,12 +6640,11 @@ class OcamlBuilder {
 					bodyExpr.pos);
 			}
 			for (index in 0...args.length)
-				requireIdentityIntCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index',
-					bodyExpr.pos);
-			requireIdentityIntCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
+				requireCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index', bodyExpr.pos);
+			requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			[
-				for (argument in args)
-					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(argument.name)), OcamlTypeExpr.TIdent("int"))
+				for (index in 0...args.length)
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), OcamlTypeExpr.TIdent(callableBoundary.arguments[index].outputCarrierTypeId))
 			];
 		}
 
@@ -6697,7 +6709,7 @@ class OcamlBuilder {
 		if (isVoidType(resolvedReturnType)) {
 			body = exprAsStatement(body);
 		} else if (callableBoundary != null) {
-			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent("int"));
+			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent(callableBoundary.result.inputCarrierTypeId));
 		}
 
 		for (a in args) {

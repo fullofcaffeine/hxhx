@@ -25,6 +25,11 @@ class Main {
 		return 2;
 	}
 
+	static function observedNullableInput():Int {
+		Sys.println("nullable-int-source");
+		return 9;
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -35,6 +40,11 @@ class Main {
 			-1;
 		};
 		Sys.println("caught=" + recovered);
+		final existing:Null<Int> = null;
+		final preserved = NullableCalls.identity(existing);
+		Sys.println("nullable-preserved-null=" + (preserved == null));
+		final boxed = NullableCalls.identity(observedNullableInput());
+		Sys.println("nullable-boxed=" + (boxed == null ? -1 : boxed));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

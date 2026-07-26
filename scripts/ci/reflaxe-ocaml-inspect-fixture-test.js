@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 9)
+	assert.strictEqual(report.schemaVersion, 10)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -87,8 +87,8 @@ try {
 	assert(report.lowering.calls.every(call =>
 		report.lowering.callableBoundaries.some(boundary =>
 			boundary.calleeId === call.calleeId
-			&& boundary.arguments[0].representationId === call.arguments[0].representationId
-			&& boundary.result.representationId === call.result.representationId)))
+			&& boundary.arguments[0].outputRepresentationId === call.arguments[0].outputRepresentationId
+			&& boundary.result.inputRepresentationId === call.result.inputRepresentationId)))
 	assert.strictEqual(report.lowering.staticStorage.length, report.summary.staticStorageCount)
 	assert.match(report.lowering.staticStorageRevision, sha256Revision)
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleValue'
