@@ -131,11 +131,39 @@ if grep -Eq 'ZeroArgCalls\.(exactCount|exactFlag|nullableCount|nullableFlag)([^ 
 	echo "A zero-argument source call must not lower to a bare OCaml function value" >&2
 	exit 1
 fi
+if ! grep -Eq '^let nullableFlag = fun \(\) -> \(Obj\.repr \(\(' "$zero_source"; then
+	echo "The raw Bool result must cross the sealed Null<Bool> callable carrier exactly once" >&2
+	exit 1
+fi
+if grep -Eq 'let result.*Obj\.t|Obj\.repr \(Obj\.repr' "$zero_source"; then
+	echo "The callable result conversion must not rely on an intermediate local or box twice" >&2
+	exit 1
+fi
+
+negative_log="$(mktemp)"
+rm -rf negative-out
+if haxe negative.hxml >"$negative_log" 2>&1; then
+	echo "An early Bool return unexpectedly bypassed the sealed result-control boundary" >&2
+	rm -f "$negative_log"
+	exit 1
+fi
+if ! grep -Fq '[ocaml-call:result-control-unsealed]' "$negative_log"; then
+	echo "The rejected early result conversion did not report its stable ownership diagnostic" >&2
+	cat "$negative_log" >&2
+	rm -f "$negative_log"
+	exit 1
+fi
+if [ -f negative-out/ResultControlRejected.ml ]; then
+	echo "The rejected early result conversion reached OCaml syntax output" >&2
+	rm -f "$negative_log"
+	exit 1
+fi
+rm -f "$negative_log"
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v6') {
+if (report.schemaVersion !== 17 || report.callModel !== 'typed-ocaml-directional-call-boundary-v7') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -147,6 +175,16 @@ function isIdentity(value, semanticTypeId, carrierTypeId) {
 		&& value?.outputRepresentationId === `representation:${semanticTypeId}:internal-value`
 		&& value?.conversion === 'identity'
 		&& value?.proofId === 'identity-call-carrier-v1'
+}
+function isBoxBoolToNullable(value) {
+	return value?.inputSemanticTypeId === 'Bool'
+		&& value?.inputCarrierTypeId === 'bool'
+		&& value?.inputRepresentationId === 'representation:Bool:internal-value'
+		&& value?.outputSemanticTypeId === 'Null<Bool>'
+		&& value?.outputCarrierTypeId === 'Obj.t'
+		&& value?.outputRepresentationId === 'representation:Null<Bool>:internal-value'
+		&& value?.conversion === 'box-exact-bool-to-nullable-bool'
+		&& value?.proofId === 'nullable-bool-call-box-v1'
 }
 function verifyCalls(fieldName, arity, proofId, expectedCount) {
 	const calls = report.calls?.filter(item => item.sourceTypeName === 'Arithmetic' && item.sourceFieldName === fieldName) ?? []
@@ -177,7 +215,7 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		if (!boundary
 			|| boundary.arguments?.length !== arity
 			|| boundary.arguments.some((argument, index) => argument.outputRepresentationId !== call.arguments[index].outputRepresentationId)
-			|| boundary.result?.inputRepresentationId !== call.result.inputRepresentationId) {
+			|| boundary.result?.outputRepresentationId !== call.result.inputRepresentationId) {
 			throw new Error(`call ${fieldName} does not match an independently sealed callable definition`)
 		}
 	}
@@ -189,7 +227,7 @@ if (report.calls.some(call => call.proofId !== signatureProofId)
 }
 verifyCalls('increment', 1, signatureProofId, 1)
 verifyCalls('add', 2, signatureProofId, 2)
-function verifyZeroCall(fieldName, semanticTypeId, carrierTypeId) {
+function verifyZeroCall(fieldName, semanticTypeId, carrierTypeId, boundaryResult = null) {
 	const calls = report.calls?.filter(item => item.sourceTypeName === 'ZeroArgCalls' && item.sourceFieldName === fieldName) ?? []
 	const boundary = report.callableBoundaries?.find(
 		item => item.sourceTypeName === 'ZeroArgCalls' && item.sourceFieldName === fieldName
@@ -204,14 +242,14 @@ function verifyZeroCall(fieldName, semanticTypeId, carrierTypeId) {
 		|| calls[0].evaluationSchedule[0]?.slotId !== null
 		|| boundary.proofId !== signatureProofId
 		|| boundary.arguments?.length !== 0
-		|| !isIdentity(boundary.result, semanticTypeId, carrierTypeId)) {
+		|| !(boundaryResult ? boundaryResult(boundary.result) : isIdentity(boundary.result, semanticTypeId, carrierTypeId))) {
 		throw new Error(`the lowering report did not seal zero-argument call ${fieldName} with its exact ${semanticTypeId} result`)
 	}
 }
 verifyZeroCall('exactCount', 'Int', 'int')
 verifyZeroCall('exactFlag', 'Bool', 'bool')
 verifyZeroCall('nullableCount', 'Null<Int>', 'Obj.t')
-verifyZeroCall('nullableFlag', 'Null<Bool>', 'Obj.t')
+verifyZeroCall('nullableFlag', 'Null<Bool>', 'Obj.t', isBoxBoolToNullable)
 
 const nullableCalls = report.calls?.filter(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity') ?? []
 const nullableBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity')

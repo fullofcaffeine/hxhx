@@ -50,8 +50,9 @@ typedef OcamlCallEvaluationStep = {
 
 	Arguments flow from the source-expression representation into the callable
 	boundary. Results flow from the callable boundary into the call-expression
-	representation. Declaration and final-boundary values use identical input and
-	output representations because they describe the function's carrier itself.
+	representation. A callable definition's result instead flows from its final
+	straight-line body value into the exported callable carrier. Program-wide
+	declarations use identical sides because they describe only that carrier.
 **/
 typedef OcamlCallValuePlan = {
 	final index:Int;
@@ -360,15 +361,24 @@ class OcamlCallPlan {
 		Returns whether a call occurrence agrees with one callable carrier.
 
 		For an argument, the call's output is the value entering the function. For
-		a result, the call's input is the value produced by the function.
+		a result, the callable boundary's output is the value entering the call
+		occurrence.
 	**/
 	public static function sameCallableBoundary(callValue:OcamlCallValuePlan, boundaryValue:OcamlCallValuePlan, isResult:Bool):Bool {
 		return callValue.index == boundaryValue.index
-			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.inputSemanticTypeId
-				&& callValue.inputCarrierTypeId == boundaryValue.inputCarrierTypeId
-				&& callValue.inputRepresentationId == boundaryValue.inputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.outputSemanticTypeId
-					&& callValue.outputCarrierTypeId == boundaryValue.outputCarrierTypeId
-					&& callValue.outputRepresentationId == boundaryValue.outputRepresentationId));
+			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
+				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
+				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId
+					&& callValue.outputCarrierTypeId == boundaryValue.inputCarrierTypeId
+					&& callValue.outputRepresentationId == boundaryValue.inputRepresentationId));
+	}
+
+	/** Returns whether a callable definition exports its declared result carrier. */
+	public static function sameBoundaryDeclaration(boundaryValue:OcamlCallValuePlan, declarationValue:OcamlCallValuePlan):Bool {
+		return boundaryValue.index == declarationValue.index
+			&& boundaryValue.outputSemanticTypeId == declarationValue.inputSemanticTypeId
+			&& boundaryValue.outputCarrierTypeId == declarationValue.inputCarrierTypeId
+			&& boundaryValue.outputRepresentationId == declarationValue.inputRepresentationId;
 	}
 
 	/** Rejects a corrupted value outside the closed direct-static families. */
@@ -418,13 +428,24 @@ class OcamlCallPlan {
 	public static function requireDirectStaticDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
 		requireDirectStaticCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
 			declaration.arguments, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId, declaration.proofClaim,
-			declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"', true);
+			declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"');
+		if (!Lambda.foreach(declaration.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
+			|| declaration.result.conversion != OcamlCallCarrierConversion.Identity) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" must use identity carrier records';
+		}
 	}
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireDirectStaticCall(call:OcamlCallDecision):Void {
 		requireDirectStaticCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.result,
-			call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"', false);
+			call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"');
+		if (call.result.conversion != OcamlCallCarrierConversion.Identity)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact declared result carrier';
+		for (argument in call.arguments) {
+			if (isNullableSemanticType(argument.outputSemanticTypeId) && argument.conversion == OcamlCallCarrierConversion.Identity) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive';
+			}
+		}
 		if (call.functionId.length == 0 || call.bodyRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an empty caller or body revision';
 		if (call.source.file.length == 0 || call.source.min < 0 || call.source.max < call.source.min)
@@ -448,14 +469,16 @@ class OcamlCallPlan {
 	public static function requireDirectStaticBoundary(boundary:OcamlCallableBoundaryPlan):Void {
 		requireDirectStaticCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind,
 			boundary.arguments, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
-			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"', true);
+			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"');
+		if (!Lambda.foreach(boundary.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" arguments must use identity carrier records';
 		if (boundary.functionId.length == 0 || boundary.bodyRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" has an empty function or body revision';
 	}
 
 	static function requireDirectStaticCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
 			arguments:Array<OcamlCallValuePlan>, result:OcamlCallValuePlan, profileEligibility:Array<String>, reason:String, proofId:String,
-			proofClaim:String, programRevision:String, pipelineRevision:String, owner:String, requiresIdentityBoundary:Bool):Void {
+			proofClaim:String, programRevision:String, pipelineRevision:String, owner:String):Void {
 		if (calleeId.length == 0 || sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe callee identity';
 		if (kind != OcamlCallKind.DirectStaticHaxeMethod)
@@ -463,22 +486,8 @@ class OcamlCallPlan {
 		for (index in 0...arguments.length)
 			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
 		requireDirectStaticValue(result, -1, '$owner result');
-		if (requiresIdentityBoundary
-			&& (!Lambda.foreach(arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
-				|| result.conversion != OcamlCallCarrierConversion.Identity)) {
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner describes a callable boundary and must use identity carrier records';
-		}
 		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported profile inventory';
-		if (result.conversion != OcamlCallCarrierConversion.Identity)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must preserve its exact declared result carrier';
-		if (!requiresIdentityBoundary) {
-			for (argument in arguments) {
-				if (isNullableSemanticType(argument.outputSemanticTypeId) && argument.conversion == OcamlCallCarrierConversion.Identity) {
-					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive';
-				}
-			}
-		}
 		if (reason.length == 0 || proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID || proofClaim.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete or mismatched direct-static signature proof';
 		if (programRevision.length == 0 || pipelineRevision.length == 0)
@@ -569,6 +578,31 @@ class OcamlCallPlanner {
 		final declaration = declarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
 		if (declaration == null)
 			return null;
+		var result = OcamlCallPlan.copyValue(declaration.result);
+		var resultReason = "";
+		if (data.expr != null) {
+			final resultExpression = straightLineResultExpression(data.expr);
+			final returnExpressions = functionReturnExpressions(data.expr);
+			var directionalReturnCount = 0;
+			for (returnExpression in returnExpressions) {
+				final returnValue = definitionResultValue(returnExpression, declaration.result, representations);
+				if (returnValue == null) {
+					throw 'reflaxe.ocaml [ocaml-call:unsupported-definition-result]: callable "${declaration.calleeId}" returns a value outside the sealed ${declaration.result.outputSemanticTypeId} result-conversion matrix';
+				}
+				if (returnValue.conversion != OcamlCallCarrierConversion.Identity)
+					directionalReturnCount += 1;
+			}
+			if (directionalReturnCount > 0 && (resultExpression == null || returnExpressions.length != 1)) {
+				throw 'reflaxe.ocaml [ocaml-call:result-control-unsealed]: callable "${declaration.calleeId}" requires $directionalReturnCount result conversion${directionalReturnCount == 1 ? "" : "s"} across early or nested return control; haxe_ocaml-w32h3 must seal those transfers before OCaml syntax';
+			}
+			if (resultExpression != null) {
+				final plannedResult = definitionResultValue(resultExpression, declaration.result, representations);
+				if (plannedResult == null)
+					return null;
+				result = plannedResult;
+				resultReason = ' Its final straight-line ${result.inputSemanticTypeId} body value crosses into the exported ${result.outputSemanticTypeId} carrier via ${result.conversion}.';
+			}
+		}
 		return {
 			id: "callable-boundary:" + Sha256.encode(declaration.calleeId).substr(0, 24),
 			calleeId: declaration.calleeId,
@@ -577,9 +611,9 @@ class OcamlCallPlanner {
 			sourceFieldName: declaration.sourceFieldName,
 			kind: declaration.kind,
 			arguments: declaration.arguments.map(OcamlCallPlan.copyValue),
-			result: OcamlCallPlan.copyValue(declaration.result),
+			result: result,
 			profileEligibility: declaration.profileEligibility.copy(),
-			reason: declaration.reason,
+			reason: declaration.reason + resultReason,
 			proofId: declaration.proofId,
 			proofClaim: declaration.proofClaim,
 			functionId: binding.functionId,
@@ -587,6 +621,93 @@ class OcamlCallPlanner {
 			bodyRevision: binding.bodyRevision,
 			pipelineRevision: binding.pipelineRevision
 		};
+	}
+
+	/** Collects value-return expressions owned by this function, excluding nested callables. */
+	static function functionReturnExpressions(body:TypedExpr):Array<TypedExpr> {
+		final expressions:Array<TypedExpr> = [];
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TReturn(value):
+					if (value != null)
+						expressions.push(value);
+				case TFunction(_):
+					// A nested function owns its own callable result.
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+		visit(body);
+		return expressions;
+	}
+
+	/**
+		Finds one result expression whose conversion does not require control flow.
+
+		A root return, or the final return in an otherwise straight-line root block,
+		can be converted around the complete generated body. Any earlier or nested
+		return remains for the explicit control-effects model.
+	**/
+	static function straightLineResultExpression(body:TypedExpr):Null<TypedExpr> {
+		return switch (body.expr) {
+			case TMeta(_, child):
+				straightLineResultExpression(child);
+			case TReturn(value):
+				value;
+			case TBlock(expressions) if (expressions.length > 0):
+				var hasEarlierReturn = false;
+				for (index in 0...expressions.length - 1) {
+					if (containsReturn(expressions[index])) {
+						hasEarlierReturn = true;
+						break;
+					}
+				}
+				hasEarlierReturn ? null : directReturnValue(expressions[expressions.length - 1]);
+			case _:
+				null;
+		};
+	}
+
+	/** Unwraps metadata around one direct return without searching nested control flow. */
+	static function directReturnValue(expression:TypedExpr):Null<TypedExpr> {
+		return switch (expression.expr) {
+			case TMeta(_, child): directReturnValue(child);
+			case TReturn(value): value;
+			case _: null;
+		};
+	}
+
+	/** Reports whether this expression contains return control owned by this function. */
+	static function containsReturn(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TReturn(_):
+				true;
+			case TFunction(_):
+				false;
+			case _:
+				var found = false;
+				TypedExprTools.iter(expression, child -> {
+					if (!found && containsReturn(child))
+						found = true;
+				});
+				found;
+		};
+	}
+
+	/** Selects the closed body-value to callable-carrier crossing, or rejects the pair. */
+	static function definitionResultValue(expression:TypedExpr, boundaryValue:OcamlCallValuePlan,
+			representations:OcamlRepresentationRegistry):Null<OcamlCallValuePlan> {
+		final input = representationFor(expression.t, representations);
+		final output = representationForSemanticType(boundaryValue.outputSemanticTypeId, representations);
+		if (input == null || output == null)
+			return null;
+		if (input.semanticTypeId == output.semanticTypeId)
+			return identityValue(-1, output);
+		if (input.semanticTypeId == "Int" && output.semanticTypeId == "Null<Int>")
+			return crossingValue(-1, input, output, OcamlCallCarrierConversion.BoxExactIntToNullableInt);
+		if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>")
+			return crossingValue(-1, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
+		return null;
 	}
 
 	/** Plans every admitted call occurrence in one exact final function body. */
@@ -812,19 +933,19 @@ class OcamlCallPlanner {
 		final proof = switch (conversion) {
 			case PreserveNullableIntCarrier: {
 					id: "nullable-int-call-carrier-preserve-v1",
-					claim: "The source argument already produces the selected exact Null<Int> Obj.t carrier, so the call preserves it without another box."
+					claim: "The source value already produces the selected exact Null<Int> Obj.t carrier, so the boundary preserves it without another box."
 				};
 			case BoxExactIntToNullableInt: {
 					id: "nullable-int-call-box-v1",
-					claim: "The source argument produces exact Int in OCaml int; one Obj.repr operation stores that value in the selected exact Null<Int> Obj.t parameter carrier."
+					claim: "The source value produces exact Int in OCaml int; one Obj.repr operation stores that value in the selected exact Null<Int> Obj.t boundary carrier."
 				};
 			case PreserveNullableBoolCarrier: {
 					id: "nullable-bool-call-carrier-preserve-v1",
-					claim: "The source argument already produces the selected exact Null<Bool> Obj.t carrier, so the call preserves it without another box."
+					claim: "The source value already produces the selected exact Null<Bool> Obj.t carrier, so the boundary preserves it without another box."
 				};
 			case BoxExactBoolToNullableBool: {
 					id: "nullable-bool-call-box-v1",
-					claim: "The source argument produces exact Bool in OCaml bool; one Obj.repr operation stores that value in the selected exact Null<Bool> Obj.t parameter carrier."
+					claim: "The source value produces exact Bool in OCaml bool; one Obj.repr operation stores that value in the selected exact Null<Bool> Obj.t boundary carrier."
 				};
 			case Identity:
 				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a directional call crossing cannot use the identity helper";

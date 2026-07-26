@@ -318,8 +318,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 16) {
-						throw 'Unsupported lowering report schema $version; expected 16.';
+					if (version != 17) {
+						throw 'Unsupported lowering report schema $version; expected 17.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -368,7 +368,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v6")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v7")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -581,23 +581,24 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
-	static function validateCallSignature(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, requiresIdentityBoundary:Bool,
+	static function validateCallSignature(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, isCallableBoundary:Bool,
 			owner:String):Void {
 		if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
-		if (result.conversion != "identity"
-			|| !isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+		if (!isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
 			|| !isAdmittedCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
-			throw '$owner must preserve one exact admitted result carrier.';
+			throw '$owner contains a result outside the closed direct-static representation matrix.';
 		}
+		if (!isCallableBoundary && result.conversion != "identity")
+			throw '$owner must preserve the exact exported result carrier at the call occurrence.';
 		for (argument in arguments) {
 			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
 				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
 				throw '$owner contains an argument outside the closed direct-static representation matrix.';
 			}
-			if (requiresIdentityBoundary && argument.conversion != "identity")
+			if (isCallableBoundary && argument.conversion != "identity")
 				throw '$owner must describe identity carrier values at the callable boundary.';
-			if (!requiresIdentityBoundary
+			if (!isCallableBoundary
 				&& (argument.outputSemanticTypeId == "Null<Int>" || argument.outputSemanticTypeId == "Null<Bool>")
 				&& argument.conversion == "identity") {
 				throw '$owner must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive.';
@@ -633,11 +634,11 @@ class ReflaxeOcamlInspection {
 
 	static function sameCallableBoundary(callValue:InspectionCallValue, boundaryValue:InspectionCallValue, isResult:Bool):Bool {
 		return callValue.index == boundaryValue.index
-			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.inputSemanticTypeId
-				&& callValue.inputCarrierTypeId == boundaryValue.inputCarrierTypeId
-				&& callValue.inputRepresentationId == boundaryValue.inputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.outputSemanticTypeId
-					&& callValue.outputCarrierTypeId == boundaryValue.outputCarrierTypeId
-					&& callValue.outputRepresentationId == boundaryValue.outputRepresentationId));
+			&& (isResult ? (callValue.inputSemanticTypeId == boundaryValue.outputSemanticTypeId
+				&& callValue.inputCarrierTypeId == boundaryValue.outputCarrierTypeId
+				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId
+					&& callValue.outputCarrierTypeId == boundaryValue.inputCarrierTypeId
+					&& callValue.outputRepresentationId == boundaryValue.inputRepresentationId));
 	}
 
 	static function inspectStaticStorage(value:Dynamic, representation:InspectionRepresentation):Array<InspectionStaticStorageEntry> {

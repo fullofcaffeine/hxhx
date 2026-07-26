@@ -615,7 +615,7 @@ class CallPlanFixture {
 		};
 	}
 
-	static function nullableBoolBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+	static function nullableBoolBoundary(callee:OcamlFunctionPlanBinding, ?result:OcamlCallValuePlan):OcamlCallableBoundaryPlan {
 		return {
 			id: "callable-boundary:nullable-bool-fixture",
 			calleeId: NULLABLE_BOOL_CALLEE_ID,
@@ -624,7 +624,7 @@ class CallPlanFixture {
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableBoolValue(0)],
-			result: nullableBoolValue(-1),
+			result: result ?? nullableBoolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
@@ -761,7 +761,8 @@ class CallPlanFixture {
 		nullableBoolRegistry.requireCallableDeclaration(preserveNullableBoolCall);
 		nullableBoolRegistry.requireCallableDeclaration(boxNullableBoolCall);
 		seal(nullableBoolRegistry, nullableBoolCaller, new OcamlCallPlan([preserveNullableBoolCall, boxNullableBoolCall]), null);
-		seal(nullableBoolRegistry, nullableBoolCallee, new OcamlCallPlan([]), nullableBoolBoundary(nullableBoolCallee));
+		final boxedDefinitionResult = nullableBoolArgument(-1, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
+		seal(nullableBoolRegistry, nullableBoolCallee, new OcamlCallPlan([]), nullableBoolBoundary(nullableBoolCallee, boxedDefinitionResult));
 		nullableBoolRegistry.validateCallGraph();
 
 		final mixedCaller = binding("Main|Main::mixedCalls", "body:mixed-caller");

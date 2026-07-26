@@ -1,0 +1,7 @@
+-cp negative-src
+-main ResultControlRejected
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=negative-out

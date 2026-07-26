@@ -47,7 +47,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v15";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v16";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -390,7 +390,7 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != boundary.sourceModuleId
 			|| declaration.sourceTypeName != boundary.sourceTypeName
 			|| declaration.sourceFieldName != boundary.sourceFieldName
-			|| !OcamlCallPlan.sameValue(declaration.result, boundary.result)) {
+			|| !OcamlCallPlan.sameBoundaryDeclaration(boundary.result, declaration.result)) {
 			throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-mismatch]: callable boundary "${boundary.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...boundary.arguments.length) {

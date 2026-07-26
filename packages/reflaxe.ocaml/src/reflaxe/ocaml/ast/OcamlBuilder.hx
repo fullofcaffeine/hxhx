@@ -178,6 +178,17 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Mechanically applies the sealed final-body crossing at a callable boundary. */
+	function buildPlannedFunctionResult(value:OcamlCallValuePlan, body:OcamlExpr, position:Position):OcamlExpr {
+		requireCallValue(value, -1, "callable definition result", position);
+		return switch (value.conversion) {
+			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier:
+				body;
+			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
+		}
+	}
+
 	/**
 		Materializes one sealed direct-static call in its Haxe source order.
 
@@ -6716,7 +6727,12 @@ class OcamlBuilder {
 		if (isVoidType(resolvedReturnType)) {
 			body = exprAsStatement(body);
 		} else if (callableBoundary != null) {
-			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent(callableBoundary.result.inputCarrierTypeId));
+			if (needsReturnCatch && callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity)
+				return
+					callPlanInvariant('callable boundary "${callableBoundary.id}" selected a straight-line result conversion for a body with nested return control',
+					bodyExpr.pos);
+			body = buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
+			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent(callableBoundary.result.outputCarrierTypeId));
 		}
 
 		for (a in args) {

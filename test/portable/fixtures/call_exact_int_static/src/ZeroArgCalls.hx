@@ -20,7 +20,6 @@ class ZeroArgCalls {
 
 	public static function nullableFlag():Null<Bool> {
 		Sys.println("zero-null-bool-callee");
-		final result:Null<Bool> = true;
-		return result;
+		return true;
 	}
 }
