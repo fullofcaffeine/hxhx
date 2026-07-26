@@ -29,12 +29,14 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
@@ -157,22 +159,49 @@ class OcamlBuilder {
 
 	/** Resolves an admitted local carrier without repeating target type policy. */
 	function localCarrierType(localId:Int, type:Type, position:Position):OcamlTypeExpr {
+		final decision = plannedLocalRepresentation(localId, position);
+		return decision == null ? typeExprFromHaxeType(type) : OcamlTypeExpr.TIdent(decision.carrierTypeId);
+	}
+
+	/**
+		Returns the representation plan attached to the active sealed function.
+
+		Code outside a sealed function may use the legacy mapper. Once a function
+		binding is active, however, losing its companion representation plan is an
+		internal lifecycle error rather than permission to guess during syntax
+		construction.
+	**/
+	function activeLocalRepresentationPlan(position:Position):Null<OcamlLocalRepresentationPlan> {
+		if (currentLocalRepresentationPlan == null && currentFunctionPlanBinding != null)
+			return localStorageInvariant("sealed function reached syntax construction without its local representation plan", position);
+		return currentLocalRepresentationPlan;
+	}
+
+	/**
+		Resolves one local's sealed program representation, when it has migrated.
+
+		An unmutated local with no choice intentionally stays on the legacy mapper.
+		A local that has a storage decision must have a companion representation
+		choice. Every present program decision resolves against the exact program
+		revision before syntax can use it.
+	**/
+	function plannedLocalRepresentation(localId:Int, position:Position):Null<OcamlRepresentationDecision> {
 		final binding = currentFunctionPlanBinding;
-		final storagePlan = currentLocalStoragePlan;
-		if (binding == null || storagePlan == null)
-			return typeExprFromHaxeType(type);
-		final storage = storagePlan.decisionFor(localId);
-		if (storage == null)
-			return typeExprFromHaxeType(type);
-		final localRepresentations = currentLocalRepresentationPlan;
+		if (binding == null)
+			return null;
+		final localRepresentations = activeLocalRepresentationPlan(position);
 		if (localRepresentations == null)
 			return localStorageInvariant('local $localId reached syntax construction without a sealed representation plan', position);
 		final choice = localRepresentations.choiceFor(localId);
-		if (choice == null)
-			return localStorageInvariant('local $localId has storage decision ${storage.storage}, but no sealed representation choice', position);
+		if (choice == null) {
+			final storageDecision = currentLocalStoragePlan == null ? null : currentLocalStoragePlan.decisionFor(localId);
+			if (storageDecision != null)
+				return localStorageInvariant('local $localId has storage decision ${storageDecision.storage}, but no sealed representation choice', position);
+			return null;
+		}
 		return switch (choice) {
 			case Unmigrated(_):
-				typeExprFromHaxeType(type);
+				null;
 			case ProgramDecision(representationId, semanticTypeId, domain):
 				final decision = try {
 					representationRegistry.require(representationId, binding.programRevision);
@@ -184,7 +213,61 @@ class OcamlBuilder {
 						localStorageInvariant('local $localId expects $semanticTypeId in representation domain $domain, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
 						position);
 				}
-				OcamlTypeExpr.TIdent(decision.carrierTypeId);
+				decision;
+		}
+	}
+
+	/**
+		Consumes the initializer conversion sealed with one local representation.
+
+		Identity is admitted only when final typed planning already proved that the
+		initializer uses the selected carrier. Syntax construction therefore copies
+		the value directly instead of falling through the generic same-class cast.
+	**/
+	function coerceLocalInitializer(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
+		if (localRepresentations == null)
+			return coerceForAssignment(lhsType, rhs);
+		return switch (localRepresentations.initializerConversionFor(localId)) {
+			case OcamlLocalCarrierConversion.Identity:
+				final decision = plannedLocalRepresentation(localId, rhs.pos);
+				if (decision == null)
+					return localStorageInvariant('local $localId selected identity initializer conversion without a program representation', rhs.pos);
+				switch (unwrap(rhs).expr) {
+					case TConst(TNull):
+						localStorageInvariant('local $localId selected identity initializer conversion for the Haxe null sentinel', rhs.pos);
+					case _:
+						buildExpr(rhs);
+				}
+			case OcamlLocalCarrierConversion.LegacyCoercion, null:
+				coerceForAssignment(lhsType, rhs);
+		}
+	}
+
+	/**
+		Consumes the whole-value assignment conversion sealed for one local.
+
+		An identity replacement stores the already-selected carrier directly. The
+		planner admits it only after checking every replacement in the final typed
+		body, so this path never reclassifies the Haxe type.
+	**/
+	function coerceLocalAssignment(localId:Int, lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
+		if (localRepresentations == null)
+			return coerceForAssignment(lhsType, rhs);
+		return switch (localRepresentations.assignmentConversionFor(localId)) {
+			case OcamlLocalCarrierConversion.Identity:
+				final decision = plannedLocalRepresentation(localId, rhs.pos);
+				if (decision == null)
+					return localStorageInvariant('local $localId selected identity assignment conversion without a program representation', rhs.pos);
+				switch (unwrap(rhs).expr) {
+					case TConst(TNull):
+						localStorageInvariant('local $localId selected identity assignment conversion for the Haxe null sentinel', rhs.pos);
+					case _:
+						buildExpr(rhs);
+				}
+			case OcamlLocalCarrierConversion.LegacyCoercion, null:
+				coerceForAssignment(lhsType, rhs);
 		}
 	}
 
@@ -3374,7 +3457,7 @@ class OcamlBuilder {
 				if (isStdBytesType(arr.t)) {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [arrValue, buildExpr(idx)]);
 				} else {
-					final arrExpr = coerceArrayReceiver(arrValue, arr.t);
+					final arrExpr = coerceArrayReceiver(arrValue, arr);
 					final arrObjExpr = coerceArrayReceiverToObj(arrValue, arr.t);
 					switch (idxUnwrapped.expr) {
 						case _ if (idxString != null):
@@ -3833,7 +3916,34 @@ class OcamlBuilder {
 		}
 	}
 
-	inline function coerceArrayReceiver(rawExpr:OcamlExpr, t:Type):OcamlExpr {
+	/**
+			Consumes a sealed direct-carrier read when the array receiver is a planned
+			local. Every other receiver remains on the existing compatibility cast.
+		**/
+	inline function coerceArrayReceiver(rawExpr:OcamlExpr, receiver:TypedExpr):OcamlExpr {
+		return switch (unwrap(receiver).expr) {
+			case TLocal(local):
+				final localRepresentations = activeLocalRepresentationPlan(receiver.pos);
+				if (localRepresentations == null) {
+					legacyArrayReceiverCoercion(rawExpr);
+				} else {
+					switch (localRepresentations.readConversionFor(local.id)) {
+						case OcamlLocalCarrierConversion.Identity:
+							final decision = plannedLocalRepresentation(local.id, receiver.pos);
+							if (decision == null)
+								localStorageInvariant('local ${local.id} selected identity read conversion without a program representation', receiver.pos);
+							rawExpr;
+						case OcamlLocalCarrierConversion.LegacyCoercion, null:
+							legacyArrayReceiverCoercion(rawExpr);
+					}
+				}
+			case _:
+				legacyArrayReceiverCoercion(rawExpr);
+		}
+	}
+
+	/** Keeps the pre-migration array receiver cast behind one explicit legacy seam. */
+	inline function legacyArrayReceiverCoercion(rawExpr:OcamlExpr):OcamlExpr {
 		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [rawExpr]);
 	}
 
@@ -3859,7 +3969,7 @@ class OcamlBuilder {
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
-		final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+		final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForType(v.t);
 		final localType = init == null ? typeExprFromHaxeType(v.t) : localCarrierType(v.id, v.t, init.pos);
 		final initExpr = switch (init) {
 			case null:
@@ -4120,7 +4230,7 @@ class OcamlBuilder {
 				switch (e1.expr) {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						final tmp = freshTmp("assign");
-						var rhs = coerceForAssignment(v.t, e2);
+						var rhs = coerceLocalAssignment(v.id, v.t, e2);
 						final lhsRefObjSlot = isObjRefLocalId(v.id) || switch (followNoAbstracts(unwrapNullType(v.t))) {
 							case TDynamic(_):
 								true;
@@ -4256,7 +4366,7 @@ class OcamlBuilder {
 								OcamlExpr.EIdent(tmp)
 							]), false);
 						} else {
-							final coercedArrExpr = coerceArrayReceiver(arrExpr, arr.t);
+							final coercedArrExpr = coerceArrayReceiver(arrExpr, arr);
 							OcamlExpr.ELet(tmp, rhs, // `HxArray.set` already returns the assigned value, matching Haxe's
 								// assignment-expression semantics (`a[i] = v` evaluates to `v`).
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [coercedArrExpr, idxExpr, OcamlExpr.EIdent(tmp)]), false);
@@ -4511,7 +4621,7 @@ class OcamlBuilder {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]),
 							rhs
 						]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]);
-						OcamlExpr.ELet(tmpArr, useBytesOps ? arrExpr : coerceArrayReceiver(arrExpr, arr.t), OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false),
+						OcamlExpr.ELet(tmpArr, useBytesOps ? arrExpr : coerceArrayReceiver(arrExpr, arr), OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false),
 							false);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
@@ -5599,7 +5709,7 @@ class OcamlBuilder {
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
 							final useBytesOps = isStdBytesType(arr.t);
-							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr.t),
+							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
 									incDecDynamic(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
 										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
@@ -5716,7 +5826,7 @@ class OcamlBuilder {
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
 							final useBytesOps = isStdBytesType(arr.t);
-							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr.t),
+							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
 									incDec(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
 										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
@@ -5806,7 +5916,7 @@ class OcamlBuilder {
 							hasBase = true;
 						}
 					} else {
-						final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+						final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForType(v.t);
 						final localType = localCarrierType(v.id, v.t, e.pos);
 						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
 						final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
@@ -5854,7 +5964,7 @@ class OcamlBuilder {
 				case TBinop(OpAssign, lhs, rhs):
 					switch (lhs.expr) {
 						case TLocal(v) if (!isRefLocalId(v.id)):
-							final rhsExpr = coerceForAssignment(v.t, rhs);
+							final rhsExpr = coerceLocalAssignment(v.id, v.t, rhs);
 							final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
 							if (isLast) {
 								base = rhsExpr;

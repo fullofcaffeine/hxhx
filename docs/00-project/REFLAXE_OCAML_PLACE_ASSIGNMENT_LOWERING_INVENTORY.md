@@ -4,6 +4,9 @@
 
 **Date:** 2026-07-18
 
+**Last updated:** 2026-07-26 for exact `Array<Int>` local replacement and
+capture
+
 **Architecture authority:**
 [`ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`](ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md)
 
@@ -42,10 +45,14 @@ receiver-free typed schedule as well: load the ref once, add the token-selected
 signed delta, store once, and return the sealed old or computed result.
 Exact nominal `Array<Int>` simple assignment now also seals the array receiver,
 index, RHS, store, and shared RHS result in source order. It uses the direct
-`int HxArray.t` carrier without an `Obj.magic` cast. Before syntax construction,
-the compiler records a separate explanation for that source expression: Haxe
-array write behavior needs the `haxe-array-element-access-v1` implementation,
-whose checked runtime root is `HxArray`.
+`int HxArray.t` carrier without an `Obj.magic` cast. Haxe 4.3.7 can introduce a
+temporary local for an effectful receiver before this operation. That temporary
+now receives the same program-owned carrier decision and a sealed identity
+conversion, so `let base = receiver ()` replaces the earlier
+`let base = Obj.magic (receiver ())`. Before syntax construction, the compiler
+also records a separate explanation for the source operation: Haxe array write
+behavior needs the `haxe-array-element-access-v1` implementation, whose checked
+runtime root is `HxArray`.
 Exact primitive-`Int` `+=` on that same array place additionally seals the old
 element load before the RHS, Haxe `Int` addition, one store, and the computed
 result. Prefix and postfix `++` and `--` now use the same array place: each
@@ -54,23 +61,61 @@ evaluates the receiver and index once, loads once, performs the signed Haxe
 This remains an exact nominal carrier cut; `Array<Float>` and other array-like
 abstracts are not reclassified as `Array<Int>`.
 
-The first program-wide representation registry now owns one deliberately small
-carrier family: exact, non-null Haxe `Int`. It records separate decisions for
-ordinary values, mutable and captured local storage, instance fields, static
-fields, and array elements. Every decision says that the OCaml carrier is
-`int`, explains which surrounding object owns mutation, records null, identity,
-aliasing, and boxing policy, and names the proof contract and eligible profiles.
-Sealed local-storage and place plans reference those shared decisions. The
-function plan gives every mutated local an explicit answer: either use a named
-program decision or remain deliberately on the older type mapper for this
-slice. The builder follows that answer; it does not ask whether the Haxe type is
-`Int` or choose the storage domain a second time. The direct `int` proof is
-limited to storing and passing valid signed 32-bit values on the currently
-tested 64-bit OCaml hosts. Overflow-sensitive and bit-pattern-sensitive
-operations still use `HxInt`, and this proof does not admit a 32-bit OCaml
-target. `reflaxe.ocaml inspect` reports this scope as
-`exact-non-null-int-v1`, which is intentionally narrower than a complete
-program representation model.
+The program-wide representation registry now owns two deliberately small
+carrier families. Exact, non-null Haxe `Int` has separate decisions for ordinary
+values, mutable and captured local storage, instance fields, static fields, and
+array elements. Each uses OCaml `int`. Direct nominal `Array<Int>` now has
+separate decisions for an ordinary value, a mutable local, and a captured local.
+Each uses `int HxArray.t` and preserves one reference identity across aliases.
+
+Every decision records two different kinds of change instead of compressing
+them into one “mutation” label. The **storage mutation policy** says whether the
+binding that contains a value may be replaced; for example, a captured local
+uses one shared OCaml `ref` cell. The **value mutation policy** says whether the
+represented value itself can change; an `HxArray` owns element updates even
+when its surrounding binding is immutable. Keeping those questions separate
+prevents the compiler from mistaking `values = [4]`, which replaces the array,
+for `values[0] = 4`, which mutates the existing array.
+
+The array decision also states the null boundary honestly. Haxe null is the
+runtime sentinel `HxRuntime.hx_null`; it can enter a typed array carrier only
+through a separately reviewed boundary conversion and is not a valid receiver
+for `HxArray` operations. This slice copies a non-literal-null receiver value
+between two already matching carriers. It does not claim to have removed or
+made safe every array-null conversion.
+
+Sealed local-storage and place plans reference these shared decisions. Every
+mutated local still receives an explicit program decision or an explicit
+`Unmigrated` answer. A direct `Array<Int>` local is admitted only when its final
+typed declaration and every whole-value replacement use the same exact,
+non-null semantic type. The function plan separately seals its initializer,
+whole-value assignment, and read conversions as `identity`. The copied value
+can still be the runtime sentinel if an earlier, separately owned boundary
+produced it. The builder consumes those three sealed conversions instead of
+invoking the generic same-class assignment and receiver casts. The
+direct `Int` proof remains limited to storing and passing signed 32-bit values
+on the tested 64-bit OCaml hosts; overflow-sensitive and bit-pattern-sensitive
+operations still use `HxInt`, and 32-bit OCaml remains unadmitted.
+`reflaxe.ocaml inspect` reports the combined narrow scope as
+`exact-int-and-array-int-v3`.
+
+For example, this source keeps the old alias when the local is replaced:
+
+```haxe
+var values:Array<Int> = [1];
+final alias = values;
+values[0] = 2;
+values = [4];
+trace('${alias[0]}/${values[0]}'); // 2/4
+```
+
+The admitted captured form now uses `int HxArray.t ref`; initialization and
+replacement store an `HxArray` directly, and both `alias[0]` and `values[0]`
+read an `HxArray` directly. The executable regression matches Haxe 4.3.7
+interpreter, JavaScript, and Neko behavior and rejects `Obj.magic` at all three
+local conversion points. The generic Reflaxe alias pass must also retain
+distinct reference aliases when the source local can be rebound; that
+framework prerequisite is tracked separately by `haxe_ocaml-9bome.4`.
 
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
@@ -90,24 +135,24 @@ typed tree, nor a shared cross-target representation IR.
 | Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
 | Exact primitive-`Int` static `+=` | The same typed place model before `OcamlExpr` construction | Already-visible local and qualified ref cells record old-value load, RHS, Haxe `Int` addition, store, and computed result. Same-module cross-type cells remain unadmitted. |
 | Exact primitive-`Int` static `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and fixity are sealed with a receiver-free ref load, Haxe `Int` addition, store, and old/computed result. Same-module cross-type cells remain unadmitted. |
-| Exact nominal `Array<Int>` simple assignment | The same typed place model before `OcamlExpr` construction | The plan records canonical array/element/index identities, diagnostic display types, the direct typed HxArray carrier, receiver/index/RHS order, one store, the assigned result, and its runtime capability. Typedef- or abstract-backed array syntax is deliberately not inferred to have the same carrier. |
+| Exact nominal `Array<Int>` simple assignment | The same typed place model and program representation registry before `OcamlExpr` construction | The plan records canonical array/element/index identities, diagnostic display types, the direct typed HxArray carrier, receiver/index/RHS order, one store, the assigned result, and its runtime capability. A compiler-generated immutable receiver local shares the same registry decision and copies the carrier directly. Typedef- or abstract-backed array syntax is deliberately not inferred to have the same carrier. |
 | Exact primitive-`Int` `Array<Int>` `+=` | The same typed place model before `OcamlExpr` construction | Receiver and index setup feed one old-element load, the RHS, Haxe `Int` addition, one store, and the shared computed result. `HxArray` get/set and `HxInt` addition requirements are recorded before syntax. |
 | Exact primitive-`Int` `Array<Int>` `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and fixity are sealed with receiver/index setup, one load, Haxe `Int` addition, one store, and the old/new result. The legacy array-update branch is guarded against use. |
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, unadmitted field/static, and other stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
 | Straight-line local assignment | `OcamlLocalStoragePlanner` and the revision-bound function plan; `OcamlBuilder.buildBlockFromIndex` consumes the sealed choice | The planner records when a top-level write can introduce a newer immutable `let` binding. A mutated exact `Int` also references the program's internal-value decision. The builder still owns the mechanical target expression, but it no longer reclassifies that admitted local. |
-| Local mutation and capture | `OcamlLocalStoragePlanner`, `OcamlLocalRepresentationPlanner`, and the revision-bound `OcamlFunctionPlanRegistry` | Loops, nested blocks/functions, expression-position writes, compound updates, increment/decrement, and captured mutation select one shared `ref` cell with deterministic reasons. Every mutated local has a sealed representation choice. Exact non-null `Int` cells resolve their carrier through the program registry; other semantic types carry an explicit `Unmigrated` choice and retain the older mapper. Weak-polymorphism and `Obj.t` slot choices remain follow-up scope in `haxe_ocaml-9bome`. |
-| Field layout and carrier type | Program representation registry for exact non-null `Int`; `OcamlCompiler` plus `OcamlBuilder` helpers for the remainder | Exact-`Int` place plans share one carrier decision per storage domain. Record layout, other semantic types, `Obj.t`, null, defaults, receiver casts, and conversions are still selected in more than one component and remain migration debt. |
+| Local mutation, capture, and admitted receiver temporaries | `OcamlLocalStoragePlanner`, `OcamlLocalRepresentationPlanner`, and the revision-bound `OcamlFunctionPlanRegistry` | Loops, nested blocks/functions, expression-position writes, compound updates, increment/decrement, and captured mutation select one shared `ref` cell with deterministic reasons. Every mutated local has a sealed representation choice. Exact non-null `Int` cells resolve their carrier through the program registry; other mutated semantic types carry an explicit `Unmigrated` choice. Exact direct `Array<Int>` locals may select internal, mutable-local, or captured-local registry decisions only when their initializer and every whole-value replacement stay exact and non-null. Their initializer, assignment, and read conversions are each sealed as identity. Nullable wrappers, direct null initialization or replacement, generic arrays, typedef/abstract carriers, and non-`Int` arrays retain the older mapper. |
+| Field layout and carrier type | Program representation registry for exact non-null `Int` plus direct internal, mutable-local, and captured-local `Array<Int>`; `OcamlCompiler` and remaining `OcamlBuilder` helpers for the rest | Exact-`Int` place plans share one carrier decision per storage domain. Admitted array receivers and locals use direct `HxArray` decisions whose storage-replacement and represented-value mutation policies are recorded separately. Record layout, other semantic types, `Obj.t`, remaining null boundaries, defaults, other receiver casts, and cross-domain conversions are still selected in more than one component and remain migration debt. |
 | Runtime need for the admitted place family | `OcamlFunctionPlanSealer` and `OcamlRuntimeRequirementLedger` before syntax construction | Every `Int` addition and array read/write receives its own source identity, explanation, implementation feature, checked root module, profile eligibility, and deterministic revision. The lowering report verifies that every plan ID resolves to one of these records. |
 | Other runtime needs | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | These families still choose roots from generated OCaml structure. The scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. Whole-program runtime authority therefore remains incomplete. |
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,514 and
-3,705 lines respectively. Place, local-storage, representation, validation,
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,631 and
+3,864 lines respectively. Place, local-storage, representation, validation,
 reporting, and revision-sealing behavior lives in focused `lowered/` modules.
-The builder is still 174 lines smaller than the baseline; this slice added only
+The builder is still 57 lines smaller than the baseline; this slice added only
 registry lookup and invariant plumbing there. The compiler's intervening growth
 remains separate mega-file debt.
 
@@ -285,6 +330,15 @@ Schema version 6 replaces the place-only `subjectTypeId` field with a structured
 `{ "kind": "haxe-type", "id": "Int" }`; the same runtime requirement model can
 now describe compiler-generated modules, compiler rules, and declared native
 boundaries without pretending they are Haxe types.
+The current lowering-report schema is version 11. It preserves the intervening
+static-storage and program-representation records, advances the representation
+scope to `exact-int-and-array-int-v3`, and requires an array place's receiver
+identity to resolve to the same program registry as its element and index
+identities. Inspection rejects a missing, stale, wrong-carrier, or wrong-domain
+receiver reference before treating the report as valid. Version 11 replaces
+the ambiguous single mutation policy with separate storage-replacement and
+represented-value mutation policies, and admits exact mutable and captured
+`Array<Int>` locals with three independently sealed identity conversions.
 Every runtime-enabled build also writes
 `ocaml_runtime_requirement_report.json`. It resolves those explanations through
 the locked runtime-source catalog and records the exact dependency closure,
@@ -418,13 +472,22 @@ keeping the admission boundary exact.
 Upstream Haxe's typed dump shows that complex compound lvalues arrive with
 compiler-generated `base` and `index` setup locals. The place plan consumes
 those normalized local reads; their original receiver/index calls remain
-ordered immediately before the plan in the host typed body. The current local
-storage path still initializes the generated `base` through an outer
-`Obj.magic`, while the admitted array operation itself consumes the direct
-`int HxArray.t` carrier and adds no further cast. The first registry slice
-covers exact `Int`, not `Array<Int>`, so removing that earlier unsafe array
-conversion remains work for `haxe_ocaml-9bome`; it does not belong in a second
-representation rule in the place emitter.
+ordered immediately before the plan in the host typed body. The representation
+registry now selects one direct internal-value decision for both the exact
+`Array<Int>` receiver and its immutable generated `base` local. The function
+plan seals the local initializer as an identity conversion, so generated OCaml
+copies `receiver ()` directly and the place consumes the same
+`int HxArray.t` value. A source-shape fixture rejects reintroduction of the old
+outer `Obj.magic`.
+
+`test/portable/fixtures/array_int_local_rebinding` covers straight-line,
+nested-block, and captured replacement. It compares the target program with
+Haxe 4.3.7 interpreter, JavaScript, and Neko output; verifies alias identity and
+evaluation order; and rejects array-local `Obj.magic` casts in initialization,
+whole-value replacement, and reads. The target-side slice depends on the
+separate Reflaxe alias-lifetime correction in `haxe_ocaml-9bome.4`; until that
+fork change is pinned, the main repository cannot claim the combined cutover as
+landed.
 
 The following are deliberately deferred:
 
@@ -433,9 +496,11 @@ The following are deliberately deferred:
 - same-module cross-type mutable statics and their compound/update lowering
   until `haxe_ocaml-stthl` plans ref-cell declarations before type emission;
 - non-`+=` static compound operators;
-- representation decisions for types and domains beyond exact non-null `Int`,
-  including arrays, nullable values, `Dynamic`, classes, interfaces, generics,
-  imports, exports, and runtime payloads (`haxe_ocaml-9bome`);
+- representation decisions beyond exact non-null `Int` and exact direct
+  internal/mutable/captured `Array<Int>`, including nullable arrays, array
+  fields, generic/non-`Int` arrays, typedef/abstract/Vector carriers, `Dynamic`,
+  classes, interfaces, imports, exports, and runtime payloads
+  (`haxe_ocaml-9bome`);
 - weak-polymorphism, remaining `Obj.t` storage, explicit cross-domain
   conversions, and removal or proof-inventorying of broad `Obj.magic` use;
 - general call/conversion lowering (`haxe_ocaml-taef5`);

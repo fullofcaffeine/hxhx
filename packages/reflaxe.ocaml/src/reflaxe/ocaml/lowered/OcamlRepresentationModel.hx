@@ -26,24 +26,39 @@ enum abstract OcamlRepresentationDomain(String) from String to String {
 enum abstract OcamlRepresentationNullPolicy(String) from String to String {
 	/** Null is not a valid value in this admitted representation. */
 	final NonNull = "non-null";
+
+	/**
+		Haxe null remains the shared runtime sentinel at nullable boundaries.
+
+		The direct carrier can preserve and pass that sentinel only after a
+		separately reviewed boundary conversion; it does not make the sentinel a
+		valid value for target-native operations on the carrier.
+	**/
+	final RuntimeSentinel = "runtime-sentinel";
 }
 
 /** Which source-level identity promise the selected carrier preserves. */
 enum abstract OcamlRepresentationIdentityPolicy(String) from String to String {
 	/** The value has primitive value semantics and no object identity. */
 	final PrimitiveValue = "primitive-value";
+
+	/** Copies preserve the identity of one reference-bearing runtime value. */
+	final ReferenceIdentity = "reference-identity";
 }
 
 /** How source aliases can observe this represented value. */
 enum abstract OcamlRepresentationAliasingPolicy(String) from String to String {
 	/** The primitive value itself has no independently observable alias identity. */
 	final NoValueAlias = "no-value-alias";
+
+	/** Copies share one reference-bearing value and observe the same mutations. */
+	final SharedReferenceAliases = "shared-reference-aliases";
 }
 
-/** Which surrounding owner, if any, makes updates observable. */
-enum abstract OcamlRepresentationMutationPolicy(String) from String to String {
-	/** The value itself is immutable. A newer binding represents a later value. */
-	final ImmutableValue = "immutable-value";
+/** Which surrounding storage location owns replacement of the represented value. */
+enum abstract OcamlRepresentationStorageMutationPolicy(String) from String to String {
+	/** A newer immutable binding represents a later value. */
+	final ImmutableBinding = "immutable-binding";
 
 	/** One local OCaml ref cell owns shared mutation. */
 	final SharedLocalCell = "shared-local-cell";
@@ -54,14 +69,29 @@ enum abstract OcamlRepresentationMutationPolicy(String) from String to String {
 	/** The enclosing static OCaml ref cell owns mutation. */
 	final StaticFieldOwner = "static-field-owner";
 
-	/** The enclosing Haxe-array representation owns mutation. */
-	final ArrayOwner = "array-owner";
+	/** The enclosing Haxe array element owns replacement of its stored value. */
+	final ArrayElementOwner = "array-element-owner";
+}
+
+/** Whether the represented value can mutate independently of its storage location. */
+enum abstract OcamlRepresentationValueMutationPolicy(String) from String to String {
+	/** The represented value itself is immutable. */
+	final ImmutableValue = "immutable-value";
+
+	/** The carrier is a mutable runtime container shared by reference aliases. */
+	final MutableRuntimeContainer = "mutable-runtime-container";
 }
 
 /** Whether the Haxe value needs an additional target box or wrapper. */
 enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 	/** The carrier stores the value directly without a wrapper or Dynamic box. */
 	final DirectUnboxed = "direct-unboxed";
+
+	/**
+		The carrier is already the target runtime container and needs no additional
+		Dynamic box or representation wrapper.
+	**/
+	final DirectRuntimeContainer = "direct-runtime-container";
 }
 
 /** A named, reviewable claim supporting one representation choice. */
@@ -78,7 +108,8 @@ typedef OcamlRepresentationSelection = {
 	final nullPolicy:OcamlRepresentationNullPolicy;
 	final identityPolicy:OcamlRepresentationIdentityPolicy;
 	final aliasingPolicy:OcamlRepresentationAliasingPolicy;
-	final mutationPolicy:OcamlRepresentationMutationPolicy;
+	final storageMutationPolicy:OcamlRepresentationStorageMutationPolicy;
+	final valueMutationPolicy:OcamlRepresentationValueMutationPolicy;
 	final boxingPolicy:OcamlRepresentationBoxingPolicy;
 	final reason:String;
 	final proof:OcamlRepresentationProof;

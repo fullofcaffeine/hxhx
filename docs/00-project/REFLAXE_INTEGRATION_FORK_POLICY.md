@@ -224,16 +224,32 @@ The fork then added target-neutral lifecycle and scalability repairs:
   function with tens of thousands of sequential expressions no longer exhausts
   the host call stack.
 
-As of 2026-07-21, upstream `SomeRanDev/reflaxe` remains at
-`73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` is
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins that exact
-fork commit with path-independent content digest
-`3c3c18c393af08f7e60c467a459d992a9b913f0cf2ff6cf9cd235b4c1a8648e6`.
-Each fork change landed through its own reviewed pull request. PR #13's six
-required checks passed, and the pinned framework was then used for a successful
-current-source hxhx build and its focused stage0-forbidden upstream macro
-workload. Ordinary fork pushes still schedule no Haxelib publication or Pages
-deployment.
+As of 2026-07-26, upstream `SomeRanDev/reflaxe` remains at
+`73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins reviewed
+fork commit `3454b8e2a2758d379fa37c5f0767917ccbc3c876`, published on
+`agent/haxe-ocaml-9bome-4-reference-alias`, with path-independent content digest
+`66167ad5a4c5a2fa993d39766148a41dac7f65bbc6eca33b2cef6b917a516d53`.
+
+That patch prevents Reflaxe's generic alias-removal pass from replacing a
+reference snapshot with a local that can later point at a different object. For
+example, `var alias = values; values = replacement;` keeps `alias` bound to the
+original array. Direct-write analysis uses typed local identities across the
+whole function; element and field mutation still permit the existing
+optimization because they do not redirect a local binding.
+
+The patch has a repository-owned review record in `haxe_ocaml-9bome.4`, passes
+the fork's macro, program-revision, server-revision, and runtime-build checks,
+and passes the complete 76-fixture `reflaxe.ocaml` portable corpus. It is pinned
+by immutable commit and digest while the fork pull-request lifecycle remains
+separate; the branch name is only a discovery aid and does not participate in
+dependency identity.
+
+The earlier fork changes through PR #13 each landed through their own reviewed
+pull request. PR #13's six required checks passed, and that framework baseline
+was used for a successful current-source hxhx build and its focused
+stage0-forbidden upstream macro workload. Ordinary fork pushes still schedule
+no Haxelib publication or Pages deployment.
 
 This policy changes dependency governance, not product readiness. README Goals
 and North Star progress remain unchanged until supported behavior and release

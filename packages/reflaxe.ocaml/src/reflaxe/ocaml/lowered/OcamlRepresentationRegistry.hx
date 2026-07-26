@@ -10,9 +10,10 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
-import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
@@ -20,10 +21,12 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelecti
 	The registry is request-local. A decision answers a semantic question once—
 	for example, how an exact non-null Haxe `Int` is stored in a mutable local—so
 	function plans, place plans, reports, and syntax construction cannot silently
-	choose different carriers. This first slice admits only exact `Int`.
+	choose different carriers. The admitted scope covers exact `Int` plus
+	internal, mutable-local, and captured-local carriers for direct nominal
+	`Array<Int>`.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v1";
+	public static inline final MODEL_REVISION = "ocaml-representation-v3";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -74,14 +77,29 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/**
+		Returns whether a Haxe type is the direct nominal built-in `Array<Int>`.
+
+		This deliberately does not follow typedefs, abstracts, `Vector`, nullable
+		wrappers, or a generic element type. Those families need their own
+		representation and conversion proofs.
+	**/
+	public static function isExactArrayInt(type:Type):Bool {
+		return switch (type) {
+			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" && isExactInt(elementType);
+			case _:
+				false;
+		}
+	}
+
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
-		final mutationPolicy = switch (domain) {
-			case InternalValue: OcamlRepresentationMutationPolicy.ImmutableValue;
-			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationMutationPolicy.SharedLocalCell;
-			case InstanceField: OcamlRepresentationMutationPolicy.InstanceFieldOwner;
-			case StaticField: OcamlRepresentationMutationPolicy.StaticFieldOwner;
-			case ArrayElement: OcamlRepresentationMutationPolicy.ArrayOwner;
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
+			case StaticField: OcamlRepresentationStorageMutationPolicy.StaticFieldOwner;
+			case ArrayElement: OcamlRepresentationStorageMutationPolicy.ArrayElementOwner;
 		}
 		return register({
 			semanticTypeId: "Int",
@@ -90,12 +108,46 @@ class OcamlRepresentationRegistry {
 			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
 			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
 			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
-			mutationPolicy: mutationPolicy,
+			storageMutationPolicy: storageMutationPolicy,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
 			reason: exactIntReason(domain),
 			proof: {
 				id: "direct-exact-int-storage-64-v1",
 				claim: "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Registers or reuses the direct local carrier for nominal `Array<Int>`.
+
+		Immutable, mutable-local, and captured-local storage use the same runtime
+		array carrier but different storage owners. Fields, generic arrays, and ABI
+		crossings remain on their existing paths.
+	**/
+	public function selectExactArrayInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-int-domain]: exact Array<Int> is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+		};
+		return register({
+			semanticTypeId: "Array<Int>",
+			domain: domain,
+			carrierTypeId: "int HxArray.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: storageMutationPolicy,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			reason: exactArrayIntReason(domain),
+			proof: {
+				id: "direct-array-int-reference-carrier-v2",
+				claim: "HxArray.t is the target runtime's mutable reference-bearing array container. The surrounding binding or ref cell owns replacement of the whole carrier, while the carrier owns shared element mutation. Reusing that exact carrier preserves reference identity and aliases; Haxe null remains a separately converted runtime sentinel. This proof does not admit generic, nullable, typedef, abstract, Vector, field, or ABI representations."
 			},
 			profileEligibility: ["metal", "portable"]
 		});
@@ -126,7 +178,8 @@ class OcamlRepresentationRegistry {
 			nullPolicy: canonical.nullPolicy,
 			identityPolicy: canonical.identityPolicy,
 			aliasingPolicy: canonical.aliasingPolicy,
-			mutationPolicy: canonical.mutationPolicy,
+			storageMutationPolicy: canonical.storageMutationPolicy,
+			valueMutationPolicy: canonical.valueMutationPolicy,
 			boxingPolicy: canonical.boxingPolicy,
 			reason: canonical.reason,
 			proof: canonical.proof,
@@ -185,6 +238,19 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	static function exactArrayIntReason(domain:OcamlRepresentationDomain):String {
+		return switch (domain) {
+			case InternalValue:
+				"An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.";
+			case MutableLocalStorage:
+				"An exact Array<Int> mutable local stores the direct HxArray container in one ref cell; the cell owns whole-array replacement and each HxArray owns shared element mutation.";
+			case CapturedLocalStorage:
+				"An exact Array<Int> captured local stores the direct HxArray container in the ref cell shared with nested functions; the cell owns replacement and each HxArray owns shared element mutation.";
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-int-domain]: no exact Array<Int> local reason exists for $domain';
+		}
+	}
+
 	function requireProgramRevision():String {
 		if (currentProgramRevision == null)
 			throw "reflaxe.ocaml [ocaml-representation:program-not-started]: beginProgram must run before selecting or resolving representations";
@@ -215,7 +281,8 @@ class OcamlRepresentationRegistry {
 			nullPolicy: selection.nullPolicy,
 			identityPolicy: selection.identityPolicy,
 			aliasingPolicy: selection.aliasingPolicy,
-			mutationPolicy: selection.mutationPolicy,
+			storageMutationPolicy: selection.storageMutationPolicy,
+			valueMutationPolicy: selection.valueMutationPolicy,
 			boxingPolicy: selection.boxingPolicy,
 			reason: selection.reason,
 			proof: {
@@ -235,7 +302,8 @@ class OcamlRepresentationRegistry {
 			(selection.nullPolicy : String),
 			(selection.identityPolicy : String),
 			(selection.aliasingPolicy : String),
-			(selection.mutationPolicy : String),
+			(selection.storageMutationPolicy : String),
+			(selection.valueMutationPolicy : String),
 			(selection.boxingPolicy : String),
 			selection.reason,
 			selection.proof.id,
@@ -256,7 +324,8 @@ class OcamlRepresentationRegistry {
 			nullPolicy: decision.nullPolicy,
 			identityPolicy: decision.identityPolicy,
 			aliasingPolicy: decision.aliasingPolicy,
-			mutationPolicy: decision.mutationPolicy,
+			storageMutationPolicy: decision.storageMutationPolicy,
+			valueMutationPolicy: decision.valueMutationPolicy,
 			boxingPolicy: decision.boxingPolicy,
 			reason: decision.reason,
 			proof: {

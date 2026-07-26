@@ -149,6 +149,9 @@ typedef InspectionLoweredPlan = {
 	final carrierTypeId:String;
 	final representationId:Null<String>;
 	final representationReason:Null<String>;
+	final receiverSemanticTypeId:Null<String>;
+	final receiverCarrierTypeId:Null<String>;
+	final receiverRepresentationId:Null<String>;
 	final indexSemanticTypeId:Null<String>;
 	final indexCarrierTypeId:Null<String>;
 	final indexRepresentationId:Null<String>;
@@ -173,7 +176,8 @@ typedef InspectionRepresentationDecision = {
 	final nullPolicy:String;
 	final identityPolicy:String;
 	final aliasingPolicy:String;
-	final mutationPolicy:String;
+	final storageMutationPolicy:String;
+	final valueMutationPolicy:String;
 	final boxingPolicy:String;
 	final reason:String;
 	final proofId:String;

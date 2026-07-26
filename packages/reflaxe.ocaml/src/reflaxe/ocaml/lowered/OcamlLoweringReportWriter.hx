@@ -55,6 +55,13 @@ class OcamlLoweringReportWriter {
 				requireRepresentation(representationById, indexRepresentationId, entry.place.indexSemanticTypeId, entry.place.indexCarrierTypeId,
 					OcamlRepresentationDomain.InternalValue, 'Lowered place plan "${entry.id}" index');
 			}
+			final receiverRepresentationId = entry.place.receiverRepresentationId;
+			if (entry.place.kind == OcamlLoweredPlaceKind.ArrayElement) {
+				if (receiverRepresentationId == null)
+					throw 'Lowered array place plan "${entry.id}" has no receiver representation.';
+				requireRepresentation(representationById, receiverRepresentationId, entry.place.receiverSemanticTypeId, entry.place.receiverCarrierTypeId,
+					OcamlRepresentationDomain.InternalValue, 'Lowered place plan "${entry.id}" receiver');
+			}
 		}
 		final sortedStaticStorage = staticStorage.copy();
 		sortedStaticStorage.sort((left, right) -> Reflect.compare(left.key, right.key));
@@ -87,10 +94,10 @@ class OcamlLoweringReportWriter {
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
 		final report = {
-			schemaVersion: 9,
+			schemaVersion: 11,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
-			representationScope: "exact-non-null-int-v1",
+			representationScope: "exact-int-and-array-int-v3",
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,

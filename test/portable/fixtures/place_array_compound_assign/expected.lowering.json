@@ -1,7 +1,7 @@
 {
   "staticStorageModel": "typed-ocaml-static-storage",
   "model": "typed-ocaml-lowered-place",
-  "representationRevision": "sha256:d378b6821a9f607ef6270db9b67ecfa901c4ea5bb51d20ae1feaeeb999fc914b",
+  "representationRevision": "sha256:b2bed9fcdfbf3cb73787f07ee4379c5f191077af632b1940ab624f5f82c39d72",
   "staticStorage": [
     {
       "carrierTypeId": "int",
@@ -74,12 +74,37 @@
     }
   ],
   "runtimeRequirementCount": 16,
-  "schemaVersion": 9,
-  "representationCount": 4,
+  "schemaVersion": 11,
+  "representationCount": 5,
   "staticStorageRevision": "sha256:0bca8b5ac052cfc6d31fa8355842d1c884680f617b641b810bf5f6b940682de3",
   "representations": [
     {
+      "carrierTypeId": "int HxArray.t",
+      "storageMutationPolicy": "immutable-binding",
+      "proof": {
+        "id": "direct-array-int-reference-carrier-v2",
+        "claim": "HxArray.t is the target runtime's mutable reference-bearing array container. The surrounding binding or ref cell owns replacement of the whole carrier, while the carrier owns shared element mutation. Reusing that exact carrier preserves reference identity and aliases; Haxe null remains a separately converted runtime sentinel. This proof does not admit generic, nullable, typedef, abstract, Vector, field, or ABI representations."
+      },
+      "reason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
+      "id": "representation:Array<Int>:internal-value",
+      "semanticTypeId": "Array<Int>",
+      "aliasingPolicy": "shared-reference-aliases",
+      "nullPolicy": "runtime-sentinel",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "28c771fc253a5a404763e7b5dd6eaead259d543af2689a6c876906357ac6fb68",
+      "identityPolicy": "reference-identity",
+      "key": "Array<Int>|internal-value",
+      "domain": "internal-value",
+      "revision": "sha256:19344fbda0cc8e6c8303dacef60b9e175edd82818ddd0e701c78e19e74a2c722",
+      "boxingPolicy": "direct-runtime-container",
+      "valueMutationPolicy": "mutable-runtime-container"
+    },
+    {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "array-element-owner",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -97,12 +122,13 @@
       "identityPolicy": "primitive-value",
       "key": "Int|array-element",
       "domain": "array-element",
-      "revision": "sha256:b9ca3cf7a6a270e1e412b1bdbd4e3475196911c2f663d1f9266acbc74f4b71b5",
-      "mutationPolicy": "array-owner",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:ba8eb0d801980e8a4924f715f77ac459aeb843a87d94e198ee47df3bb9bfb2b1",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     },
     {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "instance-field-owner",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -120,12 +146,13 @@
       "identityPolicy": "primitive-value",
       "key": "Int|instance-field",
       "domain": "instance-field",
-      "revision": "sha256:93cb6bad4576a53bab79cb31d16b3192b2a88d0da091f174270a22a5ca8987fe",
-      "mutationPolicy": "instance-field-owner",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:2ee1c83d65e4d84569d23b64eaefeb606f15db8862ab679d0bdebf09cec6c047",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     },
     {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "immutable-binding",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -143,12 +170,13 @@
       "identityPolicy": "primitive-value",
       "key": "Int|internal-value",
       "domain": "internal-value",
-      "revision": "sha256:49d7f5238d4ed2a2d712db45d6ac7bfba6504a958a9c696c8d20a64e05679340",
-      "mutationPolicy": "immutable-value",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:00178aeb35e16ba26c812c6b59f5b000cfd161160a7acb4acdafda8eafc266b0",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     },
     {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "shared-local-cell",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -166,14 +194,14 @@
       "identityPolicy": "primitive-value",
       "key": "Int|mutable-local-storage",
       "domain": "mutable-local-storage",
-      "revision": "sha256:a11ca91ec836369e29784bf7827f503c038a3fc8fdd9d6c92cdf0c8d22d784cc",
-      "mutationPolicy": "shared-local-cell",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:c7eeeb3c8decc48a755bcf01aeca4b8c87317a95991b2badfa2c70acf443c519",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     }
   ],
   "staticStorageCount": 3,
-  "representationScope": "exact-non-null-int-v1",
-  "admittedInputRevision": "sha256:40621b78cbdcc1ea306485322478c8207238081939ff9bfd9eacbdf5c6de85bb",
+  "representationScope": "exact-int-and-array-int-v3",
+  "admittedInputRevision": "sha256:2878b59049b2377dc37a795571eeb8a481025ab946ca409924cd56f2295bdad9",
   "runtimeRequirementRevision": "sha256:47089d2d9415444956ab17f1372e17ff44abac28925498639e6e4cbc3476d1e3",
   "planCount": 6,
   "representationModel": "typed-ocaml-program-representation",
@@ -614,7 +642,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:12e3e65eaf20f1d04cdff365:place",
@@ -625,7 +653,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:12e3e65eaf20f1d04cdff365:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"
@@ -735,7 +763,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:265173b365928b1048573384:place",
@@ -746,7 +774,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:265173b365928b1048573384:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"
@@ -856,7 +884,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:2b570095e1b3b1a7d5fc4da7:place",
@@ -867,7 +895,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:2b570095e1b3b1a7d5fc4da7:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"
@@ -975,7 +1003,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:2ec87ed9e163efbae5e983b6:place",
@@ -986,7 +1014,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:2ec87ed9e163efbae5e983b6:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"
@@ -1107,7 +1135,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:4cb4b564fead7c106c0e97f9:place",
@@ -1118,7 +1146,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:4cb4b564fead7c106c0e97f9:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"
@@ -1224,7 +1252,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "receiverRepresentationReason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:efbd5666941b9bf547a79075:place",
@@ -1235,7 +1263,7 @@
         "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
-        "receiverRepresentationId": "place:efbd5666941b9bf547a79075:representation:array-receiver",
+        "receiverRepresentationId": "representation:Array<Int>:internal-value",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
         "representationId": "representation:Int:array-element"

@@ -21,8 +21,8 @@ const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_a
 const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
 const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const expectedHaxeVersion = '4.3.7'
-const expectedReflaxeCommit = '6922422448a5a0c1f8249f0682ecd4b239ebf325'
-const expectedReflaxeContentSha256 = '3c3c18c393af08f7e60c467a459d992a9b913f0cf2ff6cf9cd235b4c1a8648e6'
+const expectedReflaxeCommit = '3454b8e2a2758d379fa37c5f0767917ccbc3c876'
+const expectedReflaxeContentSha256 = '66167ad5a4c5a2fa993d39766148a41dac7f65bbc6eca33b2cef6b917a516d53'
 const summary = {
 	schemaVersion: 1,
 	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',
@@ -643,7 +643,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
 		|| scaffoldInspectionReport.representation?.status !== 'present'
-		|| scaffoldInspectionReport.representation?.scope !== 'exact-non-null-int-v1'
+		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-and-array-int-v3'
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
 		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.staticStorageCount)

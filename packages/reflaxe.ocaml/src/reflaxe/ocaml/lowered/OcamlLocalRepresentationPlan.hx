@@ -4,6 +4,15 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
+/** How syntax construction must convert one value crossing a local-carrier boundary. */
+enum abstract OcamlLocalCarrierConversion(String) from String to String {
+	/** The family has not yet migrated this conversion into the sealed plan. */
+	final LegacyCoercion = "legacy-coercion";
+
+	/** The typed value already uses exactly the selected carrier. */
+	final Identity = "identity";
+}
+
 /** One function-local reference to a program-owned representation decision. */
 typedef OcamlLocalRepresentationReference = {
 	final localId:Int;
@@ -12,7 +21,7 @@ typedef OcamlLocalRepresentationReference = {
 	final domain:OcamlRepresentationDomain;
 }
 
-/** Complete first-slice representation status for one mutated local. */
+/** Complete representation status for one admitted or mutated local. */
 enum OcamlLocalRepresentationChoice {
 	/** Syntax must resolve this exact program-owned decision. */
 	ProgramDecision(representationId:String, semanticTypeId:String, domain:OcamlRepresentationDomain);
@@ -21,18 +30,23 @@ enum OcamlLocalRepresentationChoice {
 	Unmigrated(semanticTypeId:String);
 }
 
-/** One explicit representation choice for a mutated local. */
+/** One explicit representation and local-carrier conversion choice for a local. */
 typedef OcamlLocalRepresentationDecision = {
 	final localId:Int;
 	final choice:OcamlLocalRepresentationChoice;
+	final initializerConversion:OcamlLocalCarrierConversion;
+	final assignmentConversion:OcamlLocalCarrierConversion;
+	final readConversion:OcamlLocalCarrierConversion;
 }
 
 /**
-	Immutable representation references for the mutated locals in one function.
+	Immutable representation references for admitted or mutated locals in one function.
 
 	The program registry owns carrier policy. This function plan retains only the
 	stable decision identity selected for each local, so syntax construction can
-	validate and consume the answer without reclassifying the Haxe type.
+	validate and consume the answer without reclassifying the Haxe type. Carrier
+	conversions are sealed separately so initialization, whole-value
+	replacement, and reads cannot fall back to generic same-class casts.
 **/
 class OcamlLocalRepresentationPlan {
 	final orderedDecisions:Array<OcamlLocalRepresentationDecision>;
@@ -54,6 +68,11 @@ class OcamlLocalRepresentationPlan {
 				case ProgramDecision(_, _, _):
 					admitted += 1;
 				case Unmigrated(_):
+					if (decision.initializerConversion != OcamlLocalCarrierConversion.LegacyCoercion
+						|| decision.assignmentConversion != OcamlLocalCarrierConversion.LegacyCoercion
+						|| decision.readConversion != OcamlLocalCarrierConversion.LegacyCoercion) {
+						throw 'reflaxe.ocaml [ocaml-representation:unmigrated-conversion]: local ${decision.localId} is unmigrated but selects a non-legacy carrier conversion';
+					}
 			}
 		}
 		count = orderedDecisions.length;
@@ -65,6 +84,24 @@ class OcamlLocalRepresentationPlan {
 	public function choiceFor(localId:Int):Null<OcamlLocalRepresentationChoice> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : copyChoice(decision.choice);
+	}
+
+	/** Returns the sealed initializer conversion for one planned local. */
+	public function initializerConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+		final decision = decisionsByLocalId.get(localId);
+		return decision == null ? null : decision.initializerConversion;
+	}
+
+	/** Returns the sealed whole-value assignment conversion for one planned local. */
+	public function assignmentConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+		final decision = decisionsByLocalId.get(localId);
+		return decision == null ? null : decision.assignmentConversion;
+	}
+
+	/** Returns the sealed conversion applied when syntax reads one planned local. */
+	public function readConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+		final decision = decisionsByLocalId.get(localId);
+		return decision == null ? null : decision.readConversion;
 	}
 
 	/** Returns a defensive copy of one local's registry reference. */
@@ -102,7 +139,10 @@ class OcamlLocalRepresentationPlan {
 	static function copyDecision(decision:OcamlLocalRepresentationDecision):OcamlLocalRepresentationDecision {
 		return {
 			localId: decision.localId,
-			choice: copyChoice(decision.choice)
+			choice: copyChoice(decision.choice),
+			initializerConversion: decision.initializerConversion,
+			assignmentConversion: decision.assignmentConversion,
+			readConversion: decision.readConversion
 		};
 	}
 
@@ -114,11 +154,13 @@ class OcamlLocalRepresentationPlan {
 	}
 
 	static function decisionFingerprint(decision:OcamlLocalRepresentationDecision):String {
-		return switch (decision.choice) {
+		final choiceFingerprint = switch (decision.choice) {
 			case ProgramDecision(representationId, semanticTypeId,
 				domain): '${decision.localId}|program|$representationId|$semanticTypeId|${(domain : String)}';
 			case Unmigrated(semanticTypeId): '${decision.localId}|unmigrated|$semanticTypeId';
 		}
+		return choiceFingerprint + "|initializer:" + (decision.initializerConversion : String) + "|assignment:" + (decision.assignmentConversion : String)
+			+ "|read:" + (decision.readConversion : String);
 	}
 }
 #end

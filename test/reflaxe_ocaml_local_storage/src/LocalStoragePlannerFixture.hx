@@ -1,7 +1,9 @@
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Type;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageDecision;
@@ -195,8 +197,7 @@ class LocalStoragePlannerFixture {
 		]);
 		assertTrue(canonicalA.revision == canonicalB.revision, "equivalent storage reasons should have one revision regardless of input order");
 
-		final representedInput = Context.typeExpr(macro {
-			var straight = 0;
+		final representedInput = Context.typeExpr(macro {var straight = 0;
 			straight = 1;
 			var mutable = 0;
 			mutable++;
@@ -205,24 +206,55 @@ class LocalStoragePlannerFixture {
 			captured = 1;
 			var floating = 0.0;
 			floating += 1.0;
-			straight + mutable + readCaptured() + Std.int(floating);
+			final arrayReceiver:Array<Int> = [7];
+			var mutableArray:Array<Int> = [8];
+			{
+				mutableArray = [9];
+			}
+			var capturedArray:Array<Int> = [10];
+			var replaceArray = function() capturedArray = [11];
+			replaceArray();
+			straight
+			+ mutable
+			+ readCaptured()
+			+ Std.int(floating)
+			+ arrayReceiver[0]
+			+ mutableArray[0]
+			+ capturedArray[0];
 		});
 		final representedStorage = OcamlLocalStoragePlanner.planExpression(representedInput);
 		final representations = new OcamlRepresentationRegistry();
 		representations.beginProgram("program:local-storage-fixture");
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(representedInput, representedStorage, representations);
 		final references = localRepresentations.references();
-		assertTrue(localRepresentations.count == 4 && localRepresentations.admittedCount == 3,
-			"every mutated local should have an explicit representation choice, while only exact Int is admitted in this slice");
-		assertTrue(references.length == 3, "all three mutated exact-Int locals should reference the program representation registry");
-		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 1,
+		assertTrue(localRepresentations.count == 7 && localRepresentations.admittedCount == 6,
+			"mutated locals plus the immutable Array<Int> receiver should have explicit representation choices");
+		assertTrue(references.length == 6, "three exact-Int and three exact-Array locals should reference the program registry");
+		assertTrue(references.filter(reference -> reference.semanticTypeId == "Int"
+			&& reference.domain == OcamlRepresentationDomain.InternalValue)
+			.length == 1,
 			"straight-line Int rebinding should use the internal-value representation domain");
-		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1,
+		assertTrue(references.filter(reference -> reference.semanticTypeId == "Int"
+			&& reference.domain == OcamlRepresentationDomain.MutableLocalStorage)
+			.length == 1,
 			"an incremented Int should use the mutable-local-storage representation domain");
-		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+		assertTrue(references.filter(reference -> reference.semanticTypeId == "Int"
+			&& reference.domain == OcamlRepresentationDomain.CapturedLocalStorage)
+			.length == 1,
 			"an Int shared with a nested function should use the captured-local-storage representation domain");
-		assertTrue(representations.decisions()
-			.length == 3, "the program registry should retain one exact-Int decision for each selected local-storage domain");
+		assertTrue(representations.decisions().length == 6, "the registry should retain exact Int and Array<Int> decisions for all three local domains");
+		final arrayReferences = references.filter(reference -> reference.semanticTypeId == "Array<Int>");
+		assertTrue(arrayReferences.length == 3
+			&& arrayReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 1
+			&& arrayReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1
+			&& arrayReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"immutable, mutable, and captured Array<Int> locals should select their exact storage domains");
+		for (reference in arrayReferences) {
+			assertTrue(localRepresentations.initializerConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
+				&& localRepresentations.assignmentConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
+				&& localRepresentations.readConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity,
+				"every admitted Array<Int> local should seal identity initialization, replacement, and read conversions");
+		}
 		var unmigratedFloatCount = 0;
 		for (storageDecision in representedStorage.decisions()) {
 			switch (localRepresentations.choiceFor(storageDecision.localId)) {
@@ -233,15 +265,118 @@ class LocalStoragePlannerFixture {
 		}
 		assertTrue(unmigratedFloatCount == 1,
 			"the mutated Float local should be explicitly marked as unmigrated instead of being silently reclassified during syntax construction");
+		final nullableArrayInput = Context.typeExpr(macro {
+			final nullable:Array<Int> = null;
+			nullable;
+		});
+		final nullableArrayRepresentations = OcamlLocalRepresentationPlanner.planExpression(nullableArrayInput,
+			OcamlLocalStoragePlanner.planExpression(nullableArrayInput), representations);
+		assertTrue(nullableArrayRepresentations.count == 0, "a null-initialized Array<Int> local should stay on the existing sentinel conversion path");
+		final dynamicInitializerInput = Context.typeExpr(macro {
+			final dynamicValue:Dynamic = [1];
+			final converted:Array<Int> = cast dynamicValue;
+			converted;
+		});
+		final dynamicInitializerPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicInitializerInput,
+			OcamlLocalStoragePlanner.planExpression(dynamicInitializerInput), representations);
+		assertTrue(dynamicInitializerPlan.count == 0, "an Array<Int> local initialized through a Dynamic cast should stay on the explicit conversion path");
+		final nullableReplacementInput = Context.typeExpr(macro {
+			var nullableReplacement:Array<Int> = [1];
+			{
+				nullableReplacement = null;
+			}
+			nullableReplacement;
+		});
+		final nullableReplacementPlan = OcamlLocalRepresentationPlanner.planExpression(nullableReplacementInput,
+			OcamlLocalStoragePlanner.planExpression(nullableReplacementInput), representations);
+		final nullableReplacementLocal = switch (nullableReplacementInput.expr) {
+			case TBlock(expressions):
+				switch (expressions[0].expr) {
+					case TVar(local, _): local;
+					case _: throw "nullable replacement declaration changed shape";
+				}
+			case _: throw "nullable replacement regression input changed shape";
+		}
+		switch (nullableReplacementPlan.choiceFor(nullableReplacementLocal.id)) {
+			case Unmigrated(_):
+			case _:
+				throw "a local that can receive null should remain outside direct Array<Int> carrier conversion";
+		}
+		final dynamicReplacementInput = Context.typeExpr(macro {
+			final dynamicValue:Dynamic = [1];
+			var converted:Array<Int> = [2];
+			{
+				converted = cast dynamicValue;
+			}
+			converted;
+		});
+		final dynamicReplacementPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicReplacementInput,
+			OcamlLocalStoragePlanner.planExpression(dynamicReplacementInput), representations);
+		final dynamicReplacementLocal = switch (dynamicReplacementInput.expr) {
+			case TBlock(expressions):
+				switch (expressions[1].expr) {
+					case TVar(local, _): local;
+					case _: throw "Dynamic replacement declaration changed shape";
+				}
+			case _: throw "Dynamic replacement regression input changed shape";
+		}
+		switch (dynamicReplacementPlan.choiceFor(dynamicReplacementLocal.id)) {
+			case Unmigrated(_):
+			case _:
+				throw "a local assigned through a Dynamic cast should remain outside direct Array<Int> carrier conversion";
+		}
 		final returnedReference = references[0];
 		Reflect.setField(returnedReference, "representationId", "changed-by-caller");
 		assertTrue(localRepresentations.referenceFor(returnedReference.localId).representationId != "changed-by-caller",
 			"mutating a returned local reference must not change the sealed function plan");
+		final legacyAssignmentPlan = new OcamlLocalRepresentationPlan([
+			{
+				localId: 70,
+				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
+					OcamlRepresentationDomain.InternalValue),
+				initializerConversion: OcamlLocalCarrierConversion.Identity,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.Identity
+			}
+		]);
+		final identityAssignmentPlan = new OcamlLocalRepresentationPlan([
+			{
+				localId: 70,
+				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
+					OcamlRepresentationDomain.InternalValue),
+				initializerConversion: OcamlLocalCarrierConversion.Identity,
+				assignmentConversion: OcamlLocalCarrierConversion.Identity,
+				readConversion: OcamlLocalCarrierConversion.Identity
+			}
+		]);
+		assertTrue(legacyAssignmentPlan.revision != identityAssignmentPlan.revision,
+			"changing one sealed local-carrier conversion should change the function-local representation revision");
 
 		expectFailure("duplicate local", "planned more than once", () -> new OcamlLocalStoragePlan([straightLine, straightLine]));
+		expectFailure("unmigrated identity conversion", "unmigrated but selects a non-legacy carrier conversion", () -> new OcamlLocalRepresentationPlan([
+			{
+				localId: 8,
+				choice: OcamlLocalRepresentationChoice.Unmigrated("Array<Int>"),
+				initializerConversion: OcamlLocalCarrierConversion.Identity,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+			}
+		]));
 		expectFailure("duplicate local representation choice", "more than one representation choice", () -> new OcamlLocalRepresentationPlan([
-			{localId: 7, choice: OcamlLocalRepresentationChoice.Unmigrated("Float")},
-			{localId: 7, choice: OcamlLocalRepresentationChoice.Unmigrated("Float")}
+			{
+				localId: 7,
+				choice: OcamlLocalRepresentationChoice.Unmigrated("Float"),
+				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+			},
+			{
+				localId: 7,
+				choice: OcamlLocalRepresentationChoice.Unmigrated("Float"),
+				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+			}
 		]));
 		Sys.println("REFLAXE_OCAML_LOCAL_STORAGE_PLANNER_FIXTURE:PASS");
 	}

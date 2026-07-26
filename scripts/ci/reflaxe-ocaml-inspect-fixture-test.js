@@ -81,7 +81,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-non-null-int-v1')
+	assert.strictEqual(report.representation.scope, 'exact-int-and-array-int-v3')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
@@ -331,6 +331,15 @@ try {
 	assert.strictEqual(wrongDomainReport.representation.status, 'invalid')
 	assert(wrongDomainReport.representation.message.includes('static-field')
 		&& wrongDomainReport.representation.message.includes('array-element'))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const missingMutationPolicyValue = JSON.parse(loweringBytes)
+	delete missingMutationPolicyValue.representations[0].storageMutationPolicy
+	fs.writeFileSync(loweringPath, JSON.stringify(missingMutationPolicyValue, null, 2) + '\n')
+	const missingMutationPolicy = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(missingMutationPolicy.status, 1)
+	const missingMutationPolicyReport = JSON.parse(missingMutationPolicy.stdout)
+	assert.strictEqual(missingMutationPolicyReport.representation.status, 'invalid')
+	assert(missingMutationPolicyReport.representation.message.includes('storageMutationPolicy'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const wrongStaticCountValue = JSON.parse(loweringBytes)
 	wrongStaticCountValue.staticStorageCount += 1

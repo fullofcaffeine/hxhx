@@ -282,8 +282,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 9) {
-						throw 'Unsupported lowering report schema $version; expected 9.';
+					if (version != 11) {
+						throw 'Unsupported lowering report schema $version; expected 11.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -392,7 +392,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-non-null-int-v1")
+		if (scope != "exact-int-and-array-int-v3")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -437,6 +437,19 @@ class ReflaxeOcamlInspection {
 					throw 'Typed place plan "${plan.id}" index expects ${plan.indexSemanticTypeId} -> ${plan.indexCarrierTypeId} in internal-value, but representation ${indexDecision.id} selects ${indexDecision.semanticTypeId} -> ${indexDecision.carrierTypeId} in ${indexDecision.domain}.';
 				}
 			}
+			final receiverRepresentationId = plan.receiverRepresentationId;
+			if (plan.placeKind == "array-element") {
+				if (receiverRepresentationId == null)
+					throw 'Typed array place plan "${plan.id}" has no receiver representation.';
+				if (!byId.exists(receiverRepresentationId))
+					throw 'Typed place plan "${plan.id}" refers to missing receiver representation "$receiverRepresentationId".';
+				final receiverDecision:InspectionRepresentationDecision = cast byId.get(receiverRepresentationId);
+				if (receiverDecision.semanticTypeId != plan.receiverSemanticTypeId
+					|| receiverDecision.carrierTypeId != plan.receiverCarrierTypeId
+					|| receiverDecision.domain != "internal-value") {
+					throw 'Typed place plan "${plan.id}" receiver expects ${plan.receiverSemanticTypeId} -> ${plan.receiverCarrierTypeId} in internal-value, but representation ${receiverDecision.id} selects ${receiverDecision.semanticTypeId} -> ${receiverDecision.carrierTypeId} in ${receiverDecision.domain}.';
+				}
+			}
 		}
 		return {
 			status: "present",
@@ -446,7 +459,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact-Int carrier decision${decisions.length == 1 ? "" : "s"}; other Haxe types and boundary domains remain outside this first slice.'
+			message: 'The compiler reported ${decisions.length} program-owned exact-Int or direct Array<Int> carrier decision${decisions.length == 1 ? "" : "s"}; generic, nullable, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
 		};
 	}
 
@@ -466,7 +479,8 @@ class ReflaxeOcamlInspection {
 			nullPolicy: requiredString(value, "nullPolicy"),
 			identityPolicy: requiredString(value, "identityPolicy"),
 			aliasingPolicy: requiredString(value, "aliasingPolicy"),
-			mutationPolicy: requiredString(value, "mutationPolicy"),
+			storageMutationPolicy: requiredString(value, "storageMutationPolicy"),
+			valueMutationPolicy: requiredString(value, "valueMutationPolicy"),
 			boxingPolicy: requiredString(value, "boxingPolicy"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(proof, "id"),
@@ -492,6 +506,9 @@ class ReflaxeOcamlInspection {
 			carrierTypeId: requiredString(value, "carrierTypeId"),
 			representationId: requiredString(place, "representationId"),
 			representationReason: requiredString(place, "representationReason"),
+			receiverSemanticTypeId: optionalString(place, "receiverSemanticTypeId"),
+			receiverCarrierTypeId: optionalString(place, "receiverCarrierTypeId"),
+			receiverRepresentationId: optionalString(place, "receiverRepresentationId"),
 			indexSemanticTypeId: optionalString(place, "indexSemanticTypeId"),
 			indexCarrierTypeId: optionalString(place, "indexCarrierTypeId"),
 			indexRepresentationId: optionalString(place, "indexRepresentationId"),
@@ -851,7 +868,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-non-null-int-v1",
+			scope: "exact-int-and-array-int-v3",
 			message: message
 		};
 	}

@@ -1,7 +1,7 @@
 {
   "staticStorageModel": "typed-ocaml-static-storage",
   "model": "typed-ocaml-lowered-place",
-  "representationRevision": "sha256:82e0671a66c9d7fb5639c9cab8a2aeb32dbe80b496df566c92bf1add444f2ec4",
+  "representationRevision": "sha256:51a4428514917ee3585b1986db1311fd4a307e0a47d3eef8da0a0bf7b902ce52",
   "staticStorage": [
     {
       "carrierTypeId": "int",
@@ -74,12 +74,37 @@
     }
   ],
   "runtimeRequirementCount": 6,
-  "schemaVersion": 9,
-  "representationCount": 2,
+  "schemaVersion": 11,
+  "representationCount": 3,
   "staticStorageRevision": "sha256:02e13ff4a06295844506f3e15f9c7b5d1ea2c68f65bf6edaedcee631a421b9b5",
   "representations": [
     {
+      "carrierTypeId": "int HxArray.t",
+      "storageMutationPolicy": "immutable-binding",
+      "proof": {
+        "id": "direct-array-int-reference-carrier-v2",
+        "claim": "HxArray.t is the target runtime's mutable reference-bearing array container. The surrounding binding or ref cell owns replacement of the whole carrier, while the carrier owns shared element mutation. Reusing that exact carrier preserves reference identity and aliases; Haxe null remains a separately converted runtime sentinel. This proof does not admit generic, nullable, typedef, abstract, Vector, field, or ABI representations."
+      },
+      "reason": "An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.",
+      "id": "representation:Array<Int>:internal-value",
+      "semanticTypeId": "Array<Int>",
+      "aliasingPolicy": "shared-reference-aliases",
+      "nullPolicy": "runtime-sentinel",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "d4c24802df5eaadb781a088ed4fa6b54a2d6930fe051a62e26e351c04663ad54",
+      "identityPolicy": "reference-identity",
+      "key": "Array<Int>|internal-value",
+      "domain": "internal-value",
+      "revision": "sha256:19344fbda0cc8e6c8303dacef60b9e175edd82818ddd0e701c78e19e74a2c722",
+      "boxingPolicy": "direct-runtime-container",
+      "valueMutationPolicy": "mutable-runtime-container"
+    },
+    {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "instance-field-owner",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -97,12 +122,13 @@
       "identityPolicy": "primitive-value",
       "key": "Int|instance-field",
       "domain": "instance-field",
-      "revision": "sha256:93cb6bad4576a53bab79cb31d16b3192b2a88d0da091f174270a22a5ca8987fe",
-      "mutationPolicy": "instance-field-owner",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:2ee1c83d65e4d84569d23b64eaefeb606f15db8862ab679d0bdebf09cec6c047",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     },
     {
       "carrierTypeId": "int",
+      "storageMutationPolicy": "shared-local-cell",
       "proof": {
         "id": "direct-exact-int-storage-64-v1",
         "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
@@ -120,13 +146,13 @@
       "identityPolicy": "primitive-value",
       "key": "Int|mutable-local-storage",
       "domain": "mutable-local-storage",
-      "revision": "sha256:a11ca91ec836369e29784bf7827f503c038a3fc8fdd9d6c92cdf0c8d22d784cc",
-      "mutationPolicy": "shared-local-cell",
-      "boxingPolicy": "direct-unboxed"
+      "revision": "sha256:c7eeeb3c8decc48a755bcf01aeca4b8c87317a95991b2badfa2c70acf443c519",
+      "boxingPolicy": "direct-unboxed",
+      "valueMutationPolicy": "immutable-value"
     }
   ],
   "staticStorageCount": 3,
-  "representationScope": "exact-non-null-int-v1",
+  "representationScope": "exact-int-and-array-int-v3",
   "admittedInputRevision": "sha256:16203348867cdada00723aeb22c693ff95bd601f2c453ae668bb0fe9f64004af",
   "runtimeRequirementRevision": "sha256:503590d2df750895a8897a1a542c3c7c1c07535c173a4be7d2399cce72d69f76",
   "planCount": 9,
