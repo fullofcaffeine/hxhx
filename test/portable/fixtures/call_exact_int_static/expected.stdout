@@ -22,4 +22,12 @@ nullable-bool-preserved-false=false
 bool-source
 nullable-bool-callee
 nullable-bool-boxed=true
+mixed-count-preserve
+mixed-flag-existing
+mixed-callee
+mixed-preserved=-1
+mixed-count-box
+mixed-flag-exact
+mixed-callee
+mixed-boxed=42
 instance=6

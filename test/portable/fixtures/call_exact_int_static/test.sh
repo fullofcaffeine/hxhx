@@ -4,9 +4,10 @@ set -euo pipefail
 arithmetic_source="out/Arithmetic.ml"
 nullable_source="out/NullableCalls.ml"
 bool_source="out/BoolCalls.ml"
+mixed_source="out/MixedCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -83,11 +84,27 @@ if grep -Eq 'Obj\.repr \(Obj\.repr \(observedBoolInput \(\)\)\)' "$main_source";
 	echo "The exact Bool-to-Null<Bool> call crossing must not box its argument twice" >&2
 	exit 1
 fi
+if ! grep -q '^let choose = fun (count : int) (enabled : Obj.t) ->' "$mixed_source"; then
+	echo "The mixed callable must independently select int and Obj.t parameter carriers" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = mixedCount \("preserve" : string\) 41 in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
+	echo "The mixed preserve call must evaluate, bind, and preserve both carriers in source order" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = mixedCount \("box" : string\) 42 in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
+	echo "The mixed box call must evaluate its exact Bool once and box it once after the Int argument" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.repr \(Obj\.repr \(exactMixedFlag \(\)\)\)' "$main_source"; then
+	echo "The mixed signature matrix must not box the exact Bool argument twice" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v3') {
+if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v4') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -134,13 +151,18 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		}
 	}
 }
-verifyCalls('increment', 1, 'direct-one-int-static-call-v1', 1)
-verifyCalls('add', 2, 'direct-two-int-static-call-v1', 2)
+const signatureProofId = 'direct-static-representation-signature-v1'
+if (report.calls.some(call => call.proofId !== signatureProofId)
+	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
+	throw new Error('an admitted direct-static call retained a legacy per-family proof')
+}
+verifyCalls('increment', 1, signatureProofId, 1)
+verifyCalls('add', 2, signatureProofId, 2)
 
 const nullableCalls = report.calls?.filter(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity') ?? []
 const nullableBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'NullableCalls' && item.sourceFieldName === 'identity')
 if (nullableCalls.length !== 2 || !nullableBoundary
-	|| nullableBoundary.proofId !== 'direct-one-nullable-int-static-call-v1'
+	|| nullableBoundary.proofId !== signatureProofId
 	|| nullableBoundary.arguments?.length !== 1
 	|| !isIdentity(nullableBoundary.arguments[0], 'Null<Int>', 'Obj.t')
 	|| !isIdentity(nullableBoundary.result, 'Null<Int>', 'Obj.t')) {
@@ -169,7 +191,7 @@ if (!boxCall
 	throw new Error('the exact Int argument was not recorded as one directional box into Null<Int>')
 }
 for (const call of nullableCalls) {
-	if (call.proofId !== 'direct-one-nullable-int-static-call-v1'
+	if (call.proofId !== signatureProofId
 		|| call.arguments?.length !== 1
 		|| call.evaluationSchedule?.length !== 2
 		|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
@@ -182,14 +204,14 @@ for (const call of nullableCalls) {
 const boolCalls = report.calls?.filter(item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'negate') ?? []
 const boolBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'negate')
 if (boolCalls.length !== 1 || !boolBoundary
-	|| boolBoundary.proofId !== 'direct-one-bool-static-call-v1'
+	|| boolBoundary.proofId !== signatureProofId
 	|| boolBoundary.arguments?.length !== 1
 	|| !isIdentity(boolBoundary.arguments[0], 'Bool', 'bool')
 	|| !isIdentity(boolBoundary.result, 'Bool', 'bool')) {
 	throw new Error('the lowering report did not seal the exact Bool callable definition')
 }
 const boolCall = boolCalls[0]
-if (boolCall.proofId !== 'direct-one-bool-static-call-v1'
+if (boolCall.proofId !== signatureProofId
 	|| boolCall.arguments?.length !== 1
 	|| !isIdentity(boolCall.arguments[0], 'Bool', 'bool')
 	|| !isIdentity(boolCall.result, 'Bool', 'bool')
@@ -207,7 +229,7 @@ const nullableBoolBoundary = report.callableBoundaries?.find(
 	item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'identityNullable'
 )
 if (nullableBoolCalls.length !== 3 || !nullableBoolBoundary
-	|| nullableBoolBoundary.proofId !== 'direct-one-nullable-bool-static-call-v1'
+	|| nullableBoolBoundary.proofId !== signatureProofId
 	|| nullableBoolBoundary.arguments?.length !== 1
 	|| !isIdentity(nullableBoolBoundary.arguments[0], 'Null<Bool>', 'Obj.t')
 	|| !isIdentity(nullableBoolBoundary.result, 'Null<Bool>', 'Obj.t')) {
@@ -245,7 +267,7 @@ if (nullableBoolBox.arguments[0].inputSemanticTypeId !== 'Bool'
 	throw new Error('the exact Bool argument was not recorded as one directional box into Null<Bool>')
 }
 for (const call of nullableBoolCalls) {
-	if (call.proofId !== 'direct-one-nullable-bool-static-call-v1'
+	if (call.proofId !== signatureProofId
 		|| call.arguments?.length !== 1
 		|| call.evaluationSchedule?.length !== 2
 		|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
@@ -257,9 +279,50 @@ for (const call of nullableBoolCalls) {
 		throw new Error('the exact Null<Bool> call does not materialize its argument before invocation')
 	}
 }
+const mixedCalls = report.calls?.filter(item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'choose') ?? []
+const mixedBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'choose')
+if (mixedCalls.length !== 2 || !mixedBoundary
+	|| mixedBoundary.proofId !== signatureProofId
+	|| mixedBoundary.arguments?.length !== 2
+	|| !isIdentity(mixedBoundary.arguments[0], 'Int', 'int')
+	|| !isIdentity(mixedBoundary.arguments[1], 'Null<Bool>', 'Obj.t')
+	|| !isIdentity(mixedBoundary.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the lowering report did not seal the mixed Int, Null<Bool> -> Null<Int> callable definition')
+}
+const mixedPreserve = mixedCalls.find(call => call.arguments?.[1]?.conversion === 'preserve-nullable-bool-carrier')
+const mixedBox = mixedCalls.find(call => call.arguments?.[1]?.conversion === 'box-exact-bool-to-nullable-bool')
+if (!mixedPreserve || !mixedBox
+	|| !isIdentity(mixedPreserve.arguments[0], 'Int', 'int')
+	|| !isIdentity(mixedPreserve.result, 'Null<Int>', 'Obj.t')
+	|| mixedPreserve.arguments[1].inputSemanticTypeId !== 'Null<Bool>'
+	|| mixedPreserve.arguments[1].inputCarrierTypeId !== 'Obj.t'
+	|| mixedPreserve.arguments[1].outputSemanticTypeId !== 'Null<Bool>'
+	|| mixedPreserve.arguments[1].outputCarrierTypeId !== 'Obj.t'
+	|| mixedPreserve.arguments[1].proofId !== 'nullable-bool-call-carrier-preserve-v1'
+	|| !isIdentity(mixedBox.arguments[0], 'Int', 'int')
+	|| !isIdentity(mixedBox.result, 'Null<Int>', 'Obj.t')
+	|| mixedBox.arguments[1].inputSemanticTypeId !== 'Bool'
+	|| mixedBox.arguments[1].inputCarrierTypeId !== 'bool'
+	|| mixedBox.arguments[1].outputSemanticTypeId !== 'Null<Bool>'
+	|| mixedBox.arguments[1].outputCarrierTypeId !== 'Obj.t'
+	|| mixedBox.arguments[1].proofId !== 'nullable-bool-call-box-v1') {
+	throw new Error('the mixed call occurrences did not preserve their independent directional crossings')
+}
+for (const call of mixedCalls) {
+	if (call.proofId !== signatureProofId
+		|| call.arguments?.length !== 2
+		|| call.evaluationSchedule?.length !== 3
+		|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
+		|| call.evaluationSchedule[0]?.argumentIndex !== 0
+		|| call.evaluationSchedule[1]?.kind !== 'materialize-argument'
+		|| call.evaluationSchedule[1]?.argumentIndex !== 1
+		|| call.evaluationSchedule[2]?.kind !== 'invoke-callee') {
+		throw new Error('the mixed signature did not retain its evaluate-bind-invoke schedule')
+	}
+}
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
-	throw new Error('an instance method entered the first direct-static call family')
+	throw new Error('an instance method entered the first direct-static call kind')
 }
 NODE
 

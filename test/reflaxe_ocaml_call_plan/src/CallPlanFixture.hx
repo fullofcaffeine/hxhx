@@ -26,6 +26,8 @@ import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 **/
 @:access(reflaxe.ocaml.OcamlCompiler)
 class CallPlanFixture {
+	static var expectedFailureIndex = 0;
+
 	static inline final PROGRAM_REVISION = "program:call-plan-fixture";
 	static inline final CALLEE_ID = "Arithmetic|Arithmetic::increment";
 	static inline final CALL_ID = "call:fixture";
@@ -39,6 +41,9 @@ class CallPlanFixture {
 	static inline final NULLABLE_BOOL_CALLEE_ID = "BoolCalls|BoolCalls::identityNullable";
 	static inline final NULLABLE_BOOL_PRESERVE_CALL_ID = "call:nullable-bool-preserve-fixture";
 	static inline final NULLABLE_BOOL_BOX_CALL_ID = "call:nullable-bool-box-fixture";
+	static inline final MIXED_CALLEE_ID = "MixedCalls|MixedCalls::choose";
+	static inline final MIXED_PRESERVE_CALL_ID = "call:mixed-preserve-fixture";
+	static inline final MIXED_BOX_CALL_ID = "call:mixed-box-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -182,7 +187,7 @@ class CallPlanFixture {
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
@@ -201,7 +206,7 @@ class CallPlanFixture {
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-two-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
@@ -220,7 +225,7 @@ class CallPlanFixture {
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
@@ -239,7 +244,7 @@ class CallPlanFixture {
 			result: boolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
@@ -258,8 +263,27 @@ class CallPlanFixture {
 			result: nullableBoolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
+	static function mixedDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:mixed-fixture",
+			calleeId: MIXED_CALLEE_ID,
+			sourceModuleId: "MixedCalls",
+			sourceTypeName: "MixedCalls",
+			sourceFieldName: "choose",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), nullableBoolValue(1)],
+			result: nullableValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture mixed signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture mixed signature",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
 		};
@@ -288,7 +312,7 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(CALL_ID, 1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -311,7 +335,7 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(TWO_CALL_ID, 2),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-two-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -334,7 +358,7 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -357,7 +381,7 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(BOOL_CALL_ID, 1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -380,8 +404,31 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function mixedCall(caller:OcamlFunctionPlanBinding, id:String, sourceMin:Int, conversion:OcamlCallCarrierConversion):OcamlCallDecision {
+		return {
+			id: id,
+			source: {file: "CallPlanFixture.hx", min: sourceMin, max: sourceMin + 1},
+			calleeId: MIXED_CALLEE_ID,
+			sourceModuleId: "MixedCalls",
+			sourceTypeName: "MixedCalls",
+			sourceFieldName: "choose",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), nullableBoolArgument(1, conversion)],
+			result: nullableValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 2),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture mixed signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture mixed signature",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -425,7 +472,7 @@ class CallPlanFixture {
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -446,7 +493,7 @@ class CallPlanFixture {
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-two-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -467,7 +514,7 @@ class CallPlanFixture {
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-int-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -488,7 +535,7 @@ class CallPlanFixture {
 			result: boolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -509,8 +556,29 @@ class CallPlanFixture {
 			result: nullableBoolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
-			proofId: "direct-one-nullable-bool-static-call-v1",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function mixedBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:mixed-fixture",
+			calleeId: MIXED_CALLEE_ID,
+			sourceModuleId: "MixedCalls",
+			sourceTypeName: "MixedCalls",
+			sourceFieldName: "choose",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), nullableBoolValue(1)],
+			result: nullableValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture mixed signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture mixed signature",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
 			bodyRevision: callee.bodyRevision,
@@ -524,6 +592,7 @@ class CallPlanFixture {
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {
+		expectedFailureIndex += 1;
 		var message:Null<String> = null;
 		try {
 			operation();
@@ -531,7 +600,8 @@ class CallPlanFixture {
 			message = Std.string(error);
 		}
 		if (message == null || message.indexOf(code) < 0)
-			Context.error('Expected failure containing "$code", received ${message == null ? "no failure" : message}.', Context.currentPos());
+			Context.error('Expected failure $expectedFailureIndex containing "$code", received ${message == null ? "no failure" : message}.',
+				Context.currentPos());
 	}
 
 	/**
@@ -623,6 +693,19 @@ class CallPlanFixture {
 		seal(nullableBoolRegistry, nullableBoolCallee, new OcamlCallPlan([]), nullableBoolBoundary(nullableBoolCallee));
 		nullableBoolRegistry.validateCallGraph();
 
+		final mixedCaller = binding("Main|Main::mixedCalls", "body:mixed-caller");
+		final mixedCallee = binding("MixedCalls|MixedCalls::choose", "body:mixed-callee");
+		final preserveMixedCall = mixedCall(mixedCaller, MIXED_PRESERVE_CALL_ID, 14, OcamlCallCarrierConversion.PreserveNullableBoolCarrier);
+		final boxMixedCall = mixedCall(mixedCaller, MIXED_BOX_CALL_ID, 16, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
+		final mixedRegistry = new OcamlFunctionPlanRegistry();
+		mixedRegistry.beginProgram(PROGRAM_REVISION);
+		mixedRegistry.registerCallableDeclaration(mixedDeclaration());
+		mixedRegistry.requireCallableDeclaration(preserveMixedCall);
+		mixedRegistry.requireCallableDeclaration(boxMixedCall);
+		seal(mixedRegistry, mixedCaller, new OcamlCallPlan([preserveMixedCall, boxMixedCall]), null);
+		seal(mixedRegistry, mixedCallee, new OcamlCallPlan([]), mixedBoundary(mixedCallee));
+		mixedRegistry.validateCallGraph();
+
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
 
@@ -669,6 +752,11 @@ class CallPlanFixture {
 		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(repeatedFirstArgument));
 		final skippedFirstArgument = copyCall(selectedTwoArgumentCall, null, null, null, null, null, [twoSchedule[1], twoSchedule[2]]);
 		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(skippedFirstArgument));
+
+		final zeroArgumentCall = copyCall(selectedCall, null, null, []);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(zeroArgumentCall));
+		final threeArgumentCall = copyCall(selectedTwoArgumentCall, null, null, [value(0), value(1), value(2)]);
+		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(threeArgumentCall));
 
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{
@@ -764,7 +852,7 @@ class CallPlanFixture {
 		expectThrows("invalid-plan", () -> boolRegistry.requireCallableDeclaration(wrongBoolProof));
 
 		final wrongBoolFamilyProof = copyCall(selectedBoolCall);
-		Reflect.setField(wrongBoolFamilyProof, "proofId", "direct-one-int-static-call-v1");
+		Reflect.setField(wrongBoolFamilyProof, "proofId", "wrong-signature-proof");
 		expectThrows("invalid-plan", () -> boolRegistry.requireCallableDeclaration(wrongBoolFamilyProof));
 
 		final conflictingBoolBoundary = boolBoundary(boolCallee);
@@ -802,6 +890,22 @@ class CallPlanFixture {
 		conflictingNullableBoolRegistry.beginProgram(PROGRAM_REVISION);
 		conflictingNullableBoolRegistry.registerCallableDeclaration(nullableBoolDeclaration());
 		expectThrows("invalid-plan", () -> seal(conflictingNullableBoolRegistry, nullableBoolCallee, new OcamlCallPlan([]), conflictingNullableBoolBoundary));
+
+		final wrongMixedArgument = copyCall(preserveMixedCall, null, null, [
+			boolValue(0),
+			nullableBoolArgument(1, OcamlCallCarrierConversion.PreserveNullableBoolCarrier)
+		]);
+		expectThrows("declaration-argument-mismatch", () -> mixedRegistry.requireCallableDeclaration(wrongMixedArgument));
+
+		final wrongMixedResult = copyCall(preserveMixedCall, null, null, null, boolValue(-1));
+		expectThrows("declaration-mismatch", () -> mixedRegistry.requireCallableDeclaration(wrongMixedResult));
+
+		final conflictingMixedBoundary = mixedBoundary(mixedCallee);
+		Reflect.setField(conflictingMixedBoundary.arguments[0], "outputCarrierTypeId", "bool");
+		final conflictingMixedRegistry = new OcamlFunctionPlanRegistry();
+		conflictingMixedRegistry.beginProgram(PROGRAM_REVISION);
+		conflictingMixedRegistry.registerCallableDeclaration(mixedDeclaration());
+		expectThrows("invalid-plan", () -> seal(conflictingMixedRegistry, mixedCallee, new OcamlCallPlan([]), conflictingMixedBoundary));
 
 		final staleCaller = copyCall(selectedCall, null, null, null, null, "body:stale");
 		final staleCallerRegistry = new OcamlFunctionPlanRegistry();

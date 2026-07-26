@@ -35,6 +35,21 @@ class Main {
 		return true;
 	}
 
+	static function mixedCount(label:String, value:Int):Int {
+		Sys.println("mixed-count-" + label);
+		return value;
+	}
+
+	static function exactMixedFlag():Bool {
+		Sys.println("mixed-flag-exact");
+		return true;
+	}
+
+	static function observeExistingMixedFlag(value:Null<Bool>):Null<Bool> {
+		Sys.println("mixed-flag-existing");
+		return value;
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -60,6 +75,11 @@ class Main {
 		Sys.println(preservedFalseBool == null ? "nullable-bool-preserved-false=missing" : (preservedFalseBool ? "nullable-bool-preserved-false=true" : "nullable-bool-preserved-false=false"));
 		final boxedTrueBool = BoolCalls.identityNullable(observedBoolInput());
 		Sys.println(boxedTrueBool == null ? "nullable-bool-boxed=missing" : (boxedTrueBool ? "nullable-bool-boxed=true" : "nullable-bool-boxed=false"));
+		final existingMixedFlag:Null<Bool> = false;
+		final preservedMixed = MixedCalls.choose(mixedCount("preserve", 41), observeExistingMixedFlag(existingMixedFlag));
+		Sys.println("mixed-preserved=" + (preservedMixed == null ? -1 : preservedMixed));
+		final boxedMixed = MixedCalls.choose(mixedCount("box", 42), exactMixedFlag());
+		Sys.println("mixed-boxed=" + (boxedMixed == null ? -1 : boxedMixed));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

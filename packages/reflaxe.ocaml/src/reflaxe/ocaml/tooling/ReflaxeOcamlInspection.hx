@@ -44,6 +44,7 @@ class ReflaxeOcamlInspection {
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
+	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v1";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -367,7 +368,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v3")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v4")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -390,7 +391,7 @@ class ReflaxeOcamlInspection {
 			for (index in 0...boundary.arguments.length)
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
-			validateCallFamily(boundary.arguments, boundary.result, boundary.proofId, true, 'Callable boundary "${boundary.id}"');
+			validateCallSignature(boundary.arguments, boundary.result, boundary.proofId, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
 		}
@@ -404,7 +405,7 @@ class ReflaxeOcamlInspection {
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			validateCallValue(call.result, representationById, 'Call "${call.id}" result');
-			validateCallFamily(call.arguments, call.result, call.proofId, false, 'Call "${call.id}"');
+			validateCallSignature(call.arguments, call.result, call.proofId, false, 'Call "${call.id}"');
 			final boundary = boundaryByCallee.get(call.calleeId);
 			if (boundary == null)
 				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
@@ -584,65 +585,37 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
-	static function validateCallFamily(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, requiresIdentityBoundary:Bool,
+	static function validateCallSignature(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, requiresIdentityBoundary:Bool,
 			owner:String):Void {
-		final exactIntFamily = Lambda.foreach(arguments,
-			value -> value.conversion == "identity"
-				&& isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Int", "int")
-				&& isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Int", "int"))
-			&& result.conversion == "identity"
-			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Int", "int")
-			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Int", "int");
-		if (exactIntFamily) {
-			final expectedProofId = arguments.length == 1 ? "direct-one-int-static-call-v1" : "direct-two-int-static-call-v1";
-			if (proofId != expectedProofId)
-				throw '$owner has proof "$proofId" instead of "$expectedProofId".';
-			return;
+		if (arguments.length < 1 || arguments.length > 2)
+			throw '$owner has ${arguments.length} arguments outside the admitted arities 1 and 2.';
+		if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
+			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
+		if (result.conversion != "identity"
+			|| !isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			|| !isAdmittedCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
+			throw '$owner must preserve one exact admitted result carrier.';
 		}
-
-		final exactBoolFamily = arguments.length == 1
-			&& arguments[0].conversion == "identity"
-			&& isCallValueSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId, "Bool", "bool")
-			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Bool", "bool")
-			&& result.conversion == "identity"
-			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Bool", "bool")
-			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Bool", "bool");
-		if (exactBoolFamily) {
-			if (proofId != "direct-one-bool-static-call-v1")
-				throw '$owner has proof "$proofId" instead of "direct-one-bool-static-call-v1".';
-			return;
-		}
-
-		final nullableIntFamily = arguments.length == 1
-			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Null<Int>", "Obj.t")
-			&& result.conversion == "identity"
-			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Int>", "Obj.t")
-			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Int>", "Obj.t");
-		if (nullableIntFamily && proofId == "direct-one-nullable-int-static-call-v1") {
-			if (requiresIdentityBoundary) {
-				if (arguments[0].conversion != "identity")
-					throw '$owner must describe an identity carrier value.';
-			} else if (arguments[0].conversion != "preserve-nullable-int-carrier"
-				&& arguments[0].conversion != "box-exact-int-to-nullable-int") {
-				throw '$owner must explicitly preserve an existing Null<Int> carrier or box one exact Int.';
+		for (argument in arguments) {
+			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
+				throw '$owner contains an argument outside the closed direct-static representation matrix.';
 			}
-			return;
+			if (requiresIdentityBoundary && argument.conversion != "identity")
+				throw '$owner must describe identity carrier values at the callable boundary.';
+			if (!requiresIdentityBoundary
+				&& (argument.outputSemanticTypeId == "Null<Int>" || argument.outputSemanticTypeId == "Null<Bool>")
+				&& argument.conversion == "identity") {
+				throw '$owner must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive.';
+			}
 		}
+	}
 
-		final nullableBoolFamily = arguments.length == 1
-			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Null<Bool>", "Obj.t")
-			&& result.conversion == "identity"
-			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Bool>", "Obj.t")
-			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Bool>", "Obj.t");
-		if (!nullableBoolFamily || proofId != "direct-one-nullable-bool-static-call-v1")
-			throw '$owner does not match an admitted exact Int, Bool, Null<Int>, or Null<Bool> direct-call family.';
-		if (requiresIdentityBoundary) {
-			if (arguments[0].conversion != "identity")
-				throw '$owner must describe an identity carrier value.';
-		} else if (arguments[0].conversion != "preserve-nullable-bool-carrier"
-			&& arguments[0].conversion != "box-exact-bool-to-nullable-bool") {
-			throw '$owner must explicitly preserve an existing Null<Bool> carrier or box one exact Bool.';
-		}
+	static function isAdmittedCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Int", "int")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Bool", "bool")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Int>", "Obj.t")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t");
 	}
 
 	static function isCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String, expectedSemanticTypeId:String,
