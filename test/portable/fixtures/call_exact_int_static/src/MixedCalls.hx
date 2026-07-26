@@ -4,4 +4,9 @@ class MixedCalls {
 		Sys.println("mixed-callee");
 		return enabled ? count : null;
 	}
+
+	public static function chooseMany(prefix:Int, enabled:Null<Bool>, invert:Bool, fallback:Null<Int>):Null<Int> {
+		Sys.println("mixed-many-callee");
+		return enabled == invert ? prefix : fallback;
+	}
 }

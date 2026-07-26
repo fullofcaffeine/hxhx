@@ -30,4 +30,16 @@ mixed-count-box
 mixed-flag-exact
 mixed-callee
 mixed-boxed=42
+mixed-count-many-preserve
+mixed-flag-existing
+mixed-decision-preserve
+mixed-fallback-existing
+mixed-many-callee
+mixed-many-preserved=-1
+mixed-count-many-box
+mixed-flag-exact
+mixed-decision-box
+mixed-fallback-exact
+mixed-many-callee
+mixed-many-boxed=84
 instance=6

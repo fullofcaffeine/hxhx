@@ -368,7 +368,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v4")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v5")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -430,8 +430,6 @@ class ReflaxeOcamlInspection {
 
 	static function callValue(value:Dynamic):InspectionCallValue {
 		final conversion = requiredString(value, "conversion");
-		if (conversion != "identity" && conversion != "preserve-nullable-int-carrier" && conversion != "box-exact-int-to-nullable-int")
-			throw 'Unsupported typed-call carrier conversion "$conversion".';
 		return {
 			index: requiredInt(value, "index"),
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
@@ -448,8 +446,8 @@ class ReflaxeOcamlInspection {
 
 	static function callValues(value:Dynamic, field:String):Array<InspectionCallValue> {
 		final values = [for (entry in requiredArray(value, field)) callValue(entry)];
-		if (values.length < 1 || values.length > 2)
-			throw 'Typed-call field "$field" has ${values.length} values outside the admitted arities 1 and 2.';
+		if (values.length < 1)
+			throw 'Typed-call field "$field" must contain at least one admitted value.';
 		for (index in 0...values.length) {
 			if (values[index].index != index)
 				throw 'Typed-call field "$field" has value index ${values[index].index} at position $index.';
@@ -587,8 +585,8 @@ class ReflaxeOcamlInspection {
 
 	static function validateCallSignature(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, requiresIdentityBoundary:Bool,
 			owner:String):Void {
-		if (arguments.length < 1 || arguments.length > 2)
-			throw '$owner has ${arguments.length} arguments outside the admitted arities 1 and 2.';
+		if (arguments.length < 1)
+			throw '$owner must have at least one admitted argument.';
 		if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
 		if (result.conversion != "identity"

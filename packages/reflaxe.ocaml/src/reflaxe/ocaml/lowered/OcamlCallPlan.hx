@@ -92,7 +92,7 @@ typedef OcamlCallableDeclarationPlan = {
 /**
 	The callable shape exported by one exact final Haxe function body.
 
-	This boundary deliberately admits ordinary static methods whose one or two
+	This boundary deliberately admits ordinary static methods whose one or more
 	required arguments and result independently use the closed exact `Int`,
 	`Bool`, `Null<Int>`, or `Null<Bool>` representation matrix. Later call kinds
 	extend the planner rather than teaching the syntax builder new rules.
@@ -447,8 +447,8 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe callee identity';
 		if (kind != OcamlCallKind.DirectStaticHaxeMethod)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
-		if (arguments.length < 1 || arguments.length > 2)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has ${arguments.length} arguments outside the admitted arities 1 and 2';
+		if (arguments.length < 1)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must have at least one admitted argument';
 		for (index in 0...arguments.length)
 			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
 		requireDirectStaticValue(result, -1, '$owner result');
@@ -511,7 +511,7 @@ class OcamlCallPlan {
 
 	/** Builds the complete closed schedule for one admitted direct call. */
 	public static function evaluationSchedule(callId:String, argumentCount:Int):Array<OcamlCallEvaluationStep> {
-		if (argumentCount < 1 || argumentCount > 2)
+		if (argumentCount < 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported direct-call arity $argumentCount';
 		final schedule:Array<OcamlCallEvaluationStep> = [
 			for (index in 0...argumentCount)
@@ -537,7 +537,7 @@ class OcamlCallPlan {
 /**
 	Selects the first closed typed-call kind from final Haxe expressions.
 
-	Only an ordinary, non-extern, non-generic static method whose one or two
+	Only an ordinary, non-extern, non-generic static method whose one or more
 	required arguments and result independently select exact `Int`, `Bool`,
 	`Null<Int>`, or `Null<Bool>` representations is admitted. Everything else is
 	left explicitly unmigrated for a later call-kind or representation slice.
@@ -593,7 +593,7 @@ class OcamlCallPlanner {
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		return switch (expression.expr) {
-			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (arguments.length >= 1 && arguments.length <= 2):
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments) if (arguments.length >= 1):
 				final classType = classRef.get();
 				final field = fieldRef.get();
 				final declaration = declarationFor(classType, field, representations, binding.programRevision, binding.pipelineRevision);
@@ -726,7 +726,6 @@ class OcamlCallPlanner {
 		return switch (TypeTools.follow(field.type)) {
 			case TFun(arguments, result)
 				if (arguments.length >= 1
-					&& arguments.length <= 2
 					&& Lambda.foreach(arguments, argument -> !argument.opt && semanticTypeId(argument.t) != null)
 					&& semanticTypeId(result) != null):
 				{argumentTypes: arguments.map(argument -> argument.t), resultType: result};

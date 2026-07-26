@@ -145,16 +145,15 @@ class OcamlFunctionPlanSealer {
 	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String,
 			position:Position):Void {
 		for (call in calls.decisions()) {
-			if (call.arguments.length < 1 || call.arguments.length > 2)
-				fail('call "${call.id}" has ${call.arguments.length} arguments outside the admitted arities 1 and 2', position);
+			if (call.arguments.length < 1)
+				fail('call "${call.id}" must have at least one admitted argument', position);
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], programRevision, 'call "${call.id}" argument $index', position);
 			validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
 		}
 		if (callableBoundary != null) {
-			if (callableBoundary.arguments.length < 1 || callableBoundary.arguments.length > 2)
-				fail('callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} arguments outside the admitted arities 1 and 2',
-					position);
+			if (callableBoundary.arguments.length < 1)
+				fail('callable boundary "${callableBoundary.id}" must have at least one admitted argument', position);
 			for (index in 0...callableBoundary.arguments.length)
 				validateCallValue(callableBoundary.arguments[index], programRevision, 'callable boundary "${callableBoundary.id}" argument $index', position);
 			validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);

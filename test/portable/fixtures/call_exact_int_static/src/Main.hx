@@ -50,6 +50,21 @@ class Main {
 		return value;
 	}
 
+	static function mixedDecision(label:String, value:Bool):Bool {
+		Sys.println("mixed-decision-" + label);
+		return value;
+	}
+
+	static function observeExistingMixedFallback(value:Null<Int>):Null<Int> {
+		Sys.println("mixed-fallback-existing");
+		return value;
+	}
+
+	static function exactMixedFallback():Int {
+		Sys.println("mixed-fallback-exact");
+		return 7;
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -80,6 +95,12 @@ class Main {
 		Sys.println("mixed-preserved=" + (preservedMixed == null ? -1 : preservedMixed));
 		final boxedMixed = MixedCalls.choose(mixedCount("box", 42), exactMixedFlag());
 		Sys.println("mixed-boxed=" + (boxedMixed == null ? -1 : boxedMixed));
+		final existingMixedFallback:Null<Int> = null;
+		final preservedMany = MixedCalls.chooseMany(mixedCount("many-preserve", 83), observeExistingMixedFlag(existingMixedFlag),
+			mixedDecision("preserve", true), observeExistingMixedFallback(existingMixedFallback));
+		Sys.println("mixed-many-preserved=" + (preservedMany == null ? -1 : preservedMany));
+		final boxedMany = MixedCalls.chooseMany(mixedCount("many-box", 84), exactMixedFlag(), mixedDecision("box", true), exactMixedFallback());
+		Sys.println("mixed-many-boxed=" + (boxedMany == null ? -1 : boxedMany));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

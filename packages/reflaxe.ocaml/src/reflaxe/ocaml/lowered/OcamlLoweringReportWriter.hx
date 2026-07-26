@@ -189,7 +189,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v4",
+			callModel: "typed-ocaml-directional-call-boundary-v5",
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,

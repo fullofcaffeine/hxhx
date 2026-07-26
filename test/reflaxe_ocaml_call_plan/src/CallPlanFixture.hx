@@ -278,7 +278,7 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
-			arguments: [value(0), nullableBoolValue(1)],
+			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture mixed signature",
@@ -413,7 +413,8 @@ class CallPlanFixture {
 		};
 	}
 
-	static function mixedCall(caller:OcamlFunctionPlanBinding, id:String, sourceMin:Int, conversion:OcamlCallCarrierConversion):OcamlCallDecision {
+	static function mixedCall(caller:OcamlFunctionPlanBinding, id:String, sourceMin:Int, boolConversion:OcamlCallCarrierConversion,
+			intConversion:OcamlCallCarrierConversion):OcamlCallDecision {
 		return {
 			id: id,
 			source: {file: "CallPlanFixture.hx", min: sourceMin, max: sourceMin + 1},
@@ -422,9 +423,14 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
-			arguments: [value(0), nullableBoolArgument(1, conversion)],
+			arguments: [
+				value(0),
+				nullableBoolArgument(1, boolConversion),
+				boolValue(2),
+				nullableArgument(3, intConversion)
+			],
 			result: nullableValue(-1),
-			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 2),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 4),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture mixed signature",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
@@ -573,7 +579,7 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
-			arguments: [value(0), nullableBoolValue(1)],
+			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture mixed signature",
@@ -695,8 +701,10 @@ class CallPlanFixture {
 
 		final mixedCaller = binding("Main|Main::mixedCalls", "body:mixed-caller");
 		final mixedCallee = binding("MixedCalls|MixedCalls::choose", "body:mixed-callee");
-		final preserveMixedCall = mixedCall(mixedCaller, MIXED_PRESERVE_CALL_ID, 14, OcamlCallCarrierConversion.PreserveNullableBoolCarrier);
-		final boxMixedCall = mixedCall(mixedCaller, MIXED_BOX_CALL_ID, 16, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
+		final preserveMixedCall = mixedCall(mixedCaller, MIXED_PRESERVE_CALL_ID, 14, OcamlCallCarrierConversion.PreserveNullableBoolCarrier,
+			OcamlCallCarrierConversion.PreserveNullableIntCarrier);
+		final boxMixedCall = mixedCall(mixedCaller, MIXED_BOX_CALL_ID, 16, OcamlCallCarrierConversion.BoxExactBoolToNullableBool,
+			OcamlCallCarrierConversion.BoxExactIntToNullableInt);
 		final mixedRegistry = new OcamlFunctionPlanRegistry();
 		mixedRegistry.beginProgram(PROGRAM_REVISION);
 		mixedRegistry.registerCallableDeclaration(mixedDeclaration());
@@ -705,6 +713,15 @@ class CallPlanFixture {
 		seal(mixedRegistry, mixedCaller, new OcamlCallPlan([preserveMixedCall, boxMixedCall]), null);
 		seal(mixedRegistry, mixedCallee, new OcamlCallPlan([]), mixedBoundary(mixedCallee));
 		mixedRegistry.validateCallGraph();
+		final mixedSchedule = preserveMixedCall.evaluationSchedule;
+		final reorderedMixedArguments = copyCall(preserveMixedCall, null, null, null, null, null, [
+			mixedSchedule[0],
+			mixedSchedule[2],
+			mixedSchedule[1],
+			mixedSchedule[3],
+			mixedSchedule[4]
+		]);
+		expectThrows("invalid-plan", () -> mixedRegistry.requireCallableDeclaration(reorderedMixedArguments));
 
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
@@ -755,8 +772,6 @@ class CallPlanFixture {
 
 		final zeroArgumentCall = copyCall(selectedCall, null, null, []);
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(zeroArgumentCall));
-		final threeArgumentCall = copyCall(selectedTwoArgumentCall, null, null, [value(0), value(1), value(2)]);
-		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(threeArgumentCall));
 
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{
@@ -893,7 +908,9 @@ class CallPlanFixture {
 
 		final wrongMixedArgument = copyCall(preserveMixedCall, null, null, [
 			boolValue(0),
-			nullableBoolArgument(1, OcamlCallCarrierConversion.PreserveNullableBoolCarrier)
+			nullableBoolArgument(1, OcamlCallCarrierConversion.PreserveNullableBoolCarrier),
+			boolValue(2),
+			nullableArgument(3, OcamlCallCarrierConversion.PreserveNullableIntCarrier)
 		]);
 		expectThrows("declaration-argument-mismatch", () -> mixedRegistry.requireCallableDeclaration(wrongMixedArgument));
 

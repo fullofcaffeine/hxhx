@@ -100,11 +100,27 @@ if grep -Eq 'Obj\.repr \(Obj\.repr \(exactMixedFlag \(\)\)\)' "$main_source"; th
 	echo "The mixed signature matrix must not box the exact Bool argument twice" >&2
 	exit 1
 fi
+if ! grep -q '^let chooseMany = fun (prefix : int) (enabled : Obj.t) (invert : bool) (fallback : Obj.t) ->' "$mixed_source"; then
+	echo "The positive-arity callable must independently select all four parameter carriers" >&2
+	exit 1
+fi
+if ! grep -Eq 'let preservedMany = let __call_arg_0_[0-9]+ = mixedCount \("many-preserve" : string\) 83 in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in let __call_arg_2_[0-9]+ = mixedDecision \("preserve" : string\) true in let __call_arg_3_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFallback in observeExistingMixedFallback __call_arg_0_[0-9]+ in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
+	echo "The four-argument preserve call must evaluate, bind, and preserve every carrier in source order" >&2
+	exit 1
+fi
+if ! grep -Eq 'let boxedMany = let __call_arg_0_[0-9]+ = mixedCount \("many-box" : string\) 84 in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in let __call_arg_2_[0-9]+ = mixedDecision \("box" : string\) true in let __call_arg_3_[0-9]+ = Obj\.repr \(exactMixedFallback \(\)\) in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
+	echo "The four-argument box call must evaluate each source argument once and box only the selected nullable crossings" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.repr \(Obj\.repr \((exactMixedFlag|exactMixedFallback) \(\)\)\)' "$main_source"; then
+	echo "The positive-arity signature matrix must not box an exact primitive argument twice" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v4') {
+if (report.schemaVersion !== 16 || report.callModel !== 'typed-ocaml-directional-call-boundary-v5') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -320,14 +336,89 @@ for (const call of mixedCalls) {
 		throw new Error('the mixed signature did not retain its evaluate-bind-invoke schedule')
 	}
 }
+const positiveArityCalls = report.calls?.filter(item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'chooseMany') ?? []
+const positiveArityBoundary = report.callableBoundaries?.find(
+	item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'chooseMany'
+)
+if (positiveArityCalls.length !== 2 || !positiveArityBoundary
+	|| positiveArityBoundary.proofId !== signatureProofId
+	|| positiveArityBoundary.arguments?.length !== 4
+	|| !isIdentity(positiveArityBoundary.arguments[0], 'Int', 'int')
+	|| !isIdentity(positiveArityBoundary.arguments[1], 'Null<Bool>', 'Obj.t')
+	|| !isIdentity(positiveArityBoundary.arguments[2], 'Bool', 'bool')
+	|| !isIdentity(positiveArityBoundary.arguments[3], 'Null<Int>', 'Obj.t')
+	|| !isIdentity(positiveArityBoundary.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the lowering report did not seal the four-argument mixed callable definition')
+}
+const positiveArityPreserve = positiveArityCalls.find(call =>
+	call.arguments?.[1]?.conversion === 'preserve-nullable-bool-carrier'
+	&& call.arguments?.[3]?.conversion === 'preserve-nullable-int-carrier'
+)
+const positiveArityBox = positiveArityCalls.find(call =>
+	call.arguments?.[1]?.conversion === 'box-exact-bool-to-nullable-bool'
+	&& call.arguments?.[3]?.conversion === 'box-exact-int-to-nullable-int'
+)
+if (!positiveArityPreserve || !positiveArityBox
+	|| !isIdentity(positiveArityPreserve.arguments[0], 'Int', 'int')
+	|| !isIdentity(positiveArityPreserve.arguments[2], 'Bool', 'bool')
+	|| !isIdentity(positiveArityPreserve.result, 'Null<Int>', 'Obj.t')
+	|| !isIdentity(positiveArityBox.arguments[0], 'Int', 'int')
+	|| !isIdentity(positiveArityBox.arguments[2], 'Bool', 'bool')
+	|| !isIdentity(positiveArityBox.result, 'Null<Int>', 'Obj.t')) {
+	throw new Error('the four-argument calls did not retain their independent directional crossings')
+}
+for (const call of positiveArityCalls) {
+	if (call.proofId !== signatureProofId
+		|| call.arguments?.length !== 4
+		|| call.evaluationSchedule?.length !== 5) {
+		throw new Error('the positive-arity call did not retain its complete sealed argument vector')
+	}
+	for (let index = 0; index < 4; index++) {
+		if (call.evaluationSchedule[index]?.kind !== 'materialize-argument'
+			|| call.evaluationSchedule[index]?.argumentIndex !== index) {
+			throw new Error(`the positive-arity call did not materialize source argument ${index} in order`)
+		}
+	}
+	if (call.evaluationSchedule[4]?.kind !== 'invoke-callee'
+		|| call.evaluationSchedule[4]?.argumentIndex !== null
+		|| call.evaluationSchedule[4]?.slotId !== null) {
+		throw new Error('the positive-arity call did not invoke exactly once after all argument bindings')
+	}
+}
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
 	throw new Error('an instance method entered the first direct-static call kind')
 }
 NODE
 
+repo_root="$(cd ../../../.. && pwd)"
+fixture_root="$PWD"
+inspection_report="$(mktemp)"
+trap 'rm -f "$inspection_report"' EXIT
+(
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output out --require-lowering --json
+) >"$inspection_report"
+node - "$inspection_report" <<'NODE'
+const fs = require('fs')
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+if (!report.summary?.valid) {
+	throw new Error('reflaxe.ocaml inspection rejected the positive-arity lowering report')
+}
+const calls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'chooseMany') ?? []
+const boundary = report.lowering?.callableBoundaries?.find(
+	item => item.sourceTypeName === 'MixedCalls' && item.sourceFieldName === 'chooseMany'
+)
+if (calls.length !== 2 || calls.some(call => call.arguments?.length !== 4) || boundary?.arguments?.length !== 4) {
+	throw new Error('reflaxe.ocaml inspection did not preserve the four-argument call and callable boundary')
+}
+NODE
+
 oracle_output="$(mktemp)"
-trap 'rm -f "$oracle_output"' EXIT
+trap 'rm -f "$inspection_report" "$oracle_output"' EXIT
 haxe -cp src --main Main --interp >"$oracle_output"
 diff -u expected.stdout "$oracle_output"
 
