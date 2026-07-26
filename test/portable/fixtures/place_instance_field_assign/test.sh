@@ -24,6 +24,14 @@ if ! grep -q 'ready = false.*: holder_t' "$source_file"; then
 	echo "Holder.ready must use the exact Bool false default selected before emission" >&2
 	exit 1
 fi
+if ! grep -q '^type holder_t = .*mutable optionalCount : Obj.t.*mutable optionalFlag : Obj.t' "$source_file"; then
+	echo "Exact nullable primitive fields must use the Obj.t carriers selected before emission" >&2
+	exit 1
+fi
+if ! grep -q 'optionalCount = HxRuntime.hx_null.*optionalFlag = HxRuntime.hx_null.*: holder_t' "$source_file"; then
+	echo "Exact nullable primitive fields must use direct HxRuntime.hx_null defaults" >&2
+	exit 1
+fi
 if ! grep -q 'value = Obj.magic (HxRuntime.hx_null).*: abstractholder_t' "$source_file"; then
 	echo "WrappedInt fields must remain outside the exact core Int field decision" >&2
 	exit 1
@@ -34,6 +42,8 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const decision = report.representations.find(item => item.id === 'representation:Int:instance-field')
 const boolDecision = report.representations.find(item => item.id === 'representation:Bool:instance-field')
+const nullableIntDecision = report.representations.find(item => item.id === 'representation:Null<Int>:instance-field')
+const nullableBoolDecision = report.representations.find(item => item.id === 'representation:Null<Bool>:instance-field')
 const boolAssignment = report.plans.find(item =>
 	item.nodeKind === 'simple-assignment'
 	&& item.semanticTypeId === 'Bool'
@@ -49,6 +59,15 @@ if (!boolDecision
 	|| boolDecision.implicitDefaultPolicy !== 'exact-bool-false'
 	|| !boolAssignment) {
 	throw new Error('the lowering report did not preserve the exact Bool field/default/simple-assignment decision')
+}
+if (!nullableIntDecision
+	|| nullableIntDecision.carrierTypeId !== 'Obj.t'
+	|| nullableIntDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
+	|| !nullableBoolDecision
+	|| nullableBoolDecision.carrierTypeId !== 'Obj.t'
+	|| nullableBoolDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
+	|| nullableIntDecision.id === nullableBoolDecision.id) {
+	throw new Error('the lowering report did not preserve distinct exact nullable primitive field/default decisions')
 }
 NODE
 

@@ -2,6 +2,7 @@ initial=0
 result=7 final=7 events=receiver,rhs abstract=9/9
 bool_initial=false
 bool_result=true final=true events=receiver,bool_rhs
+nullable_initial=true/true
 compound=14 final=14 events=receiver,rhs_mutates
 postfix=14 final=15 events=receiver
 prefix=16 final=16 events=receiver

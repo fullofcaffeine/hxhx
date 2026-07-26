@@ -74,6 +74,31 @@ class StaticStoragePlanFixture {
 		});
 	}
 
+	static function registerNullablePrimitive(plan:OcamlStaticStoragePlan, semanticTypeId:String, owner:String, field:String, target:String, order:Int,
+			declarationSite:OcamlStaticStorageDeclarationSite, ?declarationTypeName:String, declarationTypeOrder:Int = -1):Void {
+		final fieldType = semanticTypeId == "Null<Int>" ? Context.typeof(macro(null : Null<Int>)) : Context.typeof(macro(null : Null<Bool>));
+		plan.register({
+			moduleId: "Main",
+			ownerTypeName: owner,
+			fieldName: field,
+			targetValueName: target,
+			semanticTypeId: semanticTypeId,
+			carrierTypeId: "Obj.t",
+			fieldType: fieldType,
+			carrierType: OcamlTypeExpr.TIdent("Obj.t"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: declarationSite,
+			declarationTypeName: declarationTypeName,
+			declarationTypeOrder: declarationTypeOrder,
+			ownerTypeOrder: order,
+			declarationOrder: order,
+			initializationOrder: order,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: 'representation:$semanticTypeId:static-field'
+		});
+	}
+
 	static function registerTypePrelude(plan:OcamlStaticStoragePlan):Void {
 		plan.register({
 			moduleId: "Main",
@@ -144,6 +169,18 @@ class StaticStoragePlanFixture {
 			&& ready.carrierTypeId == "bool"
 			&& ready.representationId == "representation:Bool:static-field",
 			"an exact Bool static cell should retain its direct carrier and program representation decision");
+
+		final nullablePlan = new OcamlStaticStoragePlan();
+		nullablePlan.beginProgram("program:static-storage-nullable");
+		nullablePlan.registerTypeOrder("Main", "Worker", 0);
+		nullablePlan.registerTypeOrder("Main", "Main", 1);
+		registerNullablePrimitive(nullablePlan, "Null<Bool>", "Worker", "optionalFlag", "worker_optionalFlag", 0,
+			OcamlStaticStorageDeclarationSite.OwnerBinding);
+		registerNullablePrimitive(nullablePlan, "Null<Int>", "Main", "optionalCount", "optionalCount", 1, OcamlStaticStorageDeclarationSite.ModulePrelude);
+		nullablePlan.seal();
+		assertTrue(nullablePlan.require("Main", "Worker", "optionalFlag").representationId == "representation:Null<Bool>:static-field"
+			&& nullablePlan.require("Main", "Main", "optionalCount").representationId == "representation:Null<Int>:static-field",
+			"nullable primitive static cells should retain distinct semantic decisions across applicable declaration sites");
 
 		final collision = new OcamlStaticStoragePlan();
 		collision.beginProgram("program:static-storage-collision");
@@ -244,6 +281,30 @@ class StaticStoragePlanFixture {
 			carrierTypeId: "bool",
 			fieldType: Context.typeof(macro(false : Bool)),
 			carrierType: OcamlTypeExpr.TIdent("bool"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: null
+		}));
+
+		final missingNullableRepresentation = new OcamlStaticStoragePlan();
+		missingNullableRepresentation.beginProgram("program:static-storage-missing-nullable-representation");
+		missingNullableRepresentation.registerTypeOrder("Main", "Main", 0);
+		expectFailure("missing exact nullable representation", "missing-exact-primitive-representation", () -> missingNullableRepresentation.register({
+			moduleId: "Main",
+			ownerTypeName: "Main",
+			fieldName: "optionalCount",
+			targetValueName: "optionalCount",
+			semanticTypeId: "Null<Int>",
+			carrierTypeId: "Obj.t",
+			fieldType: Context.typeof(macro(null : Null<Int>)),
+			carrierType: OcamlTypeExpr.TIdent("Obj.t"),
 			kind: OcamlStaticStorageKind.Variable,
 			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
 			declarationTypeName: null,

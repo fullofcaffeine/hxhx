@@ -27,6 +27,7 @@ class Main {
 		Sys.println("bool_initial=" + holder.ready);
 		final boolResult = receiver().ready = boolRhs();
 		Sys.println("bool_result=" + boolResult + " final=" + holder.ready + " events=" + events.join(","));
+		Sys.println("nullable_initial=" + (holder.optionalCount == null) + "/" + (holder.optionalFlag == null));
 
 		events.resize(0);
 		final compoundResult = receiver().value += rhsMutating();
@@ -69,6 +70,8 @@ class Main {
 class Holder {
 	public var value:Int;
 	public var ready:Bool;
+	public var optionalCount:Null<Int>;
+	public var optionalFlag:Null<Bool>;
 
 	public function new() {}
 }

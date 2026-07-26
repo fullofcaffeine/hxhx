@@ -415,7 +415,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-field-default-and-simple-assignment-array-int-nullable-locals-v8")
+		if (scope != "exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -998,7 +998,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-field-default-and-simple-assignment-array-int-nullable-locals-v8",
+			scope: "exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9",
 			message: message
 		};
 	}

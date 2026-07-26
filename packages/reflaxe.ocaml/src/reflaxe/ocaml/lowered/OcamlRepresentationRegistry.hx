@@ -29,7 +29,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	local-only decisions.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v8";
+	public static inline final MODEL_REVISION = "ocaml-representation-v9";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -249,22 +249,23 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
-		Registers the nullable primitive carrier used by exact `Null<Int>` locals.
+		Registers the nullable primitive carrier used by exact `Null<Int>` storage.
 
 		The representation decision owns the carrier only. The function-local
 		conversion plan separately proves whether each occurrence preserves the
-		carrier, boxes an exact Int, or performs a checked non-null read.
+		carrier, boxes an exact Int, or performs a checked non-null read. Field
+		assignment conversions remain outside this storage/default decision.
 	**/
 	public function selectExactNullInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		requireNullablePrimitiveDomain(domain, "Null<Int>");
 		return selectExactNullablePrimitive(domain, "Null<Int>", exactNullIntReason(domain), {
-			id: "nullable-int-obj-carrier-v1",
-			claim: "One Obj.t carrier can distinguish HxRuntime.hx_null from every boxed OCaml int that represents a Haxe Int. The carrier is valid only with occurrence-bound proofs for sentinel preservation, exact-Int boxing, and checked non-null reads; it does not admit other Null<T> families, fields, calls, or ABI crossings."
+			id: "nullable-int-obj-carrier-v2",
+			claim: "One Obj.t carrier can distinguish HxRuntime.hx_null from every boxed OCaml int that represents a Haxe Int. It owns internal/local/field storage and implicit null defaults only. Occurrence-bound proofs remain required for sentinel preservation, exact-Int boxing, checked non-null reads, and field writes; this does not admit other Null<T> families, calls, or ABI crossings."
 		});
 	}
 
 	/**
-		Registers the nullable primitive carrier used by exact `Null<Bool>` locals.
+		Registers the nullable primitive carrier used by exact `Null<Bool>` storage.
 
 		The stored carrier preserves null, false, and true as distinct values.
 		Function-local occurrence plans separately prove carrier-preserving writes,
@@ -273,8 +274,8 @@ class OcamlRepresentationRegistry {
 	public function selectExactNullBool(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		requireNullablePrimitiveDomain(domain, "Null<Bool>");
 		return selectExactNullablePrimitive(domain, "Null<Bool>", exactNullBoolReason(domain), {
-			id: "nullable-bool-obj-carrier-v1",
-			claim: "One Obj.t carrier preserves HxRuntime.hx_null, Obj.repr false, and Obj.repr true as three distinct Haxe Null<Bool> values. Occurrence-bound proofs must own every carrier-preserving copy, exact-Bool box, and condition-truthiness read; this does not admit calls, fields, concrete-Bool boundaries, or other Null<T> families."
+			id: "nullable-bool-obj-carrier-v2",
+			claim: "One Obj.t carrier preserves HxRuntime.hx_null, Obj.repr false, and Obj.repr true as three distinct Haxe Null<Bool> values. It owns internal/local/field storage and implicit null defaults only. Occurrence-bound proofs must own every carrier-preserving copy, exact-Bool box, condition-truthiness read, and field write; this does not admit calls, concrete-Bool boundaries, ABI crossings, or other Null<T> families."
 		});
 	}
 
@@ -283,8 +284,10 @@ class OcamlRepresentationRegistry {
 		final storageMutationPolicy = switch (domain) {
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
-			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
+			case StaticField: OcamlRepresentationStorageMutationPolicy.StaticFieldOwner;
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, local, instance-field, or static-field storage, not $domain';
 		};
 		return register({
 			semanticTypeId: semanticTypeId,
@@ -307,8 +310,8 @@ class OcamlRepresentationRegistry {
 		Registers one complete choice or rejects a conflicting choice for its key.
 
 		Keeping this operation general lets later semantic types join the same
-		registry without adding another side table. This slice's compiler path calls
-		it only through `selectExactInt`.
+		registry without adding another side table. Compiler paths call it through
+		the closed semantic-family selectors above.
 	**/
 	public function register(selection:OcamlRepresentationSelection):OcamlRepresentationDecision {
 		final programRevision = requireProgramRevision();
@@ -422,8 +425,12 @@ class OcamlRepresentationRegistry {
 				"An exact Null<Int> mutable local stores its Obj.t carrier in one ref cell; the cell owns replacement while occurrence plans own boxing and checked reads.";
 			case CapturedLocalStorage:
 				"An exact Null<Int> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans own every carrier crossing.";
-			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> local reason exists for $domain';
+			case InstanceField:
+				"An exact Null<Int> instance field stores Haxe null or a boxed Int in Obj.t; the field owns replacement and its omitted default is HxRuntime.hx_null.";
+			case StaticField:
+				"An exact Null<Int> static field stores Haxe null or a boxed Int in one Obj.t ref cell; the cell owns replacement and its omitted default is HxRuntime.hx_null.";
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> storage reason exists for $domain';
 		}
 	}
 
@@ -435,8 +442,12 @@ class OcamlRepresentationRegistry {
 				"An exact Null<Bool> mutable local stores its Obj.t carrier in one ref cell; the cell owns replacement while occurrence plans own boxing and condition truthiness.";
 			case CapturedLocalStorage:
 				"An exact Null<Bool> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans preserve all three stored states and own truthiness reads.";
-			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> local reason exists for $domain';
+			case InstanceField:
+				"An exact Null<Bool> instance field stores Haxe null, boxed false, or boxed true in Obj.t; the field owns replacement and its omitted default is HxRuntime.hx_null.";
+			case StaticField:
+				"An exact Null<Bool> static field stores Haxe null, boxed false, or boxed true in one Obj.t ref cell; the cell owns replacement and its omitted default is HxRuntime.hx_null.";
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> storage reason exists for $domain';
 		}
 	}
 
@@ -456,9 +467,9 @@ class OcamlRepresentationRegistry {
 
 	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		switch (domain) {
-			case InternalValue, MutableLocalStorage, CapturedLocalStorage:
-			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+			case InternalValue, MutableLocalStorage, CapturedLocalStorage, InstanceField, StaticField:
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, local, instance-field, or static-field storage, not $domain';
 		}
 	}
 

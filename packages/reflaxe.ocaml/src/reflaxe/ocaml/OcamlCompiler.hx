@@ -508,9 +508,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case FVar(_, _): OcamlStaticStorageKind.Variable;
 						case _: continue;
 					}
-					final representation = kind == OcamlStaticStorageKind.Variable ? selectDirectPrimitiveField(field.type,
+					final representation = kind == OcamlStaticStorageKind.Variable ? selectRepresentedField(field.type,
 						OcamlRepresentationDomain.StaticField) : null;
-					final representedField = representation == null ? null : OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(representation,
+					final representedField = representation == null ? null : OcamlFieldRepresentationMaterializer.materializeRepresentedField(representation,
 						OcamlRepresentationDomain.StaticField);
 					final previousModuleId = ctx.currentModuleId;
 					final previousTypeName = ctx.currentTypeName;
@@ -912,7 +912,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return entry;
 	}
 
-	/** Resolves one sealed direct primitive static field without consulting the legacy type mapper. */
+	/** Resolves one sealed represented static field without consulting the legacy type mapper. */
 	function requireStaticFieldRepresentation(entry:OcamlStaticStorageEntry):Null<OcamlFieldRepresentationMaterialization> {
 		if (entry.representationId == null)
 			return null;
@@ -926,37 +926,51 @@ class OcamlCompiler extends DirectToStringCompiler {
 				staticStorageInvariant('"${entry.key}" expects ${entry.semanticTypeId} on ${entry.carrierTypeId}, but ${decision.id} selects ${decision.semanticTypeId} on ${decision.carrierTypeId}');
 		}
 		return try {
-			OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(decision, OcamlRepresentationDomain.StaticField);
+			OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, OcamlRepresentationDomain.StaticField);
 		} catch (error:Dynamic) {
 			staticStorageInvariant(Std.string(error));
 		}
 	}
 
-	/** Selects one admitted direct primitive field representation, when applicable. */
-	function selectDirectPrimitiveField(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
+	/** Selects one explicitly admitted field representation, when applicable. */
+	function selectRepresentedField(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
 		if (OcamlRepresentationRegistry.isExactInt(type))
 			return representationRegistry.selectExactInt(domain);
 		if (OcamlRepresentationRegistry.isExactBool(type))
 			return representationRegistry.selectExactBool(domain);
+		if (OcamlRepresentationRegistry.isExactNullInt(type))
+			return representationRegistry.selectExactNullInt(domain);
+		if (OcamlRepresentationRegistry.isExactNullBool(type))
+			return representationRegistry.selectExactNullBool(domain);
 		return null;
 	}
 
-	/** Materializes the admitted direct primitive instance field, when applicable. */
-	function directPrimitiveInstanceField(type:Type):Null<OcamlFieldRepresentationMaterialization> {
-		final decision = selectDirectPrimitiveField(type, OcamlRepresentationDomain.InstanceField);
-		return decision == null ? null : OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(decision, OcamlRepresentationDomain.InstanceField);
+	/** Materializes one admitted instance field, when applicable. */
+	function representedInstanceField(type:Type):Null<OcamlFieldRepresentationMaterialization> {
+		final decision = selectRepresentedField(type, OcamlRepresentationDomain.InstanceField);
+		return decision == null ? null : OcamlFieldRepresentationMaterializer.materializeRepresentedField(decision, OcamlRepresentationDomain.InstanceField);
 	}
 
 	/** Returns one instance field's selected carrier or the explicitly unmigrated mapper. */
 	function instanceFieldCarrier(type:Type):OcamlTypeExpr {
-		final represented = directPrimitiveInstanceField(type);
+		final represented = representedInstanceField(type);
 		return represented == null ? ocamlTypeExprFromHaxeType(type) : represented.carrierType;
 	}
 
 	/** Returns one instance field's selected implicit default or the unmigrated default mapper. */
 	function instanceFieldDefault(type:Type):OcamlExpr {
-		final represented = directPrimitiveInstanceField(type);
+		final represented = representedInstanceField(type);
 		return represented == null ? defaultValueForType(type) : represented.implicitDefault;
+	}
+
+	/** Reports whether a typed initializer is the canonical Haxe null literal. */
+	static function isLiteralNullInitializer(initializer:Null<TypedExpr>):Bool {
+		if (initializer == null)
+			return false;
+		return switch (initializer.expr) {
+			case TConst(TNull): true;
+			case _: false;
+		}
 	}
 
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
@@ -1912,13 +1926,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final init = v.field.expr();
 			final representedStatic = storage == null ? null : requireStaticFieldRepresentation(storage);
 			final initT = representedStatic == null ? ocamlTypeExprFromHaxeType(v.field.type) : representedStatic.carrierType;
-			final compiledInitFromFieldType = init != null ? builder.buildStandaloneExprForAssignment(v.field.type, init,
-				OcamlLocalStoragePlanner.planExpression(init)) : (representedStatic == null ? defaultValueForType(v.field.type) : representedStatic.implicitDefault);
-			final compiledInit = switch (initT) {
-				case OcamlTypeExpr.TIdent("Obj.t"):
-					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [compiledInitFromFieldType]);
-				case _:
-					compiledInitFromFieldType;
+			final consumesRepresentedNullDefault = representedStatic != null
+				&& storage != null
+				&& (storage.semanticTypeId == "Null<Int>" || storage.semanticTypeId == "Null<Bool>")
+				&& (init == null || isLiteralNullInitializer(init));
+			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
+				representedStatic.implicitDefault;
+			} else if (init != null) {
+				builder.buildStandaloneExprForAssignment(v.field.type, init, OcamlLocalStoragePlanner.planExpression(init));
+			} else {
+				representedStatic == null ? defaultValueForType(v.field.type) : representedStatic.implicitDefault;
+			};
+			final compiledInit = if (consumesRepresentedNullDefault) {
+				compiledInitFromFieldType;
+			} else {
+				switch (initT) {
+					case OcamlTypeExpr.TIdent("Obj.t"):
+						OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [compiledInitFromFieldType]);
+					case _:
+						compiledInitFromFieldType;
+				}
 			}
 			final compiled = if (isMutableStatic) {
 				if (storage != null && storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) {

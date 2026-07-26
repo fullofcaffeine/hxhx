@@ -52,15 +52,28 @@ if ! grep -q '^let omittedBool = ref (false : bool)$' "$external_source_file"; t
 	echo "An omitted exact Bool static must use the selected bool carrier and false default" >&2
 	exit 1
 fi
+if ! grep -q '^let omittedNullableInt = ref (HxRuntime.hx_null : Obj.t)$' "$external_source_file"; then
+	echo "An omitted exact Null<Int> static must use direct HxRuntime.hx_null on Obj.t" >&2
+	exit 1
+fi
+if ! grep -q '^let omittedNullableBool = ref (HxRuntime.hx_null : Obj.t)$' "$external_source_file"; then
+	echo "An omitted exact Null<Bool> static must use direct HxRuntime.hx_null on Obj.t" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const decision = report.representations.find(item => item.id === 'representation:Int:static-field')
 const boolDecision = report.representations.find(item => item.id === 'representation:Bool:static-field')
+const nullableIntDecision = report.representations.find(item => item.id === 'representation:Null<Int>:static-field')
+const nullableBoolDecision = report.representations.find(item => item.id === 'representation:Null<Bool>:static-field')
 const external = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omitted')
 const externalBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedBool')
+const externalNullableInt = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedNullableInt')
+const externalNullableBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedNullableBool')
 const sameModuleBool = report.staticStorage.find(item => item.key === 'Main::Main::sameModuleBool')
+const sameModuleNullableInt = report.staticStorage.find(item => item.key === 'Main::Main::sameModuleNullableInt')
 const boolAssignment = report.plans.find(item =>
 	item.nodeKind === 'static-simple-assignment'
 	&& item.semanticTypeId === 'Bool'
@@ -83,6 +96,21 @@ if (!boolDecision
 	|| sameModuleBool.representationId !== boolDecision.id
 	|| !boolAssignment) {
 	throw new Error('the lowering report did not preserve the exact Bool static carrier/default/simple-assignment decision')
+}
+if (!nullableIntDecision
+	|| nullableIntDecision.carrierTypeId !== 'Obj.t'
+	|| nullableIntDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
+	|| !nullableBoolDecision
+	|| nullableBoolDecision.carrierTypeId !== 'Obj.t'
+	|| nullableBoolDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
+	|| !externalNullableInt
+	|| externalNullableInt.representationId !== nullableIntDecision.id
+	|| !externalNullableBool
+	|| externalNullableBool.representationId !== nullableBoolDecision.id
+	|| !sameModuleNullableInt
+	|| sameModuleNullableInt.declarationSite !== 'module-prelude'
+	|| sameModuleNullableInt.representationId !== nullableIntDecision.id) {
+	throw new Error('the lowering report did not preserve exact nullable primitive static carrier/default decisions')
 }
 NODE
 

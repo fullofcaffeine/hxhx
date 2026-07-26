@@ -90,11 +90,19 @@ try {
 		&& entry.declarationSite === 'module-prelude'
 		&& entry.carrierTypeId === 'bool'
 		&& entry.representationId === 'representation:Bool:static-field'))
+	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleNullableInt'
+		&& entry.declarationSite === 'module-prelude'
+		&& entry.carrierTypeId === 'Obj.t'
+		&& entry.representationId === 'representation:Null<Int>:static-field'))
+	assert(report.lowering.staticStorage.some(entry => entry.key === 'ExternalHolder::ExternalHolder::omittedNullableBool'
+		&& entry.declarationSite === 'owner-binding'
+		&& entry.carrierTypeId === 'Obj.t'
+		&& entry.representationId === 'representation:Null<Bool>:static-field'))
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleObject'
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-field-default-and-simple-assignment-array-int-nullable-locals-v8')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
@@ -106,6 +114,16 @@ try {
 		&& decision.nullPolicy === 'non-null'
 		&& decision.boxingPolicy === 'direct-unboxed'
 		&& decision.implicitDefaultPolicy === 'exact-bool-false'))
+	assert(report.representation.decisions.some(decision => decision.id === 'representation:Null<Int>:static-field'
+		&& decision.carrierTypeId === 'Obj.t'
+		&& decision.nullPolicy === 'runtime-sentinel'
+		&& decision.boxingPolicy === 'nullable-primitive-carrier'
+		&& decision.implicitDefaultPolicy === 'runtime-null-sentinel'))
+	assert(report.representation.decisions.some(decision => decision.id === 'representation:Null<Bool>:static-field'
+		&& decision.carrierTypeId === 'Obj.t'
+		&& decision.nullPolicy === 'runtime-sentinel'
+		&& decision.boxingPolicy === 'nullable-primitive-carrier'
+		&& decision.implicitDefaultPolicy === 'runtime-null-sentinel'))
 	assert(report.lowering.plans.some(plan => plan.nodeKind === 'static-simple-assignment'
 		&& plan.semanticTypeId === 'Bool'
 		&& plan.carrierTypeId === 'bool'

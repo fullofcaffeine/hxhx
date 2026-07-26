@@ -5,6 +5,7 @@ class Main {
 	static final events:Array<String> = [];
 	public static var sameModuleValue:Int = 20;
 	public static var sameModuleBool:Bool;
+	public static var sameModuleNullableInt:Null<Int>;
 	public static var sameModuleObject:SameModuleWorker;
 
 	static function rhs(label:String, value:Int):Int {
@@ -33,6 +34,7 @@ class Main {
 		Sys.println(SameModuleWorker.run());
 		Sys.println("omitted=" + ExternalHolder.omitted);
 		Sys.println("omitted_bool=" + ExternalHolder.omittedBool);
+		Sys.println("omitted_nullable=" + (ExternalHolder.omittedNullableInt == null) + "/" + (ExternalHolder.omittedNullableBool == null));
 		final boolResult = ExternalHolder.omittedBool = rhsBool();
 		Sys.println("bool=" + boolResult + " final=" + ExternalHolder.omittedBool + " events=" + events.join(","));
 
@@ -107,6 +109,7 @@ class SameModuleWorker {
 		Main.sameModuleObject = object;
 		final sameObject = Main.sameModuleObject == object;
 		final boolAssigned = Main.sameModuleBool = true;
-		return 'same_module=$assigned/$compound/$postfix/$prefix/${Main.sameModuleValue}/$sameObject/$boolAssigned/${Main.sameModuleBool}';
+		final nullableDefault = Main.sameModuleNullableInt == null;
+		return 'same_module=$assigned/$compound/$postfix/$prefix/${Main.sameModuleValue}/$sameObject/$boolAssigned/${Main.sameModuleBool}/$nullableDefault';
 	}
 }
