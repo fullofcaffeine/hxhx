@@ -4,6 +4,7 @@ package reflaxe.ocaml.lowered;
 import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr.Unop;
+import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.CompilationContext;
@@ -30,6 +31,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 /** Builds typed semantic plans for the place-operation families admitted so far. */
@@ -96,6 +98,14 @@ class OcamlPlaceAssignmentPlanner {
 		}
 	}
 
+	function selectDirectPrimitive(type:Type, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		if (OcamlRepresentationRegistry.isExactInt(type))
+			return representations.selectExactInt(domain);
+		if (OcamlRepresentationRegistry.isExactBool(type))
+			return representations.selectExactBool(domain);
+		throw 'reflaxe.ocaml [ocaml-place:unsupported-direct-primitive]: no admitted direct primitive field representation exists for ${TypeTools.toString(type)} in $domain';
+	}
+
 	function planInstanceField(originId:String, left:TypedExpr):Null<{place:OcamlLoweredInstanceFieldPlace, receiver:TypedExpr}> {
 		return switch (left.expr) {
 			case TField(receiver, FInstance(classRef, _, fieldRef)):
@@ -111,7 +121,7 @@ class OcamlPlaceAssignmentPlanner {
 				final currentModuleName = context.ocamlModuleNameForModuleId(currentModuleId);
 				final scopedType = context.scopedInstanceTypeName(receiverClass.module, receiverClass.name);
 				final receiverCarrier = currentModuleName == moduleName ? scopedType : moduleName + "." + scopedType;
-				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InstanceField);
+				final valueRepresentation = selectDirectPrimitive(left.t, OcamlRepresentationDomain.InstanceField);
 				{
 					place: {
 						id: originId + ":place",
@@ -144,7 +154,7 @@ class OcamlPlaceAssignmentPlanner {
 				final targetModuleName = context.ocamlModuleNameForModuleId(classType.module);
 				final staticAccess = currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
 				final storage = staticStorage.require(classType.module, classType.name, field.name);
-				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.StaticField);
+				final valueRepresentation = selectDirectPrimitive(left.t, OcamlRepresentationDomain.StaticField);
 				if (storage.representationId != null && storage.representationId != valueRepresentation.id)
 					throw 'reflaxe.ocaml [ocaml-static-storage:representation-mismatch]: "${storage.key}" uses ${storage.representationId}, but place lowering selected ${valueRepresentation.id}';
 				{
@@ -222,7 +232,7 @@ class OcamlPlaceAssignmentPlanner {
 			originId: originId,
 			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
 			semanticTypeId: TypeTools.toString(expression.t),
-			carrierTypeId: "int",
+			carrierTypeId: target.place.carrierTypeId,
 			place: target.place,
 			receiver: target.receiver,
 			rightHandSide: right,
@@ -262,7 +272,7 @@ class OcamlPlaceAssignmentPlanner {
 			originId: originId,
 			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
 			semanticTypeId: TypeTools.toString(expression.t),
-			carrierTypeId: "int",
+			carrierTypeId: place.carrierTypeId,
 			place: place,
 			rightHandSide: right,
 			conversion: OcamlLoweredConversionKind.Identity,

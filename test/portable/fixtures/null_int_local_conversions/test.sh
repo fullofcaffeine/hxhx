@@ -39,7 +39,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 13
-	|| report.representationScope !== 'exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7'
+	|| report.representationScope !== 'exact-int-bool-field-default-and-simple-assignment-array-int-nullable-locals-v8'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
 	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {

@@ -16,6 +16,14 @@ if ! grep -q 'value = 0.*: holder_t' "$source_file"; then
 	echo "Holder.value must use the exact Int zero default selected before emission" >&2
 	exit 1
 fi
+if ! grep -q '^type holder_t = .*mutable ready : bool' "$source_file"; then
+	echo "Holder.ready must use the exact Bool field carrier selected before emission" >&2
+	exit 1
+fi
+if ! grep -q 'ready = false.*: holder_t' "$source_file"; then
+	echo "Holder.ready must use the exact Bool false default selected before emission" >&2
+	exit 1
+fi
 if ! grep -q 'value = Obj.magic (HxRuntime.hx_null).*: abstractholder_t' "$source_file"; then
 	echo "WrappedInt fields must remain outside the exact core Int field decision" >&2
 	exit 1
@@ -25,10 +33,22 @@ node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const decision = report.representations.find(item => item.id === 'representation:Int:instance-field')
+const boolDecision = report.representations.find(item => item.id === 'representation:Bool:instance-field')
+const boolAssignment = report.plans.find(item =>
+	item.nodeKind === 'simple-assignment'
+	&& item.semanticTypeId === 'Bool'
+	&& item.carrierTypeId === 'bool'
+	&& item.place?.representationId === boolDecision?.id)
 if (!decision
 	|| decision.carrierTypeId !== 'int'
 	|| decision.implicitDefaultPolicy !== 'exact-int-zero') {
 	throw new Error('the lowering report did not preserve the exact Int instance-field carrier/default decision')
+}
+if (!boolDecision
+	|| boolDecision.carrierTypeId !== 'bool'
+	|| boolDecision.implicitDefaultPolicy !== 'exact-bool-false'
+	|| !boolAssignment) {
+	throw new Error('the lowering report did not preserve the exact Bool field/default/simple-assignment decision')
 }
 NODE
 

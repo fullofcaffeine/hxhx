@@ -18,6 +18,14 @@ class OcamlPlaceInputPolicy {
 		return OcamlRepresentationRegistry.isExactInt(type);
 	}
 
+	static function isExactBool(type:Type):Bool {
+		return OcamlRepresentationRegistry.isExactBool(type);
+	}
+
+	static function isSameDirectPrimitive(left:Type, right:Type):Bool {
+		return (isExactInt(left) && isExactInt(right)) || (isExactBool(left) && isExactBool(right));
+	}
+
 	/** Recognizes only a direct nominal `Array<Int>` carrier. */
 	static function isExactIntArray(type:Type):Bool {
 		return OcamlRepresentationRegistry.isExactArrayInt(type);
@@ -37,8 +45,8 @@ class OcamlPlaceInputPolicy {
 		Accepts a direct record-backed receiver while keeping inherited field
 		declaration identity separate from the receiver representation.
 	**/
-	static function admitsExactIntInstanceFieldPlace(expression:TypedExpr):Bool {
-		if (!isExactInt(expression.t))
+	static function admitsDirectPrimitiveInstanceFieldPlace(expression:TypedExpr):Bool {
+		if (!isExactInt(expression.t) && !isExactBool(expression.t))
 			return false;
 		return switch (expression.expr) {
 			case TField(receiver, FInstance(classRef, _, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final ordinaryField = switch (field.kind) {
@@ -53,24 +61,32 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
-	/** Admits a directly writable, non-extern `Int` static backed by an OCaml ref. */
-	static function admitsExactIntStaticFieldPlace(expression:TypedExpr):Bool {
-		if (!isExactInt(expression.t))
+	static function admitsExactIntInstanceFieldPlace(expression:TypedExpr):Bool {
+		return isExactInt(expression.t) && admitsDirectPrimitiveInstanceFieldPlace(expression);
+	}
+
+	/** Admits a directly writable, non-extern primitive static backed by a ref. */
+	static function admitsDirectPrimitiveStaticFieldPlace(expression:TypedExpr):Bool {
+		if (!isExactInt(expression.t) && !isExactBool(expression.t))
 			return false;
 		return switch (expression.expr) {
 			case TField(_, FStatic(classRef, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final directlyWritable = switch (field.kind) {
 					case FVar(_, AccNormal): !field.isFinal;
 					case _: false;
-				} directlyWritable && !classType.isExtern && !classType.isInterface && isExactInt(field.type);
+				} directlyWritable && !classType.isExtern && !classType.isInterface && isSameDirectPrimitive(expression.t, field.type);
 			case _:
 				false;
 		}
 	}
 
-	/** Admits only static cells whose mutable OCaml declaration is already guaranteed. */
-	static function admitsVisibleExactIntStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+	static function admitsExactIntStaticFieldPlace(expression:TypedExpr):Bool {
+		return isExactInt(expression.t) && admitsDirectPrimitiveStaticFieldPlace(expression);
+	}
+
+	/** Admits only direct primitive static cells with an already-visible declaration. */
+	static function admitsVisibleDirectPrimitiveStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
 			staticStorage:OcamlStaticStoragePlan):Bool {
-		if (!admitsExactIntStaticFieldPlace(expression) || currentModuleId == null || currentTypeName == null)
+		if (!admitsDirectPrimitiveStaticFieldPlace(expression) || currentModuleId == null || currentTypeName == null)
 			return false;
 		return switch (expression.expr) {
 			case TField(_, FStatic(classRef, fieldRef)):
@@ -81,13 +97,20 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
-	/** Admits ordinary `Int` fields with an exact `Int` RHS for simple assignment. */
+	/** Admits only visible exact-Int static cells for Int-only operator families. */
+	static function admitsVisibleExactIntStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+			staticStorage:OcamlStaticStoragePlan):Bool {
+		return admitsExactIntStaticFieldPlace(expression)
+			&& admitsVisibleDirectPrimitiveStaticFieldPlace(expression, currentModuleId, currentTypeName, staticStorage);
+	}
+
+	/** Admits direct primitive fields with a matching exact RHS. */
 	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
-		return admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
+		return admitsDirectPrimitiveInstanceFieldPlace(left) && isSameDirectPrimitive(left.t, right.t);
 	}
 
 	/**
-		Admits mutable static `Int` ref cells whose declaration is already visible.
+		Admits mutable direct primitive ref cells whose declaration is visible.
 
 		For a different type in the same Haxe module, visibility comes from the sealed
 		program-level storage plan: the cell is either declared in an earlier type
@@ -95,7 +118,8 @@ class OcamlPlaceInputPolicy {
 	**/
 	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
 			staticStorage:OcamlStaticStoragePlan):Bool {
-		return admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName, staticStorage) && isExactInt(right.t);
+		return admitsVisibleDirectPrimitiveStaticFieldPlace(left, currentModuleId, currentTypeName, staticStorage)
+			&& isSameDirectPrimitive(left.t, right.t);
 	}
 
 	/** Admits exact primitive-Int `+=` on an already-visible mutable static. */

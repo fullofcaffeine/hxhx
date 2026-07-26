@@ -1,5 +1,7 @@
-same_module=21/23/23/25/25/true
+same_module=21/23/23/25/25/true/true/true
 omitted=0
+omitted_bool=false
+bool=true final=true events=rhs_bool
 local=7 final=7 events=rhs_local
 local_compound=10 final=10 events=rhs_mutates_local
 local_postfix=10 final=11 events=

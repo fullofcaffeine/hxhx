@@ -50,6 +50,30 @@ class StaticStoragePlanFixture {
 		});
 	}
 
+	static function registerBool(plan:OcamlStaticStoragePlan, owner:String, field:String, target:String, order:Int,
+			declarationSite:OcamlStaticStorageDeclarationSite, ?declarationTypeName:String, declarationTypeOrder:Int = -1):Void {
+		plan.register({
+			moduleId: "Main",
+			ownerTypeName: owner,
+			fieldName: field,
+			targetValueName: target,
+			semanticTypeId: "Bool",
+			carrierTypeId: "bool",
+			fieldType: Context.typeof(macro(false : Bool)),
+			carrierType: OcamlTypeExpr.TIdent("bool"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: declarationSite,
+			declarationTypeName: declarationTypeName,
+			declarationTypeOrder: declarationTypeOrder,
+			ownerTypeOrder: order,
+			declarationOrder: order,
+			initializationOrder: order,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: "representation:Bool:static-field"
+		});
+	}
+
 	static function registerTypePrelude(plan:OcamlStaticStoragePlan):Void {
 		plan.register({
 			moduleId: "Main",
@@ -109,6 +133,17 @@ class StaticStoragePlanFixture {
 		expectFailure("sealed mutation", "cannot change",
 			() -> registerInt(plan, "Later", "value", "later_value", 2, OcamlStaticStorageDeclarationSite.OwnerBinding));
 		expectFailure("missing entry", "no pre-emission storage decision", () -> plan.require("Main", "Missing", "value"));
+
+		final boolPlan = new OcamlStaticStoragePlan();
+		boolPlan.beginProgram("program:static-storage-bool");
+		boolPlan.registerTypeOrder("Main", "Main", 0);
+		registerBool(boolPlan, "Main", "ready", "ready", 0, OcamlStaticStorageDeclarationSite.OwnerBinding);
+		boolPlan.seal();
+		final ready = boolPlan.require("Main", "Main", "ready");
+		assertTrue(ready.semanticTypeId == "Bool"
+			&& ready.carrierTypeId == "bool"
+			&& ready.representationId == "representation:Bool:static-field",
+			"an exact Bool static cell should retain its direct carrier and program representation decision");
 
 		final collision = new OcamlStaticStoragePlan();
 		collision.beginProgram("program:static-storage-collision");
@@ -176,7 +211,7 @@ class StaticStoragePlanFixture {
 		final missingRepresentation = new OcamlStaticStoragePlan();
 		missingRepresentation.beginProgram("program:static-storage-missing-representation");
 		missingRepresentation.registerTypeOrder("Main", "Main", 0);
-		expectFailure("missing exact Int representation", "missing-exact-int-representation", () -> missingRepresentation.register({
+		expectFailure("missing exact Int representation", "missing-exact-primitive-representation", () -> missingRepresentation.register({
 			moduleId: "Main",
 			ownerTypeName: "Main",
 			fieldName: "value",
@@ -185,6 +220,30 @@ class StaticStoragePlanFixture {
 			carrierTypeId: "int",
 			fieldType: Context.typeof(macro(0 : Int)),
 			carrierType: OcamlTypeExpr.TIdent("int"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: null
+		}));
+
+		final missingBoolRepresentation = new OcamlStaticStoragePlan();
+		missingBoolRepresentation.beginProgram("program:static-storage-missing-bool-representation");
+		missingBoolRepresentation.registerTypeOrder("Main", "Main", 0);
+		expectFailure("missing exact Bool representation", "missing-exact-primitive-representation", () -> missingBoolRepresentation.register({
+			moduleId: "Main",
+			ownerTypeName: "Main",
+			fieldName: "ready",
+			targetValueName: "ready",
+			semanticTypeId: "Bool",
+			carrierTypeId: "bool",
+			fieldType: Context.typeof(macro(false : Bool)),
+			carrierType: OcamlTypeExpr.TIdent("bool"),
 			kind: OcamlStaticStorageKind.Variable,
 			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
 			declarationTypeName: null,
@@ -224,6 +283,15 @@ class StaticStoragePlanFixture {
 		typePreludeInt.seal();
 		assertTrue(typePreludeInt.require("Main", "Main", "value").representationId == "representation:Int:static-field",
 			"a type-prelude exact Int cell should preserve the same representation decision");
+
+		final typePreludeBool = new OcamlStaticStoragePlan();
+		typePreludeBool.beginProgram("program:static-storage-type-prelude-bool");
+		typePreludeBool.registerTypeOrder("Main", "Worker", 0);
+		typePreludeBool.registerTypeOrder("Main", "Main", 1);
+		registerBool(typePreludeBool, "Main", "ready", "ready", 1, OcamlStaticStorageDeclarationSite.TypePrelude, "Worker", 0);
+		typePreludeBool.seal();
+		assertTrue(typePreludeBool.require("Main", "Main", "ready").representationId == "representation:Bool:static-field",
+			"a type-prelude exact Bool cell should preserve the same representation decision if a carrier dependency selects that site");
 
 		final repeated = new OcamlStaticStoragePlan();
 		repeated.beginProgram("program:static-storage-fixture");

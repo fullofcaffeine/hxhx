@@ -4,11 +4,17 @@ class Main {
 	static var floatValue:Float = 1.5;
 	static final events:Array<String> = [];
 	public static var sameModuleValue:Int = 20;
+	public static var sameModuleBool:Bool;
 	public static var sameModuleObject:SameModuleWorker;
 
 	static function rhs(label:String, value:Int):Int {
 		events.push(label);
 		return value;
+	}
+
+	static function rhsBool():Bool {
+		events.push("rhs_bool");
+		return true;
 	}
 
 	static function rhsMutatingLocal():Int {
@@ -26,7 +32,11 @@ class Main {
 	static function main():Void {
 		Sys.println(SameModuleWorker.run());
 		Sys.println("omitted=" + ExternalHolder.omitted);
+		Sys.println("omitted_bool=" + ExternalHolder.omittedBool);
+		final boolResult = ExternalHolder.omittedBool = rhsBool();
+		Sys.println("bool=" + boolResult + " final=" + ExternalHolder.omittedBool + " events=" + events.join(","));
 
+		events.resize(0);
 		final localResult = localValue = rhs("rhs_local", 7);
 		Sys.println("local=" + localResult + " final=" + localValue + " events=" + events.join(","));
 
@@ -96,6 +106,7 @@ class SameModuleWorker {
 		final object = new SameModuleWorker();
 		Main.sameModuleObject = object;
 		final sameObject = Main.sameModuleObject == object;
-		return 'same_module=$assigned/$compound/$postfix/$prefix/${Main.sameModuleValue}/$sameObject';
+		final boolAssigned = Main.sameModuleBool = true;
+		return 'same_module=$assigned/$compound/$postfix/$prefix/${Main.sameModuleValue}/$sameObject/$boolAssigned/${Main.sameModuleBool}';
 	}
 }

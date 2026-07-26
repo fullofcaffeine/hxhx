@@ -2,4 +2,5 @@
 class ExternalHolder {
 	public static var value:Int = 10;
 	public static var omitted:Int;
+	public static var omittedBool:Bool;
 }

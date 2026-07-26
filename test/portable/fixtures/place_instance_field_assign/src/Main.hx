@@ -13,10 +13,20 @@ class Main {
 		return 7;
 	}
 
+	static function boolRhs():Bool {
+		events.push("bool_rhs");
+		return true;
+	}
+
 	static function main():Void {
 		Sys.println("initial=" + holder.value);
 		final result = receiver().value = rhs();
 		Sys.println("result=" + result + " final=" + holder.value + " events=" + events.join(",") + " abstract=" + abstractControl());
+
+		events.resize(0);
+		Sys.println("bool_initial=" + holder.ready);
+		final boolResult = receiver().ready = boolRhs();
+		Sys.println("bool_result=" + boolResult + " final=" + holder.ready + " events=" + events.join(","));
 
 		events.resize(0);
 		final compoundResult = receiver().value += rhsMutating();
@@ -58,6 +68,7 @@ class Main {
 /** Mutable record-backed receiver used by the focused place fixture. */
 class Holder {
 	public var value:Int;
+	public var ready:Bool;
 
 	public function new() {}
 }

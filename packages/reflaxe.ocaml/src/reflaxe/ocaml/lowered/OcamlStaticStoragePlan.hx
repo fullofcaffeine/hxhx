@@ -92,7 +92,7 @@ typedef OcamlStaticStorageReportEntry = {
 	late forward declaration.
 **/
 class OcamlStaticStoragePlan {
-	public static inline final MODEL_REVISION = "ocaml-static-storage-v3";
+	public static inline final MODEL_REVISION = "ocaml-static-storage-v4";
 
 	var currentProgramRevision:Null<String> = null;
 	var sealed:Bool = false;
@@ -344,10 +344,10 @@ class OcamlStaticStoragePlan {
 			throw "reflaxe.ocaml [ocaml-static-storage:missing-representation]: a module-prelude cell needs the program representation decision that makes its early carrier safe";
 		}
 		if (selection.kind == OcamlStaticStorageKind.Variable
-			&& selection.semanticTypeId == "Int"
-			&& selection.carrierTypeId == "int"
+			&& ((selection.semanticTypeId == "Int" && selection.carrierTypeId == "int")
+				|| (selection.semanticTypeId == "Bool" && selection.carrierTypeId == "bool"))
 			&& selection.representationId == null) {
-			throw "reflaxe.ocaml [ocaml-static-storage:missing-exact-int-representation]: every exact-Int static cell needs its program representation decision, regardless of declaration site";
+			throw "reflaxe.ocaml [ocaml-static-storage:missing-exact-primitive-representation]: every exact Int or Bool static cell needs its program representation decision, regardless of declaration site";
 		}
 		if (selection.declarationSite == OcamlStaticStorageDeclarationSite.TypePrelude) {
 			if (selection.declarationTypeName == null || selection.declarationTypeName.length == 0 || selection.declarationTypeOrder < 0)

@@ -23,14 +23,7 @@ typedef OcamlFieldRepresentationMaterialization = {
 	It never inspects a Haxe type or selects a fallback representation.
 **/
 class OcamlFieldRepresentationMaterializer {
-	/**
-		Returns the direct exact-Int field carrier and implicit zero initializer.
-
-		Other semantic families stay rejected until their field representation and
-		default policies receive their own bounded proof.
-	**/
-	public static function materializeExactInt(decision:OcamlRepresentationDecision,
-			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
+	static function requireFieldDomain(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):Void {
 		switch (expectedDomain) {
 			case InstanceField, StaticField:
 			case InternalValue, MutableLocalStorage, CapturedLocalStorage, ArrayElement:
@@ -39,6 +32,17 @@ class OcamlFieldRepresentationMaterializer {
 		if (decision.domain != expectedDomain) {
 			throw 'reflaxe.ocaml [ocaml-field-representation:wrong-domain]: representation ${decision.id} selects ${decision.domain}, but field materialization requires $expectedDomain';
 		}
+	}
+
+	/**
+		Returns the direct exact-Int field carrier and implicit zero initializer.
+
+		Other semantic families stay rejected until their field representation and
+		default policies receive their own bounded proof.
+	**/
+	public static function materializeExactInt(decision:OcamlRepresentationDecision,
+			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
+		requireFieldDomain(decision, expectedDomain);
 		if (decision.semanticTypeId != "Int"
 			|| decision.carrierTypeId != "int"
 			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.ExactIntZero) {
@@ -48,6 +52,37 @@ class OcamlFieldRepresentationMaterializer {
 			carrierType: OcamlTypeExpr.TIdent("int"),
 			implicitDefault: OcamlExpr.EConst(OcamlConst.CInt(0))
 		};
+	}
+
+	/** Returns the direct exact-Bool field carrier and implicit false initializer. */
+	public static function materializeExactBool(decision:OcamlRepresentationDecision,
+			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
+		requireFieldDomain(decision, expectedDomain);
+		if (decision.semanticTypeId != "Bool"
+			|| decision.carrierTypeId != "bool"
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.ExactBoolFalse) {
+			throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-decision]: representation ${decision.id} must select exact Bool -> bool with exact-bool-false, but selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} with ${decision.implicitDefaultPolicy}';
+		}
+		return {
+			carrierType: OcamlTypeExpr.TIdent("bool"),
+			implicitDefault: OcamlExpr.EConst(OcamlConst.CBool(false))
+		};
+	}
+
+	/**
+		Materializes one of the two explicitly admitted direct primitive fields.
+
+		The decision's semantic type selects the already-proven mechanical
+		translation. Unknown families fail instead of falling back to a type mapper.
+	**/
+	public static function materializeDirectPrimitive(decision:OcamlRepresentationDecision,
+			expectedDomain:OcamlRepresentationDomain):OcamlFieldRepresentationMaterialization {
+		return switch (decision.semanticTypeId) {
+			case "Int": materializeExactInt(decision, expectedDomain);
+			case "Bool": materializeExactBool(decision, expectedDomain);
+			case other:
+				throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-family]: no direct primitive field materializer exists for $other';
+		}
 	}
 }
 #end

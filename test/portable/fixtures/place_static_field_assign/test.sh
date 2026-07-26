@@ -23,6 +23,13 @@ if [ "$declaration_line" -ge "$worker_line" ] || [ "$initializer_count" -ne 1 ];
 	exit 1
 fi
 
+bool_declaration_count="$(grep -c '^let sameModuleBool = ref (false : bool)$' "$source_file" || true)"
+bool_declaration_line="$(grep -n '^let sameModuleBool = ref (false : bool)$' "$source_file" | cut -d: -f1)"
+if [ "$bool_declaration_count" -ne 1 ] || [ "$bool_declaration_line" -ge "$worker_line" ]; then
+	echo "The shared exact Bool cell must be declared once with false before SameModuleWorker" >&2
+	exit 1
+fi
+
 object_declaration_count="$(grep -c '^let sameModuleObject = ref ' "$source_file" || true)"
 if [ "$object_declaration_count" -ne 1 ]; then
 	echo "Expected exactly one OCaml ref cell for Main.sameModuleObject, found $object_declaration_count" >&2
@@ -41,18 +48,41 @@ if ! grep -q '^let omitted = ref (0 : int)$' "$external_source_file"; then
 	echo "An omitted exact Int static must use the selected int carrier and zero default" >&2
 	exit 1
 fi
+if ! grep -q '^let omittedBool = ref (false : bool)$' "$external_source_file"; then
+	echo "An omitted exact Bool static must use the selected bool carrier and false default" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const decision = report.representations.find(item => item.id === 'representation:Int:static-field')
+const boolDecision = report.representations.find(item => item.id === 'representation:Bool:static-field')
 const external = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omitted')
+const externalBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedBool')
+const sameModuleBool = report.staticStorage.find(item => item.key === 'Main::Main::sameModuleBool')
+const boolAssignment = report.plans.find(item =>
+	item.nodeKind === 'static-simple-assignment'
+	&& item.semanticTypeId === 'Bool'
+	&& item.carrierTypeId === 'bool'
+	&& item.place?.representationId === boolDecision?.id)
 if (!decision
 	|| decision.carrierTypeId !== 'int'
 	|| decision.implicitDefaultPolicy !== 'exact-int-zero'
 	|| !external
 	|| external.representationId !== decision.id) {
 	throw new Error('the lowering report did not preserve the exact Int static carrier/default decision')
+}
+if (!boolDecision
+	|| boolDecision.carrierTypeId !== 'bool'
+	|| boolDecision.implicitDefaultPolicy !== 'exact-bool-false'
+	|| !externalBool
+	|| externalBool.representationId !== boolDecision.id
+	|| !sameModuleBool
+	|| sameModuleBool.declarationSite !== 'module-prelude'
+	|| sameModuleBool.representationId !== boolDecision.id
+	|| !boolAssignment) {
+	throw new Error('the lowering report did not preserve the exact Bool static carrier/default/simple-assignment decision')
 }
 NODE
 

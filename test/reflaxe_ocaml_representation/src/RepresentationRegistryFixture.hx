@@ -87,6 +87,8 @@ class RepresentationRegistryFixture {
 		final boolInternal = registry.selectExactBool(OcamlRepresentationDomain.InternalValue);
 		final boolMutable = registry.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
 		final boolCaptured = registry.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
+		final boolInstanceField = registry.selectExactBool(OcamlRepresentationDomain.InstanceField);
+		final boolStaticField = registry.selectExactBool(OcamlRepresentationDomain.StaticField);
 		final arrayInternal = registry.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		final arrayMutable = registry.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final arrayCaptured = registry.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
@@ -129,13 +131,26 @@ class RepresentationRegistryFixture {
 			&& boolInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectUnboxed,
 			"exact Bool locals should use the direct non-null OCaml bool carrier");
 		assertTrue(boolInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactBoolFalse,
-			"exact Bool decisions should record their semantic false default even though field storage is not admitted yet");
-		assertTrue(boolInternal.proof.id == "direct-exact-bool-local-v1"
-			&& boolInternal.proof.claim.indexOf("does not admit nullable values, fields, calls, operators, native boundaries, or public ABI") >= 0,
-			"the exact Bool proof should state its local-only boundary");
+			"exact Bool decisions should record their semantic false default");
+		assertTrue(boolInternal.proof.id == "direct-exact-bool-storage-v2"
+			&& boolInternal.proof.claim.indexOf("does not admit nullable values, array elements, calls, operators, native boundaries, or public ABI") >= 0,
+			"the exact Bool proof should state its bounded storage boundary");
 		assertTrue(boolMutable.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
-			&& boolCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
-			"mutable and captured Bool values should put replacement mutation in their shared local cells");
+			&& boolCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& boolInstanceField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner
+			&& boolStaticField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.StaticFieldOwner,
+			"exact Bool storage should name the local, instance, or static owner that performs replacement");
+		final boolInstanceMaterialization = OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(boolInstanceField,
+			OcamlRepresentationDomain.InstanceField);
+		final boolCarrierIsDirect = switch (boolInstanceMaterialization.carrierType) {
+			case TIdent("bool"): true;
+			case _: false;
+		}
+		final boolDefaultIsFalse = switch (boolInstanceMaterialization.implicitDefault) {
+			case EConst(CBool(false)): true;
+			case _: false;
+		}
+		assertTrue(boolCarrierIsDirect && boolDefaultIsFalse, "an exact Bool instance field should materialize directly as OCaml bool with a false default");
 		assertTrue(arrayInternal.semanticTypeId == "Array<Int>" && arrayInternal.carrierTypeId == "int HxArray.t",
 			"the direct Array<Int> internal value should use the typed HxArray carrier");
 		assertTrue(arrayInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
@@ -185,7 +200,7 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 17, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 19, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -200,14 +215,31 @@ class RepresentationRegistryFixture {
 		assertTrue(registry.require(instanceField.id, "program:representation-fixture")
 			.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactIntZero,
 			"mutating a returned default policy must not change the retained decision");
+		expectFailure("wrong Bool field domain", "wrong-domain",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactBool(boolMutable, OcamlRepresentationDomain.StaticField));
+		Reflect.setField(boolInstanceField, "carrierTypeId", "int");
+		expectFailure("wrong Bool field carrier", "unsupported-decision",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactBool(boolInstanceField, OcamlRepresentationDomain.InstanceField));
+		assertTrue(registry.require(boolInstanceField.id, "program:representation-fixture").carrierTypeId == "bool",
+			"mutating a returned Bool carrier must not change the retained decision");
+		Reflect.setField(boolStaticField, "implicitDefaultPolicy", OcamlRepresentationImplicitDefaultPolicy.NotAdmitted);
+		expectFailure("wrong Bool field default", "unsupported-decision",
+			() -> OcamlFieldRepresentationMaterializer.materializeExactBool(boolStaticField, OcamlRepresentationDomain.StaticField));
+		assertTrue(registry.require(boolStaticField.id, "program:representation-fixture")
+			.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.ExactBoolFalse,
+			"mutating a returned Bool default policy must not change the retained decision");
+		final wrongBoolSemantic = registry.require(boolStaticField.id, "program:representation-fixture");
+		Reflect.setField(wrongBoolSemantic, "semanticTypeId", "Float");
+		expectFailure("wrong Bool semantic family", "unsupported-family",
+			() -> OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(wrongBoolSemantic, OcamlRepresentationDomain.StaticField));
 
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
 		expectFailure("stale program", "registry belongs to", () -> registry.require(internal.id, "program:older"));
 		expectFailure("unsupported Array<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
 			() -> registry.selectExactArrayInt(OcamlRepresentationDomain.InstanceField));
-		expectFailure("unsupported Bool domain", "admitted only for internal, mutable-local, or captured-local storage",
-			() -> registry.selectExactBool(OcamlRepresentationDomain.InstanceField));
+		expectFailure("unsupported Bool array domain", "admitted only for internal, local, instance-field, or static-field storage",
+			() -> registry.selectExactBool(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported Null<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
 			() -> registry.selectExactNullInt(OcamlRepresentationDomain.InstanceField));
 		expectFailure("unsupported Null<Bool> domain", "admitted only for internal, mutable-local, or captured-local storage",
@@ -238,6 +270,8 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
+		registryAgain.selectExactBool(OcamlRepresentationDomain.InstanceField);
+		registryAgain.selectExactBool(OcamlRepresentationDomain.StaticField);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);

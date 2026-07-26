@@ -48,7 +48,7 @@ try {
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
 	assert(report.summary.runtimeModuleCount > 0)
-	assert.strictEqual(report.summary.loweredPlanCount, 18)
+	assert.strictEqual(report.summary.loweredPlanCount, 20)
 	assert(report.summary.representationDecisionCount > 0)
 	assert(report.summary.staticStorageCount > 0)
 	assert.strictEqual(report.artifactManifest.status, 'present')
@@ -86,17 +86,30 @@ try {
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleValue'
 		&& entry.declarationSite === 'module-prelude'
 		&& entry.carrierTypeId === 'int'))
+	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleBool'
+		&& entry.declarationSite === 'module-prelude'
+		&& entry.carrierTypeId === 'bool'
+		&& entry.representationId === 'representation:Bool:static-field'))
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleObject'
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-field-default-bool-array-int-and-nullable-primitive-locals-v7')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-field-default-and-simple-assignment-array-int-nullable-locals-v8')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
 		&& decision.nullPolicy === 'non-null'
 		&& decision.boxingPolicy === 'direct-unboxed'
 		&& decision.implicitDefaultPolicy === 'exact-int-zero'))
+	assert(report.representation.decisions.some(decision => decision.id === 'representation:Bool:static-field'
+		&& decision.carrierTypeId === 'bool'
+		&& decision.nullPolicy === 'non-null'
+		&& decision.boxingPolicy === 'direct-unboxed'
+		&& decision.implicitDefaultPolicy === 'exact-bool-false'))
+	assert(report.lowering.plans.some(plan => plan.nodeKind === 'static-simple-assignment'
+		&& plan.semanticTypeId === 'Bool'
+		&& plan.carrierTypeId === 'bool'
+		&& plan.representationId === 'representation:Bool:static-field'))
 	const update = report.lowering.plans.find(plan => plan.nodeKind === 'static-int-update')
 	assert(update)
 	assert.strictEqual(update.semanticTypeId, 'Int')

@@ -54,6 +54,7 @@ import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
@@ -507,9 +508,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case FVar(_, _): OcamlStaticStorageKind.Variable;
 						case _: continue;
 					}
-					final representation = kind == OcamlStaticStorageKind.Variable
-						&& OcamlRepresentationRegistry.isExactInt(field.type) ? representationRegistry.selectExactInt(OcamlRepresentationDomain.StaticField) : null;
-					final representedField = representation == null ? null : OcamlFieldRepresentationMaterializer.materializeExactInt(representation,
+					final representation = kind == OcamlStaticStorageKind.Variable ? selectDirectPrimitiveField(field.type,
+						OcamlRepresentationDomain.StaticField) : null;
+					final representedField = representation == null ? null : OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(representation,
 						OcamlRepresentationDomain.StaticField);
 					final previousModuleId = ctx.currentModuleId;
 					final previousTypeName = ctx.currentTypeName;
@@ -518,9 +519,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final carrierType = representedField == null ? ocamlTypeExprFromHaxeType(field.type) : representedField.carrierType;
 					ctx.currentModuleId = previousModuleId;
 					ctx.currentTypeName = previousTypeName;
-					final useModulePrelude = kind == OcamlStaticStorageKind.Variable
-						&& concrete.length > 1
-						&& OcamlRepresentationRegistry.isExactInt(field.type);
+					final useModulePrelude = representedField != null && concrete.length > 1;
 					final latestCarrierDependency = latestCarrierTypeOrder(carrierType);
 					if (!useModulePrelude && latestCarrierDependency > typeOrder) {
 						final dependencyTypeName = ordered[latestCarrierDependency].classType.name;
@@ -913,7 +912,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return entry;
 	}
 
-	/** Resolves one sealed exact-Int static field without asking the legacy type mapper. */
+	/** Resolves one sealed direct primitive static field without consulting the legacy type mapper. */
 	function requireStaticFieldRepresentation(entry:OcamlStaticStorageEntry):Null<OcamlFieldRepresentationMaterialization> {
 		if (entry.representationId == null)
 			return null;
@@ -927,29 +926,36 @@ class OcamlCompiler extends DirectToStringCompiler {
 				staticStorageInvariant('"${entry.key}" expects ${entry.semanticTypeId} on ${entry.carrierTypeId}, but ${decision.id} selects ${decision.semanticTypeId} on ${decision.carrierTypeId}');
 		}
 		return try {
-			OcamlFieldRepresentationMaterializer.materializeExactInt(decision, OcamlRepresentationDomain.StaticField);
+			OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(decision, OcamlRepresentationDomain.StaticField);
 		} catch (error:Dynamic) {
 			staticStorageInvariant(Std.string(error));
 		}
 	}
 
-	/** Selects the admitted exact-Int instance-field representation, when applicable. */
-	function exactIntInstanceField(type:Type):Null<OcamlFieldRepresentationMaterialization> {
-		if (!OcamlRepresentationRegistry.isExactInt(type))
-			return null;
-		final decision = representationRegistry.selectExactInt(OcamlRepresentationDomain.InstanceField);
-		return OcamlFieldRepresentationMaterializer.materializeExactInt(decision, OcamlRepresentationDomain.InstanceField);
+	/** Selects one admitted direct primitive field representation, when applicable. */
+	function selectDirectPrimitiveField(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
+		if (OcamlRepresentationRegistry.isExactInt(type))
+			return representationRegistry.selectExactInt(domain);
+		if (OcamlRepresentationRegistry.isExactBool(type))
+			return representationRegistry.selectExactBool(domain);
+		return null;
+	}
+
+	/** Materializes the admitted direct primitive instance field, when applicable. */
+	function directPrimitiveInstanceField(type:Type):Null<OcamlFieldRepresentationMaterialization> {
+		final decision = selectDirectPrimitiveField(type, OcamlRepresentationDomain.InstanceField);
+		return decision == null ? null : OcamlFieldRepresentationMaterializer.materializeDirectPrimitive(decision, OcamlRepresentationDomain.InstanceField);
 	}
 
 	/** Returns one instance field's selected carrier or the explicitly unmigrated mapper. */
 	function instanceFieldCarrier(type:Type):OcamlTypeExpr {
-		final represented = exactIntInstanceField(type);
+		final represented = directPrimitiveInstanceField(type);
 		return represented == null ? ocamlTypeExprFromHaxeType(type) : represented.carrierType;
 	}
 
 	/** Returns one instance field's selected implicit default or the unmigrated default mapper. */
 	function instanceFieldDefault(type:Type):OcamlExpr {
-		final represented = exactIntInstanceField(type);
+		final represented = directPrimitiveInstanceField(type);
 		return represented == null ? defaultValueForType(type) : represented.implicitDefault;
 	}
 

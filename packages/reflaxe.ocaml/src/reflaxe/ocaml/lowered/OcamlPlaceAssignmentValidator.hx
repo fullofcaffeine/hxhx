@@ -105,12 +105,17 @@ class OcamlPlaceAssignmentValidator {
 		return found;
 	}
 
-	static function validateIdentityAndPlace(plan:OcamlPlaceValidationFacts):Array<String> {
+	static function isDirectPrimitive(semanticTypeId:String, carrierTypeId:String):Bool {
+		return (semanticTypeId == "Int" && carrierTypeId == "int") || (semanticTypeId == "Bool" && carrierTypeId == "bool");
+	}
+
+	static function validateIdentityAndPlace(plan:OcamlPlaceValidationFacts, allowBool:Bool = false):Array<String> {
 		final errors:Array<String> = [];
 		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
 			errors.push("stable node, origin, and place identities are required");
-		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
-			errors.push("the first slice only admits semantic Int on the OCaml int carrier");
+		if ((allowBool && !isDirectPrimitive(plan.semanticTypeId, plan.carrierTypeId))
+			|| (!allowBool && (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")))
+			errors.push(allowBool ? "simple assignment admits only exact Int or Bool on their direct OCaml carriers" : "this operator slice admits only semantic Int on the OCaml int carrier");
 		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
 			errors.push("place and expression semantic/carrier types must agree in the first slice");
 		if (plan.place.kind != OcamlLoweredPlaceKind.InstanceField)
@@ -160,12 +165,13 @@ class OcamlPlaceAssignmentValidator {
 		return errors;
 	}
 
-	static function validateStaticIdentityAndPlace(plan:OcamlStaticPlaceValidationFacts):Array<String> {
+	static function validateStaticIdentityAndPlace(plan:OcamlStaticPlaceValidationFacts, allowBool:Bool = false):Array<String> {
 		final errors:Array<String> = [];
 		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
 			errors.push("stable node, origin, and static-place identities are required");
-		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
-			errors.push("the first static slice only admits semantic Int on the OCaml int carrier");
+		if ((allowBool && !isDirectPrimitive(plan.semanticTypeId, plan.carrierTypeId))
+			|| (!allowBool && (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")))
+			errors.push(allowBool ? "static simple assignment admits only exact Int or Bool on their direct OCaml carriers" : "this static operator slice admits only semantic Int on the OCaml int carrier");
 		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
 			errors.push("static place and expression semantic/carrier types must agree");
 		if (plan.place.kind != OcamlLoweredPlaceKind.StaticField)
@@ -188,7 +194,7 @@ class OcamlPlaceAssignmentValidator {
 	}
 
 	public static function validateSimple(plan:OcamlLoweredSimpleAssignment):Array<String> {
-		final errors = validateIdentityAndPlace(plan);
+		final errors = validateIdentityAndPlace(plan, true);
 		if (plan.result != OcamlAssignmentResultKind.AssignedValue)
 			errors.push("simple assignment must return its assigned value");
 
@@ -213,7 +219,7 @@ class OcamlPlaceAssignmentValidator {
 			}
 		}
 		if (plan.runtimeRequirementIds.length != 0)
-			errors.push("direct Int record-field assignment must not require compatibility runtime support");
+			errors.push("direct primitive record-field assignment must not require compatibility runtime support");
 		if (containsUnsealedAdmittedPlace(plan.receiver) || containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed source-shaped child");
 		return errors;
@@ -221,7 +227,7 @@ class OcamlPlaceAssignmentValidator {
 
 	/** Validates a receiver-free static ref assignment and its selected symbol access. */
 	public static function validateStaticSimple(plan:OcamlLoweredStaticSimpleAssignment):Array<String> {
-		final errors = validateStaticIdentityAndPlace(plan);
+		final errors = validateStaticIdentityAndPlace(plan, true);
 		if (plan.result != OcamlAssignmentResultKind.AssignedValue)
 			errors.push("static simple assignment must return its assigned value");
 
@@ -249,7 +255,7 @@ class OcamlPlaceAssignmentValidator {
 				errors.push("the static assignment result must reuse the evaluated RHS");
 		}
 		if (plan.runtimeRequirementIds.length != 0)
-			errors.push("direct Int static ref assignment must not require compatibility runtime support");
+			errors.push("direct primitive static ref assignment must not require compatibility runtime support");
 		if (containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed static-assignment RHS");
 		return errors;
