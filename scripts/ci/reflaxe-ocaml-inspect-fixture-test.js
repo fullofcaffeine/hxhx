@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 7)
+	assert.strictEqual(report.schemaVersion, 8)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -70,7 +70,7 @@ try {
 	assert.strictEqual(report.runtime.semanticManifest, false)
 	assert.strictEqual(report.buildTiming.status, 'not-enabled')
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
-	assert.strictEqual(report.lowering.scope, 'typed-place-assignment-and-update-family')
+	assert.strictEqual(report.lowering.scope, 'typed-place-and-first-direct-call-families')
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
@@ -81,6 +81,14 @@ try {
 	assert(report.lowering.unsafeOperations.every(operation =>
 		report.lowering.localConversions.some(conversion =>
 			conversion.id === operation.conversionId && conversion.unsafeOperationId === operation.id)))
+	assert.strictEqual(report.lowering.calls.length, report.summary.callCount)
+	assert.strictEqual(report.lowering.callableBoundaries.length, report.summary.callableBoundaryCount)
+	assert.match(report.lowering.callRevision, sha256Revision)
+	assert(report.lowering.calls.every(call =>
+		report.lowering.callableBoundaries.some(boundary =>
+			boundary.calleeId === call.calleeId
+			&& boundary.arguments[0].representationId === call.arguments[0].representationId
+			&& boundary.result.representationId === call.result.representationId)))
 	assert.strictEqual(report.lowering.staticStorage.length, report.summary.staticStorageCount)
 	assert.match(report.lowering.staticStorageRevision, sha256Revision)
 	assert(report.lowering.staticStorage.some(entry => entry.key === 'Main::Main::sameModuleValue'

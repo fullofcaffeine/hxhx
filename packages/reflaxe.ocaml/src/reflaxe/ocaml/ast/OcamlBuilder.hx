@@ -25,6 +25,9 @@ import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlCallPlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
@@ -63,9 +66,11 @@ class OcamlBuilder {
 	public final emitSourceMap:Bool;
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
+	final functionPlanRegistry:OcamlFunctionPlanRegistry;
 	final representationRegistry:OcamlRepresentationRegistry;
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
+	var currentCallPlan:Null<OcamlCallPlan> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -115,6 +120,7 @@ class OcamlBuilder {
 			representationRegistry:OcamlRepresentationRegistry, staticStoragePlan:OcamlStaticStoragePlan, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
+		this.functionPlanRegistry = functionPlanRegistry;
 		this.representationRegistry = representationRegistry;
 		this.staticStoragePlan = staticStoragePlan;
 		this.emitSourceMap = emitSourceMap;
@@ -140,6 +146,41 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	function callPlanInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-call:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	function requireIdentityIntCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
+		try {
+			OcamlCallPlan.requireFirstFamilyValue(value, expectedIndex, owner);
+		} catch (error:Dynamic) {
+			callPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Materializes the first sealed direct-static call family without rediscovering its semantics. */
+	function buildPlannedCall(call:OcamlCallDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		try {
+			OcamlCallPlan.requireFirstFamilyCall(call);
+			functionPlanRegistry.requireCallableDeclaration(call);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), position);
+		}
+		if (arguments.length != 1)
+			return callPlanInvariant('call "${call.id}" must have exactly one source argument', position);
+
+		final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId);
+		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+		final targetName = ctx.scopedValueName(call.sourceModuleId, call.sourceTypeName, call.sourceFieldName);
+		final target = selfModule != null
+			&& selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), targetName);
+		return OcamlExpr.EApp(target, [buildExpr(arguments[0])]);
 	}
 
 	/** Resolves one pre-emission static cell and rejects an unsafe late cross-type reference. */
@@ -1255,7 +1296,10 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
+		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case TCall(_, arguments) if (plannedCall != null):
+				buildPlannedCall(plannedCall, arguments, e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):
@@ -6533,14 +6577,27 @@ class OcamlBuilder {
 		final storagePlan = functionPlan.localStorage;
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousCallPlan = currentCallPlan;
 		currentFunctionPlanBinding = functionPlan.binding;
+		currentCallPlan = functionPlan.calls;
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
 			log("reflaxe.ocaml: builder_fn_plan_bind dt_ms=" + Std.string(Std.int((t1 - t0) * 1000)));
 		#end
 
-		final params = args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
+		final callableBoundary = functionPlan.callableBoundary;
+		final params = if (callableBoundary == null) {
+			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
+		} else {
+			if (args.length != 1 || callableBoundary.arguments.length != 1)
+				return callPlanInvariant('callable boundary "${callableBoundary.id}" must materialize one parameter', bodyExpr.pos);
+			requireIdentityIntCallValue(callableBoundary.arguments[0], 0, 'callable boundary "${callableBoundary.id}" argument', bodyExpr.pos);
+			requireIdentityIntCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
+			[
+				OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[0].name)), OcamlTypeExpr.TIdent("int"))
+			];
+		}
 
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalRepresentationPlan = currentLocalRepresentationPlan;
@@ -6602,6 +6659,8 @@ class OcamlBuilder {
 		}
 		if (isVoidType(resolvedReturnType)) {
 			body = exprAsStatement(body);
+		} else if (callableBoundary != null) {
+			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent("int"));
 		}
 
 		for (a in args) {
@@ -6617,6 +6676,7 @@ class OcamlBuilder {
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentCallPlan = previousCallPlan;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)

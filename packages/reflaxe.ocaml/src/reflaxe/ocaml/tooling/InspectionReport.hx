@@ -244,6 +244,59 @@ typedef InspectionUnsafeOperation = {
 	final pipelineRevision:String;
 }
 
+/** One argument or result carrier selected by the typed call plan. **/
+typedef InspectionCallValue = {
+	final index:Int;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final conversion:String;
+}
+
+/** One direct call occurrence whose target and evaluation order were sealed before syntax. **/
+typedef InspectionCall = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final calleeId:String;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final sourceFieldName:String;
+	final kind:String;
+	final arguments:Array<InspectionCallValue>;
+	final result:InspectionCallValue;
+	final evaluationSchedule:Array<String>;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One callable definition independently sealed against its final body. **/
+typedef InspectionCallableBoundary = {
+	final id:String;
+	final calleeId:String;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final sourceFieldName:String;
+	final kind:String;
+	final arguments:Array<InspectionCallValue>;
+	final result:InspectionCallValue;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One mutable static cell selected before generated type values are emitted. **/
 typedef InspectionStaticStorageEntry = {
 	final id:String;
@@ -284,6 +337,9 @@ typedef InspectionLowering = {
 	final unsafeOperationCompleteness:Null<String>;
 	final unsafeOperationRevision:Null<String>;
 	final unsafeOperations:Array<InspectionUnsafeOperation>;
+	final callRevision:Null<String>;
+	final calls:Array<InspectionCall>;
+	final callableBoundaries:Array<InspectionCallableBoundary>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -310,6 +366,8 @@ typedef InspectionSummary = {
 	final representationDecisionCount:Int;
 	final localConversionCount:Int;
 	final unsafeOperationCount:Int;
+	final callCount:Int;
+	final callableBoundaryCount:Int;
 	final staticStorageCount:Int;
 }
 

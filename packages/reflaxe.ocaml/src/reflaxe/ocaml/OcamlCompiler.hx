@@ -48,6 +48,7 @@ import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
@@ -254,11 +255,36 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.beginRuntimeRequirementProgram(revision.id);
 		#if macro
 		try {
+			planCallableDeclarations(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, revision.id);
 			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
 		} catch (error:Dynamic) {
 			Context.error(Std.string(error), Context.currentPos());
 		}
 		#end
+	}
+
+	/**
+		Builds the first callable declaration catalog from the complete typed program.
+
+		This happens before Reflaxe emits any module, so a caller can be checked
+		against the authoritative Haxe declaration even when the callee's final
+		body is processed later. The final body still has to publish a matching
+		callable boundary before the target command succeeds.
+	**/
+	function planCallableDeclarations(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>, programRevision:String):Void {
+		for (moduleId in moduleOrder) {
+			final classes = moduleToClasses.get(moduleId);
+			if (classes == null)
+				continue;
+			for (classType in classes) {
+				for (field in classType.statics.get()) {
+					final declaration = OcamlCallPlanner.declarationFor(classType, field, representationRegistry, programRevision,
+						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+					if (declaration != null)
+						functionPlanRegistry.registerCallableDeclaration(declaration);
+				}
+			}
+		}
 	}
 
 	/** Builds and validates every admitted plan for one final typed function body. */
@@ -2010,6 +2036,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return out;
 	}
 
+	/**
+		Rejects an incomplete typed-call graph before Reflaxe writes target files.
+
+		Function plans are finalized while Reflaxe adds the complete typed program.
+		This hook is the last target-owned boundary before its output manager turns
+		the already-built syntax into files, so a missing or conflicting callee
+		cannot leave newly generated OCaml source behind.
+	**/
+	public override function generateFiles():Void {
+		functionPlanRegistry.validateCallGraph();
+		super.generateFiles();
+	}
+
 	public override function onOutputComplete() {
 		#if eval
 		if (output == null || output.outputDir == null)
@@ -2026,6 +2065,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final revision = programRevision;
 		if (revision == null)
 			throw "reflaxe.ocaml: cannot seal generated artifacts without a program revision";
+		// Keep a second check before artifact sealing in case a future Reflaxe
+		// lifecycle adds output-completion work after generateFiles().
+		functionPlanRegistry.validateCallGraph();
 		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
@@ -2051,8 +2093,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
-				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), staticStoragePlan.reportEntries(),
-				staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
+				functionPlanRegistry.callableBoundaries(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

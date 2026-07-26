@@ -6,6 +6,9 @@ import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
@@ -68,7 +71,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 7,
+			schemaVersion: 8,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -91,6 +94,8 @@ class ReflaxeOcamlInspection {
 				representationDecisionCount: representation.decisions.length,
 				localConversionCount: lowering.localConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
+				callCount: lowering.calls.length,
+				callableBoundaryCount: lowering.callableBoundaries.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -132,6 +137,11 @@ class ReflaxeOcamlInspection {
 				lines.push('  - ${operation.sourceFile} bytes ${operation.sourceMin}-${operation.sourceMax} ${operation.operation}: ${operation.inputSemanticTypeId}/${operation.inputCarrierTypeId} -> ${operation.outputSemanticTypeId}/${operation.outputCarrierTypeId}');
 				lines.push('    proof ${operation.proofId}: ${operation.proofClaim}');
 				lines.push('    profiles: ${operation.profileEligibility.join(", ")}; function=${operation.functionId}; body=${operation.bodyRevision}; pipeline=${operation.pipelineRevision}');
+			}
+			lines.push('[PASS] Typed direct calls: ${report.lowering.calls.length} call occurrence${report.lowering.calls.length == 1 ? "" : "s"} matched against ${report.lowering.callableBoundaries.length} independently sealed callable definition${report.lowering.callableBoundaries.length == 1 ? "" : "s"}.');
+			for (call in report.lowering.calls) {
+				lines.push('  - ${call.sourceFile} bytes ${call.sourceMin}-${call.sourceMax}: ${call.calleeId}');
+				lines.push('    schedule: ${call.evaluationSchedule.join(" -> ")}; ${call.arguments[0].semanticTypeId}/${call.arguments[0].carrierTypeId} -> ${call.result.semanticTypeId}/${call.result.carrierTypeId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -288,9 +298,12 @@ class ReflaxeOcamlInspection {
 					unsafeOperationCompleteness: null,
 					unsafeOperationRevision: null,
 					unsafeOperations: [],
+					callRevision: null,
+					calls: [],
+					callableBoundaries: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-assignment-and-update-family",
+					scope: "typed-place-and-first-direct-call-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -298,8 +311,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 13) {
-						throw 'Unsupported lowering report schema $version; expected 13.';
+					if (version != 14) {
+						throw 'Unsupported lowering report schema $version; expected 14.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -315,6 +328,7 @@ class ReflaxeOcamlInspection {
 					final representation = inspectRepresentations(value, path, version, plans);
 					final localConversions = inspectLocalConversions(value);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
+					final callInventory = inspectCalls(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
@@ -331,15 +345,168 @@ class ReflaxeOcamlInspection {
 						unsafeOperationCompleteness: requiredString(value, "unsafeOperationCompleteness"),
 						unsafeOperationRevision: requiredSha256Revision(value, "unsafeOperationRevision"),
 						unsafeOperations: unsafeOperations,
+						callRevision: requiredSha256Revision(value, "callRevision"),
+						calls: callInventory.calls,
+						callableBoundaries: callInventory.boundaries,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-assignment-and-update-family",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-and-first-direct-call-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed direct call${callInventory.calls.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
 				}
 		};
+	}
+
+	static function inspectCalls(value:Dynamic,
+			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
+		if (requiredString(value, "callModel") != "typed-ocaml-call-boundary-v1")
+			throw "Unsupported call-boundary report model.";
+		final rawCalls = requiredArray(value, "calls");
+		final rawBoundaries = requiredArray(value, "callableBoundaries");
+		if (rawCalls.length != requiredInt(value, "callCount"))
+			throw "Call count does not match its inventory.";
+		if (rawBoundaries.length != requiredInt(value, "callableBoundaryCount"))
+			throw "Callable-boundary count does not match its inventory.";
+
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final boundaries = [for (entry in rawBoundaries) callableBoundary(entry)];
+		final boundaryByCallee:Map<String, InspectionCallableBoundary> = [];
+		final boundaryIds:Map<String, Bool> = [];
+		for (boundary in boundaries) {
+			if (boundaryIds.exists(boundary.id))
+				throw 'Callable-boundary report contains duplicate identity "${boundary.id}".';
+			if (boundaryByCallee.exists(boundary.calleeId))
+				throw 'Callable-boundary report contains duplicate callee "${boundary.calleeId}".';
+			validateCallValue(boundary.arguments[0], representationById, 'Callable boundary "${boundary.id}" argument');
+			validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
+			boundaryIds.set(boundary.id, true);
+			boundaryByCallee.set(boundary.calleeId, boundary);
+		}
+		final calls = [for (entry in rawCalls) callDecision(entry)];
+		final callIds:Map<String, Bool> = [];
+		for (call in calls) {
+			if (callIds.exists(call.id))
+				throw 'Call report contains duplicate identity "${call.id}".';
+			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
+				throw 'Call "${call.id}" has an invalid source span.';
+			validateCallValue(call.arguments[0], representationById, 'Call "${call.id}" argument');
+			validateCallValue(call.result, representationById, 'Call "${call.id}" result');
+			final boundary = boundaryByCallee.get(call.calleeId);
+			if (boundary == null)
+				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
+			if (boundary.kind != call.kind
+				|| boundary.sourceModuleId != call.sourceModuleId
+				|| boundary.sourceTypeName != call.sourceTypeName
+				|| boundary.sourceFieldName != call.sourceFieldName
+				|| !sameCallValue(boundary.arguments[0], call.arguments[0])
+				|| !sameCallValue(boundary.result, call.result)) {
+				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
+			}
+			callIds.set(call.id, true);
+		}
+		calls.sort((left, right) -> compareStrings(left.id, right.id));
+		boundaries.sort((left, right) -> compareStrings(left.calleeId, right.calleeId));
+		return {calls: calls, boundaries: boundaries};
+	}
+
+	static function callValue(value:Dynamic):InspectionCallValue {
+		final conversion = requiredString(value, "conversion");
+		if (conversion != "identity")
+			throw 'Unsupported typed-call carrier conversion "$conversion".';
+		return {
+			index: requiredInt(value, "index"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			carrierTypeId: requiredString(value, "carrierTypeId"),
+			representationId: requiredString(value, "representationId"),
+			conversion: conversion
+		};
+	}
+
+	static function callValues(value:Dynamic, field:String):Array<InspectionCallValue> {
+		final values = [for (entry in requiredArray(value, field)) callValue(entry)];
+		if (values.length != 1)
+			throw 'Typed-call field "$field" has ${values.length} values instead of the admitted arity 1.';
+		return values;
+	}
+
+	static function requireDirectCallKind(value:Dynamic):String {
+		final kind = requiredString(value, "kind");
+		if (kind != "direct-static-haxe-method")
+			throw 'Unsupported typed-call kind "$kind".';
+		return kind;
+	}
+
+	static function callDecision(value:Dynamic):InspectionCall {
+		final source = requiredObject(value, "source");
+		final schedule = requiredStringArray(value, "evaluationSchedule");
+		if (schedule.length != 2 || schedule[0] != "evaluate-argument:0" || schedule[1] != "invoke-callee")
+			throw 'Call "${requiredString(value, "id")}" has an unsupported evaluation schedule.';
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			calleeId: requiredString(value, "calleeId"),
+			sourceModuleId: requiredString(value, "sourceModuleId"),
+			sourceTypeName: requiredString(value, "sourceTypeName"),
+			sourceFieldName: requiredString(value, "sourceFieldName"),
+			kind: requireDirectCallKind(value),
+			arguments: callValues(value, "arguments"),
+			result: callValue(requiredObject(value, "result")),
+			evaluationSchedule: schedule,
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function callableBoundary(value:Dynamic):InspectionCallableBoundary {
+		return {
+			id: requiredString(value, "id"),
+			calleeId: requiredString(value, "calleeId"),
+			sourceModuleId: requiredString(value, "sourceModuleId"),
+			sourceTypeName: requiredString(value, "sourceTypeName"),
+			sourceFieldName: requiredString(value, "sourceFieldName"),
+			kind: requireDirectCallKind(value),
+			arguments: callValues(value, "arguments"),
+			result: callValue(requiredObject(value, "result")),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function validateCallValue(value:InspectionCallValue, representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
+		final representation = representations.get(value.representationId);
+		if (representation == null)
+			throw '$owner refers to missing representation "${value.representationId}".';
+		if (representation.semanticTypeId != value.semanticTypeId
+			|| representation.carrierTypeId != value.carrierTypeId
+			|| representation.domain != "internal-value") {
+			throw '$owner expects ${value.semanticTypeId} -> ${value.carrierTypeId} in internal-value, but representation ${representation.id} selects ${representation.semanticTypeId} -> ${representation.carrierTypeId} in ${representation.domain}.';
+		}
+	}
+
+	static function sameCallValue(left:InspectionCallValue, right:InspectionCallValue):Bool {
+		return left.index == right.index
+			&& left.semanticTypeId == right.semanticTypeId
+			&& left.carrierTypeId == right.carrierTypeId
+			&& left.representationId == right.representationId
+			&& left.conversion == right.conversion;
 	}
 
 	static function inspectStaticStorage(value:Dynamic, representation:InspectionRepresentation):Array<InspectionStaticStorageEntry> {
@@ -983,9 +1150,12 @@ class ReflaxeOcamlInspection {
 			unsafeOperationCompleteness: null,
 			unsafeOperationRevision: null,
 			unsafeOperations: [],
+			callRevision: null,
+			calls: [],
+			callableBoundaries: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-assignment-and-update-family",
+			scope: "typed-place-and-first-direct-call-families",
 			message: message
 		};
 	}

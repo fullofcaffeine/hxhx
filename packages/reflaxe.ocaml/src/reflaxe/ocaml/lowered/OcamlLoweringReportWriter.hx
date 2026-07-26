@@ -8,6 +8,9 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -37,10 +40,14 @@ class OcamlLoweringReportWriter {
 		}
 	}
 
+	static function requireCallValue(byId:Map<String, OcamlRepresentationDecision>, value:OcamlCallValuePlan, owner:String):Void {
+		requireRepresentation(byId, value.representationId, value.semanticTypeId, value.carrierTypeId, OcamlRepresentationDomain.InternalValue, owner);
+	}
+
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
-			unsafeOperations:Array<OcamlUnsafeOperationRecord>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
-			artifacts:OcamlArtifactManifestBuilder):Void {
+			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -78,6 +85,39 @@ class OcamlLoweringReportWriter {
 			if (entry.representationId != null) {
 				requireRepresentation(representationById, entry.representationId, entry.semanticTypeId, entry.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, 'Static storage plan "${entry.id}"');
+			}
+		}
+		final sortedCalls = calls.copy();
+		sortedCalls.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final sortedCallableBoundaries = callableBoundaries.copy();
+		sortedCallableBoundaries.sort((left, right) -> Reflect.compare(left.calleeId, right.calleeId));
+		final callableByCallee:Map<String, OcamlCallableBoundaryPlan> = [];
+		for (boundary in sortedCallableBoundaries) {
+			OcamlCallPlan.requireFirstFamilyBoundary(boundary);
+			if (callableByCallee.exists(boundary.calleeId))
+				throw 'Callable boundary identity "${boundary.calleeId}" occurs more than once.';
+			if (boundary.arguments.length != 1)
+				throw 'Callable boundary "${boundary.id}" has ${boundary.arguments.length} arguments instead of the admitted arity 1.';
+			requireCallValue(representationById, boundary.arguments[0], 'Callable boundary "${boundary.id}" argument');
+			requireCallValue(representationById, boundary.result, 'Callable boundary "${boundary.id}" result');
+			callableByCallee.set(boundary.calleeId, boundary);
+		}
+		for (call in sortedCalls) {
+			OcamlCallPlan.requireFirstFamilyCall(call);
+			if (call.arguments.length != 1)
+				throw 'Call "${call.id}" has ${call.arguments.length} arguments instead of the admitted arity 1.';
+			requireCallValue(representationById, call.arguments[0], 'Call "${call.id}" argument');
+			requireCallValue(representationById, call.result, 'Call "${call.id}" result');
+			final boundary = callableByCallee.get(call.calleeId);
+			if (boundary == null)
+				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
+			if (boundary.kind != call.kind
+				|| boundary.sourceModuleId != call.sourceModuleId
+				|| boundary.sourceTypeName != call.sourceTypeName
+				|| boundary.sourceFieldName != call.sourceFieldName
+				|| !OcamlCallPlan.sameValue(boundary.arguments[0], call.arguments[0])
+				|| !OcamlCallPlan.sameValue(boundary.result, call.result)) {
+				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
@@ -123,8 +163,12 @@ class OcamlLoweringReportWriter {
 			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local conversion.";
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
+		final canonicalCalls = haxe.Json.stringify({
+			calls: sortedCalls,
+			callableBoundaries: sortedCallableBoundaries
+		});
 		final report = {
-			schemaVersion: 13,
+			schemaVersion: 14,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: "exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9",
@@ -140,6 +184,12 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
+			callModel: "typed-ocaml-call-boundary-v1",
+			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
+			callCount: sortedCalls.length,
+			calls: sortedCalls,
+			callableBoundaryCount: sortedCallableBoundaries.length,
+			callableBoundaries: sortedCallableBoundaries,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,

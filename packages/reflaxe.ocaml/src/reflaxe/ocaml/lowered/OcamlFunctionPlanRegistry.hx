@@ -4,6 +4,9 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -25,6 +28,8 @@ typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final calls:OcamlCallPlan;
+	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -42,12 +47,14 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v7";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v8";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
 	final originsByFunction:StringMap<Array<String>> = new StringMap();
 	final sealedFunctions:StringMap<OcamlSealedFunctionRecord> = new StringMap();
+	final declaredCallableByCallee:StringMap<OcamlCallableDeclarationPlan> = new StringMap();
+	final callableByCallee:StringMap<OcamlCallableBoundaryPlan> = new StringMap();
 	final originByProtection:StringMap<String> = new StringMap();
 
 	public function new() {}
@@ -60,6 +67,8 @@ class OcamlFunctionPlanRegistry {
 		plansByOrigin.clear();
 		originsByFunction.clear();
 		sealedFunctions.clear();
+		declaredCallableByCallee.clear();
+		callableByCallee.clear();
 		originByProtection.clear();
 	}
 
@@ -182,19 +191,137 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/** Prevents later planning from silently changing one function's inventory. */
-	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan):Void {
+	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
+			calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		for (call in calls.decisions()) {
+			OcamlCallPlan.requireFirstFamilyCall(call);
+			requireCallBinding(call, binding);
+			requireCallableDeclaration(call);
+		}
+		if (callableBoundary != null) {
+			OcamlCallPlan.requireFirstFamilyBoundary(callableBoundary);
+			requireBoundaryBinding(callableBoundary, binding);
+			requireDeclarationMatch(callableBoundary);
+			if (callableByCallee.exists(callableBoundary.calleeId))
+				throw 'reflaxe.ocaml [ocaml-call:duplicate-callable]: callee "${callableBoundary.calleeId}" has more than one sealed callable boundary';
+			callableByCallee.set(callableBoundary.calleeId, OcamlCallPlan.copyBoundary(callableBoundary));
+		}
 		final originIds = (originsByFunction.get(binding.functionId) ?? []).copy();
 		originIds.sort(Reflect.compare);
 		sealedFunctions.set(binding.functionId, {
 			plan: {
 				binding: binding,
 				localStorage: localStorage,
-				localRepresentations: localRepresentations
+				localRepresentations: localRepresentations,
+				calls: calls,
+				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary)
 			},
 			originIds: originIds
 		});
+	}
+
+	/** Registers one complete typed callable declaration before module emission. */
+	public function registerCallableDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
+		OcamlCallPlan.requireFirstFamilyDeclaration(declaration);
+		if (declaration.programRevision != currentProgramRevision || declaration.pipelineRevision != PIPELINE_REVISION)
+			throw 'reflaxe.ocaml [ocaml-call:stale-declaration]: callable declaration "${declaration.id}" does not belong to $currentProgramRevision/$PIPELINE_REVISION';
+		if (declaredCallableByCallee.exists(declaration.calleeId))
+			throw 'reflaxe.ocaml [ocaml-call:duplicate-declaration]: callee "${declaration.calleeId}" has more than one typed declaration';
+		declaredCallableByCallee.set(declaration.calleeId, OcamlCallPlan.copyDeclaration(declaration));
+	}
+
+	/**
+		Requires a caller plan to match the program-wide declaration catalog.
+
+		The catalog is built from the complete typed program before Reflaxe begins
+		module syntax. A missing or conflicting call therefore fails before the
+		builder constructs target code for that occurrence.
+	**/
+	public function requireCallableDeclaration(call:OcamlCallDecision):OcamlCallableDeclarationPlan {
+		OcamlCallPlan.requireFirstFamilyCall(call);
+		final declaration = declaredCallableByCallee.get(call.calleeId);
+		if (declaration == null)
+			throw 'reflaxe.ocaml [ocaml-call:missing-declaration]: call "${call.id}" refers to "${call.calleeId}", but the complete typed program has no admitted declaration';
+		if (declaration.kind != call.kind
+			|| declaration.arguments.length != call.arguments.length
+			|| declaration.sourceModuleId != call.sourceModuleId
+			|| declaration.sourceTypeName != call.sourceTypeName
+			|| declaration.sourceFieldName != call.sourceFieldName
+			|| !OcamlCallPlan.sameValue(declaration.result, call.result)) {
+			throw 'reflaxe.ocaml [ocaml-call:declaration-mismatch]: call "${call.id}" disagrees with typed declaration "${declaration.id}"';
+		}
+		for (index in 0...call.arguments.length) {
+			if (!OcamlCallPlan.sameValue(declaration.arguments[index], call.arguments[index]))
+				throw 'reflaxe.ocaml [ocaml-call:declaration-argument-mismatch]: call "${call.id}" argument $index disagrees with typed declaration "${declaration.id}"';
+		}
+		return OcamlCallPlan.copyDeclaration(declaration);
+	}
+
+	/** Returns every admitted typed call in deterministic identity order. */
+	public function callDecisions():Array<OcamlCallDecision> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final calls:Array<OcamlCallDecision> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (call in sealed.plan.calls.decisions())
+					calls.push(call);
+			}
+		}
+		calls.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return calls;
+	}
+
+	/** Returns every admitted callable definition in canonical callee order. */
+	public function callableBoundaries():Array<OcamlCallableBoundaryPlan> {
+		final boundaries:Array<OcamlCallableBoundaryPlan> = [];
+		for (boundary in callableByCallee)
+			boundaries.push(OcamlCallPlan.copyBoundary(boundary));
+		boundaries.sort((left, right) -> Reflect.compare(left.calleeId, right.calleeId));
+		return boundaries;
+	}
+
+	/**
+		Requires an admitted call to agree with the independently sealed callee.
+
+		The complete typed declaration authorizes caller syntax before emission.
+		This stricter body check runs once Reflaxe has finalized every function.
+		It prevents that earlier declaration check from authorizing a call whose
+		final definition failed to publish the matching revision-bound boundary.
+	**/
+	function requireCallableBoundary(call:OcamlCallDecision):OcamlCallableBoundaryPlan {
+		final boundary = callableByCallee.get(call.calleeId);
+		if (boundary == null) {
+			final available = [for (calleeId in callableByCallee.keys()) calleeId];
+			available.sort(Reflect.compare);
+			throw 'reflaxe.ocaml [ocaml-call:missing-callable]: call "${call.id}" refers to "${call.calleeId}", but that definition has no admitted callable boundary (available: ${available.join(", ")})';
+		}
+		if (boundary.kind != call.kind
+			|| boundary.arguments.length != call.arguments.length
+			|| !OcamlCallPlan.sameValue(boundary.result, call.result)) {
+			throw 'reflaxe.ocaml [ocaml-call:callable-mismatch]: call "${call.id}" disagrees with callable boundary "${boundary.id}"';
+		}
+		for (index in 0...call.arguments.length) {
+			if (!OcamlCallPlan.sameValue(boundary.arguments[index], call.arguments[index]))
+				throw 'reflaxe.ocaml [ocaml-call:argument-mismatch]: call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}"';
+		}
+		return OcamlCallPlan.copyBoundary(boundary);
+	}
+
+	/**
+		Validates every caller against the complete independently sealed program.
+
+		Reflaxe finalizes and emits modules lazily, so a caller can reach syntax
+		before a later module's definition has been finalized. The target therefore
+		performs this mandatory whole-program check immediately before file
+		generation, then repeats it before artifact sealing as a lifecycle guard.
+	**/
+	public function validateCallGraph():Void {
+		for (call in callDecisions())
+			requireCallableBoundary(call);
 	}
 
 	/** Returns a function's plans in deterministic origin order. */
@@ -234,6 +361,42 @@ class OcamlFunctionPlanRegistry {
 		}
 		operations.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return operations;
+	}
+
+	static function requireCallBinding(call:OcamlCallDecision, binding:OcamlFunctionPlanBinding):Void {
+		if (call.functionId != binding.functionId
+			|| call.programRevision != binding.programRevision
+			|| call.bodyRevision != binding.bodyRevision
+			|| call.pipelineRevision != binding.pipelineRevision) {
+			throw 'reflaxe.ocaml [ocaml-call:stale-caller-binding]: call "${call.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+		}
+	}
+
+	static function requireBoundaryBinding(boundary:OcamlCallableBoundaryPlan, binding:OcamlFunctionPlanBinding):Void {
+		if (boundary.functionId != binding.functionId
+			|| boundary.programRevision != binding.programRevision
+			|| boundary.bodyRevision != binding.bodyRevision
+			|| boundary.pipelineRevision != binding.pipelineRevision) {
+			throw 'reflaxe.ocaml [ocaml-call:stale-callable-binding]: callable boundary "${boundary.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+		}
+	}
+
+	function requireDeclarationMatch(boundary:OcamlCallableBoundaryPlan):Void {
+		final declaration = declaredCallableByCallee.get(boundary.calleeId);
+		if (declaration == null)
+			throw 'reflaxe.ocaml [ocaml-call:missing-boundary-declaration]: callable boundary "${boundary.id}" has no program-wide typed declaration';
+		if (declaration.kind != boundary.kind
+			|| declaration.arguments.length != boundary.arguments.length
+			|| declaration.sourceModuleId != boundary.sourceModuleId
+			|| declaration.sourceTypeName != boundary.sourceTypeName
+			|| declaration.sourceFieldName != boundary.sourceFieldName
+			|| !OcamlCallPlan.sameValue(declaration.result, boundary.result)) {
+			throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-mismatch]: callable boundary "${boundary.id}" disagrees with typed declaration "${declaration.id}"';
+		}
+		for (index in 0...boundary.arguments.length) {
+			if (!OcamlCallPlan.sameValue(declaration.arguments[index], boundary.arguments[index]))
+				throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-argument-mismatch]: callable boundary "${boundary.id}" argument $index disagrees with typed declaration "${declaration.id}"';
+		}
 	}
 
 	/** Explains a missing or stale lookup instead of allowing emission to guess. */

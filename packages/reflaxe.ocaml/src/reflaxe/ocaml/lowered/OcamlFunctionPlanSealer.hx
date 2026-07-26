@@ -6,6 +6,9 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
@@ -80,12 +83,16 @@ class OcamlFunctionPlanSealer {
 	/** Plans, validates, and seals one exact function-body revision. */
 	public function seal(data:ClassFuncData):Void {
 		final binding = registry.planningBindingFor(data);
+		final callPlanner = new OcamlCallPlanner(representations, binding);
+		final callableBoundary = callPlanner.boundaryFor(data);
 		if (data.expr == null) {
-			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]));
+			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlCallPlan([]),
+				callableBoundary);
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding);
+		final calls = callPlanner.plan(data.expr);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -127,10 +134,41 @@ class OcamlFunctionPlanSealer {
 
 		visit(data.expr);
 		validateLocalRepresentationReferences(localRepresentations, binding.programRevision, data.expr.pos);
-		registry.sealFunction(binding, localStorage, localRepresentations);
+		validateCallRepresentationReferences(calls, callableBoundary, binding.programRevision, data.expr.pos);
+		registry.sealFunction(binding, localStorage, localRepresentations, calls, callableBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
+	}
+
+	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String,
+			position:Position):Void {
+		for (call in calls.decisions()) {
+			if (call.arguments.length != 1)
+				fail('call "${call.id}" has ${call.arguments.length} arguments instead of the admitted arity 1', position);
+			validateCallValue(call.arguments[0], programRevision, 'call "${call.id}" argument', position);
+			validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
+		}
+		if (callableBoundary != null) {
+			if (callableBoundary.arguments.length != 1)
+				fail('callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} arguments instead of the admitted arity 1', position);
+			validateCallValue(callableBoundary.arguments[0], programRevision, 'callable boundary "${callableBoundary.id}" argument', position);
+			validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);
+		}
+	}
+
+	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {
+		final decision = try {
+			representations.require(value.representationId, programRevision);
+		} catch (error:Dynamic) {
+			fail(Std.string(error), position);
+		}
+		if (decision.semanticTypeId != value.semanticTypeId
+			|| decision.carrierTypeId != value.carrierTypeId
+			|| decision.domain != OcamlRepresentationDomain.InternalValue) {
+			fail('$owner expects ${value.semanticTypeId} -> ${value.carrierTypeId} in ${OcamlRepresentationDomain.InternalValue}, but ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}',
+				position);
+		}
 	}
 
 	function validateLocalRepresentationReferences(plan:OcamlLocalRepresentationPlan, programRevision:String, position:Position):Void {
