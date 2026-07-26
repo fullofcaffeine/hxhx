@@ -1,5 +1,10 @@
 argument
 callee
 result=42
-two=3
+first
+second
+two-callee
+two=12
+throw-first
+caught=-1
 instance=6

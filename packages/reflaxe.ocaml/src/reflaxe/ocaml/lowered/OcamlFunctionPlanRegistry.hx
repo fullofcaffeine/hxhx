@@ -47,7 +47,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v8";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v9";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -196,12 +196,12 @@ class OcamlFunctionPlanRegistry {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		for (call in calls.decisions()) {
-			OcamlCallPlan.requireFirstFamilyCall(call);
+			OcamlCallPlan.requireDirectStaticIntCall(call);
 			requireCallBinding(call, binding);
 			requireCallableDeclaration(call);
 		}
 		if (callableBoundary != null) {
-			OcamlCallPlan.requireFirstFamilyBoundary(callableBoundary);
+			OcamlCallPlan.requireDirectStaticIntBoundary(callableBoundary);
 			requireBoundaryBinding(callableBoundary, binding);
 			requireDeclarationMatch(callableBoundary);
 			if (callableByCallee.exists(callableBoundary.calleeId))
@@ -224,7 +224,7 @@ class OcamlFunctionPlanRegistry {
 
 	/** Registers one complete typed callable declaration before module emission. */
 	public function registerCallableDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
-		OcamlCallPlan.requireFirstFamilyDeclaration(declaration);
+		OcamlCallPlan.requireDirectStaticIntDeclaration(declaration);
 		if (declaration.programRevision != currentProgramRevision || declaration.pipelineRevision != PIPELINE_REVISION)
 			throw 'reflaxe.ocaml [ocaml-call:stale-declaration]: callable declaration "${declaration.id}" does not belong to $currentProgramRevision/$PIPELINE_REVISION';
 		if (declaredCallableByCallee.exists(declaration.calleeId))
@@ -240,7 +240,7 @@ class OcamlFunctionPlanRegistry {
 		builder constructs target code for that occurrence.
 	**/
 	public function requireCallableDeclaration(call:OcamlCallDecision):OcamlCallableDeclarationPlan {
-		OcamlCallPlan.requireFirstFamilyCall(call);
+		OcamlCallPlan.requireDirectStaticIntCall(call);
 		final declaration = declaredCallableByCallee.get(call.calleeId);
 		if (declaration == null)
 			throw 'reflaxe.ocaml [ocaml-call:missing-declaration]: call "${call.id}" refers to "${call.calleeId}", but the complete typed program has no admitted declaration';

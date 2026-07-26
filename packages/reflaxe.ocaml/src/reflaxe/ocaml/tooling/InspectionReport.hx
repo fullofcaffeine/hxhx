@@ -253,6 +253,13 @@ typedef InspectionCallValue = {
 	final conversion:String;
 }
 
+/** One validated source-order action in a typed direct-call schedule. **/
+typedef InspectionCallEvaluationStep = {
+	final kind:String;
+	final argumentIndex:Null<Int>;
+	final slotId:Null<String>;
+}
+
 /** One direct call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -266,7 +273,7 @@ typedef InspectionCall = {
 	final kind:String;
 	final arguments:Array<InspectionCallValue>;
 	final result:InspectionCallValue;
-	final evaluationSchedule:Array<String>;
+	final evaluationSchedule:Array<InspectionCallEvaluationStep>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;

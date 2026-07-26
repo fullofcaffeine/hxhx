@@ -1,12 +1,14 @@
 package reflaxe.ocaml.tooling;
 
 import haxe.Json;
+import haxe.crypto.Sha256;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
@@ -71,7 +73,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 8,
+			schemaVersion: 9,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -141,7 +143,9 @@ class ReflaxeOcamlInspection {
 			lines.push('[PASS] Typed direct calls: ${report.lowering.calls.length} call occurrence${report.lowering.calls.length == 1 ? "" : "s"} matched against ${report.lowering.callableBoundaries.length} independently sealed callable definition${report.lowering.callableBoundaries.length == 1 ? "" : "s"}.');
 			for (call in report.lowering.calls) {
 				lines.push('  - ${call.sourceFile} bytes ${call.sourceMin}-${call.sourceMax}: ${call.calleeId}');
-				lines.push('    schedule: ${call.evaluationSchedule.join(" -> ")}; ${call.arguments[0].semanticTypeId}/${call.arguments[0].carrierTypeId} -> ${call.result.semanticTypeId}/${call.result.carrierTypeId}');
+				final schedule = call.evaluationSchedule.map(step -> step.argumentIndex == null ? step.kind : '${step.kind}:${step.argumentIndex}');
+				final arguments = call.arguments.map(argument -> '${argument.semanticTypeId}/${argument.carrierTypeId}').join(", ");
+				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> ${call.result.semanticTypeId}/${call.result.carrierTypeId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -311,8 +315,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 14) {
-						throw 'Unsupported lowering report schema $version; expected 14.';
+					if (version != 15) {
+						throw 'Unsupported lowering report schema $version; expected 15.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -361,7 +365,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-call-boundary-v1")
+		if (requiredString(value, "callModel") != "typed-ocaml-call-boundary-v2")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -381,7 +385,8 @@ class ReflaxeOcamlInspection {
 				throw 'Callable-boundary report contains duplicate identity "${boundary.id}".';
 			if (boundaryByCallee.exists(boundary.calleeId))
 				throw 'Callable-boundary report contains duplicate callee "${boundary.calleeId}".';
-			validateCallValue(boundary.arguments[0], representationById, 'Callable boundary "${boundary.id}" argument');
+			for (index in 0...boundary.arguments.length)
+				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
@@ -393,7 +398,8 @@ class ReflaxeOcamlInspection {
 				throw 'Call report contains duplicate identity "${call.id}".';
 			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
 				throw 'Call "${call.id}" has an invalid source span.';
-			validateCallValue(call.arguments[0], representationById, 'Call "${call.id}" argument');
+			for (index in 0...call.arguments.length)
+				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			validateCallValue(call.result, representationById, 'Call "${call.id}" result');
 			final boundary = boundaryByCallee.get(call.calleeId);
 			if (boundary == null)
@@ -402,9 +408,13 @@ class ReflaxeOcamlInspection {
 				|| boundary.sourceModuleId != call.sourceModuleId
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
-				|| !sameCallValue(boundary.arguments[0], call.arguments[0])
+				|| boundary.arguments.length != call.arguments.length
 				|| !sameCallValue(boundary.result, call.result)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
+			}
+			for (index in 0...call.arguments.length) {
+				if (!sameCallValue(boundary.arguments[index], call.arguments[index]))
+					throw 'Call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}".';
 			}
 			callIds.set(call.id, true);
 		}
@@ -428,9 +438,20 @@ class ReflaxeOcamlInspection {
 
 	static function callValues(value:Dynamic, field:String):Array<InspectionCallValue> {
 		final values = [for (entry in requiredArray(value, field)) callValue(entry)];
-		if (values.length != 1)
-			throw 'Typed-call field "$field" has ${values.length} values instead of the admitted arity 1.';
+		if (values.length < 1 || values.length > 2)
+			throw 'Typed-call field "$field" has ${values.length} values outside the admitted arities 1 and 2.';
+		for (index in 0...values.length) {
+			if (values[index].index != index)
+				throw 'Typed-call field "$field" has value index ${values[index].index} at position $index.';
+		}
 		return values;
+	}
+
+	static function callResult(value:Dynamic):InspectionCallValue {
+		final result = callValue(requiredObject(value, "result"));
+		if (result.index != -1)
+			throw 'Typed-call result has index ${result.index} instead of -1.';
+		return result;
 	}
 
 	static function requireDirectCallKind(value:Dynamic):String {
@@ -442,11 +463,11 @@ class ReflaxeOcamlInspection {
 
 	static function callDecision(value:Dynamic):InspectionCall {
 		final source = requiredObject(value, "source");
-		final schedule = requiredStringArray(value, "evaluationSchedule");
-		if (schedule.length != 2 || schedule[0] != "evaluate-argument:0" || schedule[1] != "invoke-callee")
-			throw 'Call "${requiredString(value, "id")}" has an unsupported evaluation schedule.';
+		final id = requiredString(value, "id");
+		final arguments = callValues(value, "arguments");
+		final schedule = callEvaluationSchedule(value, id, arguments.length);
 		return {
-			id: requiredString(value, "id"),
+			id: id,
 			sourceFile: requiredString(source, "file"),
 			sourceMin: requiredInt(source, "min"),
 			sourceMax: requiredInt(source, "max"),
@@ -455,8 +476,8 @@ class ReflaxeOcamlInspection {
 			sourceTypeName: requiredString(value, "sourceTypeName"),
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: requireDirectCallKind(value),
-			arguments: callValues(value, "arguments"),
-			result: callValue(requiredObject(value, "result")),
+			arguments: arguments,
+			result: callResult(value),
 			evaluationSchedule: schedule,
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
@@ -469,6 +490,29 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
+	static function callEvaluationSchedule(value:Dynamic, callId:String, argumentCount:Int):Array<InspectionCallEvaluationStep> {
+		final schedule = [
+			for (entry in requiredArray(value, "evaluationSchedule"))
+				{
+					kind: requiredString(entry, "kind"),
+					argumentIndex: optionalInt(entry, "argumentIndex"),
+					slotId: optionalString(entry, "slotId")
+				}
+		];
+		if (schedule.length != argumentCount + 1)
+			throw 'Call "$callId" has an unsupported evaluation-schedule length.';
+		for (index in 0...argumentCount) {
+			final step = schedule[index];
+			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
+			if (step.kind != "materialize-argument" || step.argumentIndex != index || step.slotId != expectedSlot)
+				throw 'Call "$callId" has an invalid materialization at schedule index $index.';
+		}
+		final invocation = schedule[schedule.length - 1];
+		if (invocation.kind != "invoke-callee" || invocation.argumentIndex != null || invocation.slotId != null)
+			throw 'Call "$callId" has an invalid invocation step.';
+		return schedule;
+	}
+
 	static function callableBoundary(value:Dynamic):InspectionCallableBoundary {
 		return {
 			id: requiredString(value, "id"),
@@ -478,7 +522,7 @@ class ReflaxeOcamlInspection {
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: requireDirectCallKind(value),
 			arguments: callValues(value, "arguments"),
-			result: callValue(requiredObject(value, "result")),
+			result: callResult(value),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(value, "proofId"),
@@ -1064,6 +1108,15 @@ class ReflaxeOcamlInspection {
 		if (!Std.isOfType(result, String)) {
 			throw 'Expected optional string field "$name".';
 		}
+		return cast result;
+	}
+
+	static function optionalInt(value:Dynamic, name:String):Null<Int> {
+		final result:Dynamic = Reflect.field(value, name);
+		if (result == null)
+			return null;
+		if (!Std.isOfType(result, Int))
+			throw 'Expected optional integer field "$name".';
 		return cast result;
 	}
 

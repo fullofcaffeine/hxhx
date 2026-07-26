@@ -4,6 +4,8 @@ import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStep;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -26,6 +28,9 @@ import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 class CallPlanFixture {
 	static inline final PROGRAM_REVISION = "program:call-plan-fixture";
 	static inline final CALLEE_ID = "Arithmetic|Arithmetic::increment";
+	static inline final CALL_ID = "call:fixture";
+	static inline final TWO_CALLEE_ID = "Arithmetic|Arithmetic::add";
+	static inline final TWO_CALL_ID = "call:two-argument-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -56,6 +61,25 @@ class CallPlanFixture {
 		};
 	}
 
+	static function twoArgumentDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:two-argument-fixture",
+			calleeId: TWO_CALLEE_ID,
+			sourceModuleId: "Arithmetic",
+			sourceTypeName: "Arithmetic",
+			sourceFieldName: "add",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), value(1)],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-two-int-static-call-v1",
+			proofClaim: "fixture",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
 	static function binding(functionId:String, bodyRevision:String):OcamlFunctionPlanBinding {
 		return {
 			functionId: functionId,
@@ -67,7 +91,7 @@ class CallPlanFixture {
 
 	static function call(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
 		return {
-			id: "call:fixture",
+			id: CALL_ID,
 			source: {file: "CallPlanFixture.hx", min: 0, max: 1},
 			calleeId: CALLEE_ID,
 			sourceModuleId: "Arithmetic",
@@ -76,7 +100,7 @@ class CallPlanFixture {
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0)],
 			result: value(-1),
-			evaluationSchedule: ["evaluate-argument:0", "invoke-callee"],
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(CALL_ID, 1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-one-int-static-call-v1",
@@ -88,8 +112,31 @@ class CallPlanFixture {
 		};
 	}
 
+	static function twoArgumentCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: TWO_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 2, max: 3},
+			calleeId: TWO_CALLEE_ID,
+			sourceModuleId: "Arithmetic",
+			sourceTypeName: "Arithmetic",
+			sourceFieldName: "add",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), value(1)],
+			result: value(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(TWO_CALL_ID, 2),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-two-int-static-call-v1",
+			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
 	static function copyCall(source:OcamlCallDecision, ?calleeId:String, ?kind:OcamlCallKind, ?arguments:Array<OcamlCallValuePlan>,
-			?result:OcamlCallValuePlan, ?bodyRevision:String):OcamlCallDecision {
+			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>):OcamlCallDecision {
 		return {
 			id: source.id,
 			source: {file: source.source.file, min: source.source.min, max: source.source.max},
@@ -100,7 +147,7 @@ class CallPlanFixture {
 			kind: kind ?? source.kind,
 			arguments: arguments ?? source.arguments.map(OcamlCallPlan.copyValue),
 			result: result ?? OcamlCallPlan.copyValue(source.result),
-			evaluationSchedule: source.evaluationSchedule.copy(),
+			evaluationSchedule: (evaluationSchedule ?? source.evaluationSchedule).map(OcamlCallPlan.copyEvaluationStep),
 			profileEligibility: source.profileEligibility.copy(),
 			reason: source.reason,
 			proofId: source.proofId,
@@ -125,6 +172,27 @@ class CallPlanFixture {
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-one-int-static-call-v1",
+			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function twoArgumentBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:two-argument-fixture",
+			calleeId: TWO_CALLEE_ID,
+			sourceModuleId: "Arithmetic",
+			sourceTypeName: "Arithmetic",
+			sourceFieldName: "add",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), value(1)],
+			result: value(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-two-int-static-call-v1",
 			proofClaim: "fixture",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
@@ -190,6 +258,16 @@ class CallPlanFixture {
 		seal(registry, callee, new OcamlCallPlan([]), boundary(callee));
 		registry.validateCallGraph();
 
+		final twoArgumentCallee = binding("Arithmetic|Arithmetic::add", "body:two-argument-callee");
+		final selectedTwoArgumentCall = twoArgumentCall(caller);
+		final twoArgumentRegistry = new OcamlFunctionPlanRegistry();
+		twoArgumentRegistry.beginProgram(PROGRAM_REVISION);
+		twoArgumentRegistry.registerCallableDeclaration(twoArgumentDeclaration());
+		twoArgumentRegistry.requireCallableDeclaration(selectedTwoArgumentCall);
+		seal(twoArgumentRegistry, caller, new OcamlCallPlan([selectedTwoArgumentCall]), null);
+		seal(twoArgumentRegistry, twoArgumentCallee, new OcamlCallPlan([]), twoArgumentBoundary(twoArgumentCallee));
+		twoArgumentRegistry.validateCallGraph();
+
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
 
@@ -199,8 +277,43 @@ class CallPlanFixture {
 		final wrongKind = copyCall(selectedCall, null, cast "dynamic-call");
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongKind));
 
-		final wrongArity = copyCall(selectedCall, null, null, [value(0), value(1)]);
+		final wrongArity = copyCall(selectedCall, null, null, [value(0), value(1), value(2)]);
 		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongArity));
+
+		final materialization = selectedCall.evaluationSchedule[0];
+		final invocation = selectedCall.evaluationSchedule[1];
+		final missingMaterialization = copyCall(selectedCall, null, null, null, null, null, [invocation]);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(missingMaterialization));
+		final reorderedSchedule = copyCall(selectedCall, null, null, null, null, null, [invocation, materialization]);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(reorderedSchedule));
+		final repeatedMaterialization = copyCall(selectedCall, null, null, null, null, null, [materialization, materialization]);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(repeatedMaterialization));
+		final outOfRangeSchedule = copyCall(selectedCall, null, null, null, null, null, [
+			{
+				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: 1,
+				slotId: OcamlCallPlan.argumentSlotId(CALL_ID, 1)
+			},
+			invocation
+		]);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(outOfRangeSchedule));
+		final wrongSlotSchedule = copyCall(selectedCall, null, null, null, null, null, [
+			{
+				kind: OcamlCallEvaluationStepKind.MaterializeArgument,
+				argumentIndex: 0,
+				slotId: "call-argument-slot:wrong"
+			},
+			invocation
+		]);
+		expectThrows("invalid-plan", () -> registry.requireCallableDeclaration(wrongSlotSchedule));
+
+		final twoSchedule = selectedTwoArgumentCall.evaluationSchedule;
+		final reorderedArguments = copyCall(selectedTwoArgumentCall, null, null, null, null, null, [twoSchedule[1], twoSchedule[0], twoSchedule[2]]);
+		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(reorderedArguments));
+		final repeatedFirstArgument = copyCall(selectedTwoArgumentCall, null, null, null, null, null, [twoSchedule[0], twoSchedule[0], twoSchedule[2]]);
+		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(repeatedFirstArgument));
+		final skippedFirstArgument = copyCall(selectedTwoArgumentCall, null, null, null, null, null, [twoSchedule[1], twoSchedule[2]]);
+		expectThrows("invalid-plan", () -> twoArgumentRegistry.requireCallableDeclaration(skippedFirstArgument));
 
 		final wrongSemanticType = copyCall(selectedCall, null, null, [
 			{

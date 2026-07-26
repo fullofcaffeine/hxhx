@@ -27,6 +27,7 @@ import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
@@ -158,29 +159,59 @@ class OcamlBuilder {
 
 	function requireIdentityIntCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
 		try {
-			OcamlCallPlan.requireFirstFamilyValue(value, expectedIndex, owner);
+			OcamlCallPlan.requireDirectStaticIntValue(value, expectedIndex, owner);
 		} catch (error:Dynamic) {
 			callPlanInvariant(Std.string(error), position);
 		}
 	}
 
-	/** Materializes the first sealed direct-static call family without rediscovering its semantics. */
+	/**
+		Materializes one sealed direct-static call in its Haxe source order.
+
+		Every argument is bound by the typed schedule before the target is applied,
+		so runtime order does not depend on OCaml function-application behavior.
+	**/
 	function buildPlannedCall(call:OcamlCallDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
-			OcamlCallPlan.requireFirstFamilyCall(call);
+			OcamlCallPlan.requireDirectStaticIntCall(call);
 			functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
-		if (arguments.length != 1)
-			return callPlanInvariant('call "${call.id}" must have exactly one source argument', position);
+		if (arguments.length != call.arguments.length)
+			return callPlanInvariant('call "${call.id}" has ${arguments.length} source arguments but its sealed plan has ${call.arguments.length}', position);
 
 		final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId);
 		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 		final targetName = ctx.scopedValueName(call.sourceModuleId, call.sourceTypeName, call.sourceFieldName);
 		final target = selfModule != null
 			&& selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), targetName);
-		return OcamlExpr.EApp(target, [buildExpr(arguments[0])]);
+		final materialized:Array<{name:String, value:OcamlExpr}> = [];
+		final applicationArguments:Array<OcamlExpr> = [];
+		var invocationSeen = false;
+		for (step in call.evaluationSchedule) {
+			switch (step.kind) {
+				case OcamlCallEvaluationStepKind.MaterializeArgument:
+					final argumentIndex = step.argumentIndex;
+					if (argumentIndex == null || argumentIndex < 0 || argumentIndex >= arguments.length || step.slotId == null)
+						return callPlanInvariant('call "${call.id}" has an invalid materialization step', position);
+					final name = freshTmp("call_arg_" + argumentIndex);
+					materialized.push({name: name, value: buildExpr(arguments[argumentIndex])});
+					applicationArguments.push(OcamlExpr.EIdent(name));
+				case OcamlCallEvaluationStepKind.InvokeCallee:
+					if (invocationSeen)
+						return callPlanInvariant('call "${call.id}" invokes its callee more than once', position);
+					invocationSeen = true;
+			}
+		}
+		if (!invocationSeen || materialized.length != arguments.length)
+			return callPlanInvariant('call "${call.id}" did not materialize every source argument before invocation', position);
+		var out = OcamlExpr.EApp(target, applicationArguments);
+		for (offset in 0...materialized.length) {
+			final binding = materialized[materialized.length - 1 - offset];
+			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
+		}
+		return out;
 	}
 
 	/** Resolves one pre-emission static cell and rejects an unsafe late cross-type reference. */
@@ -6590,12 +6621,18 @@ class OcamlBuilder {
 		final params = if (callableBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
-			if (args.length != 1 || callableBoundary.arguments.length != 1)
-				return callPlanInvariant('callable boundary "${callableBoundary.id}" must materialize one parameter', bodyExpr.pos);
-			requireIdentityIntCallValue(callableBoundary.arguments[0], 0, 'callable boundary "${callableBoundary.id}" argument', bodyExpr.pos);
+			if (args.length != callableBoundary.arguments.length) {
+				return
+					callPlanInvariant('callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} planned parameters but ${args.length} typed parameters',
+					bodyExpr.pos);
+			}
+			for (index in 0...args.length)
+				requireIdentityIntCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index',
+					bodyExpr.pos);
 			requireIdentityIntCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			[
-				OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[0].name)), OcamlTypeExpr.TIdent("int"))
+				for (argument in args)
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(argument.name)), OcamlTypeExpr.TIdent("int"))
 			];
 		}
 
