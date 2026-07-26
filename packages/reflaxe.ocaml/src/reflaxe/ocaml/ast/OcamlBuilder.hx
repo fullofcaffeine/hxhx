@@ -273,15 +273,27 @@ class OcamlBuilder {
 			case TConst(TNull): {semanticTypeId: "Null<Bool>", carrierTypeId: "Obj.t"};
 			case TConst(TBool(_)): {semanticTypeId: "Bool", carrierTypeId: "bool"};
 			case TLocal(local) if (OcamlRepresentationRegistry.isExactNullBool(local.t)): {
-					semanticTypeId: "Null<Bool>",
-					carrierTypeId: "Obj.t"
+					final decision = plannedLocalRepresentation(local.id, expression.pos);
+					if (decision == null || decision.semanticTypeId != "Null<Bool>" || decision.carrierTypeId != "Obj.t")
+						null;
+					else
+						{
+							semanticTypeId: "Null<Bool>",
+							carrierTypeId: "Obj.t"
+						};
+				};
+			case TLocal(local) if (OcamlRepresentationRegistry.isExactBool(local.t)): {
+					final decision = plannedLocalRepresentation(local.id, expression.pos);
+					if (decision == null || decision.semanticTypeId != "Bool" || decision.carrierTypeId != "bool")
+						null;
+					else
+						{
+							semanticTypeId: "Bool",
+							carrierTypeId: "bool"
+						};
 				};
 			case _:
-				if (OcamlRepresentationRegistry.isExactBool(expression.t)) {
-					{semanticTypeId: "Bool", carrierTypeId: "bool"};
-				} else {
-					null;
-				}
+				null;
 		}
 	}
 

@@ -22,12 +22,13 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	The registry is request-local. A decision answers a semantic question once—
 	for example, how an exact non-null Haxe `Int` is stored in a mutable local—so
 	function plans, place plans, reports, and syntax construction cannot silently
-	choose different carriers. The admitted scope covers exact `Int` plus
+	choose different carriers. The admitted scope covers exact `Int`, exact
+	`Bool`, plus
 	internal, mutable-local, and captured-local carriers for direct nominal
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>`.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v5";
+	public static inline final MODEL_REVISION = "ocaml-representation-v6";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -170,6 +171,39 @@ class OcamlRepresentationRegistry {
 			proof: {
 				id: "direct-exact-int-storage-64-v1",
 				claim: "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Registers or reuses the direct local carrier for exact Haxe `Bool`.
+
+		This bounded decision covers function-internal values and the cells used by
+		mutable or captured locals. Fields, array elements, calls, and ABI
+		boundaries remain outside the proof.
+	**/
+	public function selectExactBool(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: exact Bool is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+		};
+		return register({
+			semanticTypeId: "Bool",
+			domain: domain,
+			carrierTypeId: "bool",
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: storageMutationPolicy,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			reason: exactBoolReason(domain),
+			proof: {
+				id: "direct-exact-bool-local-v1",
+				claim: "The OCaml bool carrier represents the two exact non-null Haxe Bool values directly. The surrounding immutable binding or shared local cell owns replacement; this proof does not admit nullable values, fields, calls, operators, native boundaries, or public ABI."
 			},
 			profileEligibility: ["metal", "portable"]
 		});
@@ -344,6 +378,16 @@ class OcamlRepresentationRegistry {
 			case InstanceField: "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.";
 			case StaticField: "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.";
 			case ArrayElement: "An exact, non-null Haxe Int uses OCaml int directly; the enclosing Haxe array owns element mutation.";
+		}
+	}
+
+	static function exactBoolReason(domain:OcamlRepresentationDomain):String {
+		return switch (domain) {
+			case InternalValue: "An exact, non-null Haxe Bool local uses OCaml bool directly; a later value is represented by a newer immutable binding.";
+			case MutableLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the mutable local cell selected by the function plan.";
+			case CapturedLocalStorage: "An exact, non-null Haxe Bool uses OCaml bool directly inside the one local cell shared with nested functions.";
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: no exact Bool local reason exists for $domain';
 		}
 	}
 

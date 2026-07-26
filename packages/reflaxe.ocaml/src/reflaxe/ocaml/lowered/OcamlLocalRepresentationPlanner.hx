@@ -20,6 +20,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 private typedef PendingNullablePrimitiveConversion = {
 	final localId:Int;
+	final sourceLocalId:Null<Int>;
 	final role:OcamlLocalConversionRole;
 	final expression:TypedExpr;
 	final inputSemanticTypeId:String;
@@ -29,10 +30,16 @@ private typedef PendingNullablePrimitiveConversion = {
 	final conversion:OcamlLocalCarrierConversion;
 }
 
+private typedef ExactBoolCarrierInput = {
+	final sourceLocalId:Null<Int>;
+}
+
 /**
 	Connects local carrier choices to the program representation registry.
 
-	Mutated locals retain the existing exact-Int migration. Exact `Array<Int>`
+	Mutated locals retain the existing exact-Int migration. Exact `Bool` locals
+	use one direct carrier decision before they can feed nullable-Bool boxing.
+	Exact `Array<Int>`
 	locals are admitted only when the declaration and every whole-value
 	replacement use the same non-null carrier, including locals shared with nested
 	functions. Exact core `Null<Int>` and `Null<Bool>` locals additionally receive
@@ -68,11 +75,33 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
+	/**
+		Returns whether one expression is already inside the admitted direct-Bool
+		local carrier.
+
+		This deliberately recognizes only literals and previously declared exact
+		Bool locals. Calls, operators, field reads, casts, parameters, and nullable
+		reads need their own typed conversion owner.
+	**/
+	static function exactBoolCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>):Null<ExactBoolCarrierInput> {
+		return switch (unwrapTransparent(expression).expr) {
+			case TConst(TBool(_)):
+				{sourceLocalId: null};
+			case TLocal(local) if (declaredLocalIds.exists(local.id) && OcamlRepresentationRegistry.isExactBool(local.t)):
+				{sourceLocalId: local.id};
+			case _:
+				null;
+		}
+	}
+
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, storage:OcamlLocalStoragePlan, representations:OcamlRepresentationRegistry,
 			?binding:OcamlFunctionPlanBinding):OcamlLocalRepresentationPlan {
 		final typeByLocalId:Map<Int, Type> = [];
 		final declaredLocalIds:Map<Int, Bool> = [];
+		final identityBoolInitializerByLocalId:Map<Int, Bool> = [];
+		final identityBoolAssignmentsByLocalId:Map<Int, Bool> = [];
+		final boolSourceLocalIdsByLocalId:Map<Int, Array<Int>> = [];
 		final identityArrayInitializerByLocalId:Map<Int, Bool> = [];
 		final identityArrayAssignmentsByLocalId:Map<Int, Bool> = [];
 		final unsupportedNullableLocalIds:Map<Int, Bool> = [];
@@ -94,6 +123,7 @@ class OcamlLocalRepresentationPlanner {
 			}
 			pendingNullableConversions.push({
 				localId: localId,
+				sourceLocalId: input.sourceLocalId,
 				role: role,
 				expression: value,
 				inputSemanticTypeId: input.semanticTypeId,
@@ -108,6 +138,7 @@ class OcamlLocalRepresentationPlanner {
 			if (checked) {
 				pendingNullableConversions.push({
 					localId: localId,
+					sourceLocalId: localId,
 					role: OcamlLocalConversionRole.Read,
 					expression: current,
 					inputSemanticTypeId: "Null<Int>",
@@ -119,6 +150,7 @@ class OcamlLocalRepresentationPlanner {
 			} else if (OcamlRepresentationRegistry.isExactNullInt(current.t)) {
 				pendingNullableConversions.push({
 					localId: localId,
+					sourceLocalId: localId,
 					role: OcamlLocalConversionRole.Read,
 					expression: current,
 					inputSemanticTypeId: "Null<Int>",
@@ -130,6 +162,7 @@ class OcamlLocalRepresentationPlanner {
 			} else if (OcamlRepresentationRegistry.isExactInt(current.t)) {
 				pendingNullableConversions.push({
 					localId: localId,
+					sourceLocalId: localId,
 					role: OcamlLocalConversionRole.Read,
 					expression: current,
 					inputSemanticTypeId: "Null<Int>",
@@ -144,13 +177,14 @@ class OcamlLocalRepresentationPlanner {
 		}
 
 		function addNullBoolWrite(localId:Int, role:OcamlLocalConversionRole, value:TypedExpr):Void {
-			final input = nullBoolWriteInput(value);
+			final input = nullBoolWriteInput(value, declaredLocalIds);
 			if (input == null) {
 				unsupportedNullableLocalIds.set(localId, true);
 				return;
 			}
 			pendingNullableConversions.push({
 				localId: localId,
+				sourceLocalId: input.sourceLocalId,
 				role: role,
 				expression: value,
 				inputSemanticTypeId: input.semanticTypeId,
@@ -165,6 +199,7 @@ class OcamlLocalRepresentationPlanner {
 			if (truthiness) {
 				pendingNullableConversions.push({
 					localId: localId,
+					sourceLocalId: localId,
 					role: OcamlLocalConversionRole.Read,
 					expression: current,
 					inputSemanticTypeId: "Null<Bool>",
@@ -176,6 +211,7 @@ class OcamlLocalRepresentationPlanner {
 			} else if (OcamlRepresentationRegistry.isExactNullBool(current.t)) {
 				pendingNullableConversions.push({
 					localId: localId,
+					sourceLocalId: localId,
 					role: OcamlLocalConversionRole.Read,
 					expression: current,
 					inputSemanticTypeId: "Null<Bool>",
@@ -235,6 +271,12 @@ class OcamlLocalRepresentationPlanner {
 						final identityInitializer = initializer != null && isExactArrayIntCarrierExpression(initializer);
 						identityArrayInitializerByLocalId.set(local.id, identityInitializer);
 					}
+					if (OcamlRepresentationRegistry.isExactBool(local.t)) {
+						final input = initializer == null ? null : exactBoolCarrierInput(initializer, declaredLocalIds);
+						identityBoolInitializerByLocalId.set(local.id, input != null);
+						if (input != null && input.sourceLocalId != null)
+							boolSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+					}
 					if (OcamlRepresentationRegistry.isExactNullInt(local.t) && initializer != null)
 						addNullIntWrite(local.id, OcamlLocalConversionRole.Initializer, initializer);
 					if (OcamlRepresentationRegistry.isExactNullBool(local.t) && initializer != null)
@@ -263,6 +305,18 @@ class OcamlLocalRepresentationPlanner {
 							addNullBoolWrite(local.id, OcamlLocalConversionRole.Assignment, right);
 							visit(right);
 							visitChildren = false;
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactBool(local.t)):
+							final input = exactBoolCarrierInput(right, declaredLocalIds);
+							final identityAssignment = input != null;
+							if (!identityAssignment || !identityBoolAssignmentsByLocalId.exists(local.id))
+								identityBoolAssignmentsByLocalId.set(local.id, identityAssignment);
+							if (input != null && input.sourceLocalId != null) {
+								final sources = boolSourceLocalIdsByLocalId.get(local.id);
+								if (sources == null)
+									boolSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+								else if (sources.indexOf(input.sourceLocalId) < 0)
+									sources.push(input.sourceLocalId);
+							}
 						case _:
 							rejectDirectNullBoolBoundary(right);
 					}
@@ -321,6 +375,49 @@ class OcamlLocalRepresentationPlanner {
 		};
 
 		visit(expression);
+		final unsupportedBoolLocalIds:Map<Int, Bool> = [];
+		for (localId in declaredLocalIds.keys()) {
+			final type = typeByLocalId.get(localId);
+			if (type != null
+				&& OcamlRepresentationRegistry.isExactBool(type)
+				&& (identityBoolInitializerByLocalId.get(localId) != true || identityBoolAssignmentsByLocalId.get(localId) == false))
+				unsupportedBoolLocalIds.set(localId, true);
+		}
+		var propagatedUnsupportedBool = true;
+		while (propagatedUnsupportedBool) {
+			propagatedUnsupportedBool = false;
+			for (localId in boolSourceLocalIdsByLocalId.keys()) {
+				if (unsupportedBoolLocalIds.exists(localId))
+					continue;
+				final sourceLocalIds:Array<Int> = cast boolSourceLocalIdsByLocalId.get(localId);
+				var hasUnsupportedSource = false;
+				for (sourceLocalId in sourceLocalIds) {
+					if (unsupportedBoolLocalIds.exists(sourceLocalId)) {
+						hasUnsupportedSource = true;
+						break;
+					}
+				}
+				if (hasUnsupportedSource) {
+					unsupportedBoolLocalIds.set(localId, true);
+					propagatedUnsupportedBool = true;
+				}
+			}
+		}
+		var propagatedUnsupported = true;
+		while (propagatedUnsupported) {
+			propagatedUnsupported = false;
+			for (pending in pendingNullableConversions) {
+				final sourceLocalId = pending.sourceLocalId;
+				if (sourceLocalId != null
+					&& sourceLocalId != pending.localId
+					&& (unsupportedNullableLocalIds.exists(sourceLocalId)
+						|| (pending.inputSemanticTypeId == "Bool" && unsupportedBoolLocalIds.exists(sourceLocalId)))
+					&& !unsupportedNullableLocalIds.exists(pending.localId)) {
+					unsupportedNullableLocalIds.set(pending.localId, true);
+					propagatedUnsupported = true;
+				}
+			}
+		}
 		if (binding != null) {
 			final occurrenceOwnerById:Map<String, Int> = [];
 			for (pending in pendingNullableConversions) {
@@ -395,6 +492,22 @@ class OcamlLocalRepresentationPlanner {
 				}
 				continue;
 			}
+			if (OcamlRepresentationRegistry.isExactBool(type)) {
+				if (!unsupportedBoolLocalIds.exists(decision.localId)) {
+					final domain = localDomain(decision);
+					final representation = representations.selectExactBool(domain);
+					decisions.push({
+						localId: decision.localId,
+						choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId, domain),
+						initializerConversion: OcamlLocalCarrierConversion.Identity,
+						assignmentConversion: OcamlLocalCarrierConversion.Identity,
+						readConversion: OcamlLocalCarrierConversion.Identity
+					});
+				} else {
+					decisions.push(unmigratedDecision(decision.localId, "Bool"));
+				}
+				continue;
+			}
 			if (!OcamlRepresentationRegistry.isExactInt(type)) {
 				decisions.push(unmigratedDecision(decision.localId, TypeTools.toString(type)));
 				continue;
@@ -415,6 +528,20 @@ class OcamlLocalRepresentationPlanner {
 			if (plannedLocalIds.exists(localId))
 				continue;
 			final type = cast typeByLocalId.get(localId);
+			if (declaredLocalIds.exists(localId)
+				&& OcamlRepresentationRegistry.isExactBool(type)
+				&& !unsupportedBoolLocalIds.exists(localId)) {
+				final representation = representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
+				decisions.push({
+					localId: localId,
+					choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId,
+						OcamlRepresentationDomain.InternalValue),
+					initializerConversion: OcamlLocalCarrierConversion.Identity,
+					assignmentConversion: OcamlLocalCarrierConversion.Identity,
+					readConversion: OcamlLocalCarrierConversion.Identity
+				});
+				continue;
+			}
 			if (declaredLocalIds.exists(localId)
 				&& (OcamlRepresentationRegistry.isExactNullInt(type) || OcamlRepresentationRegistry.isExactNullBool(type))
 				&& !unsupportedNullableLocalIds.exists(localId)) {
@@ -465,30 +592,47 @@ class OcamlLocalRepresentationPlanner {
 	static function nullIntWriteInput(expression:TypedExpr):Null<{
 		semanticTypeId:String,
 		carrierTypeId:String,
+		sourceLocalId:Null<Int>,
 		conversion:OcamlLocalCarrierConversion
 	}> {
 		return switch (unwrapTransparent(expression).expr) {
 			case TConst(TNull): {
 					semanticTypeId: "Null<Int>",
 					carrierTypeId: "Obj.t",
+					sourceLocalId: null,
 					conversion: OcamlLocalCarrierConversion.PreserveNullableIntCarrier
 				};
 			case TConst(TInt(_)): {
 					semanticTypeId: "Int",
 					carrierTypeId: "int",
+					sourceLocalId: null,
 					conversion: OcamlLocalCarrierConversion.BoxExactIntToNullableInt
+				};
+			case TLocal(local) if (OcamlRepresentationRegistry.isExactInt(local.t)): {
+					semanticTypeId: "Int",
+					carrierTypeId: "int",
+					sourceLocalId: local.id,
+					conversion: OcamlLocalCarrierConversion.BoxExactIntToNullableInt
+				};
+			case TLocal(local) if (OcamlRepresentationRegistry.isExactNullInt(local.t)): {
+					semanticTypeId: "Null<Int>",
+					carrierTypeId: "Obj.t",
+					sourceLocalId: local.id,
+					conversion: OcamlLocalCarrierConversion.PreserveNullableIntCarrier
 				};
 			case _:
 				if (OcamlRepresentationRegistry.isExactInt(expression.t)) {
 					{
 						semanticTypeId: "Int",
 						carrierTypeId: "int",
+						sourceLocalId: null,
 						conversion: OcamlLocalCarrierConversion.BoxExactIntToNullableInt
 					};
 				} else if (OcamlRepresentationRegistry.isExactNullInt(expression.t)) {
 					{
 						semanticTypeId: "Null<Int>",
 						carrierTypeId: "Obj.t",
+						sourceLocalId: null,
 						conversion: OcamlLocalCarrierConversion.PreserveNullableIntCarrier
 					};
 				} else {
@@ -497,37 +641,39 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
-	static function nullBoolWriteInput(expression:TypedExpr):Null<{
+	static function nullBoolWriteInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>):Null<{
 		semanticTypeId:String,
 		carrierTypeId:String,
+		sourceLocalId:Null<Int>,
 		conversion:OcamlLocalCarrierConversion
 	}> {
 		return switch (unwrapTransparent(expression).expr) {
 			case TConst(TNull): {
 					semanticTypeId: "Null<Bool>",
 					carrierTypeId: "Obj.t",
+					sourceLocalId: null,
 					conversion: OcamlLocalCarrierConversion.PreserveNullableBoolCarrier
 				};
 			case TConst(TBool(_)): {
 					semanticTypeId: "Bool",
 					carrierTypeId: "bool",
+					sourceLocalId: null,
 					conversion: OcamlLocalCarrierConversion.BoxExactBoolToNullableBool
 				};
-			case TLocal(local) if (OcamlRepresentationRegistry.isExactNullBool(local.t)): {
+			case TLocal(local) if (declaredLocalIds.exists(local.id) && OcamlRepresentationRegistry.isExactNullBool(local.t)): {
 					semanticTypeId: "Null<Bool>",
 					carrierTypeId: "Obj.t",
+					sourceLocalId: local.id,
 					conversion: OcamlLocalCarrierConversion.PreserveNullableBoolCarrier
 				};
+			case TLocal(local) if (declaredLocalIds.exists(local.id) && OcamlRepresentationRegistry.isExactBool(local.t)): {
+					semanticTypeId: "Bool",
+					carrierTypeId: "bool",
+					sourceLocalId: local.id,
+					conversion: OcamlLocalCarrierConversion.BoxExactBoolToNullableBool
+				};
 			case _:
-				if (OcamlRepresentationRegistry.isExactBool(expression.t)) {
-					{
-						semanticTypeId: "Bool",
-						carrierTypeId: "bool",
-						conversion: OcamlLocalCarrierConversion.BoxExactBoolToNullableBool
-					};
-				} else {
-					null;
-				}
+				null;
 		}
 	}
 

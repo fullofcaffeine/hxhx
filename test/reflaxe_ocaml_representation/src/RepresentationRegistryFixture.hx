@@ -77,6 +77,9 @@ class RepresentationRegistryFixture {
 		final mutable = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final internal = registry.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		final captured = registry.selectExactInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		final boolInternal = registry.selectExactBool(OcamlRepresentationDomain.InternalValue);
+		final boolMutable = registry.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
+		final boolCaptured = registry.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		final arrayInternal = registry.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		final arrayMutable = registry.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final arrayCaptured = registry.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
@@ -100,6 +103,17 @@ class RepresentationRegistryFixture {
 		assertTrue(captured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
 			"a captured Int should use the one cell shared with nested functions");
 		assertTrue(mutable.id == "representation:Int:mutable-local-storage", "representation identities should be semantic and program independent");
+		assertTrue(boolInternal.semanticTypeId == "Bool"
+			&& boolInternal.carrierTypeId == "bool"
+			&& boolInternal.nullPolicy == OcamlRepresentationNullPolicy.NonNull
+			&& boolInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			"exact Bool locals should use the direct non-null OCaml bool carrier");
+		assertTrue(boolInternal.proof.id == "direct-exact-bool-local-v1"
+			&& boolInternal.proof.claim.indexOf("does not admit nullable values, fields, calls, operators, native boundaries, or public ABI") >= 0,
+			"the exact Bool proof should state its local-only boundary");
+		assertTrue(boolMutable.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& boolCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
+			"mutable and captured Bool values should put replacement mutation in their shared local cells");
 		assertTrue(arrayInternal.semanticTypeId == "Array<Int>" && arrayInternal.carrierTypeId == "int HxArray.t",
 			"the direct Array<Int> internal value should use the typed HxArray carrier");
 		assertTrue(arrayInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
@@ -143,7 +157,7 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 12, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 15, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -156,6 +170,8 @@ class RepresentationRegistryFixture {
 		expectFailure("stale program", "registry belongs to", () -> registry.require(internal.id, "program:older"));
 		expectFailure("unsupported Array<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
 			() -> registry.selectExactArrayInt(OcamlRepresentationDomain.InstanceField));
+		expectFailure("unsupported Bool domain", "admitted only for internal, mutable-local, or captured-local storage",
+			() -> registry.selectExactBool(OcamlRepresentationDomain.InstanceField));
 		expectFailure("unsupported Null<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
 			() -> registry.selectExactNullInt(OcamlRepresentationDomain.InstanceField));
 		expectFailure("unsupported Null<Bool> domain", "admitted only for internal, mutable-local, or captured-local storage",
@@ -180,6 +196,9 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactInt(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectExactBool(OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectExactBool(OcamlRepresentationDomain.InternalValue);
+		registryAgain.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);

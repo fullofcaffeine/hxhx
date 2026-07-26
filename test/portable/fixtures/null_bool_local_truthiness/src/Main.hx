@@ -53,6 +53,24 @@ class Main {
 			mutable = true;
 		log("mutable=" + Std.string(mutable));
 
+		var directInternal:Bool = true;
+		log("direct-internal=" + directInternal);
+
+		var directMutable:Bool = false;
+		if (effects == 0)
+			directMutable = true;
+		log("direct-mutable=" + directMutable);
+
+		var directCaptured:Bool = true;
+		var directCapturedResult = "";
+		var exerciseDirectCaptured:Void->Void = () -> {
+			directCapturedResult = Std.string(directCaptured);
+			directCaptured = false;
+			directCapturedResult += "," + directCaptured;
+		};
+		exerciseDirectCaptured();
+		log("direct-captured=" + directCapturedResult);
+
 		var plannedMutable:Null<Bool> = null;
 		if (effects == 0)
 			plannedMutable = true;

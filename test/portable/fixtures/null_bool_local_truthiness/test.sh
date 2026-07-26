@@ -16,6 +16,14 @@ if ! grep -Fq 'let plannedCaptured = ref (Obj.repr true)' "$source_file"; then
 	echo "The captured Null<Bool> local did not use its selected Obj.t ref-cell carrier" >&2
 	exit 1
 fi
+if ! grep -Fq 'let directMutable = ref false' "$source_file"; then
+	echo "The mutable exact Bool local did not use its selected bool ref-cell carrier" >&2
+	exit 1
+fi
+if ! grep -Fq 'let directCaptured = ref true' "$source_file"; then
+	echo "The captured exact Bool local did not use its selected bool ref-cell carrier" >&2
+	exit 1
+fi
 if grep -Eq 'Obj\.magic \(!?(plannedCaptured|hx_plannedMutable)\)' "$source_file"; then
 	echo "An admitted Null<Bool> ref-cell read still uses the legacy Obj.magic fallback" >&2
 	exit 1
@@ -35,7 +43,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 13
-	|| report.representationScope !== 'exact-int-array-int-and-nullable-primitive-locals-v5'
+	|| report.representationScope !== 'exact-int-bool-array-int-and-nullable-primitive-locals-v6'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
 	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {
@@ -47,6 +55,13 @@ const nullBoolDomains = new Set(report.representations
 for (const domain of ['internal-value', 'mutable-local-storage', 'captured-local-storage']) {
 	if (!nullBoolDomains.has(domain))
 		fail(`missing exact Null<Bool> representation for ${domain}`)
+}
+const boolDomains = new Set(report.representations
+	.filter(entry => entry.semanticTypeId === 'Bool' && entry.carrierTypeId === 'bool')
+	.map(entry => entry.domain))
+for (const domain of ['internal-value', 'mutable-local-storage', 'captured-local-storage']) {
+	if (!boolDomains.has(domain))
+		fail(`missing exact Bool representation for ${domain}`)
 }
 const conversions = report.localConversions.filter(entry => entry.source.file === 'src/Main.hx')
 for (const conversion of ['preserve-nullable-bool-carrier', 'box-exact-bool-to-nullable-bool', 'nullable-bool-truthiness']) {

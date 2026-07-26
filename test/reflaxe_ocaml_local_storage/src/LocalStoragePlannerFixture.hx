@@ -322,6 +322,67 @@ class LocalStoragePlannerFixture {
 				.join(",") == nullIntConversions.map(conversion -> conversion.id)
 				.join(","),
 			"planning the same typed body twice should preserve occurrence identities and the local representation revision");
+		final boolInput = Context.typeExpr(macro {
+			final internal:Bool = true;
+			var mutable:Bool = false;
+			if (internal) {
+				mutable = true;
+			}
+			var captured:Bool = true;
+			final replaceCaptured = () -> captured = false;
+			replaceCaptured();
+			final nullable:Null<Bool> = internal;
+			nullable;
+		});
+		final boolStorage = OcamlLocalStoragePlanner.planExpression(boolInput);
+		final boolPlan = OcamlLocalRepresentationPlanner.planExpression(boolInput, boolStorage, representations, {
+			functionId: "fixture|bool-locals",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:bool-locals-v1",
+			pipelineRevision: "ocaml-function-plans-v7"
+		});
+		final boolReferences = boolPlan.references().filter(reference -> reference.semanticTypeId == "Bool");
+		assertTrue(boolReferences.length == 3, "every declared exact Bool local should reference one sealed program representation");
+		assertTrue(boolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 1
+			&& boolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1
+			&& boolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"exact Bool declarations should distinguish internal, mutable, and captured local storage");
+		assertTrue(boolPlan.conversions().filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToNullableBool).length == 1,
+			"a registry-backed exact Bool local should cross once into the selected nullable carrier");
+		final unsupportedBoolExpression = Context.typeExpr(macro {
+			final nullable:Null<Bool> = true == false;
+			nullable;
+		});
+		final unsupportedBoolPlan = OcamlLocalRepresentationPlanner.planExpression(unsupportedBoolExpression,
+			OcamlLocalStoragePlanner.planExpression(unsupportedBoolExpression), representations, {
+				functionId: "fixture|unsupported-bool-expression",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:unsupported-bool-expression-v1",
+				pipelineRevision: "ocaml-function-plans-v7"
+			});
+		assertTrue(unsupportedBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
+			"an arbitrary exact Bool expression should not publish a partial nullable-Bool representation");
+		assertTrue(unsupportedBoolPlan.conversions().length == 0,
+			"an arbitrary exact Bool expression should not publish a nullable-Bool conversion without its own carrier owner");
+		final unsupportedBoolLocalInput = Context.typeExpr(macro {
+			final source:Bool = true == false;
+			final alias:Bool = source;
+			final nullable:Null<Bool> = alias;
+			nullable;
+		});
+		final unsupportedBoolLocalPlan = OcamlLocalRepresentationPlanner.planExpression(unsupportedBoolLocalInput,
+			OcamlLocalStoragePlanner.planExpression(unsupportedBoolLocalInput), representations, {
+				functionId: "fixture|unsupported-bool-local",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:unsupported-bool-local-v1",
+				pipelineRevision: "ocaml-function-plans-v7"
+			});
+		assertTrue(unsupportedBoolLocalPlan.references()
+			.filter(reference -> reference.semanticTypeId == "Bool" || reference.semanticTypeId == "Null<Bool>")
+			.length == 0,
+			"a Bool local with an unowned operator initializer and its nullable dependent should both remain unplanned");
+		assertTrue(unsupportedBoolLocalPlan.conversions().length == 0,
+			"an unplanned Bool source local must not lend a guessed carrier to a nullable dependent");
 		final nullBoolInput = Context.typeExpr(macro {
 			var internal:Null<Bool> = null;
 			internal = false;
@@ -406,6 +467,22 @@ class LocalStoragePlannerFixture {
 			"a Null<Bool> local consumed by a concrete Bool boundary should remain outside the truthiness-only slice");
 		assertTrue(concreteBoolBoundaryPlan.conversions().length == 0,
 			"an unadmitted concrete Bool boundary must not publish partial nullable-Bool occurrence conversions");
+		final excludedNullableCopyInput = Context.typeExpr(macro {
+			final source:Null<Bool> = null;
+			final concrete:Bool = source;
+			final copy:Null<Bool> = source;
+			concrete || copy;});
+		final excludedNullableCopyPlan = OcamlLocalRepresentationPlanner.planExpression(excludedNullableCopyInput,
+			OcamlLocalStoragePlanner.planExpression(excludedNullableCopyInput), representations, {
+				functionId: "fixture|excluded-nullable-copy",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:excluded-nullable-copy-v1",
+				pipelineRevision: "ocaml-function-plans-v7"
+			});
+		assertTrue(excludedNullableCopyPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
+			"a nullable copy must not claim carrier preservation when its source local was excluded by a concrete-Bool boundary");
+		assertTrue(excludedNullableCopyPlan.conversions().length == 0,
+			"excluding a nullable source must also remove dependent carrier-preserving occurrence records");
 		final returnedConversion = nullIntConversions[0];
 		Reflect.setField(returnedConversion, "proofId", "changed-by-caller");
 		assertTrue(nullIntPlan.conversions()[0].proofId != "changed-by-caller", "mutating a returned conversion must not change the sealed occurrence plan");
