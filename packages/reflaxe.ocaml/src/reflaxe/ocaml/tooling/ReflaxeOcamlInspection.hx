@@ -587,13 +587,26 @@ class ReflaxeOcamlInspection {
 			return;
 		}
 
+		final exactBoolFamily = arguments.length == 1
+			&& arguments[0].conversion == "identity"
+			&& isCallValueSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId, "Bool", "bool")
+			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Bool", "bool")
+			&& result.conversion == "identity"
+			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Bool", "bool")
+			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Bool", "bool");
+		if (exactBoolFamily) {
+			if (proofId != "direct-one-bool-static-call-v1")
+				throw '$owner has proof "$proofId" instead of "direct-one-bool-static-call-v1".';
+			return;
+		}
+
 		final nullableIntFamily = arguments.length == 1
 			&& isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Null<Int>", "Obj.t")
 			&& result.conversion == "identity"
 			&& isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Null<Int>", "Obj.t")
 			&& isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Null<Int>", "Obj.t");
 		if (!nullableIntFamily || proofId != "direct-one-nullable-int-static-call-v1")
-			throw '$owner does not match an admitted exact Int or Null<Int> direct-call family.';
+			throw '$owner does not match an admitted exact Int, Bool, or Null<Int> direct-call family.';
 		if (requiresIdentityBoundary) {
 			if (arguments[0].conversion != "identity")
 				throw '$owner must describe an identity carrier value.';

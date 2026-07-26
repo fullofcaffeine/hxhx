@@ -91,8 +91,8 @@ typedef OcamlCallableDeclarationPlan = {
 	The callable shape exported by one exact final Haxe function body.
 
 	This boundary deliberately admits ordinary static methods in the closed exact
-	`Int` and `Null<Int>` families. Later call families extend the planner rather
-	than teaching the syntax builder new rules.
+	`Int`, `Bool`, and `Null<Int>` families. Later call families extend the
+	planner rather than teaching the syntax builder new rules.
 **/
 typedef OcamlCallableBoundaryPlan = {
 	final id:String;
@@ -337,6 +337,7 @@ class OcamlCallPlan {
 			case Identity:
 				if (!sameRepresentationSides(value)
 					|| (!isExactIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+						&& !isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))
 					|| value.proofId != "identity-call-carrier-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
@@ -436,6 +437,10 @@ class OcamlCallPlan {
 		return semanticTypeId == "Int" && carrierTypeId == "int" && representationId == "representation:Int:internal-value";
 	}
 
+	static function isExactBoolSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId == "Bool" && carrierTypeId == "bool" && representationId == "representation:Bool:internal-value";
+	}
+
 	static function isExactNullIntSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return semanticTypeId == "Null<Int>" && carrierTypeId == "Obj.t" && representationId == "representation:Null<Int>:internal-value";
 	}
@@ -450,6 +455,15 @@ class OcamlCallPlan {
 			&& result.conversion == OcamlCallCarrierConversion.Identity;
 		if (exactIntFamily)
 			return proofIdForArity(arguments.length);
+		final exactBoolFamily = arguments.length == 1
+			&& isExactBoolSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId)
+			&& isExactBoolSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId)
+			&& arguments[0].conversion == OcamlCallCarrierConversion.Identity
+			&& isExactBoolSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+			&& isExactBoolSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (exactBoolFamily)
+			return "direct-one-bool-static-call-v1";
 		final nullableIntFamily = arguments.length == 1
 			&& isExactNullIntSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId)
 			&& (arguments[0].conversion == OcamlCallCarrierConversion.PreserveNullableIntCarrier
@@ -507,9 +521,9 @@ class OcamlCallPlan {
 /**
 	Selects the first closed typed-call family from final Haxe expressions.
 
-	Only an ordinary, non-extern, non-generic static method with one or two
-	required exact `Int` parameters and exact `Int` result is admitted.
-	Everything else is left explicitly unmigrated for a later call-family slice.
+	Only an ordinary, non-extern, non-generic static method in one of the closed
+	exact `Int`, `Bool`, or `Null<Int>` families is admitted. Everything else is
+	left explicitly unmigrated for a later call-family slice.
 **/
 class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
@@ -616,6 +630,10 @@ class OcamlCallPlanner {
 				if (!OcamlRepresentationRegistry.isExactInt(arguments[index].t))
 					return null;
 				planned.push(OcamlCallPlan.copyValue(boundary));
+			} else if (boundary.outputSemanticTypeId == "Bool") {
+				if (!OcamlRepresentationRegistry.isExactBool(arguments[index].t))
+					return null;
+				planned.push(OcamlCallPlan.copyValue(boundary));
 			} else if (boundary.outputSemanticTypeId == "Null<Int>") {
 				final input = if (OcamlRepresentationRegistry.isExactNullInt(arguments[index].t)) {
 					representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
@@ -637,6 +655,7 @@ class OcamlCallPlanner {
 	static function sameResultExpressionType(type:Type, result:OcamlCallValuePlan):Bool {
 		return switch (result.outputSemanticTypeId) {
 			case "Int": OcamlRepresentationRegistry.isExactInt(type);
+			case "Bool": OcamlRepresentationRegistry.isExactBool(type);
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(type);
 			case _: false;
 		}
@@ -646,6 +665,8 @@ class OcamlCallPlanner {
 		if (result.outputSemanticTypeId == "Int")
 			return
 				'The typed Haxe expression resolves to one ordinary static method with ${arguments.length} exact Int identity argument${arguments.length == 1 ? "" : "s"} and exact Int result.';
+		if (result.outputSemanticTypeId == "Bool")
+			return "The typed Haxe expression resolves to one ordinary static method with one exact Bool identity argument and exact Bool result.";
 		return switch (arguments[0].conversion) {
 			case PreserveNullableIntCarrier:
 				"The typed Haxe expression passes an existing exact Null<Int> carrier into one ordinary static Null<Int> method and preserves its nullable result.";
@@ -668,12 +689,37 @@ class OcamlCallPlanner {
 			return null;
 		final representation = switch (signature.family) {
 			case "exact-int": representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			case "exact-bool": representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
 			case "exact-null-int": representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 			case _: return null;
 		}
 		final selectedCalleeId = calleeId(classType, field);
-		final proofId = signature.family == "exact-int" ? OcamlCallPlan.proofIdForArity(signature.argumentCount) : "direct-one-nullable-int-static-call-v1";
-		final proofClaim = signature.family == "exact-int" ? "Each selected exact Int representation is an identity crossing for one direct Haxe static call. Materializing every source argument in index order before invocation preserves Haxe evaluation order without relying on OCaml application order." : "The callable accepts and returns the sealed exact Null<Int> Obj.t carrier. Each caller must either preserve that carrier or box one exact Int before invocation, and the nullable result remains in the same carrier.";
+		final proofId = switch (signature.family) {
+			case "exact-int": OcamlCallPlan.proofIdForArity(signature.argumentCount);
+			case "exact-bool": "direct-one-bool-static-call-v1";
+			case "exact-null-int": "direct-one-nullable-int-static-call-v1";
+			case _: throw "reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported admitted call family";
+		}
+		final proofClaim = switch (signature.family) {
+			case "exact-int":
+				"Each selected exact Int representation is an identity crossing for one direct Haxe static call. Materializing every source argument in index order before invocation preserves Haxe evaluation order without relying on OCaml application order.";
+			case "exact-bool":
+				"The selected exact Bool representation is one identity crossing for a direct Haxe static call. Materializing the source argument before invocation evaluates it exactly once.";
+			case "exact-null-int":
+				"The callable accepts and returns the sealed exact Null<Int> Obj.t carrier. Each caller must either preserve that carrier or box one exact Int before invocation, and the nullable result remains in the same carrier.";
+			case _:
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported admitted call family";
+		}
+		final reason = switch (signature.family) {
+			case "exact-int":
+				'An ordinary static Haxe method with ${signature.argumentCount} exact Int argument${signature.argumentCount == 1 ? "" : "s"} and exact Int result uses the direct internal int carrier at both definition and call boundaries.';
+			case "exact-bool":
+				"An ordinary static Haxe method with one exact Bool parameter and result uses the direct internal bool carrier at both definition and call boundaries.";
+			case "exact-null-int":
+				"An ordinary static Haxe method with one exact Null<Int> parameter and result uses the sealed internal Obj.t carrier at its definition boundary.";
+			case _:
+				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported admitted call family";
+		}
 		return {
 			id: "callable-declaration:" + Sha256.encode(selectedCalleeId).substr(0, 24),
 			calleeId: selectedCalleeId,
@@ -684,7 +730,7 @@ class OcamlCallPlanner {
 			arguments: [for (index in 0...signature.argumentCount) identityValue(index, representation)],
 			result: identityValue(-1, representation),
 			profileEligibility: ["metal", "portable"],
-			reason: signature.family == "exact-int" ? 'An ordinary static Haxe method with ${signature.argumentCount} exact Int argument${signature.argumentCount == 1 ? "" : "s"} and exact Int result uses the direct internal int carrier at both definition and call boundaries.' : "An ordinary static Haxe method with one exact Null<Int> parameter and result uses the sealed internal Obj.t carrier at its definition boundary.",
+			reason: reason,
 			proofId: proofId,
 			proofClaim: proofClaim,
 			programRevision: programRevision,
@@ -700,6 +746,12 @@ class OcamlCallPlanner {
 					&& Lambda.foreach(arguments, argument -> !argument.opt && OcamlRepresentationRegistry.isExactInt(argument.t))
 					&& OcamlRepresentationRegistry.isExactInt(result)):
 				{family: "exact-int", argumentCount: arguments.length};
+			case TFun(arguments, result)
+				if (arguments.length == 1
+					&& !arguments[0].opt
+					&& OcamlRepresentationRegistry.isExactBool(arguments[0].t)
+					&& OcamlRepresentationRegistry.isExactBool(result)):
+				{family: "exact-bool", argumentCount: 1};
 			case TFun(arguments, result)
 				if (arguments.length == 1
 					&& !arguments[0].opt

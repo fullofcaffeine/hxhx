@@ -30,6 +30,11 @@ class Main {
 		return 9;
 	}
 
+	static function observedBoolInput():Bool {
+		Sys.println("bool-source");
+		return true;
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -45,6 +50,8 @@ class Main {
 		Sys.println("nullable-preserved-null=" + (preserved == null));
 		final boxed = NullableCalls.identity(observedNullableInput());
 		Sys.println("nullable-boxed=" + (boxed == null ? -1 : boxed));
+		final boolResult = BoolCalls.negate(observedBoolInput());
+		Sys.println(boolResult ? "bool-result=true" : "bool-result=false");
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

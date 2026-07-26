@@ -12,4 +12,7 @@ nullable-preserved-null=true
 nullable-int-source
 nullable-callee
 nullable-boxed=9
+bool-source
+bool-callee
+bool-result=false
 instance=6

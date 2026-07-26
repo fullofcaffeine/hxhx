@@ -34,6 +34,8 @@ class CallPlanFixture {
 	static inline final NULLABLE_CALLEE_ID = "NullableCalls|NullableCalls::identity";
 	static inline final NULLABLE_PRESERVE_CALL_ID = "call:nullable-preserve-fixture";
 	static inline final NULLABLE_BOX_CALL_ID = "call:nullable-box-fixture";
+	static inline final BOOL_CALLEE_ID = "BoolCalls|BoolCalls::negate";
+	static inline final BOOL_CALL_ID = "call:bool-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -62,6 +64,21 @@ class CallPlanFixture {
 			conversion: OcamlCallCarrierConversion.Identity,
 			proofId: "identity-call-carrier-v1",
 			proofClaim: "fixture nullable identity"
+		};
+	}
+
+	static function boolValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			inputSemanticTypeId: "Bool",
+			inputCarrierTypeId: "bool",
+			inputRepresentationId: "representation:Bool:internal-value",
+			outputSemanticTypeId: "Bool",
+			outputCarrierTypeId: "bool",
+			outputRepresentationId: "representation:Bool:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture Bool identity"
 		};
 	}
 
@@ -155,6 +172,25 @@ class CallPlanFixture {
 		};
 	}
 
+	static function boolDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:bool-fixture",
+			calleeId: BOOL_CALLEE_ID,
+			sourceModuleId: "BoolCalls",
+			sourceTypeName: "BoolCalls",
+			sourceFieldName: "negate",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [boolValue(0)],
+			result: boolValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-bool-static-call-v1",
+			proofClaim: "fixture",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
 	static function binding(functionId:String, bodyRevision:String):OcamlFunctionPlanBinding {
 		return {
 			functionId: functionId,
@@ -225,6 +261,29 @@ class CallPlanFixture {
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
 			proofId: "direct-one-nullable-int-static-call-v1",
+			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function boolCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: BOOL_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 8, max: 9},
+			calleeId: BOOL_CALLEE_ID,
+			sourceModuleId: "BoolCalls",
+			sourceTypeName: "BoolCalls",
+			sourceFieldName: "negate",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [boolValue(0)],
+			result: boolValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(BOOL_CALL_ID, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-bool-static-call-v1",
 			proofClaim: "fixture",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -320,6 +379,27 @@ class CallPlanFixture {
 		};
 	}
 
+	static function boolBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:bool-fixture",
+			calleeId: BOOL_CALLEE_ID,
+			sourceModuleId: "BoolCalls",
+			sourceTypeName: "BoolCalls",
+			sourceFieldName: "negate",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [boolValue(0)],
+			result: boolValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture",
+			proofId: "direct-one-bool-static-call-v1",
+			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
 	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan,
 			callable:Null<OcamlCallableBoundaryPlan>):Void {
 		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), calls, callable);
@@ -399,6 +479,17 @@ class CallPlanFixture {
 		seal(nullableRegistry, nullableCaller, new OcamlCallPlan([preserveNullableCall, boxNullableCall]), null);
 		seal(nullableRegistry, nullableCallee, new OcamlCallPlan([]), nullableBoundary(nullableCallee));
 		nullableRegistry.validateCallGraph();
+
+		final boolCaller = binding("Main|Main::boolCall", "body:bool-caller");
+		final boolCallee = binding("BoolCalls|BoolCalls::negate", "body:bool-callee");
+		final selectedBoolCall = boolCall(boolCaller);
+		final boolRegistry = new OcamlFunctionPlanRegistry();
+		boolRegistry.beginProgram(PROGRAM_REVISION);
+		boolRegistry.registerCallableDeclaration(boolDeclaration());
+		boolRegistry.requireCallableDeclaration(selectedBoolCall);
+		seal(boolRegistry, boolCaller, new OcamlCallPlan([selectedBoolCall]), null);
+		seal(boolRegistry, boolCallee, new OcamlCallPlan([]), boolBoundary(boolCallee));
+		boolRegistry.validateCallGraph();
 
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));
@@ -528,6 +619,28 @@ class CallPlanFixture {
 		conflictingNullableRegistry.beginProgram(PROGRAM_REVISION);
 		conflictingNullableRegistry.registerCallableDeclaration(nullableDeclaration());
 		expectThrows("invalid-plan", () -> seal(conflictingNullableRegistry, nullableCallee, new OcamlCallPlan([]), conflictingNullableBoundary));
+
+		final wrongBoolCarrierValue = OcamlCallPlan.copyValue(selectedBoolCall.arguments[0]);
+		Reflect.setField(wrongBoolCarrierValue, "inputCarrierTypeId", "int");
+		Reflect.setField(wrongBoolCarrierValue, "outputCarrierTypeId", "int");
+		final wrongBoolCarrier = copyCall(selectedBoolCall, null, null, [wrongBoolCarrierValue]);
+		expectThrows("invalid-plan", () -> boolRegistry.requireCallableDeclaration(wrongBoolCarrier));
+
+		final wrongBoolProofValue = OcamlCallPlan.copyValue(selectedBoolCall.arguments[0]);
+		Reflect.setField(wrongBoolProofValue, "proofId", "wrong-proof");
+		final wrongBoolProof = copyCall(selectedBoolCall, null, null, [wrongBoolProofValue]);
+		expectThrows("invalid-plan", () -> boolRegistry.requireCallableDeclaration(wrongBoolProof));
+
+		final wrongBoolFamilyProof = copyCall(selectedBoolCall);
+		Reflect.setField(wrongBoolFamilyProof, "proofId", "direct-one-int-static-call-v1");
+		expectThrows("invalid-plan", () -> boolRegistry.requireCallableDeclaration(wrongBoolFamilyProof));
+
+		final conflictingBoolBoundary = boolBoundary(boolCallee);
+		Reflect.setField(conflictingBoolBoundary.result, "outputRepresentationId", "representation:Int:internal-value");
+		final conflictingBoolRegistry = new OcamlFunctionPlanRegistry();
+		conflictingBoolRegistry.beginProgram(PROGRAM_REVISION);
+		conflictingBoolRegistry.registerCallableDeclaration(boolDeclaration());
+		expectThrows("invalid-plan", () -> seal(conflictingBoolRegistry, boolCallee, new OcamlCallPlan([]), conflictingBoolBoundary));
 
 		final staleCaller = copyCall(selectedCall, null, null, null, null, "body:stale");
 		final staleCallerRegistry = new OcamlFunctionPlanRegistry();

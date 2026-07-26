@@ -3,9 +3,10 @@ set -euo pipefail
 
 arithmetic_source="out/Arithmetic.ml"
 nullable_source="out/NullableCalls.ml"
+bool_source="out/BoolCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -52,6 +53,18 @@ if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(observedNullableInput \(\)\
 fi
 if grep -Eq 'Obj\.repr \(Obj\.repr \(observedNullableInput \(\)\)\)' "$main_source"; then
 	echo "The exact Int-to-Null<Int> call crossing must not box its argument twice" >&2
+	exit 1
+fi
+if ! grep -q '^let negate = fun (value : bool) ->' "$bool_source"; then
+	echo "The exact Bool callable boundary must annotate its OCaml parameter as bool" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = observedBoolInput \(\) in BoolCalls\.negate __call_arg_0_[0-9]+' "$main_source"; then
+	echo "The exact Bool call must materialize its sealed source argument before invocation" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.(magic|repr|obj) \(BoolCalls\.negate|BoolCalls\.negate \(Obj\.(magic|repr|obj)' "$main_source"; then
+	echo "The exact Bool call boundary must remain a direct bool identity crossing" >&2
 	exit 1
 fi
 
@@ -149,6 +162,27 @@ for (const call of nullableCalls) {
 		|| call.evaluationSchedule[1]?.kind !== 'invoke-callee') {
 		throw new Error('the exact Null<Int> call does not materialize its argument before invocation')
 	}
+}
+const boolCalls = report.calls?.filter(item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'negate') ?? []
+const boolBoundary = report.callableBoundaries?.find(item => item.sourceTypeName === 'BoolCalls' && item.sourceFieldName === 'negate')
+if (boolCalls.length !== 1 || !boolBoundary
+	|| boolBoundary.proofId !== 'direct-one-bool-static-call-v1'
+	|| boolBoundary.arguments?.length !== 1
+	|| !isIdentity(boolBoundary.arguments[0], 'Bool', 'bool')
+	|| !isIdentity(boolBoundary.result, 'Bool', 'bool')) {
+	throw new Error('the lowering report did not seal the exact Bool callable definition')
+}
+const boolCall = boolCalls[0]
+if (boolCall.proofId !== 'direct-one-bool-static-call-v1'
+	|| boolCall.arguments?.length !== 1
+	|| !isIdentity(boolCall.arguments[0], 'Bool', 'bool')
+	|| !isIdentity(boolCall.result, 'Bool', 'bool')
+	|| boolCall.evaluationSchedule?.length !== 2
+	|| boolCall.evaluationSchedule[0]?.kind !== 'materialize-argument'
+	|| boolCall.evaluationSchedule[0]?.argumentIndex !== 0
+	|| typeof boolCall.evaluationSchedule[0]?.slotId !== 'string'
+	|| boolCall.evaluationSchedule[1]?.kind !== 'invoke-callee') {
+	throw new Error('the exact Bool call did not retain its identity crossing and evaluate-before-invoke schedule')
 }
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
