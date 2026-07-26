@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 6)
+	assert.strictEqual(report.schemaVersion, 7)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -74,7 +74,7 @@ try {
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
-	assert.strictEqual(report.lowering.unsafeOperationCompleteness, 'exact-null-int-local-slice-only')
+	assert.strictEqual(report.lowering.unsafeOperationCompleteness, 'exact-null-int-and-null-bool-local-slices-only')
 	assert.match(report.lowering.localConversionRevision, sha256Revision)
 	assert.match(report.lowering.unsafeOperationRevision, sha256Revision)
 	assert(report.lowering.localConversions.length > 0)
@@ -90,7 +90,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-array-int-and-null-int-locals-v4')
+	assert.strictEqual(report.representation.scope, 'exact-int-array-int-and-nullable-primitive-locals-v5')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'

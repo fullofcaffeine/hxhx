@@ -8,24 +8,20 @@ if [ ! -f "$source_file" ] || [ ! -f "$report_file" ]; then
 	exit 1
 fi
 
-if ! grep -Fq 'let hx_mutable = ref (HxRuntime.hx_null : Obj.t)' "$source_file"; then
-	echo "The mutable Null<Int> local did not use its selected Obj.t ref-cell carrier" >&2
+if ! grep -Fq 'let plannedMutable = ref (HxRuntime.hx_null : Obj.t)' "$source_file"; then
+	echo "The mutable Null<Bool> local did not use its selected Obj.t ref-cell carrier" >&2
 	exit 1
 fi
-if ! grep -Fq 'let captured = ref (Obj.repr 1)' "$source_file"; then
-	echo "The captured Null<Int> local did not use its selected Obj.t ref-cell carrier" >&2
+if ! grep -Fq 'let plannedCaptured = ref (Obj.repr true)' "$source_file"; then
+	echo "The captured Null<Bool> local did not use its selected Obj.t ref-cell carrier" >&2
 	exit 1
 fi
-if grep -Eq 'Obj\.magic \(!?(captured|hx_mutable)\)' "$source_file"; then
-	echo "An admitted Null<Int> ref-cell read still uses the legacy Obj.magic fallback" >&2
+if grep -Eq 'Obj\.magic \(!?(plannedCaptured|hx_plannedMutable)\)' "$source_file"; then
+	echo "An admitted Null<Bool> ref-cell read still uses the legacy Obj.magic fallback" >&2
 	exit 1
 fi
-if ! grep -Fq 'HxRuntime.nullable_int_unwrap refined' "$source_file"; then
-	echo "The flow-refined Null<Int> read did not use its sealed checked conversion" >&2
-	exit 1
-fi
-if grep -Eq '__nullable_int_[0-9]+ = refined.*then 0 else Obj\.obj' "$source_file"; then
-	echo "The flow-refined Null<Int> read still maps null to zero through the legacy fallback" >&2
+if ! grep -Fq 'HxRuntime.unbox_bool_or_obj' "$source_file"; then
+	echo "The generated conditions did not render their sealed nullable-Bool truthiness conversion" >&2
 	exit 1
 fi
 
@@ -34,7 +30,7 @@ const fs = require('node:fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 
 function fail(message) {
-	console.error(`Null<Int> lowering report check failed: ${message}`)
+	console.error(`Null<Bool> lowering report check failed: ${message}`)
 	process.exit(1)
 }
 
@@ -45,15 +41,15 @@ if (report.schemaVersion !== 13
 	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {
 	fail('unexpected schema, representation scope, or proof-ledger model')
 }
-const nullIntDomains = new Set(report.representations
-	.filter(entry => entry.semanticTypeId === 'Null<Int>' && entry.carrierTypeId === 'Obj.t')
+const nullBoolDomains = new Set(report.representations
+	.filter(entry => entry.semanticTypeId === 'Null<Bool>' && entry.carrierTypeId === 'Obj.t')
 	.map(entry => entry.domain))
 for (const domain of ['internal-value', 'mutable-local-storage', 'captured-local-storage']) {
-	if (!nullIntDomains.has(domain))
-		fail(`missing exact Null<Int> representation for ${domain}`)
+	if (!nullBoolDomains.has(domain))
+		fail(`missing exact Null<Bool> representation for ${domain}`)
 }
 const conversions = report.localConversions.filter(entry => entry.source.file === 'src/Main.hx')
-for (const conversion of ['preserve-nullable-int-carrier', 'box-exact-int-to-nullable-int', 'checked-unbox-nullable-int']) {
+for (const conversion of ['preserve-nullable-bool-carrier', 'box-exact-bool-to-nullable-bool', 'nullable-bool-truthiness']) {
 	if (!conversions.some(entry => entry.conversion === conversion))
 		fail(`missing source conversion ${conversion}`)
 }
@@ -72,14 +68,14 @@ for (const conversion of report.localConversions) {
 	}
 }
 if (!report.unsafeOperations.some(entry => entry.source.file === 'src/Main.hx'
-	&& entry.operation === 'obj-repr-exact-int'
-	&& entry.proofId === 'nullable-int-box-exact-int-v1')) {
-	fail('missing proof-backed Obj.repr operation')
+	&& entry.operation === 'obj-repr-exact-bool'
+	&& entry.proofId === 'nullable-bool-box-exact-bool-v1')) {
+	fail('missing proof-backed exact-Bool Obj.repr operation')
 }
 if (!report.unsafeOperations.some(entry => entry.source.file === 'src/Main.hx'
-	&& entry.operation === 'checked-nullable-int-unwrap'
-	&& entry.proofId === 'nullable-int-checked-read-v1')) {
-	fail('missing proof-backed checked nullable read')
+	&& entry.operation === 'nullable-bool-truthiness'
+	&& entry.proofId === 'nullable-bool-truthiness-v1')) {
+	fail('missing proof-backed nullable-Bool truthiness operation')
 }
 NODE
 
@@ -94,7 +90,11 @@ haxe -cp src -main Main -neko out/oracle.n
 neko out/oracle.n >out/oracle.neko.stdout
 
 diff -u expected.stdout out/oracle.interp
-diff -u expected.stdout out/oracle.js.stdout
-diff -u expected.stdout out/oracle.neko.stdout
+# Haxe 4.3.7's interpreter returns the typed Bool result for `null && rhs`.
+# JavaScript and Neko preserve the null left operand instead. The OCaml target
+# follows the interpreter's typed-Bool behavior while all three oracle routes
+# must agree on condition truthiness and short-circuit side effects.
+diff -u expected.js-neko.stdout out/oracle.js.stdout
+diff -u expected.js-neko.stdout out/oracle.neko.stdout
 
-echo "NULL_INT_LOCAL_CONVERSIONS_ORACLE_REPORT_AND_SOURCE_SHAPE:PASS"
+echo "NULL_BOOL_LOCAL_TRUTHINESS_ORACLE_REPORT_AND_SOURCE_SHAPE:PASS"

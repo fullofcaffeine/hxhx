@@ -124,10 +124,10 @@ class OcamlLoweringReportWriter {
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
 		final report = {
-			schemaVersion: 12,
+			schemaVersion: 13,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
-			representationScope: "exact-int-array-int-and-null-int-locals-v4",
+			representationScope: "exact-int-array-int-and-nullable-primitive-locals-v5",
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
@@ -136,7 +136,7 @@ class OcamlLoweringReportWriter {
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
 			unsafeOperationModel: "proof-backed-admitted-unsafe-operations-v1",
-			unsafeOperationCompleteness: "exact-null-int-local-slice-only",
+			unsafeOperationCompleteness: "exact-null-int-and-null-bool-local-slices-only",
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,

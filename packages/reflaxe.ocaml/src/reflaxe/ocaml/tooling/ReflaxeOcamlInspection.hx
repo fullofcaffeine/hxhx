@@ -68,7 +68,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 6,
+			schemaVersion: 7,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -298,8 +298,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 12) {
-						throw 'Unsupported lowering report schema $version; expected 12.';
+					if (version != 13) {
+						throw 'Unsupported lowering report schema $version; expected 13.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -415,7 +415,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-array-int-and-null-int-locals-v4")
+		if (scope != "exact-int-array-int-and-nullable-primitive-locals-v5")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -482,7 +482,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Null<Int> carrier decision${decisions.length == 1 ? "" : "s"}; generic, other nullable types, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Null<Int>/Null<Bool> carrier decision${decisions.length == 1 ? "" : "s"}; generic, other nullable types, typedef, abstract, Vector, field, and ABI array domains remain outside this slice.'
 		};
 	}
 
@@ -533,7 +533,7 @@ class ReflaxeOcamlInspection {
 	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
 		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
 			throw "Unsupported unsafe-operation report model.";
-		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-local-slice-only")
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-and-null-bool-local-slices-only")
 			throw "Unsupported unsafe-operation completeness claim.";
 		final raw = requiredArray(value, "unsafeOperations");
 		if (raw.length != requiredInt(value, "unsafeOperationCount"))
@@ -789,7 +789,7 @@ class ReflaxeOcamlInspection {
 				id: "raw-unsafe",
 				label: "Whole-program raw and unsafe operation inventory",
 				status: lowering.status == "present" ? "partial" : "unavailable",
-				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact Null<Int> locals; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the first exact Null<Int> local slice is not available."
+				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact Null<Int> and Null<Bool> locals; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the exact nullable-primitive local slices is not available."
 			},
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
 			unavailable("export-abi", "Curated public OCaml export ABI", "Inferred .mli files are not a stable export contract.")
@@ -997,7 +997,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-array-int-and-null-int-locals-v4",
+			scope: "exact-int-array-int-and-nullable-primitive-locals-v5",
 			message: message
 		};
 	}

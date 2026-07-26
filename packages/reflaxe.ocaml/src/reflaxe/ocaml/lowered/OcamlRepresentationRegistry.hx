@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasin
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationProof;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
@@ -23,10 +24,10 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	function plans, place plans, reports, and syntax construction cannot silently
 	choose different carriers. The admitted scope covers exact `Int` plus
 	internal, mutable-local, and captured-local carriers for direct nominal
-	`Array<Int>` and exact core `Null<Int>`.
+	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>`.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v4";
+	public static inline final MODEL_REVISION = "ocaml-representation-v5";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -77,6 +78,40 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/** Returns whether a Haxe type resolves to the non-null built-in `Bool`. */
+	public static function isExactBool(type:Type):Bool {
+		var current = type;
+		var following = true;
+		var depth = 0;
+		while (following && depth < 32) {
+			depth += 1;
+			current = switch (current) {
+				case TLazy(resolve): resolve();
+				case TMono(reference):
+					final resolved = reference.get();
+					if (resolved == null) {
+						following = false;
+						current;
+					} else {
+						resolved;
+					}
+				case TType(typeRef, parameters):
+					final typedefType = typeRef.get();
+					TypeTools.applyTypeParameters(typedefType.type, typedefType.params, parameters);
+				case _:
+					following = false;
+					current;
+			}
+		}
+		if (following)
+			return false;
+		return switch (current) {
+			case TAbstract(abstractRef, _): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Bool";
+			case _:
+				false;
+		}
+	}
+
 	/**
 		Returns whether a Haxe type is the direct nominal built-in `Array<Int>`.
 
@@ -99,11 +134,17 @@ class OcamlRepresentationRegistry {
 		are intentionally excluded. Their carrier or conversion proof can differ.
 	**/
 	public static function isExactNullInt(type:Type):Bool {
-		return switch (type) {
-			case TAbstract(abstractRef, [TAbstract(innerRef, _)]): final abstractType = abstractRef.get(); final innerType = innerRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && innerType.pack.length == 0 && innerType.name == "Int";
-			case _:
-				false;
-		}
+		return isExactCoreNullablePrimitive(type, "Int");
+	}
+
+	/**
+		Returns whether a type is exactly the core `Null<Bool>` representation.
+
+		Like exact `Null<Int>`, this deliberately rejects typedef and user-abstract
+		wrappers. Their boundary behavior needs a separate representation proof.
+	**/
+	public static function isExactNullBool(type:Type):Bool {
+		return isExactCoreNullablePrimitive(type, "Bool");
 	}
 
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
@@ -175,14 +216,38 @@ class OcamlRepresentationRegistry {
 		carrier, boxes an exact Int, or performs a checked non-null read.
 	**/
 	public function selectExactNullInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		requireNullablePrimitiveDomain(domain, "Null<Int>");
+		return selectExactNullablePrimitive(domain, "Null<Int>", exactNullIntReason(domain), {
+			id: "nullable-int-obj-carrier-v1",
+			claim: "One Obj.t carrier can distinguish HxRuntime.hx_null from every boxed OCaml int that represents a Haxe Int. The carrier is valid only with occurrence-bound proofs for sentinel preservation, exact-Int boxing, and checked non-null reads; it does not admit other Null<T> families, fields, calls, or ABI crossings."
+		});
+	}
+
+	/**
+		Registers the nullable primitive carrier used by exact `Null<Bool>` locals.
+
+		The stored carrier preserves null, false, and true as distinct values.
+		Function-local occurrence plans separately prove carrier-preserving writes,
+		exact-Bool boxing, and Haxe condition truthiness.
+	**/
+	public function selectExactNullBool(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		requireNullablePrimitiveDomain(domain, "Null<Bool>");
+		return selectExactNullablePrimitive(domain, "Null<Bool>", exactNullBoolReason(domain), {
+			id: "nullable-bool-obj-carrier-v1",
+			claim: "One Obj.t carrier preserves HxRuntime.hx_null, Obj.repr false, and Obj.repr true as three distinct Haxe Null<Bool> values. Occurrence-bound proofs must own every carrier-preserving copy, exact-Bool box, and condition-truthiness read; this does not admit calls, fields, concrete-Bool boundaries, or other Null<T> families."
+		});
+	}
+
+	function selectExactNullablePrimitive(domain:OcamlRepresentationDomain, semanticTypeId:String, reason:String,
+			proof:OcamlRepresentationProof):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: exact Null<Int> is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, mutable-local, or captured-local storage, not $domain';
 		};
 		return register({
-			semanticTypeId: "Null<Int>",
+			semanticTypeId: semanticTypeId,
 			domain: domain,
 			carrierTypeId: "Obj.t",
 			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
@@ -191,11 +256,8 @@ class OcamlRepresentationRegistry {
 			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.NullablePrimitiveCarrier,
-			reason: exactNullIntReason(domain),
-			proof: {
-				id: "nullable-int-obj-carrier-v1",
-				claim: "One Obj.t carrier can distinguish HxRuntime.hx_null from every boxed OCaml int that represents a Haxe Int. The carrier is valid only with occurrence-bound proofs for sentinel preservation, exact-Int boxing, and checked non-null reads; it does not admit other Null<T> families, fields, calls, or ABI crossings."
-			},
+			reason: reason,
+			proof: proof,
 			profileEligibility: ["metal", "portable"]
 		});
 	}
@@ -308,6 +370,41 @@ class OcamlRepresentationRegistry {
 				"An exact Null<Int> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans own every carrier crossing.";
 			case InstanceField, StaticField, ArrayElement:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> local reason exists for $domain';
+		}
+	}
+
+	static function exactNullBoolReason(domain:OcamlRepresentationDomain):String {
+		return switch (domain) {
+			case InternalValue:
+				"An exact Null<Bool> immutable binding uses Obj.t so stored null remains distinct from boxed false and boxed true.";
+			case MutableLocalStorage:
+				"An exact Null<Bool> mutable local stores its Obj.t carrier in one ref cell; the cell owns replacement while occurrence plans own boxing and condition truthiness.";
+			case CapturedLocalStorage:
+				"An exact Null<Bool> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans preserve all three stored states and own truthiness reads.";
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> local reason exists for $domain';
+		}
+	}
+
+	static function isExactCoreNullablePrimitive(type:Type, primitiveName:String):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, [TAbstract(innerRef, _)]):
+				final abstractType = abstractRef.get();
+				final innerType = innerRef.get();
+				abstractType.pack.length == 0
+				&& abstractType.name == "Null"
+				&& innerType.pack.length == 0
+				&& innerType.name == primitiveName;
+			case _:
+				false;
+		}
+	}
+
+	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
+		switch (domain) {
+			case InternalValue, MutableLocalStorage, CapturedLocalStorage:
+			case InstanceField, StaticField, ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact $semanticTypeId is admitted only for internal, mutable-local, or captured-local storage, not $domain';
 		}
 	}
 

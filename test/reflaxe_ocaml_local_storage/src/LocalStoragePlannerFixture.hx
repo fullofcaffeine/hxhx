@@ -291,7 +291,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|null-int-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:null-int-locals-v1",
-			pipelineRevision: "ocaml-function-plans-v6"
+			pipelineRevision: "ocaml-function-plans-v7"
 		};
 		final nullIntPlan = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
 		final nullIntReferences = nullIntPlan.references().filter(reference -> reference.semanticTypeId == "Null<Int>");
@@ -322,6 +322,90 @@ class LocalStoragePlannerFixture {
 				.join(",") == nullIntConversions.map(conversion -> conversion.id)
 				.join(","),
 			"planning the same typed body twice should preserve occurrence identities and the local representation revision");
+		final nullBoolInput = Context.typeExpr(macro {
+			var internal:Null<Bool> = null;
+			internal = false;
+			final copied:Null<Bool> = internal;
+			var mutable:Null<Bool> = null;
+			if (copied) {
+				mutable = true;
+			}
+			var captured:Null<Bool> = true;
+			final readCaptured = () -> captured && copied;
+			final replaceCaptured = () -> captured = false;
+			replaceCaptured();
+			if (!captured) {
+				mutable = false;
+			}
+			readCaptured() || mutable;});
+		final nullBoolStorage = OcamlLocalStoragePlanner.planExpression(nullBoolInput);
+		final nullBoolBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|null-bool-locals",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:null-bool-locals-v1",
+			pipelineRevision: "ocaml-function-plans-v7"
+		};
+		final nullBoolPlan = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolStorage, representations, nullBoolBinding);
+		final nullBoolReferences = nullBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>");
+		assertTrue(nullBoolReferences.length == 4, "every exact Null<Bool> declaration in the focused body should reference one sealed program representation");
+		assertTrue(nullBoolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 2
+			&& nullBoolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1
+			&& nullBoolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"exact Null<Bool> declarations should distinguish internal, mutable, and captured local storage");
+		final nullBoolConversions = nullBoolPlan.conversions();
+		assertTrue(nullBoolConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.PreserveNullableBoolCarrier).length > 0,
+			"null and existing nullable-Bool values should preserve the selected Obj.t carrier");
+		assertTrue(nullBoolConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToNullableBool).length > 0,
+			"exact Bool writes should seal one Obj.repr carrier conversion");
+		assertTrue(nullBoolConversions.filter(conversion -> conversion.role == OcamlLocalConversionRole.Read
+			&& conversion.conversion == OcamlLocalCarrierConversion.NullableBoolTruthiness)
+			.length >= 4,
+			"if, logical-and, logical-or, and logical-not reads should seal nullable-Bool truthiness");
+		final nullBoolUnsafe = nullBoolPlan.unsafeOperations();
+		assertTrue(nullBoolUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprExactBool).length > 0
+			&& nullBoolUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.NullableBoolTruthiness).length > 0,
+			"the focused plan should own proof records for nullable-Bool boxing and truthiness");
+		final nullBoolPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolStorage, representations, nullBoolBinding);
+		assertTrue(nullBoolPlanAgain.revision == nullBoolPlan.revision
+			&& nullBoolPlanAgain.conversions()
+				.map(conversion -> conversion.id)
+				.join(",") == nullBoolConversions.map(conversion -> conversion.id)
+				.join(","),
+			"planning the same nullable-Bool body twice should preserve occurrence identities and the local representation revision");
+		final nullableBoolConversion = nullBoolConversions[0];
+		final wrongFamilyDecision:OcamlLocalRepresentationDecision = {
+			localId: nullableBoolConversion.localId,
+			choice: cast nullIntPlan.choiceFor(nullIntConversions[0].localId),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		};
+		expectFailure("wrong nullable primitive family", "wrong-conversion-family",
+			() -> new OcamlLocalRepresentationPlan([wrongFamilyDecision], [nullableBoolConversion]));
+		final concreteBoolBoundaryInput = Context.typeExpr(macro {
+			final nullable:Null<Bool> = null;
+			final concrete:Bool = nullable;
+			concrete;
+		});
+		final concreteBoolBoundaryPlan = OcamlLocalRepresentationPlanner.planExpression(concreteBoolBoundaryInput,
+			OcamlLocalStoragePlanner.planExpression(concreteBoolBoundaryInput), representations, {
+				functionId: "fixture|null-bool-concrete-boundary",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:null-bool-concrete-boundary-v1",
+				pipelineRevision: "ocaml-function-plans-v7"
+			});
+		final concreteBoolBoundaryLocalId = switch (concreteBoolBoundaryInput.expr) {
+			case TBlock(expressions):
+				switch (expressions[0].expr) {
+					case TVar(local, _): local.id;
+					case _: throw "concrete Bool boundary declaration changed shape";
+				}
+			case _: throw "concrete Bool boundary block changed shape";
+		}
+		assertTrue(concreteBoolBoundaryPlan.choiceFor(concreteBoolBoundaryLocalId) == null,
+			"a Null<Bool> local consumed by a concrete Bool boundary should remain outside the truthiness-only slice");
+		assertTrue(concreteBoolBoundaryPlan.conversions().length == 0,
+			"an unadmitted concrete Bool boundary must not publish partial nullable-Bool occurrence conversions");
 		final returnedConversion = nullIntConversions[0];
 		Reflect.setField(returnedConversion, "proofId", "changed-by-caller");
 		assertTrue(nullIntPlan.conversions()[0].proofId != "changed-by-caller", "mutating a returned conversion must not change the sealed occurrence plan");

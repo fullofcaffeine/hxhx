@@ -22,6 +22,24 @@ enum abstract OcamlLocalCarrierConversion(String) from String to String {
 
 	/** A flow-refined `Null<Int>` read must reject null before returning `int`. */
 	final CheckedUnboxNullableInt = "checked-unbox-nullable-int";
+
+	/** A null sentinel or existing exact `Null<Bool>` already uses `Obj.t`. */
+	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
+
+	/** An exact Haxe Bool must enter nullable `Obj.t` through `Obj.repr`. */
+	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
+
+	/**
+		A condition or logical operator reads null as false and a boxed bool as
+		its bool value.
+
+		This conversion describes the OCaml target's typed-`Bool` result. Haxe
+		4.3.7's JavaScript and Neko targets preserve a null left operand for
+		`nullValue && rhs`; the oracle fixture records that target-specific
+		difference while all tested routes retain the same condition truthiness
+		and short-circuit side effects.
+	**/
+	final NullableBoolTruthiness = "nullable-bool-truthiness";
 }
 
 /** The source role that requires one local-carrier conversion. */
@@ -35,6 +53,8 @@ enum abstract OcamlLocalConversionRole(String) from String to String {
 enum abstract OcamlUnsafeOperationKind(String) from String to String {
 	final ObjReprExactInt = "obj-repr-exact-int";
 	final CheckedNullableIntUnwrap = "checked-nullable-int-unwrap";
+	final ObjReprExactBool = "obj-repr-exact-bool";
+	final NullableBoolTruthiness = "nullable-bool-truthiness";
 }
 
 /** Revision-bound proof for one admitted unsafe target operation. */
@@ -159,10 +179,10 @@ class OcamlLocalRepresentationPlan {
 			if (localDecision == null)
 				throw 'reflaxe.ocaml [ocaml-representation:conversion-without-local]: occurrence "${conversion.id}" refers to unplanned local ${conversion.localId}';
 			switch (localDecision.choice) {
-				case ProgramDecision(_, "Null<Int>", _):
-					validateNullIntConversion(conversion);
+				case ProgramDecision(_, semanticTypeId, _) if (semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>"):
+					validateNullablePrimitiveConversion(conversion, semanticTypeId);
 				case ProgramDecision(_, semanticTypeId, _):
-					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${conversion.id}" selects a Null<Int> conversion for $semanticTypeId';
+					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${conversion.id}" selects a nullable-primitive conversion for $semanticTypeId';
 				case Unmigrated(_):
 					throw 'reflaxe.ocaml [ocaml-representation:unmigrated-occurrence-conversion]: occurrence "${conversion.id}" belongs to an unmigrated local';
 			}
@@ -299,7 +319,7 @@ class OcamlLocalRepresentationPlan {
 			+ "|read:" + (decision.readConversion : String);
 	}
 
-	static function validateNullIntConversion(decision:OcamlLocalConversionDecision):Void {
+	static function validateNullablePrimitiveConversion(decision:OcamlLocalConversionDecision, semanticTypeId:String):Void {
 		if (decision.id.length == 0
 			|| decision.reason.length == 0
 			|| decision.proofId.length == 0
@@ -335,9 +355,26 @@ class OcamlLocalRepresentationPlan {
 			case CheckedUnboxNullableInt:
 				requireConversionShape(decision, "Null<Int>", "Obj.t", "Int", "int");
 				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.CheckedNullableIntUnwrap);
+			case PreserveNullableBoolCarrier:
+				requireConversionShape(decision, "Null<Bool>", "Obj.t", "Null<Bool>", "Obj.t");
+				if (decision.unsafeOperation != null)
+					throw 'reflaxe.ocaml [ocaml-representation:unexpected-unsafe-operation]: carrier-preserving occurrence "${decision.id}" must not claim an unsafe target operation';
+			case BoxExactBoolToNullableBool:
+				requireConversionShape(decision, "Bool", "bool", "Null<Bool>", "Obj.t");
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.ObjReprExactBool);
+			case NullableBoolTruthiness:
+				requireConversionShape(decision, "Null<Bool>", "Obj.t", "Bool", "bool");
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.NullableBoolTruthiness);
 			case LegacyCoercion, Identity:
-				throw 'reflaxe.ocaml [ocaml-representation:invalid-null-int-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact Null<Int> conversion';
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-nullable-primitive-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact $semanticTypeId conversion';
 		}
+		final conversionFamily = switch (decision.conversion) {
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt: "Null<Int>";
+			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness: "Null<Bool>";
+			case LegacyCoercion, Identity: semanticTypeId;
+		}
+		if (conversionFamily != semanticTypeId)
+			throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${decision.id}" selects a $conversionFamily conversion for $semanticTypeId';
 	}
 
 	static function requireConversionShape(decision:OcamlLocalConversionDecision, inputSemanticTypeId:String, inputCarrierTypeId:String,
