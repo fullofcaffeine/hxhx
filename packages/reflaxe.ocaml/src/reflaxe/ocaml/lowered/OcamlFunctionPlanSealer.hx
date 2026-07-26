@@ -157,6 +157,7 @@ class OcamlFunctionPlanSealer {
 					OcamlRepresentationDomain.StaticField, programRevision, position);
 			case ArraySimple(plan):
 				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
 					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
 			case Compound(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
@@ -166,6 +167,7 @@ class OcamlFunctionPlanSealer {
 					OcamlRepresentationDomain.StaticField, programRevision, position);
 			case ArrayCompound(plan):
 				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
 					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
 			case Update(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
@@ -175,13 +177,17 @@ class OcamlFunctionPlanSealer {
 					OcamlRepresentationDomain.StaticField, programRevision, position);
 			case ArrayUpdate(plan):
 				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
 					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
 		}
 	}
 
-	function validateArrayRepresentationReferences(representationId:String, semanticTypeId:String, carrierTypeId:String, indexRepresentationId:String,
-			indexSemanticTypeId:String, indexCarrierTypeId:String, programRevision:String, position:Position):Void {
+	function validateArrayRepresentationReferences(representationId:String, semanticTypeId:String, carrierTypeId:String, receiverRepresentationId:String,
+			receiverSemanticTypeId:String, receiverCarrierTypeId:String, indexRepresentationId:String, indexSemanticTypeId:String, indexCarrierTypeId:String,
+			programRevision:String, position:Position):Void {
 		validateRepresentationReference(representationId, semanticTypeId, carrierTypeId, OcamlRepresentationDomain.ArrayElement, programRevision, position);
+		validateRepresentationReference(receiverRepresentationId, receiverSemanticTypeId, receiverCarrierTypeId, OcamlRepresentationDomain.InternalValue,
+			programRevision, position);
 		validateRepresentationReference(indexRepresentationId, indexSemanticTypeId, indexCarrierTypeId, OcamlRepresentationDomain.InternalValue,
 			programRevision, position);
 	}

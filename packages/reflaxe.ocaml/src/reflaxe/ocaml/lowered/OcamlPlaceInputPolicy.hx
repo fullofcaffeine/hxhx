@@ -20,11 +20,7 @@ class OcamlPlaceInputPolicy {
 
 	/** Recognizes only a direct nominal `Array<Int>` carrier. */
 	static function isExactIntArray(type:Type):Bool {
-		return switch (type) {
-			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" && isExactInt(elementType);
-			case _:
-				false;
-		}
+		return OcamlRepresentationRegistry.isExactArrayInt(type);
 	}
 
 	/** Recognizes an exact `Int` element place on a direct nominal `Array<Int>`. */

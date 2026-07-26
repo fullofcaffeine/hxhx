@@ -170,6 +170,7 @@ class OcamlPlaceAssignmentPlanner {
 	function planArrayElement(originId:String, left:TypedExpr):Null<{place:OcamlLoweredArrayElementPlace, receiver:TypedExpr, index:TypedExpr}> {
 		return switch (left.expr) {
 			case TArray(receiver, index):
+				final receiverRepresentation = representations.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
 				final indexRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.ArrayElement);
 				{
@@ -181,9 +182,9 @@ class OcamlPlaceAssignmentPlanner {
 						targetSymbolId: "runtime::HxArray::element",
 						receiverSemanticTypeId: "Array<Int>",
 						receiverDisplayType: TypeTools.toString(receiver.t),
-						receiverCarrierTypeId: "int HxArray.t",
-						receiverRepresentationId: originId + ":representation:array-receiver",
-						receiverRepresentationReason: "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+						receiverCarrierTypeId: receiverRepresentation.carrierTypeId,
+						receiverRepresentationId: receiverRepresentation.id,
+						receiverRepresentationReason: receiverRepresentation.reason,
 						indexSemanticTypeId: "Int",
 						indexDisplayType: TypeTools.toString(index.t),
 						indexCarrierTypeId: indexRepresentation.carrierTypeId,
