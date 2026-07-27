@@ -20,18 +20,20 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first six bounded control-effect slices are now executable. An ordinary
+The first seven bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
 represented String carrier also preserves the target's existing runtime null
-sentinel; this does not admit the separate nullable-primitive carriers such as
-`Null<Int>` or `Null<Bool>`. The compiler records and validates the return
-target and exact input/output carrier before printing OCaml, and the generated
-function catches only its own return signal. An ordinary static `Void`
-function can likewise use `return;` from a nested branch, loop, `try`, or
-`catch`. Because that statement carries no Haxe value, the compiler records a
-payloadless function-exit decision and the runtime transports no invented
+sentinel. Exact `Null<Int>` and `Null<Bool>` values can now leave early as
+well: the selected `Obj.t` carrier—one OCaml runtime value capable of
+distinguishing null, zero/false, and nonzero/true—is transported unchanged
+instead of being boxed a second time. The compiler records and validates the
+return target and exact input/output carrier before printing OCaml, and the
+generated function catches only its own return signal. An ordinary static
+`Void` function can likewise use `return;` from a nested branch, loop, `try`,
+or `catch`. Because that statement carries no Haxe value, the compiler records
+a payloadless function-exit decision and the runtime transports no invented
 `Obj.t` value.
 
 The third slice gives every ordinary `while` and `do ... while` loop a sealed
@@ -91,11 +93,27 @@ reject a record that substitutes the value-return mechanism. This slice does
 not use an `Obj.t` payload, `Obj.magic`, or a target-printer guess to represent
 the missing value.
 
+The seventh slice preserves exact `Null<Int>` and `Null<Bool>` carriers across
+early returns. For example, in a function that returns `Null<Int>`, an early
+`return value;` now raises the private return signal with the existing
+`Obj.t` value, while a final direct `return 7;` performs its one required
+`Int`-to-`Null<Int>` conversion inside the same function boundary. The
+same boundary leaves an already-nullable final fallback unchanged. The
+function boundary returns an early carrier directly, without `Obj.obj`,
+`Obj.magic`, or another `Obj.repr`, so null and zero/false remain distinct.
+Source `catch` clauses rethrow the private signal before matching source
+exceptions. The lowering report and public inspection expose the exact
+nullable semantic type, carrier, representation, conversion, proof, and
+revision, and reject a record that substitutes exact-value boxing. A nested
+early `return 7;` that itself needs `Int`-to-`Null<Int>` conversion still
+fails before OCaml source or lowering evidence is published; that distinct
+directional-control family remains unfinished.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.6`, not closure of the parent control-effects requirement.
-Additional value-return payloads, nullable return carriers, unsupported catch
-and throw payloads, cleanup effects, and the complete runtime-requirement
-ledger remain unfinished.
+`haxe_ocaml-w32h3.7`, not closure of the parent control-effects requirement.
+Additional value-return payloads, nested primitive-to-nullable conversions,
+other nullable return carriers, unsupported catch and throw payloads, cleanup
+effects, and the complete runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -244,19 +262,23 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first six slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first seven slices cover
   exact-`Int`, exact-`Bool`, and represented-`String` early returns from
   ordinary static functions, including the existing String runtime null
-  sentinel, and payloadless early return from ordinary static `Void` functions
-  without inventing a value. They also cover exact lexical targets for `break`
-  and `continue` in ordinary `while` and `do ... while` loops, and
+  sentinel; carrier-preserving early returns of exact `Null<Int>` and
+  `Null<Bool>` values; and payloadless early return from ordinary static
+  `Void` functions without inventing a value. A direct final `Int` or `Bool`
+  fallback may cross once into the matching nullable carrier inside that
+  function boundary; nested primitive-to-nullable return conversions remain
+  unsupported. The slices also cover exact lexical targets for `break` and
+  `continue` in ordinary `while` and `do ... while` loops, and
   exact-`Int`/`Bool`/represented-`String` payloads entering the global Haxe
   exception channel with upstream-compatible runtime-value tags. Complete
   source-ordered catch chains over those exact primitive types and a final
   `Dynamic` catch are also sealed, including the separate target-native
   exception channel and private-control bypass. The remaining value/nullable
-  return, unsupported-catch/exception, and cleanup families are still release
-  blockers;
+  return conversions, unsupported-catch/exception, and cleanup families are
+  still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);

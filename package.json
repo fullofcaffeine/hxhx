@@ -110,6 +110,7 @@
     "test:reflaxe-ocaml:control-plan": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_control_plan/src -lib reflaxe --macro 'nullSafety(\"reflaxe.ocaml\")' --macro 'ControlPlanFixture.run()' --no-output",
     "test:reflaxe-ocaml:early-return-oracle": "bash scripts/reflaxe-ocaml/run-early-return-control-oracle.sh",
     "test:reflaxe-ocaml:void-return-oracle": "bash scripts/reflaxe-ocaml/run-void-return-control-oracle.sh",
+    "test:reflaxe-ocaml:nullable-return-oracle": "bash scripts/reflaxe-ocaml/run-nullable-return-control-oracle.sh",
     "test:reflaxe-ocaml:loop-control-oracle": "bash scripts/reflaxe-ocaml/run-loop-control-oracle.sh",
     "test:reflaxe-ocaml:exact-throw-oracle": "bash scripts/reflaxe-ocaml/run-exact-throw-control-oracle.sh",
     "test:reflaxe-ocaml:exact-catch-oracle": "bash scripts/reflaxe-ocaml/run-exact-catch-control-oracle.sh",

@@ -221,7 +221,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `16`)
+  - `schemaVersion` (current: `31`)
   - the sealed assignment/update plans and their source locations
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
@@ -230,6 +230,12 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     `Null<Int>` parameter records one `box-exact-int-to-nullable-int`
     conversion; an existing `Null<Int>` records a carrier-preserving crossing.
     This makes the conversion inspectable before OCaml syntax is written.
+  - `controlModel`, `controls`, and `controlTargets`, which show the exact
+    function or loop affected by an admitted non-local transfer. Exact
+    `Null<Int>` and `Null<Bool>` early returns record
+    `preserve-nullable-carrier`: their existing `Obj.t` value crosses the
+    private return signal unchanged, so null and zero/false cannot collapse
+    through a second box or unchecked cast.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and

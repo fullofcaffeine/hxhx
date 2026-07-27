@@ -274,6 +274,8 @@ class OcamlBuilder {
 						final payload = switch (selectedPayload.conversion) {
 							case BoxAndRecoverExactValue:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
+							case PreserveNullableCarrier:
+								buildExpr(value);
 							case _:
 								return
 									controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}',
@@ -301,6 +303,8 @@ class OcamlBuilder {
 			case BoxAndRecoverExactValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
+			case PreserveNullableCarrier:
+				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${payload.conversion}', position);
 		}
@@ -7245,6 +7249,7 @@ class OcamlBuilder {
 			log("reflaxe.ocaml: builder_fn_body dt_ms=" + Std.string(Std.int((t5 - t4) * 1000)));
 		#end
 
+		var resultConvertedInsideControl = false;
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
 			final plannedReturn = functionPlan.controls.returnFamilyAdmitted ? functionPlan.controls.returnBoundaryDecision() : null;
@@ -7266,7 +7271,14 @@ class OcamlBuilder {
 				};
 			}
 			final fallbackBody = if (functionPlan.controls.returnFamilyAdmitted) {
-				body;
+				if (callableBoundary != null
+					&& callableBoundary.result != null
+					&& callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity) {
+					resultConvertedInsideControl = true;
+					buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
+				} else {
+					body;
+				}
 			} else if (isVoidType(resolvedReturnType)) {
 				body;
 			} else {
@@ -7287,11 +7299,14 @@ class OcamlBuilder {
 			if (callableBoundary.resultKind != OcamlCallResultKind.Value || callableBoundary.result == null)
 				return callPlanInvariant('callable boundary "${callableBoundary.id}" has no represented result for its value-returning typed function',
 					bodyExpr.pos);
-			if (needsReturnCatch && callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity)
+			if (needsReturnCatch
+				&& callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity
+				&& !resultConvertedInsideControl)
 				return
 					callPlanInvariant('callable boundary "${callableBoundary.id}" selected a straight-line result conversion for a body with nested return control',
 					bodyExpr.pos);
-			body = buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
+			if (!resultConvertedInsideControl)
+				body = buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
 			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent(callableBoundary.result.outputCarrierTypeId));
 		}
 

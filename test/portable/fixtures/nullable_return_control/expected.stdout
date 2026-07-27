@@ -1,0 +1,19 @@
+intNull=null
+intZero=0
+intPositive=4
+intDirect=7
+boolNull=null
+boolFalse=false
+boolTrue=true
+boolDirect=true
+intCarrierFallback=5
+boolCarrierFallback=false
+tryIntNull=null
+tryIntNullCaught=false
+tryIntZero=0
+tryIntZeroCaught=false
+tryBoolFalse=false
+tryBoolFalseCaught=false
+tryDirect=8
+tryDirectCaught=false
+OK nullable_return_control

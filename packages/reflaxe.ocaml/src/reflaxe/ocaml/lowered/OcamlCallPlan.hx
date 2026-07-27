@@ -1034,7 +1034,7 @@ class OcamlCallPlanner {
 		if (data.expr != null && declaration.resultKind == OcamlCallResultKind.Value) {
 			if (result == null)
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable "${declaration.calleeId}" has a value result kind without a value crossing';
-			final resultExpression = straightLineResultExpression(data.expr);
+			var resultExpression = straightLineResultExpression(data.expr);
 			final returnExpressions = functionReturnExpressions(data.expr);
 			var directionalReturnCount = 0;
 			for (returnExpression in returnExpressions) {
@@ -1046,7 +1046,11 @@ class OcamlCallPlanner {
 					directionalReturnCount += 1;
 			}
 			if (directionalReturnCount > 0 && (resultExpression == null || returnExpressions.length != 1)) {
-				throw 'reflaxe.ocaml [ocaml-call:result-control-unsealed]: callable "${declaration.calleeId}" requires $directionalReturnCount result conversion${directionalReturnCount == 1 ? "" : "s"} across early or nested return control; haxe_ocaml-w32h3 must seal those transfers before OCaml syntax';
+				final directResult = directRootResultExpression(data.expr);
+				if (!supportsNullableResultControl(directResult, returnExpressions, declaration.result, representations)) {
+					throw 'reflaxe.ocaml [ocaml-call:result-control-unsealed]: callable "${declaration.calleeId}" requires $directionalReturnCount result conversion${directionalReturnCount == 1 ? "" : "s"} across early or nested return control; haxe_ocaml-w32h3 must seal those transfers before OCaml syntax';
+				}
+				resultExpression = directResult;
 			}
 			if (resultExpression != null) {
 				final plannedResult = definitionResultValue(resultExpression, declaration.result, representations);
@@ -1159,6 +1163,26 @@ class OcamlCallPlanner {
 		};
 	}
 
+	/**
+		Returns the direct root result even when an earlier nested return exists.
+
+		This is not independently safe to lower. It is exposed only to the
+		exact-nullable result-control check below, which requires every earlier
+		return to preserve the already selected nullable carrier.
+	**/
+	static function directRootResultExpression(body:TypedExpr):Null<TypedExpr> {
+		return switch (body.expr) {
+			case TMeta(_, child):
+				directRootResultExpression(child);
+			case TReturn(value):
+				value;
+			case TBlock(expressions) if (expressions.length > 0):
+				directReturnValue(expressions[expressions.length - 1]);
+			case _:
+				null;
+		};
+	}
+
 	/** Unwraps metadata around one direct return without searching nested control flow. */
 	static function directReturnValue(expression:TypedExpr):Null<TypedExpr> {
 		return switch (expression.expr) {
@@ -1199,6 +1223,35 @@ class OcamlCallPlanner {
 		if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>")
 			return crossingValue(-1, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
 		return null;
+	}
+
+	/**
+		Admits one directional direct result beside carrier-preserving nullable
+		early returns. The control plan must still seal those earlier occurrences;
+		this check merely keeps the callable boundary available for that planner.
+	**/
+	static function supportsNullableResultControl(directResult:Null<TypedExpr>, returnExpressions:Array<TypedExpr>, boundaryValue:OcamlCallValuePlan,
+			representations:OcamlRepresentationRegistry):Bool {
+		if (directResult == null
+			|| (boundaryValue.outputSemanticTypeId != "Null<Int>" && boundaryValue.outputSemanticTypeId != "Null<Bool>")
+			|| boundaryValue.outputCarrierTypeId != "Obj.t") {
+			return false;
+		}
+		var foundDirect = false;
+		for (returnExpression in returnExpressions) {
+			final crossing = definitionResultValue(returnExpression, boundaryValue, representations);
+			if (crossing == null)
+				return false;
+			if (returnExpression == directResult) {
+				foundDirect = true;
+				final expected = boundaryValue.outputSemanticTypeId == "Null<Int>" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.BoxExactBoolToNullableBool;
+				if (crossing.conversion != expected)
+					return false;
+			} else if (crossing.conversion != OcamlCallCarrierConversion.Identity) {
+				return false;
+			}
+		}
+		return foundDirect;
 	}
 
 	/** Plans every admitted call occurrence in one exact final function body. */

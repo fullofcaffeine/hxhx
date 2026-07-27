@@ -82,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 15,
+			schemaVersion: 16,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 30) {
-						throw 'Unsupported lowering report schema $version; expected 30.';
+					if (version != 31) {
+						throw 'Unsupported lowering report schema $version; expected 31.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -435,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v6")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v7")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -477,7 +477,7 @@ class ReflaxeOcamlInspection {
 								'Control decision "${control.id}" input');
 							validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
 								representationById, 'Control decision "${control.id}" output');
-							final admittedInput = (payload.inputSemanticTypeId == "Int"
+							final admittedExactInput = (payload.inputSemanticTypeId == "Int"
 								&& payload.inputCarrierTypeId == "int"
 								&& payload.inputRepresentationId == "representation:Int:internal-value")
 								|| (payload.inputSemanticTypeId == "Bool"
@@ -486,16 +486,26 @@ class ReflaxeOcamlInspection {
 								|| (payload.inputSemanticTypeId == "String"
 									&& payload.inputCarrierTypeId == "string"
 									&& payload.inputRepresentationId == "representation:String:internal-value");
-							if (!admittedInput
-								|| payload.signalCarrierTypeId != "Obj.t"
-								|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-								|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-								|| payload.outputRepresentationId != payload.inputRepresentationId
-								|| payload.conversion != "box-and-recover-exact-value"
-								|| payload.proofId != "exact-value-early-return-control-v2"
-								|| payload.proofClaim.length == 0
-								|| control.proofId != "exact-value-early-return-control-v2") {
-								throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
+							final admittedNullableInput = (payload.inputSemanticTypeId == "Null<Int>"
+								&& payload.inputCarrierTypeId == "Obj.t"
+								&& payload.inputRepresentationId == "representation:Null<Int>:internal-value")
+								|| (payload.inputSemanticTypeId == "Null<Bool>"
+									&& payload.inputCarrierTypeId == "Obj.t"
+									&& payload.inputRepresentationId == "representation:Null<Bool>:internal-value");
+							final commonPayloadValid = payload.signalCarrierTypeId == "Obj.t"
+								&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+								&& payload.outputCarrierTypeId == payload.inputCarrierTypeId
+								&& payload.outputRepresentationId == payload.inputRepresentationId;
+							final exactPayloadValid = admittedExactInput
+								&& payload.conversion == "box-and-recover-exact-value"
+								&& payload.proofId == "exact-value-early-return-control-v2"
+								&& control.proofId == "exact-value-early-return-control-v2";
+							final nullablePayloadValid = admittedNullableInput
+								&& payload.conversion == "preserve-nullable-carrier"
+								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
+								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
+							if (!commonPayloadValid || payload.proofClaim.length == 0 || (!exactPayloadValid && !nullablePayloadValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value or nullable-carrier payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';

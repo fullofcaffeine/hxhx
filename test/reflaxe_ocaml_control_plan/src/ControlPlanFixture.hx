@@ -41,26 +41,30 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision,
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
 	static function returnDecision(id:String, min:Int, ?targetId:String, ?conversion:OcamlControlPayloadConversion, ?mechanism:OcamlControlTargetMechanism,
-			?semanticTypeId:String, ?outputSemanticTypeId:String):OcamlControlDecision {
+			?semanticTypeId:String, ?outputSemanticTypeId:String, ?proofId:String):OcamlControlDecision {
 		final target = targetId ?? FUNCTION_ID;
-		final selectedConversion = conversion ?? OcamlControlPayloadConversion.BoxAndRecoverExactValue;
 		final selectedMechanism = mechanism ?? OcamlControlTargetMechanism.RuntimeReturnSignal;
 		final semanticType = semanticTypeId ?? "Int";
 		final outputSemanticType = outputSemanticTypeId ?? semanticType;
+		final nullableCarrier = semanticType == "Null<Int>" || semanticType == "Null<Bool>";
+		final selectedConversion = conversion ?? (nullableCarrier ? OcamlControlPayloadConversion.PreserveNullableCarrier : OcamlControlPayloadConversion.BoxAndRecoverExactValue);
+		final selectedProofId = proofId ?? (selectedConversion == OcamlControlPayloadConversion.PreserveNullableCarrier ? OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID : OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID);
 		final carrierType = switch (semanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
+			case "Null<Int>", "Null<Bool>": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
 		final outputCarrierType = switch (outputSemanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
+			case "Null<Int>", "Null<Bool>": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
@@ -87,7 +91,7 @@ class ControlPlanFixture {
 				outputCarrierTypeId: outputCarrierType,
 				outputRepresentationId: outputRepresentationId,
 				conversion: selectedConversion,
-				proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
+				proofId: selectedProofId,
 				proofClaim: proof
 			},
 			runtimeTags: [],
@@ -96,12 +100,12 @@ class ControlPlanFixture {
 			runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
 			profileEligibility: ["metal", "portable"],
 			reason: 'fixture nested return exits its owning exact-$semanticType function',
-			proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
+			proofId: selectedProofId,
 			proofClaim: proof,
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -131,7 +135,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -147,7 +151,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32",
+			pipelineRevision: "typed-ocaml-function-plan-v33",
 			proofId: OcamlControlPlan.LEXICAL_LOOP_CONTROL_PROOF_ID,
 			proofClaim: "fixture lexical loop target"
 		};
@@ -179,7 +183,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -237,7 +241,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -284,7 +288,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -315,7 +319,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v32"
+			pipelineRevision: "typed-ocaml-function-plan-v33"
 		};
 	}
 
@@ -396,6 +400,13 @@ class ControlPlanFixture {
 
 		OcamlControlPlan.requireDecision(returnDecision("control:return:bool", 40, null, null, null, "Bool"));
 		OcamlControlPlan.requireDecision(returnDecision("control:return:string", 45, null, null, null, "String"));
+		final nullableIntReturn = returnDecision("control:return:nullable-int", 46, null, null, null, "Null<Int>");
+		final nullableBoolReturn = returnDecision("control:return:nullable-bool", 47, null, null, null, "Null<Bool>");
+		OcamlControlPlan.requireDecision(nullableIntReturn);
+		OcamlControlPlan.requireDecision(nullableBoolReturn);
+		final nullableReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [nullableIntReturn]);
+		if (nullableReturnOnly.returnBoundaryDecision()?.payload?.conversion != OcamlControlPayloadConversion.PreserveNullableCarrier)
+			throw "Exact nullable return lost its carrier-preserving function boundary";
 		final voidReturn = voidReturnDecision("control:return:void", 47);
 		OcamlControlPlan.requireDecision(voidReturn);
 		final voidReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [voidReturn]);
@@ -430,6 +441,14 @@ class ControlPlanFixture {
 
 		final mismatchedPayload = returnDecision("control:return:mismatched-payload", 87, null, null, null, "Int", "Bool");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [mismatchedPayload]));
+		final boxedNullablePayload = returnDecision("control:return:boxed-nullable", 88, null, OcamlControlPayloadConversion.BoxAndRecoverExactValue, null,
+			"Null<Int>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [boxedNullablePayload]));
+		final wrongNullableProof = returnDecision("control:return:nullable-proof", 89, null, null, null, "Null<Bool>", null,
+			OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongNullableProof]));
+		final mismatchedNullablePayload = returnDecision("control:return:mismatched-nullable", 90, null, null, null, "Null<Int>", "Int");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [mismatchedNullablePayload]));
 		final payloadBearingVoid = voidReturnDecision("control:return:void-payload", 88, null, null, null, null, first.payload);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [payloadBearingVoid]));
 		final wrongVoidCapability = voidReturnDecision("control:return:void-capability", 89, null, null, OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID);
@@ -440,6 +459,8 @@ class ControlPlanFixture {
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongVoidMechanism]));
 		final mixedReturnBoundary = new OcamlControlPlan(true, false, false, binding(), [], [first, voidReturn]);
 		expectThrows("conflicting-return-boundary", () -> mixedReturnBoundary.returnBoundaryDecision());
+		final mixedCarrierBoundary = new OcamlControlPlan(true, false, false, binding(), [], [first, nullableIntReturn]);
+		expectThrows("conflicting-return-boundary", () -> mixedCarrierBoundary.returnBoundaryDecision());
 
 		final badThrowConversion = throwDecision("control:throw:bad-conversion", 200, "Int", cast "identity");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [badThrowConversion]));
