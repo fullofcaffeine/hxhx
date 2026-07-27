@@ -4433,13 +4433,7 @@ class OcamlBuilder {
 		return initExpr;
 	}
 
-	/**
-		 * Materializes an admitted local default from its sealed representation.
-		 *
-		 * Exact String is the first reference carrier on this path. Its materializer
-		 * validates the named runtime-sentinel proof before syntax is created.
-		 * Unmigrated families continue through the explicit legacy mapper.
-		 */
+	/** Materializes an admitted local default after validating its sealed representation. */
 	function defaultValueForLocal(localId:Int, type:Type, position:Position):OcamlExpr {
 		final representation = plannedLocalRepresentation(localId, position);
 		if (representation != null && representation.semanticTypeId == "String") {
@@ -4452,10 +4446,7 @@ class OcamlBuilder {
 		return defaultValueForType(type);
 	}
 
-	/**
-			Returns the one runtime-owned exact String null value after validating the
-			sealed representation for the requested domain.
-		**/
+	/** Returns the runtime-owned exact String null after validating its representation domain. */
 	function exactStringNullValue(domain:OcamlRepresentationDomain):OcamlExpr {
 		final decision = representationRegistry.selectExactString(domain);
 		return OcamlStringRepresentationMaterializer.materialize(decision, domain).implicitDefault;

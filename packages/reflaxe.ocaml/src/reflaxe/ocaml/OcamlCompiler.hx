@@ -61,6 +61,7 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
+import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
 import reflaxe.lifecycle.ProgramRevision;
@@ -2735,6 +2736,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return switch (ot) {
 					case OcamlTypeExpr.TIdent("Obj.t"):
 						"HxRuntime.hx_null";
+					case OcamlTypeExpr.TIdent("string") if (OcamlRepresentationRegistry.isExactString(t)):
+						printer.printExpr(exactStringNullValue(OcamlRepresentationDomain.InternalValue));
 					case _:
 						"Obj.magic HxRuntime.hx_null";
 				}
@@ -3430,7 +3433,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						// `Null<T>` uses the backend's nullable representation for `T`.
 						//
 						// - `Null<Int/Float/Bool>` => `Obj.t` (uses `HxRuntime.hx_null` sentinel).
-						// - `Null<String>` => `string` (uses `Obj.magic HxRuntime.hx_null` sentinel).
+						// - `Null<String>` => `string` (uses the runtime-owned `HxString.hx_null_string` sentinel).
 						// - `Null<Enum>` => `Obj.t` (enums are variants; we avoid `Obj.magic` sentinels).
 						// - `Null<Class>` => the underlying record type (uses `Obj.magic` sentinel).
 						if (params != null && params.length == 1) {
@@ -3640,6 +3643,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	function defaultValueForType(t:Type):OcamlExpr {
+		if (OcamlRepresentationRegistry.isExactString(t))
+			return exactStringNullValue(OcamlRepresentationDomain.InternalValue);
 		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 
 		return switch (t) {
@@ -3675,6 +3680,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case _:
 				anyNull;
 		}
+	}
+
+	/**
+		Returns the single runtime-owned exact String null value after validating
+		the sealed representation selected for the requested storage domain.
+	**/
+	function exactStringNullValue(domain:OcamlRepresentationDomain):OcamlExpr {
+		final decision = representationRegistry.selectExactString(domain);
+		return OcamlStringRepresentationMaterializer.materialize(decision, domain).implicitDefault;
 	}
 
 	static function orderLetBindingsForOcaml(lets:Array<OcamlLetBinding>):Array<{bindings:Array<OcamlLetBinding>, isRec:Bool}> {
