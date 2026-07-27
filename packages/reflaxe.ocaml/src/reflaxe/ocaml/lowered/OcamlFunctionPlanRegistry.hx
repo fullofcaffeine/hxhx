@@ -5,6 +5,7 @@ import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
@@ -48,7 +49,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v19";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v20";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -197,12 +198,13 @@ class OcamlFunctionPlanRegistry {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		for (call in calls.decisions()) {
-			OcamlCallPlan.requireDirectStaticCall(call);
+			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
-			requireCallableDeclaration(call);
+			if (requiresDeclaredCallable(call))
+				requireCallableDeclaration(call);
 		}
 		if (callableBoundary != null) {
-			OcamlCallPlan.requireDirectStaticBoundary(callableBoundary);
+			OcamlCallPlan.requireCallableBoundary(callableBoundary);
 			requireBoundaryBinding(callableBoundary, binding);
 			requireDeclarationMatch(callableBoundary);
 			if (callableByCallee.exists(callableBoundary.calleeId))
@@ -225,7 +227,7 @@ class OcamlFunctionPlanRegistry {
 
 	/** Registers one complete typed callable declaration before module emission. */
 	public function registerCallableDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
-		OcamlCallPlan.requireDirectStaticDeclaration(declaration);
+		OcamlCallPlan.requireCallableDeclarationPlan(declaration);
 		if (declaration.programRevision != currentProgramRevision || declaration.pipelineRevision != PIPELINE_REVISION)
 			throw 'reflaxe.ocaml [ocaml-call:stale-declaration]: callable declaration "${declaration.id}" does not belong to $currentProgramRevision/$PIPELINE_REVISION';
 		if (declaredCallableByCallee.exists(declaration.calleeId))
@@ -263,7 +265,9 @@ class OcamlFunctionPlanRegistry {
 		builder constructs target code for that occurrence.
 	**/
 	public function requireCallableDeclaration(call:OcamlCallDecision):OcamlCallableDeclarationPlan {
-		OcamlCallPlan.requireDirectStaticCall(call);
+		OcamlCallPlan.requireCall(call);
+		if (!requiresDeclaredCallable(call))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: function-value call "${call.id}" does not own a program-wide callable declaration';
 		final declaration = declaredCallableByCallee.get(call.calleeId);
 		if (declaration == null)
 			throw 'reflaxe.ocaml [ocaml-call:missing-declaration]: call "${call.id}" refers to "${call.calleeId}", but the complete typed program has no admitted declaration';
@@ -280,6 +284,10 @@ class OcamlFunctionPlanRegistry {
 				throw 'reflaxe.ocaml [ocaml-call:declaration-argument-mismatch]: call "${call.id}" argument $index disagrees with typed declaration "${declaration.id}"';
 		}
 		return OcamlCallPlan.copyDeclaration(declaration);
+	}
+
+	static inline function requiresDeclaredCallable(call:OcamlCallDecision):Bool {
+		return call.kind == OcamlCallKind.DirectStaticHaxeMethod;
 	}
 
 	/** Returns every admitted typed call in deterministic identity order. */
@@ -316,6 +324,8 @@ class OcamlFunctionPlanRegistry {
 		final definition failed to publish the matching revision-bound boundary.
 	**/
 	function requireCallableBoundary(call:OcamlCallDecision):OcamlCallableBoundaryPlan {
+		if (!requiresDeclaredCallable(call))
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: function-value call "${call.id}" does not own a program-wide callable boundary';
 		final boundary = callableByCallee.get(call.calleeId);
 		if (boundary == null) {
 			final available = [for (calleeId in callableByCallee.keys()) calleeId];
@@ -343,8 +353,10 @@ class OcamlFunctionPlanRegistry {
 		generation, then repeats it before artifact sealing as a lifecycle guard.
 	**/
 	public function validateCallGraph():Void {
-		for (call in callDecisions())
-			requireCallableBoundary(call);
+		for (call in callDecisions()) {
+			if (requiresDeclaredCallable(call))
+				requireCallableBoundary(call);
+		}
 	}
 
 	/** Returns a function's plans in deterministic origin order. */

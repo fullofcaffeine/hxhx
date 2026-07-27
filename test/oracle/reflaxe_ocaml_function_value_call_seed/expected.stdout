@@ -1,0 +1,4 @@
+closure result=42 events=argument,closure
+method_value result=42 events=argument,method
+selected_callee result=42 events=selector,argument,shifted
+failed_callee events=failing_callee,caught

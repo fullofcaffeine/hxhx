@@ -52,6 +52,8 @@ class CallPlanFixture {
 	static inline final OPTIONAL_SUPPLIED_CALL_ID = "call:optional-supplied-fixture";
 	static inline final VOID_CALLEE_ID = "VoidCalls|VoidCalls::withArguments";
 	static inline final VOID_CALL_ID = "call:void-fixture";
+	static inline final FUNCTION_VALUE_CALLEE_ID = "function-value:fixture";
+	static inline final FUNCTION_VALUE_CALL_ID = "call:function-value-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -500,6 +502,30 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function functionValueCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: FUNCTION_VALUE_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 30, max: 31},
+			calleeId: FUNCTION_VALUE_CALLEE_ID,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.TypedFunctionValue,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: value(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(FUNCTION_VALUE_CALL_ID, 1, [], true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact Int function-value call",
+			proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture exact Int function-value signature",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -979,21 +1005,42 @@ class CallPlanFixture {
 
 	public static macro function run():Expr {
 		final stringArgument = stringValue(0);
-		OcamlCallPlan.requireDirectStaticValue(stringArgument, 0, "exact String fixture");
+		OcamlCallPlan.requireCallValue(stringArgument, 0, "exact String fixture");
 		final wrongStringCarrier = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(wrongStringCarrier, "outputCarrierTypeId", "Obj.t");
-		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireDirectStaticValue(wrongStringCarrier, 0, "wrong String carrier fixture"));
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireCallValue(wrongStringCarrier, 0, "wrong String carrier fixture"));
 		final wrongStringRepresentation = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(wrongStringRepresentation, "inputRepresentationId", "representation:String:mutable-local-storage");
-		expectThrows("invalid identity crossing",
-			() -> OcamlCallPlan.requireDirectStaticValue(wrongStringRepresentation, 0, "wrong String representation fixture"));
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireCallValue(wrongStringRepresentation, 0, "wrong String representation fixture"));
 		final missingStringProof = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(missingStringProof, "proofId", "");
-		expectThrows("invalid index or empty conversion proof",
-			() -> OcamlCallPlan.requireDirectStaticValue(missingStringProof, 0, "missing String proof fixture"));
+		expectThrows("invalid index or empty conversion proof", () -> OcamlCallPlan.requireCallValue(missingStringProof, 0, "missing String proof fixture"));
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final selectedFunctionValueCall = functionValueCall(caller);
+		OcamlCallPlan.requireCall(selectedFunctionValueCall);
+		final functionValueRegistry = new OcamlFunctionPlanRegistry();
+		functionValueRegistry.beginProgram(PROGRAM_REVISION);
+		seal(functionValueRegistry, caller, new OcamlCallPlan([selectedFunctionValueCall]), null);
+		functionValueRegistry.validateCallGraph();
+		expectThrows("does not own a program-wide callable declaration", () -> functionValueRegistry.requireCallableDeclaration(selectedFunctionValueCall));
+
+		final missingCalleeMaterialization = copyCall(selectedFunctionValueCall, null, null, null, null, null,
+			selectedFunctionValueCall.evaluationSchedule.slice(1));
+		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingCalleeMaterialization));
+		final wrongCalleeSlot = copyCall(selectedFunctionValueCall);
+		Reflect.setField(wrongCalleeSlot.evaluationSchedule[0], "slotId", "call-callee-slot:wrong");
+		expectThrows("invalid callee materialization", () -> OcamlCallPlan.requireCall(wrongCalleeSlot));
+		final declarationOwnedFunctionValue = copyCall(selectedFunctionValueCall);
+		Reflect.setField(declarationOwnedFunctionValue, "sourceModuleId", "Main");
+		expectThrows("assigns declaration fields", () -> OcamlCallPlan.requireCall(declarationOwnedFunctionValue));
+		final wrongFunctionValueProof = copyCall(selectedFunctionValueCall);
+		Reflect.setField(wrongFunctionValueProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
+		expectThrows("mismatched function-value signature proof", () -> OcamlCallPlan.requireCall(wrongFunctionValueProof));
+		final wrongFunctionValueArgument = copyCall(selectedFunctionValueCall, null, null, [boolValue(0)]);
+		expectThrows("outside the one-argument exact Int function-value signature", () -> OcamlCallPlan.requireCall(wrongFunctionValueArgument));
+
 		final selectedCall = call(caller);
 		final registry = new OcamlFunctionPlanRegistry();
 		registry.beginProgram(PROGRAM_REVISION);
@@ -1176,30 +1223,30 @@ class CallPlanFixture {
 
 		final nonTrailingOptionalDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
 		Reflect.setField(nonTrailingOptionalDeclaration, "arguments", [optionalNullableValue(0), value(1)]);
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalDeclaration));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallableDeclarationPlan(nonTrailingOptionalDeclaration));
 
 		final optionalStringDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
 		Reflect.setField(optionalStringDeclaration, "arguments", [optionalStringValue(0)]);
 		Reflect.setField(optionalStringDeclaration, "result", stringValue(-1));
-		OcamlCallPlan.requireDirectStaticDeclaration(optionalStringDeclaration);
+		OcamlCallPlan.requireCallableDeclarationPlan(optionalStringDeclaration);
 		final omittedOptionalString = copyCall(omittedOptionalCall, null, null, [optionalStringValue(0, true)], stringValue(-1));
-		OcamlCallPlan.requireDirectStaticCall(omittedOptionalString);
+		OcamlCallPlan.requireCall(omittedOptionalString);
 		final explicitNullOptionalString = copyCall(suppliedOptionalCall, null, null, [explicitNullStringValue(0)], stringValue(-1));
-		OcamlCallPlan.requireDirectStaticCall(explicitNullOptionalString);
+		OcamlCallPlan.requireCall(explicitNullOptionalString);
 		final optionalStringBoundary = optionalBoundary(optionalCallee);
 		Reflect.setField(optionalStringBoundary, "arguments", [optionalStringValue(0)]);
 		Reflect.setField(optionalStringBoundary, "result", stringValue(-1));
-		OcamlCallPlan.requireDirectStaticBoundary(optionalStringBoundary);
+		OcamlCallPlan.requireCallableBoundary(optionalStringBoundary);
 
 		final omittedStringWithWrongProof = OcamlCallPlan.copyValue(optionalStringValue(0, true));
 		Reflect.setField(omittedStringWithWrongProof, "proofId", "omitted-nullable-int-call-materialization-v1");
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticValue(omittedStringWithWrongProof, 0, "fixture omitted optional String"));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(omittedStringWithWrongProof, 0, "fixture omitted optional String"));
 		final explicitNullStringWithWrongProof = OcamlCallPlan.copyValue(explicitNullStringValue(0));
 		Reflect.setField(explicitNullStringWithWrongProof, "proofId", "identity-call-carrier-v1");
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticValue(explicitNullStringWithWrongProof, 0, "fixture explicit null String"));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(explicitNullStringWithWrongProof, 0, "fixture explicit null String"));
 		final nonTrailingOptionalStringDeclaration = OcamlCallPlan.copyDeclaration(optionalStringDeclaration);
 		Reflect.setField(nonTrailingOptionalStringDeclaration, "arguments", [optionalStringValue(0), value(1)]);
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalStringDeclaration));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallableDeclarationPlan(nonTrailingOptionalStringDeclaration));
 
 		final voidCaller = binding("Main|Main::voidCalls", "body:void-caller");
 		final voidCallee = binding(VOID_CALLEE_ID, "body:void-callee");
@@ -1218,10 +1265,10 @@ class CallPlanFixture {
 
 		final valueKindWithoutValue = OcamlCallPlan.copyDeclaration(voidDeclaration());
 		Reflect.setField(valueKindWithoutValue, "resultKind", OcamlCallResultKind.Value);
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(valueKindWithoutValue));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallableDeclarationPlan(valueKindWithoutValue));
 		final effectKindWithValue = OcamlCallPlan.copyDeclaration(voidDeclaration());
 		Reflect.setField(effectKindWithValue, "result", value(-1));
-		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(effectKindWithValue));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallableDeclarationPlan(effectKindWithValue));
 		final valueReturningVoidCall = copyCall(selectedVoidCall, null, null, null, value(-1), null, null, OcamlCallResultKind.Value);
 		expectThrows("declaration-mismatch", () -> voidRegistry.requireCallableDeclaration(valueReturningVoidCall));
 		final valueReturningVoidBoundary = voidBoundary(voidCallee);

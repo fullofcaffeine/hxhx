@@ -32,7 +32,7 @@ function oneEvent(preprocessorSuffix, phase) {
 if (report.schemaVersion !== 1 || report.model !== 'reflaxe-ocaml-semantic-lifecycle') {
 	fail('unexpected report schema or model')
 }
-if (report.pipelineRevision !== 'ocaml-function-plans-v19') {
+if (report.pipelineRevision !== 'ocaml-function-plans-v20') {
 	fail(`unexpected pipeline revision ${report.pipelineRevision}`)
 }
 if (report.functionFilter !== expectedFunction) {

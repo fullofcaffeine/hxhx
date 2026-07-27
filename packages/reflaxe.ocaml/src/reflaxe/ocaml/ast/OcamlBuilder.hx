@@ -29,6 +29,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -164,7 +165,7 @@ class OcamlBuilder {
 
 	function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
 		try {
-			OcamlCallPlan.requireDirectStaticValue(value, expectedIndex, owner);
+			OcamlCallPlan.requireCallValue(value, expectedIndex, owner);
 		} catch (error:Dynamic) {
 			callPlanInvariant(Std.string(error), position);
 		}
@@ -215,15 +216,17 @@ class OcamlBuilder {
 	}
 
 	/**
-		Materializes one sealed direct-static call in its Haxe source order.
+		Materializes one sealed typed call in its Haxe source order.
 
-		Every argument is bound by the typed schedule before the target is applied,
-		so runtime order does not depend on OCaml function-application behavior.
+		A computed function value is bound before its arguments. Every supplied or
+		omitted argument is then bound before invocation, so runtime order does not
+		depend on OCaml function-application behavior.
 	**/
-	function buildPlannedCall(call:OcamlCallDecision, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+	function buildPlannedCall(call:OcamlCallDecision, callee:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
-			OcamlCallPlan.requireDirectStaticCall(call);
-			functionPlanRegistry.requireCallableDeclaration(call);
+			OcamlCallPlan.requireCall(call);
+			if (call.kind == OcamlCallKind.DirectStaticHaxeMethod)
+				functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
@@ -233,16 +236,25 @@ class OcamlBuilder {
 				callPlanInvariant('call "${call.id}" has ${arguments.length} source arguments but its sealed plan expects $suppliedArgumentCount supplied arguments',
 					position);
 
-		final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId);
-		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-		final targetName = ctx.scopedValueName(call.sourceModuleId, call.sourceTypeName, call.sourceFieldName);
-		final target = selfModule != null
-			&& selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), targetName);
+		var target:Null<OcamlExpr> = switch (call.kind) {
+			case OcamlCallKind.DirectStaticHaxeMethod: final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId); final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId); final targetName = ctx.scopedValueName(call.sourceModuleId,
+					call.sourceTypeName,
+					call.sourceFieldName); selfModule != null && selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName),
+					targetName);
+			case OcamlCallKind.TypedFunctionValue:
+				null;
+		};
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
 		final applicationArguments:Array<OcamlExpr> = [];
 		var invocationSeen = false;
 		for (step in call.evaluationSchedule) {
 			switch (step.kind) {
+				case OcamlCallEvaluationStepKind.MaterializeCallee:
+					if (call.kind != OcamlCallKind.TypedFunctionValue || target != null || step.slotId == null)
+						return callPlanInvariant('call "${call.id}" has an invalid callee materialization step', position);
+					final name = freshTmp("call_callee");
+					materialized.push({name: name, value: buildExpr(callee)});
+					target = OcamlExpr.EIdent(name);
 				case OcamlCallEvaluationStepKind.MaterializeArgument:
 					final argumentIndex = step.argumentIndex;
 					final sourceArgumentIndex = step.sourceArgumentIndex;
@@ -275,12 +287,13 @@ class OcamlBuilder {
 					});
 					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.InvokeCallee:
-					if (invocationSeen)
+					if (invocationSeen || target == null)
 						return callPlanInvariant('call "${call.id}" invokes its callee more than once', position);
 					invocationSeen = true;
 			}
 		}
-		if (!invocationSeen || materialized.length != call.arguments.length)
+		final expectedMaterializations = call.arguments.length + (call.kind == OcamlCallKind.TypedFunctionValue ? 1 : 0);
+		if (!invocationSeen || target == null || materialized.length != expectedMaterializations)
 			return callPlanInvariant('call "${call.id}" did not materialize every callable parameter before invocation', position);
 		final targetArguments = applicationArguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : applicationArguments;
 		var out = OcamlExpr.EApp(target, targetArguments);
@@ -1414,13 +1427,15 @@ class OcamlBuilder {
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
-			case TCall(_, arguments) if (plannedCall != null):
-				buildPlannedCall(plannedCall, arguments, e.pos);
+			case TCall(callee, arguments) if (plannedCall != null):
+				buildPlannedCall(plannedCall, callee, arguments, e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
 				if (functionPlanRegistry.hasOptionalCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))
 					|| functionPlanRegistry.hasEffectOnlyCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):
 				callPlanInvariant('admitted call "${OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get())}" reached syntax without its sealed occurrence plan',
 					e.pos);
+			case TCall(callee, arguments) if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, e.t)):
+				callPlanInvariant("admitted exact Int function-value call reached syntax without its sealed occurrence plan", e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):

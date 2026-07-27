@@ -70,7 +70,7 @@ try {
 	assert.strictEqual(report.runtime.semanticManifest, false)
 	assert.strictEqual(report.buildTiming.status, 'not-enabled')
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
-	assert.strictEqual(report.lowering.scope, 'typed-place-and-first-direct-call-families')
+	assert.strictEqual(report.lowering.scope, 'typed-place-and-first-call-families')
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)

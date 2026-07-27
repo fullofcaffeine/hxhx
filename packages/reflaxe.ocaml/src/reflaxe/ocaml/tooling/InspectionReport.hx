@@ -259,7 +259,7 @@ typedef InspectionCallValue = {
 	final proofClaim:String;
 }
 
-/** One validated source-order action in a typed direct-call schedule. **/
+/** One validated source-order action in a sealed typed-call schedule. **/
 typedef InspectionCallEvaluationStep = {
 	final kind:String;
 	final argumentIndex:Null<Int>;
@@ -267,7 +267,7 @@ typedef InspectionCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
-/** One direct call occurrence whose target and evaluation order were sealed before syntax. **/
+/** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
 	final sourceFile:String;

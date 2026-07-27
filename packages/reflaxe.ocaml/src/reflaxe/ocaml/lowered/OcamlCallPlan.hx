@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 /** The source-language dispatch selected before OCaml syntax is constructed. */
 enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
+	final TypedFunctionValue = "typed-function-value";
 }
 
 /**
@@ -42,8 +43,9 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final MaterializeExplicitNullString = "materialize-explicit-null-string";
 }
 
-/** The only runtime actions admitted in a direct-call evaluation schedule. */
+/** The only runtime actions admitted in a sealed typed-call schedule. */
 enum abstract OcamlCallEvaluationStepKind(String) from String to String {
+	final MaterializeCallee = "materialize-callee";
 	final MaterializeArgument = "materialize-argument";
 	final MaterializeOmittedArgument = "materialize-omitted-argument";
 	final InvokeCallee = "invoke-callee";
@@ -178,6 +180,7 @@ typedef OcamlCallDecision = {
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
+	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID = "typed-function-value-signature-v1";
 
 	final ordered:Array<OcamlCallDecision>;
 	final bySourceKey:Map<String, OcamlCallDecision> = [];
@@ -206,6 +209,13 @@ class OcamlCallPlan {
 		return switch (expression.expr) {
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == suppliedArgumentCount(decision.arguments) && OcamlCallPlanner.calleeId(classRef.get(),
 					fieldRef.get()) == decision.calleeId;
+			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue): final binding:OcamlFunctionPlanBinding = {
+					functionId: decision.functionId,
+					programRevision: decision.programRevision,
+					bodyRevision: decision.bodyRevision,
+					pipelineRevision: decision.pipelineRevision
+				}; arguments.length == 1 && OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments,
+					expression.t) && OcamlCallPlanner.functionValueCalleeId(callee, binding) == decision.calleeId;
 			case _:
 				false;
 		}
@@ -484,8 +494,8 @@ class OcamlCallPlan {
 		}
 	}
 
-	/** Rejects a corrupted value outside the closed direct-static families. */
-	public static function requireDirectStaticValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
+	/** Rejects a corrupted value outside the closed typed-call carrier families. */
+	public static function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String):Void {
 		if (value.index != expectedIndex || value.proofId.length == 0 || value.proofClaim.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid index or empty conversion proof';
 		switch (value.conversion) {
@@ -557,8 +567,10 @@ class OcamlCallPlan {
 	}
 
 	/** Rejects a corrupted program-wide declaration before it enters the catalog. */
-	public static function requireDirectStaticDeclaration(declaration:OcamlCallableDeclarationPlan):Void {
-		requireDirectStaticCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
+	public static function requireCallableDeclarationPlan(declaration:OcamlCallableDeclarationPlan):Void {
+		if (declaration.kind != OcamlCallKind.DirectStaticHaxeMethod)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" cannot describe a computed function value';
+		requireCallCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
 			declaration.arguments, declaration.resultKind, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId,
 			declaration.proofClaim, declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"');
 		if (!Lambda.foreach(declaration.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
@@ -568,8 +580,8 @@ class OcamlCallPlan {
 	}
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
-	public static function requireDirectStaticCall(call:OcamlCallDecision):Void {
-		requireDirectStaticCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
+	public static function requireCall(call:OcamlCallDecision):Void {
+		requireCallCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
 			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"');
 		if (call.result != null && call.result.conversion != OcamlCallCarrierConversion.Identity)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact declared result carrier';
@@ -582,12 +594,23 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an empty caller or body revision';
 		if (call.source.file.length == 0 || call.source.min < 0 || call.source.max < call.source.min)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid source occurrence';
-		if (call.evaluationSchedule.length != call.arguments.length + 1)
+		final hasMaterializedCallee = call.kind == OcamlCallKind.TypedFunctionValue;
+		final scheduleOffset = hasMaterializedCallee ? 1 : 0;
+		if (call.evaluationSchedule.length != call.arguments.length + scheduleOffset + 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid evaluation schedule';
+		if (hasMaterializedCallee) {
+			final callee = call.evaluationSchedule[0];
+			if (callee.kind != OcamlCallEvaluationStepKind.MaterializeCallee
+				|| callee.argumentIndex != null
+				|| callee.sourceArgumentIndex != null
+				|| callee.slotId != calleeSlotId(call.id)) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid callee materialization';
+			}
+		}
 		var sourceArgumentIndex = 0;
 		for (index in 0...call.arguments.length) {
 			final argument = call.arguments[index];
-			final step = call.evaluationSchedule[index];
+			final step = call.evaluationSchedule[index + scheduleOffset];
 			final omitted = isOmittedConversion(argument.conversion);
 			final expectedKind = omitted ? OcamlCallEvaluationStepKind.MaterializeOmittedArgument : OcamlCallEvaluationStepKind.MaterializeArgument;
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
@@ -607,9 +630,11 @@ class OcamlCallPlan {
 	}
 
 	/** Rejects a corrupted final callable boundary before publication. */
-	public static function requireDirectStaticBoundary(boundary:OcamlCallableBoundaryPlan):Void {
-		requireDirectStaticCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind,
-			boundary.arguments, boundary.resultKind, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
+	public static function requireCallableBoundary(boundary:OcamlCallableBoundaryPlan):Void {
+		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" cannot describe a computed function value';
+		requireCallCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind, boundary.arguments,
+			boundary.resultKind, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
 			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"');
 		if (!Lambda.foreach(boundary.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity))
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" arguments must use identity carrier records';
@@ -617,15 +642,27 @@ class OcamlCallPlan {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" has an empty function or body revision';
 	}
 
-	static function requireDirectStaticCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
+	static function requireCallCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
 			arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>, profileEligibility:Array<String>,
 			reason:String, proofId:String, proofClaim:String, programRevision:String, pipelineRevision:String, owner:String):Void {
-		if (calleeId.length == 0 || sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe callee identity';
-		if (kind != OcamlCallKind.DirectStaticHaxeMethod)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
+		if (calleeId.length == 0)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty typed callee identity';
+		switch (kind) {
+			case DirectStaticHaxeMethod:
+				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
+				if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-static signature proof';
+			case TypedFunctionValue:
+				if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns declaration fields to a first-class function value';
+				if (proofId != FUNCTION_VALUE_SIGNATURE_PROOF_ID)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched function-value signature proof';
+			case _:
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
+		}
 		for (index in 0...arguments.length)
-			requireDirectStaticValue(arguments[index], index, '$owner argument $index');
+			requireCallValue(arguments[index], index, '$owner argument $index');
 		var optionalSeen = false;
 		for (index in 0...arguments.length) {
 			final argument = arguments[index];
@@ -641,7 +678,7 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a value result kind without a value crossing';
 				if (result.parameterOptional)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner result cannot be an optional parameter';
-				requireDirectStaticValue(result, -1, '$owner result');
+				requireCallValue(result, -1, '$owner result');
 			case EffectOnlyVoid:
 				if (result != null)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner effect-only Void result cannot carry a representation or conversion';
@@ -650,10 +687,24 @@ class OcamlCallPlan {
 		}
 		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported profile inventory';
-		if (reason.length == 0 || proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID || proofClaim.length == 0)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete or mismatched direct-static signature proof';
+		if (reason.length == 0 || proofClaim.length == 0)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete typed-call proof';
 		if (programRevision.length == 0 || pipelineRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty program or pipeline revision';
+		if (kind == OcamlCallKind.TypedFunctionValue) {
+			if (arguments.length != 1
+				|| arguments[0].parameterOptional
+				|| !isExactIntSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId)
+				|| !sameRepresentationSides(arguments[0])
+				|| arguments[0].conversion != OcamlCallCarrierConversion.Identity
+				|| resultKind != OcamlCallResultKind.Value
+				|| result == null
+				|| !isExactIntSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+				|| !sameRepresentationSides(result)
+				|| result.conversion != OcamlCallCarrierConversion.Identity) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the one-argument exact Int function-value signature';
+			}
+		}
 	}
 
 	static function sameRepresentationSides(value:OcamlCallValuePlan):Bool {
@@ -707,10 +758,18 @@ class OcamlCallPlan {
 		return "call-argument-slot:" + Sha256.encode(callId + "|" + argumentIndex).substr(0, 24);
 	}
 
-	/** Builds the complete closed schedule for one admitted direct call. */
-	public static function evaluationSchedule(callId:String, argumentCount:Int, ?omittedArgumentIndices:Array<Int>):Array<OcamlCallEvaluationStep> {
+	/** Returns the stable plan-local carrier slot for a computed callee value. */
+	public static function calleeSlotId(callId:String):String {
+		if (callId.length == 0)
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: cannot identify a function-value slot without a call identity";
+		return "call-callee-slot:" + Sha256.encode(callId).substr(0, 24);
+	}
+
+	/** Builds the complete closed schedule for one admitted typed call. */
+	public static function evaluationSchedule(callId:String, argumentCount:Int, ?omittedArgumentIndices:Array<Int>,
+			materializeCallee:Bool = false):Array<OcamlCallEvaluationStep> {
 		if (argumentCount < 0)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported direct-call arity $argumentCount';
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported typed-call arity $argumentCount';
 		final omitted = omittedArgumentIndices ?? [];
 		final omittedByIndex:Map<Int, Bool> = [];
 		for (index in omitted) {
@@ -719,6 +778,14 @@ class OcamlCallPlan {
 			omittedByIndex.set(index, true);
 		}
 		final schedule:Array<OcamlCallEvaluationStep> = [];
+		if (materializeCallee) {
+			schedule.push({
+				kind: OcamlCallEvaluationStepKind.MaterializeCallee,
+				argumentIndex: null,
+				sourceArgumentIndex: null,
+				slotId: calleeSlotId(callId)
+			});
+		}
 		var sourceArgumentIndex = 0;
 		for (index in 0...argumentCount) {
 			final isOmitted = omittedByIndex.exists(index);
@@ -744,12 +811,12 @@ class OcamlCallPlan {
 }
 
 /**
-	Selects the first closed typed-call kind from final Haxe expressions.
+	Selects the first closed typed-call kinds from final Haxe expressions.
 
 	Only an ordinary, non-extern, non-generic static method whose required
-		arguments and result independently select exact `Int`, `Bool`,
-		`Null<Int>`, `Null<Bool>`, or `String` representations is admitted. Everything else is
-	left explicitly unmigrated for a later call-kind or representation slice.
+	arguments and result independently select admitted representations, or an
+	already-bound/call-produced exact `Int -> Int` function value, is admitted.
+	Everything else remains explicitly unmigrated for a later slice.
 **/
 class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
@@ -958,9 +1025,97 @@ class OcamlCallPlanner {
 						pipelineRevision: binding.pipelineRevision
 					};
 				}
+			case TCall(callee, arguments) if (isAdmittedFunctionValueCall(callee, arguments, expression.t)):
+				final intRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+				final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+				final selectedCalleeId = functionValueCalleeId(callee, binding);
+				final id = "call:" + Sha256.encode([
+					binding.functionId,
+					binding.programRevision,
+					binding.bodyRevision,
+					binding.pipelineRevision,
+					OcamlCallPlan.sourceKey(source),
+					selectedCalleeId
+				].join("|")).substr(0, 24);
+				{
+					id: id,
+					source: source,
+					calleeId: selectedCalleeId,
+					sourceModuleId: "",
+					sourceTypeName: "",
+					sourceFieldName: "",
+					kind: OcamlCallKind.TypedFunctionValue,
+					arguments: [identityValue(0, intRepresentation)],
+					resultKind: OcamlCallResultKind.Value,
+					result: identityValue(-1, intRepresentation),
+					evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1, [], true),
+					profileEligibility: ["metal", "portable"],
+					reason: "The typed Haxe expression invokes one already-created Int -> Int function value. The sealed schedule evaluates and binds the callee first, evaluates and binds the exact Int argument second, then invokes the bound function and preserves its exact Int result.",
+					proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID,
+					proofClaim: "The followed Haxe function type selects one required exact Int parameter and an exact Int result. Its call occurrence must materialize the computed callee before the source argument, without target-side signature inference or carrier conversion.",
+					functionId: binding.functionId,
+					programRevision: binding.programRevision,
+					bodyRevision: binding.bodyRevision,
+					pipelineRevision: binding.pipelineRevision
+				};
 			case _:
 				null;
 		}
+	}
+
+	/**
+		Returns whether one local or call-produced callee fits the first
+		function-value family.
+
+		The check is intentionally shape-only so planning and the builder's
+		fail-closed guard agree without sharing mutable compiler state. Instance
+		methods and arbitrary field expressions stay with their existing owners.
+	**/
+	public static function isAdmittedFunctionValueCall(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Bool {
+		if (arguments.length != 1
+			|| !OcamlRepresentationRegistry.isExactInt(arguments[0].t)
+			|| !OcamlRepresentationRegistry.isExactInt(resultType)) {
+			return false;
+		}
+		switch (callee.expr) {
+			case TLocal(_), TCall(_, _):
+			case _:
+				return false;
+		}
+		return switch (TypeTools.follow(callee.t)) {
+			case TFun(parameters, result):
+				parameters.length == 1
+				&& !parameters[0].opt
+				&& OcamlRepresentationRegistry.isExactInt(parameters[0].t)
+				&& OcamlRepresentationRegistry.isExactInt(result);
+			case _:
+				false;
+		}
+	}
+
+	/**
+		Builds the stable identity for a computed function used at one call site.
+
+		The sealed caller/body identity and producer occurrence distinguish each
+		admitted use without depending on Haxe's process-local variable numbers,
+		rendered target names, or object addresses.
+	**/
+	public static function functionValueCalleeId(callee:TypedExpr, binding:OcamlFunctionPlanBinding):String {
+		final source = OcamlLoweredOrigin.sourceSpan(callee.pos);
+		final form = switch (callee.expr) {
+			case TLocal(_): "local-function-value";
+			case TCall(_, _): "call-result";
+			case _: throw "reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported function-value callee shape reached identity construction";
+		}
+		return "function-value:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			form,
+			OcamlCallPlan.sourceKey(source),
+			"(Int)->Int"
+		].join("|")).substr(0, 32);
 	}
 
 	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>,

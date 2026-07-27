@@ -291,7 +291,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|null-int-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:null-int-locals-v1",
-			pipelineRevision: "ocaml-function-plans-v19"
+			pipelineRevision: "ocaml-function-plans-v20"
 		};
 		final nullIntPlan = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
 		final nullIntReferences = nullIntPlan.references().filter(reference -> reference.semanticTypeId == "Null<Int>");
@@ -339,7 +339,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|bool-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:bool-locals-v1",
-			pipelineRevision: "ocaml-function-plans-v19"
+			pipelineRevision: "ocaml-function-plans-v20"
 		});
 		final boolReferences = boolPlan.references().filter(reference -> reference.semanticTypeId == "Bool");
 		assertTrue(boolReferences.length == 3, "every declared exact Bool local should reference one sealed program representation");
@@ -366,7 +366,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|string-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:string-locals-v1",
-			pipelineRevision: "ocaml-function-plans-v19"
+			pipelineRevision: "ocaml-function-plans-v20"
 		});
 		final stringReferences = stringPlan.references().filter(reference -> reference.semanticTypeId == "String");
 		assertTrue(stringReferences.length == 4,
@@ -408,7 +408,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|unsupported-bool-expression",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:unsupported-bool-expression-v1",
-				pipelineRevision: "ocaml-function-plans-v19"
+				pipelineRevision: "ocaml-function-plans-v20"
 			});
 		assertTrue(unsupportedBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
 			"an arbitrary exact Bool expression should not publish a partial nullable-Bool representation");
@@ -425,7 +425,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|unsupported-bool-local",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:unsupported-bool-local-v1",
-				pipelineRevision: "ocaml-function-plans-v19"
+				pipelineRevision: "ocaml-function-plans-v20"
 			});
 		assertTrue(unsupportedBoolLocalPlan.references()
 			.filter(reference -> reference.semanticTypeId == "Bool" || reference.semanticTypeId == "Null<Bool>")
@@ -454,7 +454,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|null-bool-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:null-bool-locals-v1",
-			pipelineRevision: "ocaml-function-plans-v19"
+			pipelineRevision: "ocaml-function-plans-v20"
 		};
 		final nullBoolPlan = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolStorage, representations, nullBoolBinding);
 		final nullBoolReferences = nullBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>");
@@ -503,7 +503,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|null-bool-concrete-boundary",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:null-bool-concrete-boundary-v1",
-				pipelineRevision: "ocaml-function-plans-v19"
+				pipelineRevision: "ocaml-function-plans-v20"
 			});
 		final concreteBoolBoundaryLocalId = switch (concreteBoolBoundaryInput.expr) {
 			case TBlock(expressions):
@@ -527,7 +527,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|excluded-nullable-copy",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:excluded-nullable-copy-v1",
-				pipelineRevision: "ocaml-function-plans-v19"
+				pipelineRevision: "ocaml-function-plans-v20"
 			});
 		assertTrue(excludedNullableCopyPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
 			"a nullable copy must not claim carrier preservation when its source local was excluded by a concrete-Bool boundary");
