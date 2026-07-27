@@ -42,6 +42,7 @@ let protect_transport (run : unit -> 'a) : 'a =
   | HxRuntime.Hx_break -> raise HxRuntime.Hx_break
   | HxRuntime.Hx_continue -> raise HxRuntime.Hx_continue
   | HxRuntime.Hx_return value -> raise (HxRuntime.Hx_return value)
+  | HxRuntime.Hx_return_void -> raise HxRuntime.Hx_return_void
   | exn -> raise_haxe_string exn
 
 let split_host_port (mode : string) : string * int =

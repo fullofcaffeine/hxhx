@@ -41,7 +41,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision,
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -101,7 +101,37 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
+		};
+	}
+
+	static function voidReturnDecision(id:String, min:Int, ?targetId:String, ?mechanism:OcamlControlTargetMechanism, ?runtimeCapabilityId:String,
+			?proofId:String, ?payload:OcamlControlPayloadPlan):OcamlControlDecision {
+		final proof = "fixture effect-only Void early-return crossing";
+		return {
+			id: id,
+			source: {
+				file: "test/oracle/control/Main.hx",
+				min: min,
+				max: min + 8
+			},
+			kind: OcamlControlTransferKind.Return,
+			effect: OcamlControlEffect.ExitFunction,
+			targetKind: OcamlControlTargetKind.Function,
+			targetId: targetId ?? FUNCTION_ID,
+			payload: payload,
+			runtimeTags: [],
+			runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
+			mechanism: mechanism ?? OcamlControlTargetMechanism.RuntimeVoidReturnSignal,
+			runtimeCapabilityId: runtimeCapabilityId ?? OcamlControlPlan.VOID_RETURN_SIGNAL_CAPABILITY_ID,
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture payloadless return exits its owning effect-only Void function",
+			proofId: proofId ?? OcamlControlPlan.EFFECT_ONLY_VOID_RETURN_PROOF_ID,
+			proofClaim: proof,
+			functionId: FUNCTION_ID,
+			programRevision: "program:control-fixture",
+			bodyRevision: "body:control-fixture",
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -117,7 +147,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31",
+			pipelineRevision: "typed-ocaml-function-plan-v32",
 			proofId: OcamlControlPlan.LEXICAL_LOOP_CONTROL_PROOF_ID,
 			proofClaim: "fixture lexical loop target"
 		};
@@ -149,7 +179,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -207,7 +237,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -254,7 +284,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -285,7 +315,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v31"
+			pipelineRevision: "typed-ocaml-function-plan-v32"
 		};
 	}
 
@@ -366,6 +396,13 @@ class ControlPlanFixture {
 
 		OcamlControlPlan.requireDecision(returnDecision("control:return:bool", 40, null, null, null, "Bool"));
 		OcamlControlPlan.requireDecision(returnDecision("control:return:string", 45, null, null, null, "String"));
+		final voidReturn = voidReturnDecision("control:return:void", 47);
+		OcamlControlPlan.requireDecision(voidReturn);
+		final voidReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [voidReturn]);
+		if (voidReturnOnly.returnBoundaryDecision()?.mechanism != OcamlControlTargetMechanism.RuntimeVoidReturnSignal
+			|| voidReturnOnly.returnBoundaryDecision()?.payload != null) {
+			throw "Effect-only Void return lost its payloadless function boundary";
+		}
 		OcamlControlPlan.requireDecision(loopBreak);
 		OcamlControlPlan.requireDecision(loopContinue);
 		OcamlControlPlan.requireDecision(intThrow);
@@ -393,6 +430,16 @@ class ControlPlanFixture {
 
 		final mismatchedPayload = returnDecision("control:return:mismatched-payload", 87, null, null, null, "Int", "Bool");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [mismatchedPayload]));
+		final payloadBearingVoid = voidReturnDecision("control:return:void-payload", 88, null, null, null, null, first.payload);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [payloadBearingVoid]));
+		final wrongVoidCapability = voidReturnDecision("control:return:void-capability", 89, null, null, OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongVoidCapability]));
+		final wrongVoidProof = voidReturnDecision("control:return:void-proof", 90, null, null, null, OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongVoidProof]));
+		final wrongVoidMechanism = voidReturnDecision("control:return:void-mechanism", 91, null, OcamlControlTargetMechanism.RuntimeReturnSignal);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongVoidMechanism]));
+		final mixedReturnBoundary = new OcamlControlPlan(true, false, false, binding(), [], [first, voidReturn]);
+		expectThrows("conflicting-return-boundary", () -> mixedReturnBoundary.returnBoundaryDecision());
 
 		final badThrowConversion = throwDecision("control:throw:bad-conversion", 200, "Int", cast "identity");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [badThrowConversion]));

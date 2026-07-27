@@ -241,7 +241,7 @@ class OcamlBuilder {
 		}
 	}
 
-	/** Raises one exact early return using only its sealed payload mechanism. */
+	/** Raises one early return using only its sealed value or effect-only mechanism. */
 	function buildPlannedReturn(decision:OcamlControlDecision, value:Null<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlControlPlan.requireDecision(decision);
@@ -258,21 +258,30 @@ class OcamlBuilder {
 				controlPlanInvariant('control decision "${decision.id}" targets ${decision.targetKind} "${decision.targetId}" while return syntax is building "${binding.functionId}"',
 				position);
 		}
-		if (value == null)
-			return controlPlanInvariant('control decision "${decision.id}" expects an exact represented return value, but the typed return is empty', position);
-		final selectedPayload = decision.payload;
-		if (selectedPayload == null)
-			return controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
-		final payload = switch (selectedPayload.conversion) {
-			case BoxAndRecoverExactValue:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
-			case _:
-				return controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}',
-					position);
-		}
 		return switch (decision.mechanism) {
+			case RuntimeVoidReturnSignal:
+				if (value != null || decision.payload != null)
+					controlPlanInvariant('control decision "${decision.id}" selected an effect-only Void return for a value-bearing typed return',
+					position); else OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"));
 			case RuntimeReturnSignal:
-				OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+				if (value == null)
+					controlPlanInvariant('control decision "${decision.id}" expects an exact represented return value, but the typed return is empty',
+						position); else {
+					final selectedPayload = decision.payload;
+					if (selectedPayload == null)
+						controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
+					else {
+						final payload = switch (selectedPayload.conversion) {
+							case BoxAndRecoverExactValue:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
+							case _:
+								return
+									controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}',
+										position);
+						}
+						OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+					}
+				}
 			case _:
 				controlPlanInvariant('control decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
 		}
@@ -423,6 +432,11 @@ class OcamlBuilder {
 						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVariable)]),
 						guard: null,
 						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVariable)]))
+					},
+					{
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"))
 					}
 				];
 		};
@@ -4508,6 +4522,11 @@ class OcamlBuilder {
 						guard: null,
 						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVar)]))
 					};
+					final voidReturnCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return_void"))
+					};
 
 					final hxValVar = freshTmp("exn_v");
 					final hxTagsVar = freshTmp("exn_tags");
@@ -4530,7 +4549,14 @@ class OcamlBuilder {
 						expr: ocamlHandlerExpr
 					};
 
-					OcamlExpr.ETry(builtTry, [breakCase, continueCase, returnCase, hxExceptionCase, ocamlExnCase]);
+					OcamlExpr.ETry(builtTry, [
+						breakCase,
+						continueCase,
+						returnCase,
+						voidReturnCase,
+						hxExceptionCase,
+						ocamlExnCase
+					]);
 				}
 			case TReturn(ret):
 				if (currentControlPlan != null && currentControlPlan.returnFamilyAdmitted) {
@@ -7224,12 +7250,21 @@ class OcamlBuilder {
 			final plannedReturn = functionPlan.controls.returnFamilyAdmitted ? functionPlan.controls.returnBoundaryDecision() : null;
 			if (functionPlan.controls.returnFamilyAdmitted && plannedReturn == null)
 				return controlPlanInvariant("an admitted return family requires a return catch but has no sealed return-boundary decision", bodyExpr.pos);
-			final returnCase:OcamlMatchCase = {
-				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
-				guard: null,
-				expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
-					resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
-			};
+			final returnCase:OcamlMatchCase = if (plannedReturn != null
+				&& plannedReturn.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal) {
+				{
+					pat: OcamlPat.PConstructor("HxRuntime.Hx_return_void", []),
+					guard: null,
+					expr: OcamlExpr.EConst(OcamlConst.CUnit)
+				};
+			} else {
+				{
+					pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
+					guard: null,
+					expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
+						resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
+				};
+			}
 			final fallbackBody = if (functionPlan.controls.returnFamilyAdmitted) {
 				body;
 			} else if (isVoidType(resolvedReturnType)) {

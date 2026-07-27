@@ -123,7 +123,7 @@
     {
       "module": "HxHxCompilerServer",
       "scope": "tooling",
-      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "15ee002a5f583050a5cfdf6c9b7b2f6309bd3205317751459f1be4707fbb99ea" }],
+      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "95d98ed8dc38fc73cbe7eb4f5e0ad6e750be28a98fc586cc06e8c1c91ebaaea3" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": ["unix"],
       "profiles": ["portable"],
@@ -222,7 +222,7 @@
     {
       "module": "HxRuntime",
       "scope": "application",
-      "files": [{ "path": "HxRuntime.ml", "sha256": "55b5eaf74a7bfc56f89cb16d44d09bbe6e05ae8ed56f3f677b12bd3baf916515" }],
+      "files": [{ "path": "HxRuntime.ml", "sha256": "44ce67e055281cef82d640f3f97dbd3f7f07679ed685c1c24046d1221046c9cb" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

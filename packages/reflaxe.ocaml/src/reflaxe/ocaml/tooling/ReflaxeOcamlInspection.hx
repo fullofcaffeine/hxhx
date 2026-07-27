@@ -82,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 14,
+			schemaVersion: 15,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 29) {
-						throw 'Unsupported lowering report schema $version; expected 29.';
+					if (version != 30) {
+						throw 'Unsupported lowering report schema $version; expected 30.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -435,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v5")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v6")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -459,36 +459,46 @@ class ReflaxeOcamlInspection {
 					if (control.effect != "exit-function"
 						|| control.targetKind != "function"
 						|| control.targetId != control.functionId
-						|| control.mechanism != "runtime-return-signal"
-						|| control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1"
-						|| payload == null) {
-						throw 'Control decision "${control.id}" has an invalid return target, effect, mechanism, capability, or payload.';
-					}
-					validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-						'Control decision "${control.id}" input');
-					validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
-						'Control decision "${control.id}" output');
-					final admittedInput = (payload.inputSemanticTypeId == "Int"
-						&& payload.inputCarrierTypeId == "int"
-						&& payload.inputRepresentationId == "representation:Int:internal-value")
-						|| (payload.inputSemanticTypeId == "Bool"
-							&& payload.inputCarrierTypeId == "bool"
-							&& payload.inputRepresentationId == "representation:Bool:internal-value")
-						|| (payload.inputSemanticTypeId == "String"
-							&& payload.inputCarrierTypeId == "string"
-							&& payload.inputRepresentationId == "representation:String:internal-value");
-					if (!admittedInput
-						|| payload.signalCarrierTypeId != "Obj.t"
-						|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-						|| payload.outputRepresentationId != payload.inputRepresentationId
-						|| payload.conversion != "box-and-recover-exact-value"
-						|| payload.proofId != "exact-value-early-return-control-v2"
-						|| payload.proofClaim.length == 0
-						|| control.proofId != "exact-value-early-return-control-v2"
 						|| control.runtimeTags.length != 0
 						|| control.runtimeTagPolicy != "no-runtime-tags") {
-						throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
+						throw 'Control decision "${control.id}" has an invalid return target, effect, or tag policy.';
+					}
+					switch (control.mechanism) {
+						case "runtime-void-return-signal":
+							if (control.runtimeCapabilityId != "hxhx-runtime:function-void-return-signal-v1"
+								|| payload != null
+								|| control.proofId != "effect-only-void-early-return-control-v1") {
+								throw 'Control decision "${control.id}" has an invalid effect-only Void return contract.';
+							}
+						case "runtime-return-signal":
+							if (control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1" || payload == null)
+								throw 'Control decision "${control.id}" has an invalid exact-value return capability or payload.';
+							validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+								'Control decision "${control.id}" input');
+							validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
+								representationById, 'Control decision "${control.id}" output');
+							final admittedInput = (payload.inputSemanticTypeId == "Int"
+								&& payload.inputCarrierTypeId == "int"
+								&& payload.inputRepresentationId == "representation:Int:internal-value")
+								|| (payload.inputSemanticTypeId == "Bool"
+									&& payload.inputCarrierTypeId == "bool"
+									&& payload.inputRepresentationId == "representation:Bool:internal-value")
+								|| (payload.inputSemanticTypeId == "String"
+									&& payload.inputCarrierTypeId == "string"
+									&& payload.inputRepresentationId == "representation:String:internal-value");
+							if (!admittedInput
+								|| payload.signalCarrierTypeId != "Obj.t"
+								|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+								|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+								|| payload.outputRepresentationId != payload.inputRepresentationId
+								|| payload.conversion != "box-and-recover-exact-value"
+								|| payload.proofId != "exact-value-early-return-control-v2"
+								|| payload.proofClaim.length == 0
+								|| control.proofId != "exact-value-early-return-control-v2") {
+								throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
+							}
+						case _:
+							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
 					}
 				case "break", "continue":
 					final isBreak = control.kind == "break";

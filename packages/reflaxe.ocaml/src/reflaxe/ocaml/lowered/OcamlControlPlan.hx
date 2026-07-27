@@ -48,6 +48,7 @@ enum abstract OcamlControlLoopKind(String) from String to String {
 /** The target mechanism selected for an admitted control transfer. */
 enum abstract OcamlControlTargetMechanism(String) from String to String {
 	final RuntimeReturnSignal = "runtime-return-signal";
+	final RuntimeVoidReturnSignal = "runtime-void-return-signal";
 	final RuntimeBreakSignal = "runtime-break-signal";
 	final RuntimeContinueSignal = "runtime-continue-signal";
 	final RuntimeTypedHaxeExceptionSignal = "runtime-typed-haxe-exception-signal";
@@ -265,10 +266,12 @@ typedef OcamlCatchChainOccurrence = {
 **/
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
+	public static inline final EFFECT_ONLY_VOID_RETURN_PROOF_ID = "effect-only-void-early-return-control-v1";
 	public static inline final LEXICAL_LOOP_CONTROL_PROOF_ID = "lexical-loop-control-v1";
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
 	public static inline final EXACT_PRIMITIVE_CATCH_PROOF_ID = "exact-primitive-catch-control-v1";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
+	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
 	public static inline final CONTINUE_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-continue-signal-v1";
 	public static inline final THROW_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-exception-signal-v1";
@@ -534,11 +537,13 @@ class OcamlControlPlan {
 			bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
 		};
 		final matching = candidates.filter(decision -> switch (expression.expr) {
-			case TReturn(value):
-				value != null
-				&& decision.kind == OcamlControlTransferKind.Return
-				&& decision.payload != null
-				&& expressionMatchesPayload(value, decision.payload);
+			case TReturn(value): decision.kind == OcamlControlTransferKind.Return && ((value == null
+					&& decision.payload == null
+					&& decision.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal)
+					|| (value != null
+						&& decision.payload != null
+						&& decision.mechanism == OcamlControlTargetMechanism.RuntimeReturnSignal
+						&& expressionMatchesPayload(value, decision.payload)));
 			case TBreak: decision.kind == OcamlControlTransferKind.Break && decision.payload == null;
 			case TContinue: decision.kind == OcamlControlTransferKind.Continue && decision.payload == null;
 			case TThrow(value): decision.kind == OcamlControlTransferKind.Throw && decision.payload != null && expressionMatchesPayload(value,
@@ -647,26 +652,7 @@ class OcamlControlPlan {
 
 		switch (decision.kind) {
 			case Return:
-				final payload = decision.payload;
-				if (decision.effect != OcamlControlEffect.ExitFunction
-					|| decision.targetKind != OcamlControlTargetKind.Function
-					|| decision.targetId != decision.functionId
-					|| decision.mechanism != OcamlControlTargetMechanism.RuntimeReturnSignal
-					|| decision.runtimeCapabilityId != RETURN_SIGNAL_CAPABILITY_ID
-					|| payload == null
-					|| !isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
-					|| payload.signalCarrierTypeId != "Obj.t"
-					|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-					|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-					|| payload.outputRepresentationId != payload.inputRepresentationId
-					|| payload.conversion != OcamlControlPayloadConversion.BoxAndRecoverExactValue
-					|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
-					|| payload.proofClaim.length == 0
-					|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID
-					|| decision.runtimeTags.length != 0
-					|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.NoRuntimeTags) {
-					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an unsupported target or incomplete exact-value payload crossing';
-				}
+				requireReturnDecision(decision);
 			case Break:
 				requireLoopDecision(decision, OcamlControlEffect.ExitLoop, OcamlControlTargetMechanism.RuntimeBreakSignal, BREAK_SIGNAL_CAPABILITY_ID);
 			case Continue:
@@ -682,6 +668,42 @@ class OcamlControlPlan {
 			|| decision.reason.length == 0
 			|| decision.proofClaim.length == 0) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: control decision "${decision.id}" has incomplete eligibility or proof metadata';
+		}
+	}
+
+	static function requireReturnDecision(decision:OcamlControlDecision):Void {
+		if (decision.effect != OcamlControlEffect.ExitFunction
+			|| decision.targetKind != OcamlControlTargetKind.Function
+			|| decision.targetId != decision.functionId
+			|| decision.runtimeTags.length != 0
+			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.NoRuntimeTags) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an unsupported target, tags, or effect';
+		}
+
+		switch (decision.mechanism) {
+			case RuntimeReturnSignal:
+				final payload = decision.payload;
+				if (decision.runtimeCapabilityId != RETURN_SIGNAL_CAPABILITY_ID
+					|| payload == null
+					|| !isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+					|| payload.signalCarrierTypeId != "Obj.t"
+					|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+					|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+					|| payload.outputRepresentationId != payload.inputRepresentationId
+					|| payload.conversion != OcamlControlPayloadConversion.BoxAndRecoverExactValue
+					|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
+					|| payload.proofClaim.length == 0
+					|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete exact-value payload crossing';
+				}
+			case RuntimeVoidReturnSignal:
+				if (decision.runtimeCapabilityId != VOID_RETURN_SIGNAL_CAPABILITY_ID
+					|| decision.payload != null
+					|| decision.proofId != EFFECT_ONLY_VOID_RETURN_PROOF_ID) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid effect-only Void contract';
+				}
+			case _:
+				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" selected unsupported mechanism ${decision.mechanism}';
 		}
 	}
 
@@ -1164,8 +1186,8 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects exact-value returns and throws, lexical loop transfers, and exact
-	primitive/Dynamic catch chains.
+	Selects exact-value or effect-only `Void` returns, exact-value throws,
+	lexical loop transfers, and exact primitive/Dynamic catch chains.
 
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
@@ -1195,7 +1217,8 @@ class OcamlControlPlanner {
 			return OcamlControlPlan.notAdmitted(binding);
 
 		final boundaryPayload = admittedBoundaryPayload(boundary);
-		var returnFamilyAdmitted = boundaryPayload != null;
+		final effectOnlyVoidBoundary = admittedEffectOnlyVoidBoundary(boundary);
+		var returnFamilyAdmitted = boundaryPayload != null || effectOnlyVoidBoundary;
 		var loopFamilyAdmitted = true;
 		var throwFamilyAdmitted = true;
 		final targets:Array<OcamlControlLoopTarget> = [];
@@ -1250,6 +1273,37 @@ class OcamlControlPlanner {
 						visit(value, false, path + "/return-value");
 					if (directRootStatement || !returnFamilyAdmitted)
 						return;
+					if (value == null && effectOnlyVoidBoundary) {
+						final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+						final proofClaim = 'The final typed Haxe body assigns this payloadless return to the current effect-only Void function. The private payloadless runtime signal exits only that exact function boundary and does not invent a Haxe value, carrier, or representation.';
+						final decision:OcamlControlDecision = {
+							id: controlId(OcamlControlTransferKind.Return, path, binding.functionId),
+							source: source,
+							kind: OcamlControlTransferKind.Return,
+							effect: OcamlControlEffect.ExitFunction,
+							targetKind: OcamlControlTargetKind.Function,
+							targetId: binding.functionId,
+							payload: null,
+							runtimeTags: [],
+							runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
+							mechanism: OcamlControlTargetMechanism.RuntimeVoidReturnSignal,
+							runtimeCapabilityId: OcamlControlPlan.VOID_RETURN_SIGNAL_CAPABILITY_ID,
+							profileEligibility: ["metal", "portable"],
+							reason: "This payloadless return is nested below the function's direct result path, so it exits the current effect-only Void Haxe function through one revision-bound private signal.",
+							proofId: OcamlControlPlan.EFFECT_ONLY_VOID_RETURN_PROOF_ID,
+							proofClaim: proofClaim,
+							functionId: binding.functionId,
+							programRevision: binding.programRevision,
+							bodyRevision: binding.bodyRevision,
+							pipelineRevision: binding.pipelineRevision
+						};
+						decisions.push(decision);
+						decisionOccurrences.push({
+							expression: expression,
+							decisionId: decision.id
+						});
+						return;
+					}
 					final representation = value == null ? null : exactValueRepresentation(value);
 					if (value == null
 						|| representation == null
@@ -1645,6 +1699,13 @@ class OcamlControlPlanner {
 			&& result.conversion == OcamlCallCarrierConversion.Identity
 			&& OcamlControlPlan.isAdmittedExactSide(result.inputSemanticTypeId, result.inputCarrierTypeId,
 				result.inputRepresentationId) ? OcamlCallPlan.copyValue(result) : null;
+	}
+
+	static function admittedEffectOnlyVoidBoundary(boundary:Null<OcamlCallableBoundaryPlan>):Bool {
+		return boundary != null
+			&& boundary.kind == OcamlCallKind.DirectStaticHaxeMethod
+			&& boundary.resultKind == OcamlCallResultKind.EffectOnlyVoid
+			&& boundary.result == null;
 	}
 }
 #end
