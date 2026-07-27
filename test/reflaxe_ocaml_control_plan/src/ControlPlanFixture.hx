@@ -53,7 +53,12 @@ class ControlPlanFixture {
 		final outputSemanticType = outputSemanticTypeId ?? semanticType;
 		final nullableCarrier = semanticType == "Null<Int>" || semanticType == "Null<Bool>";
 		final selectedConversion = conversion ?? (nullableCarrier ? OcamlControlPayloadConversion.PreserveNullableCarrier : OcamlControlPayloadConversion.BoxAndRecoverExactValue);
-		final selectedProofId = proofId ?? (selectedConversion == OcamlControlPayloadConversion.PreserveNullableCarrier ? OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID : OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID);
+		final selectedProofId = proofId ?? switch (selectedConversion) {
+			case PreserveNullableCarrier: OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID;
+			case BoxExactIntToNullableCarrier: OcamlControlPlan.NULLABLE_INT_CONVERSION_RETURN_PROOF_ID;
+			case BoxExactBoolToNullableCarrier: OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID;
+			case _: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID;
+		}
 		final carrierType = switch (semanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
@@ -407,6 +412,15 @@ class ControlPlanFixture {
 		final nullableReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [nullableIntReturn]);
 		if (nullableReturnOnly.returnBoundaryDecision()?.payload?.conversion != OcamlControlPayloadConversion.PreserveNullableCarrier)
 			throw "Exact nullable return lost its carrier-preserving function boundary";
+		final nullableIntConversion = returnDecision("control:return:int-to-nullable", 48, null, OcamlControlPayloadConversion.BoxExactIntToNullableCarrier,
+			null, "Int", "Null<Int>");
+		final nullableBoolConversion = returnDecision("control:return:bool-to-nullable", 49, null,
+			OcamlControlPayloadConversion.BoxExactBoolToNullableCarrier, null, "Bool", "Null<Bool>");
+		OcamlControlPlan.requireDecision(nullableIntConversion);
+		OcamlControlPlan.requireDecision(nullableBoolConversion);
+		final mixedNullableIntBoundary = new OcamlControlPlan(true, false, false, binding(), [], [nullableIntReturn, nullableIntConversion]);
+		if (mixedNullableIntBoundary.returnBoundaryDecision()?.payload?.outputSemanticTypeId != "Null<Int>")
+			throw "Compatible nullable identity and Int conversion lost their shared function boundary";
 		final voidReturn = voidReturnDecision("control:return:void", 47);
 		OcamlControlPlan.requireDecision(voidReturn);
 		final voidReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [voidReturn]);
@@ -449,6 +463,15 @@ class ControlPlanFixture {
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongNullableProof]));
 		final mismatchedNullablePayload = returnDecision("control:return:mismatched-nullable", 90, null, null, null, "Null<Int>", "Int");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [mismatchedNullablePayload]));
+		final wrongDirectionalConversion = returnDecision("control:return:wrong-directional-conversion", 91, null,
+			OcamlControlPayloadConversion.BoxExactBoolToNullableCarrier, null, "Int", "Null<Int>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongDirectionalConversion]));
+		final wrongDirectionalOutput = returnDecision("control:return:wrong-directional-output", 92, null,
+			OcamlControlPayloadConversion.BoxExactIntToNullableCarrier, null, "Int", "Null<Bool>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongDirectionalOutput]));
+		final wrongDirectionalProof = returnDecision("control:return:wrong-directional-proof", 93, null,
+			OcamlControlPayloadConversion.BoxExactIntToNullableCarrier, null, "Int", "Null<Int>", OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongDirectionalProof]));
 		final payloadBearingVoid = voidReturnDecision("control:return:void-payload", 88, null, null, null, null, first.payload);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [payloadBearingVoid]));
 		final wrongVoidCapability = voidReturnDecision("control:return:void-capability", 89, null, null, OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID);
@@ -461,6 +484,8 @@ class ControlPlanFixture {
 		expectThrows("conflicting-return-boundary", () -> mixedReturnBoundary.returnBoundaryDecision());
 		final mixedCarrierBoundary = new OcamlControlPlan(true, false, false, binding(), [], [first, nullableIntReturn]);
 		expectThrows("conflicting-return-boundary", () -> mixedCarrierBoundary.returnBoundaryDecision());
+		final mixedNullableCarrierBoundary = new OcamlControlPlan(true, false, false, binding(), [], [nullableBoolReturn, nullableIntConversion]);
+		expectThrows("conflicting-return-boundary", () -> mixedNullableCarrierBoundary.returnBoundaryDecision());
 
 		final badThrowConversion = throwDecision("control:throw:bad-conversion", 200, "Int", cast "identity");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [badThrowConversion]));

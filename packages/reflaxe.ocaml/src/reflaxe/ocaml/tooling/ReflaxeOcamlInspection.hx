@@ -82,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 16,
+			schemaVersion: 17,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 31) {
-						throw 'Unsupported lowering report schema $version; expected 31.';
+					if (version != 32) {
+						throw 'Unsupported lowering report schema $version; expected 32.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -435,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v7")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v8")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -492,20 +492,42 @@ class ReflaxeOcamlInspection {
 								|| (payload.inputSemanticTypeId == "Null<Bool>"
 									&& payload.inputCarrierTypeId == "Obj.t"
 									&& payload.inputRepresentationId == "representation:Null<Bool>:internal-value");
-							final commonPayloadValid = payload.signalCarrierTypeId == "Obj.t"
-								&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+							final commonPayloadValid = payload.signalCarrierTypeId == "Obj.t";
+							final sameSides = payload.outputSemanticTypeId == payload.inputSemanticTypeId
 								&& payload.outputCarrierTypeId == payload.inputCarrierTypeId
 								&& payload.outputRepresentationId == payload.inputRepresentationId;
 							final exactPayloadValid = admittedExactInput
+								&& sameSides
 								&& payload.conversion == "box-and-recover-exact-value"
 								&& payload.proofId == "exact-value-early-return-control-v2"
 								&& control.proofId == "exact-value-early-return-control-v2";
 							final nullablePayloadValid = admittedNullableInput
+								&& sameSides
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
-							if (!commonPayloadValid || payload.proofClaim.length == 0 || (!exactPayloadValid && !nullablePayloadValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value or nullable-carrier payload crossing.';
+							final nullableIntConversionValid = payload.inputSemanticTypeId == "Int"
+								&& payload.inputCarrierTypeId == "int"
+								&& payload.inputRepresentationId == "representation:Int:internal-value"
+								&& payload.outputSemanticTypeId == "Null<Int>"
+								&& payload.outputCarrierTypeId == "Obj.t"
+								&& payload.outputRepresentationId == "representation:Null<Int>:internal-value"
+								&& payload.conversion == "box-exact-int-to-nullable-carrier"
+								&& payload.proofId == "exact-int-to-nullable-early-return-control-v1"
+								&& control.proofId == "exact-int-to-nullable-early-return-control-v1";
+							final nullableBoolConversionValid = payload.inputSemanticTypeId == "Bool"
+								&& payload.inputCarrierTypeId == "bool"
+								&& payload.inputRepresentationId == "representation:Bool:internal-value"
+								&& payload.outputSemanticTypeId == "Null<Bool>"
+								&& payload.outputCarrierTypeId == "Obj.t"
+								&& payload.outputRepresentationId == "representation:Null<Bool>:internal-value"
+								&& payload.conversion == "box-exact-bool-to-nullable-carrier"
+								&& payload.proofId == "exact-bool-to-nullable-early-return-control-v1"
+								&& control.proofId == "exact-bool-to-nullable-early-return-control-v1";
+							if (!commonPayloadValid
+								|| payload.proofClaim.length == 0
+								|| (!exactPayloadValid && !nullablePayloadValid && !nullableIntConversionValid && !nullableBoolConversionValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nullable-carrier, or primitive-to-nullable payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';

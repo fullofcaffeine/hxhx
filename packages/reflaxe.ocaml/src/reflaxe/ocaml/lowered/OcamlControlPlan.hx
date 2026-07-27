@@ -64,6 +64,8 @@ enum abstract OcamlControlRuntimeTagPolicy(String) from String to String {
 enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
+	final BoxExactIntToNullableCarrier = "box-exact-int-to-nullable-carrier";
+	final BoxExactBoolToNullableCarrier = "box-exact-bool-to-nullable-carrier";
 	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
 }
@@ -268,6 +270,8 @@ typedef OcamlCatchChainOccurrence = {
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
 	public static inline final NULLABLE_CARRIER_RETURN_PROOF_ID = "exact-nullable-carrier-early-return-control-v1";
+	public static inline final NULLABLE_INT_CONVERSION_RETURN_PROOF_ID = "exact-int-to-nullable-early-return-control-v1";
+	public static inline final NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID = "exact-bool-to-nullable-early-return-control-v1";
 	public static inline final EFFECT_ONLY_VOID_RETURN_PROOF_ID = "effect-only-void-early-return-control-v1";
 	public static inline final LEXICAL_LOOP_CONTROL_PROOF_ID = "lexical-loop-control-v1";
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
@@ -592,14 +596,20 @@ class OcamlControlPlan {
 		return hasCatchOccurrenceIndex ? catchDispositionByExpression.exists(expression) : true;
 	}
 
-	/** Returns the shared return payload contract for the function boundary. */
+	/**
+		Returns one decision whose output side represents the shared function boundary.
+
+		Different early values may use different input conversions, such as an
+		exact Int and an existing Null<Int>. They are compatible only when their
+		signal and output carriers, function target, and runtime mechanism match.
+	**/
 	public function returnBoundaryDecision():Null<OcamlControlDecision> {
 		final returns = ordered.filter(decision -> decision.kind == OcamlControlTransferKind.Return);
 		if (returns.length == 0)
 			return null;
 		final first = returns[0];
 		for (decision in returns) {
-			if (payloadFingerprint(decision.payload) != payloadFingerprint(first.payload)
+			if (!sameReturnBoundary(decision.payload, first.payload)
 				|| decision.targetKind != first.targetKind
 				|| decision.targetId != first.targetId
 				|| decision.mechanism != first.mechanism) {
@@ -688,24 +698,37 @@ class OcamlControlPlan {
 				if (decision.runtimeCapabilityId != RETURN_SIGNAL_CAPABILITY_ID
 					|| payload == null
 					|| payload.signalCarrierTypeId != "Obj.t"
-					|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-					|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-					|| payload.outputRepresentationId != payload.inputRepresentationId
 					|| payload.proofClaim.length == 0) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete value payload crossing';
 				}
 				switch (payload.conversion) {
 					case BoxAndRecoverExactValue:
 						if (!isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+							|| !samePayloadSides(payload)
 							|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
 							|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete exact-value payload crossing';
 						}
 					case PreserveNullableCarrier:
 						if (!isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+							|| !samePayloadSides(payload)
 							|| payload.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID
 							|| decision.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid nullable-carrier payload crossing';
+						}
+					case BoxExactIntToNullableCarrier:
+						if (!isExactNullableConversion(payload, "Int", "int", "representation:Int:internal-value", "Null<Int>",
+							"representation:Null<Int>:internal-value")
+							|| payload.proofId != NULLABLE_INT_CONVERSION_RETURN_PROOF_ID
+							|| decision.proofId != NULLABLE_INT_CONVERSION_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid Int-to-Null<Int> payload crossing';
+						}
+					case BoxExactBoolToNullableCarrier:
+						if (!isExactNullableConversion(payload, "Bool", "bool", "representation:Bool:internal-value", "Null<Bool>",
+							"representation:Null<Bool>:internal-value")
+							|| payload.proofId != NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID
+							|| decision.proofId != NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid Bool-to-Null<Bool> payload crossing';
 						}
 					case _:
 						throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
@@ -1046,6 +1069,23 @@ class OcamlControlPlan {
 				&& representationId == "representation:Null<Bool>:internal-value");
 	}
 
+	static function samePayloadSides(payload:OcamlControlPayloadPlan):Bool {
+		return payload.outputSemanticTypeId == payload.inputSemanticTypeId
+			&& payload.outputCarrierTypeId == payload.inputCarrierTypeId
+			&& payload.outputRepresentationId == payload.inputRepresentationId;
+	}
+
+	static function isExactNullableConversion(payload:OcamlControlPayloadPlan, inputSemanticTypeId:String, inputCarrierTypeId:String,
+			inputRepresentationId:String, outputSemanticTypeId:String, outputRepresentationId:String):Bool {
+		return payload.inputSemanticTypeId == inputSemanticTypeId
+			&& payload.inputCarrierTypeId == inputCarrierTypeId
+			&& payload.inputRepresentationId == inputRepresentationId
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& payload.outputSemanticTypeId == outputSemanticTypeId
+			&& payload.outputCarrierTypeId == "Obj.t"
+			&& payload.outputRepresentationId == outputRepresentationId;
+	}
+
 	public static function expectedThrowTags(semanticTypeId:String):Array<String> {
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String": ["Dynamic"];
@@ -1122,6 +1162,15 @@ class OcamlControlPlan {
 			payload.proofId,
 			payload.proofClaim
 		].join("|");
+	}
+
+	static function sameReturnBoundary(left:Null<OcamlControlPayloadPlan>, right:Null<OcamlControlPayloadPlan>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return left.signalCarrierTypeId == right.signalCarrierTypeId
+			&& left.outputSemanticTypeId == right.outputSemanticTypeId
+			&& left.outputCarrierTypeId == right.outputCarrierTypeId
+			&& left.outputRepresentationId == right.outputRepresentationId;
 	}
 
 	static function loopTargetFingerprint(target:OcamlControlLoopTarget):String {
@@ -1329,20 +1378,14 @@ class OcamlControlPlanner {
 						return;
 					}
 					final representation = value == null ? null : exactValueRepresentation(value);
-					if (value == null
-						|| representation == null
-						|| representation.semanticTypeId != boundaryPayload.inputSemanticTypeId
-						|| representation.carrierTypeId != boundaryPayload.inputCarrierTypeId
-						|| representation.id != boundaryPayload.inputRepresentationId) {
+					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
+					if (value == null || payload == null) {
 						returnFamilyAdmitted = false;
 						return;
 					}
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
-					final preservesNullableCarrier = OcamlControlPlan.isAdmittedNullableSide(representation.semanticTypeId, representation.carrierTypeId,
-						representation.id);
-					final conversion = preservesNullableCarrier ? OcamlControlPayloadConversion.PreserveNullableCarrier : OcamlControlPayloadConversion.BoxAndRecoverExactValue;
-					final proofId = preservesNullableCarrier ? OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID : OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID;
-					final proofClaim = preservesNullableCarrier ? 'The final typed Haxe body assigns this return to the current ${representation.semanticTypeId} function. The selected private runtime signal already carries the exact ${representation.carrierTypeId} nullable value, so syntax must preserve that carrier without another box, unchecked cast, or boundary recovery.' : 'The final typed Haxe body assigns this return to the current ${representation.semanticTypeId} function. The selected private runtime signal boxes the exact ${representation.carrierTypeId} carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.';
+					final proofId = payload.proofId;
+					final proofClaim = payload.proofClaim;
 					final decision:OcamlControlDecision = {
 						id: controlId(OcamlControlTransferKind.Return, path, binding.functionId),
 						source: source,
@@ -1350,24 +1393,13 @@ class OcamlControlPlanner {
 						effect: OcamlControlEffect.ExitFunction,
 						targetKind: OcamlControlTargetKind.Function,
 						targetId: binding.functionId,
-						payload: {
-							inputSemanticTypeId: representation.semanticTypeId,
-							inputCarrierTypeId: representation.carrierTypeId,
-							inputRepresentationId: representation.id,
-							signalCarrierTypeId: "Obj.t",
-							outputSemanticTypeId: representation.semanticTypeId,
-							outputCarrierTypeId: representation.carrierTypeId,
-							outputRepresentationId: representation.id,
-							conversion: conversion,
-							proofId: proofId,
-							proofClaim: proofClaim
-						},
+						payload: payload,
 						runtimeTags: [],
 						runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
 						mechanism: OcamlControlTargetMechanism.RuntimeReturnSignal,
 						runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
 						profileEligibility: ["metal", "portable"],
-						reason: preservesNullableCarrier ? 'This return is nested below the function\'s direct result path, so it preserves the current exact-${representation.semanticTypeId} carrier through one revision-bound private runtime signal.' : 'This return is nested below the function\'s direct result path, so it exits the current exact-${representation.semanticTypeId} Haxe function through one revision-bound private runtime signal.',
+						reason: returnReason(payload),
 						proofId: proofId,
 						proofClaim: proofClaim,
 						functionId: binding.functionId,
@@ -1688,6 +1720,60 @@ class OcamlControlPlanner {
 		if (OcamlRepresentationRegistry.isExactString(expression.t))
 			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 		return null;
+	}
+
+	static function returnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan):Null<OcamlControlPayloadPlan> {
+		final sameSide = input.semanticTypeId == output.outputSemanticTypeId
+			&& input.carrierTypeId == output.outputCarrierTypeId
+			&& input.id == output.outputRepresentationId;
+		if (sameSide && OcamlControlPlan.isAdmittedExactSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
+			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal boxes the exact ${input.carrierTypeId} carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.';
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxAndRecoverExactValue, OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
+				proofClaim);
+		}
+		if (sameSide && OcamlControlPlan.isAdmittedNullableSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
+			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal already carries the exact ${input.carrierTypeId} nullable value, so syntax must preserve that carrier without another box, unchecked cast, or boundary recovery.';
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.PreserveNullableCarrier, OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID,
+				proofClaim);
+		}
+		if (input.semanticTypeId == "Int" && output.outputSemanticTypeId == "Null<Int>") {
+			final proofClaim = "The final typed Haxe body converts this exact Int return to the function's exact Null<Int> Obj.t carrier once before the private return signal. The owning function boundary preserves that resulting carrier unchanged.";
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxExactIntToNullableCarrier,
+				OcamlControlPlan.NULLABLE_INT_CONVERSION_RETURN_PROOF_ID, proofClaim);
+		}
+		if (input.semanticTypeId == "Bool" && output.outputSemanticTypeId == "Null<Bool>") {
+			final proofClaim = "The final typed Haxe body converts this exact Bool return to the function's exact Null<Bool> Obj.t carrier once before the private return signal. The owning function boundary preserves that resulting carrier unchanged.";
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxExactBoolToNullableCarrier,
+				OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID, proofClaim);
+		}
+		return null;
+	}
+
+	static function makeReturnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan, conversion:OcamlControlPayloadConversion, proofId:String,
+			proofClaim:String):OcamlControlPayloadPlan {
+		return {
+			inputSemanticTypeId: input.semanticTypeId,
+			inputCarrierTypeId: input.carrierTypeId,
+			inputRepresentationId: input.id,
+			signalCarrierTypeId: "Obj.t",
+			outputSemanticTypeId: output.outputSemanticTypeId,
+			outputCarrierTypeId: output.outputCarrierTypeId,
+			outputRepresentationId: output.outputRepresentationId,
+			conversion: conversion,
+			proofId: proofId,
+			proofClaim: proofClaim
+		};
+	}
+
+	static function returnReason(payload:OcamlControlPayloadPlan):String {
+		return switch (payload.conversion) {
+			case PreserveNullableCarrier:
+				'This return is nested below the function\'s direct result path, so it preserves the current exact-${payload.outputSemanticTypeId} carrier through one revision-bound private runtime signal.';
+			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
+				'This return is nested below the function\'s direct result path, so it performs the sealed ${payload.inputSemanticTypeId}-to-${payload.outputSemanticTypeId} conversion before one revision-bound private runtime signal.';
+			case _:
+				'This return is nested below the function\'s direct result path, so it exits the current exact-${payload.outputSemanticTypeId} Haxe function through one revision-bound private runtime signal.';
+		};
 	}
 
 	function loopTargetId(kind:OcamlControlLoopKind, path:String):String {

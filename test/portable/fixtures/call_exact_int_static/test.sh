@@ -192,12 +192,12 @@ fi
 negative_log="$(mktemp)"
 rm -rf negative-out
 if haxe negative.hxml >"$negative_log" 2>&1; then
-	echo "An early Bool return unexpectedly bypassed the sealed result-control boundary" >&2
+	echo "An incompatible Dynamic return unexpectedly joined the sealed Bool-to-Null<Bool> return family" >&2
 	rm -f "$negative_log"
 	exit 1
 fi
-if ! grep -Fq '[ocaml-call:result-control-unsealed]' "$negative_log"; then
-	echo "The rejected early result conversion did not report its stable ownership diagnostic" >&2
+if ! grep -Fq '[ocaml-call:unsupported-definition-result]' "$negative_log"; then
+	echo "The rejected mixed return family did not report its stable ownership diagnostic" >&2
 	cat "$negative_log" >&2
 	rm -f "$negative_log"
 	exit 1
@@ -254,7 +254,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 31 || report.callModel !== 'typed-ocaml-directional-call-boundary-v16') {
+if (report.schemaVersion !== 32 || report.callModel !== 'typed-ocaml-directional-call-boundary-v16') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {

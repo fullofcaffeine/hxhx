@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first seven bounded control-effect slices are now executable. An ordinary
+The first eight bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -104,16 +104,33 @@ function boundary returns an early carrier directly, without `Obj.obj`,
 Source `catch` clauses rethrow the private signal before matching source
 exceptions. The lowering report and public inspection expose the exact
 nullable semantic type, carrier, representation, conversion, proof, and
-revision, and reject a record that substitutes exact-value boxing. A nested
-early `return 7;` that itself needs `Int`-to-`Null<Int>` conversion still
-fails before OCaml source or lowering evidence is published; that distinct
-directional-control family remains unfinished.
+revision, and reject a record that substitutes exact-value boxing.
+
+The eighth slice adds the matching directional crossing for early exact
+`Int` and `Bool` values. For example, this now has one defined path:
+
+```haxe
+static function choose(stop:Bool, early:Int, fallback:Null<Int>):Null<Int> {
+	if (stop)
+		return early;
+	return fallback;
+}
+```
+
+Before OCaml syntax is written, the compiler records that `early` starts as an
+OCaml `int`, must become the function's `Null<Int>` `Obj.t` carrier, and must
+be boxed exactly once before the private return signal is raised. The function
+then catches that signal and returns the resulting `Obj.t` unchanged. The same
+rule covers `Bool` to `Null<Bool>`, including false, and can coexist with an
+already-nullable early return in the same function. An incompatible return,
+such as a `Dynamic` value mixed into that family, rejects the whole function
+before generated source or lowering evidence is published.
 
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.7`, not closure of the parent control-effects requirement.
-Additional value-return payloads, nested primitive-to-nullable conversions,
-other nullable return carriers, unsupported catch and throw payloads, cleanup
-effects, and the complete runtime-requirement ledger remain unfinished.
+`haxe_ocaml-w32h3.8`, not closure of the parent control-effects requirement.
+Additional value-return payloads, other primitive-to-nullable and nullable
+return carriers, unsupported catch and throw payloads, cleanup effects, and
+the complete runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -262,15 +279,15 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first seven slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first eight slices cover
   exact-`Int`, exact-`Bool`, and represented-`String` early returns from
   ordinary static functions, including the existing String runtime null
   sentinel; carrier-preserving early returns of exact `Null<Int>` and
   `Null<Bool>` values; and payloadless early return from ordinary static
-  `Void` functions without inventing a value. A direct final `Int` or `Bool`
-  fallback may cross once into the matching nullable carrier inside that
-  function boundary; nested primitive-to-nullable return conversions remain
-  unsupported. The slices also cover exact lexical targets for `break` and
+  `Void` functions without inventing a value. A direct final or nested early
+  exact `Int` or `Bool` may cross once into its matching nullable carrier
+  inside that function boundary; an already-nullable early value remains
+  unchanged. The slices also cover exact lexical targets for `break` and
   `continue` in ordinary `while` and `do ... while` loops, and
   exact-`Int`/`Bool`/represented-`String` payloads entering the global Haxe
   exception channel with upstream-compatible runtime-value tags. Complete

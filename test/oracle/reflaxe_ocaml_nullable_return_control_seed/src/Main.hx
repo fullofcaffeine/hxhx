@@ -41,6 +41,32 @@ class Main {
 		return fallback;
 	}
 
+	static function convertInt(stop:Bool, early:Int, fallback:Null<Int>):Null<Int> {
+		if (stop)
+			return early;
+		return fallback;
+	}
+
+	static function convertBool(stop:Bool, early:Bool, fallback:Null<Bool>):Null<Bool> {
+		if (stop)
+			return early;
+		return fallback;
+	}
+
+	static function mixedInt(mode:Int, early:Int, nullable:Null<Int>):Null<Int> {
+		if (mode == 0)
+			return early;
+		if (mode == 1)
+			return nullable;
+		return 9;
+	}
+
+	static function intThroughLoop(run:Bool, early:Int, fallback:Null<Int>):Null<Int> {
+		while (run)
+			return early;
+		return fallback;
+	}
+
 	static function intThroughTry(stop:Bool, value:Null<Int>):Null<Int> {
 		caught = false;
 		try {
@@ -63,6 +89,17 @@ class Main {
 		return false;
 	}
 
+	static function primitiveBoolThroughTry(stop:Bool, early:Bool, fallback:Null<Bool>):Null<Bool> {
+		caught = false;
+		try {
+			if (stop)
+				return early;
+		} catch (_:Dynamic) {
+			caught = true;
+		}
+		return fallback;
+	}
+
 	static function printInt(label:String, value:Null<Int>):Void {
 		printLine(label + "=" + describeInt(value));
 	}
@@ -82,6 +119,17 @@ class Main {
 		printBool("boolDirect", chooseBool(false, null));
 		printInt("intCarrierFallback", preserveIntFallback(false, null, 5));
 		printBool("boolCarrierFallback", preserveBoolFallback(false, true, false));
+		printInt("intConvertedZero", convertInt(true, 0, null));
+		printInt("intConvertedPositive", convertInt(true, 6, null));
+		printInt("intConvertedFallback", convertInt(false, 6, null));
+		printBool("boolConvertedFalse", convertBool(true, false, null));
+		printBool("boolConvertedTrue", convertBool(true, true, null));
+		printBool("boolConvertedFallback", convertBool(false, true, null));
+		printInt("mixedConverted", mixedInt(0, 3, null));
+		printInt("mixedNullable", mixedInt(1, 3, null));
+		printInt("mixedDirect", mixedInt(2, 3, null));
+		printInt("loopConverted", intThroughLoop(true, 0, null));
+		printInt("loopFallback", intThroughLoop(false, 4, null));
 
 		printInt("tryIntNull", intThroughTry(true, null));
 		printLine("tryIntNullCaught=" + caught);
@@ -91,6 +139,10 @@ class Main {
 		printLine("tryBoolFalseCaught=" + caught);
 		printInt("tryDirect", intThroughTry(false, null));
 		printLine("tryDirectCaught=" + caught);
+		printBool("tryPrimitiveFalse", primitiveBoolThroughTry(true, false, null));
+		printLine("tryPrimitiveFalseCaught=" + caught);
+		printBool("tryPrimitiveFallback", primitiveBoolThroughTry(false, true, null));
+		printLine("tryPrimitiveFallbackCaught=" + caught);
 		printLine("OK nullable_return_control");
 	}
 }

@@ -41,4 +41,5 @@ for route in interp js neko; do
 	fi
 done
 
-echo "REFLAXE_OCAML_NULLABLE_RETURN_CONTROL_ORACLE:PASS routes=3 cases=19"
+CASE_COUNT="$(wc -l <"$EXPECTED" | tr -d '[:space:]')"
+echo "REFLAXE_OCAML_NULLABLE_RETURN_CONTROL_ORACLE:PASS routes=3 cases=$CASE_COUNT"

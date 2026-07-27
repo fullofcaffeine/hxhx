@@ -1242,14 +1242,11 @@ class OcamlCallPlanner {
 			final crossing = definitionResultValue(returnExpression, boundaryValue, representations);
 			if (crossing == null)
 				return false;
-			if (returnExpression == directResult) {
+			if (returnExpression == directResult)
 				foundDirect = true;
-				final expected = boundaryValue.outputSemanticTypeId == "Null<Int>" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.BoxExactBoolToNullableBool;
-				if (crossing.conversion != expected)
-					return false;
-			} else if (crossing.conversion != OcamlCallCarrierConversion.Identity) {
+			final expected = boundaryValue.outputSemanticTypeId == "Null<Int>" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.BoxExactBoolToNullableBool;
+			if (crossing.conversion != OcamlCallCarrierConversion.Identity && crossing.conversion != expected)
 				return false;
-			}
 		}
 		return foundDirect;
 	}
