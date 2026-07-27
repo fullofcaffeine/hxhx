@@ -23,8 +23,8 @@ if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional
 const calls = (report.calls ?? []).filter(call =>
 	call.kind === 'typed-function-value'
 	&& call.proofId === 'typed-function-value-optional-string-signature-v1')
-if (calls.length !== 8) {
-	fail(`expected eight optional String function-value calls, got ${calls.length}`)
+if (calls.length !== 17) {
+	fail(`expected seventeen optional String function-value calls, got ${calls.length}`)
 }
 
 let oneParameterCalls = 0
@@ -90,13 +90,13 @@ for (const call of calls) {
 		}
 	}
 }
-if (oneParameterCalls !== 4 || twoParameterCalls !== 4 || omittedCalls !== 2 || explicitNullCalls !== 2) {
+if (oneParameterCalls !== 8 || twoParameterCalls !== 9 || omittedCalls !== 5 || explicitNullCalls !== 4) {
 	fail(`unexpected optional call partition: one=${oneParameterCalls}, two=${twoParameterCalls}, omitted=${omittedCalls}, explicitNull=${explicitNullCalls}`)
 }
 
 const callLines = source.split('\n').filter(line => line.includes('let __call_callee_'))
-if (callLines.length !== 8) {
-	fail(`expected eight syntax-level callee bindings, got ${callLines.length}`)
+if (callLines.length !== 17) {
+	fail(`expected seventeen syntax-level callee bindings, got ${callLines.length}`)
 }
 for (const line of callLines) {
 	const callee = line.match(/let (__call_callee_[0-9]+) =/)?.[1]
@@ -107,8 +107,13 @@ for (const line of callLines) {
 		fail(`planned optional String call used an unsealed fallback carrier: ${line}`)
 	}
 }
-if (callLines.filter(line => line.includes('HxString.hx_null_string')).length !== 4) {
+if (callLines.filter(line => line.includes('HxString.hx_null_string')).length !== 9) {
 	fail('exactly the omitted and literal-null calls must materialize the selected String null sentinel')
+}
+const callProducedLines = callLines.filter(line =>
+	/= (?:makeGreeter|makeOnly|failingGreeter) \(\)/.test(line))
+if (callProducedLines.length !== 9) {
+	fail(`expected nine call-produced callee bindings, got ${callProducedLines.length}`)
 }
 NODE
 
@@ -142,11 +147,11 @@ if (!report.summary?.valid) {
 const calls = report.lowering?.calls?.filter(call =>
 	call.kind === 'typed-function-value'
 	&& call.proofId === 'typed-function-value-optional-string-signature-v1') ?? []
-if (calls.length !== 8
+if (calls.length !== 17
 	|| calls.filter(call => call.arguments?.some(argument =>
-		argument.conversion === 'materialize-omitted-string')).length !== 2
+		argument.conversion === 'materialize-omitted-string')).length !== 5
 	|| calls.filter(call => call.arguments?.some(argument =>
-		argument.conversion === 'materialize-explicit-null-string')).length !== 2) {
+		argument.conversion === 'materialize-explicit-null-string')).length !== 4) {
 	throw new Error('reflaxe.ocaml inspection did not preserve the optional function-value calls')
 }
 NODE
@@ -158,7 +163,9 @@ const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const selected = report.calls?.find(call =>
 	call.kind === 'typed-function-value'
-	&& call.proofId === 'typed-function-value-optional-string-signature-v1')
+	&& call.proofId === 'typed-function-value-optional-string-signature-v1'
+	&& call.arguments?.some(argument =>
+		argument.conversion === 'materialize-omitted-string'))
 if (selected == null) {
 	throw new Error('missing optional function-value call to corrupt')
 }

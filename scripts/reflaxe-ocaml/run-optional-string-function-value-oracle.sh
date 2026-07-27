@@ -41,4 +41,4 @@ for route in interp js neko; do
 	fi
 done
 
-echo "REFLAXE_OCAML_OPTIONAL_STRING_FUNCTION_VALUE_ORACLE:PASS routes=3 cases=8"
+echo "REFLAXE_OCAML_OPTIONAL_STRING_FUNCTION_VALUE_ORACLE:PASS routes=3 cases=17"

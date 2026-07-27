@@ -6,3 +6,12 @@ only_omitted result=none events=only
 only_supplied result=! events=suffix,only
 only_null result=none events=explicit_null,only
 only_literal_null result=none events=only
+factory_required_omitted result=hi Ada events=factory,required,greet
+factory_required_supplied result=hi Ada! events=factory,required,suffix,greet
+factory_required_null result=hi Ada events=factory,required,explicit_null,greet
+factory_required_literal_null result=hi Ada events=factory,required,greet
+factory_only_omitted result=none events=factory,only
+factory_only_supplied result=! events=factory,suffix,only
+factory_only_null result=none events=factory,explicit_null,only
+factory_only_literal_null result=none events=factory,only
+factory_throw events=factory_throw

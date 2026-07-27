@@ -7,6 +7,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStep;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -1045,6 +1046,31 @@ class CallPlanFixture {
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final localBlock = Context.typeExpr(macro {
+			final localIdentityValue = 1;
+			localIdentityValue;
+		});
+		final localValue = switch (localBlock.expr) {
+			case TBlock(expressions): expressions[expressions.length - 1];
+			case _: Context.error("Expected the function-value identity fixture to type as a block.", Context.currentPos());
+		}
+		final callValue = Context.typeExpr(macro Std.string(1));
+		final sharedIdentityPosition = Context.currentPos();
+		final localAtSharedPosition = {
+			expr: localValue.expr,
+			pos: sharedIdentityPosition,
+			t: localValue.t
+		};
+		final callAtSharedPosition = {
+			expr: callValue.expr,
+			pos: sharedIdentityPosition,
+			t: callValue.t
+		};
+		final localIdentity = OcamlCallPlanner.functionValueCalleeId(localAtSharedPosition, caller, "(?String)->String");
+		final callResultIdentity = OcamlCallPlanner.functionValueCalleeId(callAtSharedPosition, caller, "(?String)->String");
+		if (localIdentity == callResultIdentity)
+			Context.error("Local and call-produced function values shared one callee identity.", Context.currentPos());
+
 		final selectedFunctionValueCall = functionValueCall(caller);
 		OcamlCallPlan.requireCall(selectedFunctionValueCall);
 		final functionValueRegistry = new OcamlFunctionPlanRegistry();

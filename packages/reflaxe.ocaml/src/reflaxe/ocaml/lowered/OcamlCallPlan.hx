@@ -1127,9 +1127,13 @@ class OcamlCallPlanner {
 	/**
 		Returns the canonical admitted signature for one computed function call.
 
-		Exact `Int -> Int` retains local and call-produced callees. The optional
-		String family starts with locals only so this slice does not also claim
-		call-produced optional-function construction.
+		Exact `Int -> Int` and the admitted optional-String signatures accept
+		local and call-produced callees. The callee form remains part of the
+		stable identity so those occurrences cannot collide. Haxe's typed API
+		preserves the optional flag but follows a call-produced function typedef
+		to an exact `String` parameter; local method values retain `Null<String>`.
+		Both shapes therefore require the optional flag, while the exact
+		parameter carrier remains form-specific.
 	**/
 	public static function functionValueSignatureId(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Null<String> {
 		final calleeForm = switch (callee.expr) {
@@ -1149,24 +1153,24 @@ class OcamlCallPlanner {
 					&& OcamlRepresentationRegistry.isExactInt(resultType)):
 				"(Int)->Int";
 			case TFun(parameters, result)
-				if (calleeForm == "local"
+				if (calleeForm != null
 					&& parameters.length == 1
 					&& parameters[0].opt
 					&& arguments.length <= 1
-					&& OcamlRepresentationRegistry.isExactNullString(parameters[0].t)
+					&& isAdmittedOptionalStringParameter(parameters[0].t, calleeForm)
 					&& suppliedStrings(arguments)
 					&& OcamlRepresentationRegistry.isExactString(result)
 					&& OcamlRepresentationRegistry.isExactString(resultType)):
 				"(?String)->String";
 			case TFun(parameters, result)
-				if (calleeForm == "local"
+				if (calleeForm != null
 					&& parameters.length == 2
 					&& !parameters[0].opt
 					&& parameters[1].opt
 					&& arguments.length >= 1
 					&& arguments.length <= 2
 					&& OcamlRepresentationRegistry.isExactString(parameters[0].t)
-					&& OcamlRepresentationRegistry.isExactNullString(parameters[1].t)
+					&& isAdmittedOptionalStringParameter(parameters[1].t, calleeForm)
 					&& suppliedStrings(arguments)
 					&& OcamlRepresentationRegistry.isExactString(result)
 					&& OcamlRepresentationRegistry.isExactString(resultType)):
@@ -1174,6 +1178,11 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	static function isAdmittedOptionalStringParameter(type:Type, calleeForm:String):Bool {
+		return OcamlRepresentationRegistry.isExactNullString(type)
+			|| (calleeForm == "call-result" && OcamlRepresentationRegistry.isExactString(type));
 	}
 
 	/**
@@ -1247,8 +1256,8 @@ class OcamlCallPlanner {
 				};
 			case "(?String)->String", "(String,?String)->String": {
 					id: OcamlCallPlan.FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID,
-					reason: "The typed Haxe expression invokes one local function value with one trailing optional String parameter. The sealed schedule binds the callee first, evaluates each supplied String in source order, materializes an omitted String without source evaluation, then invokes the function and preserves its exact String result.",
-					claim: "The followed local Haxe function type selects exact String carriers and one trailing optional String. Every call occurrence must distinguish supplied, explicitly null, and omitted values before syntax, using the existing String null-sentinel conversion where required."
+					reason: "The typed Haxe expression invokes one local or call-produced function value with one trailing optional String parameter. The sealed schedule binds the callee first, evaluates each supplied String in source order, materializes an omitted String without source evaluation, then invokes the function and preserves its exact String result.",
+					claim: "The followed Haxe function type selects exact String carriers and one trailing optional String. Every call occurrence must distinguish supplied, explicitly null, and omitted values before syntax, using the existing String null-sentinel conversion where required."
 				};
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported function-value signature "$signatureId" reached proof construction';
@@ -1268,14 +1277,15 @@ class OcamlCallPlanner {
 			final output = representationForSemanticType(boundary.outputSemanticTypeId, representations);
 			if (output == null)
 				return null;
-			final input = representationFor(arguments[index].t, representations);
-			if (input == null) {
-				if (output.semanticTypeId == "String" && OcamlCallPlan.isExplicitNullExpression(arguments[index])) {
-					planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullString, boundary.parameterOptional));
-					continue;
-				}
-				return null;
+			if (boundary.parameterOptional
+				&& output.semanticTypeId == "String"
+				&& OcamlCallPlan.isExplicitNullExpression(arguments[index])) {
+				planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullString, true));
+				continue;
 			}
+			final input = representationFor(arguments[index].t, representations);
+			if (input == null)
+				return null;
 			if (input.semanticTypeId == output.semanticTypeId) {
 				if (output.semanticTypeId == "Null<Int>") {
 					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableIntCarrier, boundary.parameterOptional));
