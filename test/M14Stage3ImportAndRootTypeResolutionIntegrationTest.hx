@@ -1,3 +1,4 @@
+import haxe.ds.StringMap;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -24,6 +25,21 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		} else {
 			FileSystem.deleteFile(path);
 		}
+	}
+
+	/**
+		Type every source module through the same shared index and loader used by
+		real compiler requests. A single-module shortcut cannot prove an imported
+		provider because that provider never enters semantic resolution.
+	**/
+	static function program(classPaths:Array<String>, modules:Array<ResolvedModule>):backend.GenIrProgram {
+		final index = TyperIndex.build(modules);
+		final loader = new ModuleLoader(classPaths, new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready(modules);
+		return MacroStage.expandProgram([
+			for (module in modules)
+				TyperStage.typeResolvedModule(module, index, loader, true)
+		], []);
 	}
 
 	static function main():Void {
@@ -118,9 +134,11 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final parsed = ParserStage.parse(src, mainHx);
-			final typed = TyperStage.typeModule(parsed);
-			final expanded = MacroStage.expandProgram([typed], []);
+			final expanded = program([srcDir], [
+				new ResolvedModule("utest.Assert", assertHx, ParserStage.parse(File.getContent(assertHx), assertHx)),
+				new ResolvedModule("php.Syntax", phpSyntaxHx, ParserStage.parse(File.getContent(phpSyntaxHx), phpSyntaxHx)),
+				new ResolvedModule("unit.Main", mainHx, ParserStage.parse(src, mainHx))
+			]);
 			EmitterStage.emitToDir(expanded, outDir, true, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Unit_Main.ml']);
@@ -168,9 +186,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'}',
 			].join("\n");
 			File.saveContent(haxeMainHx, haxeSrc);
-			final haxeParsed = ParserStage.parse(haxeSrc, haxeMainHx);
-			final haxeTyped = TyperStage.typeModule(haxeParsed);
-			final haxeExpanded = MacroStage.expandProgram([haxeTyped], []);
+			final haxeExpanded = program([haxeSrcDir], [
+				new ResolvedModule("haxe.Main", haxeMainHx, ParserStage.parse(haxeSrc, haxeMainHx))
+			]);
 			EmitterStage.emitToDir(haxeExpanded, haxeOutDir, true, false);
 
 			final haxeMainMl = haxe.io.Path.join([haxeOutDir, 'Haxe_Main.ml']);
@@ -204,9 +222,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'}',
 			].join("\n");
 			File.saveContent(phpBootHx, phpBootSrc);
-			final phpParsed = ParserStage.parse(phpBootSrc, phpBootHx);
-			final phpTyped = TyperStage.typeModule(phpParsed);
-			final phpExpanded = MacroStage.expandProgram([phpTyped], []);
+			final phpExpanded = program([phpSrcDir], [
+				new ResolvedModule("php.Syntax", phpSyntaxLocalHx, ParserStage.parse(File.getContent(phpSyntaxLocalHx), phpSyntaxLocalHx)),
+				new ResolvedModule("php.Boot", phpBootHx, ParserStage.parse(phpBootSrc, phpBootHx))
+			]);
 			EmitterStage.emitToDir(phpExpanded, phpOutDir, true, false);
 
 			final phpBootMl = haxe.io.Path.join([phpOutDir, 'Php_Boot.ml']);
