@@ -1,6 +1,6 @@
 # reflaxe.ocaml 1.0 Contract
 
-Last audited: 2026-07-23
+Last audited: 2026-07-27
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
@@ -11,9 +11,12 @@ target-lowering and six-month architecture reviews, it is necessary but not
 sufficient for a 1.0 release. The target must complete one validated semantic
 path for place/evaluation (`haxe_ocaml-9v1va`, completed), representation,
 storage, and capture (`haxe_ocaml-9bome`), calls and conversions
-(`haxe_ocaml-taef5`), structured control effects (`haxe_ocaml-w32h3`), and
-fail-closed runtime ownership (`haxe_ocaml-0uwin`). This aggregate must then
-open those results. Existing package, matrix, documentation, and performance
+(`haxe_ocaml-taef5`, completed for the represented ordinary-Haxe foundation),
+structured control effects (`haxe_ocaml-w32h3`), and fail-closed runtime
+ownership (`haxe_ocaml-0uwin`). This aggregate must then open those results.
+Target-native labelled calls, typed adapters, and native dependencies remain
+owned by `haxe_ocaml-v8a9b` and block only a release scope that claims those
+interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
@@ -156,8 +159,12 @@ Required semantic-safety prerequisites before release authorization:
 - representation, local storage, closure capture, nullability, boxing, and
   boundary carriers come from one immutable registry rather than independent
   compiler and builder guesses (`haxe_ocaml-9bome`);
-- resolved calls, labels, optional arguments, callbacks, coercions, and
-  conversions use one typed call contract (`haxe_ocaml-taef5`);
+- represented ordinary non-extern calls, optional arguments, callbacks,
+  receivers, constructors, coercions, and conversions use one typed call
+  contract before OCaml syntax (`haxe_ocaml-taef5`, completed foundation);
+- target-native labels, imported OCaml call shapes, typed adapters, and native
+  package dependencies use that foundation only when the declared release scope
+  admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
   model cannot represent them (`haxe_ocaml-w32h3`);

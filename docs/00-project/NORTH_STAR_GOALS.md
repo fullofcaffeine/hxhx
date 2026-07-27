@@ -195,7 +195,9 @@ surface, cold/warm/one-file author-loop measurements, generated-code and runtime
 inventories, and behavior-correct native comparisons. The owning work is split
 deliberately: `haxe_ocaml-1hd2w`, `haxe_ocaml-850ii`, and the focused
 `haxe_ocaml-850ii.21` receipt own iteration;
-`haxe_ocaml-taef5` and `haxe_ocaml-v8a9b` own typed interop;
+`haxe_ocaml-taef5` owns the represented ordinary-Haxe call foundation, while
+`haxe_ocaml-v8a9b` owns target-native labels, imported OCaml call shapes, typed
+adapters, and native dependencies;
 `haxe_ocaml-9bome`, `haxe_ocaml-h5jta.1`, and `haxe_ocaml-i69n4` own generated
 representation/quality and comparable native evidence; `haxe_ocaml-bxwut`
 owns an authentic promoted compiler workload. Goal 6 and M22 own the shared
