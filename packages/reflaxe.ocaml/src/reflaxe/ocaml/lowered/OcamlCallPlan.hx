@@ -716,6 +716,10 @@ class OcamlCallPlan {
 			case DirectInstanceHaxeMethod:
 				if (receiver == null)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has no sealed instance receiver';
+				if (!isNominalInternalSide(receiver.inputSemanticTypeId, receiver.inputCarrierTypeId, receiver.inputRepresentationId)
+					|| !isNominalInternalSide(receiver.outputSemanticTypeId, receiver.outputCarrierTypeId, receiver.outputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an instance receiver outside the sealed nominal carrier family';
+				}
 				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
 				if (proofId != DIRECT_INSTANCE_SIGNATURE_PROOF_ID)
@@ -859,6 +863,7 @@ class OcamlCallPlan {
 		return semanticTypeId.length > 0
 			&& semanticTypeId.indexOf("<") < 0
 			&& carrierTypeId.length > 0
+			&& !isAdmittedInternalSide(semanticTypeId, carrierTypeId, representationId)
 			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 

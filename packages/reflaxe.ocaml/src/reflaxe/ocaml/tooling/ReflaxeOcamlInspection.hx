@@ -397,8 +397,8 @@ class ReflaxeOcamlInspection {
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			if (boundary.result != null)
 				validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
-			validateCallSignature(boundary.kind, boundary.receiver, boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId, true,
-				'Callable boundary "${boundary.id}"');
+			validateCallSignature(boundary.kind, boundary.receiver, boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId,
+				representationById, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
 		}
@@ -415,7 +415,8 @@ class ReflaxeOcamlInspection {
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				validateCallValue(call.result, representationById, 'Call "${call.id}" result');
-			validateCallSignature(call.kind, call.receiver, call.arguments, call.resultKind, call.result, call.proofId, false, 'Call "${call.id}"');
+			validateCallSignature(call.kind, call.receiver, call.arguments, call.resultKind, call.result, call.proofId, representationById, false,
+				'Call "${call.id}"');
 			if (call.kind == "typed-function-value") {
 				if (call.sourceModuleId.length != 0 || call.sourceTypeName.length != 0 || call.sourceFieldName.length != 0)
 					throw 'Function-value call "${call.id}" must not report a declaration identity.';
@@ -703,7 +704,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateCallSignature(kind:String, receiver:Null<InspectionCallValue>, arguments:Array<InspectionCallValue>, resultKind:String,
-			result:Null<InspectionCallValue>, proofId:String, isCallableBoundary:Bool, owner:String):Void {
+			result:Null<InspectionCallValue>, proofId:String, representations:Map<String, InspectionRepresentationDecision>, isCallableBoundary:Bool,
+			owner:String):Void {
 		if (kind == "direct-static-haxe-method" && proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
 		if (kind == "direct-instance-haxe-method") {
@@ -711,6 +713,10 @@ class ReflaxeOcamlInspection {
 				throw '$owner has proof "$proofId" instead of "$DIRECT_INSTANCE_SIGNATURE_PROOF_ID".';
 			if (receiver == null)
 				throw '$owner has no sealed instance receiver.';
+			if (!isAdmittedNominalSide(receiver.inputSemanticTypeId, receiver.inputCarrierTypeId, receiver.inputRepresentationId, representations)
+				|| !isAdmittedNominalSide(receiver.outputSemanticTypeId, receiver.outputCarrierTypeId, receiver.outputRepresentationId, representations)) {
+				throw '$owner has an instance receiver outside the sealed nominal carrier family.';
+			}
 		} else if (receiver != null) {
 			throw '$owner unexpectedly owns an instance receiver.';
 		}
@@ -725,8 +731,9 @@ class ReflaxeOcamlInspection {
 			case "value":
 				if (result == null)
 					throw '$owner has a value result kind without a value crossing.';
-				if (!isAdmittedDirectResultSide(kind, result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-					|| !isAdmittedDirectResultSide(kind, result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
+				if (!isAdmittedDirectResultSide(kind, result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, representations)
+					|| !isAdmittedDirectResultSide(kind, result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId,
+						representations)) {
 					throw '$owner contains a result outside the closed typed-call representation matrix.';
 				}
 				if (!isCallableBoundary && result.conversion != "identity")
@@ -809,12 +816,29 @@ class ReflaxeOcamlInspection {
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t");
 	}
 
-	static function isAdmittedDirectResultSide(kind:String, semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+	static function isAdmittedDirectResultSide(kind:String, semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
 		if (isAdmittedCallValueSide(semanticTypeId, carrierTypeId, representationId))
 			return true;
 		return (kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method")
-			&& semanticTypeId.length > 0
-			&& carrierTypeId.length > 0
+			&& isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations);
+	}
+
+	/**
+		Returns whether one reported call side is backed by a sealed nominal
+		representation, rather than merely using a nominal-looking identity.
+	**/
+	static function isAdmittedNominalSide(semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
+		final representation = representations.get(representationId);
+		return representation != null
+			&& representation.semanticTypeId == semanticTypeId
+			&& representation.carrierTypeId == carrierTypeId
+			&& representation.domain == "internal-value"
+			&& representation.boxingPolicy == "nullable-nominal-record-carrier"
+			&& representation.nominalTargetModuleName != null
+			&& representation.nominalTargetTypeName == carrierTypeId
+			&& representation.nominalLayoutRevision != null
 			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 

@@ -52,6 +52,14 @@ const instanceCalls = (report.calls ?? []).filter(call =>
 	call.kind === 'direct-instance-haxe-method'
 	&& call.sourceTypeName === 'Counter'
 	&& call.sourceFieldName === 'bump')
+const instanceBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
+	boundary.kind === 'direct-instance-haxe-method')
+if (instanceBoundaries.length !== 1
+	|| instanceBoundaries[0].sourceTypeName !== 'Counter'
+	|| instanceBoundaries[0].sourceFieldName !== 'bump'
+	|| instanceBoundaries[0].receiver?.outputRepresentationId !== decision.id) {
+	fail('the report admitted an unexpected instance callable boundary')
+}
 if (instanceCalls.length !== 2) {
 	fail(`expected constructor-local and factory-produced Counter.bump calls, got ${instanceCalls.length}`)
 }
@@ -218,7 +226,12 @@ const call = report.calls?.find(item => item.kind === 'direct-instance-haxe-meth
 if (call?.receiver == null) {
 	throw new Error('missing admitted instance receiver to corrupt')
 }
-call.receiver.inputRepresentationId = 'representation:Counter:corrupted'
+call.receiver.inputSemanticTypeId = 'Int'
+call.receiver.inputCarrierTypeId = 'int'
+call.receiver.inputRepresentationId = 'representation:Int:internal-value'
+call.receiver.outputSemanticTypeId = 'Int'
+call.receiver.outputCarrierTypeId = 'int'
+call.receiver.outputRepresentationId = 'representation:Int:internal-value'
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
@@ -231,7 +244,7 @@ if (
 	echo "The external inspector accepted a call with a corrupted nominal receiver" >&2
 	exit 1
 fi
-if ! grep -Fq 'receiver input refers to missing representation \"representation:Counter:corrupted\"' "$invalid_call_receiver_log"; then
+if ! grep -Fq 'instance receiver outside the sealed nominal carrier family' "$invalid_call_receiver_log"; then
 	echo "The external inspector rejected the corrupted call receiver for an unexpected reason" >&2
 	cat "$invalid_call_receiver_log" >&2
 	exit 1
