@@ -1,5 +1,7 @@
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
@@ -36,6 +38,34 @@ class RuntimeRequirementLedgerFixture {
 		throw 'Missing runtime requirement "$id".';
 	}
 
+	static function exactStringRepresentation():OcamlRepresentationDecision {
+		return {
+			id: "representation:String:internal-value",
+			key: "String|internal-value",
+			programRevision: "program:fixture-a",
+			revision: "sha256:dd4135006802a036d2a3f27ec92d60af669c5f73d419c9525e2f3297bc2a8504",
+			semanticTypeId: "String",
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: "string",
+			nullPolicy: "runtime-sentinel",
+			identityPolicy: "primitive-value",
+			aliasingPolicy: "no-value-alias",
+			storageMutationPolicy: "immutable-binding",
+			valueMutationPolicy: "immutable-value",
+			boxingPolicy: "nullable-string-carrier",
+			implicitDefaultPolicy: "runtime-null-sentinel",
+			reason: "Fixture exact String carrier.",
+			proof: {
+				id: "nullable-string-runtime-sentinel-carrier-v1",
+				claim: "Fixture proof for the exact String null sentinel."
+			},
+			profileEligibility: ["metal", "portable"],
+			nominalTargetModuleName: null,
+			nominalTargetTypeName: null,
+			nominalLayoutRevision: null
+		};
+	}
+
 	static function main():Void {
 		final macHaxePath = ["", "Users", "alice", "haxe", "versions", "4.3.7", "std", "haxe", "Exception.hx"].join("/");
 		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(macHaxePath) == "haxe-stdlib/haxe/Exception.hx",
@@ -55,6 +85,8 @@ class RuntimeRequirementLedgerFixture {
 		});
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram("program:fixture-a");
+		final stringRepresentation = exactStringRepresentation();
+		ledger.recordRepresentationDecision(stringRepresentation);
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
 		ledger.recordPlacePlan("place:b:array-update", "place:b", source, "Int", [
 			"place:b:runtime:haxe-array-element-get",
@@ -73,7 +105,8 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FLOAT_BIT_CONVERSIONS, "haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat",
 			source, "HxFPHelper.i32ToFloat");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 12, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
+		assertTrue(requirements.length == 13,
+			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
@@ -83,6 +116,16 @@ class RuntimeRequirementLedgerFixture {
 			"the ledger should remove machine-local parent paths before retaining a source location");
 		assertTrue(placeRequirement.decisionId == "place:a:int-update", "the requirement should name the lowering decision that caused it");
 		assertTrue(placeRequirement.rootModules[0] == "HxInt", "Haxe Int addition should select the HxInt implementation root");
+		final stringRequirement = requirementById(requirements, "representation:String:internal-value:runtime:haxe-string-null-sentinel");
+		assertTrue(stringRequirement.sourceKind == OcamlRuntimeRequirementSourceKind.RepresentationDecision
+			&& stringRequirement.cause == OcamlRuntimeRequirementCause.RepresentationDecision,
+			"the exact String sentinel should identify its sealed representation as the cause");
+		assertTrue(stringRequirement.sourceId == stringRepresentation.id + "@" + stringRepresentation.revision,
+			"the String requirement should bind the exact representation revision");
+		assertTrue(stringRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType
+			&& stringRequirement.subject.id == "String",
+			"the String sentinel requirement should identify the Haxe type it supports");
+		assertTrue(stringRequirement.rootModules[0] == "HxString", "the exact String null sentinel should select the HxString implementation root");
 		final registryRequirement = requirementById(requirements, "compiler:generated:HxTypeRegistry:type-registry");
 		assertTrue(registryRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule
 			&& registryRequirement.subject.id == "HxTypeRegistry",
@@ -107,7 +150,7 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(floatBitsRequirement.subject.id.indexOf("HxFPHelper.i32ToFloat") >= 0,
 			"the floating-point bit-conversion boundary should name the checked target symbol");
 		assertTrue(floatBitsRequirement.rootModules[0] == "HxFPHelper", "Haxe floating-point bit conversions should select the HxFPHelper implementation root");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxFPHelper,HxInt,HxRuntime,HxStdio,HxType",
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxFPHelper,HxInt,HxRuntime,HxStdio,HxString,HxType",
 			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
@@ -123,6 +166,10 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordNativeBoundary("native-not-supported", "fixture.Native.call", source, "HxStdio.call"));
 		expectFailure("native module mismatch", "requires \"HxStdio\"",
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "fixture.Native.call", source, "OtherRuntime.call"));
+		final invalidStringRepresentation:Dynamic = Reflect.copy(stringRepresentation);
+		invalidStringRepresentation.carrierTypeId = "Obj.t";
+		expectFailure("invalid String representation", "does not match the sealed exact String null-sentinel contract",
+			() -> ledger.recordRepresentationDecision(cast invalidStringRepresentation));
 		expectFailure("subject/source mismatch", "does not match source kind", () -> ledger.record({
 			id: "invalid:subject",
 			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,

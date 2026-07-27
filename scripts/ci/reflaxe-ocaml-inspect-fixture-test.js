@@ -58,7 +58,7 @@ try {
 	assert.match(report.artifactManifest.sourceBundleRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.match(report.artifactManifest.artifactSetRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.strictEqual(report.artifactManifest.semanticRuntime.status, 'incomplete')
-	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v3')
+	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v4')
 	assert.match(report.artifactManifest.semanticRuntime.revision, sha256Revision)
 	assert.strictEqual(report.artifactManifest.nativeDependencies.status, 'incomplete')
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'reflaxe-framework' && owner.count > 0))
@@ -162,13 +162,14 @@ try {
 
 	const runtimeRequirementPath = path.join(tempRoot, 'out/ocaml_runtime_requirement_report.json')
 	const runtimeRequirements = JSON.parse(fs.readFileSync(runtimeRequirementPath, 'utf8'))
-	assert.strictEqual(runtimeRequirements.schemaVersion, 3)
+	assert.strictEqual(runtimeRequirements.schemaVersion, 4)
 	assert.strictEqual(runtimeRequirements.model, 'recorded-ocaml-runtime-requirements')
 	assert.strictEqual(runtimeRequirements.authorityStatus, 'partial')
 	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, [
 		'compiler-core-runtime',
 		'compiler-type-registry',
 		'declared-static-native-runtime-boundary',
+		'exact-string-null-sentinel-representation',
 		'typed-place-assignment-and-update'
 	])
 	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-recorded-requirement-audit-v2')
@@ -187,6 +188,7 @@ try {
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxType'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBacktrace'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxFPHelper'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxString'))
 	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
 	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
 	assert.deepStrictEqual([
@@ -195,7 +197,7 @@ try {
 	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
 	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots,
-		['HxAnon', 'HxBytes', 'HxEnum', 'HxString'])
+		['HxAnon', 'HxBytes', 'HxEnum'])
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)
@@ -221,6 +223,13 @@ try {
 	assert(registryRequirement)
 	assert.deepStrictEqual(registryRequirement.subject, {kind: 'generated-module', id: 'HxTypeRegistry'})
 	assert.deepStrictEqual(registryRequirement.rootModules, ['HxType'])
+	const stringRequirement = runtimeRequirements.requirements.find(
+		requirement => requirement.semanticCapability === 'haxe-string-null-sentinel')
+	assert(stringRequirement)
+	assert.strictEqual(stringRequirement.sourceKind, 'representation-decision')
+	assert.strictEqual(stringRequirement.cause, 'representation-decision')
+	assert.deepStrictEqual(stringRequirement.subject, {kind: 'haxe-type', id: 'String'})
+	assert.deepStrictEqual(stringRequirement.rootModules, ['HxString'])
 	const stdioRequirement = runtimeRequirements.requirements.find(
 		requirement => requirement.semanticCapability === 'haxe-standard-io')
 	assert(stdioRequirement)
@@ -374,6 +383,18 @@ try {
 	const missingRequirementReport = JSON.parse(missingRequirement.stdout)
 	assert.strictEqual(missingRequirementReport.lowering.status, 'invalid')
 	assert(missingRequirementReport.lowering.message.includes(`refers to missing runtime requirement "${removedRequirement.id}"`))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const corruptStringRequirementValue = JSON.parse(loweringBytes)
+	const corruptStringRequirement = corruptStringRequirementValue.runtimeRequirements.find(
+		requirement => requirement.semanticCapability === 'haxe-string-null-sentinel')
+	assert(corruptStringRequirement)
+	corruptStringRequirement.rootModules = ['HxInt']
+	fs.writeFileSync(loweringPath, JSON.stringify(corruptStringRequirementValue, null, 2) + '\n')
+	const corruptStringRequirementResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(corruptStringRequirementResult.status, 1)
+	const corruptStringRequirementReport = JSON.parse(corruptStringRequirementResult.stdout)
+	assert.strictEqual(corruptStringRequirementReport.lowering.status, 'invalid')
+	assert(corruptStringRequirementReport.lowering.message.includes('does not match the sealed exact String dependency'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const missingUnsafeValue = JSON.parse(loweringBytes)
 	const removedUnsafe = missingUnsafeValue.unsafeOperations.pop()

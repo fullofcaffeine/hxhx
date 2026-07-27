@@ -56,7 +56,7 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 class OcamlRuntimeRequirementReportWriter {
 	public static inline final FILE_NAME = "ocaml_runtime_requirement_report.json";
 	public static inline final MODEL = "recorded-ocaml-runtime-requirements";
-	public static inline final SCHEMA_VERSION = 3;
+	public static inline final SCHEMA_VERSION = 4;
 
 	/** Resolves, cross-checks, and writes the current partial requirement ledger. **/
 	public static function write(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, profile:String, allowTooling:Bool,
@@ -120,6 +120,7 @@ class OcamlRuntimeRequirementReportWriter {
 				"compiler-core-runtime",
 				"compiler-type-registry",
 				"declared-static-native-runtime-boundary",
+				"exact-string-null-sentinel-representation",
 				"typed-place-assignment-and-update"
 			],
 			selectionAuthority: selectionAuthority,
@@ -140,7 +141,7 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, and typed assignment/update lowering. Compiler observations contain module names rather than individual use sites, so overlap with a recorded root does not prove that every use of that module is explained."
+			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, the exact String null-sentinel representation, and typed assignment/update lowering. Compiler observations contain module names rather than individual use sites, so the HxString root proves only the selected sentinel carrier dependency—not that every HxString use is explained."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,

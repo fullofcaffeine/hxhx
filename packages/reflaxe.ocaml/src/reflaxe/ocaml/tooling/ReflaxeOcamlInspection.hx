@@ -348,8 +348,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 38) {
-						throw 'Unsupported lowering report schema $version; expected 38.';
+					if (version != 39) {
+						throw 'Unsupported lowering report schema $version; expected 39.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -370,7 +370,7 @@ class ReflaxeOcamlInspection {
 					final controls = inspectControls(value, representation, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation);
 					{
 						status: "present",
 						required: required,
@@ -1829,19 +1829,19 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
-	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>):Int {
+	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
 		if (requirementValues.length != expectedCount) {
 			throw 'Lowering report runtimeRequirementCount is $expectedCount but runtimeRequirements contains ${requirementValues.length} entries.';
 		}
-		final requirements:Map<String, Bool> = [];
+		final requirements:Map<String, Dynamic> = [];
 		for (requirement in requirementValues) {
 			final id = requiredString(requirement, "id");
 			if (requirements.exists(id))
 				throw 'Lowering report contains duplicate runtime requirement "$id".';
-			requirements.set(id, true);
+			requirements.set(id, requirement);
 			requiredString(requirement, "sourceKind");
 			requiredString(requirement, "sourceId");
 			final source = requiredObject(requirement, "source");
@@ -1874,6 +1874,39 @@ class ReflaxeOcamlInspection {
 					throw 'Lowered plan "${plan.id}" refers to missing runtime requirement "$requirementId".';
 				referenced.set(requirementId, true);
 			}
+		}
+		for (decision in representation.decisions) {
+			final selectsExactStringSentinel = decision.boxingPolicy == "nullable-string-carrier"
+				|| decision.proofId == "nullable-string-runtime-sentinel-carrier-v1";
+			if (!selectsExactStringSentinel)
+				continue;
+			if (decision.semanticTypeId != "String"
+				|| decision.carrierTypeId != "string"
+				|| decision.nullPolicy != "runtime-sentinel"
+				|| decision.boxingPolicy != "nullable-string-carrier"
+				|| decision.implicitDefaultPolicy != "runtime-null-sentinel"
+				|| decision.proofId != "nullable-string-runtime-sentinel-carrier-v1") {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
+			}
+			final requirementId = decision.id + ":runtime:haxe-string-null-sentinel";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Representation decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "representation-decision"
+				|| requiredString(requirement, "sourceId") != decision.id + "@" + decision.revision
+				|| requiredString(requirement, "semanticCapability") != "haxe-string-null-sentinel"
+				|| requiredString(requirement, "cause") != "representation-decision"
+				|| requiredString(requirement, "decisionId") != decision.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != "String"
+				|| requiredString(requirement, "implementationFeature") != "haxe-string-null-sentinel-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxString") {
+				throw 'Representation decision "${decision.id}" runtime requirement "$requirementId" does not match the sealed exact String dependency.';
+			}
+			referenced.set(requirementId, true);
 		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))

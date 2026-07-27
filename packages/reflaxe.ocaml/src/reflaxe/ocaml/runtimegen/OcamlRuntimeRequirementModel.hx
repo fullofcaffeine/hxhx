@@ -6,6 +6,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 /** Where the compiler learned that runtime support is required. **/
 enum abstract OcamlRuntimeRequirementSourceKind(String) from String to String {
 	final HaxeExpression = "haxe-expression";
+	final RepresentationDecision = "representation-decision";
 	final CompilerInfrastructure = "compiler-infrastructure";
 	final Configuration = "configuration";
 	final NativeBoundary = "native-boundary";

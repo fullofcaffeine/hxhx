@@ -5,6 +5,10 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -23,6 +27,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final INT32_ADD = "haxe-int32-add";
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
+	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
@@ -88,6 +93,61 @@ class OcamlRuntimeRequirementLedger {
 				explanation: implementation.explanation
 			});
 		}
+	}
+
+	/**
+		Returns the closed runtime requirements implied by one sealed program
+		representation.
+
+		The first admitted family is exact Haxe `String`. Its OCaml `string`
+		carrier can preserve Haxe null only through the canonical value owned by
+		`HxString`, so every selected domain records that dependency before
+		packaging. Other representation families remain outside this slice.
+	**/
+	public static function requirementsForRepresentationDecision(decision:OcamlRepresentationDecision):Array<OcamlRuntimeRequirement> {
+		if (decision == null)
+			throw "OCaml runtime requirement representation decision must not be null.";
+		final selectsExactStringSentinel = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			|| decision.proof.id == "nullable-string-runtime-sentinel-carrier-v1";
+		if (!selectsExactStringSentinel)
+			return [];
+		if (decision.semanticTypeId != "String"
+			|| decision.carrierTypeId != "string"
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel
+			|| decision.proof.id != "nullable-string-runtime-sentinel-carrier-v1") {
+			throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
+		}
+		return [
+			normalize({
+				id: decision.id + ":runtime:" + STRING_NULL_SENTINEL,
+				sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+				sourceId: decision.id + "@" + decision.revision,
+				source: {
+					file: "compiler-decision/representation/" + decision.domain,
+					min: 0,
+					max: 0
+				},
+				semanticCapability: STRING_NULL_SENTINEL,
+				cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "String"
+				},
+				implementationFeature: "haxe-string-null-sentinel-v1",
+				rootModules: ["HxString"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed exact Haxe String carrier uses HxString.hx_null_string to preserve the canonical Haxe null sentinel; this requirement does not claim ownership of other HxString operations."
+			})
+		];
+	}
+
+	/** Records every runtime dependency implied by one sealed representation. **/
+	public function recordRepresentationDecision(decision:OcamlRepresentationDecision):Void {
+		for (requirement in requirementsForRepresentationDecision(decision))
+			record(requirement);
 	}
 
 	/** Records one helper required by compiler-generated output or packaging policy. **/
@@ -352,6 +412,7 @@ class OcamlRuntimeRequirementLedger {
 			id:String):OcamlRuntimeRequirementSubjectKind {
 		final valid = switch (sourceKind) {
 			case HaxeExpression: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
+			case RepresentationDecision: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
 			case CompilerInfrastructure: kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule || kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
 			case Configuration: kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
 			case NativeBoundary: kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary;

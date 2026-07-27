@@ -25,6 +25,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingP
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
 /**
@@ -36,7 +37,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 38;
+	public static inline final SCHEMA_VERSION = 39;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -266,6 +267,16 @@ class OcamlLoweringReportWriter {
 			requirementById.set(requirement.id, requirement);
 		}
 		final includedRequirementIds:Map<String, Bool> = [];
+		for (representation in sortedRepresentations) {
+			for (expected in OcamlRuntimeRequirementLedger.requirementsForRepresentationDecision(representation)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Program representation "${representation.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Program representation "${representation.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (entry in sorted) {
 			for (requirementId in entry.runtimeRequirementIds) {
 				if (!requirementById.exists(requirementId))

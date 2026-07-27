@@ -2169,6 +2169,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Keep a second check before artifact sealing in case a future Reflaxe
 		// lifecycle adds output-completion work after generateFiles().
 		functionPlanRegistry.validateCallGraph();
+		final representationDecisions = representationRegistry.decisions();
+		for (decision in representationDecisions)
+			ctx.recordRepresentationRuntimeRequirements(decision);
 		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
@@ -2177,9 +2180,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		function sealArtifacts():Void {
 			artifacts.seal({
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "recorded-runtime-requirements-partial-v3",
+				model: "recorded-runtime-requirements-partial-v4",
 				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records why typed assignments, updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
+				message: "The compiler records why the exact String null-sentinel representation, typed assignments and updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",
@@ -2193,7 +2196,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
-			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationDecisions,
 				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
 				functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
 				functionPlanRegistry.controlCatchChains(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);

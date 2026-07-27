@@ -511,13 +511,14 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"portable report includes full-runtime reason");
-		assertTrue(portableRequirementReport.schemaVersion == 3, "portable requirement report schema version");
+		assertTrue(portableRequirementReport.schemaVersion == 4, "portable requirement report schema version");
 		assertTrue(portableRequirementReport.model == "recorded-ocaml-runtime-requirements", "portable requirement report model");
 		assertTrue(portableRequirementReport.authorityStatus == "partial", "portable requirement report authority status");
 		assertArrayEquals([
 			"compiler-core-runtime",
 			"compiler-type-registry",
 			"declared-static-native-runtime-boundary",
+			"exact-string-null-sentinel-representation",
 			"typed-place-assignment-and-update"
 		], portableRequirementReport.coveredFamilies,
 			"portable requirement report covered families");
@@ -533,6 +534,12 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(registryRequirement.subject.kind == "generated-module" && registryRequirement.subject.id == "HxTypeRegistry",
 			"type-registry support should identify the generated module that uses it");
 		assertContains("\n" + registryRequirement.rootModules.join("\n") + "\n", "\nHxType\n", "type-registry requirement should select HxType");
+		final stringRequirement = requirementByCapability(portableRequirementReport, "haxe-string-null-sentinel");
+		assertTrue(stringRequirement.sourceKind == "representation-decision" && stringRequirement.cause == "representation-decision",
+			"the exact String sentinel should identify its sealed representation decision");
+		assertTrue(stringRequirement.subject.kind == "haxe-type" && stringRequirement.subject.id == "String",
+			"the String sentinel should identify the Haxe type it supports");
+		assertContains("\n" + stringRequirement.rootModules.join("\n") + "\n", "\nHxString\n", "the exact String null sentinel should select HxString");
 		final stdioRequirement = requirementByCapability(portableRequirementReport, "haxe-standard-io");
 		assertTrue(stdioRequirement.sourceKind == "native-boundary" && stdioRequirement.cause == "native-boundary",
 			"standard I/O support should identify a declared native boundary");
@@ -611,6 +618,8 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxBacktrace should overlap its declared typed extern requirement root");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxFPHelper\n",
 			"compiler-observed HxFPHelper should overlap its declared typed extern requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxString\n",
+			"compiler-observed HxString should overlap the exact String sentinel representation requirement root");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
@@ -619,8 +628,8 @@ class M6RuntimeCopierIntegrationTest {
 			"selective packaging should retain HxBacktrace because of the declared native boundary");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxFPHelper").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxFPHelper because of the declared native boundary");
-		assertArrayEquals(["HxAnon", "HxBytes", "HxEnum", "HxString"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
-			"partial coverage should keep the four compiler-observed modules with no recorded root visible");
+		assertArrayEquals(["HxAnon", "HxBytes", "HxEnum"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
+			"partial coverage should keep the three compiler-observed modules with no recorded root visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 
