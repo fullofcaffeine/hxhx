@@ -17,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -30,6 +31,25 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
+	public static inline final SCHEMA_VERSION = 24;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11";
+
+	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
+		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
+			+ (decision.nominalLayoutRevision == null ? 0 : 1);
+		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier;
+		if (isNominal != (nominalCount == 3))
+			throw 'Program representation "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
+		if (!isNominal)
+			return;
+		if (decision.nominalTargetModuleName.length == 0
+			|| decision.nominalTargetTypeName.length == 0
+			|| decision.carrierTypeId != decision.nominalTargetTypeName
+			|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
+			|| decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
+			throw 'Program representation "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+	}
 
 	static function requireRepresentation(byId:Map<String, OcamlRepresentationDecision>, id:String, semanticTypeId:String, carrierTypeId:String,
 			domain:OcamlRepresentationDomain, owner:String):Void {
@@ -60,6 +80,7 @@ class OcamlLoweringReportWriter {
 		for (representation in sortedRepresentations) {
 			if (representationById.exists(representation.id))
 				throw 'Program representation identity "${representation.id}" occurs more than once.';
+			validateNominalRepresentation(representation);
 			representationById.set(representation.id, representation);
 		}
 		for (entry in sorted) {
@@ -79,6 +100,9 @@ class OcamlLoweringReportWriter {
 			if (entry.place.kind == OcamlLoweredPlaceKind.ArrayElement) {
 				if (receiverRepresentationId == null)
 					throw 'Lowered array place plan "${entry.id}" has no receiver representation.';
+				requireRepresentation(representationById, receiverRepresentationId, entry.place.receiverSemanticTypeId, entry.place.receiverCarrierTypeId,
+					OcamlRepresentationDomain.InternalValue, 'Lowered place plan "${entry.id}" receiver');
+			} else if (receiverRepresentationId != null && StringTools.startsWith(receiverRepresentationId, "representation:")) {
 				requireRepresentation(representationById, receiverRepresentationId, entry.place.receiverSemanticTypeId, entry.place.receiverCarrierTypeId,
 					OcamlRepresentationDomain.InternalValue, 'Lowered place plan "${entry.id}" receiver');
 			}
@@ -178,10 +202,10 @@ class OcamlLoweringReportWriter {
 			callableBoundaries: sortedCallableBoundaries
 		});
 		final report = {
-			schemaVersion: 23,
+			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
-			representationScope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
+			representationScope: REPRESENTATION_SCOPE,
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,

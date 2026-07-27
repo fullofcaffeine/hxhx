@@ -38,8 +38,8 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 23
-	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
+if (report.schemaVersion !== 24
+	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
 	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {

@@ -16,6 +16,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationProof;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassDecision;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphicClassField;
 
 /**
 	Owns the OCaml carrier selected for each admitted Haxe type and use domain.
@@ -30,11 +32,13 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	carrier across internal values, local cells, and direct fields.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v10";
+	public static inline final MODEL_REVISION = "ocaml-representation-v11";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
 	final decisionsById:StringMap<OcamlRepresentationDecision> = new StringMap();
+	final monomorphicClassesBySemanticType:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
+	final monomorphicClassesById:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 
 	public function new() {}
 
@@ -45,6 +49,173 @@ class OcamlRepresentationRegistry {
 		currentProgramRevision = programRevision;
 		decisionsByKey.clear();
 		decisionsById.clear();
+		monomorphicClassesBySemanticType.clear();
+		monomorphicClassesById.clear();
+	}
+
+	/**
+		Selects an already admitted direct field representation.
+
+		Returning null is deliberate: a monomorphic class is admitted only when
+		every instance field already has an independently sealed carrier.
+	**/
+	public function selectAdmittedInstanceField(type:Type):Null<OcamlRepresentationDecision> {
+		if (isExactInt(type))
+			return selectExactInt(OcamlRepresentationDomain.InstanceField);
+		if (isExactBool(type))
+			return selectExactBool(OcamlRepresentationDomain.InstanceField);
+		if (isExactNullInt(type))
+			return selectExactNullInt(OcamlRepresentationDomain.InstanceField);
+		if (isExactNullBool(type))
+			return selectExactNullBool(OcamlRepresentationDomain.InstanceField);
+		if (isExactString(type))
+			return selectExactString(OcamlRepresentationDomain.InstanceField);
+		return null;
+	}
+
+	/** Registers one exact monomorphic class layout before function planning. */
+	public function registerMonomorphicClass(selection:{
+		final semanticTypeId:String;
+		final sourceModuleId:String;
+		final sourceTypeName:String;
+		final targetModuleName:String;
+		final targetTypeName:String;
+		final fields:Array<OcamlMonomorphicClassField>;
+	}):OcamlMonomorphicClassDecision {
+		final programRevision = requireProgramRevision();
+		if (selection.semanticTypeId.length == 0
+			|| selection.sourceModuleId.length == 0
+			|| selection.sourceTypeName.length == 0
+			|| selection.targetModuleName.length == 0
+			|| selection.targetTypeName.length == 0) {
+			throw "reflaxe.ocaml [ocaml-representation:invalid-class-layout]: class and nominal carrier identities must be non-empty";
+		}
+		final fields = selection.fields.map(copyMonomorphicField);
+		fields.sort((left, right) -> left.declarationOrder - right.declarationOrder);
+		for (index in 0...fields.length) {
+			final field = fields[index];
+			if (field.declarationOrder != index || field.sourceFieldName.length == 0 || field.targetFieldName.length == 0
+				|| field.semanticTypeId.length == 0 || field.carrierTypeId.length == 0 || field.representationId.length == 0) {
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-class-layout]: ${selection.semanticTypeId} has an invalid field at declaration order $index';
+			}
+			final representation = require(field.representationId, programRevision);
+			if (representation.semanticTypeId != field.semanticTypeId
+				|| representation.carrierTypeId != field.carrierTypeId
+				|| representation.domain != OcamlRepresentationDomain.InstanceField) {
+				throw 'reflaxe.ocaml [ocaml-representation:class-field-mismatch]: ${selection.semanticTypeId}.${field.sourceFieldName} expects ${field.semanticTypeId} -> ${field.carrierTypeId}, but ${representation.id} selects ${representation.semanticTypeId} -> ${representation.carrierTypeId} in ${representation.domain}';
+			}
+		}
+		final canonicalCarrierTypeId = selection.targetModuleName + "." + selection.targetTypeName;
+		final layoutFingerprint = [
+			MODEL_REVISION,
+			selection.semanticTypeId,
+			selection.sourceModuleId,
+			selection.sourceTypeName,
+			selection.targetModuleName,
+			selection.targetTypeName,
+			canonicalCarrierTypeId,
+			"__hx_type|Obj.t"
+		].concat(fields.map(field -> [
+			Std.string(field.declarationOrder),
+			field.sourceFieldName,
+			field.targetFieldName,
+			field.semanticTypeId,
+			field.carrierTypeId,
+			field.representationId
+		].join("|"))).join("\n");
+		final revision = "sha256:" + Sha256.encode(layoutFingerprint);
+		final id = "class-layout:" + selection.semanticTypeId;
+		final decision:OcamlMonomorphicClassDecision = {
+			id: id,
+			key: selection.semanticTypeId,
+			programRevision: programRevision,
+			revision: revision,
+			semanticTypeId: selection.semanticTypeId,
+			sourceModuleId: selection.sourceModuleId,
+			sourceTypeName: selection.sourceTypeName,
+			targetModuleName: selection.targetModuleName,
+			targetTypeName: selection.targetTypeName,
+			canonicalCarrierTypeId: canonicalCarrierTypeId,
+			fields: fields,
+			proofId: "whole-program-monomorphic-nominal-record-v1",
+			proofClaim: "The complete typed program contains one concrete non-extern, non-generic class with no base class, subclass, interface, or dynamic method. Its exact declared fields already have sealed carriers, so constructor results and proven same-class locals can share one nominal OCaml record payload without a hierarchy or interface cast."
+		};
+		final existing = monomorphicClassesBySemanticType.get(selection.semanticTypeId);
+		if (existing != null) {
+			if (existing.revision != decision.revision)
+				throw 'reflaxe.ocaml [ocaml-representation:conflicting-class-layout]: ${selection.semanticTypeId} was already assigned ${existing.revision}, so it cannot also use ${decision.revision}';
+			selectMonomorphicClassDecision(existing, OcamlRepresentationDomain.InternalValue);
+			return copyMonomorphicClass(existing);
+		}
+		if (monomorphicClassesById.exists(id))
+			throw 'reflaxe.ocaml [ocaml-representation:duplicate-class-layout]: class layout identity "$id" belongs to more than one semantic type';
+		monomorphicClassesBySemanticType.set(selection.semanticTypeId, decision);
+		monomorphicClassesById.set(id, decision);
+		selectMonomorphicClassDecision(decision, OcamlRepresentationDomain.InternalValue);
+		return copyMonomorphicClass(decision);
+	}
+
+	/** Returns the admitted exact class layout for a direct Haxe instance type. */
+	public function monomorphicClassForType(type:Type):Null<OcamlMonomorphicClassDecision> {
+		final semanticTypeId = monomorphicClassSemanticTypeId(type);
+		if (semanticTypeId == null)
+			return null;
+		final decision = monomorphicClassesBySemanticType.get(semanticTypeId);
+		return decision == null ? null : copyMonomorphicClass(decision);
+	}
+
+	/** Returns the admitted exact class layout by canonical Haxe semantic type. */
+	public function monomorphicClass(semanticTypeId:String):Null<OcamlMonomorphicClassDecision> {
+		final decision = monomorphicClassesBySemanticType.get(semanticTypeId);
+		return decision == null ? null : copyMonomorphicClass(decision);
+	}
+
+	/**
+		Selects the nominal record carrier for one proven monomorphic class value.
+
+		The first slice admits immutable internal bindings only. Mutable cells,
+		captures, fields containing class values, arrays, calls, and external
+		boundaries need separate occurrence or conversion proofs.
+	**/
+	public function selectMonomorphicClassValue(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
+		final layout = monomorphicClassForType(type);
+		if (layout == null)
+			return null;
+		return selectMonomorphicClassDecision(layout, domain);
+	}
+
+	/** Resolves the preplanned internal representation for one admitted class. */
+	public function monomorphicClassValue(semanticTypeId:String):Null<OcamlRepresentationDecision> {
+		if (!monomorphicClassesBySemanticType.exists(semanticTypeId))
+			return null;
+		final decision = decisionsByKey.get(decisionKey(semanticTypeId, OcamlRepresentationDomain.InternalValue));
+		return decision == null ? null : copyDecision(decision);
+	}
+
+	function selectMonomorphicClassDecision(layout:OcamlMonomorphicClassDecision, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		if (domain != OcamlRepresentationDomain.InternalValue)
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-class-domain]: ${layout.semanticTypeId} is admitted only for immutable internal bindings, not $domain';
+		return register({
+			semanticTypeId: layout.semanticTypeId,
+			domain: domain,
+			carrierTypeId: layout.targetTypeName,
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: 'The exact whole-program-monomorphic class ${layout.semanticTypeId} uses nominal record ${layout.canonicalCarrierTypeId}; the carrier identity stores ${layout.targetTypeName} plus its owning target module separately so syntax can qualify it correctly. This decision admits only constructor-produced and already-proven same-class internal values.',
+			proof: {
+				id: layout.proofId + ":" + layout.revision,
+				claim: layout.proofClaim
+			},
+			profileEligibility: ["metal", "portable"],
+			nominalTargetModuleName: layout.targetModuleName,
+			nominalTargetTypeName: layout.targetTypeName,
+			nominalLayoutRevision: layout.revision
+		});
 	}
 
 	/** Returns whether a Haxe type is the exact, non-null built-in `Int`. */
@@ -414,7 +585,10 @@ class OcamlRepresentationRegistry {
 			implicitDefaultPolicy: canonical.implicitDefaultPolicy,
 			reason: canonical.reason,
 			proof: canonical.proof,
-			profileEligibility: canonical.profileEligibility
+			profileEligibility: canonical.profileEligibility,
+			nominalTargetModuleName: canonical.nominalTargetModuleName,
+			nominalTargetTypeName: canonical.nominalTargetTypeName,
+			nominalLayoutRevision: canonical.nominalLayoutRevision
 		};
 		final existing = decisionsByKey.get(key);
 		if (existing != null) {
@@ -559,6 +733,20 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	static function monomorphicClassSemanticTypeId(type:Type):Null<String> {
+		return switch (type) {
+			case TInst(classRef, parameters):
+				final classType = classRef.get();
+				if (parameters.length > 0 || classType.params.length > 0) {
+					null;
+				} else {
+					(classType.pack ?? []).concat([classType.name]).join(".");
+				}
+			case _:
+				null;
+		}
+	}
+
 	static function requireNullablePrimitiveDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
 		switch (domain) {
 			case InternalValue, MutableLocalStorage, CapturedLocalStorage, InstanceField, StaticField:
@@ -580,6 +768,15 @@ class OcamlRepresentationRegistry {
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs a named proof and claim";
 		if (selection.profileEligibility.length == 0)
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: every decision needs at least one eligible profile";
+		final nominalFieldCount = (selection.nominalTargetModuleName == null ? 0 : 1) + (selection.nominalTargetTypeName == null ? 0 : 1)
+			+ (selection.nominalLayoutRevision == null ? 0 : 1);
+		if (nominalFieldCount != 0 && nominalFieldCount != 3)
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal module, type, and layout revision must be supplied together";
+		if (nominalFieldCount == 3
+			&& (selection.nominalTargetModuleName.length == 0
+				|| selection.nominalTargetTypeName.length == 0
+				|| !StringTools.startsWith(selection.nominalLayoutRevision, "sha256:")))
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal carrier metadata is incomplete or has an invalid layout revision";
 	}
 
 	static function canonicalSelection(selection:OcamlRepresentationSelection):OcamlRepresentationSelection {
@@ -606,7 +803,10 @@ class OcamlRepresentationRegistry {
 				id: selection.proof.id,
 				claim: selection.proof.claim
 			},
-			profileEligibility: uniqueProfiles
+			profileEligibility: uniqueProfiles,
+			nominalTargetModuleName: selection.nominalTargetModuleName,
+			nominalTargetTypeName: selection.nominalTargetTypeName,
+			nominalLayoutRevision: selection.nominalLayoutRevision
 		};
 	}
 
@@ -626,7 +826,10 @@ class OcamlRepresentationRegistry {
 			selection.reason,
 			selection.proof.id,
 			selection.proof.claim,
-			selection.profileEligibility.join(",")
+			selection.profileEligibility.join(","),
+			selection.nominalTargetModuleName ?? "",
+			selection.nominalTargetTypeName ?? "",
+			selection.nominalLayoutRevision ?? ""
 		].join("\n");
 	}
 
@@ -651,7 +854,39 @@ class OcamlRepresentationRegistry {
 				id: decision.proof.id,
 				claim: decision.proof.claim
 			},
-			profileEligibility: decision.profileEligibility.copy()
+			profileEligibility: decision.profileEligibility.copy(),
+			nominalTargetModuleName: decision.nominalTargetModuleName,
+			nominalTargetTypeName: decision.nominalTargetTypeName,
+			nominalLayoutRevision: decision.nominalLayoutRevision
+		};
+	}
+
+	static function copyMonomorphicField(field:OcamlMonomorphicClassField):OcamlMonomorphicClassField {
+		return {
+			sourceFieldName: field.sourceFieldName,
+			targetFieldName: field.targetFieldName,
+			semanticTypeId: field.semanticTypeId,
+			carrierTypeId: field.carrierTypeId,
+			representationId: field.representationId,
+			declarationOrder: field.declarationOrder
+		};
+	}
+
+	static function copyMonomorphicClass(decision:OcamlMonomorphicClassDecision):OcamlMonomorphicClassDecision {
+		return {
+			id: decision.id,
+			key: decision.key,
+			programRevision: decision.programRevision,
+			revision: decision.revision,
+			semanticTypeId: decision.semanticTypeId,
+			sourceModuleId: decision.sourceModuleId,
+			sourceTypeName: decision.sourceTypeName,
+			targetModuleName: decision.targetModuleName,
+			targetTypeName: decision.targetTypeName,
+			canonicalCarrierTypeId: decision.canonicalCarrierTypeId,
+			fields: decision.fields.map(copyMonomorphicField),
+			proofId: decision.proofId,
+			proofClaim: decision.proofClaim
 		};
 	}
 }

@@ -97,7 +97,7 @@ class OcamlFunctionPlanSealer {
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, staticStorage);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, staticStorage);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 
@@ -198,6 +198,8 @@ class OcamlFunctionPlanSealer {
 			case Simple(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticSimple(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -208,6 +210,8 @@ class OcamlFunctionPlanSealer {
 			case Compound(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticCompound(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -218,6 +222,8 @@ class OcamlFunctionPlanSealer {
 			case Update(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticUpdate(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -226,6 +232,13 @@ class OcamlFunctionPlanSealer {
 					plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
 					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
 		}
+	}
+
+	function validateAdmittedInstanceReceiver(representationId:String, semanticTypeId:String, carrierTypeId:String, programRevision:String,
+			position:Position):Void {
+		if (!StringTools.startsWith(representationId, "representation:"))
+			return;
+		validateRepresentationReference(representationId, semanticTypeId, carrierTypeId, OcamlRepresentationDomain.InternalValue, programRevision, position);
 	}
 
 	function validateArrayRepresentationReferences(representationId:String, semanticTypeId:String, carrierTypeId:String, receiverRepresentationId:String,

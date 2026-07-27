@@ -54,6 +54,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -188,6 +189,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	#if macro
 	static var haxeStdRoots:Null<Array<String>> = null;
+	static var reflaxeOcamlOwnedRoots:Null<Array<String>> = null;
 
 	static function normalizePath(p:String):String {
 		if (p == null)
@@ -229,6 +231,38 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		return false;
 	}
+
+	static function detectReflaxeOcamlOwnedRoots():Array<String> {
+		if (reflaxeOcamlOwnedRoots != null)
+			return reflaxeOcamlOwnedRoots;
+		final compilerPath = normalizePath(haxe.macro.Context.resolvePath("reflaxe/ocaml/OcamlCompiler.hx"));
+		final suffix = "src/reflaxe/ocaml/OcamlCompiler.hx/";
+		if (!StringTools.endsWith(compilerPath, suffix))
+			throw 'reflaxe.ocaml [ocaml-representation:package-root]: cannot derive the package root from "$compilerPath"';
+		final packageRoot = compilerPath.substr(0, compilerPath.length - suffix.length);
+		reflaxeOcamlOwnedRoots = [packageRoot + "src/", packageRoot + "std/"];
+		return reflaxeOcamlOwnedRoots;
+	}
+
+	/**
+		Returns whether a declaration belongs to the target implementation itself.
+
+		The first nominal carrier slice is for application classes. Target
+		compiler and target-stdlib classes retain their existing representation
+		until a separate runtime-facing contract admits them.
+	**/
+	static function isPosInReflaxeOcaml(pos:haxe.macro.Expr.Position):Bool {
+		final info = haxe.macro.Context.getPosInfos(pos);
+		var file = info.file;
+		if (!Path.isAbsolute(file))
+			file = Path.join([Sys.getCwd(), file]);
+		final normalizedFile = normalizePath(file);
+		for (root in detectReflaxeOcamlOwnedRoots()) {
+			if (StringTools.startsWith(normalizedFile, root))
+				return true;
+		}
+		return false;
+	}
 	#end
 
 	public function new() {
@@ -256,6 +290,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.beginRuntimeRequirementProgram(revision.id);
 		#if macro
 		try {
+			OcamlMonomorphicClassPlanner.plan(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, ctx, representationRegistry,
+				classType -> !isPosInHaxeStd(classType.pos) && !isPosInReflaxeOcaml(classType.pos));
 			planCallableDeclarations(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, revision.id);
 			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
 		} catch (error:Dynamic) {
@@ -986,6 +1022,43 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return represented == null ? ocamlTypeExprFromHaxeType(type) : represented.carrierType;
 	}
 
+	/** Validates an admitted class record against its sealed nominal layout. */
+	function validateMonomorphicClassLayout(classType:ClassType, instanceTypeName:String, typeFields:Array<OcamlTypeRecordField>):Void {
+		final semanticTypeId = (classType.pack ?? []).concat([classType.name]).join(".");
+		final decision = representationRegistry.monomorphicClass(semanticTypeId);
+		if (decision == null)
+			return;
+		final targetModuleName = ctx.ocamlModuleNameForModuleId(classType.module);
+		if (decision.sourceModuleId != classType.module
+			|| decision.sourceTypeName != classType.name
+			|| decision.targetModuleName != targetModuleName
+			|| decision.targetTypeName != instanceTypeName
+			|| decision.canonicalCarrierTypeId != targetModuleName + "." + instanceTypeName) {
+			throw 'reflaxe.ocaml [ocaml-representation:class-layout-owner-mismatch]: $semanticTypeId no longer matches sealed layout ${decision.id}';
+		}
+		if (typeFields.length != decision.fields.length + 1
+			|| typeFields[0].name != "__hx_type"
+			|| printer.printType(typeFields[0].typ) != "Obj.t")
+			throw 'reflaxe.ocaml [ocaml-representation:class-layout-shape-mismatch]: $semanticTypeId no longer has the sealed runtime-header and field count';
+		for (index in 0...decision.fields.length) {
+			final planned = decision.fields[index];
+			final emitted = typeFields[index + 1];
+			final actualCarrier = printer.printType(emitted.typ);
+			if (planned.declarationOrder != index
+				|| planned.targetFieldName != emitted.name
+				|| planned.carrierTypeId != actualCarrier
+				|| !emitted.isMutable) {
+				throw 'reflaxe.ocaml [ocaml-representation:class-layout-field-mismatch]: $semanticTypeId field $index expected ${planned.targetFieldName}:${planned.carrierTypeId}, but emission selected ${emitted.name}:$actualCarrier';
+			}
+			final fieldRepresentation = representationRegistry.require(planned.representationId, decision.programRevision);
+			if (fieldRepresentation.semanticTypeId != planned.semanticTypeId
+				|| fieldRepresentation.carrierTypeId != planned.carrierTypeId
+				|| fieldRepresentation.domain != OcamlRepresentationDomain.InstanceField) {
+				throw 'reflaxe.ocaml [ocaml-representation:class-layout-field-representation-mismatch]: $semanticTypeId.${planned.sourceFieldName} no longer matches ${planned.representationId}';
+			}
+		}
+	}
+
 	/** Returns one instance field's selected implicit default or the unmigrated default mapper. */
 	function instanceFieldDefault(type:Type):OcamlExpr {
 		final represented = representedInstanceField(type);
@@ -1591,6 +1664,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				params: [],
 				kind: OcamlTypeDeclKind.Record(typeFields)
 			};
+			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
 			items.push(OcamlModuleItem.IType([typeDecl], false));
 
 			// create: allocate record, run ctor body, return self

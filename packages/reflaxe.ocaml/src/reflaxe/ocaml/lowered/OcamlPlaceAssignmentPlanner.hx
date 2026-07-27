@@ -33,6 +33,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 
 /** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
@@ -40,14 +41,16 @@ class OcamlPlaceAssignmentPlanner {
 	final currentModuleId:String;
 	final currentTypeName:String;
 	final representations:OcamlRepresentationRegistry;
+	final localRepresentations:OcamlLocalRepresentationPlan;
 	final staticStorage:OcamlStaticStoragePlan;
 
 	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry,
-			staticStorage:OcamlStaticStoragePlan) {
+			localRepresentations:OcamlLocalRepresentationPlan, staticStorage:OcamlStaticStoragePlan) {
 		this.context = context;
 		this.currentModuleId = currentModuleId;
 		this.currentTypeName = currentTypeName;
 		this.representations = representations;
+		this.localRepresentations = localRepresentations;
 		this.staticStorage = staticStorage;
 	}
 
@@ -119,6 +122,25 @@ class OcamlPlaceAssignmentPlanner {
 				}
 				if (receiverClass == null)
 					return null;
+				final receiverLayout = representations.monomorphicClassForType(receiver.t);
+				final receiverRepresentation = receiverLayout == null ? null : representations.monomorphicClassValue(receiverLayout.semanticTypeId);
+				final receiverAdmitted = if (receiverLayout == null
+					|| receiverRepresentation == null
+					|| receiverLayout.sourceModuleId != currentModuleId) {
+					false;
+				} else {
+					switch (receiver.expr) {
+						case TConst(TThis): currentModuleId == receiverLayout.sourceModuleId && currentTypeName == receiverLayout.sourceTypeName;
+						case TLocal(local):
+							switch (localRepresentations.choiceFor(local.id)) {
+								case ProgramDecision(representationId, semanticTypeId, OcamlRepresentationDomain.InternalValue): representationId == receiverRepresentation.id && semanticTypeId == receiverLayout.semanticTypeId;
+								case _:
+									false;
+							}
+						case _:
+							false;
+					}
+				}
 				final moduleName = context.ocamlModuleNameForModuleId(receiverClass.module);
 				final currentModuleName = context.ocamlModuleNameForModuleId(currentModuleId);
 				final scopedType = context.scopedInstanceTypeName(receiverClass.module, receiverClass.name);
@@ -133,8 +155,8 @@ class OcamlPlaceAssignmentPlanner {
 						targetSymbolId: classType.module + "::" + classType.name + "::field::" + field.name,
 						receiverSemanticTypeId: TypeTools.toString(receiver.t),
 						receiverCarrierTypeId: receiverCarrier,
-						receiverRepresentationId: originId + ":representation:receiver",
-						receiverRepresentationReason: "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+						receiverRepresentationId: receiverAdmitted ? receiverRepresentation.id : originId + ":representation:receiver",
+						receiverRepresentationReason: receiverAdmitted ? receiverRepresentation.reason : "legacy record-backed carrier selected from the semantic receiver type; no sealed class representation owns this receiver yet",
 						fieldName: field.name,
 						targetFieldName: context.ocamlRecordLabel(field.name),
 						semanticTypeId: TypeTools.toString(left.t),

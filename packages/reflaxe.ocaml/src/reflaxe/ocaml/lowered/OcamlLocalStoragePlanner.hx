@@ -210,7 +210,9 @@ class OcamlLocalStoragePlanner {
 				reasons: reasons
 			});
 		}
-		return new OcamlLocalStoragePlan(decisions);
+		final capturedLocalIds = [for (localId in captured.keys()) localId];
+		capturedLocalIds.sort((left, right) -> left - right);
+		return new OcamlLocalStoragePlan(decisions, capturedLocalIds);
 	}
 
 	/** Plans storage for one expression, treating a root block as statements. */

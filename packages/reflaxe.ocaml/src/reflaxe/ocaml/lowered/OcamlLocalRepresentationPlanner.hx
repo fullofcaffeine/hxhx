@@ -38,6 +38,11 @@ private typedef ExactStringCarrierInput = {
 	final sourceLocalId:Null<Int>;
 }
 
+private typedef ExactMonomorphicClassCarrierInput = {
+	final sourceLocalId:Null<Int>;
+	final semanticTypeId:String;
+}
+
 /**
 	Connects local carrier choices to the program representation registry.
 
@@ -135,6 +140,37 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
+	/**
+		Returns whether an expression already produces one admitted nominal record.
+
+		Only a direct constructor or a local with the same exact sealed class layout
+		is eligible. Calls, parameters, fields, null, Dynamic, captures, hierarchy
+		conversions, and native values remain explicit future boundaries.
+	**/
+	static function exactMonomorphicClassCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>, classSemanticTypeByLocalId:Map<Int, String>,
+			representations:OcamlRepresentationRegistry):Null<ExactMonomorphicClassCarrierInput> {
+		final layout = representations.monomorphicClassForType(expression.t);
+		if (layout == null)
+			return null;
+		final unwrapped = unwrapTransparent(expression);
+		return switch (unwrapped.expr) {
+			case TNew(classRef, parameters, _):
+				final classType = classRef.get();
+				final semanticTypeId = (classType.pack ?? []).concat([classType.name]).join(".");
+				if (parameters.length == 0 && semanticTypeId == layout.semanticTypeId) {
+					{sourceLocalId: null, semanticTypeId: semanticTypeId};
+				} else {
+					null;
+				}
+			case TLocal(local) if (declaredLocalIds.exists(local.id) && classSemanticTypeByLocalId.get(local.id) == layout.semanticTypeId):
+				{sourceLocalId: local.id, semanticTypeId: layout.semanticTypeId};
+			case TCast(child, _) if (representations.monomorphicClassForType(child.t) != null):
+				exactMonomorphicClassCarrierInput(child, declaredLocalIds, classSemanticTypeByLocalId, representations);
+			case _:
+				null;
+		}
+	}
+
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, storage:OcamlLocalStoragePlan, representations:OcamlRepresentationRegistry,
 			?binding:OcamlFunctionPlanBinding, ?preservesNullableBoolArgument:(TypedExpr, Int) -> Bool, ?producesNullableBool:TypedExpr->Bool,
@@ -147,6 +183,10 @@ class OcamlLocalRepresentationPlanner {
 		final identityStringInitializerByLocalId:Map<Int, Bool> = [];
 		final identityStringAssignmentsByLocalId:Map<Int, Bool> = [];
 		final stringSourceLocalIdsByLocalId:Map<Int, Array<Int>> = [];
+		final classSemanticTypeByLocalId:Map<Int, String> = [];
+		final identityClassInitializerByLocalId:Map<Int, Bool> = [];
+		final identityClassAssignmentsByLocalId:Map<Int, Bool> = [];
+		final classSourceLocalIdsByLocalId:Map<Int, Array<Int>> = [];
 		final identityArrayInitializerByLocalId:Map<Int, Bool> = [];
 		final identityArrayAssignmentsByLocalId:Map<Int, Bool> = [];
 		final unsupportedNullableLocalIds:Map<Int, Bool> = [];
@@ -316,6 +356,16 @@ class OcamlLocalRepresentationPlanner {
 				case TVar(local, initializer):
 					record(local.id, local.t);
 					declaredLocalIds.set(local.id, true);
+					final classLayout = representations.monomorphicClassForType(local.t);
+					if (classLayout != null) {
+						classSemanticTypeByLocalId.set(local.id, classLayout.semanticTypeId);
+						final input = initializer == null ? null : exactMonomorphicClassCarrierInput(initializer, declaredLocalIds,
+							classSemanticTypeByLocalId, representations);
+						identityClassInitializerByLocalId.set(local.id, input != null
+							&& input.semanticTypeId == classLayout.semanticTypeId);
+						if (input != null && input.sourceLocalId != null)
+							classSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+					}
 					if (OcamlRepresentationRegistry.isExactArrayInt(local.t)) {
 						final identityInitializer = initializer != null && isExactArrayIntCarrierExpression(initializer);
 						identityArrayInitializerByLocalId.set(local.id, identityInitializer);
@@ -385,6 +435,19 @@ class OcamlLocalRepresentationPlanner {
 								else if (sources.indexOf(input.sourceLocalId) < 0)
 									sources.push(input.sourceLocalId);
 							}
+						case TLocal(local) if (classSemanticTypeByLocalId.exists(local.id)):
+							final expectedSemanticTypeId:String = cast classSemanticTypeByLocalId.get(local.id);
+							final input = exactMonomorphicClassCarrierInput(right, declaredLocalIds, classSemanticTypeByLocalId, representations);
+							final identityAssignment = input != null && input.semanticTypeId == expectedSemanticTypeId;
+							if (!identityAssignment || !identityClassAssignmentsByLocalId.exists(local.id))
+								identityClassAssignmentsByLocalId.set(local.id, identityAssignment);
+							if (input != null && input.sourceLocalId != null) {
+								final sources = classSourceLocalIdsByLocalId.get(local.id);
+								if (sources == null)
+									classSourceLocalIdsByLocalId.set(local.id, [input.sourceLocalId]);
+								else if (sources.indexOf(input.sourceLocalId) < 0)
+									sources.push(input.sourceLocalId);
+							}
 						case _:
 							rejectDirectNullBoolBoundary(right);
 					}
@@ -447,6 +510,7 @@ class OcamlLocalRepresentationPlanner {
 		visit(expression);
 		final unsupportedBoolLocalIds:Map<Int, Bool> = [];
 		final unsupportedStringLocalIds:Map<Int, Bool> = [];
+		final unsupportedClassLocalIds:Map<Int, Bool> = [];
 		for (localId in declaredLocalIds.keys()) {
 			final type = typeByLocalId.get(localId);
 			if (type != null
@@ -457,6 +521,11 @@ class OcamlLocalRepresentationPlanner {
 				&& OcamlRepresentationRegistry.isExactString(type)
 				&& (identityStringInitializerByLocalId.get(localId) != true || identityStringAssignmentsByLocalId.get(localId) == false))
 				unsupportedStringLocalIds.set(localId, true);
+			if (classSemanticTypeByLocalId.exists(localId)
+				&& (identityClassInitializerByLocalId.get(localId) != true
+					|| identityClassAssignmentsByLocalId.get(localId) == false
+					|| storage.isCaptured(localId)))
+				unsupportedClassLocalIds.set(localId, true);
 		}
 		var propagatedUnsupportedBool = true;
 		while (propagatedUnsupportedBool) {
@@ -489,6 +558,23 @@ class OcamlLocalRepresentationPlanner {
 					if (unsupportedStringLocalIds.exists(sourceLocalId)) {
 						unsupportedStringLocalIds.set(localId, true);
 						propagatedUnsupportedString = true;
+						break;
+					}
+				}
+			}
+		}
+		var propagatedUnsupportedClass = true;
+		while (propagatedUnsupportedClass) {
+			propagatedUnsupportedClass = false;
+			for (localId in classSourceLocalIdsByLocalId.keys()) {
+				if (unsupportedClassLocalIds.exists(localId))
+					continue;
+				final sourceLocalIds:Array<Int> = cast classSourceLocalIdsByLocalId.get(localId);
+				for (sourceLocalId in sourceLocalIds) {
+					if (unsupportedClassLocalIds.exists(sourceLocalId)
+						|| classSemanticTypeByLocalId.get(sourceLocalId) != classSemanticTypeByLocalId.get(localId)) {
+						unsupportedClassLocalIds.set(localId, true);
+						propagatedUnsupportedClass = true;
 						break;
 					}
 				}
@@ -653,6 +739,22 @@ class OcamlLocalRepresentationPlanner {
 				&& OcamlRepresentationRegistry.isExactString(type)
 				&& !unsupportedStringLocalIds.exists(localId)) {
 				final representation = representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+				decisions.push({
+					localId: localId,
+					choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId,
+						OcamlRepresentationDomain.InternalValue),
+					initializerConversion: OcamlLocalCarrierConversion.Identity,
+					assignmentConversion: OcamlLocalCarrierConversion.Identity,
+					readConversion: OcamlLocalCarrierConversion.Identity
+				});
+				continue;
+			}
+			if (declaredLocalIds.exists(localId)
+				&& classSemanticTypeByLocalId.exists(localId)
+				&& !unsupportedClassLocalIds.exists(localId)) {
+				final representation = representations.selectMonomorphicClassValue(type, OcamlRepresentationDomain.InternalValue);
+				if (representation == null)
+					throw 'reflaxe.ocaml [ocaml-representation:missing-class-layout]: local $localId lost its admitted monomorphic class decision';
 				decisions.push({
 					localId: localId,
 					choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId,

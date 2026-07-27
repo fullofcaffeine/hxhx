@@ -184,6 +184,9 @@ typedef InspectionRepresentationDecision = {
 	final proofId:String;
 	final proofClaim:String;
 	final profileEligibility:Array<String>;
+	final nominalTargetModuleName:Null<String>;
+	final nominalTargetTypeName:Null<String>;
+	final nominalLayoutRevision:Null<String>;
 }
 
 /** The admitted portion of the program-wide representation registry. **/

@@ -57,13 +57,14 @@ typedef OcamlLocalStorageDecision = {
 class OcamlLocalStoragePlan {
 	final orderedDecisions:Array<OcamlLocalStorageDecision>;
 	final decisionsByLocalId:Map<Int, OcamlLocalStorageDecision> = [];
+	final capturedLocalIds:Map<Int, Bool> = [];
 
 	public final count:Int;
 
 	/** Deterministic digest of the selected local-storage decisions. */
 	public final revision:String;
 
-	public function new(decisions:Array<OcamlLocalStorageDecision>) {
+	public function new(decisions:Array<OcamlLocalStorageDecision>, ?captured:Array<Int>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> left.localId - right.localId);
 		for (decision in orderedDecisions) {
@@ -71,6 +72,8 @@ class OcamlLocalStoragePlan {
 				throw 'reflaxe.ocaml [ocaml-lowering:duplicate-local-storage-decision]: local ${decision.localId} was planned more than once';
 			decisionsByLocalId.set(decision.localId, decision);
 		}
+		for (localId in captured ?? [])
+			capturedLocalIds.set(localId, true);
 		count = orderedDecisions.length;
 		revision = "sha256:" + Sha256.encode(orderedDecisions.map(decisionFingerprint).join("\n"));
 	}
@@ -79,6 +82,17 @@ class OcamlLocalStoragePlan {
 	public function requiresRef(localId:Int):Bool {
 		final decision = decisionsByLocalId.get(localId);
 		return decision != null && decision.storage == OcamlLocalStorageKind.RefCell;
+	}
+
+	/**
+		Returns whether a nested function closes over the local.
+
+		Immutable captures do not need a storage decision of their own, but later
+		representation planners still need the fact so a deliberately narrow
+		carrier slice cannot admit them accidentally.
+	**/
+	public function isCaptured(localId:Int):Bool {
+		return capturedLocalIds.exists(localId);
 	}
 
 	/** Returns a defensive copy of one decision, when the local was mutated. */

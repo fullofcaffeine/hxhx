@@ -112,6 +112,15 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		boundaries preserve the selected carrier directly.
 	**/
 	final NullableStringCarrier = "nullable-string-carrier";
+
+	/**
+		A Haxe class value uses one nominal OCaml record for non-null payloads.
+
+		The source class remains nullable. This first slice admits only producer
+		and receiver occurrences proven to contain that record payload; a general
+		null-to-record crossing is not implied by the carrier decision.
+	**/
+	final NullableNominalRecordCarrier = "nullable-nominal-record-carrier";
 }
 
 /**
@@ -156,6 +165,15 @@ typedef OcamlRepresentationSelection = {
 	final reason:String;
 	final proof:OcamlRepresentationProof;
 	final profileEligibility:Array<String>;
+
+	/** Canonical OCaml module that owns an admitted nominal record carrier. */
+	final ?nominalTargetModuleName:String;
+
+	/** Unqualified record type inside the canonical target module. */
+	final ?nominalTargetTypeName:String;
+
+	/** Revision of the exact field layout represented by the nominal carrier. */
+	final ?nominalLayoutRevision:String;
 }
 
 /** One immutable program-owned representation decision. */

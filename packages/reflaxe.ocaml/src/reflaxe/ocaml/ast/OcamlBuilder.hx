@@ -43,6 +43,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRo
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassMaterializer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
@@ -324,7 +325,14 @@ class OcamlBuilder {
 	/** Resolves an admitted local carrier without repeating target type policy. */
 	function localCarrierType(localId:Int, type:Type, position:Position):OcamlTypeExpr {
 		final decision = plannedLocalRepresentation(localId, position);
-		return decision == null ? typeExprFromHaxeType(type) : OcamlTypeExpr.TIdent(decision.carrierTypeId);
+		if (decision == null)
+			return typeExprFromHaxeType(type);
+		if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)) {
+			if (ctx.currentModuleId == null)
+				return localStorageInvariant('local $localId selected a nominal class carrier outside an OCaml module', position);
+			return OcamlMonomorphicClassMaterializer.typeExpr(decision, moduleIdToOcamlModuleName(ctx.currentModuleId));
+		}
+		return OcamlTypeExpr.TIdent(decision.carrierTypeId);
 	}
 
 	/**
@@ -7399,6 +7407,35 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+			Returns the sealed nominal payload type for one admitted direct receiver;
+			only `this` in the owning monomorphic class and locals whose final function
+			plan selected the same class decision are admitted. Every other receiver
+			keeps the legacy compatibility path until its conversion owner exists.
+		**/
+	function plannedMonomorphicReceiverType(obj:TypedExpr, owner:ClassType, position:Position):Null<OcamlTypeExpr> {
+		final layout = representationRegistry.monomorphicClassForType(obj.t);
+		if (layout == null)
+			return null;
+		final ownerSemanticTypeId = (owner.pack ?? []).concat([owner.name]).join(".");
+		if (layout.semanticTypeId != ownerSemanticTypeId)
+			return null;
+		final decision:Null<OcamlRepresentationDecision> = switch (unwrap(obj).expr) {
+			case TConst(TThis) if (ctx.currentTypeFullName == layout.semanticTypeId):
+				representationRegistry.monomorphicClassValue(layout.semanticTypeId);
+			case TLocal(local):
+				final localDecision = plannedLocalRepresentation(local.id, position);
+				if (localDecision != null
+					&& localDecision.semanticTypeId == layout.semanticTypeId
+					&& OcamlMonomorphicClassMaterializer.isNominalClass(localDecision)) localDecision else null;
+			case _:
+				null;
+		}
+		if (decision == null || ctx.currentModuleId == null)
+			return null;
+		return OcamlMonomorphicClassMaterializer.typeExpr(decision, moduleIdToOcamlModuleName(ctx.currentModuleId));
+	}
+
 	function buildField(obj:TypedExpr, fa:FieldAccess, pos:Position):OcamlExpr {
 		return switch (fa) {
 			case FEnum(eRef, ef):
@@ -7503,12 +7540,17 @@ class OcamlBuilder {
 							final coerced = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]);
 							OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), instanceFieldName);
 						} else {
-							final modName = moduleIdToOcamlModuleName(cls.module);
-							final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-							final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
-							final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
-							final coerced = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]);
-							OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), instanceFieldName);
+							final plannedReceiverType = plannedMonomorphicReceiverType(obj, cls, pos);
+							if (plannedReceiverType != null) {
+								OcamlExpr.EField(OcamlExpr.EAnnot(buildExpr(obj), plannedReceiverType), instanceFieldName);
+							} else {
+								final modName = moduleIdToOcamlModuleName(cls.module);
+								final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+								final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+								final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+								final coerced = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]);
+								OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), instanceFieldName);
+							}
 						}
 					case FMethod(_):
 						// Array iterator bring-up: allow `arr.iterator` to be used as a value when

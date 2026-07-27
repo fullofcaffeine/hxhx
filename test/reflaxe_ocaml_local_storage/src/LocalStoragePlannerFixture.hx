@@ -131,6 +131,25 @@ class LocalStoragePlannerFixture {
 		}, OcamlLocalStorageKind.RefCell,
 			["captured-and-mutated", "straight-line-assignment"], "captured mutation");
 
+		final immutableCaptureExpr = Context.typeExpr(macro {
+			final value = 3;
+			final read = function() return value;
+			read();
+		});
+		final immutableCapture = OcamlLocalStoragePlanner.planExpression(immutableCaptureExpr);
+		var capturedLocalId:Null<Int> = null;
+		switch (immutableCaptureExpr.expr) {
+			case TBlock(items):
+				switch (items[0].expr) {
+					case TVar(local, _):
+						capturedLocalId = local.id;
+					case _:
+				}
+			case _:
+		}
+		assertTrue(capturedLocalId != null && immutableCapture.decisions().length == 0 && immutableCapture.isCaptured(capturedLocalId),
+			"an immutable captured local should remain storage-free while exposing its capture boundary");
+
 		final nestedFunction = plan(macro {
 			var outer = 0;
 			var mutate = function() {

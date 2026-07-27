@@ -320,7 +320,7 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 23) {
+					if (version != 24) {
 						throw 'Unsupported lowering report schema $version; expected 23.';
 					}
 					final model = requiredString(value, "model");
@@ -879,7 +879,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10")
+		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -936,6 +936,15 @@ class ReflaxeOcamlInspection {
 					|| receiverDecision.domain != "internal-value") {
 					throw 'Typed place plan "${plan.id}" receiver expects ${plan.receiverSemanticTypeId} -> ${plan.receiverCarrierTypeId} in internal-value, but representation ${receiverDecision.id} selects ${receiverDecision.semanticTypeId} -> ${receiverDecision.carrierTypeId} in ${receiverDecision.domain}.';
 				}
+			} else if (receiverRepresentationId != null && StringTools.startsWith(receiverRepresentationId, "representation:")) {
+				if (!byId.exists(receiverRepresentationId))
+					throw 'Typed place plan "${plan.id}" refers to missing receiver representation "$receiverRepresentationId".';
+				final receiverDecision:InspectionRepresentationDecision = cast byId.get(receiverRepresentationId);
+				if (receiverDecision.semanticTypeId != plan.receiverSemanticTypeId
+					|| receiverDecision.carrierTypeId != plan.receiverCarrierTypeId
+					|| receiverDecision.domain != "internal-value") {
+					throw 'Typed place plan "${plan.id}" receiver expects ${plan.receiverSemanticTypeId} -> ${plan.receiverCarrierTypeId} in internal-value, but representation ${receiverDecision.id} selects ${receiverDecision.semanticTypeId} -> ${receiverDecision.carrierTypeId} in ${receiverDecision.domain}.';
+				}
 			}
 		}
 		return {
@@ -946,7 +955,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact Int, Bool, String, nullable-primitive, or direct Array<Int> carrier decision${decisions.length == 1 ? "" : "s"}. Admitted instance/static fields carry their Haxe implicit-default policy, including the distinction between null and an empty String; generic, other nullable, abstract, Dynamic, broader field, and ABI domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. A class decision means constructor-produced and already-proven same-class values share one named OCaml record while preserving reference identity and field mutation; inheritance, interfaces, generics, external boundaries, and unproved null crossings remain outside this slice.'
 		};
 	}
 
@@ -1051,7 +1060,7 @@ class ReflaxeOcamlInspection {
 		final profiles = requiredStringArray(value, "profileEligibility");
 		if (profiles.length == 0)
 			throw 'Representation decision "${requiredString(value, "id")}" has no eligible profile.';
-		return {
+		final decision:InspectionRepresentationDecision = {
 			id: requiredString(value, "id"),
 			key: requiredString(value, "key"),
 			programRevision: requiredString(value, "programRevision"),
@@ -1069,8 +1078,25 @@ class ReflaxeOcamlInspection {
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(proof, "id"),
 			proofClaim: requiredString(proof, "claim"),
-			profileEligibility: profiles
+			profileEligibility: profiles,
+			nominalTargetModuleName: optionalString(value, "nominalTargetModuleName"),
+			nominalTargetTypeName: optionalString(value, "nominalTargetTypeName"),
+			nominalLayoutRevision: optionalString(value, "nominalLayoutRevision")
 		};
+		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
+			+ (decision.nominalLayoutRevision == null ? 0 : 1);
+		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier";
+		if (isNominal != (nominalCount == 3))
+			throw 'Representation decision "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
+		if (isNominal
+			&& (decision.nominalTargetModuleName.length == 0
+				|| decision.nominalTargetTypeName.length == 0
+				|| decision.carrierTypeId != decision.nominalTargetTypeName
+				|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
+				|| decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision)) {
+			throw 'Representation decision "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		return decision;
 	}
 
 	static function loweredPlan(value:Dynamic):InspectionLoweredPlan {
@@ -1474,7 +1500,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
+			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11",
 			message: message
 		};
 	}
