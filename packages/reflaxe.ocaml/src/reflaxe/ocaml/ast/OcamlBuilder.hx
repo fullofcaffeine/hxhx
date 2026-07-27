@@ -291,6 +291,41 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Raises one exact Haxe value through its sealed private exception channel. */
+	function buildPlannedThrow(decision:OcamlControlDecision, value:TypedExpr, position:Position):OcamlExpr {
+		try {
+			OcamlControlPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		if (decision.kind != OcamlControlTransferKind.Throw
+			|| decision.targetKind != OcamlControlTargetKind.HaxeExceptionChannel
+			|| decision.targetId != OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID) {
+			return
+				controlPlanInvariant('control decision "${decision.id}" targets ${decision.targetKind} "${decision.targetId}" while Haxe throw syntax is building',
+					position);
+		}
+		final selectedPayload = decision.payload;
+		if (selectedPayload == null)
+			return controlPlanInvariant('throw decision "${decision.id}" reached syntax without its sealed value payload', position);
+		final built = buildExpr(value);
+		final payload = switch (selectedPayload.conversion) {
+			case ReprAndRecoverExactValue:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+			case BoxBoolAndRecoverExactValue:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [built]);
+			case _:
+				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
+		}
+		final tags = OcamlExpr.EList(decision.runtimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
+		return switch (decision.mechanism) {
+			case RuntimeTypedHaxeExceptionSignal:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tags]);
+			case _:
+				controlPlanInvariant('throw decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
+		}
+	}
+
 	/** Raises one sealed break or continue after checking its lexical target. */
 	function buildPlannedLoopTransfer(decision:OcamlControlDecision, expectedKind:OcamlControlTransferKind, position:Position):OcamlExpr {
 		try {
@@ -4118,6 +4153,16 @@ class OcamlBuilder {
 					OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 				}
 			case TThrow(expr):
+				if (currentControlPlan != null && currentControlPlan.throwFamilyAdmitted) {
+					final decision = try {
+						currentControlPlan.decisionFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+					if (decision == null)
+						return controlPlanInvariant("an admitted throw reached syntax without its sealed exception-channel decision", e.pos);
+					return buildPlannedThrow(decision, expr, e.pos);
+				}
 				final built = buildExpr(expr);
 				final kind = nullablePrimitiveKind(expr.t);
 				final enumName = fullNameOfTypeEnum(expr.t);

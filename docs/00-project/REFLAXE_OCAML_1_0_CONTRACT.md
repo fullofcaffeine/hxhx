@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first three bounded control-effect slices are now executable. An ordinary
+The first four bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -41,11 +41,22 @@ path because Haxe-generated nodes can legitimately share the same source
 position; source positions remain diagnostic evidence rather than a uniqueness
 key. Nested anonymous functions keep independent return and loop boundaries.
 
-This is evidence for `haxe_ocaml-w32h3.1`, `haxe_ocaml-w32h3.2`, and
-`haxe_ocaml-w32h3.3`, not closure of the parent control-effects requirement.
-Additional early-return payloads, `Void` early return, Haxe `throw`/`catch`
-payload behavior, non-lexical control, cleanup effects, and the complete
-runtime-requirement ledger remain unfinished.
+The fourth slice moves exact `Int`, `Bool`, and represented `String` throws out
+of OCaml syntax construction. Before printing target code, the compiler now
+records the value carrier, the global Haxe exception channel, the runtime
+boxing conversion, and a value-sensitive tag policy. The policy matters for a
+nullable String: upstream Haxe 4.3.7 sends a null String to `Dynamic`, not
+`String`, while a non-null String still matches `String`. A throw may propagate
+across calls because its target is the global exception channel rather than a
+lexically nearby catch. If one function also throws an unsupported payload such
+as `Float`, that function publishes no throw decisions and remains wholly on
+the older path.
+
+This is evidence for `haxe_ocaml-w32h3.1` through
+`haxe_ocaml-w32h3.4`, not closure of the parent control-effects requirement.
+Additional early-return payloads, `Void` early return, sealed catch
+selection/conversions, unsupported throw payloads, cleanup effects, and the
+complete runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -194,12 +205,14 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first three slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first four slices cover
   exact-`Int`, exact-`Bool`, and represented-`String` early returns from
   ordinary static functions, including the existing String runtime null
   sentinel, plus exact lexical targets for `break` and `continue` in ordinary
-  `while` and `do ... while` loops. The remaining return-payload,
-  source-exception, and cleanup families are still release blockers;
+  `while` and `do ... while` loops, and exact-`Int`/`Bool`/represented-`String`
+  payloads entering the global Haxe exception channel with upstream-compatible
+  runtime-value tags. The remaining return-payload, catch-selection,
+  unsupported-exception, and cleanup families are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);

@@ -25,8 +25,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 27
-	|| report.controlModel !== 'typed-ocaml-function-and-loop-control-v3'
+if (report.schemaVersion !== 28
+	|| report.controlModel !== 'typed-ocaml-function-loop-and-throw-control-v4'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -70,6 +70,8 @@ for (const control of returnControls) {
 		|| control.targetId !== control.functionId
 		|| control.mechanism !== 'runtime-return-signal'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
+		|| control.runtimeTags.length !== 0
+		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
 		|| control.proofId !== 'exact-value-early-return-control-v2'
 		|| !control.reason
@@ -79,7 +81,7 @@ for (const control of returnControls) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v29') {
+		|| control.pipelineRevision !== 'ocaml-function-plans-v30') {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -171,12 +173,12 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 12
+if (report.schemaVersion !== 13
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
 	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 18
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-control-families') {
+	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-control-families') {
 	throw new Error('public inspection did not expose the 18 validated exact-value control decisions')
 }
 NODE

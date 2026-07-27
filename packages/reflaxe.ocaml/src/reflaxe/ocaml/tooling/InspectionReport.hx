@@ -347,7 +347,7 @@ typedef InspectionControlLoopTarget = {
 	final proofClaim:String;
 }
 
-/** One function or loop transfer sealed before OCaml syntax is emitted. **/
+/** One function, loop, or Haxe exception transfer sealed before OCaml syntax. **/
 typedef InspectionControl = {
 	final id:String;
 	final sourceFile:String;
@@ -358,6 +358,8 @@ typedef InspectionControl = {
 	final targetKind:String;
 	final targetId:String;
 	final payload:Null<InspectionControlPayload>;
+	final runtimeTags:Array<String>;
+	final runtimeTagPolicy:String;
 	final mechanism:String;
 	final runtimeCapabilityId:String;
 	final profileEligibility:Array<String>;

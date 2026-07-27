@@ -24,8 +24,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 27
-	|| report.controlModel !== 'typed-ocaml-function-and-loop-control-v3'
+if (report.schemaVersion !== 28
+	|| report.controlModel !== 'typed-ocaml-function-loop-and-throw-control-v4'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -68,7 +68,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v29') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v30') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
@@ -81,6 +81,8 @@ for (const control of mainTransfers) {
 		|| control.effect !== (isBreak ? 'exit-loop' : 'next-loop-iteration')
 		|| control.mechanism !== (isBreak ? 'runtime-break-signal' : 'runtime-continue-signal')
 		|| control.runtimeCapabilityId !== (isBreak ? 'hxhx-runtime:loop-break-signal-v1' : 'hxhx-runtime:loop-continue-signal-v1')
+		|| control.runtimeTags.length !== 0
+		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.proofId !== 'lexical-loop-control-v1'
 		|| control.functionId !== target.functionId
 		|| control.bodyRevision !== target.bodyRevision
@@ -125,11 +127,11 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 12
+if (report.schemaVersion !== 13
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-control-families') {
+	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-control-families') {
 	throw new Error('public inspection did not expose the validated function/loop control inventory')
 }
 NODE

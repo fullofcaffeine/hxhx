@@ -80,7 +80,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 12,
+			schemaVersion: 13,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -165,6 +165,9 @@ class ReflaxeOcamlInspection {
 				final payload = control.payload;
 				if (payload != null)
 					lines.push('    payload: ${payload.inputSemanticTypeId}/${payload.inputCarrierTypeId} -${payload.conversion}-> ${payload.signalCarrierTypeId} -> ${payload.outputSemanticTypeId}/${payload.outputCarrierTypeId}');
+				if (control.runtimeTags.length > 0)
+					lines.push('    runtime tags: ${control.runtimeTags.join(", ")}');
+				lines.push('    runtime tag policy: ${control.runtimeTagPolicy}');
 				lines.push('    mechanism: ${control.mechanism}; runtime capability: ${control.runtimeCapabilityId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
@@ -331,7 +334,7 @@ class ReflaxeOcamlInspection {
 					controlTargets: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-call-and-function-loop-control-families",
+					scope: "typed-place-call-and-function-loop-throw-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -339,8 +342,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 27) {
-						throw 'Unsupported lowering report schema $version; expected 27.';
+					if (version != 28) {
+						throw 'Unsupported lowering report schema $version; expected 28.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -384,8 +387,8 @@ class ReflaxeOcamlInspection {
 						controlTargets: controlTargets,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-call-and-function-loop-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} control transfer${controls.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-call-and-function-loop-throw-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -424,7 +427,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-and-loop-control-v3")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-and-throw-control-v4")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -474,7 +477,9 @@ class ReflaxeOcamlInspection {
 						|| payload.conversion != "box-and-recover-exact-value"
 						|| payload.proofId != "exact-value-early-return-control-v2"
 						|| payload.proofClaim.length == 0
-						|| control.proofId != "exact-value-early-return-control-v2") {
+						|| control.proofId != "exact-value-early-return-control-v2"
+						|| control.runtimeTags.length != 0
+						|| control.runtimeTagPolicy != "no-runtime-tags") {
 						throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
 					}
 				case "break", "continue":
@@ -488,11 +493,48 @@ class ReflaxeOcamlInspection {
 						|| control.runtimeCapabilityId != (isBreak ? "hxhx-runtime:loop-break-signal-v1" : "hxhx-runtime:loop-continue-signal-v1")
 						|| payload != null
 						|| control.proofId != "lexical-loop-control-v1"
+						|| control.runtimeTags.length != 0
+						|| control.runtimeTagPolicy != "no-runtime-tags"
 						|| target.functionId != control.functionId
 						|| target.programRevision != control.programRevision
 						|| target.bodyRevision != control.bodyRevision
 						|| target.pipelineRevision != control.pipelineRevision) {
 						throw 'Control decision "${control.id}" has an invalid loop target, effect, mechanism, capability, payload, or revision.';
+					}
+				case "throw":
+					if (control.effect != "raise-haxe-value"
+						|| control.targetKind != "haxe-exception-channel"
+						|| control.targetId != "control-target:haxe-exception-channel:v1"
+						|| control.mechanism != "runtime-typed-haxe-exception-signal"
+						|| control.runtimeCapabilityId != "hxhx-runtime:typed-haxe-exception-signal-v1"
+						|| payload == null) {
+						throw 'Control decision "${control.id}" has an invalid Haxe exception target, effect, mechanism, capability, or payload.';
+					}
+					validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+						'Control decision "${control.id}" input');
+					validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
+						'Control decision "${control.id}" output');
+					final expectedConversion = switch (payload.inputSemanticTypeId) {
+						case "Int", "String": "repr-and-recover-exact-value";
+						case "Bool": "box-bool-and-recover-exact-value";
+						case _: null;
+					};
+					final expectedTags = switch (payload.inputSemanticTypeId) {
+						case "Int", "Bool", "String": ["Dynamic"];
+						case _: [];
+					};
+					if (expectedConversion == null
+						|| payload.signalCarrierTypeId != "Obj.t"
+						|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+						|| payload.outputRepresentationId != payload.inputRepresentationId
+						|| payload.conversion != expectedConversion
+						|| payload.proofId != "exact-value-throw-control-v1"
+						|| payload.proofClaim.length == 0
+						|| control.proofId != "exact-value-throw-control-v1"
+						|| !sameStrings(control.runtimeTags, expectedTags)
+						|| control.runtimeTagPolicy != "merge-dynamic-with-exact-runtime-value") {
+						throw 'Control decision "${control.id}" has an invalid exact-value Haxe exception crossing.';
 					}
 				case _:
 					throw 'Control decision "${control.id}" has unsupported transfer kind "${control.kind}".';
@@ -526,6 +568,8 @@ class ReflaxeOcamlInspection {
 			targetKind: requiredString(value, "targetKind"),
 			targetId: requiredString(value, "targetId"),
 			payload: Reflect.field(value, "payload") == null ? null : controlPayload(requiredObject(value, "payload")),
+			runtimeTags: requiredStringArray(value, "runtimeTags"),
+			runtimeTagPolicy: requiredString(value, "runtimeTagPolicy"),
 			mechanism: requiredString(value, "mechanism"),
 			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
@@ -1824,7 +1868,7 @@ class ReflaxeOcamlInspection {
 			controlTargets: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-call-and-function-loop-control-families",
+			scope: "typed-place-call-and-function-loop-throw-control-families",
 			message: message
 		};
 	}
@@ -1844,5 +1888,14 @@ class ReflaxeOcamlInspection {
 
 	static function compareStrings(left:String, right:String):Int {
 		return left < right ? -1 : (left > right ? 1 : 0);
+	}
+
+	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
 	}
 }

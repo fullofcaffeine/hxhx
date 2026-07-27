@@ -20,6 +20,7 @@ enum abstract OcamlControlTransferKind(String) from String to String {
 	final Return = "return";
 	final Break = "break";
 	final Continue = "continue";
+	final Throw = "throw";
 }
 
 /** The observable control effect owned by one sealed transfer. */
@@ -27,12 +28,14 @@ enum abstract OcamlControlEffect(String) from String to String {
 	final ExitFunction = "exit-function";
 	final ExitLoop = "exit-loop";
 	final NextLoopIteration = "next-loop-iteration";
+	final RaiseHaxeValue = "raise-haxe-value";
 }
 
 /** The semantic target category named by one control transfer. */
 enum abstract OcamlControlTargetKind(String) from String to String {
 	final Function = "function";
 	final Loop = "loop";
+	final HaxeExceptionChannel = "haxe-exception-channel";
 }
 
 /** Which Haxe loop form owns one lexical control target. */
@@ -46,11 +49,20 @@ enum abstract OcamlControlTargetMechanism(String) from String to String {
 	final RuntimeReturnSignal = "runtime-return-signal";
 	final RuntimeBreakSignal = "runtime-break-signal";
 	final RuntimeContinueSignal = "runtime-continue-signal";
+	final RuntimeTypedHaxeExceptionSignal = "runtime-typed-haxe-exception-signal";
+}
+
+/** How runtime type tags supplement one sealed control transfer. */
+enum abstract OcamlControlRuntimeTagPolicy(String) from String to String {
+	final NoRuntimeTags = "no-runtime-tags";
+	final MergeDynamicWithExactRuntimeValue = "merge-dynamic-with-exact-runtime-value";
 }
 
 /** How an exact Haxe value crosses the private runtime-control payload. */
 enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
+	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
+	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
 }
 
 /**
@@ -96,6 +108,8 @@ typedef OcamlControlDecision = {
 	final targetKind:OcamlControlTargetKind;
 	final targetId:String;
 	final payload:Null<OcamlControlPayloadPlan>;
+	final runtimeTags:Array<String>;
+	final runtimeTagPolicy:OcamlControlRuntimeTagPolicy;
 	final mechanism:OcamlControlTargetMechanism;
 	final runtimeCapabilityId:String;
 	final profileEligibility:Array<String>;
@@ -129,20 +143,24 @@ typedef OcamlControlDecisionOccurrence = {
 /**
 	Immutable control inventory for one final function body.
 
-	Return and loop families are admitted independently. An unsupported return
-	carrier cannot discard valid loop targets, and admitting lexical loop
-	transfers does not claim that the function's early-return payload is safe.
-	Syntax may consume targets and decisions but cannot add or reinterpret them.
+	Return, loop, and throw families are admitted independently. An unsupported
+	return carrier cannot discard valid loop targets, and an unsupported throw
+	payload cannot discard a safe return or loop decision. Syntax may consume
+	targets and decisions but cannot add or reinterpret them.
 **/
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
 	public static inline final LEXICAL_LOOP_CONTROL_PROOF_ID = "lexical-loop-control-v1";
+	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
 	public static inline final CONTINUE_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-continue-signal-v1";
+	public static inline final THROW_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-exception-signal-v1";
+	public static inline final HAXE_EXCEPTION_CHANNEL_ID = "control-target:haxe-exception-channel:v1";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
+	public final throwFamilyAdmitted:Bool;
 	public final binding:OcamlFunctionPlanBinding;
 	public final revision:String;
 
@@ -156,11 +174,12 @@ class OcamlControlPlan {
 	final decisionIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
 	final hasOccurrenceIndex:Bool;
 
-	public function new(returnFamilyAdmitted:Bool, loopFamilyAdmitted:Bool, binding:OcamlFunctionPlanBinding, targets:Array<OcamlControlLoopTarget>,
-			decisions:Array<OcamlControlDecision>, ?targetOccurrences:Array<OcamlControlLoopTargetOccurrence>,
+	public function new(returnFamilyAdmitted:Bool, loopFamilyAdmitted:Bool, throwFamilyAdmitted:Bool, binding:OcamlFunctionPlanBinding,
+			targets:Array<OcamlControlLoopTarget>, decisions:Array<OcamlControlDecision>, ?targetOccurrences:Array<OcamlControlLoopTargetOccurrence>,
 			?decisionOccurrences:Array<OcamlControlDecisionOccurrence>) {
 		this.returnFamilyAdmitted = returnFamilyAdmitted;
 		this.loopFamilyAdmitted = loopFamilyAdmitted;
+		this.throwFamilyAdmitted = throwFamilyAdmitted;
 		this.binding = copyBinding(binding);
 		if ((targetOccurrences == null) != (decisionOccurrences == null))
 			throw 'reflaxe.ocaml [ocaml-control:incomplete-occurrence-index]: loop-target and transfer occurrence indexes must be supplied together';
@@ -203,6 +222,9 @@ class OcamlControlPlan {
 					final target = targetsById.get(decision.targetId);
 					if (target == null)
 						throw 'reflaxe.ocaml [ocaml-control:missing-target]: loop transfer "${decision.id}" refers to missing target "${decision.targetId}"';
+				case Throw:
+					if (!throwFamilyAdmitted)
+						throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: unadmitted throw family in "${binding.functionId}" cannot own decision "${decision.id}"';
 			}
 			final key = sourceKey(decision.source);
 			final candidates = bySourceKey.get(key) ?? [];
@@ -256,6 +278,7 @@ class OcamlControlPlan {
 		revision = "sha256:" + Sha256.encode([
 			returnFamilyAdmitted ? "return-admitted" : "return-legacy",
 			loopFamilyAdmitted ? "loop-admitted" : "loop-legacy",
+			throwFamilyAdmitted ? "throw-admitted" : "throw-legacy",
 			binding.functionId,
 			binding.programRevision,
 			binding.bodyRevision,
@@ -265,7 +288,7 @@ class OcamlControlPlan {
 
 	/** Creates an explicit empty plan for a function outside every control slice. */
 	public static function notAdmitted(binding:OcamlFunctionPlanBinding):OcamlControlPlan {
-		return new OcamlControlPlan(false, false, binding, [], []);
+		return new OcamlControlPlan(false, false, false, binding, [], []);
 	}
 
 	/** Returns immutable loop-target copies in deterministic identity order. */
@@ -325,6 +348,8 @@ class OcamlControlPlan {
 				&& expressionMatchesPayload(value, decision.payload);
 			case TBreak: decision.kind == OcamlControlTransferKind.Break && decision.payload == null;
 			case TContinue: decision.kind == OcamlControlTransferKind.Continue && decision.payload == null;
+			case TThrow(value): decision.kind == OcamlControlTransferKind.Throw && decision.payload != null && expressionMatchesPayload(value,
+					decision.payload);
 			case _:
 				false;
 		});
@@ -408,7 +433,9 @@ class OcamlControlPlan {
 					|| payload.conversion != OcamlControlPayloadConversion.BoxAndRecoverExactValue
 					|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
 					|| payload.proofClaim.length == 0
-					|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID) {
+					|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID
+					|| decision.runtimeTags.length != 0
+					|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.NoRuntimeTags) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an unsupported target or incomplete exact-value payload crossing';
 				}
 			case Break:
@@ -416,6 +443,8 @@ class OcamlControlPlan {
 			case Continue:
 				requireLoopDecision(decision, OcamlControlEffect.NextLoopIteration, OcamlControlTargetMechanism.RuntimeContinueSignal,
 					CONTINUE_SIGNAL_CAPABILITY_ID);
+			case Throw:
+				requireThrowDecision(decision);
 		}
 
 		if (decision.profileEligibility.length != 2
@@ -434,8 +463,33 @@ class OcamlControlPlan {
 			|| decision.payload != null
 			|| decision.mechanism != mechanism
 			|| decision.runtimeCapabilityId != capabilityId
-			|| decision.proofId != LEXICAL_LOOP_CONTROL_PROOF_ID) {
+			|| decision.proofId != LEXICAL_LOOP_CONTROL_PROOF_ID
+			|| decision.runtimeTags.length != 0
+			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.NoRuntimeTags) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: loop decision "${decision.id}" has an unsupported target, payload, effect, mechanism, or runtime capability';
+		}
+	}
+
+	static function requireThrowDecision(decision:OcamlControlDecision):Void {
+		final payload = decision.payload;
+		if (decision.effect != OcamlControlEffect.RaiseHaxeValue
+			|| decision.targetKind != OcamlControlTargetKind.HaxeExceptionChannel
+			|| decision.targetId != HAXE_EXCEPTION_CHANNEL_ID
+			|| decision.mechanism != OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal
+			|| decision.runtimeCapabilityId != THROW_SIGNAL_CAPABILITY_ID
+			|| payload == null
+			|| !isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+			|| payload.signalCarrierTypeId != "Obj.t"
+			|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+			|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+			|| payload.outputRepresentationId != payload.inputRepresentationId
+			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId)
+			|| payload.proofId != EXACT_VALUE_THROW_PROOF_ID
+			|| payload.proofClaim.length == 0
+			|| decision.proofId != EXACT_VALUE_THROW_PROOF_ID
+			|| !sameStrings(decision.runtimeTags, expectedThrowTags(payload.inputSemanticTypeId))
+			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an unsupported exception target or incomplete exact-value payload crossing';
 		}
 	}
 
@@ -470,6 +524,8 @@ class OcamlControlPlan {
 			targetKind: decision.targetKind,
 			targetId: decision.targetId,
 			payload: copyPayload(decision.payload),
+			runtimeTags: decision.runtimeTags.copy(),
+			runtimeTagPolicy: decision.runtimeTagPolicy,
 			mechanism: decision.mechanism,
 			runtimeCapabilityId: decision.runtimeCapabilityId,
 			profileEligibility: decision.profileEligibility.copy(),
@@ -545,6 +601,30 @@ class OcamlControlPlan {
 			|| (semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value");
 	}
 
+	public static function expectedThrowTags(semanticTypeId:String):Array<String> {
+		return switch (semanticTypeId) {
+			case "Int", "Bool", "String": ["Dynamic"];
+			case _: [];
+		}
+	}
+
+	public static function expectedThrowConversion(semanticTypeId:String):Null<OcamlControlPayloadConversion> {
+		return switch (semanticTypeId) {
+			case "Int", "String": OcamlControlPayloadConversion.ReprAndRecoverExactValue;
+			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
+			case _: null;
+		}
+	}
+
+	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
+	}
+
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
 		return switch (payload.inputSemanticTypeId) {
 			case "Int": OcamlRepresentationRegistry.isExactInt(expression.t);
@@ -594,6 +674,8 @@ class OcamlControlPlan {
 			(decision.targetKind : String),
 			decision.targetId,
 			payloadFingerprint(decision.payload),
+			decision.runtimeTags.join(","),
+			(decision.runtimeTagPolicy : String),
 			(decision.mechanism : String),
 			decision.runtimeCapabilityId,
 			decision.profileEligibility.join(","),
@@ -609,12 +691,13 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects exact-value early returns and lexical loop transfers from one body.
+	Selects exact-value returns and throws plus lexical loop transfers.
 
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
-	sealed function body. Nested function literals own independent boundaries and
-	are deliberately skipped.
+	sealed function body. Throw-family admission is independent and initially
+	accepts only exact `Int`, `Bool`, and represented `String` payloads. Nested
+	function literals own independent boundaries and are deliberately skipped.
 
 	Stable record IDs use the node's structural path through the final typed body,
 	not its source span. Haxe-generated nodes can legitimately share `(unknown):0`
@@ -638,6 +721,7 @@ class OcamlControlPlanner {
 		final boundaryPayload = admittedBoundaryPayload(boundary);
 		var returnFamilyAdmitted = boundaryPayload != null;
 		var loopFamilyAdmitted = true;
+		var throwFamilyAdmitted = true;
 		final targets:Array<OcamlControlLoopTarget> = [];
 		var decisions:Array<OcamlControlDecision> = [];
 		final targetOccurrences:Array<OcamlControlLoopTargetOccurrence> = [];
@@ -661,6 +745,8 @@ class OcamlControlPlanner {
 				targetKind: OcamlControlTargetKind.Loop,
 				targetId: target.id,
 				payload: null,
+				runtimeTags: [],
+				runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
 				mechanism: isBreak ? OcamlControlTargetMechanism.RuntimeBreakSignal : OcamlControlTargetMechanism.RuntimeContinueSignal,
 				runtimeCapabilityId: isBreak ? OcamlControlPlan.BREAK_SIGNAL_CAPABILITY_ID : OcamlControlPlan.CONTINUE_SIGNAL_CAPABILITY_ID,
 				profileEligibility: ["metal", "portable"],
@@ -682,6 +768,8 @@ class OcamlControlPlanner {
 		function visit(expression:TypedExpr, directRootStatement:Bool, path:String):Void {
 			switch (expression.expr) {
 				case TReturn(value):
+					if (value != null)
+						visit(value, false, path + "/return-value");
 					if (directRootStatement || !returnFamilyAdmitted)
 						return;
 					final representation = value == null ? null : exactValueRepresentation(value);
@@ -714,11 +802,60 @@ class OcamlControlPlanner {
 							proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 							proofClaim: proofClaim
 						},
+						runtimeTags: [],
+						runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
 						mechanism: OcamlControlTargetMechanism.RuntimeReturnSignal,
 						runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
 						profileEligibility: ["metal", "portable"],
 						reason: 'This return is nested below the function\'s direct result path, so it exits the current exact-${representation.semanticTypeId} Haxe function through one revision-bound private runtime signal.',
 						proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
+						proofClaim: proofClaim,
+						functionId: binding.functionId,
+						programRevision: binding.programRevision,
+						bodyRevision: binding.bodyRevision,
+						pipelineRevision: binding.pipelineRevision
+					};
+					decisions.push(decision);
+					decisionOccurrences.push({
+						expression: expression,
+						decisionId: decision.id
+					});
+				case TThrow(value):
+					visit(value, false, path + "/throw-value");
+					final representation = exactValueRepresentation(value);
+					final conversion = representation == null ? null : OcamlControlPlan.expectedThrowConversion(representation.semanticTypeId);
+					if (representation == null || conversion == null) {
+						throwFamilyAdmitted = false;
+						return;
+					}
+					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final proofClaim = 'The final typed Haxe body sends this exact ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. The selected payload conversion preserves that represented value in the private Obj.t carrier. The sealed tag policy always admits Dynamic and derives the exact primitive tag from the carried runtime value, so a null String remains Dynamic rather than matching String.';
+					final decision:OcamlControlDecision = {
+						id: controlId(OcamlControlTransferKind.Throw, path, OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID),
+						source: source,
+						kind: OcamlControlTransferKind.Throw,
+						effect: OcamlControlEffect.RaiseHaxeValue,
+						targetKind: OcamlControlTargetKind.HaxeExceptionChannel,
+						targetId: OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID,
+						payload: {
+							inputSemanticTypeId: representation.semanticTypeId,
+							inputCarrierTypeId: representation.carrierTypeId,
+							inputRepresentationId: representation.id,
+							signalCarrierTypeId: "Obj.t",
+							outputSemanticTypeId: representation.semanticTypeId,
+							outputCarrierTypeId: representation.carrierTypeId,
+							outputRepresentationId: representation.id,
+							conversion: conversion,
+							proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
+							proofClaim: proofClaim
+						},
+						runtimeTags: OcamlControlPlan.expectedThrowTags(representation.semanticTypeId),
+						runtimeTagPolicy: OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
+						mechanism: OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
+						runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
+						profileEligibility: ["metal", "portable"],
+						reason: 'This exact ${representation.semanticTypeId} Haxe value enters the private typed-exception channel and may propagate across calls before a source catch matches it.',
+						proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
 						proofClaim: proofClaim,
 						functionId: binding.functionId,
 						programRevision: binding.programRevision,
@@ -789,9 +926,16 @@ class OcamlControlPlanner {
 			decisions = decisions.filter(decision -> decision.targetKind != OcamlControlTargetKind.Loop);
 			final admittedIds = [for (decision in decisions) decision.id => true];
 			decisionOccurrences = decisionOccurrences.filter(occurrence -> admittedIds.exists(occurrence.decisionId));
-			return new OcamlControlPlan(returnFamilyAdmitted, false, binding, [], decisions, [], decisionOccurrences);
+			targets.resize(0);
+			targetOccurrences.resize(0);
 		}
-		return new OcamlControlPlan(returnFamilyAdmitted, true, binding, targets, decisions, targetOccurrences, decisionOccurrences);
+		if (!throwFamilyAdmitted) {
+			decisions = decisions.filter(decision -> decision.kind != OcamlControlTransferKind.Throw);
+			final admittedIds = [for (decision in decisions) decision.id => true];
+			decisionOccurrences = decisionOccurrences.filter(occurrence -> admittedIds.exists(occurrence.decisionId));
+		}
+		return new OcamlControlPlan(returnFamilyAdmitted, loopFamilyAdmitted, throwFamilyAdmitted, binding, targets, decisions, targetOccurrences,
+			decisionOccurrences);
 	}
 
 	function exactValueRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
