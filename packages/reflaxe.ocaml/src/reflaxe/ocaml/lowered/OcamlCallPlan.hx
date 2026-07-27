@@ -181,7 +181,8 @@ typedef OcamlCallDecision = {
 	decision. The callee check matters because Haxe can assign the same source
 	span to a nested call and its enclosing call. A source-only lookup could
 	therefore apply a zero-argument plan to a different call that has arguments.
-	Plan-to-plan span collisions are also rejected during construction.
+	Distinct typed callees may share a source span; two plans that could match the
+	same typed occurrence are rejected during construction.
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
@@ -189,26 +190,44 @@ class OcamlCallPlan {
 	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 
 	final ordered:Array<OcamlCallDecision>;
-	final bySourceKey:Map<String, OcamlCallDecision> = [];
+	final bySourceKey:Map<String, Array<OcamlCallDecision>> = [];
 
 	public final revision:String;
 
 	public function new(decisions:Array<OcamlCallDecision>) {
-		ordered = decisions.map(copyDecision);
-		ordered.sort((left, right) -> Reflect.compare(left.id, right.id));
-		for (decision in ordered) {
+		final sorted = decisions.map(copyDecision);
+		sorted.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final normalized:Array<OcamlCallDecision> = [];
+		for (decision in sorted) {
 			final key = sourceKey(decision.source);
-			if (bySourceKey.exists(key))
-				throw 'reflaxe.ocaml [ocaml-call:duplicate-source-occurrence]: more than one admitted call uses source occurrence "$key"';
-			bySourceKey.set(key, decision);
+			final candidates = bySourceKey.get(key) ?? [];
+			final exact = Lambda.find(candidates, existing -> existing.id == decision.id);
+			if (exact != null) {
+				if (decisionFingerprint(exact) != decisionFingerprint(decision))
+					throw 'reflaxe.ocaml [ocaml-call:conflicting-source-occurrence]: call identity "${decision.id}" selects two different plans';
+				continue;
+			}
+			if (Lambda.exists(candidates,
+				existing -> existing.kind == decision.kind
+					&& existing.calleeId == decision.calleeId
+					&& suppliedArgumentCount(existing.arguments) == suppliedArgumentCount(decision.arguments))) {
+				throw 'reflaxe.ocaml [ocaml-call:duplicate-source-occurrence]: more than one admitted call can match ${decision.kind}/${decision.calleeId} at source occurrence "$key"';
+			}
+			candidates.push(copyDecision(decision));
+			bySourceKey.set(key, candidates);
+			normalized.push(copyDecision(decision));
 		}
+		ordered = normalized;
 		revision = "sha256:" + Sha256.encode(ordered.map(decisionFingerprint).join("\n"));
 	}
 
 	/** Returns one admitted call by its exact final-body source occurrence. */
 	public function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
-		final decision = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos)));
-		return decision == null || !matchesTypedOccurrence(decision, expression) ? null : copyDecision(decision);
+		final candidates = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
+		final matching = candidates.filter(decision -> matchesTypedOccurrence(decision, expression));
+		if (matching.length > 1)
+			throw 'reflaxe.ocaml [ocaml-call:ambiguous-source-occurrence]: ${matching.length} sealed calls match one typed occurrence at ${sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))}';
+		return matching.length == 0 ? null : copyDecision(matching[0]);
 	}
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {

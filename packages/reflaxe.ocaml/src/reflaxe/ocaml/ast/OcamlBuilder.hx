@@ -312,7 +312,9 @@ class OcamlBuilder {
 			+ (call.kind == OcamlCallKind.DirectInstanceHaxeMethod ? 1 : 0);
 		if (!invocationSeen || target == null || materialized.length != expectedMaterializations)
 			return callPlanInvariant('call "${call.id}" did not materialize every callable parameter before invocation', position);
-		final targetArguments = applicationArguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : applicationArguments;
+		final targetArguments = applicationArguments.copy();
+		if (call.arguments.length == 0)
+			targetArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
 		var out = OcamlExpr.EApp(target, targetArguments);
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
