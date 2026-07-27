@@ -349,6 +349,8 @@ class OcamlBuilder {
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
 			case BoxNominalThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+			case PreserveDynamicThrowCarrier:
+				built;
 			case _:
 				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
 		}
@@ -4363,9 +4365,6 @@ class OcamlBuilder {
 					payload = built;
 				} else {
 					switch (followNoAbstracts(unwrapNullType(expr.t))) {
-						case TDynamic(_):
-							// Dynamic values already use `Obj.t`.
-							payload = built;
 						case TAnonymous(_) if (shouldAnonUseHxAnon(expr.t)):
 							// Anonymous structures represented via `HxAnon` already use `Obj.t`.
 							payload = built;

@@ -36,7 +36,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 35;
+	public static inline final SCHEMA_VERSION = 36;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -199,10 +199,16 @@ class OcamlLoweringReportWriter {
 			controlById.set(control.id, true);
 			final payload = control.payload;
 			if (payload != null) {
-				requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
-					OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
-				requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
-					OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+				if (payload.inputSemanticTypeId == "Dynamic") {
+					if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)) {
+						throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+					}
+				} else {
+					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
+						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
+					requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
+						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+				}
 				final nominal = payload.nominalRepresentation;
 				if (nominal != null) {
 					final representation = representationById.get(payload.inputRepresentationId);
@@ -330,7 +336,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v11",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v12",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

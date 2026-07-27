@@ -74,6 +74,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final PreserveNullableIntThrowCarrier = "preserve-nullable-int-throw-carrier";
 	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
 	final BoxNominalThrowCarrier = "box-nominal-throw-carrier";
+	final PreserveDynamicThrowCarrier = "preserve-dynamic-throw-carrier";
 }
 
 /**
@@ -160,6 +161,21 @@ typedef OcamlControlPayloadPlan = {
 	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final proofId:String;
 	final proofClaim:String;
+}
+
+/**
+	The represented value selected specifically for exception transport.
+
+	Most selections refer to a program-owned representation decision. `Dynamic`
+	is the one deliberate control-only case: it already arrives as `Obj.t`, so
+	throwing it preserves that carrier without claiming general-purpose Dynamic
+	storage, call, or public-ABI support.
+**/
+private typedef OcamlControlThrowRepresentation = {
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 }
 
 /** One deterministic lexical loop target owned by a sealed function body. */
@@ -302,6 +318,7 @@ class OcamlControlPlan {
 	public static inline final NULLABLE_INT_THROW_PROOF_ID = "nullable-int-throw-control-v1";
 	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
 	public static inline final EXACT_NOMINAL_THROW_PROOF_ID = "exact-monomorphic-class-throw-control-v1";
+	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
 	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v2";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
@@ -310,7 +327,7 @@ class OcamlControlPlan {
 	public static inline final THROW_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-exception-signal-v1";
 	public static inline final CATCH_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-catch-chain-v1";
 	public static inline final HAXE_EXCEPTION_CHANNEL_ID = "control-target:haxe-exception-channel:v1";
-	public static inline final DYNAMIC_CATCH_REPRESENTATION_ID = "control-representation:Dynamic:runtime-obj-v1";
+	public static inline final DYNAMIC_CONTROL_REPRESENTATION_ID = "control-representation:Dynamic:runtime-obj-v1";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
@@ -841,6 +858,10 @@ class OcamlControlPlan {
 				if (!isAdmittedNominalPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an incomplete monomorphic-class payload crossing';
 				}
+			case PreserveDynamicThrowCarrier:
+				if (!isAdmittedDynamicThrowPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid Dynamic carrier crossing';
+				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
 		}
@@ -931,7 +952,7 @@ class OcamlControlPlan {
 				}
 			case "Dynamic":
 				if (clause.outputCarrierTypeId != "Obj.t"
-					|| clause.outputRepresentationId != DYNAMIC_CATCH_REPRESENTATION_ID
+					|| clause.outputRepresentationId != DYNAMIC_CONTROL_REPRESENTATION_ID
 					|| clause.matchPolicy != OcamlCatchMatchPolicy.MatchAll
 					|| clause.runtimeTag != null
 					|| clause.conversion != OcamlCatchPayloadConversion.PreserveDynamicCarrier
@@ -1206,7 +1227,7 @@ class OcamlControlPlan {
 
 	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false):Array<String> {
 		return switch (semanticTypeId) {
-			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
+			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic": ["Dynamic"];
 			case _: hasNominalRepresentation ? ["Dynamic"] : [];
 		}
 	}
@@ -1217,6 +1238,7 @@ class OcamlControlPlan {
 			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
 			case "Null<Int>": OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier;
 			case "Null<Bool>": OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier;
+			case "Dynamic": OcamlControlPayloadConversion.PreserveDynamicThrowCarrier;
 			case _: hasNominalRepresentation ? OcamlControlPayloadConversion.BoxNominalThrowCarrier : null;
 		}
 	}
@@ -1227,8 +1249,28 @@ class OcamlControlPlan {
 			case "Int", "Bool", "String": EXACT_VALUE_THROW_PROOF_ID;
 			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
 			case "Null<Bool>": NULLABLE_BOOL_THROW_PROOF_ID;
+			case "Dynamic": DYNAMIC_THROW_PROOF_ID;
 			case _: hasNominalRepresentation ? EXACT_NOMINAL_THROW_PROOF_ID : null;
 		}
+	}
+
+	/**
+		Reports whether one throw payload preserves the compiler-owned Dynamic
+		exception carrier without claiming a reusable program representation.
+
+		The caller must still validate the surrounding throw decision. This
+		predicate owns only the exceptional Dynamic payload boundary shared by
+		the plan, sealer, and lowering-report writer.
+	**/
+	public static function isAdmittedDynamicThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		return payload.inputSemanticTypeId == "Dynamic"
+			&& payload.inputCarrierTypeId == "Obj.t"
+			&& payload.inputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID
+			&& payload.outputSemanticTypeId == "Dynamic"
+			&& payload.outputCarrierTypeId == "Obj.t"
+			&& payload.outputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID
+			&& payload.conversion == OcamlControlPayloadConversion.PreserveDynamicThrowCarrier
+			&& payload.nominalRepresentation == null;
 	}
 
 	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
@@ -1247,6 +1289,12 @@ class OcamlControlPlan {
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(expression.t);
 			case "Null<Bool>": OcamlRepresentationRegistry.isExactNullBool(expression.t);
 			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
+			case "Dynamic":
+				switch (haxe.macro.TypeTools.follow(expression.t)) {
+					case TDynamic(_): payload.inputCarrierTypeId == "Obj.t" && payload.inputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID && payload.conversion == OcamlControlPayloadConversion.PreserveDynamicThrowCarrier;
+					case _:
+						false;
+				}
 			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue
 					|| payload.conversion == OcamlControlPayloadConversion.BoxNominalThrowCarrier) && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
 		}
@@ -1562,7 +1610,7 @@ class OcamlControlPlanner {
 				case TThrow(value):
 					visit(value, false, path + "/throw-value");
 					final representation = throwRepresentation(value);
-					final nominalRepresentation = representation == null ? null : nominalProofFor(representation);
+					final nominalRepresentation = representation == null ? null : representation.nominalRepresentation;
 					final conversion = representation == null ? null : OcamlControlPlan.expectedThrowConversion(representation.semanticTypeId,
 						nominalRepresentation != null);
 					if (representation == null || conversion == null) {
@@ -1580,6 +1628,8 @@ class OcamlControlPlanner {
 							"The final typed Haxe body sends one exact Null<Int>/Obj.t value through the compiler-owned Haxe exception channel without another box. The runtime tag comes from the carried value, so non-null matches Int while null remains Dynamic-only.";
 						case "Null<Bool>":
 							"The final typed Haxe body sends one exact Null<Bool>/Obj.t value through the compiler-owned Haxe exception channel. Null remains the existing sentinel; a non-null carrier is normalized once into the unambiguous boxed-Bool exception representation so it matches Bool rather than Int.";
+						case "Dynamic":
+							"The final typed Haxe body sends one Dynamic/Obj.t value through the compiler-owned Haxe exception channel without reboxing or changing the payload. Dynamic is the only static tag; the runtime derives any more specific primitive or class tag from the carried value, while null remains Dynamic-only.";
 						case _ if (nominalRepresentation != null):
 							'The final typed Haxe body sends one already-sealed ${representation.semanticTypeId}/${representation.carrierTypeId} nominal record through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the existing runtime class marker derives the concrete tag for a non-null record, while null remains Dynamic-only.';
 						case _:
@@ -1595,11 +1645,11 @@ class OcamlControlPlanner {
 						payload: {
 							inputSemanticTypeId: representation.semanticTypeId,
 							inputCarrierTypeId: representation.carrierTypeId,
-							inputRepresentationId: representation.id,
+							inputRepresentationId: representation.representationId,
 							signalCarrierTypeId: "Obj.t",
 							outputSemanticTypeId: representation.semanticTypeId,
 							outputCarrierTypeId: representation.carrierTypeId,
-							outputRepresentationId: representation.id,
+							outputRepresentationId: representation.representationId,
 							conversion: conversion,
 							nominalRepresentation: nominalRepresentation,
 							proofId: proofId,
@@ -1898,7 +1948,7 @@ class OcamlControlPlanner {
 				{
 					semanticTypeId: "Dynamic",
 					outputCarrierTypeId: "Obj.t",
-					outputRepresentationId: OcamlControlPlan.DYNAMIC_CATCH_REPRESENTATION_ID,
+					outputRepresentationId: OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID,
 					matchPolicy: OcamlCatchMatchPolicy.MatchAll,
 					runtimeTag: null,
 					conversion: OcamlCatchPayloadConversion.PreserveDynamicCarrier,
@@ -1951,14 +2001,41 @@ class OcamlControlPlanner {
 		decision even when the surrounding expression has no separately admitted
 		local or call-boundary proof. `Obj.repr` preserves either the real record
 		or the null sentinel, and runtime marker inspection adds the class tag only
-		for a real record. Other control families remain on their narrower proofs.
+		for a real record. A value statically typed as `Dynamic` already uses the
+		private `Obj.t` carrier; selecting it here preserves that carrier only for
+		exception transport and does not register a general Dynamic representation.
+		Other control families remain on their narrower proofs.
 	**/
-	function throwRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+	function throwRepresentation(expression:TypedExpr):Null<OcamlControlThrowRepresentation> {
 		final exact = exactValueRepresentation(expression);
-		if (exact != null)
-			return exact;
+		if (exact != null) {
+			return {
+				semanticTypeId: exact.semanticTypeId,
+				carrierTypeId: exact.carrierTypeId,
+				representationId: exact.id,
+				nominalRepresentation: nominalProofFor(exact)
+			};
+		}
+		switch (haxe.macro.TypeTools.follow(expression.t)) {
+			case TDynamic(_):
+				return {
+					semanticTypeId: "Dynamic",
+					carrierTypeId: "Obj.t",
+					representationId: OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID,
+					nominalRepresentation: null
+				};
+			case _:
+		}
 		final nominalClass = representations.monomorphicClassForType(expression.t);
-		return nominalClass == null ? null : representations.monomorphicClassValue(nominalClass.semanticTypeId);
+		if (nominalClass == null)
+			return null;
+		final representation = representations.monomorphicClassValue(nominalClass.semanticTypeId);
+		return representation == null ? null : {
+			semanticTypeId: representation.semanticTypeId,
+			carrierTypeId: representation.carrierTypeId,
+			representationId: representation.id,
+			nominalRepresentation: nominalProofFor(representation)
+		};
 	}
 
 	static function returnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan):Null<OcamlControlPayloadPlan> {

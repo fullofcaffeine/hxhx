@@ -1,0 +1,8 @@
+-cp ../../../oracle/reflaxe_ocaml_dynamic_throw_control_seed/src
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=out
+-D ocaml_lowering_report

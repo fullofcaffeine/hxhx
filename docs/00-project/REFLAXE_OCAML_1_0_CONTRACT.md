@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first eleven bounded control-effect slices are now executable. An ordinary
+The first twelve bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -212,13 +212,46 @@ a stale or conflicting revision.
 This is deliberately not general class-exception support. Inheritance,
 interfaces, generics, extern classes, dynamic methods, `haxe.Exception`,
 `haxe.ValueException`, enums, abstracts, nullable catch declarations, and
-arbitrary values crossing calls or storage without an existing representation
-proof remain unadmitted. The slice proves only the exception crossing and
-recovery boundary; it does not claim that every operation on a class value is
-already free of older target fallbacks.
+class values that lack an exact representation proof remain unadmitted. The
+slice proves only the exception crossing and recovery boundary; it does not
+claim that every operation on a class value is already free of older target
+fallbacks.
+
+The twelfth slice seals a throw whose static Haxe type is `Dynamic`. The
+practical change is that this function no longer asks the OCaml syntax builder
+how to box or classify `value`:
+
+```haxe
+static function fail(value:Dynamic):Void {
+	throw value;
+}
+```
+
+`Dynamic` already uses `Obj.t` in the target: one opaque OCaml carrier that can
+hold the runtime value without choosing its source type again. The control plan
+now records that exact carrier under the control-only identity
+`control-representation:Dynamic:runtime-obj-v1` and selects
+`preserve-dynamic-throw-carrier`. Generated syntax transports the carrier
+unchanged. It neither applies `Obj.repr` a second time nor invents an exact tag
+from the static `Dynamic` annotation.
+
+Only `Dynamic` is attached as a static tag. The existing exception channel
+examines the value already in the carrier: an integer reaches an `Int` catch, a
+Bool reaches `Bool`, a non-null String reaches `String`, and an admitted
+monomorphic-class record contributes its runtime class marker. Null contributes
+no more specific tag and therefore reaches only the final `Dynamic` catch. A
+`Dynamic` catch preserves the same carrier, so rethrowing that variable keeps
+the runtime value and lets an outer exact catch classify it the same way.
+
+This is exception-transport support, not a general `Dynamic` representation
+claim. Dynamic fields, storage, calls, operators, reflection, public ABI, and
+metal-profile admission keep their existing owners. The slice also does not
+define `haxe.Exception` or `haxe.ValueException` wrapping, class-hierarchy
+matching, enum/abstract payloads, Float payloads, or nested-function plan
+ownership.
 
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.11`, not closure of the parent control-effects requirement.
+`haxe_ocaml-w32h3.12`, not closure of the parent control-effects requirement.
 Additional value-return payloads, other primitive-to-nullable and nullable
 return carriers, wider nominal/exception families, cleanup effects, and the
 complete runtime-requirement ledger remain unfinished.

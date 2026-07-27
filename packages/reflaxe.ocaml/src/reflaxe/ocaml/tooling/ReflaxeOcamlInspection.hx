@@ -83,7 +83,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 20,
+			schemaVersion: 21,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -348,8 +348,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 35) {
-						throw 'Unsupported lowering report schema $version; expected 35.';
+					if (version != 36) {
+						throw 'Unsupported lowering report schema $version; expected 36.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -436,7 +436,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v11")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v12")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -582,25 +582,38 @@ class ReflaxeOcamlInspection {
 						|| payload == null) {
 						throw 'Control decision "${control.id}" has an invalid Haxe exception target, effect, mechanism, capability, or payload.';
 					}
-					validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-						'Control decision "${control.id}" input');
-					validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
-						'Control decision "${control.id}" output');
+					if (payload.inputSemanticTypeId == "Dynamic") {
+						if (payload.inputCarrierTypeId != "Obj.t"
+							|| payload.outputSemanticTypeId != "Dynamic"
+							|| payload.outputCarrierTypeId != "Obj.t"
+							|| payload.inputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| payload.outputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| payload.nominalRepresentation != null) {
+							throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+						}
+					} else {
+						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+							'Control decision "${control.id}" input');
+						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
+							'Control decision "${control.id}" output');
+					}
 					final expectedConversion = switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
+						case "Dynamic": "preserve-dynamic-throw-carrier";
 						case _: payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier";
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
-						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
+						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic": ["Dynamic"];
 						case _: payload.nominalRepresentation == null ? [] : ["Dynamic"];
 					};
 					final expectedProofId = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
+						case "Dynamic": "dynamic-carrier-throw-control-v1";
 						case _: payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1";
 					};
 					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,

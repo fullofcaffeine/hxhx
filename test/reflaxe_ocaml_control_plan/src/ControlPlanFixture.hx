@@ -199,7 +199,7 @@ class ControlPlanFixture {
 		final carrierTypeId = switch (semanticTypeId) {
 			case "Int": "int";
 			case "Bool": "bool";
-			case "Null<Int>", "Null<Bool>": "Obj.t";
+			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		};
@@ -207,7 +207,7 @@ class ControlPlanFixture {
 		final outputCarrierTypeId = switch (outputSemanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
-			case "Null<Int>", "Null<Bool>": "Obj.t";
+			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		};
@@ -217,6 +217,8 @@ class ControlPlanFixture {
 		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
+		final representationId = semanticTypeId == "Dynamic" ? OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID : 'representation:$semanticTypeId:internal-value';
+		final outputRepresentationId = outputSemanticType == "Dynamic" ? OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID : 'representation:$outputSemanticType:internal-value';
 		final proof = 'fixture exact-$semanticTypeId Haxe exception crossing';
 		return {
 			id: id,
@@ -232,11 +234,11 @@ class ControlPlanFixture {
 			payload: {
 				inputSemanticTypeId: semanticTypeId,
 				inputCarrierTypeId: carrierTypeId,
-				inputRepresentationId: 'representation:$semanticTypeId:internal-value',
+				inputRepresentationId: representationId,
 				signalCarrierTypeId: "Obj.t",
 				outputSemanticTypeId: outputSemanticType,
 				outputCarrierTypeId: outputCarrierTypeId,
-				outputRepresentationId: 'representation:$outputSemanticType:internal-value',
+				outputRepresentationId: outputRepresentationId,
 				conversion: selectedConversion,
 				proofId: selectedProofId,
 				proofClaim: proof,
@@ -267,7 +269,7 @@ class ControlPlanFixture {
 			case "Dynamic": "Obj.t";
 			case _: "unsupported";
 		}
-		final representation = semanticTypeId == "Dynamic" ? OcamlControlPlan.DYNAMIC_CATCH_REPRESENTATION_ID : 'representation:$semanticTypeId:internal-value';
+		final representation = semanticTypeId == "Dynamic" ? OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID : 'representation:$semanticTypeId:internal-value';
 		final selectedConversion = conversion ?? switch (semanticTypeId) {
 			case "Bool": OcamlCatchPayloadConversion.RecoverCheckedBool;
 			case "Dynamic": OcamlCatchPayloadConversion.PreserveDynamicCarrier;
@@ -443,6 +445,7 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:string", 190, "String"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-int", 192, "Null<Int>"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-bool", 194, "Null<Bool>"));
+		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
 		OcamlControlPlan.requireLoopTarget(loop);
 		OcamlControlPlan.requireCatchChain(exactCatchChain);
 		for (clause in exactCatchChain.clauses)
@@ -518,7 +521,14 @@ class ControlPlanFixture {
 		final preservedNullableBoolThrow = throwDecision("control:throw:preserved-nullable-bool", 254, "Null<Bool>",
 			OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [preservedNullableBoolThrow]));
-		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 256, "Int");
+		final boxedDynamicThrow = throwDecision("control:throw:boxed-dynamic", 255, "Dynamic", OcamlControlPayloadConversion.ReprAndRecoverExactValue);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [boxedDynamicThrow]));
+		final dynamicThrowWithProgramRepresentation = throwDecision("control:throw:dynamic-program-representation", 256, "Dynamic");
+		if (dynamicThrowWithProgramRepresentation.payload == null)
+			throw "The Dynamic representation-corruption fixture lost its payload";
+		Reflect.setField(dynamicThrowWithProgramRepresentation.payload, "inputRepresentationId", "representation:Dynamic:internal-value");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [dynamicThrowWithProgramRepresentation]));
+		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 257, "Int");
 		final primitivePayload = primitiveWithNominalProof.payload;
 		if (primitivePayload == null)
 			throw "The primitive nominal-corruption fixture lost its payload";

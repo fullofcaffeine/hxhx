@@ -153,6 +153,12 @@ class OcamlFunctionPlanSealer {
 			final payload = control.payload;
 			if (payload == null)
 				continue;
+			if (payload.inputSemanticTypeId == "Dynamic") {
+				if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)) {
+					fail('control "${control.id}" has an invalid Dynamic exception carrier', position);
+				}
+				continue;
+			}
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);
 			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, programRevision,

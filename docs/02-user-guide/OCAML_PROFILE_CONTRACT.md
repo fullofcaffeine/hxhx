@@ -268,6 +268,13 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     limited to concrete, non-extern, non-generic classes without hierarchy,
     interfaces, or dynamic methods; it does not admit general class,
     `haxe.Exception`, enum, abstract, or nullable-catch behavior.
+    A throw whose static type is `Dynamic` records
+    `preserve-dynamic-throw-carrier`. The source value already uses `Obj.t`,
+    so the exception channel transports that exact carrier without another
+    box. `Dynamic` is the only static tag; the runtime value may add its exact
+    primitive or admitted class tag, while null remains `Dynamic`-only. This
+    control-only record does not claim that Dynamic storage, calls, operators,
+    reflection, public ABI, or the metal profile are generally admitted.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and
