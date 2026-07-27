@@ -12,6 +12,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
@@ -79,7 +80,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 11,
+			schemaVersion: 12,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -105,6 +106,7 @@ class ReflaxeOcamlInspection {
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
 				controlCount: lowering.controls.length,
+				controlTargetCount: lowering.controlTargets.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -157,10 +159,12 @@ class ReflaxeOcamlInspection {
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
-			lines.push('[PASS] Typed control: ${report.lowering.controls.length} early return${report.lowering.controls.length == 1 ? "" : "s"} sealed before syntax.');
+			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
-				lines.push('  - ${control.sourceFile} bytes ${control.sourceMin}-${control.sourceMax}: ${control.kind} -> ${control.targetFunctionId}');
-				lines.push('    payload: ${control.payload.inputSemanticTypeId}/${control.payload.inputCarrierTypeId} -${control.payload.conversion}-> ${control.payload.signalCarrierTypeId} -> ${control.payload.outputSemanticTypeId}/${control.payload.outputCarrierTypeId}');
+				lines.push('  - ${control.sourceFile} bytes ${control.sourceMin}-${control.sourceMax}: ${control.kind} -> ${control.targetKind} ${control.targetId}');
+				final payload = control.payload;
+				if (payload != null)
+					lines.push('    payload: ${payload.inputSemanticTypeId}/${payload.inputCarrierTypeId} -${payload.conversion}-> ${payload.signalCarrierTypeId} -> ${payload.outputSemanticTypeId}/${payload.outputCarrierTypeId}');
 				lines.push('    mechanism: ${control.mechanism}; runtime capability: ${control.runtimeCapabilityId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
@@ -323,9 +327,11 @@ class ReflaxeOcamlInspection {
 					callableBoundaries: [],
 					controlRevision: null,
 					controls: [],
+					controlTargetRevision: null,
+					controlTargets: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-call-and-first-control-families",
+					scope: "typed-place-call-and-function-loop-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -333,8 +339,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 26) {
-						throw 'Unsupported lowering report schema $version; expected 26.';
+					if (version != 27) {
+						throw 'Unsupported lowering report schema $version; expected 27.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -351,7 +357,8 @@ class ReflaxeOcamlInspection {
 					final localConversions = inspectLocalConversions(value);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
 					final callInventory = inspectCalls(value, representation);
-					final controls = inspectControls(value, representation);
+					final controlTargets = inspectControlTargets(value);
+					final controls = inspectControls(value, representation, controlTargets);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
@@ -373,10 +380,12 @@ class ReflaxeOcamlInspection {
 						callableBoundaries: callInventory.boundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
 						controls: controls,
+						controlTargetRevision: requiredSha256Revision(value, "controlTargetRevision"),
+						controlTargets: controlTargets,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-call-and-first-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} early return${controls.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-call-and-function-loop-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} control transfer${controls.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -384,8 +393,38 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
-	static function inspectControls(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-exact-value-return-control-v2")
+	static function inspectControlTargets(value:Dynamic):Array<InspectionControlLoopTarget> {
+		if (requiredString(value, "controlTargetModel") != "typed-ocaml-lexical-loop-target-v1")
+			throw "Unsupported control-target report model.";
+		final rawTargets = requiredArray(value, "controlTargets");
+		if (rawTargets.length != requiredInt(value, "controlTargetCount"))
+			throw "Control-target count does not match its inventory.";
+		final targets = [for (entry in rawTargets) controlLoopTarget(entry)];
+		final ids:Map<String, Bool> = [];
+		for (target in targets) {
+			if (ids.exists(target.id))
+				throw 'Control-target report contains duplicate identity "${target.id}".';
+			if (target.sourceFile.length == 0
+				|| target.sourceMin < 0
+				|| target.sourceMax < target.sourceMin
+				|| (target.kind != "while" && target.kind != "do-while")
+				|| target.functionId.length == 0
+				|| target.programRevision.length == 0
+				|| target.bodyRevision.length == 0
+				|| target.pipelineRevision.length == 0
+				|| target.proofId != "lexical-loop-control-v1"
+				|| target.proofClaim.length == 0) {
+				throw 'Control loop target "${target.id}" has incomplete identity, source, proof, or revision metadata.';
+			}
+			ids.set(target.id, true);
+		}
+		targets.sort((left, right) -> compareStrings(left.id, right.id));
+		return targets;
+	}
+
+	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
+			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-and-loop-control-v3")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -393,6 +432,9 @@ class ReflaxeOcamlInspection {
 		final representationById:Map<String, InspectionRepresentationDecision> = [];
 		for (decision in representation.decisions)
 			representationById.set(decision.id, decision);
+		final targetById:Map<String, InspectionControlLoopTarget> = [];
+		for (target in targets)
+			targetById.set(target.id, target);
 		final controls = [for (entry in rawControls) controlDecision(entry)];
 		final ids:Map<String, Bool> = [];
 		for (control in controls) {
@@ -400,39 +442,62 @@ class ReflaxeOcamlInspection {
 				throw 'Control report contains duplicate identity "${control.id}".';
 			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
 				throw 'Control decision "${control.id}" has an invalid source span.';
-			if (control.kind != "return"
-				|| control.effect != "exit-function"
-				|| control.mechanism != "runtime-return-signal"
-				|| control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1"
-				|| control.targetFunctionId != control.functionId) {
-				throw 'Control decision "${control.id}" has an invalid transfer, target, effect, mechanism, or runtime capability.';
-			}
 			final payload = control.payload;
-			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-				'Control decision "${control.id}" input');
-			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
-				'Control decision "${control.id}" output');
-			final admittedInput = (payload.inputSemanticTypeId == "Int"
-				&& payload.inputCarrierTypeId == "int"
-				&& payload.inputRepresentationId == "representation:Int:internal-value")
-				|| (payload.inputSemanticTypeId == "Bool"
-					&& payload.inputCarrierTypeId == "bool"
-					&& payload.inputRepresentationId == "representation:Bool:internal-value")
-				|| (payload.inputSemanticTypeId == "String"
-					&& payload.inputCarrierTypeId == "string"
-					&& payload.inputRepresentationId == "representation:String:internal-value");
-			if (!admittedInput
-				|| payload.signalCarrierTypeId != "Obj.t"
-				|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-				|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-				|| payload.outputRepresentationId != payload.inputRepresentationId
-				|| payload.conversion != "box-and-recover-exact-value"
-				|| payload.proofId != "exact-value-early-return-control-v2"
-				|| control.proofId != "exact-value-early-return-control-v2") {
-				throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
+			switch (control.kind) {
+				case "return":
+					if (control.effect != "exit-function"
+						|| control.targetKind != "function"
+						|| control.targetId != control.functionId
+						|| control.mechanism != "runtime-return-signal"
+						|| control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1"
+						|| payload == null) {
+						throw 'Control decision "${control.id}" has an invalid return target, effect, mechanism, capability, or payload.';
+					}
+					validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+						'Control decision "${control.id}" input');
+					validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
+						'Control decision "${control.id}" output');
+					final admittedInput = (payload.inputSemanticTypeId == "Int"
+						&& payload.inputCarrierTypeId == "int"
+						&& payload.inputRepresentationId == "representation:Int:internal-value")
+						|| (payload.inputSemanticTypeId == "Bool"
+							&& payload.inputCarrierTypeId == "bool"
+							&& payload.inputRepresentationId == "representation:Bool:internal-value")
+						|| (payload.inputSemanticTypeId == "String"
+							&& payload.inputCarrierTypeId == "string"
+							&& payload.inputRepresentationId == "representation:String:internal-value");
+					if (!admittedInput
+						|| payload.signalCarrierTypeId != "Obj.t"
+						|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+						|| payload.outputRepresentationId != payload.inputRepresentationId
+						|| payload.conversion != "box-and-recover-exact-value"
+						|| payload.proofId != "exact-value-early-return-control-v2"
+						|| payload.proofClaim.length == 0
+						|| control.proofId != "exact-value-early-return-control-v2") {
+						throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
+					}
+				case "break", "continue":
+					final isBreak = control.kind == "break";
+					final target = targetById.get(control.targetId);
+					if (target == null)
+						throw 'Control decision "${control.id}" refers to missing loop target "${control.targetId}".';
+					if (control.targetKind != "loop"
+						|| control.effect != (isBreak ? "exit-loop" : "next-loop-iteration")
+						|| control.mechanism != (isBreak ? "runtime-break-signal" : "runtime-continue-signal")
+						|| control.runtimeCapabilityId != (isBreak ? "hxhx-runtime:loop-break-signal-v1" : "hxhx-runtime:loop-continue-signal-v1")
+						|| payload != null
+						|| control.proofId != "lexical-loop-control-v1"
+						|| target.functionId != control.functionId
+						|| target.programRevision != control.programRevision
+						|| target.bodyRevision != control.bodyRevision
+						|| target.pipelineRevision != control.pipelineRevision) {
+						throw 'Control decision "${control.id}" has an invalid loop target, effect, mechanism, capability, payload, or revision.';
+					}
+				case _:
+					throw 'Control decision "${control.id}" has unsupported transfer kind "${control.kind}".';
 			}
-			if (payload.proofClaim.length == 0
-				|| control.proofClaim.length == 0
+			if (control.proofClaim.length == 0
 				|| control.reason.length == 0
 				|| control.functionId.length == 0
 				|| control.programRevision.length == 0
@@ -458,8 +523,9 @@ class ReflaxeOcamlInspection {
 			sourceMax: requiredInt(source, "max"),
 			kind: requiredString(value, "kind"),
 			effect: requiredString(value, "effect"),
-			targetFunctionId: requiredString(value, "targetFunctionId"),
-			payload: controlPayload(requiredObject(value, "payload")),
+			targetKind: requiredString(value, "targetKind"),
+			targetId: requiredString(value, "targetId"),
+			payload: Reflect.field(value, "payload") == null ? null : controlPayload(requiredObject(value, "payload")),
 			mechanism: requiredString(value, "mechanism"),
 			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
@@ -470,6 +536,23 @@ class ReflaxeOcamlInspection {
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlLoopTarget(value:Dynamic):InspectionControlLoopTarget {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			kind: requiredString(value, "kind"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
 		};
 	}
 
@@ -1737,9 +1820,11 @@ class ReflaxeOcamlInspection {
 			callableBoundaries: [],
 			controlRevision: null,
 			controls: [],
+			controlTargetRevision: null,
+			controlTargets: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-call-and-first-control-families",
+			scope: "typed-place-call-and-function-loop-control-families",
 			message: message
 		};
 	}

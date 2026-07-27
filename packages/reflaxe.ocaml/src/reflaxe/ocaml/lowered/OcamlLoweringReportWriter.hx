@@ -13,6 +13,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -33,7 +35,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 26;
+	public static inline final SCHEMA_VERSION = 27;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -88,8 +90,8 @@ class OcamlLoweringReportWriter {
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
 			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
-			artifacts:OcamlArtifactManifestBuilder):Void {
+			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, staticStorage:Array<OcamlStaticStorageReportEntry>,
+			staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -177,6 +179,15 @@ class OcamlLoweringReportWriter {
 					throw 'Call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}".';
 			}
 		}
+		final sortedControlTargets = controlLoopTargets.copy();
+		sortedControlTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final controlTargetById:Map<String, OcamlControlLoopTarget> = [];
+		for (target in sortedControlTargets) {
+			OcamlControlPlan.requireLoopTarget(target);
+			if (controlTargetById.exists(target.id))
+				throw 'Control loop target identity "${target.id}" occurs more than once.';
+			controlTargetById.set(target.id, target);
+		}
 		final sortedControls = controls.copy();
 		sortedControls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final controlById:Map<String, Bool> = [];
@@ -185,10 +196,24 @@ class OcamlLoweringReportWriter {
 			if (controlById.exists(control.id))
 				throw 'Control decision identity "${control.id}" occurs more than once.';
 			controlById.set(control.id, true);
-			requireRepresentation(representationById, control.payload.inputRepresentationId, control.payload.inputSemanticTypeId,
-				control.payload.inputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
-			requireRepresentation(representationById, control.payload.outputRepresentationId, control.payload.outputSemanticTypeId,
-				control.payload.outputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+			final payload = control.payload;
+			if (payload != null) {
+				requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
+					OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
+				requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
+					OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+			}
+			if (control.targetKind == OcamlControlTargetKind.Loop) {
+				final target = controlTargetById.get(control.targetId);
+				if (target == null)
+					throw 'Control decision "${control.id}" refers to missing loop target "${control.targetId}".';
+				if (target.functionId != control.functionId
+					|| target.programRevision != control.programRevision
+					|| target.bodyRevision != control.bodyRevision
+					|| target.pipelineRevision != control.pipelineRevision) {
+					throw 'Control decision "${control.id}" and loop target "${target.id}" disagree about their owning function or revision.';
+				}
+			}
 		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
@@ -237,7 +262,11 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaries: sortedCallableBoundaries
 		});
-		final canonicalControls = haxe.Json.stringify(sortedControls);
+		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
+		final canonicalControls = haxe.Json.stringify({
+			targets: sortedControlTargets,
+			decisions: sortedControls
+		});
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
@@ -261,10 +290,14 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-exact-value-return-control-v2",
+			controlModel: "typed-ocaml-function-and-loop-control-v3",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
+			controlTargetModel: "typed-ocaml-lexical-loop-target-v1",
+			controlTargetRevision: "sha256:" + Sha256.encode(canonicalControlTargets),
+			controlTargetCount: sortedControlTargets.length,
+			controlTargets: sortedControlTargets,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,

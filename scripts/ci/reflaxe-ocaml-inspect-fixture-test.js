@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 11)
+	assert.strictEqual(report.schemaVersion, 12)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -70,7 +70,7 @@ try {
 	assert.strictEqual(report.runtime.semanticManifest, false)
 	assert.strictEqual(report.buildTiming.status, 'not-enabled')
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
-	assert.strictEqual(report.lowering.scope, 'typed-place-call-and-first-control-families')
+	assert.strictEqual(report.lowering.scope, 'typed-place-call-and-function-loop-control-families')
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
@@ -84,6 +84,8 @@ try {
 	assert.strictEqual(report.lowering.calls.length, report.summary.callCount)
 	assert.strictEqual(report.lowering.callableBoundaries.length, report.summary.callableBoundaryCount)
 	assert.strictEqual(report.lowering.controls.length, report.summary.controlCount)
+	assert.strictEqual(report.lowering.controlTargets.length, report.summary.controlTargetCount)
+	assert.match(report.lowering.controlTargetRevision, sha256Revision)
 	assert.match(report.lowering.callRevision, sha256Revision)
 	assert(report.lowering.calls.every(call =>
 		report.lowering.callableBoundaries.some(boundary =>

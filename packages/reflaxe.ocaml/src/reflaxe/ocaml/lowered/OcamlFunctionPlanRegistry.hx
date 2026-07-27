@@ -12,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -54,7 +55,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v27";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v29";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -375,6 +376,22 @@ class OcamlFunctionPlanRegistry {
 		}
 		controls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return controls;
+	}
+
+	/** Returns every admitted lexical loop target in deterministic identity order. */
+	public function controlLoopTargets():Array<OcamlControlLoopTarget> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final targets:Array<OcamlControlLoopTarget> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (target in sealed.plan.controls.loopTargets())
+					targets.push(target);
+			}
+		}
+		targets.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return targets;
 	}
 
 	/** Returns every admitted callable definition in canonical callee order. */

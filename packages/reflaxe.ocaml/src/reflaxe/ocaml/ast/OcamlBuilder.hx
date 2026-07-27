@@ -35,8 +35,11 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
@@ -65,11 +68,11 @@ import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 	Behavior-sensitive families move through focused typed OCaml lowering modules
 	before this class constructs syntax. Admitted place operations, local
-	mutable-storage choices, typed calls, and exact-value early returns now arrive
-	in one revision-sealed function plan. New representation, scheduling,
-	mutation, control, runtime, or ABI decisions do not belong in this
-	already-large builder; legacy `unit` fallbacks remain migration debt, not the
-	contract for a newly admitted family.
+	mutable-storage choices, typed calls, exact-value early returns, and lexical
+	loop-control targets now arrive in one revision-sealed function plan. New
+	representation, scheduling, mutation, control, runtime, or ABI decisions do
+	not belong in this already-large builder; legacy `unit` fallbacks remain
+	migration debt, not the contract for a newly admitted family.
 **/
 class OcamlBuilder {
 	static final injectionPrinter = new OcamlASTPrinter();
@@ -97,8 +100,10 @@ class OcamlBuilder {
 
 	var tmpId:Int = 0;
 
-	// Tracks nesting of loops while building expressions (used for break/continue).
+	// Legacy nesting check for nested function literals that do not yet own a
+	// sealed function plan. Admitted ordinary functions use exact target IDs.
 	var loopDepth:Int = 0;
+	var currentLoopTargetIds:Array<String> = [];
 
 	// Set while compiling a function body so declarations consume the selected
 	// shared-cell versus immutable-rebinding decision.
@@ -240,17 +245,23 @@ class OcamlBuilder {
 		final binding = currentFunctionPlanBinding;
 		if (binding == null)
 			return controlPlanInvariant('control decision "${decision.id}" reached syntax without a sealed function binding', position);
-		if (decision.targetFunctionId != binding.functionId)
+		if (decision.kind != OcamlControlTransferKind.Return
+			|| decision.targetKind != OcamlControlTargetKind.Function
+			|| decision.targetId != binding.functionId) {
 			return
-				controlPlanInvariant('control decision "${decision.id}" targets "${decision.targetFunctionId}" while syntax is building "${binding.functionId}"',
-					position);
+				controlPlanInvariant('control decision "${decision.id}" targets ${decision.targetKind} "${decision.targetId}" while return syntax is building "${binding.functionId}"',
+				position);
+		}
 		if (value == null)
 			return controlPlanInvariant('control decision "${decision.id}" expects an exact represented return value, but the typed return is empty', position);
-		final payload = switch (decision.payload.conversion) {
+		final selectedPayload = decision.payload;
+		if (selectedPayload == null)
+			return controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
+		final payload = switch (selectedPayload.conversion) {
 			case BoxAndRecoverExactValue:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 			case _:
-				return controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${decision.payload.conversion}',
+				return controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}',
 					position);
 		}
 		return switch (decision.mechanism) {
@@ -268,12 +279,41 @@ class OcamlBuilder {
 		} catch (error:Dynamic) {
 			return controlPlanInvariant(Std.string(error), position);
 		}
-		return switch (decision.payload.conversion) {
+		final payload = decision.payload;
+		if (payload == null)
+			return controlPlanInvariant('return decision "${decision.id}" reached its function boundary without a sealed value payload', position);
+		return switch (payload.conversion) {
 			case BoxAndRecoverExactValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
-					OcamlTypeExpr.TIdent(decision.payload.outputCarrierTypeId));
+					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case _:
-				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${decision.payload.conversion}', position);
+				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${payload.conversion}', position);
+		}
+	}
+
+	/** Raises one sealed break or continue after checking its lexical target. */
+	function buildPlannedLoopTransfer(decision:OcamlControlDecision, expectedKind:OcamlControlTransferKind, position:Position):OcamlExpr {
+		try {
+			OcamlControlPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		if (decision.kind != expectedKind || decision.targetKind != OcamlControlTargetKind.Loop)
+			return controlPlanInvariant('control decision "${decision.id}" does not represent the expected $expectedKind loop transfer', position);
+		if (currentLoopTargetIds.length == 0)
+			return controlPlanInvariant('control decision "${decision.id}" reached syntax without an active sealed loop target', position);
+		final currentTargetId = currentLoopTargetIds[currentLoopTargetIds.length - 1];
+		if (decision.targetId != currentTargetId)
+			return
+				controlPlanInvariant('control decision "${decision.id}" targets loop "${decision.targetId}" while syntax is building innermost loop "$currentTargetId"',
+					position);
+		return switch (decision.mechanism) {
+			case RuntimeBreakSignal if (expectedKind == OcamlControlTransferKind.Break):
+				OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
+			case RuntimeContinueSignal if (expectedKind == OcamlControlTransferKind.Continue):
+				OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
+			case _:
+				controlPlanInvariant('control decision "${decision.id}" selected mechanism ${decision.mechanism} for $expectedKind', position);
 		}
 	}
 
@@ -3891,7 +3931,16 @@ class OcamlBuilder {
 						OcamlExpr.EConst(OcamlConst.CInt(-1));
 				}
 			case TBreak:
-				if (loopDepth <= 0) {
+				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
+					final decision = try {
+						currentControlPlan.decisionFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+					if (decision == null)
+						return controlPlanInvariant("an admitted break reached syntax without its sealed loop-transfer decision", e.pos);
+					buildPlannedLoopTransfer(decision, OcamlControlTransferKind.Break, e.pos);
+				} else if (loopDepth <= 0) {
 					#if macro
 					guardrailError("reflaxe.ocaml: `break` is only supported inside loops.", e.pos);
 					#end
@@ -3900,7 +3949,16 @@ class OcamlBuilder {
 					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
 				}
 			case TContinue:
-				if (loopDepth <= 0) {
+				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
+					final decision = try {
+						currentControlPlan.decisionFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+					if (decision == null)
+						return controlPlanInvariant("an admitted continue reached syntax without its sealed loop-transfer decision", e.pos);
+					buildPlannedLoopTransfer(decision, OcamlControlTransferKind.Continue, e.pos);
+				} else if (loopDepth <= 0) {
 					#if macro
 					guardrailError("reflaxe.ocaml: `continue` is only supported inside loops.", e.pos);
 					#end
@@ -3910,10 +3968,29 @@ class OcamlBuilder {
 				}
 			case TWhile(cond, body, normalWhile):
 				final condExpr = buildCondition(cond);
-				final needsControl = containsLoopControl(body);
-				loopDepth += 1;
+				final plannedTarget:Null<OcamlControlLoopTarget> = if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted) {
+					try {
+						currentControlPlan.loopTargetFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+				} else {
+					null;
+				};
+				if (currentControlPlan != null && currentControlPlan.loopFamilyAdmitted && plannedTarget == null)
+					return controlPlanInvariant("an admitted loop reached syntax without its sealed lexical target", e.pos);
+				final needsControl = plannedTarget == null ? containsLoopControl(body) : currentControlPlan.hasTransfersForTarget(plannedTarget.id);
+				if (plannedTarget == null) {
+					loopDepth += 1;
+				} else {
+					currentLoopTargetIds.push(plannedTarget.id);
+				}
 				final builtBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]);
-				loopDepth -= 1;
+				if (plannedTarget == null) {
+					loopDepth -= 1;
+				} else {
+					currentLoopTargetIds.pop();
+				}
 
 				if (needsControl) {
 					final continueCase:OcamlMatchCase = {
@@ -4251,14 +4328,14 @@ class OcamlBuilder {
 					OcamlExpr.ETry(builtTry, [breakCase, continueCase, returnCase, hxExceptionCase, ocamlExnCase]);
 				}
 			case TReturn(ret):
-				if (currentControlPlan != null && currentControlPlan.admittedFunction) {
+				if (currentControlPlan != null && currentControlPlan.returnFamilyAdmitted) {
 					final decision = try {
 						currentControlPlan.decisionFor(e);
 					} catch (error:Dynamic) {
 						return controlPlanInvariant(Std.string(error), e.pos);
 					}
 					if (decision == null)
-						return controlPlanInvariant("an exact-Int early return reached syntax without its sealed control decision", e.pos);
+						return controlPlanInvariant("an admitted exact-value early return reached syntax without its sealed control decision", e.pos);
 					buildPlannedReturn(decision, ret, e.pos);
 				} else {
 					final valueExpr = switch (ret) {
@@ -6577,14 +6654,14 @@ class OcamlBuilder {
 					// `return` terminates the block: ignore any following expressions.
 					base = if (allowDirectReturn) {
 						ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
-					} else if (currentControlPlan != null && currentControlPlan.admittedFunction) {
+					} else if (currentControlPlan != null && currentControlPlan.returnFamilyAdmitted) {
 						final decision = try {
 							currentControlPlan.decisionFor(e);
 						} catch (error:Dynamic) {
 							return controlPlanInvariant(Std.string(error), e.pos);
 						}
 						if (decision == null)
-							return controlPlanInvariant("an exact-Int early return reached block syntax without its sealed control decision", e.pos);
+							return controlPlanInvariant("an admitted exact-value early return reached block syntax without its sealed control decision", e.pos);
 						buildPlannedReturn(decision, ret, e.pos);
 					} else {
 						final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
@@ -6863,9 +6940,13 @@ class OcamlBuilder {
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousCallPlan = currentCallPlan;
 		final previousControlPlan = currentControlPlan;
+		final previousLoopDepth = loopDepth;
+		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
 		currentCallPlan = functionPlan.calls;
 		currentControlPlan = functionPlan.controls;
+		loopDepth = 0;
+		currentLoopTargetIds = [];
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6906,7 +6987,7 @@ class OcamlBuilder {
 		#if macro
 		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final needsReturnCatch = functionPlan.controls.admittedFunction ? functionPlan.controls.hasReturnTransfers() : containsNestedReturnInFunctionBody(bodyExpr);
+		final needsReturnCatch = functionPlan.controls.returnFamilyAdmitted ? functionPlan.controls.hasReturnTransfers() : containsNestedReturnInFunctionBody(bodyExpr);
 		#if macro
 		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6935,16 +7016,16 @@ class OcamlBuilder {
 
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
-			final plannedReturn = functionPlan.controls.admittedFunction ? functionPlan.controls.returnBoundaryDecision() : null;
-			if (functionPlan.controls.admittedFunction && plannedReturn == null)
-				return controlPlanInvariant("an admitted function requires a return catch but has no sealed return-boundary decision", bodyExpr.pos);
+			final plannedReturn = functionPlan.controls.returnFamilyAdmitted ? functionPlan.controls.returnBoundaryDecision() : null;
+			if (functionPlan.controls.returnFamilyAdmitted && plannedReturn == null)
+				return controlPlanInvariant("an admitted return family requires a return catch but has no sealed return-boundary decision", bodyExpr.pos);
 			final returnCase:OcamlMatchCase = {
 				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 				guard: null,
 				expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
 					resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
 			};
-			final fallbackBody = if (functionPlan.controls.admittedFunction) {
+			final fallbackBody = if (functionPlan.controls.returnFamilyAdmitted) {
 				body;
 			} else if (isVoidType(resolvedReturnType)) {
 				body;
@@ -6989,6 +7070,8 @@ class OcamlBuilder {
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentCallPlan = previousCallPlan;
 		currentControlPlan = previousControlPlan;
+		loopDepth = previousLoopDepth;
+		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -7014,7 +7097,11 @@ class OcamlBuilder {
 		}
 
 		final previousControlPlan = currentControlPlan;
+		final previousLoopDepth = loopDepth;
+		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = null;
+		loopDepth = 0;
+		currentLoopTargetIds = [];
 		final needsReturnCatch = containsNestedReturnInFunctionBody(tfunc.expr);
 		final functionReturnType:Type = switch (tfunc.t) {
 			case TFun(_, ret): ret;
@@ -7064,6 +7151,8 @@ class OcamlBuilder {
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentControlPlan = previousControlPlan;
+		loopDepth = previousLoopDepth;
+		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);
 	}
 

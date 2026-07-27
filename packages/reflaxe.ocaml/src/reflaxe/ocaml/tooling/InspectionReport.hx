@@ -332,7 +332,22 @@ typedef InspectionControlPayload = {
 	final proofClaim:String;
 }
 
-/** One early return whose target and payload were sealed before OCaml syntax. **/
+/** One lexical loop target sealed before break/continue syntax is emitted. **/
+typedef InspectionControlLoopTarget = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/** One function or loop transfer sealed before OCaml syntax is emitted. **/
 typedef InspectionControl = {
 	final id:String;
 	final sourceFile:String;
@@ -340,8 +355,9 @@ typedef InspectionControl = {
 	final sourceMax:Int;
 	final kind:String;
 	final effect:String;
-	final targetFunctionId:String;
-	final payload:InspectionControlPayload;
+	final targetKind:String;
+	final targetId:String;
+	final payload:Null<InspectionControlPayload>;
 	final mechanism:String;
 	final runtimeCapabilityId:String;
 	final profileEligibility:Array<String>;
@@ -399,6 +415,8 @@ typedef InspectionLowering = {
 	final callableBoundaries:Array<InspectionCallableBoundary>;
 	final controlRevision:Null<String>;
 	final controls:Array<InspectionControl>;
+	final controlTargetRevision:Null<String>;
+	final controlTargets:Array<InspectionControlLoopTarget>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -428,6 +446,7 @@ typedef InspectionSummary = {
 	final callCount:Int;
 	final callableBoundaryCount:Int;
 	final controlCount:Int;
+	final controlTargetCount:Int;
 	final staticStorageCount:Int;
 }
 

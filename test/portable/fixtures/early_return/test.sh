@@ -25,14 +25,20 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 26
-	|| report.controlModel !== 'typed-ocaml-exact-value-return-control-v2'
-	|| report.controlCount !== 18
-	|| report.controls.length !== 18
-	|| !sha256.test(report.controlRevision)) {
-	fail('unexpected exact-value control report schema, model, count, or revision')
+if (report.schemaVersion !== 27
+	|| report.controlModel !== 'typed-ocaml-function-and-loop-control-v3'
+	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
+	|| report.controlCount !== report.controls.length
+	|| report.controlTargetCount !== report.controlTargets.length
+	|| !sha256.test(report.controlRevision)
+	|| !sha256.test(report.controlTargetRevision)) {
+	fail('unexpected function/loop control report schema, model, inventory, or revision')
 }
 
+const returnControls = report.controls.filter(control => control.kind === 'return')
+if (returnControls.length !== 18) {
+	fail(`expected 18 exact-value return decisions, got ${returnControls.length}`)
+}
 const expectedByFunction = new Map([
 	['branch', 1],
 	['loop', 1],
@@ -44,23 +50,24 @@ const expectedByFunction = new Map([
 	['nestedClosure', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
-	const decisions = report.controls.filter(control =>
+	const decisions = returnControls.filter(control =>
 		control.functionId.includes(`|function|${name}|`))
 	if (decisions.length !== expectedCount) {
 		fail(`expected ${expectedCount} sealed ${name} return decisions, got ${decisions.length}`)
 	}
 }
-if (report.controls.some(control =>
+if (returnControls.some(control =>
 	control.functionId.includes('|function|local|'))) {
 	fail('the outer method control plan incorrectly claimed the nested function literal')
 }
 
 const ids = new Set()
-for (const control of report.controls) {
+for (const control of returnControls) {
 	if (ids.has(control.id)
 		|| control.kind !== 'return'
 		|| control.effect !== 'exit-function'
-		|| control.targetFunctionId !== control.functionId
+		|| control.targetKind !== 'function'
+		|| control.targetId !== control.functionId
 		|| control.mechanism !== 'runtime-return-signal'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
@@ -72,7 +79,7 @@ for (const control of report.controls) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v27') {
+		|| control.pipelineRevision !== 'ocaml-function-plans-v29') {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -164,11 +171,12 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 11
+if (report.schemaVersion !== 12
 	|| report.summary.valid !== true
-	|| report.summary.controlCount !== 18
-	|| report.lowering.controls.length !== 18
-	|| report.lowering.scope !== 'typed-place-call-and-first-control-families') {
+	|| report.summary.controlCount !== report.lowering.controls.length
+	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 18
+	|| report.lowering.scope !== 'typed-place-call-and-function-loop-control-families') {
 	throw new Error('public inspection did not expose the 18 validated exact-value control decisions')
 }
 NODE
