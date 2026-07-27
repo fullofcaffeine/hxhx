@@ -46,6 +46,7 @@ class ReflaxeOcamlInspection {
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
 	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
+	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -371,7 +372,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v15")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v16")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -397,6 +398,8 @@ class ReflaxeOcamlInspection {
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			if (boundary.result != null)
 				validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
+			validateDeclaredCallIdentity(boundary.kind, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName,
+				'Callable boundary "${boundary.id}"');
 			validateCallSignature(boundary.kind, boundary.receiver, boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId,
 				representationById, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
@@ -415,6 +418,7 @@ class ReflaxeOcamlInspection {
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				validateCallValue(call.result, representationById, 'Call "${call.id}" result');
+			validateDeclaredCallIdentity(call.kind, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, 'Call "${call.id}"');
 			validateCallSignature(call.kind, call.receiver, call.arguments, call.resultKind, call.result, call.proofId, representationById, false,
 				'Call "${call.id}"');
 			if (call.kind == "typed-function-value") {
@@ -513,7 +517,10 @@ class ReflaxeOcamlInspection {
 
 	static function requireCallKind(value:Dynamic):String {
 		final kind = requiredString(value, "kind");
-		if (kind != "direct-static-haxe-method" && kind != "direct-instance-haxe-method" && kind != "typed-function-value")
+		if (kind != "direct-static-haxe-method"
+			&& kind != "direct-instance-haxe-method"
+			&& kind != "direct-haxe-constructor"
+			&& kind != "typed-function-value")
 			throw 'Unsupported typed-call kind "$kind".';
 		return kind;
 	}
@@ -609,7 +616,7 @@ class ReflaxeOcamlInspection {
 	static function callableBoundary(value:Dynamic):InspectionCallableBoundary {
 		final resultKind = callResultKind(value);
 		final kind = requireCallKind(value);
-		if (kind != "direct-static-haxe-method" && kind != "direct-instance-haxe-method")
+		if (kind != "direct-static-haxe-method" && kind != "direct-instance-haxe-method" && kind != "direct-haxe-constructor")
 			throw 'Unsupported callable-boundary kind "$kind".';
 		final receiver = callReceiver(value, kind);
 		return {
@@ -703,6 +710,19 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
+	/** Rejects report entries whose source declaration identity contradicts their call kind. */
+	static function validateDeclaredCallIdentity(kind:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, owner:String):Void {
+		if (kind == "typed-function-value") {
+			if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
+				throw '$owner assigns a declaration identity to a computed function value.';
+			return;
+		}
+		if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
+			throw '$owner has an incomplete Haxe declaration identity.';
+		if (kind == "direct-haxe-constructor" && sourceFieldName != "new")
+			throw '$owner identifies constructor field "$sourceFieldName" instead of "new".';
+	}
+
 	static function validateCallSignature(kind:String, receiver:Null<InspectionCallValue>, arguments:Array<InspectionCallValue>, resultKind:String,
 			result:Null<InspectionCallValue>, proofId:String, representations:Map<String, InspectionRepresentationDecision>, isCallableBoundary:Bool,
 			owner:String):Void {
@@ -719,6 +739,21 @@ class ReflaxeOcamlInspection {
 			}
 		} else if (receiver != null) {
 			throw '$owner unexpectedly owns an instance receiver.';
+		}
+		if (kind == "direct-haxe-constructor") {
+			if (proofId != DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID)
+				throw '$owner has proof "$proofId" instead of "$DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID".';
+			if (arguments.length != 1 || arguments[0].parameterOptional)
+				throw '$owner is outside the one-required-argument constructor slice.';
+			if (resultKind != "value" || result == null)
+				throw '$owner has no sealed nominal constructor result.';
+			final constructorResult:InspectionCallValue = result;
+			if (!isAdmittedNominalSide(constructorResult.inputSemanticTypeId, constructorResult.inputCarrierTypeId, constructorResult.inputRepresentationId,
+				representations)
+				|| !isAdmittedNominalSide(constructorResult.outputSemanticTypeId, constructorResult.outputCarrierTypeId,
+					constructorResult.outputRepresentationId, representations)) {
+				throw '$owner has no sealed nominal constructor result.';
+			}
 		}
 		if (kind == "typed-function-value") {
 			if (isCallableBoundary)
@@ -820,7 +855,7 @@ class ReflaxeOcamlInspection {
 			representations:Map<String, InspectionRepresentationDecision>):Bool {
 		if (isAdmittedCallValueSide(semanticTypeId, carrierTypeId, representationId))
 			return true;
-		return (kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method")
+		return (kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method" || kind == "direct-haxe-constructor")
 			&& isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations);
 	}
 

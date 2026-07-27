@@ -52,8 +52,46 @@ const instanceCalls = (report.calls ?? []).filter(call =>
 	call.kind === 'direct-instance-haxe-method'
 	&& call.sourceTypeName === 'Counter'
 	&& call.sourceFieldName === 'bump')
+const constructorCalls = (report.calls ?? []).filter(call =>
+	call.kind === 'direct-haxe-constructor'
+	&& call.sourceTypeName === 'Counter'
+	&& call.sourceFieldName === 'new')
+const constructorBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
+	boundary.kind === 'direct-haxe-constructor')
 const instanceBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
 	boundary.kind === 'direct-instance-haxe-method')
+if (constructorBoundaries.length !== 1
+	|| constructorBoundaries[0].sourceTypeName !== 'Counter'
+	|| constructorBoundaries[0].sourceFieldName !== 'new'
+	|| constructorBoundaries[0].result?.outputRepresentationId !== decision.id) {
+	fail('the report did not seal the exact Counter construction boundary')
+}
+if (constructorCalls.length !== 4) {
+	fail(`expected four exact Counter constructions, got ${constructorCalls.length}`)
+}
+for (const constructorCall of constructorCalls) {
+	if (constructorCall.receiver !== null
+		|| constructorCall.arguments?.length !== 1
+		|| constructorCall.arguments[0]?.outputSemanticTypeId !== 'Int'
+		|| constructorCall.arguments[0]?.outputCarrierTypeId !== 'int'
+		|| constructorCall.arguments[0]?.conversion !== 'identity'
+		|| constructorCall.resultKind !== 'value'
+		|| constructorCall.result?.inputSemanticTypeId !== 'Counter'
+		|| constructorCall.result?.inputCarrierTypeId !== 'counter_t'
+		|| constructorCall.result?.inputRepresentationId !== decision.id
+		|| constructorCall.result?.outputSemanticTypeId !== 'Counter'
+		|| constructorCall.result?.outputCarrierTypeId !== 'counter_t'
+		|| constructorCall.result?.outputRepresentationId !== decision.id
+		|| constructorCall.result?.conversion !== 'identity'
+		|| constructorCall.evaluationSchedule?.length !== 2
+		|| constructorCall.evaluationSchedule[0]?.kind !== 'materialize-argument'
+		|| constructorCall.evaluationSchedule[0]?.argumentIndex !== 0
+		|| constructorCall.evaluationSchedule[0]?.sourceArgumentIndex !== 0
+		|| typeof constructorCall.evaluationSchedule[0]?.slotId !== 'string'
+		|| constructorCall.evaluationSchedule[1]?.kind !== 'invoke-callee') {
+		fail('a Counter construction does not preserve its exact argument, result, and evaluation schedule')
+	}
+}
 if (instanceBoundaries.length !== 1
 	|| instanceBoundaries[0].sourceTypeName !== 'Counter'
 	|| instanceBoundaries[0].sourceFieldName !== 'bump'
@@ -84,18 +122,21 @@ for (const instanceCall of instanceCalls) {
 	}
 }
 
-if (!source.includes('let counter = Obj.magic (counter_create 6)')
+if (!/let counter = Obj\.magic \(let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+\)/.test(source)
 	|| !source.includes('(Obj.magic counter : counter_t).value')) {
 	fail('the captured Counter local crossed the first-slice boundary instead of retaining the legacy path')
+}
+if (!/let counter = let __call_arg_0_\d+ = sourceValue \(\) in counter_create __call_arg_0_\d+/.test(source)) {
+	fail('the constructor-local path did not materialize its argument before invoking Counter.create')
 }
 
 const requiredSource = [
 	'type counter_t = { __hx_type : Obj.t; mutable value : int }',
-	'let counter = counter_create (sourceValue ())',
 	'(self : counter_t).value',
 	'(counter : counter_t).value',
-	'let __call_receiver_',
 	'let __call_arg_0_',
+	'counter_create __call_arg_0_',
+	'let __call_receiver_',
 	'counter_bump __call_receiver_'
 ]
 for (const fragment of requiredSource) {
@@ -128,7 +169,13 @@ invalid_call_receiver_log="$(mktemp)"
 invalid_call_receiver_output="out-invalid-call-receiver-$$"
 invalid_call_schedule_log="$(mktemp)"
 invalid_call_schedule_output="out-invalid-call-schedule-$$"
-trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log"; rm -rf "$invalid_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output"' EXIT
+invalid_constructor_result_log="$(mktemp)"
+invalid_constructor_result_output="out-invalid-constructor-result-$$"
+missing_constructor_boundary_log="$(mktemp)"
+missing_constructor_boundary_output="out-missing-constructor-boundary-$$"
+invalid_constructor_identity_log="$(mktemp)"
+invalid_constructor_identity_output="out-invalid-constructor-identity-$$"
+trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
 
 cp "$report_file" "$first_report"
 haxe build.hxml -D ocaml_build=native
@@ -277,6 +324,97 @@ fi
 if ! grep -Fq 'has an invalid receiver materialization' "$invalid_call_schedule_log"; then
 	echo "The external inspector rejected the reordered instance schedule for an unexpected reason" >&2
 	cat "$invalid_call_schedule_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_constructor_result_output"
+node - "$invalid_constructor_result_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const call = report.calls?.find(item => item.kind === 'direct-haxe-constructor')
+if (call?.result == null) {
+	throw new Error('missing admitted constructor result to corrupt')
+}
+for (const side of ['input', 'output']) {
+	call.result[`${side}SemanticTypeId`] = 'Int'
+	call.result[`${side}CarrierTypeId`] = 'int'
+	call.result[`${side}RepresentationId`] = 'representation:Int:internal-value'
+}
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_constructor_result_output" --require-lowering --json
+) >"$invalid_constructor_result_log" 2>&1; then
+	echo "The external inspector accepted a constructor with a primitive result" >&2
+	exit 1
+fi
+if ! grep -Fq 'has no sealed nominal constructor result' "$invalid_constructor_result_log"; then
+	echo "The external inspector rejected the corrupted constructor result for an unexpected reason" >&2
+	cat "$invalid_constructor_result_log" >&2
+	exit 1
+fi
+
+cp -R out "$missing_constructor_boundary_output"
+node - "$missing_constructor_boundary_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const boundaryIndex = report.callableBoundaries?.findIndex(item =>
+	item.kind === 'direct-haxe-constructor')
+if (boundaryIndex == null || boundaryIndex < 0) {
+	throw new Error('missing constructor boundary to remove')
+}
+report.callableBoundaries.splice(boundaryIndex, 1)
+report.callableBoundaryCount -= 1
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$missing_constructor_boundary_output" --require-lowering --json
+) >"$missing_constructor_boundary_log" 2>&1; then
+	echo "The external inspector accepted constructor calls without their definition boundary" >&2
+	exit 1
+fi
+if ! grep -Fq 'refers to missing callable boundary' "$missing_constructor_boundary_log"; then
+	echo "The external inspector rejected the missing constructor boundary for an unexpected reason" >&2
+	cat "$missing_constructor_boundary_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_constructor_identity_output"
+node - "$invalid_constructor_identity_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const boundary = report.callableBoundaries?.find(item =>
+	item.kind === 'direct-haxe-constructor')
+if (boundary == null) {
+	throw new Error('missing constructor boundary identity to corrupt')
+}
+boundary.sourceFieldName = 'create'
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_constructor_identity_output" --require-lowering --json
+) >"$invalid_constructor_identity_log" 2>&1; then
+	echo "The external inspector accepted a constructor boundary with the wrong source field" >&2
+	exit 1
+fi
+if ! grep -Fq 'identifies constructor field \"create\" instead of \"new\"' "$invalid_constructor_identity_log"; then
+	echo "The external inspector rejected the corrupted constructor identity for an unexpected reason" >&2
+	cat "$invalid_constructor_identity_log" >&2
 	exit 1
 fi
 

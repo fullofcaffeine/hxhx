@@ -17,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
+	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
 }
 
@@ -187,6 +188,7 @@ typedef OcamlCallDecision = {
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
 	public static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
+	public static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 
 	final ordered:Array<OcamlCallDecision>;
@@ -232,6 +234,11 @@ class OcamlCallPlan {
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
 		return switch (expression.expr) {
+			case TNew(classRef, parameters, arguments) if (decision.kind == OcamlCallKind.DirectHaxeConstructor):
+				parameters.length == 0
+				&& arguments.length == suppliedArgumentCount(decision.arguments)
+				&& classRef.get().constructor != null
+				&& OcamlCallPlanner.calleeId(classRef.get(), classRef.get().constructor.get()) == decision.calleeId;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == suppliedArgumentCount(decision.arguments) && OcamlCallPlanner.calleeId(classRef.get(),
 					fieldRef.get()) == decision.calleeId;
 			case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectInstanceHaxeMethod):
@@ -602,7 +609,9 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted program-wide declaration before it enters the catalog. */
 	public static function requireCallableDeclarationPlan(declaration:OcamlCallableDeclarationPlan):Void {
-		if (declaration.kind != OcamlCallKind.DirectStaticHaxeMethod && declaration.kind != OcamlCallKind.DirectInstanceHaxeMethod)
+		if (declaration.kind != OcamlCallKind.DirectStaticHaxeMethod
+			&& declaration.kind != OcamlCallKind.DirectInstanceHaxeMethod
+			&& declaration.kind != OcamlCallKind.DirectHaxeConstructor)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" cannot describe a computed function value';
 		requireCallCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
 			declaration.arguments, declaration.resultKind, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId,
@@ -686,7 +695,9 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted final callable boundary before publication. */
 	public static function requireCallableBoundary(boundary:OcamlCallableBoundaryPlan):Void {
-		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod && boundary.kind != OcamlCallKind.DirectInstanceHaxeMethod)
+		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod
+			&& boundary.kind != OcamlCallKind.DirectInstanceHaxeMethod
+			&& boundary.kind != OcamlCallKind.DirectHaxeConstructor)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" cannot describe a computed function value';
 		requireCallCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind, boundary.arguments,
 			boundary.resultKind, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
@@ -724,6 +735,21 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
 				if (proofId != DIRECT_INSTANCE_SIGNATURE_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-instance signature proof';
+			case DirectHaxeConstructor:
+				if (receiver != null)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a constructor';
+				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName != "new")
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe constructor identity';
+				if (proofId != DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-constructor signature proof';
+				if (arguments.length != 1 || arguments[0].parameterOptional)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the one-required-argument constructor slice';
+				if (resultKind != OcamlCallResultKind.Value
+					|| result == null
+					|| !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					|| !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has no sealed nominal constructor result';
+				}
 			case TypedFunctionValue:
 				if (receiver != null)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a function value';
@@ -1048,6 +1074,42 @@ class OcamlCallPlanner {
 		};
 	}
 
+	/**
+		Selects the generated instance-producing boundary owned by one constructor body.
+
+		The Haxe `new` function itself remains effect-only. This separate boundary
+		describes the target `create` operation that allocates the sealed class
+		layout, executes that exact body, and then returns the allocated instance.
+	**/
+	public function constructionBoundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
+		if (data.field.name != "new" || data.isStatic)
+			return null;
+		final declaration = constructorDeclarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
+		if (declaration == null)
+			return null;
+		return {
+			id: "construction-boundary:" + Sha256.encode(declaration.calleeId).substr(0, 24),
+			calleeId: declaration.calleeId,
+			sourceModuleId: declaration.sourceModuleId,
+			sourceTypeName: declaration.sourceTypeName,
+			sourceFieldName: declaration.sourceFieldName,
+			kind: declaration.kind,
+			receiver: null,
+			arguments: declaration.arguments.map(OcamlCallPlan.copyValue),
+			resultKind: declaration.resultKind,
+			result: OcamlCallPlan.copyOptionalValue(declaration.result),
+			profileEligibility: declaration.profileEligibility.copy(),
+			reason: declaration.reason +
+			" This revision-bound definition proves which final Haxe constructor body the generated create operation executes before returning its allocation.",
+			proofId: declaration.proofId,
+			proofClaim: declaration.proofClaim,
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision
+		};
+	}
+
 	/** Collects value-return expressions owned by this function, excluding nested callables. */
 	static function functionReturnExpressions(body:TypedExpr):Array<TypedExpr> {
 		final expressions:Array<TypedExpr> = [];
@@ -1150,6 +1212,50 @@ class OcamlCallPlanner {
 
 	function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		return switch (expression.expr) {
+			case TNew(classRef, parameters, arguments):
+				final classType = classRef.get();
+				final constructor = classType.constructor == null ? null : classType.constructor.get();
+				final declaration = parameters.length == 0
+					&& constructor != null ? constructorDeclarationFor(classType, constructor, representations, binding.programRevision,
+						binding.pipelineRevision) : null;
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				if (declaration == null
+					|| plannedArguments == null
+					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
+					null;
+				} else {
+					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final id = "call:" + Sha256.encode([
+						binding.functionId,
+						binding.programRevision,
+						binding.bodyRevision,
+						binding.pipelineRevision,
+						OcamlCallPlan.sourceKey(source),
+						declaration.calleeId
+					].join("|")).substr(0, 24);
+					{
+						id: id,
+						source: source,
+						calleeId: declaration.calleeId,
+						sourceModuleId: declaration.sourceModuleId,
+						sourceTypeName: declaration.sourceTypeName,
+						sourceFieldName: declaration.sourceFieldName,
+						kind: declaration.kind,
+						receiver: null,
+						arguments: plannedArguments,
+						resultKind: declaration.resultKind,
+						result: OcamlCallPlan.copyOptionalValue(declaration.result),
+						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length),
+						profileEligibility: ["metal", "portable"],
+						reason: constructorCallReason(plannedArguments, declaration.result),
+						proofId: declaration.proofId,
+						proofClaim: declaration.proofClaim,
+						functionId: binding.functionId,
+						programRevision: binding.programRevision,
+						bodyRevision: binding.bodyRevision,
+						pipelineRevision: binding.pipelineRevision
+					};
+				}
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
@@ -1540,6 +1646,14 @@ class OcamlCallPlanner {
 			+ callReason(arguments, resultKind, result);
 	}
 
+	static function constructorCallReason(arguments:Array<OcamlCallValuePlan>, result:Null<OcamlCallValuePlan>):String {
+		if (result == null)
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a constructor call has no nominal result crossing";
+		final conversions = arguments.map(argument -> '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
+		return
+			'The typed Haxe expression constructs one exact ${result.outputSemanticTypeId} value. Its sealed schedule materializes required arguments [${conversions.join(", ")}] before the generated create boundary allocates the nominal ${result.outputCarrierTypeId} carrier, executes the revision-bound constructor body, and returns that allocation.';
+	}
+
 	static function callReason(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):String {
 		final conversions = arguments.map(argument ->
 			OcamlCallPlan.isOmittedConversion(argument.conversion) ? 'omitted optional ${argument.outputSemanticTypeId} via ${argument.conversion}' : '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
@@ -1601,6 +1715,45 @@ class OcamlCallPlanner {
 			reason: isStatic ? 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.' : 'An ordinary instance method on exact ${receiverRepresentation.semanticTypeId} uses the sealed ${receiverRepresentation.carrierTypeId} nominal receiver plus arguments [$semanticSignature] and result $resultDescription.',
 			proofId: isStatic ? OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID : OcamlCallPlan.DIRECT_INSTANCE_SIGNATURE_PROOF_ID,
 			proofClaim: isStatic ? "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation." : "The complete typed program selects one exact monomorphic receiver carrier and a closed method signature. Every admitted occurrence must preserve that carrier, materialize the receiver once before all source-order arguments, and invoke only the matching sealed instance definition.",
+			programRevision: programRevision,
+			pipelineRevision: pipelineRevision
+		};
+	}
+
+	/** Selects the first exact instance-producing constructor declaration. */
+	public static function constructorDeclarationFor(classType:ClassType, field:ClassField, representations:OcamlRepresentationRegistry,
+			programRevision:String, pipelineRevision:String):Null<OcamlCallableDeclarationPlan> {
+		if (!ordinaryOwner(classType) || field.name != "new" || field.isExtern || classType.params.length > 0 || field.params.length > 0
+			|| field.overloads.get().length > 0 || !ordinaryMethod(field)) {
+			return null;
+		}
+		final signature = admittedSignature(field, representations);
+		if (signature == null
+			|| signature.resultKind != OcamlCallResultKind.EffectOnlyVoid
+			|| signature.arguments.length != 1
+			|| signature.arguments[0].optional) {
+			return null;
+		}
+		final resultRepresentation = representations.monomorphicClassValue(classSemanticTypeId(classType));
+		final argumentRepresentation = representationForSemanticType(signature.arguments[0].semanticTypeId, representations);
+		if (resultRepresentation == null || argumentRepresentation == null)
+			return null;
+		final selectedCalleeId = calleeId(classType, field);
+		return {
+			id: "construction-declaration:" + Sha256.encode(selectedCalleeId).substr(0, 24),
+			calleeId: selectedCalleeId,
+			sourceModuleId: classType.module,
+			sourceTypeName: classType.name,
+			sourceFieldName: field.name,
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [identityValue(0, argumentRepresentation)],
+			resultKind: OcamlCallResultKind.Value,
+			result: identityValue(-1, resultRepresentation),
+			profileEligibility: ["metal", "portable"],
+			reason: 'An exact whole-program-monomorphic ${resultRepresentation.semanticTypeId} constructor takes one required ${argumentRepresentation.semanticTypeId} carrier. The generated create boundary owns record allocation, execution of the sealed Haxe constructor body, and the exact ${resultRepresentation.carrierTypeId} instance result.',
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "The complete typed program selects one exact monomorphic class layout and one ordinary one-argument constructor. Every admitted construction must preserve the declared argument carrier, execute the exact sealed constructor body once, and return the same nominal allocation without target-side signature recovery.",
 			programRevision: programRevision,
 			pipelineRevision: pipelineRevision
 		};

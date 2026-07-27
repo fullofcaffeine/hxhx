@@ -6,6 +6,7 @@ import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -33,6 +34,7 @@ typedef OcamlSealedFunctionPlan = {
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final calls:OcamlCallPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
+	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -50,7 +52,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v22";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v23";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -195,7 +197,7 @@ class OcamlFunctionPlanRegistry {
 
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
-			calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>):Void {
+			calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		for (call in calls.decisions()) {
@@ -205,12 +207,10 @@ class OcamlFunctionPlanRegistry {
 				requireCallableDeclaration(call);
 		}
 		if (callableBoundary != null) {
-			OcamlCallPlan.requireCallableBoundary(callableBoundary);
-			requireBoundaryBinding(callableBoundary, binding);
-			requireDeclarationMatch(callableBoundary);
-			if (callableByCallee.exists(callableBoundary.calleeId))
-				throw 'reflaxe.ocaml [ocaml-call:duplicate-callable]: callee "${callableBoundary.calleeId}" has more than one sealed callable boundary';
-			callableByCallee.set(callableBoundary.calleeId, OcamlCallPlan.copyBoundary(callableBoundary));
+			registerCallableBoundary(callableBoundary, binding);
+		}
+		if (constructionBoundary != null) {
+			registerCallableBoundary(constructionBoundary, binding);
 		}
 		final originIds = (originsByFunction.get(binding.functionId) ?? []).copy();
 		originIds.sort(Reflect.compare);
@@ -220,10 +220,20 @@ class OcamlFunctionPlanRegistry {
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
 				calls: calls,
-				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary)
+				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
+				constructionBoundary: constructionBoundary == null ? null : OcamlCallPlan.copyBoundary(constructionBoundary)
 			},
 			originIds: originIds
 		});
+	}
+
+	function registerCallableBoundary(boundary:OcamlCallableBoundaryPlan, binding:OcamlFunctionPlanBinding):Void {
+		OcamlCallPlan.requireCallableBoundary(boundary);
+		requireBoundaryBinding(boundary, binding);
+		requireDeclarationMatch(boundary);
+		if (callableByCallee.exists(boundary.calleeId))
+			throw 'reflaxe.ocaml [ocaml-call:duplicate-callable]: callee "${boundary.calleeId}" has more than one sealed callable boundary';
+		callableByCallee.set(boundary.calleeId, OcamlCallPlan.copyBoundary(boundary));
 	}
 
 	/** Registers one complete typed callable declaration before module emission. */
@@ -258,6 +268,42 @@ class OcamlFunctionPlanRegistry {
 		return declaration != null && declaration.resultKind == OcamlCallResultKind.EffectOnlyVoid;
 	}
 
+	/** Returns whether one exact constructor must use the sealed construction path. */
+	public function hasConstructorDeclaration(calleeId:String):Bool {
+		final declaration = declaredCallableByCallee.get(calleeId);
+		return declaration != null && declaration.kind == OcamlCallKind.DirectHaxeConstructor;
+	}
+
+	/**
+		Returns the instance-producing boundary sealed by one constructor body.
+
+		An admitted Haxe constructor is effect-only, while the generated OCaml
+		`create` function returns the newly allocated instance. Syntax construction
+		must therefore consume this separate boundary instead of treating `new` as
+		an ordinary value-returning Haxe method or rereading its typed signature.
+	**/
+	public function constructionBoundaryForDefinition(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
+		final sealed = sealedFunctionPlanFor(data);
+		final calleeId = OcamlCallPlanner.calleeId(data.classType, data.field);
+		final boundary = sealed.constructionBoundary;
+		if (boundary == null) {
+			if (hasConstructorDeclaration(calleeId))
+				throw 'reflaxe.ocaml [ocaml-call:missing-construction-boundary]: admitted constructor "$calleeId" reached create syntax without its sealed instance-producing boundary';
+			return null;
+		}
+		if (boundary.kind != OcamlCallKind.DirectHaxeConstructor || boundary.calleeId != calleeId)
+			throw 'reflaxe.ocaml [ocaml-call:construction-boundary-mismatch]: function "${data.id}" owns a construction boundary for "${boundary.calleeId}" instead of "$calleeId"';
+		final published = callableByCallee.get(calleeId);
+		if (published == null
+			|| published.id != boundary.id
+			|| published.functionId != boundary.functionId
+			|| published.bodyRevision != boundary.bodyRevision
+			|| published.pipelineRevision != boundary.pipelineRevision) {
+			throw 'reflaxe.ocaml [ocaml-call:unpublished-construction-boundary]: constructor "$calleeId" reached create syntax without its matching published boundary';
+		}
+		return OcamlCallPlan.copyBoundary(boundary);
+	}
+
 	/**
 		Requires a caller plan to match the program-wide declaration catalog.
 
@@ -289,7 +335,9 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	static inline function requiresDeclaredCallable(call:OcamlCallDecision):Bool {
-		return call.kind == OcamlCallKind.DirectStaticHaxeMethod || call.kind == OcamlCallKind.DirectInstanceHaxeMethod;
+		return call.kind == OcamlCallKind.DirectStaticHaxeMethod
+			|| call.kind == OcamlCallKind.DirectInstanceHaxeMethod
+			|| call.kind == OcamlCallKind.DirectHaxeConstructor;
 	}
 
 	/** Returns every admitted typed call in deterministic identity order. */

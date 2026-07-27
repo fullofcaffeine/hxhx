@@ -85,9 +85,10 @@ class OcamlFunctionPlanSealer {
 		final binding = registry.planningBindingFor(data);
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
+		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		if (data.expr == null) {
 			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlCallPlan([]),
-				callableBoundary);
+				callableBoundary, constructionBoundary);
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
@@ -136,15 +137,15 @@ class OcamlFunctionPlanSealer {
 
 		visit(data.expr);
 		validateLocalRepresentationReferences(localRepresentations, binding.programRevision, data.expr.pos);
-		validateCallRepresentationReferences(calls, callableBoundary, binding.programRevision, data.expr.pos);
-		registry.sealFunction(binding, localStorage, localRepresentations, calls, callableBoundary);
+		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
+		registry.sealFunction(binding, localStorage, localRepresentations, calls, callableBoundary, constructionBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
 	}
 
-	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String,
-			position:Position):Void {
+	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			constructionBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String, position:Position):Void {
 		for (call in calls.decisions()) {
 			if (call.receiver != null)
 				validateCallValue(call.receiver, programRevision, 'call "${call.id}" receiver', position);
@@ -154,13 +155,19 @@ class OcamlFunctionPlanSealer {
 				validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
 		}
 		if (callableBoundary != null) {
-			if (callableBoundary.receiver != null)
-				validateCallValue(callableBoundary.receiver, programRevision, 'callable boundary "${callableBoundary.id}" receiver', position);
-			for (index in 0...callableBoundary.arguments.length)
-				validateCallValue(callableBoundary.arguments[index], programRevision, 'callable boundary "${callableBoundary.id}" argument $index', position);
-			if (callableBoundary.result != null)
-				validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);
+			validateBoundaryRepresentationReferences(callableBoundary, programRevision, position);
 		}
+		if (constructionBoundary != null)
+			validateBoundaryRepresentationReferences(constructionBoundary, programRevision, position);
+	}
+
+	function validateBoundaryRepresentationReferences(boundary:OcamlCallableBoundaryPlan, programRevision:String, position:Position):Void {
+		if (boundary.receiver != null)
+			validateCallValue(boundary.receiver, programRevision, 'callable boundary "${boundary.id}" receiver', position);
+		for (index in 0...boundary.arguments.length)
+			validateCallValue(boundary.arguments[index], programRevision, 'callable boundary "${boundary.id}" argument $index', position);
+		if (boundary.result != null)
+			validateCallValue(boundary.result, programRevision, 'callable boundary "${boundary.id}" result', position);
 	}
 
 	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {

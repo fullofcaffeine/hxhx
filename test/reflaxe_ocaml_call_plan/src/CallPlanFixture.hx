@@ -57,6 +57,8 @@ class CallPlanFixture {
 	static inline final FUNCTION_VALUE_CALL_ID = "call:function-value-fixture";
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALLEE_ID = "function-value:optional-string-fixture";
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID = "call:optional-string-function-value-fixture";
+	static inline final CONSTRUCTOR_CALLEE_ID = "Counter|Counter::new";
+	static inline final CONSTRUCTOR_CALL_ID = "call:constructor-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -71,6 +73,22 @@ class CallPlanFixture {
 			conversion: OcamlCallCarrierConversion.Identity,
 			proofId: "identity-call-carrier-v1",
 			proofClaim: "fixture identity"
+		};
+	}
+
+	static function nominalCounterValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Counter",
+			inputCarrierTypeId: "counter_t",
+			inputRepresentationId: "representation:Counter:internal-value",
+			outputSemanticTypeId: "Counter",
+			outputCarrierTypeId: "counter_t",
+			outputRepresentationId: "representation:Counter:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture exact nominal Counter carrier"
 		};
 	}
 
@@ -320,6 +338,27 @@ class CallPlanFixture {
 		};
 	}
 
+	static function constructorDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "construction-declaration:fixture",
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact one-argument construction",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture exact one-argument construction",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
 	static function twoArgumentDeclaration():OcamlCallableDeclarationPlan {
 		return {
 			id: "callable-declaration:two-argument-fixture",
@@ -515,6 +554,31 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function constructorCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: CONSTRUCTOR_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 50, max: 51},
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(CONSTRUCTOR_CALL_ID, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact one-argument construction occurrence",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture exact one-argument construction occurrence",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -860,6 +924,29 @@ class CallPlanFixture {
 		};
 	}
 
+	static function constructorBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "construction-boundary:fixture",
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture allocation, exact constructor body, and nominal instance result",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture allocation, exact constructor body, and nominal instance result",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
 	static function twoArgumentBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
 		return {
 			id: "callable-boundary:two-argument-fixture",
@@ -1044,9 +1131,9 @@ class CallPlanFixture {
 		};
 	}
 
-	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan,
-			callable:Null<OcamlCallableBoundaryPlan>):Void {
-		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), calls, callable);
+	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan, callable:Null<OcamlCallableBoundaryPlan>,
+			?construction:Null<OcamlCallableBoundaryPlan>):Void {
+		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), calls, callable, construction);
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {
@@ -1210,6 +1297,48 @@ class CallPlanFixture {
 		seal(registry, caller, new OcamlCallPlan([selectedCall]), null);
 		seal(registry, callee, new OcamlCallPlan([]), boundary(callee));
 		registry.validateCallGraph();
+
+		final constructorCaller = binding("Main|Main::construct", "body:constructor-caller");
+		final constructorDefinition = binding(CONSTRUCTOR_CALLEE_ID, "body:constructor-definition");
+		final selectedConstructorCall = constructorCall(constructorCaller);
+		final constructorRegistry = new OcamlFunctionPlanRegistry();
+		constructorRegistry.beginProgram(PROGRAM_REVISION);
+		if (constructorRegistry.hasConstructorDeclaration(CONSTRUCTOR_CALLEE_ID))
+			Context.error("The constructor hard-cut guard reported an unregistered constructor.", Context.currentPos());
+		constructorRegistry.registerCallableDeclaration(constructorDeclaration());
+		if (!constructorRegistry.hasConstructorDeclaration(CONSTRUCTOR_CALLEE_ID))
+			Context.error("The constructor hard-cut guard did not expose the registered constructor.", Context.currentPos());
+		if (registry.hasConstructorDeclaration(CALLEE_ID))
+			Context.error("The constructor hard-cut guard incorrectly selected an ordinary method.", Context.currentPos());
+		constructorRegistry.requireCallableDeclaration(selectedConstructorCall);
+		seal(constructorRegistry, constructorCaller, new OcamlCallPlan([selectedConstructorCall]), null);
+		seal(constructorRegistry, constructorDefinition, new OcamlCallPlan([]), null, constructorBoundary(constructorDefinition));
+		constructorRegistry.validateCallGraph();
+
+		final primitiveConstructorResult = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(primitiveConstructorResult, "result", value(-1));
+		expectThrows("no sealed nominal constructor result", () -> OcamlCallPlan.requireCallableDeclarationPlan(primitiveConstructorResult));
+		final optionalConstructorArgument = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(optionalConstructorArgument.arguments[0], "parameterOptional", true);
+		expectThrows("one-required-argument constructor slice", () -> OcamlCallPlan.requireCallableDeclarationPlan(optionalConstructorArgument));
+		final wrongConstructorProof = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(wrongConstructorProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
+		expectThrows("mismatched direct-constructor signature proof", () -> OcamlCallPlan.requireCallableDeclarationPlan(wrongConstructorProof));
+		final reorderedConstructorSchedule = copyCall(selectedConstructorCall);
+		reorderedConstructorSchedule.evaluationSchedule.reverse();
+		expectThrows("invalid argument materialization", () -> constructorRegistry.requireCallableDeclaration(reorderedConstructorSchedule));
+		final staleConstructorBoundary = constructorBoundary(constructorDefinition);
+		Reflect.setField(staleConstructorBoundary, "bodyRevision", "body:stale-constructor-definition");
+		final staleConstructorRegistry = new OcamlFunctionPlanRegistry();
+		staleConstructorRegistry.beginProgram(PROGRAM_REVISION);
+		staleConstructorRegistry.registerCallableDeclaration(constructorDeclaration());
+		expectThrows("stale-callable-binding",
+			() -> seal(staleConstructorRegistry, constructorDefinition, new OcamlCallPlan([]), null, staleConstructorBoundary));
+		final missingConstructorBoundaryRegistry = new OcamlFunctionPlanRegistry();
+		missingConstructorBoundaryRegistry.beginProgram(PROGRAM_REVISION);
+		missingConstructorBoundaryRegistry.registerCallableDeclaration(constructorDeclaration());
+		seal(missingConstructorBoundaryRegistry, constructorCaller, new OcamlCallPlan([selectedConstructorCall]), null);
+		expectThrows("missing-callable", () -> missingConstructorBoundaryRegistry.validateCallGraph());
 
 		final twoArgumentCallee = binding("Arithmetic|Arithmetic::add", "body:two-argument-callee");
 		final selectedTwoArgumentCall = twoArgumentCall(caller);

@@ -223,10 +223,10 @@ class OcamlBuilder {
 		omitted argument is then bound before invocation, so runtime order does not
 		depend on OCaml function-application behavior.
 	**/
-	function buildPlannedCall(call:OcamlCallDecision, callee:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+	function buildPlannedCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
-			if (call.kind == OcamlCallKind.DirectStaticHaxeMethod || call.kind == OcamlCallKind.DirectInstanceHaxeMethod)
+			if (call.kind != OcamlCallKind.TypedFunctionValue)
 				functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
@@ -243,6 +243,10 @@ class OcamlBuilder {
 					call.sourceTypeName,
 					call.sourceFieldName); selfModule != null && selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName),
 					targetName);
+			case OcamlCallKind.DirectHaxeConstructor: final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId); final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId); final targetName = ctx.scopedValueName(call.sourceModuleId,
+					call.sourceTypeName,
+					"create"); selfModule != null && selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName),
+					targetName);
 			case OcamlCallKind.TypedFunctionValue:
 				null;
 		};
@@ -252,12 +256,14 @@ class OcamlBuilder {
 		for (step in call.evaluationSchedule) {
 			switch (step.kind) {
 				case OcamlCallEvaluationStepKind.MaterializeCallee:
-					if (call.kind != OcamlCallKind.TypedFunctionValue || target != null || step.slotId == null)
+					if (call.kind != OcamlCallKind.TypedFunctionValue || callee == null || target != null || step.slotId == null)
 						return callPlanInvariant('call "${call.id}" has an invalid callee materialization step', position);
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
 					target = OcamlExpr.EIdent(name);
 				case OcamlCallEvaluationStepKind.MaterializeReceiver:
+					if (callee == null)
+						return callPlanInvariant('call "${call.id}" has no typed instance receiver occurrence', position);
 					final receiver = switch (callee.expr) {
 						case TField(receiverExpression, FInstance(_, _, _)):
 							receiverExpression;
@@ -1453,6 +1459,8 @@ class OcamlBuilder {
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case TNew(_, _, arguments) if (plannedCall != null):
+				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, callee, arguments, e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
@@ -1676,6 +1684,12 @@ class OcamlBuilder {
 				// Variable declarations should generally be handled by `buildBlock`
 				// so that scope covers the remainder of the block.
 				OcamlExpr.EConst(OcamlConst.CUnit);
+			case TNew(clsRef, parameters, _)
+				if (parameters.length == 0
+					&& clsRef.get().constructor != null
+					&& functionPlanRegistry.hasConstructorDeclaration(OcamlCallPlanner.calleeId(clsRef.get(), clsRef.get().constructor.get()))):
+				callPlanInvariant('admitted constructor "${OcamlCallPlanner.calleeId(clsRef.get(), clsRef.get().constructor.get())}" reached syntax without its sealed occurrence plan',
+					e.pos);
 			case TNew(clsRef, _, args):
 				final cls = clsRef.get();
 				if (isStdArrayClass(cls) && args.length == 0) {

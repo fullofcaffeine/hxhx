@@ -49,6 +49,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
@@ -314,6 +315,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (classes == null)
 				continue;
 			for (classType in classes) {
+				if (classType.constructor != null) {
+					final declaration = OcamlCallPlanner.constructorDeclarationFor(classType, classType.constructor.get(), representationRegistry,
+						programRevision, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+					if (declaration != null)
+						functionPlanRegistry.registerCallableDeclaration(declaration);
+				}
 				for (field in classType.statics.get()) {
 					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
 						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
@@ -1676,6 +1683,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// create: allocate record, run ctor body, return self
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
 			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
+			var constructionBoundary:Null<OcamlCallableBoundaryPlan> = null;
 			if (ctorFunc != null && ctorFunc.expr != null) {
 				final argInfo:Array<{
 					id:Int,
@@ -1692,11 +1700,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, functionPlanRegistry.sealedFunctionPlanFor(ctorFunc), ctorReturnType)) {
+				final sealedCtorPlan = functionPlanRegistry.sealedFunctionPlanFor(ctorFunc);
+				constructionBoundary = functionPlanRegistry.constructionBoundaryForDefinition(ctorFunc);
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, sealedCtorPlan, ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
 					case _:
+				}
+				if (constructionBoundary != null) {
+					final result = constructionBoundary.result;
+					if (createParams.length != constructionBoundary.arguments.length
+						|| result == null
+						|| result.outputCarrierTypeId != instanceTypeName) {
+						throw 'reflaxe.ocaml [ocaml-call:construction-emission-mismatch]: admitted constructor "${constructionBoundary.calleeId}" does not match create(${createParams.length}) -> $instanceTypeName';
+					}
 				}
 			}
 
