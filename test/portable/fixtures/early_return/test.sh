@@ -26,11 +26,11 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 26
-	|| report.controlModel !== 'typed-ocaml-exact-int-return-control-v1'
-	|| report.controlCount !== 6
-	|| report.controls.length !== 6
+	|| report.controlModel !== 'typed-ocaml-exact-value-return-control-v2'
+	|| report.controlCount !== 18
+	|| report.controls.length !== 18
 	|| !sha256.test(report.controlRevision)) {
-	fail('unexpected exact-Int control report schema, model, count, or revision')
+	fail('unexpected exact-value control report schema, model, count, or revision')
 }
 
 const expectedByFunction = new Map([
@@ -38,6 +38,9 @@ const expectedByFunction = new Map([
 	['loop', 1],
 	['nestedBlock', 1],
 	['throughTry', 2],
+	['boolBranch', 1],
+	['stringThroughTry', 2],
+	['nullableStringCarrier', 1],
 	['nestedClosure', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
@@ -61,7 +64,7 @@ for (const control of report.controls) {
 		|| control.mechanism !== 'runtime-return-signal'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.proofId !== 'exact-int-early-return-control-v1'
+		|| control.proofId !== 'exact-value-early-return-control-v2'
 		|| !control.reason
 		|| !control.proofClaim
 		|| !control.source.file
@@ -69,26 +72,31 @@ for (const control of report.controls) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v26') {
+		|| control.pipelineRevision !== 'ocaml-function-plans-v27') {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
-	if (payload.inputSemanticTypeId !== 'Int'
-		|| payload.inputCarrierTypeId !== 'int'
-		|| payload.inputRepresentationId !== 'representation:Int:internal-value'
+	const expectedCarrier = new Map([
+		['Int', 'int'],
+		['Bool', 'bool'],
+		['String', 'string']
+	]).get(payload.inputSemanticTypeId)
+	if (!expectedCarrier
+		|| payload.inputCarrierTypeId !== expectedCarrier
+		|| payload.inputRepresentationId !== `representation:${payload.inputSemanticTypeId}:internal-value`
 		|| payload.signalCarrierTypeId !== 'Obj.t'
-		|| payload.outputSemanticTypeId !== 'Int'
-		|| payload.outputCarrierTypeId !== 'int'
-		|| payload.outputRepresentationId !== 'representation:Int:internal-value'
-		|| payload.conversion !== 'box-and-recover-exact-int'
-		|| payload.proofId !== 'exact-int-early-return-control-v1'
+		|| payload.outputSemanticTypeId !== payload.inputSemanticTypeId
+		|| payload.outputCarrierTypeId !== expectedCarrier
+		|| payload.outputRepresentationId !== payload.inputRepresentationId
+		|| payload.conversion !== 'box-and-recover-exact-value'
+		|| payload.proofId !== 'exact-value-early-return-control-v2'
 		|| !payload.proofClaim) {
-		fail(`control decision ${control.id} has an incomplete exact-Int payload crossing`)
+		fail(`control decision ${control.id} has an incomplete exact-value payload crossing`)
 	}
 	ids.add(control.id)
 }
 
-for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry']) {
+for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry', 'boolBranch', 'stringThroughTry', 'nullableStringCarrier']) {
 	const start = source.indexOf(`let ${name} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	if (start < 0 || next < 0) {
@@ -100,7 +108,7 @@ for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry']) {
 		|| !body.includes('Obj.obj')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')) {
-		fail(`${name} did not hard-cut to the sealed exact-Int return mechanism`)
+		fail(`${name} did not hard-cut to the sealed exact-value return mechanism`)
 	}
 }
 const tryStart = source.indexOf('let throughTry =')
@@ -109,6 +117,26 @@ const tryBody = source.slice(tryStart, tryEnd)
 if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(tryBody)) {
 	fail('a source catch can intercept the private function-return signal')
 }
+const stringTryStart = source.indexOf('let stringThroughTry =')
+const stringTryEnd = source.indexOf('\nlet nestedClosure =', stringTryStart)
+const stringTryBody = source.slice(stringTryStart, stringTryEnd)
+if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(stringTryBody)
+	|| !/Obj\.obj __ret_\d+ : string/.test(stringTryBody)) {
+	fail('the exact-String try boundary does not rethrow private control before recovering its sealed string carrier')
+}
+const boolStart = source.indexOf('let boolBranch =')
+const boolEnd = source.indexOf('\nlet stringThroughTry =', boolStart)
+const boolBody = source.slice(boolStart, boolEnd)
+if (!/Obj\.obj __ret_\d+ : bool/.test(boolBody)) {
+	fail('the exact-Bool boundary did not recover its sealed bool carrier')
+}
+const nullableStringStart = source.indexOf('let nullableStringCarrier =')
+const nullableStringEnd = source.indexOf('\nlet nestedClosure =', nullableStringStart)
+const nullableStringBody = source.slice(nullableStringStart, nullableStringEnd)
+if (!nullableStringBody.includes('Obj.repr (HxString.hx_null_string)')
+	|| !/Obj\.obj __ret_\d+ : string/.test(nullableStringBody)) {
+	fail('the exact-String boundary did not preserve the existing runtime null-sentinel carrier')
+}
 const closureStart = source.indexOf('let nestedClosure =')
 const closureEnd = source.indexOf('\nlet main =', closureStart)
 const closureBody = source.slice(closureStart, closureEnd)
@@ -116,7 +144,7 @@ if (!closureBody.includes('let local = fun')
 	|| !closureBody.includes('__fallback_result')
 	|| !closureBody.includes('HxRuntime.Hx_return')
 	|| !closureBody.includes(': int)')) {
-	fail('the nested function literal was not kept on its independent legacy boundary while the outer exact-Int return used its sealed plan')
+	fail('the nested function literal was not kept on its independent legacy boundary while the outer exact-value return used its sealed plan')
 }
 NODE
 
@@ -138,11 +166,11 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 11
 	|| report.summary.valid !== true
-	|| report.summary.controlCount !== 6
-	|| report.lowering.controls.length !== 6
+	|| report.summary.controlCount !== 18
+	|| report.lowering.controls.length !== 18
 	|| report.lowering.scope !== 'typed-place-call-and-first-control-families') {
-	throw new Error('public inspection did not expose the six validated exact-Int control decisions')
+	throw new Error('public inspection did not expose the 18 validated exact-value control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=6"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=18"

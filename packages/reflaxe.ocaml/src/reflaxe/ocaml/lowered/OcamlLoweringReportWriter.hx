@@ -261,7 +261,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-exact-int-return-control-v1",
+			controlModel: "typed-ocaml-exact-value-return-control-v2",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

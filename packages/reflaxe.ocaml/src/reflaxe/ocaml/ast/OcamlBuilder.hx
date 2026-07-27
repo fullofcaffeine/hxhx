@@ -65,7 +65,7 @@ import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 	Behavior-sensitive families move through focused typed OCaml lowering modules
 	before this class constructs syntax. Admitted place operations, local
-	mutable-storage choices, typed calls, and exact-Int early returns now arrive
+	mutable-storage choices, typed calls, and exact-value early returns now arrive
 	in one revision-sealed function plan. New representation, scheduling,
 	mutation, control, runtime, or ABI decisions do not belong in this
 	already-large builder; legacy `unit` fallbacks remain migration debt, not the
@@ -245,9 +245,9 @@ class OcamlBuilder {
 				controlPlanInvariant('control decision "${decision.id}" targets "${decision.targetFunctionId}" while syntax is building "${binding.functionId}"',
 					position);
 		if (value == null)
-			return controlPlanInvariant('control decision "${decision.id}" expects an exact-Int return value, but the typed return is empty', position);
+			return controlPlanInvariant('control decision "${decision.id}" expects an exact represented return value, but the typed return is empty', position);
 		final payload = switch (decision.payload.conversion) {
-			case BoxAndRecoverExactInt:
+			case BoxAndRecoverExactValue:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 			case _:
 				return controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${decision.payload.conversion}',
@@ -269,7 +269,7 @@ class OcamlBuilder {
 			return controlPlanInvariant(Std.string(error), position);
 		}
 		return switch (decision.payload.conversion) {
-			case BoxAndRecoverExactInt:
+			case BoxAndRecoverExactValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(decision.payload.outputCarrierTypeId));
 			case _:

@@ -8,7 +8,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 
 /**
-	Checks exact-Int control-plan immutability and fail-closed validation.
+	Checks exact-value control-plan immutability and fail-closed validation.
 
 	The portable fixture proves behavior from a real typed Haxe program. This
 	macro fixture deliberately corrupts individual records so a stale target,
@@ -23,16 +23,32 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision,
-			pipelineRevision: "typed-ocaml-function-plan-v26"
+			pipelineRevision: "typed-ocaml-function-plan-v27"
 		};
 	}
 
-	static function decision(id:String, min:Int, ?targetFunctionId:String, ?conversion:OcamlControlPayloadConversion,
-			?mechanism:OcamlControlTargetMechanism):OcamlControlDecision {
+	static function decision(id:String, min:Int, ?targetFunctionId:String, ?conversion:OcamlControlPayloadConversion, ?mechanism:OcamlControlTargetMechanism,
+			?semanticTypeId:String, ?outputSemanticTypeId:String):OcamlControlDecision {
 		final target = targetFunctionId ?? FUNCTION_ID;
-		final selectedConversion = conversion ?? OcamlControlPayloadConversion.BoxAndRecoverExactInt;
+		final selectedConversion = conversion ?? OcamlControlPayloadConversion.BoxAndRecoverExactValue;
 		final selectedMechanism = mechanism ?? OcamlControlTargetMechanism.RuntimeReturnSignal;
-		final proof = "fixture exact-Int early-return crossing";
+		final semanticType = semanticTypeId ?? "Int";
+		final outputSemanticType = outputSemanticTypeId ?? semanticType;
+		final carrierType = switch (semanticType) {
+			case "Int": "int";
+			case "Bool": "bool";
+			case "String": "string";
+			case _: "unsupported";
+		}
+		final outputCarrierType = switch (outputSemanticType) {
+			case "Int": "int";
+			case "Bool": "bool";
+			case "String": "string";
+			case _: "unsupported";
+		}
+		final representationId = 'representation:$semanticType:internal-value';
+		final outputRepresentationId = 'representation:$outputSemanticType:internal-value';
+		final proof = 'fixture exact-$semanticType early-return crossing';
 		return {
 			id: id,
 			source: {
@@ -44,27 +60,27 @@ class ControlPlanFixture {
 			effect: OcamlControlEffect.ExitFunction,
 			targetFunctionId: target,
 			payload: {
-				inputSemanticTypeId: "Int",
-				inputCarrierTypeId: "int",
-				inputRepresentationId: "representation:Int:internal-value",
+				inputSemanticTypeId: semanticType,
+				inputCarrierTypeId: carrierType,
+				inputRepresentationId: representationId,
 				signalCarrierTypeId: "Obj.t",
-				outputSemanticTypeId: "Int",
-				outputCarrierTypeId: "int",
-				outputRepresentationId: "representation:Int:internal-value",
+				outputSemanticTypeId: outputSemanticType,
+				outputCarrierTypeId: outputCarrierType,
+				outputRepresentationId: outputRepresentationId,
 				conversion: selectedConversion,
-				proofId: OcamlControlPlan.EXACT_INT_RETURN_PROOF_ID,
+				proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 				proofClaim: proof
 			},
 			mechanism: selectedMechanism,
 			runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
 			profileEligibility: ["metal", "portable"],
-			reason: "fixture nested return exits its owning exact-Int function",
-			proofId: OcamlControlPlan.EXACT_INT_RETURN_PROOF_ID,
+			reason: 'fixture nested return exits its owning exact-$semanticType function',
+			proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 			proofClaim: proof,
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v26"
+			pipelineRevision: "typed-ocaml-function-plan-v27"
 		};
 	}
 
@@ -104,6 +120,9 @@ class ControlPlanFixture {
 		if (legacy.admittedFunction || legacy.hasReturnTransfers())
 			throw "A legacy function became control-plan admitted";
 
+		OcamlControlPlan.requireDecision(decision("control:return:bool", 40, null, null, null, "Bool"));
+		OcamlControlPlan.requireDecision(decision("control:return:string", 45, null, null, null, "String"));
+
 		final missingId = decision("", 50);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, binding(), [missingId]));
 
@@ -115,6 +134,12 @@ class ControlPlanFixture {
 
 		final badMechanism = decision("control:return:bad-mechanism", 80, null, null, cast "catch-all");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, binding(), [badMechanism]));
+
+		final unsupportedPayload = decision("control:return:unsupported-payload", 85, null, null, null, "Float");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, binding(), [unsupportedPayload]));
+
+		final mismatchedPayload = decision("control:return:mismatched-payload", 87, null, null, null, "Int", "Bool");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, binding(), [mismatchedPayload]));
 
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, binding(), [first]));
 		expectThrows("duplicate-decision", () -> new OcamlControlPlan(true, binding(), [first, first]));

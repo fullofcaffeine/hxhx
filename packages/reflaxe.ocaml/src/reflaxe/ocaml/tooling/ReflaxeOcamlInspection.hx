@@ -385,7 +385,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-exact-int-return-control-v1")
+		if (requiredString(value, "controlModel") != "typed-ocaml-exact-value-return-control-v2")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -412,17 +412,24 @@ class ReflaxeOcamlInspection {
 				'Control decision "${control.id}" input');
 			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
 				'Control decision "${control.id}" output');
-			if (payload.inputSemanticTypeId != "Int"
-				|| payload.inputCarrierTypeId != "int"
-				|| payload.inputRepresentationId != "representation:Int:internal-value"
+			final admittedInput = (payload.inputSemanticTypeId == "Int"
+				&& payload.inputCarrierTypeId == "int"
+				&& payload.inputRepresentationId == "representation:Int:internal-value")
+				|| (payload.inputSemanticTypeId == "Bool"
+					&& payload.inputCarrierTypeId == "bool"
+					&& payload.inputRepresentationId == "representation:Bool:internal-value")
+				|| (payload.inputSemanticTypeId == "String"
+					&& payload.inputCarrierTypeId == "string"
+					&& payload.inputRepresentationId == "representation:String:internal-value");
+			if (!admittedInput
 				|| payload.signalCarrierTypeId != "Obj.t"
-				|| payload.outputSemanticTypeId != "Int"
-				|| payload.outputCarrierTypeId != "int"
-				|| payload.outputRepresentationId != "representation:Int:internal-value"
-				|| payload.conversion != "box-and-recover-exact-int"
-				|| payload.proofId != "exact-int-early-return-control-v1"
-				|| control.proofId != "exact-int-early-return-control-v1") {
-				throw 'Control decision "${control.id}" has an invalid exact-Int payload crossing.';
+				|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+				|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+				|| payload.outputRepresentationId != payload.inputRepresentationId
+				|| payload.conversion != "box-and-recover-exact-value"
+				|| payload.proofId != "exact-value-early-return-control-v2"
+				|| control.proofId != "exact-value-early-return-control-v2") {
+				throw 'Control decision "${control.id}" has an invalid exact-value payload crossing.';
 			}
 			if (payload.proofClaim.length == 0
 				|| control.proofClaim.length == 0

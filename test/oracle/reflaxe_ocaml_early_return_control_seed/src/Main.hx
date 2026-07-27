@@ -41,6 +41,28 @@ class Main {
 		return 3;
 	}
 
+	static function boolBranch(enabled:Bool):Bool {
+		if (!enabled)
+			return false;
+		return true;
+	}
+
+	static function stringThroughTry(enabled:Bool):String {
+		try {
+			if (enabled)
+				return "early";
+		} catch (_:Dynamic) {
+			return "caught";
+		}
+		return "late";
+	}
+
+	static function nullableStringCarrier(useNull:Bool):String {
+		if (useNull)
+			return null;
+		return "value";
+	}
+
 	static function nestedClosure():Int {
 		final local = function(flag:Bool):Int {
 			if (flag)
@@ -60,6 +82,12 @@ class Main {
 		printLine("block0=" + nestedBlock(0));
 		printLine("try1=" + throughTry(1));
 		printLine("try0=" + throughTry(0));
+		printLine("bool0=" + boolBranch(false));
+		printLine("bool1=" + boolBranch(true));
+		printLine("string1=" + stringThroughTry(true));
+		printLine("string0=" + stringThroughTry(false));
+		printLine("stringNull1=" + (nullableStringCarrier(true) == null));
+		printLine("stringNull0=" + nullableStringCarrier(false));
 		printLine("closure=" + nestedClosure());
 		printLine("OK early_return_control");
 	}

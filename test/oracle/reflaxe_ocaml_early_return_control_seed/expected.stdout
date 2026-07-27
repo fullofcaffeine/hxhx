@@ -5,5 +5,11 @@ block1=4
 block0=5
 try1=7
 try0=3
+bool0=false
+bool1=true
+string1=early
+string0=late
+stringNull1=true
+stringNull0=value
 closure=8
 OK early_return_control

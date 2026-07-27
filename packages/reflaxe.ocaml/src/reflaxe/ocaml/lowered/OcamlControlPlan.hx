@@ -7,9 +7,11 @@ import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 /** The source-language control transfer selected before OCaml syntax. */
@@ -29,7 +31,7 @@ enum abstract OcamlControlTargetMechanism(String) from String to String {
 
 /** How an exact Haxe value crosses the private runtime-control payload. */
 enum abstract OcamlControlPayloadConversion(String) from String to String {
-	final BoxAndRecoverExactInt = "box-and-recover-exact-int";
+	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 }
 
 /**
@@ -80,7 +82,7 @@ typedef OcamlControlDecision = {
 	consume decisions but cannot add or reinterpret them.
 **/
 class OcamlControlPlan {
-	public static inline final EXACT_INT_RETURN_PROOF_ID = "exact-int-early-return-control-v1";
+	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 
 	public final admittedFunction:Bool;
@@ -140,7 +142,7 @@ class OcamlControlPlan {
 	public function decisionFor(expression:TypedExpr):Null<OcamlControlDecision> {
 		final candidates = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
 		final matching = candidates.filter(decision -> switch (expression.expr) {
-			case TReturn(value): value != null && decision.kind == OcamlControlTransferKind.Return && OcamlRepresentationRegistry.isExactInt(value.t);
+			case TReturn(value): value != null && decision.kind == OcamlControlTransferKind.Return && expressionMatchesPayload(value, decision.payload);
 			case _:
 				false;
 		});
@@ -192,23 +194,21 @@ class OcamlControlPlan {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: control decision "${decision.id}" selects an unsupported transfer, effect, mechanism, or runtime capability';
 		}
 		final payload = decision.payload;
-		if (payload.inputSemanticTypeId != "Int"
-			|| payload.inputCarrierTypeId != "int"
-			|| payload.inputRepresentationId != "representation:Int:internal-value"
+		if (!isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
 			|| payload.signalCarrierTypeId != "Obj.t"
-			|| payload.outputSemanticTypeId != "Int"
-			|| payload.outputCarrierTypeId != "int"
-			|| payload.outputRepresentationId != "representation:Int:internal-value"
-			|| payload.conversion != OcamlControlPayloadConversion.BoxAndRecoverExactInt
-			|| payload.proofId != EXACT_INT_RETURN_PROOF_ID
+			|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+			|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+			|| payload.outputRepresentationId != payload.inputRepresentationId
+			|| payload.conversion != OcamlControlPayloadConversion.BoxAndRecoverExactValue
+			|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
 			|| payload.proofClaim.length == 0) {
-			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: control decision "${decision.id}" has an unsupported or incomplete exact-Int payload crossing';
+			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: control decision "${decision.id}" has an unsupported or incomplete exact-value payload crossing';
 		}
 		if (decision.profileEligibility.length != 2
 			|| decision.profileEligibility[0] != "metal"
 			|| decision.profileEligibility[1] != "portable"
 			|| decision.reason.length == 0
-			|| decision.proofId != EXACT_INT_RETURN_PROOF_ID
+			|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID
 			|| decision.proofClaim.length == 0) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: control decision "${decision.id}" has incomplete eligibility or proof metadata';
 		}
@@ -280,6 +280,22 @@ class OcamlControlPlan {
 		return source.file + ":" + source.min + ":" + source.max;
 	}
 
+	/** Whether one semantic/carrier/representation side belongs to this slice. */
+	public static function isAdmittedExactSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return (semanticTypeId == "Int" && carrierTypeId == "int" && representationId == "representation:Int:internal-value")
+			|| (semanticTypeId == "Bool" && carrierTypeId == "bool" && representationId == "representation:Bool:internal-value")
+			|| (semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value");
+	}
+
+	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
+		return switch (payload.inputSemanticTypeId) {
+			case "Int": OcamlRepresentationRegistry.isExactInt(expression.t);
+			case "Bool": OcamlRepresentationRegistry.isExactBool(expression.t);
+			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
+			case _: false;
+		}
+	}
+
 	static function payloadFingerprint(payload:OcamlControlPayloadPlan):String {
 		return [
 			payload.inputSemanticTypeId,
@@ -318,11 +334,12 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects the first exact-Int early-return family from one final typed body.
+	Selects the first exact-value early-return family from one final typed body.
 
-	Only a represented ordinary static Haxe method is admitted. Direct root
-	returns stay on the straight-line callable-result path; nested function
-	literals own independent control boundaries and are deliberately skipped.
+	Only represented ordinary static Haxe methods with an identity-carrier
+	`Int`, `Bool`, or `String` result are admitted. Direct root returns stay on
+	the straight-line callable-result path; nested function literals own
+	independent control boundaries and are deliberately skipped.
 **/
 class OcamlControlPlanner {
 	final representations:OcamlRepresentationRegistry;
@@ -334,9 +351,9 @@ class OcamlControlPlanner {
 	}
 
 	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlCallableBoundaryPlan>):OcamlControlPlan {
-		if (!admitsBoundary(boundary))
+		final boundaryPayload = admittedBoundaryPayload(boundary);
+		if (boundaryPayload == null)
 			return OcamlControlPlan.notAdmitted(binding);
-		final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		final decisions:Array<OcamlControlDecision> = [];
 		var ordinal = 0;
 		var supported = true;
@@ -348,13 +365,18 @@ class OcamlControlPlanner {
 				case TReturn(value):
 					if (directRootStatement)
 						return;
-					if (value == null || !OcamlRepresentationRegistry.isExactInt(value.t)) {
+					final representation = value == null ? null : exactValueRepresentation(value);
+					if (value == null
+						|| representation == null
+						|| representation.semanticTypeId != boundaryPayload.inputSemanticTypeId
+						|| representation.carrierTypeId != boundaryPayload.inputCarrierTypeId
+						|| representation.id != boundaryPayload.inputRepresentationId) {
 						supported = false;
 						return;
 					}
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 					final id = "control:return:" + Sha256.encode(binding.functionId + "|" + ordinal++).substr(0, 24);
-					final proofClaim = "The final typed Haxe body assigns this return to the current exact-Int function. The selected private runtime signal boxes the exact int only while control is in flight, and the matching function boundary recovers the same int carrier before it can cross the callable ABI.";
+					final proofClaim = 'The final typed Haxe body assigns this return to the current ${representation.semanticTypeId} function. The selected private runtime signal boxes the exact ${representation.carrierTypeId} carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.';
 					decisions.push({
 						id: id,
 						source: source,
@@ -369,15 +391,15 @@ class OcamlControlPlanner {
 							outputSemanticTypeId: representation.semanticTypeId,
 							outputCarrierTypeId: representation.carrierTypeId,
 							outputRepresentationId: representation.id,
-							conversion: OcamlControlPayloadConversion.BoxAndRecoverExactInt,
-							proofId: OcamlControlPlan.EXACT_INT_RETURN_PROOF_ID,
+							conversion: OcamlControlPayloadConversion.BoxAndRecoverExactValue,
+							proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 							proofClaim: proofClaim
 						},
 						mechanism: OcamlControlTargetMechanism.RuntimeReturnSignal,
 						runtimeCapabilityId: OcamlControlPlan.RETURN_SIGNAL_CAPABILITY_ID,
 						profileEligibility: ["metal", "portable"],
-						reason: "This return is nested below the function's direct result path, so it exits the current exact-Int Haxe function through one revision-bound private runtime signal.",
-						proofId: OcamlControlPlan.EXACT_INT_RETURN_PROOF_ID,
+						reason: 'This return is nested below the function\'s direct result path, so it exits the current exact-${representation.semanticTypeId} Haxe function through one revision-bound private runtime signal.',
+						proofId: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 						proofClaim: proofClaim,
 						functionId: binding.functionId,
 						programRevision: binding.programRevision,
@@ -408,21 +430,30 @@ class OcamlControlPlanner {
 		return new OcamlControlPlan(true, binding, decisions);
 	}
 
-	static function admitsBoundary(boundary:Null<OcamlCallableBoundaryPlan>):Bool {
+	function exactValueRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+		if (OcamlRepresentationRegistry.isExactInt(expression.t))
+			return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactBool(expression.t))
+			return representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactString(expression.t))
+			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+		return null;
+	}
+
+	static function admittedBoundaryPayload(boundary:Null<OcamlCallableBoundaryPlan>):Null<OcamlCallValuePlan> {
 		if (boundary == null
 			|| boundary.kind != OcamlCallKind.DirectStaticHaxeMethod
 			|| boundary.resultKind != OcamlCallResultKind.Value
 			|| boundary.result == null) {
-			return false;
+			return null;
 		}
 		final result = boundary.result;
-		return result.inputSemanticTypeId == "Int"
-			&& result.inputCarrierTypeId == "int"
-			&& result.inputRepresentationId == "representation:Int:internal-value"
-			&& result.outputSemanticTypeId == "Int"
-			&& result.outputCarrierTypeId == "int"
-			&& result.outputRepresentationId == "representation:Int:internal-value"
-			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		return result.inputSemanticTypeId == result.outputSemanticTypeId
+			&& result.inputCarrierTypeId == result.outputCarrierTypeId
+			&& result.inputRepresentationId == result.outputRepresentationId
+			&& result.conversion == OcamlCallCarrierConversion.Identity
+			&& OcamlControlPlan.isAdmittedExactSide(result.inputSemanticTypeId, result.inputCarrierTypeId,
+				result.inputRepresentationId) ? OcamlCallPlan.copyValue(result) : null;
 	}
 }
 #end
