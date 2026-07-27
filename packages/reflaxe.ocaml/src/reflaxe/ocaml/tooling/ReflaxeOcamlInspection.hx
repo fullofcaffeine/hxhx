@@ -745,6 +745,10 @@ class ReflaxeOcamlInspection {
 				throw '$owner has proof "$proofId" instead of "$DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID".';
 			if (arguments.length != 1 || arguments[0].parameterOptional)
 				throw '$owner is outside the one-required-argument constructor slice.';
+			if (!isCallValueSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId, "Int", "int")
+				|| !isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Int", "int")) {
+				throw '$owner is outside the first exact Int constructor-argument slice.';
+			}
 			if (resultKind != "value" || result == null)
 				throw '$owner has no sealed nominal constructor result.';
 			final constructorResult:InspectionCallValue = result;

@@ -744,6 +744,10 @@ class OcamlCallPlan {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-constructor signature proof';
 				if (arguments.length != 1 || arguments[0].parameterOptional)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the one-required-argument constructor slice';
+				if (!isExactIntSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId)
+					|| !isExactIntSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the first exact Int constructor-argument slice';
+				}
 				if (resultKind != OcamlCallResultKind.Value
 					|| result == null
 					|| !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
@@ -1736,7 +1740,7 @@ class OcamlCallPlanner {
 		}
 		final resultRepresentation = representations.monomorphicClassValue(classSemanticTypeId(classType));
 		final argumentRepresentation = representationForSemanticType(signature.arguments[0].semanticTypeId, representations);
-		if (resultRepresentation == null || argumentRepresentation == null)
+		if (resultRepresentation == null || argumentRepresentation == null || argumentRepresentation.semanticTypeId != "Int")
 			return null;
 		final selectedCalleeId = calleeId(classType, field);
 		return {
@@ -1751,7 +1755,7 @@ class OcamlCallPlanner {
 			resultKind: OcamlCallResultKind.Value,
 			result: identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: 'An exact whole-program-monomorphic ${resultRepresentation.semanticTypeId} constructor takes one required ${argumentRepresentation.semanticTypeId} carrier. The generated create boundary owns record allocation, execution of the sealed Haxe constructor body, and the exact ${resultRepresentation.carrierTypeId} instance result.',
+			reason: 'An exact whole-program-monomorphic ${resultRepresentation.semanticTypeId} constructor takes one required Int carrier. The generated create boundary owns record allocation, execution of the sealed Haxe constructor body, and the exact ${resultRepresentation.carrierTypeId} instance result.',
 			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
 			proofClaim: "The complete typed program selects one exact monomorphic class layout and one ordinary one-argument constructor. Every admitted construction must preserve the declared argument carrier, execute the exact sealed constructor body once, and return the same nominal allocation without target-side signature recovery.",
 			programRevision: programRevision,

@@ -1321,6 +1321,9 @@ class CallPlanFixture {
 		final optionalConstructorArgument = OcamlCallPlan.copyDeclaration(constructorDeclaration());
 		Reflect.setField(optionalConstructorArgument.arguments[0], "parameterOptional", true);
 		expectThrows("one-required-argument constructor slice", () -> OcamlCallPlan.requireCallableDeclarationPlan(optionalConstructorArgument));
+		final boolConstructorArgument = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(boolConstructorArgument, "arguments", [boolValue(0)]);
+		expectThrows("first exact Int constructor-argument slice", () -> OcamlCallPlan.requireCallableDeclarationPlan(boolConstructorArgument));
 		final wrongConstructorProof = OcamlCallPlan.copyDeclaration(constructorDeclaration());
 		Reflect.setField(wrongConstructorProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
 		expectThrows("mismatched direct-constructor signature proof", () -> OcamlCallPlan.requireCallableDeclarationPlan(wrongConstructorProof));
