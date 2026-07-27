@@ -31,7 +31,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 24;
+	public static inline final SCHEMA_VERSION = 25;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -66,6 +66,12 @@ class OcamlLoweringReportWriter {
 			owner + " input");
 		requireRepresentation(byId, value.outputRepresentationId, value.outputSemanticTypeId, value.outputCarrierTypeId,
 			OcamlRepresentationDomain.InternalValue, owner + " output");
+	}
+
+	static function sameOptionalBoundary(left:Null<OcamlCallValuePlan>, right:Null<OcamlCallValuePlan>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return OcamlCallPlan.sameCallableBoundary(left, right, false);
 	}
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
@@ -124,6 +130,8 @@ class OcamlLoweringReportWriter {
 			OcamlCallPlan.requireCallableBoundary(boundary);
 			if (callableByCallee.exists(boundary.calleeId))
 				throw 'Callable boundary identity "${boundary.calleeId}" occurs more than once.';
+			if (boundary.receiver != null)
+				requireCallValue(representationById, boundary.receiver, 'Callable boundary "${boundary.id}" receiver');
 			for (index in 0...boundary.arguments.length)
 				requireCallValue(representationById, boundary.arguments[index], 'Callable boundary "${boundary.id}" argument $index');
 			if (boundary.result != null)
@@ -132,6 +140,8 @@ class OcamlLoweringReportWriter {
 		}
 		for (call in sortedCalls) {
 			OcamlCallPlan.requireCall(call);
+			if (call.receiver != null)
+				requireCallValue(representationById, call.receiver, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
 			if (call.result != null)
@@ -146,7 +156,8 @@ class OcamlLoweringReportWriter {
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
 				|| boundary.arguments.length != call.arguments.length
-				|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
+				|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)
+				|| !sameOptionalBoundary(call.receiver, boundary.receiver)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 			for (index in 0...call.arguments.length) {
@@ -218,7 +229,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v14",
+			callModel: "typed-ocaml-directional-call-boundary-v15",
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,

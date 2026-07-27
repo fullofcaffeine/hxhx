@@ -281,6 +281,7 @@ typedef InspectionCall = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:String;
+	final receiver:Null<InspectionCallValue>;
 	final arguments:Array<InspectionCallValue>;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
@@ -303,6 +304,7 @@ typedef InspectionCallableBoundary = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:String;
+	final receiver:Null<InspectionCallValue>;
 	final arguments:Array<InspectionCallValue>;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;

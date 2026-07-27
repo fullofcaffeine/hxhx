@@ -17,7 +17,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 24
+if (report.schemaVersion !== 25
 	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11') {
 	fail('unexpected lowering-report schema or representation scope')
 }
@@ -48,6 +48,34 @@ if (admittedReceivers.length !== 3
 	fail(`expected three Counter field plans to consume the sealed receiver, got ${admittedReceivers.length}`)
 }
 
+const instanceCalls = (report.calls ?? []).filter(call =>
+	call.kind === 'direct-instance-haxe-method'
+	&& call.sourceTypeName === 'Counter'
+	&& call.sourceFieldName === 'bump')
+if (instanceCalls.length !== 2) {
+	fail(`expected constructor-local and factory-produced Counter.bump calls, got ${instanceCalls.length}`)
+}
+for (const instanceCall of instanceCalls) {
+	if (instanceCall.receiver?.inputSemanticTypeId !== 'Counter'
+		|| instanceCall.receiver.inputCarrierTypeId !== 'counter_t'
+		|| instanceCall.receiver.inputRepresentationId !== decision.id
+		|| instanceCall.receiver.outputSemanticTypeId !== 'Counter'
+		|| instanceCall.receiver.outputCarrierTypeId !== 'counter_t'
+		|| instanceCall.receiver.outputRepresentationId !== decision.id
+		|| instanceCall.receiver.conversion !== 'identity'
+		|| instanceCall.evaluationSchedule?.length !== 3
+		|| instanceCall.evaluationSchedule[0]?.kind !== 'materialize-receiver'
+		|| instanceCall.evaluationSchedule[0]?.argumentIndex !== null
+		|| instanceCall.evaluationSchedule[0]?.sourceArgumentIndex !== null
+		|| typeof instanceCall.evaluationSchedule[0]?.slotId !== 'string'
+		|| instanceCall.evaluationSchedule[1]?.kind !== 'materialize-argument'
+		|| instanceCall.evaluationSchedule[1]?.argumentIndex !== 0
+		|| instanceCall.evaluationSchedule[1]?.sourceArgumentIndex !== 0
+		|| instanceCall.evaluationSchedule[2]?.kind !== 'invoke-callee') {
+		fail('a Counter.bump call does not seal receiver-before-argument evaluation')
+	}
+}
+
 if (!source.includes('let counter = Obj.magic (counter_create 6)')
 	|| !source.includes('(Obj.magic counter : counter_t).value')) {
 	fail('the captured Counter local crossed the first-slice boundary instead of retaining the legacy path')
@@ -56,17 +84,24 @@ if (!source.includes('let counter = Obj.magic (counter_create 6)')
 const requiredSource = [
 	'type counter_t = { __hx_type : Obj.t; mutable value : int }',
 	'let counter = counter_create (sourceValue ())',
-	'(__place_receiver_6 : counter_t).value <- __place_rhs_7',
 	'(self : counter_t).value',
-	'(counter : counter_t).value'
+	'(counter : counter_t).value',
+	'let __call_receiver_',
+	'let __call_arg_0_',
+	'counter_bump __call_receiver_'
 ]
 for (const fragment of requiredSource) {
 	if (!source.includes(fragment)) {
 		fail(`generated OCaml is missing the admitted class-carrier fragment: ${fragment}`)
 	}
 }
+if (!/\(__place_receiver_\d+ : counter_t\)\.value <- __place_rhs_\d+/.test(source)) {
+	fail('generated OCaml is missing the admitted nominal receiver field write')
+}
 const forbiddenSource = [
-	'(Obj.magic self : counter_t).value'
+	'(Obj.magic self : counter_t).value',
+	'counter_bump (Obj.magic counter)',
+	'counter_bump (Obj.magic (makeCounter ()))'
 ]
 for (const fragment of forbiddenSource) {
 	if (source.includes(fragment)) {
@@ -81,7 +116,11 @@ invalid_inspection_log="$(mktemp)"
 invalid_output="out-invalid-monomorphic-class-$$"
 invalid_receiver_log="$(mktemp)"
 invalid_receiver_output="out-invalid-monomorphic-receiver-$$"
-trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_receiver_log"; rm -rf "$invalid_output" "$invalid_receiver_output"' EXIT
+invalid_call_receiver_log="$(mktemp)"
+invalid_call_receiver_output="out-invalid-call-receiver-$$"
+invalid_call_schedule_log="$(mktemp)"
+invalid_call_schedule_output="out-invalid-call-schedule-$$"
+trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log"; rm -rf "$invalid_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output"' EXIT
 
 cp "$report_file" "$first_report"
 haxe build.hxml -D ocaml_build=native
@@ -167,6 +206,64 @@ fi
 if ! grep -Fq 'refers to missing receiver representation \"representation:Counter:corrupted\"' "$invalid_receiver_log"; then
 	echo "The external inspector rejected the corrupted nominal receiver for an unexpected reason" >&2
 	cat "$invalid_receiver_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_call_receiver_output"
+node - "$invalid_call_receiver_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const call = report.calls?.find(item => item.kind === 'direct-instance-haxe-method')
+if (call?.receiver == null) {
+	throw new Error('missing admitted instance receiver to corrupt')
+}
+call.receiver.inputRepresentationId = 'representation:Counter:corrupted'
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_call_receiver_output" --require-lowering --json
+) >"$invalid_call_receiver_log" 2>&1; then
+	echo "The external inspector accepted a call with a corrupted nominal receiver" >&2
+	exit 1
+fi
+if ! grep -Fq 'receiver input refers to missing representation \"representation:Counter:corrupted\"' "$invalid_call_receiver_log"; then
+	echo "The external inspector rejected the corrupted call receiver for an unexpected reason" >&2
+	cat "$invalid_call_receiver_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_call_schedule_output"
+node - "$invalid_call_schedule_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const call = report.calls?.find(item => item.kind === 'direct-instance-haxe-method')
+if (call?.evaluationSchedule?.length !== 3) {
+	throw new Error('missing admitted instance schedule to corrupt')
+}
+const receiver = call.evaluationSchedule[0]
+call.evaluationSchedule[0] = call.evaluationSchedule[1]
+call.evaluationSchedule[1] = receiver
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_call_schedule_output" --require-lowering --json
+) >"$invalid_call_schedule_log" 2>&1; then
+	echo "The external inspector accepted arguments evaluated before the instance receiver" >&2
+	exit 1
+fi
+if ! grep -Fq 'has an invalid receiver materialization' "$invalid_call_schedule_log"; then
+	echo "The external inspector rejected the reordered instance schedule for an unexpected reason" >&2
+	cat "$invalid_call_schedule_log" >&2
 	exit 1
 fi
 

@@ -226,7 +226,7 @@ class OcamlBuilder {
 	function buildPlannedCall(call:OcamlCallDecision, callee:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
 		try {
 			OcamlCallPlan.requireCall(call);
-			if (call.kind == OcamlCallKind.DirectStaticHaxeMethod)
+			if (call.kind == OcamlCallKind.DirectStaticHaxeMethod || call.kind == OcamlCallKind.DirectInstanceHaxeMethod)
 				functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
@@ -238,7 +238,8 @@ class OcamlBuilder {
 					position);
 
 		var target:Null<OcamlExpr> = switch (call.kind) {
-			case OcamlCallKind.DirectStaticHaxeMethod: final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId); final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId); final targetName = ctx.scopedValueName(call.sourceModuleId,
+			case OcamlCallKind.DirectStaticHaxeMethod,
+				OcamlCallKind.DirectInstanceHaxeMethod: final moduleName = moduleIdToOcamlModuleName(call.sourceModuleId); final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId); final targetName = ctx.scopedValueName(call.sourceModuleId,
 					call.sourceTypeName,
 					call.sourceFieldName); selfModule != null && selfModule == moduleName ? OcamlExpr.EIdent(targetName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName),
 					targetName);
@@ -256,6 +257,19 @@ class OcamlBuilder {
 					final name = freshTmp("call_callee");
 					materialized.push({name: name, value: buildExpr(callee)});
 					target = OcamlExpr.EIdent(name);
+				case OcamlCallEvaluationStepKind.MaterializeReceiver:
+					final receiver = switch (callee.expr) {
+						case TField(receiverExpression, FInstance(_, _, _)):
+							receiverExpression;
+						case _:
+							return callPlanInvariant('call "${call.id}" has no typed instance receiver occurrence', position);
+					}
+					if (call.kind != OcamlCallKind.DirectInstanceHaxeMethod || call.receiver == null || step.slotId == null)
+						return callPlanInvariant('call "${call.id}" has an invalid receiver materialization step', position);
+					requireCallValue(call.receiver, -2, 'call receiver', receiver.pos);
+					final name = freshTmp("call_receiver");
+					materialized.push({name: name, value: buildExpr(receiver)});
+					applicationArguments.push(OcamlExpr.EIdent(name));
 				case OcamlCallEvaluationStepKind.MaterializeArgument:
 					final argumentIndex = step.argumentIndex;
 					final sourceArgumentIndex = step.sourceArgumentIndex;
@@ -293,7 +307,9 @@ class OcamlBuilder {
 					invocationSeen = true;
 			}
 		}
-		final expectedMaterializations = call.arguments.length + (call.kind == OcamlCallKind.TypedFunctionValue ? 1 : 0);
+		final expectedMaterializations = call.arguments.length
+			+ (call.kind == OcamlCallKind.TypedFunctionValue ? 1 : 0)
+			+ (call.kind == OcamlCallKind.DirectInstanceHaxeMethod ? 1 : 0);
 		if (!invocationSeen || target == null || materialized.length != expectedMaterializations)
 			return callPlanInvariant('call "${call.id}" did not materialize every callable parameter before invocation', position);
 		final targetArguments = applicationArguments.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : applicationArguments;

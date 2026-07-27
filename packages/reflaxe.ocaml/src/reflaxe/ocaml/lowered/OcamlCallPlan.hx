@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 /** The source-language dispatch selected before OCaml syntax is constructed. */
 enum abstract OcamlCallKind(String) from String to String {
 	final DirectStaticHaxeMethod = "direct-static-haxe-method";
+	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
 	final TypedFunctionValue = "typed-function-value";
 }
 
@@ -46,6 +47,7 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 /** The only runtime actions admitted in a sealed typed-call schedule. */
 enum abstract OcamlCallEvaluationStepKind(String) from String to String {
 	final MaterializeCallee = "materialize-callee";
+	final MaterializeReceiver = "materialize-receiver";
 	final MaterializeArgument = "materialize-argument";
 	final MaterializeOmittedArgument = "materialize-omitted-argument";
 	final InvokeCallee = "invoke-callee";
@@ -102,6 +104,7 @@ typedef OcamlCallableDeclarationPlan = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:OcamlCallKind;
+	final receiver:Null<OcamlCallValuePlan>;
 	final arguments:Array<OcamlCallValuePlan>;
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
@@ -132,6 +135,7 @@ typedef OcamlCallableBoundaryPlan = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:OcamlCallKind;
+	final receiver:Null<OcamlCallValuePlan>;
 	final arguments:Array<OcamlCallValuePlan>;
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
@@ -154,6 +158,7 @@ typedef OcamlCallDecision = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:OcamlCallKind;
+	final receiver:Null<OcamlCallValuePlan>;
 	final arguments:Array<OcamlCallValuePlan>;
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
@@ -180,6 +185,7 @@ typedef OcamlCallDecision = {
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
+	public static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 
 	final ordered:Array<OcamlCallDecision>;
@@ -209,6 +215,9 @@ class OcamlCallPlan {
 		return switch (expression.expr) {
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == suppliedArgumentCount(decision.arguments) && OcamlCallPlanner.calleeId(classRef.get(),
 					fieldRef.get()) == decision.calleeId;
+			case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectInstanceHaxeMethod):
+				arguments.length == suppliedArgumentCount(decision.arguments)
+				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
 			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue): final binding:OcamlFunctionPlanBinding = {
 					functionId: decision.functionId,
 					programRevision: decision.programRevision,
@@ -293,6 +302,7 @@ class OcamlCallPlan {
 			decision.id,
 			decision.calleeId,
 			(decision.kind : String),
+			decision.receiver == null ? "" : valueFingerprint(decision.receiver),
 			decision.arguments.map(valueFingerprint).join(","),
 			resultFingerprint(decision.resultKind, decision.result),
 			decision.evaluationSchedule.map(evaluationStepFingerprint).join(","),
@@ -341,6 +351,7 @@ class OcamlCallPlan {
 			sourceTypeName: decision.sourceTypeName,
 			sourceFieldName: decision.sourceFieldName,
 			kind: decision.kind,
+			receiver: copyOptionalValue(decision.receiver),
 			arguments: decision.arguments.map(copyValue),
 			resultKind: decision.resultKind,
 			result: copyOptionalValue(decision.result),
@@ -364,6 +375,7 @@ class OcamlCallPlan {
 			sourceTypeName: boundary.sourceTypeName,
 			sourceFieldName: boundary.sourceFieldName,
 			kind: boundary.kind,
+			receiver: copyOptionalValue(boundary.receiver),
 			arguments: boundary.arguments.map(copyValue),
 			resultKind: boundary.resultKind,
 			result: copyOptionalValue(boundary.result),
@@ -386,6 +398,7 @@ class OcamlCallPlan {
 			sourceTypeName: declaration.sourceTypeName,
 			sourceFieldName: declaration.sourceFieldName,
 			kind: declaration.kind,
+			receiver: copyOptionalValue(declaration.receiver),
 			arguments: declaration.arguments.map(copyValue),
 			resultKind: declaration.resultKind,
 			result: copyOptionalValue(declaration.result),
@@ -505,7 +518,9 @@ class OcamlCallPlan {
 						&& !isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
-						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))
+						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+						&& !(expectedIndex < 0
+							&& isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)))
 					|| value.proofId != "identity-call-carrier-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
 				}
@@ -568,12 +583,16 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted program-wide declaration before it enters the catalog. */
 	public static function requireCallableDeclarationPlan(declaration:OcamlCallableDeclarationPlan):Void {
-		if (declaration.kind != OcamlCallKind.DirectStaticHaxeMethod)
+		if (declaration.kind != OcamlCallKind.DirectStaticHaxeMethod && declaration.kind != OcamlCallKind.DirectInstanceHaxeMethod)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" cannot describe a computed function value';
 		requireCallCommon(declaration.calleeId, declaration.sourceModuleId, declaration.sourceTypeName, declaration.sourceFieldName, declaration.kind,
 			declaration.arguments, declaration.resultKind, declaration.result, declaration.profileEligibility, declaration.reason, declaration.proofId,
-			declaration.proofClaim, declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"');
+			declaration.proofClaim, declaration.programRevision, declaration.pipelineRevision, 'callable declaration "${declaration.id}"',
+			declaration.receiver);
+		if (declaration.receiver != null)
+			requireCallValue(declaration.receiver, -2, 'callable declaration "${declaration.id}" receiver');
 		if (!Lambda.foreach(declaration.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity)
+			|| (declaration.receiver != null && declaration.receiver.conversion != OcamlCallCarrierConversion.Identity)
 			|| (declaration.result != null && declaration.result.conversion != OcamlCallCarrierConversion.Identity)) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable declaration "${declaration.id}" must use identity carrier records';
 		}
@@ -582,7 +601,13 @@ class OcamlCallPlan {
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireCall(call:OcamlCallDecision):Void {
 		requireCallCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
-			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision, 'call "${call.id}"');
+			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision,
+			'call "${call.id}"', call.receiver);
+		if (call.receiver != null) {
+			requireCallValue(call.receiver, -2, 'call "${call.id}" receiver');
+			if (call.receiver.conversion != OcamlCallCarrierConversion.Identity)
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact receiver carrier';
+		}
 		if (call.result != null && call.result.conversion != OcamlCallCarrierConversion.Identity)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact declared result carrier';
 		for (argument in call.arguments) {
@@ -595,7 +620,8 @@ class OcamlCallPlan {
 		if (call.source.file.length == 0 || call.source.min < 0 || call.source.max < call.source.min)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid source occurrence';
 		final hasMaterializedCallee = call.kind == OcamlCallKind.TypedFunctionValue;
-		final scheduleOffset = hasMaterializedCallee ? 1 : 0;
+		final hasMaterializedReceiver = call.kind == OcamlCallKind.DirectInstanceHaxeMethod;
+		final scheduleOffset = (hasMaterializedCallee ? 1 : 0) + (hasMaterializedReceiver ? 1 : 0);
 		if (call.evaluationSchedule.length != call.arguments.length + scheduleOffset + 1)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid evaluation schedule';
 		if (hasMaterializedCallee) {
@@ -605,6 +631,16 @@ class OcamlCallPlan {
 				|| callee.sourceArgumentIndex != null
 				|| callee.slotId != calleeSlotId(call.id)) {
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid callee materialization';
+			}
+		}
+		if (hasMaterializedReceiver) {
+			final receiver = call.evaluationSchedule[0];
+			if (call.receiver == null
+				|| receiver.kind != OcamlCallEvaluationStepKind.MaterializeReceiver
+				|| receiver.argumentIndex != null
+				|| receiver.sourceArgumentIndex != null
+				|| receiver.slotId != receiverSlotId(call.id)) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid receiver materialization';
 			}
 		}
 		var sourceArgumentIndex = 0;
@@ -631,11 +667,13 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted final callable boundary before publication. */
 	public static function requireCallableBoundary(boundary:OcamlCallableBoundaryPlan):Void {
-		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod)
+		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod && boundary.kind != OcamlCallKind.DirectInstanceHaxeMethod)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" cannot describe a computed function value';
 		requireCallCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind, boundary.arguments,
 			boundary.resultKind, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
-			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"');
+			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"', boundary.receiver);
+		if (boundary.receiver != null)
+			requireCallValue(boundary.receiver, -2, 'callable boundary "${boundary.id}" receiver');
 		if (!Lambda.foreach(boundary.arguments, value -> value.conversion == OcamlCallCarrierConversion.Identity))
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" arguments must use identity carrier records';
 		if (boundary.functionId.length == 0 || boundary.bodyRevision.length == 0)
@@ -644,16 +682,28 @@ class OcamlCallPlan {
 
 	static function requireCallCommon(calleeId:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, kind:OcamlCallKind,
 			arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>, profileEligibility:Array<String>,
-			reason:String, proofId:String, proofClaim:String, programRevision:String, pipelineRevision:String, owner:String):Void {
+			reason:String, proofId:String, proofClaim:String, programRevision:String, pipelineRevision:String, owner:String,
+			?receiver:Null<OcamlCallValuePlan>):Void {
 		if (calleeId.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty typed callee identity';
 		switch (kind) {
 			case DirectStaticHaxeMethod:
+				if (receiver != null)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a static method';
 				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
 				if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-static signature proof';
+			case DirectInstanceHaxeMethod:
+				if (receiver == null)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has no sealed instance receiver';
+				if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an incomplete Haxe declaration identity';
+				if (proofId != DIRECT_INSTANCE_SIGNATURE_PROOF_ID)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched direct-instance signature proof';
 			case TypedFunctionValue:
+				if (receiver != null)
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns a receiver to a function value';
 				if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns declaration fields to a first-class function value';
 				if (proofId.indexOf(FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX) != 0)
@@ -786,6 +836,13 @@ class OcamlCallPlan {
 		return isNullableSemanticType(semanticTypeId) || semanticTypeId == "String";
 	}
 
+	static function isNominalInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId.length > 0
+			&& semanticTypeId.indexOf("<") < 0
+			&& carrierTypeId.length > 0
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
 	/** Returns whether the typed source occurrence is the explicit null literal. */
 	public static function isExplicitNullExpression(expression:TypedExpr):Bool {
 		return switch (expression.expr) {
@@ -808,11 +865,20 @@ class OcamlCallPlan {
 		return "call-callee-slot:" + Sha256.encode(callId).substr(0, 24);
 	}
 
+	/** Returns the stable plan-local carrier slot for one instance receiver. */
+	public static function receiverSlotId(callId:String):String {
+		if (callId.length == 0)
+			throw "reflaxe.ocaml [ocaml-call:invalid-plan]: cannot identify an instance receiver slot without a call identity";
+		return "call-receiver-slot:" + Sha256.encode(callId).substr(0, 24);
+	}
+
 	/** Builds the complete closed schedule for one admitted typed call. */
-	public static function evaluationSchedule(callId:String, argumentCount:Int, ?omittedArgumentIndices:Array<Int>,
-			materializeCallee:Bool = false):Array<OcamlCallEvaluationStep> {
+	public static function evaluationSchedule(callId:String, argumentCount:Int, ?omittedArgumentIndices:Array<Int>, materializeCallee:Bool = false,
+			materializeReceiver:Bool = false):Array<OcamlCallEvaluationStep> {
 		if (argumentCount < 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot schedule unsupported typed-call arity $argumentCount';
+		if (materializeCallee && materializeReceiver)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "$callId" cannot materialize both a function value and an instance receiver';
 		final omitted = omittedArgumentIndices ?? [];
 		final omittedByIndex:Map<Int, Bool> = [];
 		for (index in omitted) {
@@ -827,6 +893,14 @@ class OcamlCallPlan {
 				argumentIndex: null,
 				sourceArgumentIndex: null,
 				slotId: calleeSlotId(callId)
+			});
+		}
+		if (materializeReceiver) {
+			schedule.push({
+				kind: OcamlCallEvaluationStepKind.MaterializeReceiver,
+				argumentIndex: null,
+				sourceArgumentIndex: null,
+				slotId: receiverSlotId(callId)
 			});
 		}
 		var sourceArgumentIndex = 0;
@@ -888,17 +962,17 @@ private typedef OcamlAdmittedCallSignature = {
 class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
 	final binding:OcamlFunctionPlanBinding;
+	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
 
-	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding) {
+	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan) {
 		this.representations = representations;
 		this.binding = binding;
+		this.localRepresentations = localRepresentations;
 	}
 
 	/** Selects the callable boundary exported by this function, if admitted. */
 	public function boundaryFor(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
-		if (!data.isStatic)
-			return null;
-		final declaration = declarationFor(data.classType, data.field, representations, binding.programRevision, binding.pipelineRevision);
+		final declaration = declarationFor(data.classType, data.field, data.isStatic, representations, binding.programRevision, binding.pipelineRevision);
 		if (declaration == null)
 			return null;
 		var result = OcamlCallPlan.copyOptionalValue(declaration.result);
@@ -935,6 +1009,7 @@ class OcamlCallPlanner {
 			sourceTypeName: declaration.sourceTypeName,
 			sourceFieldName: declaration.sourceFieldName,
 			kind: declaration.kind,
+			receiver: OcamlCallPlan.copyOptionalValue(declaration.receiver),
 			arguments: declaration.arguments.map(OcamlCallPlan.copyValue),
 			resultKind: declaration.resultKind,
 			result: result,
@@ -1054,11 +1129,11 @@ class OcamlCallPlanner {
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
-				final declaration = declarationFor(classType, field, representations, binding.programRevision, binding.pipelineRevision);
+				final declaration = declarationFor(classType, field, true, representations, binding.programRevision, binding.pipelineRevision);
 				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
 				if (declaration == null
 					|| plannedArguments == null
-					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result)) {
+					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
 					null;
 				} else {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
@@ -1078,12 +1153,59 @@ class OcamlCallPlanner {
 						sourceTypeName: declaration.sourceTypeName,
 						sourceFieldName: declaration.sourceFieldName,
 						kind: declaration.kind,
+						receiver: null,
 						arguments: plannedArguments,
 						resultKind: declaration.resultKind,
 						result: OcamlCallPlan.copyOptionalValue(declaration.result),
 						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length, omittedArgumentIndices(plannedArguments)),
 						profileEligibility: ["metal", "portable"],
 						reason: callReason(plannedArguments, declaration.resultKind, declaration.result),
+						proofId: declaration.proofId,
+						proofClaim: declaration.proofClaim,
+						functionId: binding.functionId,
+						programRevision: binding.programRevision,
+						bodyRevision: binding.bodyRevision,
+						pipelineRevision: binding.pipelineRevision
+					};
+				}
+			case TCall({expr: TField(receiverExpression, FInstance(classRef, parameters, fieldRef))}, arguments):
+				final classType = classRef.get();
+				final field = fieldRef.get();
+				final declaration = parameters.length == 0 ? declarationFor(classType, field, false, representations, binding.programRevision,
+					binding.pipelineRevision) : null;
+				final receiver = declaration == null ? null : instanceReceiverValue(receiverExpression, declaration);
+				final plannedArguments = declaration == null ? null : callArgumentValues(arguments, declaration.arguments, representations);
+				if (declaration == null
+					|| receiver == null
+					|| plannedArguments == null
+					|| !sameResultExpressionType(expression.t, declaration.resultKind, declaration.result, representations)) {
+					null;
+				} else {
+					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					final id = "call:" + Sha256.encode([
+						binding.functionId,
+						binding.programRevision,
+						binding.bodyRevision,
+						binding.pipelineRevision,
+						OcamlCallPlan.sourceKey(source),
+						declaration.calleeId
+					].join("|")).substr(0, 24);
+					{
+						id: id,
+						source: source,
+						calleeId: declaration.calleeId,
+						sourceModuleId: declaration.sourceModuleId,
+						sourceTypeName: declaration.sourceTypeName,
+						sourceFieldName: declaration.sourceFieldName,
+						kind: declaration.kind,
+						receiver: receiver,
+						arguments: plannedArguments,
+						resultKind: declaration.resultKind,
+						result: OcamlCallPlan.copyOptionalValue(declaration.result),
+						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length, omittedArgumentIndices(plannedArguments), false,
+							true),
+						profileEligibility: ["metal", "portable"],
+						reason: instanceCallReason(receiver, plannedArguments, declaration.resultKind, declaration.result),
 						proofId: declaration.proofId,
 						proofClaim: declaration.proofClaim,
 						functionId: binding.functionId,
@@ -1121,6 +1243,7 @@ class OcamlCallPlanner {
 						sourceTypeName: "",
 						sourceFieldName: "",
 						kind: OcamlCallKind.TypedFunctionValue,
+						receiver: null,
 						arguments: plannedArguments,
 						resultKind: signature.resultKind,
 						result: plannedResult,
@@ -1334,13 +1457,63 @@ class OcamlCallPlanner {
 		];
 	}
 
-	static function sameResultExpressionType(type:Type, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):Bool {
+	static function sameResultExpressionType(type:Type, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>,
+			representations:OcamlRepresentationRegistry):Bool {
 		return switch (resultKind) {
-			case Value: result != null && semanticTypeId(type) == result.outputSemanticTypeId;
+			case Value: final representation = representationFor(type,
+					representations); result != null && representation != null && representation.semanticTypeId == result.outputSemanticTypeId;
 			case EffectOnlyVoid: result == null && isExactVoid(type);
 			case _:
 				false;
 		}
+	}
+
+	function instanceReceiverValue(expression:TypedExpr, declaration:OcamlCallableDeclarationPlan):Null<OcamlCallValuePlan> {
+		final boundary = declaration.receiver;
+		if (boundary == null)
+			return null;
+		final input = representationFor(expression.t, representations);
+		if (input == null
+			|| input.id != boundary.inputRepresentationId
+			|| input.semanticTypeId != boundary.inputSemanticTypeId
+			|| input.carrierTypeId != boundary.inputCarrierTypeId) {
+			return null;
+		}
+		final unwrapped = unwrapTransparent(expression);
+		final exactProducer = switch (unwrapped.expr) {
+			case TNew(classRef, parameters, _): parameters.length == 0 && representations.monomorphicClassForType(unwrapped.t) != null;
+			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
+				final producer = declarationFor(classRef.get(), fieldRef.get(), true, representations, binding.programRevision, binding.pipelineRevision);
+				producer != null
+				&& producer.result != null
+				&& arguments.length == producer.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length
+				&& producer.result.outputRepresentationId == boundary.inputRepresentationId;
+			case TLocal(local):
+				final reference = localRepresentations == null ? null : localRepresentations.referenceFor(local.id);
+				reference != null
+				&& reference.domain == OcamlRepresentationDomain.InternalValue
+				&& reference.representationId == boundary.inputRepresentationId
+				&& reference.semanticTypeId == boundary.inputSemanticTypeId;
+			case _:
+				false;
+		}
+		return exactProducer ? OcamlCallPlan.copyValue(boundary) : null;
+	}
+
+	static function unwrapTransparent(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TParenthesis(child), TMeta(_, child), TCast(child, null):
+				unwrapTransparent(child);
+			case _:
+				expression;
+		}
+	}
+
+	static function instanceCallReason(receiver:OcamlCallValuePlan, arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind,
+			result:Null<OcamlCallValuePlan>):String {
+		return
+			'The typed Haxe expression resolves to one ordinary instance method on exact ${receiver.outputSemanticTypeId}. Its sealed schedule materializes that ${receiver.outputCarrierTypeId} receiver once before every source-order argument, then invokes the method with already evaluated values. '
+			+ callReason(arguments, resultKind, result);
 	}
 
 	static function callReason(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):String {
@@ -1361,14 +1534,17 @@ class OcamlCallPlanner {
 	}
 
 	/** Selects one program-wide callable declaration before module syntax starts. */
-	public static function declarationFor(classType:ClassType, field:ClassField, representations:OcamlRepresentationRegistry, programRevision:String,
-			pipelineRevision:String):Null<OcamlCallableDeclarationPlan> {
-		if (!ordinaryOwner(classType) || field.isExtern || classType.params.length > 0 || field.params.length > 0 || field.overloads.get().length > 0
-			|| !ordinaryMethod(field)) {
+	public static function declarationFor(classType:ClassType, field:ClassField, isStatic:Bool, representations:OcamlRepresentationRegistry,
+			programRevision:String, pipelineRevision:String):Null<OcamlCallableDeclarationPlan> {
+		if (!ordinaryOwner(classType) || field.name == "new" || field.isExtern || classType.params.length > 0 || field.params.length > 0
+			|| field.overloads.get().length > 0 || !ordinaryMethod(field)) {
 			return null;
 		}
-		final signature = admittedSignature(field);
+		final signature = admittedSignature(field, representations);
 		if (signature == null)
+			return null;
+		final receiverRepresentation = isStatic ? null : representations.monomorphicClassValue(classSemanticTypeId(classType));
+		if (!isStatic && receiverRepresentation == null)
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
 		for (argument in signature.arguments) {
@@ -1389,7 +1565,8 @@ class OcamlCallPlanner {
 			sourceModuleId: classType.module,
 			sourceTypeName: classType.name,
 			sourceFieldName: field.name,
-			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			kind: isStatic ? OcamlCallKind.DirectStaticHaxeMethod : OcamlCallKind.DirectInstanceHaxeMethod,
+			receiver: receiverRepresentation == null ? null : identityValue(-2, receiverRepresentation),
 			arguments: [
 				for (index in 0...argumentRepresentations.length)
 					identityValue(index, argumentRepresentations[index], signature.arguments[index].optional)
@@ -1397,16 +1574,16 @@ class OcamlCallPlanner {
 			resultKind: signature.resultKind,
 			result: resultRepresentation == null ? null : identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.',
-			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
-			proofClaim: "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+			reason: isStatic ? 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.' : 'An ordinary instance method on exact ${receiverRepresentation.semanticTypeId} uses the sealed ${receiverRepresentation.carrierTypeId} nominal receiver plus arguments [$semanticSignature] and result $resultDescription.',
+			proofId: isStatic ? OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID : OcamlCallPlan.DIRECT_INSTANCE_SIGNATURE_PROOF_ID,
+			proofClaim: isStatic ? "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation." : "The complete typed program selects one exact monomorphic receiver carrier and a closed method signature. Every admitted occurrence must preserve that carrier, materialize the receiver once before all source-order arguments, and invoke only the matching sealed instance definition.",
 			programRevision: programRevision,
 			pipelineRevision: pipelineRevision
 		};
 	}
 
-	static function admittedSignature(field:ClassField):Null<OcamlAdmittedCallSignature> {
-		return selectAdmittedSignature(field.type, null);
+	static function admittedSignature(field:ClassField, representations:OcamlRepresentationRegistry):Null<OcamlAdmittedCallSignature> {
+		return selectAdmittedSignature(field.type, null, representations);
 	}
 
 	/**
@@ -1418,9 +1595,12 @@ class OcamlCallPlanner {
 		normalizes both forms to one semantic signature while refusing exact
 		optional locals that do not have that observed typed-API shape.
 	**/
-	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>):Null<OcamlAdmittedCallSignature> {
+	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>, ?representations:OcamlRepresentationRegistry):Null<OcamlAdmittedCallSignature> {
 		return switch (TypeTools.follow(type)) {
-			case TFun(arguments, result) if (semanticTypeId(result) != null || isExactVoid(result)):
+			case TFun(arguments, result)
+				if (semanticTypeId(result) != null
+					|| (representations != null && representations.monomorphicClassForType(result) != null)
+					|| isExactVoid(result)):
 				var optionalCount = 0;
 				var valid = true;
 				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
@@ -1462,7 +1642,7 @@ class OcamlCallPlanner {
 					null;
 				} else {
 					final resultKind = isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value;
-					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeId(result) : null;
+					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeIdWithRegistry(result, representations) : null;
 					final parameterIds = selectedArguments.map(argument -> (argument.optional ? "?" : "") + argument.semanticTypeId);
 					final resultId = resultKind == OcamlCallResultKind.EffectOnlyVoid ? "Void" : resultSemanticTypeId;
 					{
@@ -1492,6 +1672,18 @@ class OcamlCallPlanner {
 		return null;
 	}
 
+	static function semanticTypeIdWithRegistry(type:Type, representations:Null<OcamlRepresentationRegistry>):Null<String> {
+		final primitive = semanticTypeId(type);
+		if (primitive != null || representations == null)
+			return primitive;
+		final layout = representations.monomorphicClassForType(type);
+		return layout == null ? null : layout.semanticTypeId;
+	}
+
+	static function classSemanticTypeId(classType:ClassType):String {
+		return (classType.pack ?? []).concat([classType.name]).join(".");
+	}
+
 	/** Returns whether a type is the exact built-in `Void` result. */
 	static function isExactVoid(type:Type):Bool {
 		return switch (TypeTools.follow(type)) {
@@ -1502,7 +1694,7 @@ class OcamlCallPlanner {
 	}
 
 	static function representationFor(type:Type, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
-		final semanticType = semanticTypeId(type);
+		final semanticType = semanticTypeIdWithRegistry(type, representations);
 		return semanticType == null ? null : representationForSemanticType(semanticType, representations);
 	}
 
@@ -1513,7 +1705,7 @@ class OcamlCallPlanner {
 			case "Null<Int>": representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 			case "Null<Bool>": representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
 			case "String": representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-			case _: null;
+			case _: representations.monomorphicClassValue(semanticType);
 		}
 	}
 

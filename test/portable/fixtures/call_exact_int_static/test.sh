@@ -254,7 +254,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 24 || report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
+if (report.schemaVersion !== 25 || report.callModel !== 'typed-ocaml-directional-call-boundary-v15') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -312,8 +312,9 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 	}
 }
 const signatureProofId = 'direct-static-representation-signature-v3'
-if (report.calls.some(call => call.proofId !== signatureProofId)
-	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
+if (report.calls.some(call => call.kind === 'direct-static-haxe-method' && call.proofId !== signatureProofId)
+	|| report.callableBoundaries.some(boundary =>
+		boundary.kind === 'direct-static-haxe-method' && boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
 }
 const fixtureTypeNames = new Set(['Arithmetic', 'NullableCalls', 'BoolCalls', 'MixedCalls', 'ZeroArgCalls', 'OptionalCalls', 'VoidCalls'])
@@ -332,7 +333,7 @@ for (const owner of [...report.calls, ...report.callableBoundaries].filter(owner
 		throw new Error(`non-optional call owner ${owner.id} changed parameter optionality`)
 	}
 }
-for (const call of report.calls) {
+for (const call of report.calls.filter(item => item.kind === 'direct-static-haxe-method')) {
 	let sourceArgumentIndex = 0
 	for (let index = 0; index < call.arguments.length; index++) {
 		const argument = call.arguments[index]
@@ -700,9 +701,13 @@ function verifyVoidCall(fieldName, arity) {
 }
 verifyVoidCall('noArguments', 0)
 verifyVoidCall('withArguments', 3)
-if (report.calls.some(item => item.sourceTypeName === 'Counter')
-	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
-	throw new Error('an instance method entered the first direct-static call kind')
+const instanceOwners = [...report.calls, ...report.callableBoundaries].filter(item =>
+	item.sourceTypeName === 'Counter')
+if (instanceOwners.length !== 2
+	|| instanceOwners.some(item =>
+		item.kind !== 'direct-instance-haxe-method'
+		|| item.receiver?.outputSemanticTypeId !== 'Counter')) {
+	throw new Error('the Counter instance method did not enter only the sealed direct-instance call kind')
 }
 NODE
 

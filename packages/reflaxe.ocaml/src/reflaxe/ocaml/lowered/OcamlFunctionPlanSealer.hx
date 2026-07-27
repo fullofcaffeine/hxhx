@@ -91,9 +91,10 @@ class OcamlFunctionPlanSealer {
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
-		final calls = callPlanner.plan(data.expr);
+		final preliminaryCalls = callPlanner.plan(data.expr);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
-			calls.preservesNullableBoolArgument, calls.producesNullableBool, calls.producesExactString);
+			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
+		final calls = new OcamlCallPlanner(representations, binding, localRepresentations).plan(data.expr);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -145,12 +146,16 @@ class OcamlFunctionPlanSealer {
 	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String,
 			position:Position):Void {
 		for (call in calls.decisions()) {
+			if (call.receiver != null)
+				validateCallValue(call.receiver, programRevision, 'call "${call.id}" receiver', position);
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], programRevision, 'call "${call.id}" argument $index', position);
 			if (call.result != null)
 				validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
 		}
 		if (callableBoundary != null) {
+			if (callableBoundary.receiver != null)
+				validateCallValue(callableBoundary.receiver, programRevision, 'callable boundary "${callableBoundary.id}" receiver', position);
 			for (index in 0...callableBoundary.arguments.length)
 				validateCallValue(callableBoundary.arguments[index], programRevision, 'callable boundary "${callableBoundary.id}" argument $index', position);
 			if (callableBoundary.result != null)

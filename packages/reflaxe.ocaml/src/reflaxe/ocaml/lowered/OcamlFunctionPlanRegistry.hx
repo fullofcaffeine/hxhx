@@ -7,6 +7,7 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
@@ -49,7 +50,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v21";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v22";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -276,7 +277,8 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != call.sourceModuleId
 			|| declaration.sourceTypeName != call.sourceTypeName
 			|| declaration.sourceFieldName != call.sourceFieldName
-			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, declaration.resultKind, declaration.result)) {
+			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, declaration.resultKind, declaration.result)
+			|| !sameOptionalBoundary(call.receiver, declaration.receiver)) {
 			throw 'reflaxe.ocaml [ocaml-call:declaration-mismatch]: call "${call.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...call.arguments.length) {
@@ -287,7 +289,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	static inline function requiresDeclaredCallable(call:OcamlCallDecision):Bool {
-		return call.kind == OcamlCallKind.DirectStaticHaxeMethod;
+		return call.kind == OcamlCallKind.DirectStaticHaxeMethod || call.kind == OcamlCallKind.DirectInstanceHaxeMethod;
 	}
 
 	/** Returns every admitted typed call in deterministic identity order. */
@@ -334,7 +336,8 @@ class OcamlFunctionPlanRegistry {
 		}
 		if (boundary.kind != call.kind
 			|| boundary.arguments.length != call.arguments.length
-			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
+			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)
+			|| !sameOptionalBoundary(call.receiver, boundary.receiver)) {
 			throw 'reflaxe.ocaml [ocaml-call:callable-mismatch]: call "${call.id}" disagrees with callable boundary "${boundary.id}"';
 		}
 		for (index in 0...call.arguments.length) {
@@ -425,13 +428,26 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != boundary.sourceModuleId
 			|| declaration.sourceTypeName != boundary.sourceTypeName
 			|| declaration.sourceFieldName != boundary.sourceFieldName
-			|| !OcamlCallPlan.sameDeclaredResult(boundary.resultKind, boundary.result, declaration.resultKind, declaration.result)) {
+			|| !OcamlCallPlan.sameDeclaredResult(boundary.resultKind, boundary.result, declaration.resultKind, declaration.result)
+			|| !sameOptionalValue(declaration.receiver, boundary.receiver)) {
 			throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-mismatch]: callable boundary "${boundary.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...boundary.arguments.length) {
 			if (!OcamlCallPlan.sameValue(declaration.arguments[index], boundary.arguments[index]))
 				throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-argument-mismatch]: callable boundary "${boundary.id}" argument $index disagrees with typed declaration "${declaration.id}"';
 		}
+	}
+
+	static function sameOptionalBoundary(left:Null<OcamlCallValuePlan>, right:Null<OcamlCallValuePlan>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return OcamlCallPlan.sameCallableBoundary(left, right, false);
+	}
+
+	static function sameOptionalValue(left:Null<OcamlCallValuePlan>, right:Null<OcamlCallValuePlan>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return OcamlCallPlan.sameValue(left, right);
 	}
 
 	/** Explains a missing or stale lookup instead of allowing emission to guess. */

@@ -315,7 +315,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				continue;
 			for (classType in classes) {
 				for (field in classType.statics.get()) {
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, representationRegistry, programRevision,
+					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
+						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+					if (declaration != null)
+						functionPlanRegistry.registerCallableDeclaration(declaration);
+				}
+				for (field in classType.fields.get()) {
+					final declaration = OcamlCallPlanner.declarationFor(classType, field, false, representationRegistry, programRevision,
 						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
 					if (declaration != null)
 						functionPlanRegistry.registerCallableDeclaration(declaration);

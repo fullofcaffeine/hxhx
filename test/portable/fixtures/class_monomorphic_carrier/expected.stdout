@@ -1,3 +1,4 @@
 constructor_local result=3 events=arg,ctor,method
 alias identity=true value=9 events=ctor,write
 captured_local value=9 events=ctor,write
+factory_receiver result=7 events=factory,ctor,delta,method
