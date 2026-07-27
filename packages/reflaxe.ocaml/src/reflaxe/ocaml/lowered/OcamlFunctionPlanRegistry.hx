@@ -5,6 +5,7 @@ import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
@@ -47,7 +48,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v17";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v18";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -248,6 +249,12 @@ class OcamlFunctionPlanRegistry {
 		return declaration != null && Lambda.exists(declaration.arguments, argument -> argument.parameterOptional);
 	}
 
+	/** Returns whether one declaration owns an effect-only `Void` result. */
+	public function hasEffectOnlyCallableDeclaration(calleeId:String):Bool {
+		final declaration = declaredCallableByCallee.get(calleeId);
+		return declaration != null && declaration.resultKind == OcamlCallResultKind.EffectOnlyVoid;
+	}
+
 	/**
 		Requires a caller plan to match the program-wide declaration catalog.
 
@@ -265,7 +272,7 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != call.sourceModuleId
 			|| declaration.sourceTypeName != call.sourceTypeName
 			|| declaration.sourceFieldName != call.sourceFieldName
-			|| !OcamlCallPlan.sameCallableBoundary(call.result, declaration.result, true)) {
+			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, declaration.resultKind, declaration.result)) {
 			throw 'reflaxe.ocaml [ocaml-call:declaration-mismatch]: call "${call.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...call.arguments.length) {
@@ -317,7 +324,7 @@ class OcamlFunctionPlanRegistry {
 		}
 		if (boundary.kind != call.kind
 			|| boundary.arguments.length != call.arguments.length
-			|| !OcamlCallPlan.sameCallableBoundary(call.result, boundary.result, true)) {
+			|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
 			throw 'reflaxe.ocaml [ocaml-call:callable-mismatch]: call "${call.id}" disagrees with callable boundary "${boundary.id}"';
 		}
 		for (index in 0...call.arguments.length) {
@@ -406,7 +413,7 @@ class OcamlFunctionPlanRegistry {
 			|| declaration.sourceModuleId != boundary.sourceModuleId
 			|| declaration.sourceTypeName != boundary.sourceTypeName
 			|| declaration.sourceFieldName != boundary.sourceFieldName
-			|| !OcamlCallPlan.sameBoundaryDeclaration(boundary.result, declaration.result)) {
+			|| !OcamlCallPlan.sameDeclaredResult(boundary.resultKind, boundary.result, declaration.resultKind, declaration.result)) {
 			throw 'reflaxe.ocaml [ocaml-call:boundary-declaration-mismatch]: callable boundary "${boundary.id}" disagrees with typed declaration "${declaration.id}"';
 		}
 		for (index in 0...boundary.arguments.length) {

@@ -70,4 +70,10 @@ optional-bool-exact=true
 optional-bool-existing
 optional-bool-callee
 optional-bool-existing-value=false
+void-zero-callee
+void-int-source
+void-bool-source
+void-string-source
+void-callee=21,true,ready
+void-calls-complete
 instance=6

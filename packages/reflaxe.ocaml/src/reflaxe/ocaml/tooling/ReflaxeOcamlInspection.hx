@@ -44,7 +44,7 @@ class ReflaxeOcamlInspection {
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
-	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v1";
+	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v2";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -148,7 +148,8 @@ class ReflaxeOcamlInspection {
 				final arguments = call.arguments.map(argument ->
 					'${argument.inputSemanticTypeId}/${argument.inputCarrierTypeId} -${argument.conversion}-> ${argument.outputSemanticTypeId}/${argument.outputCarrierTypeId}')
 					.join(", ");
-				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> ${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}');
+				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
+				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -318,8 +319,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 19) {
-						throw 'Unsupported lowering report schema $version; expected 19.';
+					if (version != 20) {
+						throw 'Unsupported lowering report schema $version; expected 20.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -368,7 +369,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v9")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v10")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -390,8 +391,9 @@ class ReflaxeOcamlInspection {
 				throw 'Callable-boundary report contains duplicate callee "${boundary.calleeId}".';
 			for (index in 0...boundary.arguments.length)
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
-			validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
-			validateCallSignature(boundary.arguments, boundary.result, boundary.proofId, true, 'Callable boundary "${boundary.id}"');
+			if (boundary.result != null)
+				validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
+			validateCallSignature(boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
 		}
@@ -404,8 +406,9 @@ class ReflaxeOcamlInspection {
 				throw 'Call "${call.id}" has an invalid source span.';
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
-			validateCallValue(call.result, representationById, 'Call "${call.id}" result');
-			validateCallSignature(call.arguments, call.result, call.proofId, false, 'Call "${call.id}"');
+			if (call.result != null)
+				validateCallValue(call.result, representationById, 'Call "${call.id}" result');
+			validateCallSignature(call.arguments, call.resultKind, call.result, call.proofId, false, 'Call "${call.id}"');
 			final boundary = boundaryByCallee.get(call.calleeId);
 			if (boundary == null)
 				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
@@ -414,7 +417,7 @@ class ReflaxeOcamlInspection {
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
 				|| boundary.arguments.length != call.arguments.length
-				|| !sameCallableBoundary(call.result, boundary.result, true)) {
+				|| !sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 			for (index in 0...call.arguments.length) {
@@ -454,7 +457,22 @@ class ReflaxeOcamlInspection {
 		return values;
 	}
 
-	static function callResult(value:Dynamic):InspectionCallValue {
+	static function callResultKind(value:Dynamic):String {
+		final kind = requiredString(value, "resultKind");
+		if (kind != "value" && kind != "effect-only-void")
+			throw 'Unsupported typed-call result kind "$kind".';
+		return kind;
+	}
+
+	static function callResult(value:Dynamic, resultKind:String):Null<InspectionCallValue> {
+		if (!Reflect.hasField(value, "result"))
+			throw 'Expected typed-call field "result".';
+		final rawResult = Reflect.field(value, "result");
+		if (resultKind == "effect-only-void") {
+			if (rawResult != null)
+				throw "Effect-only Void call results cannot carry a value crossing.";
+			return null;
+		}
 		final result = callValue(requiredObject(value, "result"));
 		if (result.index != -1)
 			throw 'Typed-call result has index ${result.index} instead of -1.';
@@ -475,6 +493,7 @@ class ReflaxeOcamlInspection {
 		final id = requiredString(value, "id");
 		final arguments = callValues(value, "arguments");
 		final schedule = callEvaluationSchedule(value, id, arguments);
+		final resultKind = callResultKind(value);
 		return {
 			id: id,
 			sourceFile: requiredString(source, "file"),
@@ -486,7 +505,8 @@ class ReflaxeOcamlInspection {
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: requireDirectCallKind(value),
 			arguments: arguments,
-			result: callResult(value),
+			resultKind: resultKind,
+			result: callResult(value, resultKind),
 			evaluationSchedule: schedule,
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
@@ -535,6 +555,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function callableBoundary(value:Dynamic):InspectionCallableBoundary {
+		final resultKind = callResultKind(value);
 		return {
 			id: requiredString(value, "id"),
 			calleeId: requiredString(value, "calleeId"),
@@ -543,7 +564,8 @@ class ReflaxeOcamlInspection {
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: requireDirectCallKind(value),
 			arguments: callValues(value, "arguments"),
-			result: callResult(value),
+			resultKind: resultKind,
+			result: callResult(value, resultKind),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(value, "proofId"),
@@ -610,18 +632,28 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
-	static function validateCallSignature(arguments:Array<InspectionCallValue>, result:InspectionCallValue, proofId:String, isCallableBoundary:Bool,
-			owner:String):Void {
+	static function validateCallSignature(arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>, proofId:String,
+			isCallableBoundary:Bool, owner:String):Void {
 		if (proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
-		if (!isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-			|| !isAdmittedCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
-			throw '$owner contains a result outside the closed direct-static representation matrix.';
+		switch (resultKind) {
+			case "value":
+				if (result == null)
+					throw '$owner has a value result kind without a value crossing.';
+				if (!isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					|| !isAdmittedCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
+					throw '$owner contains a result outside the closed direct-static representation matrix.';
+				}
+				if (!isCallableBoundary && result.conversion != "identity")
+					throw '$owner must preserve the exact exported result carrier at the call occurrence.';
+				if (result.parameterOptional)
+					throw '$owner result cannot be an optional parameter.';
+			case "effect-only-void":
+				if (result != null)
+					throw '$owner effect-only Void result cannot carry a value crossing.';
+			case _:
+				throw '$owner has unsupported result kind "$resultKind".';
 		}
-		if (!isCallableBoundary && result.conversion != "identity")
-			throw '$owner must preserve the exact exported result carrier at the call occurrence.';
-		if (result.parameterOptional)
-			throw '$owner result cannot be an optional parameter.';
 		var optionalCount = 0;
 		for (index in 0...arguments.length) {
 			final argument = arguments[index];
@@ -682,6 +714,17 @@ class ReflaxeOcamlInspection {
 				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId
 					&& callValue.outputCarrierTypeId == boundaryValue.inputCarrierTypeId
 					&& callValue.outputRepresentationId == boundaryValue.inputRepresentationId));
+	}
+
+	static function sameCallResult(callKind:String, callValue:Null<InspectionCallValue>, boundaryKind:String, boundaryValue:Null<InspectionCallValue>):Bool {
+		if (callKind != boundaryKind)
+			return false;
+		return switch (callKind) {
+			case "effect-only-void": callValue == null && boundaryValue == null;
+			case "value": callValue != null && boundaryValue != null && sameCallableBoundary(callValue, boundaryValue, true);
+			case _:
+				false;
+		}
 	}
 
 	static function inspectStaticStorage(value:Dynamic, representation:InspectionRepresentation):Array<InspectionStaticStorageEntry> {

@@ -1,0 +1,9 @@
+-cp void-negative-src
+-main VoidOccurrenceRejected
+--no-output
+
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=void-negative-out
+-D ocaml_no_build

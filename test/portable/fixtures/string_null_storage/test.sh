@@ -38,9 +38,9 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 19
+if (report.schemaVersion !== 20
 	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v9') {
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v10') {
 	fail('lowering schema/model did not advance with the admitted String family')
 }
 

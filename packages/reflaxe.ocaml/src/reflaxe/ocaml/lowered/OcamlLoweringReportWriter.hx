@@ -101,14 +101,16 @@ class OcamlLoweringReportWriter {
 				throw 'Callable boundary identity "${boundary.calleeId}" occurs more than once.';
 			for (index in 0...boundary.arguments.length)
 				requireCallValue(representationById, boundary.arguments[index], 'Callable boundary "${boundary.id}" argument $index');
-			requireCallValue(representationById, boundary.result, 'Callable boundary "${boundary.id}" result');
+			if (boundary.result != null)
+				requireCallValue(representationById, boundary.result, 'Callable boundary "${boundary.id}" result');
 			callableByCallee.set(boundary.calleeId, boundary);
 		}
 		for (call in sortedCalls) {
 			OcamlCallPlan.requireDirectStaticCall(call);
 			for (index in 0...call.arguments.length)
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
-			requireCallValue(representationById, call.result, 'Call "${call.id}" result');
+			if (call.result != null)
+				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
 			final boundary = callableByCallee.get(call.calleeId);
 			if (boundary == null)
 				throw 'Call "${call.id}" refers to missing callable boundary "${call.calleeId}".';
@@ -117,7 +119,7 @@ class OcamlLoweringReportWriter {
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
 				|| boundary.arguments.length != call.arguments.length
-				|| !OcamlCallPlan.sameCallableBoundary(call.result, boundary.result, true)) {
+				|| !OcamlCallPlan.sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 			for (index in 0...call.arguments.length) {
@@ -173,7 +175,7 @@ class OcamlLoweringReportWriter {
 			callableBoundaries: sortedCallableBoundaries
 		});
 		final report = {
-			schemaVersion: 19,
+			schemaVersion: 20,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
@@ -189,7 +191,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v9",
+			callModel: "typed-ocaml-directional-call-boundary-v10",
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,

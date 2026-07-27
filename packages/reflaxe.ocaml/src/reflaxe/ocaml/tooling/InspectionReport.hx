@@ -279,7 +279,8 @@ typedef InspectionCall = {
 	final sourceFieldName:String;
 	final kind:String;
 	final arguments:Array<InspectionCallValue>;
-	final result:InspectionCallValue;
+	final resultKind:String;
+	final result:Null<InspectionCallValue>;
 	final evaluationSchedule:Array<InspectionCallEvaluationStep>;
 	final profileEligibility:Array<String>;
 	final reason:String;
@@ -300,7 +301,8 @@ typedef InspectionCallableBoundary = {
 	final sourceFieldName:String;
 	final kind:String;
 	final arguments:Array<InspectionCallValue>;
-	final result:InspectionCallValue;
+	final resultKind:String;
+	final result:Null<InspectionCallValue>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;

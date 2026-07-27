@@ -147,12 +147,14 @@ class OcamlFunctionPlanSealer {
 		for (call in calls.decisions()) {
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], programRevision, 'call "${call.id}" argument $index', position);
-			validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
+			if (call.result != null)
+				validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
 		}
 		if (callableBoundary != null) {
 			for (index in 0...callableBoundary.arguments.length)
 				validateCallValue(callableBoundary.arguments[index], programRevision, 'callable boundary "${callableBoundary.id}" argument $index', position);
-			validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);
+			if (callableBoundary.result != null)
+				validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);
 		}
 	}
 

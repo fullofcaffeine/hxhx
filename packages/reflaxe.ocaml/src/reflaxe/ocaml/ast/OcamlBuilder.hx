@@ -29,6 +29,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
@@ -1412,7 +1413,8 @@ class OcamlBuilder {
 			case TCall(_, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, arguments, e.pos);
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _)
-				if (functionPlanRegistry.hasOptionalCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):
+				if (functionPlanRegistry.hasOptionalCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))
+					|| functionPlanRegistry.hasEffectOnlyCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):
 				callPlanInvariant('admitted call "${OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get())}" reached syntax without its sealed occurrence plan',
 					e.pos);
 			case TTypeExpr(_):
@@ -6739,7 +6741,8 @@ class OcamlBuilder {
 			}
 			for (index in 0...args.length)
 				requireCallValue(callableBoundary.arguments[index], index, 'callable boundary "${callableBoundary.id}" argument $index', bodyExpr.pos);
-			requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
+			if (callableBoundary.result != null)
+				requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...args.length)
 					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), OcamlTypeExpr.TIdent(callableBoundary.arguments[index].outputCarrierTypeId))
@@ -6805,8 +6808,16 @@ class OcamlBuilder {
 			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
 		if (isVoidType(resolvedReturnType)) {
+			if (callableBoundary != null
+				&& (callableBoundary.resultKind != OcamlCallResultKind.EffectOnlyVoid || callableBoundary.result != null)) {
+				return callPlanInvariant('callable boundary "${callableBoundary.id}" does not own the effect-only Void result selected by its typed function',
+					bodyExpr.pos);
+			}
 			body = exprAsStatement(body);
 		} else if (callableBoundary != null) {
+			if (callableBoundary.resultKind != OcamlCallResultKind.Value || callableBoundary.result == null)
+				return callPlanInvariant('callable boundary "${callableBoundary.id}" has no represented result for its value-returning typed function',
+					bodyExpr.pos);
 			if (needsReturnCatch && callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity)
 				return
 					callPlanInvariant('callable boundary "${callableBoundary.id}" selected a straight-line result conversion for a body with nested return control',

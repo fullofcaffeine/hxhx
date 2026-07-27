@@ -7,6 +7,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStep;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
@@ -49,6 +50,8 @@ class CallPlanFixture {
 	static inline final OPTIONAL_CALLEE_ID = "OptionalCalls|OptionalCalls::optionalInt";
 	static inline final OPTIONAL_OMITTED_CALL_ID = "call:optional-omitted-fixture";
 	static inline final OPTIONAL_SUPPLIED_CALL_ID = "call:optional-supplied-fixture";
+	static inline final VOID_CALLEE_ID = "VoidCalls|VoidCalls::withArguments";
+	static inline final VOID_CALL_ID = "call:void-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -264,6 +267,7 @@ class CallPlanFixture {
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -283,6 +287,7 @@ class CallPlanFixture {
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0), value(1)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -302,6 +307,7 @@ class CallPlanFixture {
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture zero-argument signature",
@@ -321,6 +327,7 @@ class CallPlanFixture {
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -340,6 +347,7 @@ class CallPlanFixture {
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [boolValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -359,6 +367,7 @@ class CallPlanFixture {
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableBoolValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableBoolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -378,6 +387,7 @@ class CallPlanFixture {
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture mixed signature",
@@ -397,11 +407,32 @@ class CallPlanFixture {
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [optionalNullableValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture optional signature",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture optional signature",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
+	static function voidDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "callable-declaration:void-fixture",
+			calleeId: VOID_CALLEE_ID,
+			sourceModuleId: "VoidCalls",
+			sourceTypeName: "VoidCalls",
+			sourceFieldName: "withArguments",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), boolValue(1), stringValue(2)],
+			resultKind: OcamlCallResultKind.EffectOnlyVoid,
+			result: null,
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture effect-only Void signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture effect-only Void signature",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
 		};
@@ -426,6 +457,7 @@ class CallPlanFixture {
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(CALL_ID, 1),
 			profileEligibility: ["metal", "portable"],
@@ -449,6 +481,7 @@ class CallPlanFixture {
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0), value(1)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(TWO_CALL_ID, 2),
 			profileEligibility: ["metal", "portable"],
@@ -472,6 +505,7 @@ class CallPlanFixture {
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(ZERO_CALL_ID, 0),
 			profileEligibility: ["metal", "portable"],
@@ -495,6 +529,7 @@ class CallPlanFixture {
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableArgument(0, conversion)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
 			profileEligibility: ["metal", "portable"],
@@ -518,6 +553,7 @@ class CallPlanFixture {
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [boolValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(BOOL_CALL_ID, 1),
 			profileEligibility: ["metal", "portable"],
@@ -541,6 +577,7 @@ class CallPlanFixture {
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableBoolArgument(0, conversion)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableBoolValue(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1),
 			profileEligibility: ["metal", "portable"],
@@ -570,6 +607,7 @@ class CallPlanFixture {
 				boolValue(2),
 				nullableArgument(3, intConversion)
 			],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 4),
 			profileEligibility: ["metal", "portable"],
@@ -594,6 +632,7 @@ class CallPlanFixture {
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [omitted ? omittedOptionalNullableValue(0) : suppliedOptionalNullableValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 1, omitted ? [0] : []),
 			profileEligibility: ["metal", "portable"],
@@ -607,8 +646,33 @@ class CallPlanFixture {
 		};
 	}
 
+	static function voidCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: VOID_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 24, max: 25},
+			calleeId: VOID_CALLEE_ID,
+			sourceModuleId: "VoidCalls",
+			sourceTypeName: "VoidCalls",
+			sourceFieldName: "withArguments",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), boolValue(1), stringValue(2)],
+			resultKind: OcamlCallResultKind.EffectOnlyVoid,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(VOID_CALL_ID, 3),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture effect-only Void call",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture effect-only Void call",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
 	static function copyCall(source:OcamlCallDecision, ?calleeId:String, ?kind:OcamlCallKind, ?arguments:Array<OcamlCallValuePlan>,
-			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>):OcamlCallDecision {
+			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>,
+			?resultKind:OcamlCallResultKind):OcamlCallDecision {
 		return {
 			id: source.id,
 			source: {file: source.source.file, min: source.source.min, max: source.source.max},
@@ -618,7 +682,8 @@ class CallPlanFixture {
 			sourceFieldName: source.sourceFieldName,
 			kind: kind ?? source.kind,
 			arguments: arguments ?? source.arguments.map(OcamlCallPlan.copyValue),
-			result: result ?? OcamlCallPlan.copyValue(source.result),
+			resultKind: resultKind ?? source.resultKind,
+			result: result ?? OcamlCallPlan.copyOptionalValue(source.result),
 			evaluationSchedule: (evaluationSchedule ?? source.evaluationSchedule).map(OcamlCallPlan.copyEvaluationStep),
 			profileEligibility: source.profileEligibility.copy(),
 			reason: source.reason,
@@ -640,6 +705,7 @@ class CallPlanFixture {
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -661,6 +727,7 @@ class CallPlanFixture {
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0), value(1)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -682,6 +749,7 @@ class CallPlanFixture {
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture zero-argument signature",
@@ -703,6 +771,7 @@ class CallPlanFixture {
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -724,6 +793,7 @@ class CallPlanFixture {
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [boolValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -745,6 +815,7 @@ class CallPlanFixture {
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [nullableBoolValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: result ?? nullableBoolValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture",
@@ -766,6 +837,7 @@ class CallPlanFixture {
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
+			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture mixed signature",
@@ -787,11 +859,34 @@ class CallPlanFixture {
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
 			arguments: [optionalNullableValue(0)],
+			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture optional signature",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture optional signature",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function voidBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "callable-boundary:void-fixture",
+			calleeId: VOID_CALLEE_ID,
+			sourceModuleId: "VoidCalls",
+			sourceTypeName: "VoidCalls",
+			sourceFieldName: "withArguments",
+			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			arguments: [value(0), boolValue(1), stringValue(2)],
+			resultKind: OcamlCallResultKind.EffectOnlyVoid,
+			result: null,
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture effect-only Void signature",
+			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture effect-only Void signature",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
 			bodyRevision: callee.bodyRevision,
@@ -1046,6 +1141,38 @@ class CallPlanFixture {
 		final nonTrailingOptionalDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
 		Reflect.setField(nonTrailingOptionalDeclaration, "arguments", [optionalNullableValue(0), value(1)]);
 		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalDeclaration));
+
+		final voidCaller = binding("Main|Main::voidCalls", "body:void-caller");
+		final voidCallee = binding(VOID_CALLEE_ID, "body:void-callee");
+		final selectedVoidCall = voidCall(voidCaller);
+		final voidRegistry = new OcamlFunctionPlanRegistry();
+		voidRegistry.beginProgram(PROGRAM_REVISION);
+		voidRegistry.registerCallableDeclaration(voidDeclaration());
+		if (!voidRegistry.hasEffectOnlyCallableDeclaration(VOID_CALLEE_ID))
+			Context.error("The Void hard-cut guard did not expose the admitted effect-only callable.", Context.currentPos());
+		if (registry.hasEffectOnlyCallableDeclaration(CALLEE_ID))
+			Context.error("The Void hard-cut guard incorrectly selected a value-returning callable.", Context.currentPos());
+		voidRegistry.requireCallableDeclaration(selectedVoidCall);
+		seal(voidRegistry, voidCaller, new OcamlCallPlan([selectedVoidCall]), null);
+		seal(voidRegistry, voidCallee, new OcamlCallPlan([]), voidBoundary(voidCallee));
+		voidRegistry.validateCallGraph();
+
+		final valueKindWithoutValue = OcamlCallPlan.copyDeclaration(voidDeclaration());
+		Reflect.setField(valueKindWithoutValue, "resultKind", OcamlCallResultKind.Value);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(valueKindWithoutValue));
+		final effectKindWithValue = OcamlCallPlan.copyDeclaration(voidDeclaration());
+		Reflect.setField(effectKindWithValue, "result", value(-1));
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(effectKindWithValue));
+		final valueReturningVoidCall = copyCall(selectedVoidCall, null, null, null, value(-1), null, null, OcamlCallResultKind.Value);
+		expectThrows("declaration-mismatch", () -> voidRegistry.requireCallableDeclaration(valueReturningVoidCall));
+		final valueReturningVoidBoundary = voidBoundary(voidCallee);
+		Reflect.setField(valueReturningVoidBoundary, "resultKind", OcamlCallResultKind.Value);
+		Reflect.setField(valueReturningVoidBoundary, "result", value(-1));
+		final mismatchedVoidBoundaryRegistry = new OcamlFunctionPlanRegistry();
+		mismatchedVoidBoundaryRegistry.beginProgram(PROGRAM_REVISION);
+		mismatchedVoidBoundaryRegistry.registerCallableDeclaration(voidDeclaration());
+		expectThrows("boundary-declaration-mismatch",
+			() -> seal(mismatchedVoidBoundaryRegistry, voidCallee, new OcamlCallPlan([]), valueReturningVoidBoundary));
 
 		expectThrows("duplicate-declaration", () -> registry.registerCallableDeclaration(declaration()));
 		expectThrows("duplicate-function-seal", () -> seal(registry, caller, new OcamlCallPlan([]), null));

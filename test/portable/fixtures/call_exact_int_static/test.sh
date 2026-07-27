@@ -7,9 +7,10 @@ bool_source="out/BoolCalls.ml"
 mixed_source="out/MixedCalls.ml"
 zero_source="out/ZeroArgCalls.ml"
 optional_source="out/OptionalCalls.ml"
+void_source="out/VoidCalls.ml"
 main_source="out/Main.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$zero_source" ] || [ ! -f "$optional_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$arithmetic_source" ] || [ ! -f "$nullable_source" ] || [ ! -f "$bool_source" ] || [ ! -f "$mixed_source" ] || [ ! -f "$zero_source" ] || [ ! -f "$optional_source" ] || [ ! -f "$void_source" ] || [ ! -f "$main_source" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated call fixture source or lowering report" >&2
 	exit 1
 fi
@@ -159,6 +160,18 @@ if grep -Eq 'Obj\.repr \(Obj\.repr \(optional(Int|Bool)Source \(\)\)\)' "$main_s
 	echo "A supplied optional primitive argument must not be boxed twice" >&2
 	exit 1
 fi
+if ! grep -q '^let noArguments = fun () ->' "$void_source"; then
+	echo "The zero-argument Void callable must use an explicit OCaml unit parameter" >&2
+	exit 1
+fi
+if ! grep -Eq 'VoidCalls\.noArguments \(\)' "$main_source"; then
+	echo "The zero-argument Void call must invoke its target with OCaml unit" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = voidIntSource \(\) in let __call_arg_1_[0-9]+ = voidBoolSource \(\) in let __call_arg_2_[0-9]+ = voidStringSource \(\) in VoidCalls\.withArguments __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+' "$main_source"; then
+	echo "The positive-arity Void call must evaluate and bind every argument before invocation" >&2
+	exit 1
+fi
 
 negative_log="$(mktemp)"
 rm -rf negative-out
@@ -201,10 +214,31 @@ if [ -f optional-negative-out/OptionalOccurrenceRejected.ml ]; then
 fi
 rm -f "$optional_negative_log"
 
+void_negative_log="$(mktemp)"
+rm -rf void-negative-out
+if haxe void-negative.hxml >"$void_negative_log" 2>&1; then
+	echo "A Void static-initializer call unexpectedly fell back to unplanned target syntax" >&2
+	rm -f "$void_negative_log"
+	exit 1
+fi
+if ! grep -Fq '[ocaml-call:plan-invariant]' "$void_negative_log" \
+	|| ! grep -Fq 'reached syntax without its sealed occurrence plan' "$void_negative_log"; then
+	echo "The unplanned Void call did not report the stable hard-cut diagnostic" >&2
+	cat "$void_negative_log" >&2
+	rm -f "$void_negative_log"
+	exit 1
+fi
+if [ -f void-negative-out/VoidOccurrenceRejected.ml ]; then
+	echo "The unplanned Void call reached OCaml module output" >&2
+	rm -f "$void_negative_log"
+	exit 1
+fi
+rm -f "$void_negative_log"
+
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 19 || report.callModel !== 'typed-ocaml-directional-call-boundary-v9') {
+if (report.schemaVersion !== 20 || report.callModel !== 'typed-ocaml-directional-call-boundary-v10') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -261,14 +295,14 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		}
 	}
 }
-const signatureProofId = 'direct-static-representation-signature-v1'
+const signatureProofId = 'direct-static-representation-signature-v2'
 if (report.calls.some(call => call.proofId !== signatureProofId)
 	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
 }
-const fixtureTypeNames = new Set(['Arithmetic', 'NullableCalls', 'BoolCalls', 'MixedCalls', 'ZeroArgCalls', 'OptionalCalls'])
+const fixtureTypeNames = new Set(['Arithmetic', 'NullableCalls', 'BoolCalls', 'MixedCalls', 'ZeroArgCalls', 'OptionalCalls', 'VoidCalls'])
 for (const owner of [...report.calls, ...report.callableBoundaries].filter(owner => fixtureTypeNames.has(owner.sourceTypeName))) {
-	if (owner.result?.parameterOptional !== false) {
+	if (owner.resultKind === 'value' && owner.result?.parameterOptional !== false) {
 		throw new Error(`call owner ${owner.id} marked its result as an optional parameter`)
 	}
 	const optionalArguments = owner.arguments?.filter(argument => argument.parameterOptional) ?? []
@@ -591,6 +625,25 @@ function verifyOptionalCalls(fieldName, semanticTypeId, resultSemanticTypeId, re
 }
 verifyOptionalCalls('optionalInt', 'Null<Int>', 'Int', 'int')
 verifyOptionalCalls('optionalBool', 'Null<Bool>', 'Bool', 'bool')
+function verifyVoidCall(fieldName, arity) {
+	const calls = report.calls?.filter(item => item.sourceTypeName === 'VoidCalls' && item.sourceFieldName === fieldName) ?? []
+	const boundary = report.callableBoundaries?.find(
+		item => item.sourceTypeName === 'VoidCalls' && item.sourceFieldName === fieldName
+	)
+	if (calls.length !== 1 || !boundary
+		|| calls[0].resultKind !== 'effect-only-void'
+		|| calls[0].result !== null
+		|| boundary.resultKind !== 'effect-only-void'
+		|| boundary.result !== null
+		|| calls[0].arguments?.length !== arity
+		|| boundary.arguments?.length !== arity
+		|| calls[0].evaluationSchedule?.length !== arity + 1
+		|| calls[0].evaluationSchedule[arity]?.kind !== 'invoke-callee') {
+		throw new Error(`the lowering report did not seal effect-only Void call ${fieldName}`)
+	}
+}
+verifyVoidCall('noArguments', 0)
+verifyVoidCall('withArguments', 3)
 if (report.calls.some(item => item.sourceTypeName === 'Counter')
 	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
 	throw new Error('an instance method entered the first direct-static call kind')
@@ -639,6 +692,14 @@ if (optionalCalls.length !== 8
 	|| optionalCalls.filter(call => call.evaluationSchedule?.[0]?.kind === 'materialize-omitted-argument').length !== 2
 	|| optionalCalls.some(call => call.arguments?.[0]?.parameterOptional !== true)) {
 	throw new Error('reflaxe.ocaml inspection did not preserve optional primitive presence and callable shape')
+}
+const voidCalls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'VoidCalls') ?? []
+const voidBoundaries = report.lowering?.callableBoundaries?.filter(item => item.sourceTypeName === 'VoidCalls') ?? []
+if (voidCalls.length !== 2
+	|| voidBoundaries.length !== 2
+	|| [...voidCalls, ...voidBoundaries].some(item =>
+		item.resultKind !== 'effect-only-void' || item.result !== null)) {
+	throw new Error('reflaxe.ocaml inspection did not preserve effect-only Void call results')
 }
 NODE
 

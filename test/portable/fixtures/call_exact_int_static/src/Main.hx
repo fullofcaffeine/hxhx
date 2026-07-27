@@ -85,6 +85,21 @@ class Main {
 		return value;
 	}
 
+	static function voidIntSource():Int {
+		Sys.println("void-int-source");
+		return 21;
+	}
+
+	static function voidBoolSource():Bool {
+		Sys.println("void-bool-source");
+		return true;
+	}
+
+	static function voidStringSource():String {
+		Sys.println("void-string-source");
+		return "ready";
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -136,6 +151,9 @@ class Main {
 		Sys.println(OptionalCalls.optionalBool(optionalBoolSource()) ? "optional-bool-exact=true" : "optional-bool-exact=false");
 		final existingOptionalBool:Null<Bool> = false;
 		Sys.println(OptionalCalls.optionalBool(observeOptionalBool(existingOptionalBool)) ? "optional-bool-existing-value=true" : "optional-bool-existing-value=false");
+		VoidCalls.noArguments();
+		VoidCalls.withArguments(voidIntSource(), voidBoolSource(), voidStringSource());
+		Sys.println("void-calls-complete");
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }
