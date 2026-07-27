@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 33
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v9'
+if (report.schemaVersion !== 34
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v10'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')
@@ -35,15 +35,18 @@ if (report.schemaVersion !== 33
 
 const throws = report.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (throws.length !== 6) {
-	fail(`expected 6 exact-value throw decisions, got ${throws.length}`)
+if (throws.length !== 9) {
+	fail(`expected 9 represented throw decisions, got ${throws.length}`)
 }
 const expectedByFunction = new Map([
 	['throwInt', 1],
 	['throwBool', 1],
 	['throwString', 1],
 	['throwNullString', 1],
-	['rethrowInt', 2]
+	['throwNullableInt', 1],
+	['throwNullableBool', 1],
+	['rethrowInt', 2],
+	['rethrowNullableInt', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
 	const decisions = throws.filter(control =>
@@ -59,12 +62,23 @@ if (throws.some(control => control.functionId.includes('|function|mixedThrow|'))
 const expectedCarrier = new Map([
 	['Int', 'int'],
 	['Bool', 'bool'],
-	['String', 'string']
+	['String', 'string'],
+	['Null<Int>', 'Obj.t'],
+	['Null<Bool>', 'Obj.t']
 ])
 const expectedConversion = new Map([
 	['Int', 'repr-and-recover-exact-value'],
 	['Bool', 'box-bool-and-recover-exact-value'],
-	['String', 'repr-and-recover-exact-value']
+	['String', 'repr-and-recover-exact-value'],
+	['Null<Int>', 'preserve-nullable-int-throw-carrier'],
+	['Null<Bool>', 'normalize-nullable-bool-throw-carrier']
+])
+const expectedProof = new Map([
+	['Int', 'exact-value-throw-control-v1'],
+	['Bool', 'exact-value-throw-control-v1'],
+	['String', 'exact-value-throw-control-v1'],
+	['Null<Int>', 'nullable-int-throw-control-v1'],
+	['Null<Bool>', 'nullable-bool-throw-control-v1']
 ])
 const ids = new Set()
 for (const control of throws) {
@@ -79,7 +93,7 @@ for (const control of throws) {
 		|| control.mechanism !== 'runtime-typed-haxe-exception-signal'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-exception-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.proofId !== 'exact-value-throw-control-v1'
+		|| control.proofId !== expectedProof.get(payload.inputSemanticTypeId)
 		|| !control.reason
 		|| !control.proofClaim
 		|| !control.source.file
@@ -87,7 +101,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v35'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v36'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== `representation:${payload.inputSemanticTypeId}:internal-value`
@@ -96,7 +110,7 @@ for (const control of throws) {
 		|| payload.outputCarrierTypeId !== carrier
 		|| payload.outputRepresentationId !== payload.inputRepresentationId
 		|| payload.conversion !== expectedConversion.get(payload.inputSemanticTypeId)
-		|| payload.proofId !== 'exact-value-throw-control-v1'
+		|| payload.proofId !== expectedProof.get(payload.inputSemanticTypeId)
 		|| !payload.proofClaim) {
 		fail(`throw decision ${control.id} has an incomplete exact-value exception crossing`)
 	}
@@ -126,16 +140,36 @@ if (!stringBody.includes('hx_throw_typed_rtti (Obj.repr "boom") ["Dynamic"]')
 	|| stringBody.includes('["Dynamic"; "String"]')) {
 	fail('exact String throw syntax did not defer the String tag to the runtime value')
 }
-const nullStringBody = functionBody('throwNullString', 'rethrowInt')
+const nullStringBody = functionBody('throwNullString', 'throwNullableInt')
 if (!nullStringBody.includes('HxString.hx_null_string')
 	|| !nullStringBody.includes('hx_throw_typed_rtti (Obj.repr value) ["Dynamic"]')
 	|| nullStringBody.includes('["Dynamic"; "String"]')) {
 	fail('null String throw syntax could incorrectly force a String catch')
 }
-const rethrowBody = functionBody('rethrowInt', 'mixedThrow')
+const nullableIntBody = functionBody('throwNullableInt', 'throwNullableBool')
+if (!nullableIntBody.includes('hx_throw_typed_rtti value ["Dynamic"]')
+	|| nullableIntBody.includes('Obj.repr value')
+	|| nullableIntBody.includes('Obj.magic')) {
+	fail('exact Null<Int> throw did not preserve its existing carrier')
+}
+const nullableBoolBody = functionBody('throwNullableBool', 'rethrowInt')
+if ((nullableBoolBody.match(/HxRuntime\.is_null __throw_nullable_bool_/g) || []).length !== 1
+	|| (nullableBoolBody.match(/HxRuntime\.box_bool \(HxRuntime\.unbox_bool_or_obj __throw_nullable_bool_/g) || []).length !== 1
+	|| nullableBoolBody.includes('Obj.magic')
+	|| nullableBoolBody.includes('["Dynamic"; "Bool"]')
+	|| nullableBoolBody.includes('["Dynamic"; "Int"]')) {
+	fail('exact Null<Bool> throw did not normalize its non-null exception payload once')
+}
+const rethrowBody = functionBody('rethrowInt', 'rethrowNullableInt')
 if ((rethrowBody.match(/hx_throw_typed_rtti/g) || []).length < 2
 	|| rethrowBody.includes('["Dynamic"; "Int"]')) {
 	fail('exact Int rethrow did not use its sealed exception-channel decisions')
+}
+const nullableRethrowBody = functionBody('rethrowNullableInt', 'mixedThrow')
+if (!nullableRethrowBody.includes('hx_throw_typed_rtti nullable ["Dynamic"]')
+	|| nullableRethrowBody.includes('hx_throw_typed_rtti (Obj.repr nullable)')
+	|| nullableRethrowBody.includes('Obj.magic')) {
+	fail('nullable Int rethrow did not preserve the sealed nullable carrier')
 }
 const mixedBody = functionBody('mixedThrow', 'catchInt')
 if (!mixedBody.includes('["Dynamic"; "Int"]')
@@ -162,15 +196,15 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const throws = report.lowering.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (report.schemaVersion !== 18
+if (report.schemaVersion !== 19
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| throws.length !== 6
+	|| throws.length !== 9
 	|| throws.some(control =>
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
 	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 6 validated exact-value throw decisions')
+	throw new Error('public inspection did not expose the 9 validated represented throw decisions')
 }
 NODE
 
@@ -179,10 +213,10 @@ const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const transfer = report.controls.find(control =>
-	control.kind === 'throw' && control.functionId.includes('|function|throwInt|'))
+	control.kind === 'throw' && control.functionId.includes('|function|throwNullableBool|'))
 if (!transfer)
-	throw new Error('missing exact Int throw to corrupt')
-transfer.runtimeTagPolicy = 'no-runtime-tags'
+	throw new Error('missing nullable Bool throw to corrupt')
+transfer.payload.conversion = 'preserve-nullable-int-throw-carrier'
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 
@@ -193,11 +227,11 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	echo "Public inspection accepted a throw with a corrupt runtime tag policy" >&2
 	exit 1
 fi
-if ! grep -q "invalid exact-value Haxe exception crossing" "$TAMPER_INSPECTION"; then
+if ! grep -q "invalid represented Haxe exception crossing" "$TAMPER_INSPECTION"; then
 	echo "Public inspection rejected the corrupt throw without the expected actionable reason" >&2
 	cat "$TAMPER_INSPECTION" >&2
 	exit 1
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 
-echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=6"
+echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=9"

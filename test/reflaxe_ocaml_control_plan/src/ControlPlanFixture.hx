@@ -199,6 +199,7 @@ class ControlPlanFixture {
 		final carrierTypeId = switch (semanticTypeId) {
 			case "Int": "int";
 			case "Bool": "bool";
+			case "Null<Int>", "Null<Bool>": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		};
@@ -206,12 +207,16 @@ class ControlPlanFixture {
 		final outputCarrierTypeId = switch (outputSemanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
+			case "Null<Int>", "Null<Bool>": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		};
 		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
+		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId);
+		if (selectedProofId == null)
+			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
 		final proof = 'fixture exact-$semanticTypeId Haxe exception crossing';
 		return {
 			id: id,
@@ -233,7 +238,7 @@ class ControlPlanFixture {
 				outputCarrierTypeId: outputCarrierTypeId,
 				outputRepresentationId: 'representation:$outputSemanticType:internal-value',
 				conversion: selectedConversion,
-				proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
+				proofId: selectedProofId,
 				proofClaim: proof,
 				nominalRepresentation: null
 			},
@@ -243,7 +248,7 @@ class ControlPlanFixture {
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
 			profileEligibility: ["metal", "portable"],
 			reason: 'fixture exact-$semanticTypeId value enters the Haxe exception channel',
-			proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
+			proofId: selectedProofId,
 			proofClaim: proof,
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
@@ -435,6 +440,8 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(intThrow);
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:bool", 180, "Bool"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:string", 190, "String"));
+		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-int", 192, "Null<Int>"));
+		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-bool", 194, "Null<Bool>"));
 		OcamlControlPlan.requireLoopTarget(loop);
 		OcamlControlPlan.requireCatchChain(exactCatchChain);
 		for (clause in exactCatchChain.clauses)
@@ -504,6 +511,12 @@ class ControlPlanFixture {
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [unsupportedThrow]));
 		final mismatchedThrow = throwDecision("control:throw:mismatched", 250, "Int", null, null, null, null, null, "Bool");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [mismatchedThrow]));
+		final boxedNullableIntThrow = throwDecision("control:throw:boxed-nullable-int", 252, "Null<Int>",
+			OcamlControlPayloadConversion.ReprAndRecoverExactValue);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [boxedNullableIntThrow]));
+		final preservedNullableBoolThrow = throwDecision("control:throw:preserved-nullable-bool", 254, "Null<Bool>",
+			OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [preservedNullableBoolThrow]));
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, false, binding(), [], [intThrow]));
 
 		final badCatchOrder = catchChain("control-catch-chain:bad-order", [

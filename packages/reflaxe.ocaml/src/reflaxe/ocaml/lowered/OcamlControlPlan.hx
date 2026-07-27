@@ -71,6 +71,8 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxExactBoolToNullableCarrier = "box-exact-bool-to-nullable-carrier";
 	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
+	final PreserveNullableIntThrowCarrier = "preserve-nullable-int-throw-carrier";
+	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
 }
 
 /**
@@ -294,6 +296,8 @@ class OcamlControlPlan {
 	public static inline final EFFECT_ONLY_VOID_RETURN_PROOF_ID = "effect-only-void-early-return-control-v1";
 	public static inline final LEXICAL_LOOP_CONTROL_PROOF_ID = "lexical-loop-control-v1";
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
+	public static inline final NULLABLE_INT_THROW_PROOF_ID = "nullable-int-throw-control-v1";
+	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
 	public static inline final EXACT_PRIMITIVE_CATCH_PROOF_ID = "exact-primitive-catch-control-v1";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
@@ -796,18 +800,38 @@ class OcamlControlPlan {
 			|| decision.mechanism != OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal
 			|| decision.runtimeCapabilityId != THROW_SIGNAL_CAPABILITY_ID
 			|| payload == null
-			|| !isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
 			|| payload.signalCarrierTypeId != "Obj.t"
-			|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
-			|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
-			|| payload.outputRepresentationId != payload.inputRepresentationId
+			|| !samePayloadSides(payload)
+			|| payload.nominalRepresentation != null
 			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId)
-			|| payload.proofId != EXACT_VALUE_THROW_PROOF_ID
 			|| payload.proofClaim.length == 0
-			|| decision.proofId != EXACT_VALUE_THROW_PROOF_ID
 			|| !sameStrings(decision.runtimeTags, expectedThrowTags(payload.inputSemanticTypeId))
 			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue) {
-			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an unsupported exception target or incomplete exact-value payload crossing';
+			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an unsupported exception target or incomplete value payload crossing';
+		}
+
+		final expectedProofId = expectedThrowProofId(payload.inputSemanticTypeId);
+		if (expectedProofId == null || payload.proofId != expectedProofId || decision.proofId != expectedProofId) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid proof for ${payload.inputSemanticTypeId}';
+		}
+
+		switch (payload.conversion) {
+			case ReprAndRecoverExactValue, BoxBoolAndRecoverExactValue:
+				if (!isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an incomplete exact-value payload crossing';
+				}
+			case PreserveNullableIntThrowCarrier:
+				if (payload.inputSemanticTypeId != "Null<Int>"
+					|| !isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid nullable-Int carrier crossing';
+				}
+			case NormalizeNullableBoolThrowCarrier:
+				if (payload.inputSemanticTypeId != "Null<Bool>"
+					|| !isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid nullable-Bool signal normalization';
+				}
+			case _:
+				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
 		}
 	}
 
@@ -1103,7 +1127,7 @@ class OcamlControlPlan {
 			|| (semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value");
 	}
 
-	/** Whether one return side is an exact nullable primitive `Obj.t` carrier. */
+	/** Whether one control payload side is an exact nullable primitive `Obj.t` carrier. */
 	public static function isAdmittedNullableSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return (semanticTypeId == "Null<Int>" && carrierTypeId == "Obj.t" && representationId == "representation:Null<Int>:internal-value")
 			|| (semanticTypeId == "Null<Bool>"
@@ -1148,7 +1172,7 @@ class OcamlControlPlan {
 
 	public static function expectedThrowTags(semanticTypeId:String):Array<String> {
 		return switch (semanticTypeId) {
-			case "Int", "Bool", "String": ["Dynamic"];
+			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
 			case _: [];
 		}
 	}
@@ -1157,6 +1181,18 @@ class OcamlControlPlan {
 		return switch (semanticTypeId) {
 			case "Int", "String": OcamlControlPayloadConversion.ReprAndRecoverExactValue;
 			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
+			case "Null<Int>": OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier;
+			case "Null<Bool>": OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier;
+			case _: null;
+		}
+	}
+
+	/** Selects the proof family required by one admitted throw payload. */
+	public static function expectedThrowProofId(semanticTypeId:String):Null<String> {
+		return switch (semanticTypeId) {
+			case "Int", "Bool", "String": EXACT_VALUE_THROW_PROOF_ID;
+			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
+			case "Null<Bool>": NULLABLE_BOOL_THROW_PROOF_ID;
 			case _: null;
 		}
 	}
@@ -1329,13 +1365,13 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects exact-value or effect-only `Void` returns, exact-value throws,
+	Selects exact-value or effect-only `Void` returns, represented primitive throws,
 	lexical loop transfers, and exact primitive/Dynamic catch chains.
 
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
-	sealed function body. Throw-family admission is independent and initially
-	accepts only exact `Int`, `Bool`, and represented `String` payloads. Nested
+	sealed function body. Throw-family admission is independent and accepts exact
+	`Int`, `Bool`, represented `String`, `Null<Int>`, and `Null<Bool>` payloads. Nested
 	function literals own independent boundaries and are deliberately skipped.
 	Each source `try` is admitted independently, so one unsupported catch chain
 	does not discard another exact chain in the same function.
@@ -1493,7 +1529,19 @@ class OcamlControlPlanner {
 						return;
 					}
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
-					final proofClaim = 'The final typed Haxe body sends this exact ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. The selected payload conversion preserves that represented value in the private Obj.t carrier. The sealed tag policy always admits Dynamic and derives the exact primitive tag from the carried runtime value, so a null String remains Dynamic rather than matching String.';
+					final proofId = OcamlControlPlan.expectedThrowProofId(representation.semanticTypeId);
+					if (proofId == null) {
+						throwFamilyAdmitted = false;
+						return;
+					}
+					final proofClaim = switch (representation.semanticTypeId) {
+						case "Null<Int>":
+							"The final typed Haxe body sends one exact Null<Int>/Obj.t value through the compiler-owned Haxe exception channel without another box. The runtime tag comes from the carried value, so non-null matches Int while null remains Dynamic-only.";
+						case "Null<Bool>":
+							"The final typed Haxe body sends one exact Null<Bool>/Obj.t value through the compiler-owned Haxe exception channel. Null remains the existing sentinel; a non-null carrier is normalized once into the unambiguous boxed-Bool exception representation so it matches Bool rather than Int.";
+						case _:
+							'The final typed Haxe body sends this exact ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. The selected payload conversion preserves that represented value in the private Obj.t carrier. The sealed tag policy always admits Dynamic and derives the exact primitive tag from the carried runtime value, so a null String remains Dynamic rather than matching String.';
+					};
 					final decision:OcamlControlDecision = {
 						id: controlId(OcamlControlTransferKind.Throw, path, OcamlControlPlan.HAXE_EXCEPTION_CHANNEL_ID),
 						source: source,
@@ -1511,7 +1559,7 @@ class OcamlControlPlanner {
 							outputRepresentationId: representation.id,
 							conversion: conversion,
 							nominalRepresentation: null,
-							proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
+							proofId: proofId,
 							proofClaim: proofClaim
 						},
 						runtimeTags: OcamlControlPlan.expectedThrowTags(representation.semanticTypeId),
@@ -1519,8 +1567,8 @@ class OcamlControlPlanner {
 						mechanism: OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 						runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
 						profileEligibility: ["metal", "portable"],
-						reason: 'This exact ${representation.semanticTypeId} Haxe value enters the private typed-exception channel and may propagate across calls before a source catch matches it.',
-						proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
+						reason: 'This represented ${representation.semanticTypeId} Haxe value enters the private typed-exception channel and may propagate across calls before a source catch matches its runtime value.',
+						proofId: proofId,
 						proofClaim: proofClaim,
 						functionId: binding.functionId,
 						programRevision: binding.programRevision,

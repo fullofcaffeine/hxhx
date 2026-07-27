@@ -6,6 +6,12 @@ function call before a matching source `catch` receives it. `Dynamic`,
 `haxe.ValueException`, and `haxe.Exception` catches also receive the wrapper or
 value required by Haxe, and rethrowing preserves the source value.
 
+The nullable primitive cases freeze a subtler rule. A non-null `Null<Int>` or
+`Null<Bool>` is caught by its concrete primitive type, but null skips that
+catch and reaches `Dynamic`. The Bool case deliberately checks an earlier Int
+catch so targets cannot rely on OCaml's ambiguous immediate representation.
+The distinction also survives a function call and nullable-Int rethrow.
+
 The null-String case is intentional. Haxe's `String` type is nullable in this
 compatibility mode, but upstream Haxe 4.3.7 routes a null String to the
 `Dynamic` catch rather than the `String` catch. The target therefore cannot

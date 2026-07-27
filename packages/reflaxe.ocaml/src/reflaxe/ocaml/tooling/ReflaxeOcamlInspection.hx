@@ -82,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 18,
+			schemaVersion: 19,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 33) {
-						throw 'Unsupported lowering report schema $version; expected 33.';
+					if (version != 34) {
+						throw 'Unsupported lowering report schema $version; expected 34.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -435,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v9")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v10")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -588,24 +588,34 @@ class ReflaxeOcamlInspection {
 					final expectedConversion = switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
 						case "Bool": "box-bool-and-recover-exact-value";
+						case "Null<Int>": "preserve-nullable-int-throw-carrier";
+						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
 						case _: null;
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
-						case "Int", "Bool", "String": ["Dynamic"];
+						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
 						case _: [];
 					};
+					final expectedProofId = switch (payload.inputSemanticTypeId) {
+						case "Int", "Bool", "String": "exact-value-throw-control-v1";
+						case "Null<Int>": "nullable-int-throw-control-v1";
+						case "Null<Bool>": "nullable-bool-throw-control-v1";
+						case _: null;
+					};
 					if (expectedConversion == null
+						|| expectedProofId == null
 						|| payload.signalCarrierTypeId != "Obj.t"
 						|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
 						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
 						|| payload.outputRepresentationId != payload.inputRepresentationId
 						|| payload.conversion != expectedConversion
-						|| payload.proofId != "exact-value-throw-control-v1"
+						|| payload.nominalRepresentation != null
+						|| payload.proofId != expectedProofId
 						|| payload.proofClaim.length == 0
-						|| control.proofId != "exact-value-throw-control-v1"
+						|| control.proofId != expectedProofId
 						|| !sameStrings(control.runtimeTags, expectedTags)
 						|| control.runtimeTagPolicy != "merge-dynamic-with-exact-runtime-value") {
-						throw 'Control decision "${control.id}" has an invalid exact-value Haxe exception crossing.';
+						throw 'Control decision "${control.id}" has an invalid represented Haxe exception crossing.';
 					}
 				case _:
 					throw 'Control decision "${control.id}" has unsupported transfer kind "${control.kind}".';

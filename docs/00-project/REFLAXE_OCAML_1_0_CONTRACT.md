@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first nine bounded control-effect slices are now executable. An ordinary
+The first ten bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -158,8 +158,25 @@ that crossing. The lowering report and public inspector reject a control
 record whose nominal layout revision or representation proof disagrees with
 the program registry.
 
+The tenth slice seals exact nullable primitive throws before OCaml syntax.
+Upstream Haxe 4.3.7 distinguishes the value thrown, not merely its static
+nullable type: a non-null `Null<Int>` reaches `catch (value:Int)`, a non-null
+`Null<Bool>` reaches `catch (value:Bool)`, and null skips both concrete catches
+and reaches `Dynamic`. The same distinction survives a function call and
+rethrow.
+
+`Null<Int>` can use its existing `Obj.t` carrier unchanged because a non-null
+OCaml integer has an unambiguous runtime shape. `Null<Bool>` needs one explicit
+control-boundary normalization: OCaml represents ordinary nullable Bool
+storage with `Obj.repr`, where `true` can otherwise look like the integer `1`.
+The sealed throw decision therefore preserves null, but unboxes and reboxes a
+non-null Bool once into the runtime's existing unambiguous Bool exception
+carrier. The shared exception channel then derives the concrete tag from the
+actual payload. Generated syntax does not select catch compatibility, use
+`Obj.magic`, or create a second exception mechanism.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.9`, not closure of the parent control-effects requirement.
+`haxe_ocaml-w32h3.10`, not closure of the parent control-effects requirement.
 Additional value-return payloads, other primitive-to-nullable and nullable
 return carriers, unsupported catch and throw payloads, cleanup effects, and
 the complete runtime-requirement ledger remain unfinished.

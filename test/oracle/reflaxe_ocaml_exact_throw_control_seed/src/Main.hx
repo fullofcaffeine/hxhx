@@ -24,11 +24,28 @@ class Main {
 		throw value;
 	}
 
+	static function throwNullableInt(value:Null<Int>):Void {
+		throw value;
+	}
+
+	static function throwNullableBool(value:Null<Bool>):Void {
+		throw value;
+	}
+
 	static function rethrowInt():Int {
 		try {
 			throw 9;
 		} catch (value:Int) {
 			throw value + 1;
+		}
+	}
+
+	static function rethrowNullableInt(value:Null<Int>):Void {
+		try {
+			throwNullableInt(value);
+		} catch (caught:Int) {
+			final nullable:Null<Int> = caught;
+			throw nullable;
 		}
 	}
 
@@ -87,6 +104,43 @@ class Main {
 		return "dynamic=miss";
 	}
 
+	static function catchNullableInt(value:Null<Int>):String {
+		try {
+			throwNullableInt(value);
+		} catch (_:Bool) {
+			return "nullableInt=wrong-bool";
+		} catch (caught:Int) {
+			return "nullableInt=" + caught;
+		} catch (_:Dynamic) {
+			return "nullableInt=dynamic";
+		}
+		return "nullableInt=miss";
+	}
+
+	static function catchNullableBool(value:Null<Bool>):String {
+		try {
+			throwNullableBool(value);
+		} catch (_:Int) {
+			return "nullableBool=wrong-int";
+		} catch (caught:Bool) {
+			return "nullableBool=" + caught;
+		} catch (_:Dynamic) {
+			return "nullableBool=dynamic";
+		}
+		return "nullableBool=miss";
+	}
+
+	static function catchNullableRethrow(value:Null<Int>):String {
+		try {
+			rethrowNullableInt(value);
+		} catch (caught:Int) {
+			return "nullableRethrow=" + caught;
+		} catch (_:Dynamic) {
+			return "nullableRethrow=dynamic";
+		}
+		return "nullableRethrow=miss";
+	}
+
 	static function catchValueExceptionInt():String {
 		try {
 			throwInt();
@@ -130,6 +184,12 @@ class Main {
 			catchString(),
 			catchNullString(),
 			catchDynamicInt(),
+			catchNullableInt(7),
+			catchNullableInt(null),
+			catchNullableBool(true),
+			catchNullableBool(null),
+			catchNullableRethrow(9),
+			catchNullableRethrow(null),
 			catchValueExceptionInt(),
 			catchExceptionString(),
 			catchRethrow(),

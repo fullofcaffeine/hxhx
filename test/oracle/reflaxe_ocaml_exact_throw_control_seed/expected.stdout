@@ -1,1 +1,1 @@
-int=123,bool=true,string=boom,nullString=dynamic,dynamic=123,valueException=123,exception=boom,rethrow=10,mixed=7
+int=123,bool=true,string=boom,nullString=dynamic,dynamic=123,nullableInt=7,nullableInt=dynamic,nullableBool=true,nullableBool=dynamic,nullableRethrow=9,nullableRethrow=dynamic,valueException=123,exception=boom,rethrow=10,mixed=7
