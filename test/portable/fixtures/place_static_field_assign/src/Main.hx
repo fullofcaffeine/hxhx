@@ -35,8 +35,11 @@ class Main {
 		Sys.println("omitted=" + ExternalHolder.omitted);
 		Sys.println("omitted_bool=" + ExternalHolder.omittedBool);
 		Sys.println("omitted_nullable=" + (ExternalHolder.omittedNullableInt == null) + "/" + (ExternalHolder.omittedNullableBool == null));
+		Sys.println("omitted_string=" + (ExternalHolder.omittedString == null));
 		final boolResult = ExternalHolder.omittedBool = rhsBool();
 		Sys.println("bool=" + boolResult + " final=" + ExternalHolder.omittedBool + " events=" + events.join(","));
+		final stringResult = ExternalHolder.omittedString = "written";
+		Sys.println("string=" + stringResult + " final=" + ExternalHolder.omittedString);
 
 		events.resize(0);
 		final localResult = localValue = rhs("rhs_local", 7);

@@ -60,6 +60,10 @@ if ! grep -q '^let omittedNullableBool = ref (HxRuntime.hx_null : Obj.t)$' "$ext
 	echo "An omitted exact Null<Bool> static must use direct HxRuntime.hx_null on Obj.t" >&2
 	exit 1
 fi
+if ! grep -q '^let omittedString = ref (HxString.hx_null_string : string)$' "$external_source_file"; then
+	echo "An omitted exact String static must use the sealed string carrier and runtime-null default" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('fs')
@@ -68,10 +72,12 @@ const decision = report.representations.find(item => item.id === 'representation
 const boolDecision = report.representations.find(item => item.id === 'representation:Bool:static-field')
 const nullableIntDecision = report.representations.find(item => item.id === 'representation:Null<Int>:static-field')
 const nullableBoolDecision = report.representations.find(item => item.id === 'representation:Null<Bool>:static-field')
+const stringDecision = report.representations.find(item => item.id === 'representation:String:static-field')
 const external = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omitted')
 const externalBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedBool')
 const externalNullableInt = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedNullableInt')
 const externalNullableBool = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedNullableBool')
+const externalString = report.staticStorage.find(item => item.key === 'ExternalHolder::ExternalHolder::omittedString')
 const sameModuleBool = report.staticStorage.find(item => item.key === 'Main::Main::sameModuleBool')
 const sameModuleNullableInt = report.staticStorage.find(item => item.key === 'Main::Main::sameModuleNullableInt')
 const boolAssignment = report.plans.find(item =>
@@ -79,6 +85,12 @@ const boolAssignment = report.plans.find(item =>
 	&& item.semanticTypeId === 'Bool'
 	&& item.carrierTypeId === 'bool'
 	&& item.place?.representationId === boolDecision?.id)
+const stringAssignment = report.plans.find(item =>
+	item.nodeKind === 'static-simple-assignment'
+	&& item.semanticTypeId === 'String'
+	&& item.carrierTypeId === 'string'
+	&& item.place?.fieldName === 'omittedString'
+	&& item.place?.representationId === stringDecision?.id)
 if (!decision
 	|| decision.carrierTypeId !== 'int'
 	|| decision.implicitDefaultPolicy !== 'exact-int-zero'
@@ -111,6 +123,18 @@ if (!nullableIntDecision
 	|| sameModuleNullableInt.declarationSite !== 'module-prelude'
 	|| sameModuleNullableInt.representationId !== nullableIntDecision.id) {
 	throw new Error('the lowering report did not preserve exact nullable primitive static carrier/default decisions')
+}
+if (!stringDecision
+	|| stringDecision.carrierTypeId !== 'string'
+	|| stringDecision.nullPolicy !== 'runtime-sentinel'
+	|| stringDecision.boxingPolicy !== 'nullable-string-carrier'
+	|| stringDecision.implicitDefaultPolicy !== 'runtime-null-sentinel'
+	|| stringDecision.proof?.id !== 'nullable-string-runtime-sentinel-carrier-v1'
+	|| !externalString
+	|| externalString.representationId !== stringDecision.id
+	|| !stringAssignment
+	|| stringAssignment.conversion !== 'identity') {
+	throw new Error('the lowering report did not preserve the exact String static carrier/default/simple-assignment decision')
 }
 NODE
 

@@ -643,7 +643,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
 		|| scaffoldInspectionReport.representation?.status !== 'present'
-		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9'
+		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
 		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
 		|| !scaffoldInspectionReport.representation.decisions?.some(decision =>

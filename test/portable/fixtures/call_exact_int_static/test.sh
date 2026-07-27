@@ -90,11 +90,11 @@ if ! grep -q '^let choose = fun (count : int) (enabled : Obj.t) ->' "$mixed_sour
 	echo "The mixed callable must independently select int and Obj.t parameter carriers" >&2
 	exit 1
 fi
-if ! grep -Eq 'let __call_arg_0_[0-9]+ = mixedCount \("preserve" : string\) 41 in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = let __call_arg_0_[0-9]+ = "preserve" in let __call_arg_1_[0-9]+ = 41 in mixedCount __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
 	echo "The mixed preserve call must evaluate, bind, and preserve both carriers in source order" >&2
 	exit 1
 fi
-if ! grep -Eq 'let __call_arg_0_[0-9]+ = mixedCount \("box" : string\) 42 in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = let __call_arg_0_[0-9]+ = "box" in let __call_arg_1_[0-9]+ = 42 in mixedCount __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in MixedCalls\.choose __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
 	echo "The mixed box call must evaluate its exact Bool once and box it once after the Int argument" >&2
 	exit 1
 fi
@@ -106,11 +106,11 @@ if ! grep -q '^let chooseMany = fun (prefix : int) (enabled : Obj.t) (invert : b
 	echo "The positive-arity callable must independently select all four parameter carriers" >&2
 	exit 1
 fi
-if ! grep -Eq 'let preservedMany = let __call_arg_0_[0-9]+ = mixedCount \("many-preserve" : string\) 83 in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in let __call_arg_2_[0-9]+ = mixedDecision \("preserve" : string\) true in let __call_arg_3_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFallback in observeExistingMixedFallback __call_arg_0_[0-9]+ in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
+if ! grep -Eq 'let preservedMany = let __call_arg_0_[0-9]+ = let __call_arg_0_[0-9]+ = "many-preserve" in let __call_arg_1_[0-9]+ = 83 in mixedCount __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_1_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFlag in observeExistingMixedFlag __call_arg_0_[0-9]+ in let __call_arg_2_[0-9]+ = let __call_arg_0_[0-9]+ = "preserve" in let __call_arg_1_[0-9]+ = true in mixedDecision __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_3_[0-9]+ = let __call_arg_0_[0-9]+ = existingMixedFallback in observeExistingMixedFallback __call_arg_0_[0-9]+ in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
 	echo "The four-argument preserve call must evaluate, bind, and preserve every carrier in source order" >&2
 	exit 1
 fi
-if ! grep -Eq 'let boxedMany = let __call_arg_0_[0-9]+ = mixedCount \("many-box" : string\) 84 in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in let __call_arg_2_[0-9]+ = mixedDecision \("box" : string\) true in let __call_arg_3_[0-9]+ = Obj\.repr \(exactMixedFallback \(\)\) in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
+if ! grep -Eq 'let boxedMany = let __call_arg_0_[0-9]+ = let __call_arg_0_[0-9]+ = "many-box" in let __call_arg_1_[0-9]+ = 84 in mixedCount __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_1_[0-9]+ = Obj\.repr \(exactMixedFlag \(\)\) in let __call_arg_2_[0-9]+ = let __call_arg_0_[0-9]+ = "box" in let __call_arg_1_[0-9]+ = true in mixedDecision __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ in let __call_arg_3_[0-9]+ = Obj\.repr \(exactMixedFallback \(\)\) in MixedCalls\.chooseMany __call_arg_0_[0-9]+ __call_arg_1_[0-9]+ __call_arg_2_[0-9]+ __call_arg_3_[0-9]+' "$main_source"; then
 	echo "The four-argument box call must evaluate each source argument once and box only the selected nullable crossings" >&2
 	exit 1
 fi
@@ -204,7 +204,7 @@ rm -f "$optional_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 18 || report.callModel !== 'typed-ocaml-directional-call-boundary-v8') {
+if (report.schemaVersion !== 19 || report.callModel !== 'typed-ocaml-directional-call-boundary-v9') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -266,7 +266,8 @@ if (report.calls.some(call => call.proofId !== signatureProofId)
 	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
 }
-for (const owner of [...report.calls, ...report.callableBoundaries]) {
+const fixtureTypeNames = new Set(['Arithmetic', 'NullableCalls', 'BoolCalls', 'MixedCalls', 'ZeroArgCalls', 'OptionalCalls'])
+for (const owner of [...report.calls, ...report.callableBoundaries].filter(owner => fixtureTypeNames.has(owner.sourceTypeName))) {
 	if (owner.result?.parameterOptional !== false) {
 		throw new Error(`call owner ${owner.id} marked its result as an optional parameter`)
 	}

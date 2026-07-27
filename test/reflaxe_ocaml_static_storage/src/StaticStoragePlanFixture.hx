@@ -99,6 +99,30 @@ class StaticStoragePlanFixture {
 		});
 	}
 
+	static function registerString(plan:OcamlStaticStoragePlan, owner:String, field:String, target:String, order:Int,
+			declarationSite:OcamlStaticStorageDeclarationSite):Void {
+		plan.register({
+			moduleId: "Main",
+			ownerTypeName: owner,
+			fieldName: field,
+			targetValueName: target,
+			semanticTypeId: "String",
+			carrierTypeId: "string",
+			fieldType: Context.typeof(macro("" : String)),
+			carrierType: OcamlTypeExpr.TIdent("string"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: declarationSite,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: order,
+			declarationOrder: order,
+			initializationOrder: order,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: "representation:String:static-field"
+		});
+	}
+
 	static function registerTypePrelude(plan:OcamlStaticStoragePlan):Void {
 		plan.register({
 			moduleId: "Main",
@@ -169,6 +193,18 @@ class StaticStoragePlanFixture {
 			&& ready.carrierTypeId == "bool"
 			&& ready.representationId == "representation:Bool:static-field",
 			"an exact Bool static cell should retain its direct carrier and program representation decision");
+
+		final stringPlan = new OcamlStaticStoragePlan();
+		stringPlan.beginProgram("program:static-storage-string");
+		stringPlan.registerTypeOrder("Main", "Main", 0);
+		registerString(stringPlan, "Main", "label", "label", 0, OcamlStaticStorageDeclarationSite.OwnerBinding);
+		stringPlan.seal();
+		final label = stringPlan.require("Main", "Main", "label");
+		assertTrue(label.semanticTypeId == "String"
+			&& label.carrierTypeId == "string"
+			&& label.representationId == "representation:String:static-field"
+			&& !label.hasInitializer,
+			"an omitted exact String static cell should retain its nullable carrier and program representation decision");
 
 		final nullablePlan = new OcamlStaticStoragePlan();
 		nullablePlan.beginProgram("program:static-storage-nullable");
@@ -305,6 +341,30 @@ class StaticStoragePlanFixture {
 			carrierTypeId: "Obj.t",
 			fieldType: Context.typeof(macro(null : Null<Int>)),
 			carrierType: OcamlTypeExpr.TIdent("Obj.t"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: false,
+			initializerDependencyKeys: [],
+			representationId: null
+		}));
+
+		final missingStringRepresentation = new OcamlStaticStoragePlan();
+		missingStringRepresentation.beginProgram("program:static-storage-missing-string-representation");
+		missingStringRepresentation.registerTypeOrder("Main", "Main", 0);
+		expectFailure("missing exact String representation", "missing-exact-primitive-representation", () -> missingStringRepresentation.register({
+			moduleId: "Main",
+			ownerTypeName: "Main",
+			fieldName: "label",
+			targetValueName: "label",
+			semanticTypeId: "String",
+			carrierTypeId: "string",
+			fieldType: Context.typeof(macro("" : String)),
+			carrierType: OcamlTypeExpr.TIdent("string"),
 			kind: OcamlStaticStorageKind.Variable,
 			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
 			declarationTypeName: null,

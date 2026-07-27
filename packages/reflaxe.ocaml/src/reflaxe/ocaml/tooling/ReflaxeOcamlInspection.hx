@@ -318,8 +318,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 18) {
-						throw 'Unsupported lowering report schema $version; expected 18.';
+					if (version != 19) {
+						throw 'Unsupported lowering report schema $version; expected 19.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -368,7 +368,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v8")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v9")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -650,6 +650,7 @@ class ReflaxeOcamlInspection {
 	static function isAdmittedCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Int", "int")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Bool", "bool")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "String", "string")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Int>", "Obj.t")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t");
 	}
@@ -756,7 +757,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9")
+		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -823,7 +824,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact-Int, direct Array<Int>, or exact local Bool/Null<Int>/Null<Bool> carrier decision${decisions.length == 1 ? "" : "s"}. Exact-Int instance/static fields also carry their implicit-zero policy; generic, other nullable, abstract, Dynamic, broader field, and ABI domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned exact Int, Bool, String, nullable-primitive, or direct Array<Int> carrier decision${decisions.length == 1 ? "" : "s"}. Admitted instance/static fields carry their Haxe implicit-default policy, including the distinction between null and an empty String; generic, other nullable, abstract, Dynamic, broader field, and ABI domains remain outside this slice.'
 		};
 	}
 
@@ -1351,7 +1352,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9",
+			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
 			message: message
 		};
 	}

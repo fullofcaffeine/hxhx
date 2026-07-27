@@ -149,6 +149,22 @@ class CallPlanFixture {
 		};
 	}
 
+	static function stringValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "String",
+			inputCarrierTypeId: "string",
+			inputRepresentationId: "representation:String:internal-value",
+			outputSemanticTypeId: "String",
+			outputCarrierTypeId: "string",
+			outputRepresentationId: "representation:String:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture String identity"
+		};
+	}
+
 	static function nullableArgument(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
 		return switch (conversion) {
 			case PreserveNullableIntCarrier:
@@ -831,6 +847,20 @@ class CallPlanFixture {
 	}
 
 	public static macro function run():Expr {
+		final stringArgument = stringValue(0);
+		OcamlCallPlan.requireDirectStaticValue(stringArgument, 0, "exact String fixture");
+		final wrongStringCarrier = OcamlCallPlan.copyValue(stringArgument);
+		Reflect.setField(wrongStringCarrier, "outputCarrierTypeId", "Obj.t");
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireDirectStaticValue(wrongStringCarrier, 0, "wrong String carrier fixture"));
+		final wrongStringRepresentation = OcamlCallPlan.copyValue(stringArgument);
+		Reflect.setField(wrongStringRepresentation, "inputRepresentationId", "representation:String:mutable-local-storage");
+		expectThrows("invalid identity crossing",
+			() -> OcamlCallPlan.requireDirectStaticValue(wrongStringRepresentation, 0, "wrong String representation fixture"));
+		final missingStringProof = OcamlCallPlan.copyValue(stringArgument);
+		Reflect.setField(missingStringProof, "proofId", "");
+		expectThrows("invalid index or empty conversion proof",
+			() -> OcamlCallPlan.requireDirectStaticValue(missingStringProof, 0, "missing String proof fixture"));
+
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
 		final selectedCall = call(caller);

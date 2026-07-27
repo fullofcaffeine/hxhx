@@ -106,7 +106,9 @@ class OcamlPlaceAssignmentValidator {
 	}
 
 	static function isDirectPrimitive(semanticTypeId:String, carrierTypeId:String):Bool {
-		return (semanticTypeId == "Int" && carrierTypeId == "int") || (semanticTypeId == "Bool" && carrierTypeId == "bool");
+		return (semanticTypeId == "Int" && carrierTypeId == "int")
+			|| (semanticTypeId == "Bool" && carrierTypeId == "bool")
+			|| (semanticTypeId == "String" && carrierTypeId == "string");
 	}
 
 	static function validateIdentityAndPlace(plan:OcamlPlaceValidationFacts, allowBool:Bool = false):Array<String> {
@@ -115,7 +117,7 @@ class OcamlPlaceAssignmentValidator {
 			errors.push("stable node, origin, and place identities are required");
 		if ((allowBool && !isDirectPrimitive(plan.semanticTypeId, plan.carrierTypeId))
 			|| (!allowBool && (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")))
-			errors.push(allowBool ? "simple assignment admits only exact Int or Bool on their direct OCaml carriers" : "this operator slice admits only semantic Int on the OCaml int carrier");
+			errors.push(allowBool ? "simple assignment admits only exact Int, Bool, or String on their direct OCaml carriers" : "this operator slice admits only semantic Int on the OCaml int carrier");
 		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
 			errors.push("place and expression semantic/carrier types must agree in the first slice");
 		if (plan.place.kind != OcamlLoweredPlaceKind.InstanceField)
@@ -171,7 +173,7 @@ class OcamlPlaceAssignmentValidator {
 			errors.push("stable node, origin, and static-place identities are required");
 		if ((allowBool && !isDirectPrimitive(plan.semanticTypeId, plan.carrierTypeId))
 			|| (!allowBool && (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")))
-			errors.push(allowBool ? "static simple assignment admits only exact Int or Bool on their direct OCaml carriers" : "this static operator slice admits only semantic Int on the OCaml int carrier");
+			errors.push(allowBool ? "static simple assignment admits only exact Int, Bool, or String on their direct OCaml carriers" : "this static operator slice admits only semantic Int on the OCaml int carrier");
 		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
 			errors.push("static place and expression semantic/carrier types must agree");
 		if (plan.place.kind != OcamlLoweredPlaceKind.StaticField)

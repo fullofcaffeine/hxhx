@@ -26,10 +26,11 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMu
 	choose different carriers. The admitted scope covers exact `Int` and `Bool`
 	across internal values, local cells, and direct fields. Direct nominal
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>` remain
-	local-only decisions.
+	local-only decisions. Exact core `String` uses the target's nullable string
+	carrier across internal values, local cells, and direct fields.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v9";
+	public static inline final MODEL_REVISION = "ocaml-representation-v10";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -147,6 +148,21 @@ class OcamlRepresentationRegistry {
 	**/
 	public static function isExactNullBool(type:Type):Bool {
 		return isExactCoreNullablePrimitive(type, "Bool");
+	}
+
+	/**
+		Returns whether a type is the direct built-in `String` class.
+
+		The predicate intentionally does not follow typedefs, user abstracts,
+		generic parameters, or `Dynamic`. Those families can require different
+		interop and null-boundary rules.
+	**/
+	public static function isExactString(type:Type):Bool {
+		return switch (type) {
+			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String";
+			case _:
+				false;
+		}
 	}
 
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
@@ -276,6 +292,44 @@ class OcamlRepresentationRegistry {
 		return selectExactNullablePrimitive(domain, "Null<Bool>", exactNullBoolReason(domain), {
 			id: "nullable-bool-obj-carrier-v2",
 			claim: "One Obj.t carrier preserves HxRuntime.hx_null, Obj.repr false, and Obj.repr true as three distinct Haxe Null<Bool> values. It owns internal/local/field storage and implicit null defaults only. Occurrence-bound proofs must own every carrier-preserving copy, exact-Bool box, condition-truthiness read, and field write; this does not admit calls, concrete-Bool boundaries, ABI crossings, or other Null<T> families."
+		});
+	}
+
+	/**
+		Registers the nullable direct carrier used by exact core `String`.
+
+		Haxe 4.3.7 initializes omitted String storage to null, while OCaml
+		`string` has no null constructor. The selected proof therefore admits one
+		narrow unsafe operation: the materializer may cast the canonical runtime
+		sentinel into the string carrier for an implicit default. Non-null strings
+		and admitted Haxe-to-Haxe call boundaries stay direct.
+	**/
+	public function selectExactString(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case InstanceField: OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner;
+			case StaticField: OcamlRepresentationStorageMutationPolicy.StaticFieldOwner;
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: exact String is admitted only for internal, local, instance-field, or static-field storage, not $domain';
+		};
+		return register({
+			semanticTypeId: "String",
+			domain: domain,
+			carrierTypeId: "string",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: storageMutationPolicy,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.NullableStringCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
+			reason: exactStringReason(domain),
+			proof: {
+				id: "nullable-string-runtime-sentinel-carrier-v1",
+				claim: "Exact Haxe String uses OCaml string for non-null values and preserves the canonical Haxe null sentinel through the single runtime-owned HxString.hx_null_string value. Generated storage and expressions reference that value instead of creating occurrence-local Obj.magic casts. HxString.equals checks the sentinel before native string equality. This proof does not admit typedefs, abstracts, Dynamic, native ABI crossings, array elements, or arbitrary class carriers."
+			},
+			profileEligibility: ["metal", "portable"]
 		});
 	}
 
@@ -448,6 +502,23 @@ class OcamlRepresentationRegistry {
 				"An exact Null<Bool> static field stores Haxe null, boxed false, or boxed true in one Obj.t ref cell; the cell owns replacement and its omitted default is HxRuntime.hx_null.";
 			case ArrayElement:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> storage reason exists for $domain';
+		}
+	}
+
+	static function exactStringReason(domain:OcamlRepresentationDomain):String {
+		return switch (domain) {
+			case InternalValue:
+				"An exact Haxe String internal value uses the nullable OCaml string carrier; non-null values are direct and the canonical null sentinel is materialized only through the sealed proof.";
+			case MutableLocalStorage:
+				"An exact Haxe String mutable local stores the nullable string carrier in one ref cell; the cell owns replacement and the sealed representation owns its implicit null default.";
+			case CapturedLocalStorage:
+				"An exact Haxe String captured local stores the nullable string carrier in the ref cell shared with nested functions; the sealed representation owns its implicit null default.";
+			case InstanceField:
+				"An exact Haxe String instance field uses the nullable string carrier and starts at the canonical Haxe null sentinel when no initializer is present.";
+			case StaticField:
+				"An exact Haxe String static field uses the nullable string carrier in one ref cell and starts at the canonical Haxe null sentinel when no initializer is present.";
+			case ArrayElement:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-string-domain]: no exact String storage reason exists for $domain';
 		}
 	}
 

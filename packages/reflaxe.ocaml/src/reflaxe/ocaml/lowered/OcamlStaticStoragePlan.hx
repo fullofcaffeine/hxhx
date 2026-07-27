@@ -347,9 +347,10 @@ class OcamlStaticStoragePlan {
 			&& ((selection.semanticTypeId == "Int" && selection.carrierTypeId == "int")
 				|| (selection.semanticTypeId == "Bool" && selection.carrierTypeId == "bool")
 				|| (selection.semanticTypeId == "Null<Int>" && selection.carrierTypeId == "Obj.t")
-				|| (selection.semanticTypeId == "Null<Bool>" && selection.carrierTypeId == "Obj.t"))
+				|| (selection.semanticTypeId == "Null<Bool>" && selection.carrierTypeId == "Obj.t")
+				|| (selection.semanticTypeId == "String" && selection.carrierTypeId == "string"))
 			&& selection.representationId == null) {
-			throw "reflaxe.ocaml [ocaml-static-storage:missing-exact-primitive-representation]: every admitted exact primitive or nullable-primitive static cell needs its program representation decision, regardless of declaration site";
+			throw "reflaxe.ocaml [ocaml-static-storage:missing-exact-primitive-representation]: every admitted exact primitive, nullable-primitive, or String static cell needs its program representation decision, regardless of declaration site";
 		}
 		if (selection.declarationSite == OcamlStaticStorageDeclarationSite.TypePrelude) {
 			if (selection.declarationTypeName == null || selection.declarationTypeName.length == 0 || selection.declarationTypeOrder < 0)

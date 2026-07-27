@@ -45,10 +45,12 @@ import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
+import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
@@ -1075,6 +1077,8 @@ class OcamlBuilder {
 	function missingOptionalArgValue(t:Type):OcamlExpr {
 		if (nullablePrimitiveKind(t) != null)
 			return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		if (OcamlRepresentationRegistry.isExactString(t))
+			return exactStringNullValue(OcamlRepresentationDomain.InternalValue);
 		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 	}
 
@@ -1452,10 +1456,16 @@ class OcamlBuilder {
 				//
 				// - For nullable primitives (Null<Int>/Null<Float>/Null<Bool>), represent
 				//   null as `HxRuntime.hx_null : Obj.t` directly (no cast).
-				// - Otherwise cast it with `Obj.magic` so it unifies with the expected OCaml type
-				//   (e.g. nullable strings use `Obj.magic hx_null : string`).
-				nullablePrimitiveKind(e.t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-					"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+				// - Exact String uses the one runtime-owned String sentinel selected
+				//   by the sealed representation.
+				// - Unmigrated families retain the compatibility cast.
+				if (nullablePrimitiveKind(e.t) != null) {
+					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				} else if (OcamlRepresentationRegistry.isExactString(e.t)) {
+					exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+				} else {
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+				}
 			case TConst(c):
 				// For nullable primitives, represent non-null values as `Obj.repr <prim>`.
 				switch (nullablePrimitiveKind(e.t)) {
@@ -4423,7 +4433,37 @@ class OcamlBuilder {
 		return initExpr;
 	}
 
+	/**
+		 * Materializes an admitted local default from its sealed representation.
+		 *
+		 * Exact String is the first reference carrier on this path. Its materializer
+		 * validates the named runtime-sentinel proof before syntax is created.
+		 * Unmigrated families continue through the explicit legacy mapper.
+		 */
+	function defaultValueForLocal(localId:Int, type:Type, position:Position):OcamlExpr {
+		final representation = plannedLocalRepresentation(localId, position);
+		if (representation != null && representation.semanticTypeId == "String") {
+			return try {
+				OcamlStringRepresentationMaterializer.materialize(representation, representation.domain).implicitDefault;
+			} catch (error:Dynamic) {
+				localStorageInvariant(Std.string(error), position);
+			}
+		}
+		return defaultValueForType(type);
+	}
+
+	/**
+			Returns the one runtime-owned exact String null value after validating the
+			sealed representation for the requested domain.
+		**/
+	function exactStringNullValue(domain:OcamlRepresentationDomain):OcamlExpr {
+		final decision = representationRegistry.selectExactString(domain);
+		return OcamlStringRepresentationMaterializer.materialize(decision, domain).implicitDefault;
+	}
+
 	function defaultValueForType(t:Type):OcamlExpr {
+		if (OcamlRepresentationRegistry.isExactString(t))
+			return exactStringNullValue(OcamlRepresentationDomain.InternalValue);
 		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 
 		return switch (t) {
@@ -4443,13 +4483,8 @@ class OcamlBuilder {
 						}
 					default: anyNull;
 				}
-			case TInst(cRef, _):
-				final c = cRef.get();
-				if (c.pack != null && c.pack.length == 0 && c.name == "String") {
-					OcamlExpr.EConst(OcamlConst.CString(""));
-				} else {
-					anyNull;
-				}
+			case TInst(_, _):
+				anyNull;
 			case TEnum(_, _):
 				anyNull;
 			case _:
@@ -5358,7 +5393,7 @@ class OcamlBuilder {
 		//   through try/raise control-flow joins, which then explodes at string callsites.
 		//
 		// How
-		// - Preserve `null` as the canonical string sentinel (`Obj.magic hx_null`).
+		// - Preserve exact String `null` through the runtime-owned sentinel.
 		// - Annotate non-null RHS values against the LHS string type.
 		if (isStringType(lhsType)) {
 			final lhsTypeExpr = typeExprFromHaxeType(lhsType);
@@ -5369,8 +5404,13 @@ class OcamlBuilder {
 			final rhsUnwrapped = unwrap(rhs);
 			return switch (rhsUnwrapped.expr) {
 				case TConst(TNull):
-					lhsIsObjCarrier ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-						"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+					if (lhsIsObjCarrier) {
+						OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+					} else if (OcamlRepresentationRegistry.isExactString(lhsType)) {
+						exactStringNullValue(OcamlRepresentationDomain.InternalValue);
+					} else {
+						OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+					}
 				case _:
 					if (rhsDynamicCarrier) {
 						lhsIsObjCarrier ? coerceToObjCarrier(rhs.t, buildExpr(rhs)) : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
@@ -6341,7 +6381,7 @@ class OcamlBuilder {
 							hasBase = true;
 						}
 					} else {
-						final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForType(v.t);
+						final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForLocal(v.id, v.t, e.pos);
 						final localType = localCarrierType(v.id, v.t, e.pos);
 						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
 						final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);

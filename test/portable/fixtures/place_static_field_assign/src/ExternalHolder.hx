@@ -5,4 +5,5 @@ class ExternalHolder {
 	public static var omittedBool:Bool;
 	public static var omittedNullableInt:Null<Int>;
 	public static var omittedNullableBool:Null<Bool>;
+	public static var omittedString:String;
 }

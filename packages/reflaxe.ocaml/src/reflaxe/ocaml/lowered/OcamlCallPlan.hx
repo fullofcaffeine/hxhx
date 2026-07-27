@@ -101,8 +101,8 @@ typedef OcamlCallableDeclarationPlan = {
 	The callable shape exported by one exact final Haxe function body.
 
 	This boundary deliberately admits ordinary static methods whose required
-	arguments and result independently use the closed exact `Int`, `Bool`,
-	`Null<Int>`, or `Null<Bool>` representation matrix. The argument vector may
+		arguments and result independently use the closed exact `Int`, `Bool`,
+		`Null<Int>`, `Null<Bool>`, or `String` representation matrix. The argument vector may
 	be empty; OCaml's synthetic unit parameter is added mechanically at the
 	syntax boundary and is not represented as a Haxe argument. Later call kinds
 	extend the planner rather than teaching the syntax builder new rules.
@@ -225,6 +225,19 @@ class OcamlCallPlan {
 			&& decision.result.inputCarrierTypeId == "Obj.t"
 			&& decision.result.outputSemanticTypeId == "Null<Bool>"
 			&& decision.result.outputCarrierTypeId == "Obj.t"
+			&& decision.result.conversion == OcamlCallCarrierConversion.Identity;
+	}
+
+	/** Returns whether one exact call produces the sealed core String carrier. */
+	public function producesExactString(expression:TypedExpr):Bool {
+		final decision = decisionFor(expression);
+		return decision != null
+			&& decision.result.inputSemanticTypeId == "String"
+			&& decision.result.inputCarrierTypeId == "string"
+			&& decision.result.inputRepresentationId == "representation:String:internal-value"
+			&& decision.result.outputSemanticTypeId == "String"
+			&& decision.result.outputCarrierTypeId == "string"
+			&& decision.result.outputRepresentationId == "representation:String:internal-value"
 			&& decision.result.conversion == OcamlCallCarrierConversion.Identity;
 	}
 
@@ -416,7 +429,8 @@ class OcamlCallPlan {
 					|| (!isExactIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
-						&& !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))
+						&& !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId))
 					|| value.proofId != "identity-call-carrier-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an invalid identity crossing';
 				}
@@ -578,6 +592,10 @@ class OcamlCallPlan {
 			&& representationId == "representation:Null<Bool>:internal-value";
 	}
 
+	static function isExactStringSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value";
+	}
+
 	static function isNullableSemanticType(semanticTypeId:String):Bool {
 		return semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>";
 	}
@@ -629,8 +647,8 @@ class OcamlCallPlan {
 	Selects the first closed typed-call kind from final Haxe expressions.
 
 	Only an ordinary, non-extern, non-generic static method whose required
-	arguments and result independently select exact `Int`, `Bool`,
-	`Null<Int>`, or `Null<Bool>` representations is admitted. Everything else is
+		arguments and result independently select exact `Int`, `Bool`,
+		`Null<Int>`, `Null<Bool>`, or `String` representations is admitted. Everything else is
 	left explicitly unmigrated for a later call-kind or representation slice.
 **/
 class OcamlCallPlanner {
@@ -992,6 +1010,8 @@ class OcamlCallPlanner {
 			return "Null<Int>";
 		if (OcamlRepresentationRegistry.isExactNullBool(type))
 			return "Null<Bool>";
+		if (OcamlRepresentationRegistry.isExactString(type))
+			return "String";
 		return null;
 	}
 
@@ -1006,6 +1026,7 @@ class OcamlCallPlanner {
 			case "Bool": representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
 			case "Null<Int>": representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 			case "Null<Bool>": representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
+			case "String": representations.selectExactString(OcamlRepresentationDomain.InternalValue);
 			case _: null;
 		}
 	}

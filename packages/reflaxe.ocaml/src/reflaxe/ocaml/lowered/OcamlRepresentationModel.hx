@@ -101,6 +101,17 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		every box, carrier-preserving copy, and checked non-null read.
 	**/
 	final NullablePrimitiveCarrier = "nullable-primitive-carrier";
+
+	/**
+		Exact Haxe `String` values use OCaml `string` directly while the canonical
+		runtime null sentinel crosses into that carrier through one proof-backed
+		cast.
+
+		Only the representation materializer may construct the sentinel value.
+		Ordinary string literals, copies, comparisons, and admitted Haxe call
+		boundaries preserve the selected carrier directly.
+	**/
+	final NullableStringCarrier = "nullable-string-carrier";
 }
 
 /**

@@ -48,7 +48,7 @@ try {
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
 	assert(report.summary.runtimeModuleCount > 0)
-	assert.strictEqual(report.summary.loweredPlanCount, 20)
+	assert.strictEqual(report.summary.loweredPlanCount, 21)
 	assert(report.summary.representationDecisionCount > 0)
 	assert(report.summary.staticStorageCount > 0)
 	assert.strictEqual(report.artifactManifest.status, 'present')
@@ -116,7 +116,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-nullable-field-defaults-direct-simple-assignment-array-int-locals-v9')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
@@ -138,6 +138,12 @@ try {
 		&& decision.nullPolicy === 'runtime-sentinel'
 		&& decision.boxingPolicy === 'nullable-primitive-carrier'
 		&& decision.implicitDefaultPolicy === 'runtime-null-sentinel'))
+	assert(report.representation.decisions.some(decision => decision.id === 'representation:String:static-field'
+		&& decision.carrierTypeId === 'string'
+		&& decision.nullPolicy === 'runtime-sentinel'
+		&& decision.boxingPolicy === 'nullable-string-carrier'
+		&& decision.implicitDefaultPolicy === 'runtime-null-sentinel'
+		&& decision.proofId === 'nullable-string-runtime-sentinel-carrier-v1'))
 	assert(report.lowering.plans.some(plan => plan.nodeKind === 'static-simple-assignment'
 		&& plan.semanticTypeId === 'Bool'
 		&& plan.carrierTypeId === 'bool'

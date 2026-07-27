@@ -968,6 +968,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			return representationRegistry.selectExactNullInt(domain);
 		if (OcamlRepresentationRegistry.isExactNullBool(type))
 			return representationRegistry.selectExactNullBool(domain);
+		if (OcamlRepresentationRegistry.isExactString(type))
+			return representationRegistry.selectExactString(domain);
 		return null;
 	}
 
@@ -1954,7 +1956,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final initT = representedStatic == null ? ocamlTypeExprFromHaxeType(v.field.type) : representedStatic.carrierType;
 			final consumesRepresentedNullDefault = representedStatic != null
 				&& storage != null
-				&& (storage.semanticTypeId == "Null<Int>" || storage.semanticTypeId == "Null<Bool>")
+				&& (storage.semanticTypeId == "Null<Int>" || storage.semanticTypeId == "Null<Bool>" || storage.semanticTypeId == "String")
 				&& (init == null || isLiteralNullInitializer(init));
 			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
 				representedStatic.implicitDefault;
@@ -3666,13 +3668,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						}
 					default: anyNull;
 				}
-			case TInst(cRef, _):
-				final c = cRef.get();
-				if (c.pack != null && c.pack.length == 0 && c.name == "String") {
-					OcamlExpr.EConst(OcamlConst.CString(""));
-				} else {
-					anyNull;
-				}
+			case TInst(_, _):
+				anyNull;
 			case TEnum(_, _):
 				anyNull;
 			case _:

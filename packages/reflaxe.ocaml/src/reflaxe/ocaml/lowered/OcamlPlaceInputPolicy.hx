@@ -22,8 +22,25 @@ class OcamlPlaceInputPolicy {
 		return OcamlRepresentationRegistry.isExactBool(type);
 	}
 
-	static function isSameDirectPrimitive(left:Type, right:Type):Bool {
-		return (isExactInt(left) && isExactInt(right)) || (isExactBool(left) && isExactBool(right));
+	static function isExactString(type:Type):Bool {
+		return OcamlRepresentationRegistry.isExactString(type);
+	}
+
+	static function isSameDirectCarrier(left:Type, right:Type):Bool {
+		return (isExactInt(left) && isExactInt(right))
+			|| (isExactBool(left) && isExactBool(right))
+			|| (isExactString(left) && isExactString(right));
+	}
+
+	static function isAdmittedSimpleValue(left:Type, right:TypedExpr):Bool {
+		if ((isExactInt(left) && isExactInt(right.t)) || (isExactBool(left) && isExactBool(right.t)))
+			return true;
+		if (!isExactString(left) || !isExactString(right.t))
+			return false;
+		return switch (right.expr) {
+			case TConst(TString(_)): true;
+			case _: false;
+		}
 	}
 
 	/** Recognizes only a direct nominal `Array<Int>` carrier. */
@@ -46,7 +63,7 @@ class OcamlPlaceInputPolicy {
 		declaration identity separate from the receiver representation.
 	**/
 	static function admitsDirectPrimitiveInstanceFieldPlace(expression:TypedExpr):Bool {
-		if (!isExactInt(expression.t) && !isExactBool(expression.t))
+		if (!isExactInt(expression.t) && !isExactBool(expression.t) && !isExactString(expression.t))
 			return false;
 		return switch (expression.expr) {
 			case TField(receiver, FInstance(classRef, _, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final ordinaryField = switch (field.kind) {
@@ -67,13 +84,13 @@ class OcamlPlaceInputPolicy {
 
 	/** Admits a directly writable, non-extern primitive static backed by a ref. */
 	static function admitsDirectPrimitiveStaticFieldPlace(expression:TypedExpr):Bool {
-		if (!isExactInt(expression.t) && !isExactBool(expression.t))
+		if (!isExactInt(expression.t) && !isExactBool(expression.t) && !isExactString(expression.t))
 			return false;
 		return switch (expression.expr) {
 			case TField(_, FStatic(classRef, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final directlyWritable = switch (field.kind) {
 					case FVar(_, AccNormal): !field.isFinal;
 					case _: false;
-				} directlyWritable && !classType.isExtern && !classType.isInterface && isSameDirectPrimitive(expression.t, field.type);
+				} directlyWritable && !classType.isExtern && !classType.isInterface && isSameDirectCarrier(expression.t, field.type);
 			case _:
 				false;
 		}
@@ -106,7 +123,7 @@ class OcamlPlaceInputPolicy {
 
 	/** Admits direct primitive fields with a matching exact RHS. */
 	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
-		return admitsDirectPrimitiveInstanceFieldPlace(left) && isSameDirectPrimitive(left.t, right.t);
+		return admitsDirectPrimitiveInstanceFieldPlace(left) && isAdmittedSimpleValue(left.t, right);
 	}
 
 	/**
@@ -119,7 +136,7 @@ class OcamlPlaceInputPolicy {
 	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
 			staticStorage:OcamlStaticStoragePlan):Bool {
 		return admitsVisibleDirectPrimitiveStaticFieldPlace(left, currentModuleId, currentTypeName, staticStorage)
-			&& isSameDirectPrimitive(left.t, right.t);
+			&& isAdmittedSimpleValue(left.t, right);
 	}
 
 	/** Admits exact primitive-Int `+=` on an already-visible mutable static. */

@@ -349,6 +349,56 @@ class LocalStoragePlannerFixture {
 			"exact Bool declarations should distinguish internal, mutable, and captured local storage");
 		assertTrue(boolPlan.conversions().filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToNullableBool).length == 1,
 			"a registry-backed exact Bool local should cross once into the selected nullable carrier");
+		final stringInput = Context.typeExpr(macro {
+			var internal:String = "internal";
+			internal = "updated";
+			final copied:String = internal;
+			var mutable:String = "mutable";
+			if (true) {
+				mutable = copied;
+			}
+			var captured:String = "captured";
+			final replaceCaptured = () -> captured = "replaced";
+			replaceCaptured();
+			copied + mutable + captured;
+		});
+		final stringPlan = OcamlLocalRepresentationPlanner.planExpression(stringInput, OcamlLocalStoragePlanner.planExpression(stringInput), representations, {
+			functionId: "fixture|string-locals",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:string-locals-v1",
+			pipelineRevision: "ocaml-function-plans-v17"
+		});
+		final stringReferences = stringPlan.references().filter(reference -> reference.semanticTypeId == "String");
+		assertTrue(stringReferences.length == 4,
+			"every admitted exact String declaration and carrier-preserving copy should reference one sealed program representation");
+		assertTrue(stringReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 2
+			&& stringReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1
+			&& stringReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"exact String declarations should distinguish internal, mutable, and captured local storage");
+		for (reference in stringReferences) {
+			assertTrue(stringPlan.initializerConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
+				&& stringPlan.assignmentConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
+				&& stringPlan.readConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity,
+				"every admitted String local should seal identity initialization, replacement, and read conversions");
+		}
+		final nullStringInput = Context.typeExpr(macro {
+			final explicitNull:String = null;
+			explicitNull;
+		});
+		final nullStringPlan = OcamlLocalRepresentationPlanner.planExpression(nullStringInput, OcamlLocalStoragePlanner.planExpression(nullStringInput),
+			representations);
+		assertTrue(nullStringPlan.references().filter(reference -> reference.semanticTypeId == "String").length == 0,
+			"an explicit null local String should remain unadmitted until it has an occurrence-bound sentinel conversion");
+		final dynamicStringInput = Context.typeExpr(macro {
+			final dynamicValue:Dynamic = "dynamic";
+			final converted:String = cast dynamicValue;
+			final copied:String = converted;
+			copied;
+		});
+		final dynamicStringPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicStringInput,
+			OcamlLocalStoragePlanner.planExpression(dynamicStringInput), representations);
+		assertTrue(dynamicStringPlan.references().filter(reference -> reference.semanticTypeId == "String").length == 0,
+			"a Dynamic-to-String cast and its dependent copy should not borrow the exact String carrier without a typed conversion");
 		final unsupportedBoolExpression = Context.typeExpr(macro {
 			final nullable:Null<Bool> = true == false;
 			nullable;

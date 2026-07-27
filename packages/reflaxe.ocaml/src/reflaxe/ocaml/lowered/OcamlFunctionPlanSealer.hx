@@ -93,7 +93,7 @@ class OcamlFunctionPlanSealer {
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
 		final calls = callPlanner.plan(data.expr);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
-			calls.preservesNullableBoolArgument, calls.producesNullableBool);
+			calls.preservesNullableBoolArgument, calls.producesNullableBool, calls.producesExactString);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;

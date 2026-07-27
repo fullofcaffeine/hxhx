@@ -14,6 +14,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPol
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 
 /** Focused executable checks for the program-wide OCaml representation registry. */
 class RepresentationRegistryFixture {
@@ -59,6 +60,13 @@ class RepresentationRegistryFixture {
 			"Null<Int> should remain outside the exact Null<Bool> slice");
 		assertTrue(!OcamlRepresentationRegistry.isExactNullBool(Context.typeof(macro(null : Null<BoolAlias>))),
 			"Null<BoolAlias> should need its own proof instead of following the typedef implicitly");
+		assertTrue(OcamlRepresentationRegistry.isExactString(Context.typeof(macro("value" : String))),
+			"the direct core String should be admitted by its dedicated predicate");
+		assertTrue(OcamlRepresentationRegistry.isExactString(Context.typeof(macro(null : String))),
+			"the direct core String predicate should not confuse its nullable value with a different semantic type");
+		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro("value" : StringAlias))),
+			"a String typedef should need its own proof instead of following the typedef implicitly");
+		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro(0 : Int))), "Int should remain outside the exact String slice");
 		assertTrue(OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Int>))), "the direct nominal Array<Int> should be admitted");
 		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Float>))),
 			"Array<Float> should remain outside the exact Array<Int> slice");
@@ -102,6 +110,11 @@ class RepresentationRegistryFixture {
 		final nullableBoolCaptured = registry.selectExactNullBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		final nullableBoolInstanceField = registry.selectExactNullBool(OcamlRepresentationDomain.InstanceField);
 		final nullableBoolStaticField = registry.selectExactNullBool(OcamlRepresentationDomain.StaticField);
+		final stringInternal = registry.selectExactString(OcamlRepresentationDomain.InternalValue);
+		final stringMutable = registry.selectExactString(OcamlRepresentationDomain.MutableLocalStorage);
+		final stringCaptured = registry.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
+		final stringInstanceField = registry.selectExactString(OcamlRepresentationDomain.InstanceField);
+		final stringStaticField = registry.selectExactString(OcamlRepresentationDomain.StaticField);
 		assertTrue(mutable.semanticTypeId == "Int" && mutable.carrierTypeId == "int", "exact Int storage should use the direct OCaml int carrier");
 		assertTrue(mutable.proof.id == "direct-exact-int-storage-64-v1"
 			&& mutable.proof.claim.indexOf("still require HxInt") >= 0
@@ -203,6 +216,34 @@ class RepresentationRegistryFixture {
 			&& nullableBoolInstanceField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner
 			&& nullableBoolStaticField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.StaticFieldOwner,
 			"exact Null<Bool> storage should retain distinct local, instance, and static owners");
+		assertTrue(stringInternal.semanticTypeId == "String"
+			&& stringInternal.carrierTypeId == "string"
+			&& stringInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
+			&& stringInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			&& stringInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel,
+			"exact String should preserve null and non-null text in the sealed string carrier");
+		assertTrue(stringInternal.identityPolicy == OcamlRepresentationIdentityPolicy.PrimitiveValue
+			&& stringInternal.aliasingPolicy == OcamlRepresentationAliasingPolicy.NoValueAlias
+			&& stringInternal.valueMutationPolicy == OcamlRepresentationValueMutationPolicy.ImmutableValue
+			&& stringMutable.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& stringCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& stringInstanceField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.InstanceFieldOwner
+			&& stringStaticField.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.StaticFieldOwner,
+			"exact String should separate immutable text values from the local, instance, or static storage that replaces them");
+		assertTrue(stringInternal.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
+			&& stringInternal.proof.claim.indexOf("single runtime-owned HxString.hx_null_string") >= 0,
+			"the exact String proof should name and confine its runtime-null boundary");
+		final stringMaterialization = OcamlStringRepresentationMaterializer.materialize(stringInstanceField, OcamlRepresentationDomain.InstanceField);
+		final stringCarrierIsDirect = switch (stringMaterialization.carrierType) {
+			case TIdent("string"): true;
+			case _: false;
+		}
+		final stringDefaultIsSentinel = switch (stringMaterialization.implicitDefault) {
+			case EField(EIdent("HxString"), "hx_null_string"): true;
+			case _: false;
+		}
+		assertTrue(stringCarrierIsDirect && stringDefaultIsSentinel,
+			"an exact String field should materialize the direct carrier and its proof-backed Haxe null default");
 		final nullableInstanceMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableInstanceField,
 			OcamlRepresentationDomain.InstanceField);
 		final nullableBoolStaticMaterialization = OcamlFieldRepresentationMaterializer.materializeRepresentedField(nullableBoolStaticField,
@@ -234,7 +275,7 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 23, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 28, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -276,6 +317,17 @@ class RepresentationRegistryFixture {
 		Reflect.setField(nullableBoolStaticField, "implicitDefaultPolicy", OcamlRepresentationImplicitDefaultPolicy.NotAdmitted);
 		expectFailure("wrong nullable field default", "unsupported-decision",
 			() -> OcamlFieldRepresentationMaterializer.materializeExactNullablePrimitive(nullableBoolStaticField, OcamlRepresentationDomain.StaticField));
+		expectFailure("wrong String field domain", "wrong-domain",
+			() -> OcamlStringRepresentationMaterializer.materialize(stringMutable, OcamlRepresentationDomain.InstanceField));
+		Reflect.setField(stringInstanceField, "carrierTypeId", "Obj.t");
+		expectFailure("wrong String field carrier", "unsupported-decision",
+			() -> OcamlStringRepresentationMaterializer.materialize(stringInstanceField, OcamlRepresentationDomain.InstanceField));
+		assertTrue(registry.require(stringInstanceField.id, "program:representation-fixture").carrierTypeId == "string",
+			"mutating a returned String carrier must not change the retained decision");
+		final wrongStringProof = registry.require(stringStaticField.id, "program:representation-fixture");
+		Reflect.setField(wrongStringProof.proof, "id", "unreviewed-string-cast");
+		expectFailure("wrong String unsafe proof", "unsupported-decision",
+			() -> OcamlStringRepresentationMaterializer.materialize(wrongStringProof, OcamlRepresentationDomain.StaticField));
 
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
@@ -288,6 +340,8 @@ class RepresentationRegistryFixture {
 			() -> registry.selectExactNullInt(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported Null<Bool> array domain", "admitted only for internal, local, instance-field, or static-field storage",
 			() -> registry.selectExactNullBool(OcamlRepresentationDomain.ArrayElement));
+		expectFailure("unsupported String array domain", "admitted only for internal, local, instance-field, or static-field storage",
+			() -> registry.selectExactString(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("conflicting carrier", "cannot also use Obj.t", () -> registry.register({
 			semanticTypeId: mutable.semanticTypeId,
 			domain: mutable.domain,
@@ -329,6 +383,11 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactNullBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactNullBool(OcamlRepresentationDomain.InstanceField);
 		registryAgain.selectExactNullBool(OcamlRepresentationDomain.StaticField);
+		registryAgain.selectExactString(OcamlRepresentationDomain.InternalValue);
+		registryAgain.selectExactString(OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
+		registryAgain.selectExactString(OcamlRepresentationDomain.InstanceField);
+		registryAgain.selectExactString(OcamlRepresentationDomain.StaticField);
 		assertTrue(registryAgain.revision() == registry.revision(), "registration order should not change the registry revision");
 
 		registry.beginProgram("program:new-request");

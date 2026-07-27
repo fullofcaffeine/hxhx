@@ -120,6 +120,12 @@ class OcamlFieldRepresentationMaterializer {
 		return switch (decision.semanticTypeId) {
 			case "Int", "Bool": materializeDirectPrimitive(decision, expectedDomain);
 			case "Null<Int>", "Null<Bool>": materializeExactNullablePrimitive(decision, expectedDomain);
+			case "String":
+				final materialized = OcamlStringRepresentationMaterializer.materialize(decision, expectedDomain);
+				{
+					carrierType: materialized.carrierType,
+					implicitDefault: materialized.implicitDefault
+				};
 			case other:
 				throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-family]: no represented field materializer exists for $other';
 		}

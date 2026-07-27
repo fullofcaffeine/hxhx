@@ -103,6 +103,8 @@ class OcamlPlaceAssignmentPlanner {
 			return representations.selectExactInt(domain);
 		if (OcamlRepresentationRegistry.isExactBool(type))
 			return representations.selectExactBool(domain);
+		if (OcamlRepresentationRegistry.isExactString(type))
+			return representations.selectExactString(domain);
 		throw 'reflaxe.ocaml [ocaml-place:unsupported-direct-primitive]: no admitted direct primitive field representation exists for ${TypeTools.toString(type)} in $domain';
 	}
 
