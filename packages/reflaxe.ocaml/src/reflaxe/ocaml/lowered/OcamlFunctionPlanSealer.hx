@@ -180,7 +180,7 @@ class OcamlFunctionPlanSealer {
 		}
 		for (chain in controls.catchChains()) {
 			for (clause in chain.clauses) {
-				if (clause.semanticTypeId == "Dynamic")
+				if (clause.semanticTypeId == "Dynamic" || OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause))
 					continue;
 				validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, programRevision,
 					'control catch clause "${clause.id}" output', position);

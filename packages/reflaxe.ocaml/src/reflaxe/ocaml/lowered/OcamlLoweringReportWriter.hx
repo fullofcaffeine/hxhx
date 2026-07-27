@@ -36,7 +36,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 36;
+	public static inline final SCHEMA_VERSION = 37;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -241,7 +241,7 @@ class OcamlLoweringReportWriter {
 			if (catchChainIds.exists(chain.id))
 				throw 'Control catch-chain identity "${chain.id}" occurs more than once.';
 			for (clause in chain.clauses) {
-				if (clause.semanticTypeId != "Dynamic") {
+				if (clause.semanticTypeId != "Dynamic" && !OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause)) {
 					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control catch clause "${clause.id}" output');
 				}
@@ -336,11 +336,11 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v12",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v13",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
-			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v2",
+			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v3",
 			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
 			controlCatchCount: sortedCatchChains.length,
 			controlCatches: sortedCatchChains,

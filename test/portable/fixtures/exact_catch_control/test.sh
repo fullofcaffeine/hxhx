@@ -26,9 +26,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 36
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v12'
-	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v2'
+if (report.schemaVersion !== 37
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v13'
+	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| !sha256.test(report.controlCatchRevision)) {
 	fail('unexpected exact-catch report schema, model, inventory, or revision')
@@ -69,8 +69,8 @@ for (const chain of catches) {
 		|| chain.targetNativeRuntimeTags.join(',') !== 'OcamlExn'
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
-		|| chain.proofId !== 'represented-value-catch-control-v2'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v38'
+		|| chain.proofId !== 'represented-value-catch-control-v3'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v39'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -164,7 +164,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 21
+if (report.schemaVersion !== 22
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| report.lowering.controlCatches.length !== 10

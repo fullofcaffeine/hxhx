@@ -1,3 +1,9 @@
+class OracleCustomException extends haxe.Exception {
+	public function new(message:String) {
+		super(message);
+	}
+}
+
 class Main {
 	static function printLine(value:String):Void {
 		#if js
@@ -145,7 +151,7 @@ class Main {
 		try {
 			throwInt();
 		} catch (error:haxe.ValueException) {
-			return "valueException=" + Std.string(error.value);
+			return "valueException=" + Std.string(error.value) + "/" + (error.native != null);
 		}
 		return "valueException=miss";
 	}
@@ -154,9 +160,42 @@ class Main {
 		try {
 			throwString();
 		} catch (error:haxe.Exception) {
-			return "exception=" + error.message;
+			return "exception=" + error.message + "/" + Std.isOfType(error, haxe.ValueException) + "/" + (error.native != null);
 		}
 		return "exception=miss";
+	}
+
+	static function catchExplicitValueException():String {
+		final original = new haxe.ValueException("explicit");
+		try {
+			throw original;
+		} catch (error:haxe.ValueException) {
+			return "explicitValueException=" + Std.string(error.value) + "/" + (error == original);
+		}
+		return "explicitValueException=miss";
+	}
+
+	static function catchCustomException():String {
+		final original = new OracleCustomException("custom");
+		try {
+			throw original;
+		} catch (_:haxe.ValueException) {
+			return "customException=wrong-value";
+		} catch (error:haxe.Exception) {
+			return "customException=" + error.message + "/" + (error == original);
+		}
+		return "customException=miss";
+	}
+
+	static function catchExceptionBeforeInt():String {
+		try {
+			throw 7;
+		} catch (error:haxe.Exception) {
+			return "exceptionFirst=" + error.message;
+		} catch (_:Int) {
+			return "exceptionFirst=wrong-int";
+		}
+		return "exceptionFirst=miss";
 	}
 
 	static function catchRethrow():String {
@@ -192,6 +231,9 @@ class Main {
 			catchNullableRethrow(null),
 			catchValueExceptionInt(),
 			catchExceptionString(),
+			catchExplicitValueException(),
+			catchCustomException(),
+			catchExceptionBeforeInt(),
 			catchRethrow(),
 			catchMixed()
 		].join(","));

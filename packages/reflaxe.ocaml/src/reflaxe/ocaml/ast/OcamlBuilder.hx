@@ -417,6 +417,14 @@ class OcamlBuilder {
 							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString(runtimeTag))]);
 					case MatchAll:
 						OcamlExpr.EConst(OcamlConst.CBool(true));
+					case MatchHaxeException:
+						OcamlExpr.EConst(OcamlConst.CBool(true));
+					case MatchHaxeValueException:
+						final isValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
+						final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
+						OcamlExpr.EBinop(OcamlBinop.Or, isValueException, OcamlExpr.EUnop(OcamlUnop.Not, isAnyException));
 				};
 				final boundValue = switch (clause.conversion) {
 					case RecoverExactValue:
@@ -427,6 +435,26 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 					case PreserveDynamicCarrier:
 						valueExpression;
+					case PreserveOrWrapHaxeException:
+						final isAnyException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.Exception"))]);
+						final asException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
+							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
+								[valueExpression, nullPrevious, valueExpression])
+						]);
+						OcamlExpr.EIf(isAnyException, asException, wrapped);
+					case PreserveOrWrapHaxeValueException:
+						final isValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString("haxe.ValueException"))]);
+						final asValueException = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+						final nullPrevious = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"),
+							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+						final wrapped = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_ValueException"), "create"),
+							[valueExpression, nullPrevious, valueExpression]);
+						OcamlExpr.EIf(isValueException, asValueException, wrapped);
 				};
 				final annotated = OcamlExpr.EAnnot(boundValue, entry.variableType);
 				final body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([

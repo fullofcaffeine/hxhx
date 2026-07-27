@@ -95,6 +95,8 @@ typedef OcamlControlNominalRepresentationProof = {
 enum abstract OcamlCatchMatchPolicy(String) from String to String {
 	final ExactRuntimeTag = "exact-runtime-tag";
 	final MatchAll = "match-all";
+	final MatchHaxeException = "match-haxe-exception";
+	final MatchHaxeValueException = "match-haxe-value-exception";
 }
 
 /** How the private exception carrier becomes one typed catch variable. */
@@ -103,6 +105,8 @@ enum abstract OcamlCatchPayloadConversion(String) from String to String {
 	final RecoverCheckedBool = "recover-checked-bool";
 	final RecoverNominalValue = "recover-nominal-value";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
+	final PreserveOrWrapHaxeException = "preserve-or-wrap-haxe-exception";
+	final PreserveOrWrapHaxeValueException = "preserve-or-wrap-haxe-value-exception";
 }
 
 /** Runtime channels that may enter an admitted Haxe catch chain. */
@@ -132,9 +136,10 @@ enum abstract OcamlCatchEffect(String) from String to String {
 /**
 	How one typed `try` branch reaches the common OCaml result type.
 
-	A branch that may complete in a Haxe `Void` try discards its value. A branch
-	that exits only through return/throw keeps that non-local expression
-	polymorphic so the surrounding function boundary can recover its exact value.
+	A branch that can complete in a Haxe `Void` try discards its target value.
+	A branch whose generated expression still ends in return/throw keeps that
+	non-local expression polymorphic so an enclosing function boundary can
+	recover its exact result.
 **/
 enum abstract OcamlCatchBranchResultPolicy(String) from String to String {
 	final PreserveTypedResult = "preserve-typed-result";
@@ -319,7 +324,7 @@ class OcamlControlPlan {
 	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
 	public static inline final EXACT_NOMINAL_THROW_PROOF_ID = "exact-monomorphic-class-throw-control-v1";
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
-	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v2";
+	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v3";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
@@ -328,6 +333,8 @@ class OcamlControlPlan {
 	public static inline final CATCH_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-catch-chain-v1";
 	public static inline final HAXE_EXCEPTION_CHANNEL_ID = "control-target:haxe-exception-channel:v1";
 	public static inline final DYNAMIC_CONTROL_REPRESENTATION_ID = "control-representation:Dynamic:runtime-obj-v1";
+	public static inline final HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID = "control-representation:haxe.Exception:runtime-wrapper-v1";
+	public static inline final HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID = "control-representation:haxe.ValueException:runtime-wrapper-v1";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
@@ -959,6 +966,10 @@ class OcamlControlPlan {
 					|| clause.nominalRepresentation != null) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: Dynamic catch clause "${clause.id}" has an invalid match-all or carrier-preserving contract';
 				}
+			case "haxe.Exception", "haxe.ValueException":
+				if (!isAdmittedHaxeExceptionCatchClause(clause)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: Haxe exception wrapper clause "${clause.id}" has an invalid match, carrier, representation, or wrapping contract';
+				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: catch clause "${clause.id}" has unsupported semantic type "${clause.semanticTypeId}"';
 		}
@@ -1221,6 +1232,32 @@ class OcamlControlPlan {
 			&& nominal.representationProofId == "whole-program-monomorphic-nominal-record-v1:" + nominal.layoutRevision;
 	}
 
+	/**
+		Reports whether one catch-only Haxe exception wrapper contract is exact.
+
+		These two generated Haxe runtime classes are not general program
+		representation decisions. The control plan records only how a source catch
+		matches and binds the private exception carrier.
+	**/
+	public static function isAdmittedHaxeExceptionCatchClause(clause:OcamlCatchClauseDecision):Bool {
+		if (clause.runtimeTag != null || clause.nominalRepresentation != null)
+			return false;
+		return switch (clause.semanticTypeId) {
+			case "haxe.Exception":
+				clause.outputCarrierTypeId == "Haxe_Exception.t"
+				&& clause.outputRepresentationId == HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID
+				&& clause.matchPolicy == OcamlCatchMatchPolicy.MatchHaxeException
+				&& clause.conversion == OcamlCatchPayloadConversion.PreserveOrWrapHaxeException;
+			case "haxe.ValueException":
+				clause.outputCarrierTypeId == "Haxe_ValueException.t"
+				&& clause.outputRepresentationId == HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID
+				&& clause.matchPolicy == OcamlCatchMatchPolicy.MatchHaxeValueException
+				&& clause.conversion == OcamlCatchPayloadConversion.PreserveOrWrapHaxeValueException;
+			case _:
+				false;
+		}
+	}
+
 	static function isSha256Revision(value:String):Bool {
 		return ~/^sha256:[0-9a-f]{64}$/.match(value);
 	}
@@ -1300,6 +1337,22 @@ class OcamlControlPlan {
 		}
 	}
 
+	/** Returns the exact generated Haxe exception runtime class, if any. */
+	public static function haxeExceptionCatchTypeId(type:Type):Null<String> {
+		return switch (haxe.macro.TypeTools.follow(type)) {
+			case TInst(classRef, _):
+				final classType = classRef.get();
+				final pack = classType.pack ?? [];
+				if (pack.length == 1 && pack[0] == "haxe" && (classType.name == "Exception" || classType.name == "ValueException")) {
+					"haxe." + classType.name;
+				} else {
+					null;
+				}
+			case _:
+				null;
+		}
+	}
+
 	static function catchTypesMatchChain(catches:Array<{v:TVar, expr:TypedExpr}>, chain:OcamlCatchChainDecision):Bool {
 		if (catches.length != chain.clauses.length)
 			return false;
@@ -1322,6 +1375,7 @@ class OcamlControlPlan {
 					case TDynamic(_): true;
 					case _: false;
 				}
+			case "haxe.Exception", "haxe.ValueException": haxeExceptionCatchTypeId(type) == clause.semanticTypeId && isAdmittedHaxeExceptionCatchClause(clause);
 			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type); semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause);
 		}
 	}
@@ -1779,7 +1833,7 @@ class OcamlControlPlanner {
 							privateControlPolicy: OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals,
 							runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
 							profileEligibility: ["metal", "portable"],
-							reason: "This complete source catch chain has represented primitive, monomorphic-class, or Dynamic matching and payload binding fixed before OCaml syntax.",
+							reason: "This complete source catch chain has represented primitive, monomorphic-class, Haxe exception-wrapper, or Dynamic matching and payload binding fixed before OCaml syntax.",
 							proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 							proofClaim: proofClaim,
 							functionId: binding.functionId,
@@ -1855,11 +1909,12 @@ class OcamlControlPlanner {
 	}
 
 	/**
-		Recognizes only typed shapes whose normal completion is impossible.
+		Reports whether the generated branch remains target-polymorphic.
 
-		Unknown control flow deliberately returns false. That conservative answer
-		discards a completed value to `unit`; it never guesses that a branch is
-		non-local merely to make generated OCaml type-check.
+		A block is decided by its final target-visible expression. An earlier
+		throw makes later Haxe source unreachable at runtime, but the OCaml
+		type-checker still assigns the sequence the type of its emitted suffix.
+		Unknown shapes return false so a completing `Void` branch becomes `unit`.
 	**/
 	static function definitelyTransfers(expression:TypedExpr):Bool {
 		return switch (expression.expr) {
@@ -1867,8 +1922,7 @@ class OcamlControlPlanner {
 				true;
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				definitelyTransfers(inner);
-			case TBlock(expressions):
-				Lambda.exists(expressions, definitelyTransfers);
+			case TBlock(expressions): expressions.length > 0 && definitelyTransfers(expressions[expressions.length - 1]);
 			case TIf(_, thenExpression, elseExpression): elseExpression != null && definitelyTransfers(thenExpression) && definitelyTransfers(elseExpression);
 			case TSwitch(_, cases, defaultExpression):
 				defaultExpression != null
@@ -1926,6 +1980,26 @@ class OcamlControlPlanner {
 				conversion: OcamlCatchPayloadConversion.RecoverExactValue,
 				nominalRepresentation: null
 			};
+		}
+		final haxeExceptionTypeId = OcamlControlPlan.haxeExceptionCatchTypeId(type);
+		if (haxeExceptionTypeId != null) {
+			return haxeExceptionTypeId == "haxe.Exception" ? {
+				semanticTypeId: haxeExceptionTypeId,
+				outputCarrierTypeId: "Haxe_Exception.t",
+				outputRepresentationId: OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID,
+				matchPolicy: OcamlCatchMatchPolicy.MatchHaxeException,
+				runtimeTag: null,
+				conversion: OcamlCatchPayloadConversion.PreserveOrWrapHaxeException,
+				nominalRepresentation: null
+			} : {
+				semanticTypeId: haxeExceptionTypeId,
+				outputCarrierTypeId: "Haxe_ValueException.t",
+				outputRepresentationId: OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID,
+				matchPolicy: OcamlCatchMatchPolicy.MatchHaxeValueException,
+				runtimeTag: null,
+				conversion: OcamlCatchPayloadConversion.PreserveOrWrapHaxeValueException,
+				nominalRepresentation: null
+				};
 		}
 		final nominalClass = representations.monomorphicClassForType(type);
 		if (nominalClass != null) {

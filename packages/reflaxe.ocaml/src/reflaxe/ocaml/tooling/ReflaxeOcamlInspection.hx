@@ -83,7 +83,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 21,
+			schemaVersion: 22,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -348,8 +348,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 36) {
-						throw 'Unsupported lowering report schema $version; expected 36.';
+					if (version != 37) {
+						throw 'Unsupported lowering report schema $version; expected 37.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -436,7 +436,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v12")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v13")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -655,7 +655,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
-		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v2")
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v3")
 			throw "Unsupported control catch-chain report model.";
 		final rawChains = requiredArray(value, "controlCatches");
 		if (rawChains.length != requiredInt(value, "controlCatchCount"))
@@ -683,7 +683,7 @@ class ReflaxeOcamlInspection {
 				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
 				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
 				|| chain.reason.length == 0
-				|| chain.proofId != "represented-value-catch-control-v2"
+				|| chain.proofId != "represented-value-catch-control-v3"
 				|| chain.proofClaim.length == 0
 				|| chain.functionId.length == 0
 				|| chain.programRevision.length == 0
@@ -703,7 +703,7 @@ class ReflaxeOcamlInspection {
 					|| clause.signalCarrierTypeId != "Obj.t"
 					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
 					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
-					|| clause.proofId != "represented-value-catch-control-v2"
+					|| clause.proofId != "represented-value-catch-control-v3"
 					|| clause.proofClaim.length == 0
 					|| clause.functionId != chain.functionId
 					|| clause.programRevision != chain.programRevision
@@ -728,6 +728,24 @@ class ReflaxeOcamlInspection {
 							|| clause.nominalRepresentation != null
 							|| index != chain.clauses.length - 1) {
 							throw 'Dynamic control catch clause "${clause.id}" has an invalid match-all, order, or carrier-preserving contract.';
+						}
+					case "haxe.Exception":
+						if (clause.outputCarrierTypeId != "Haxe_Exception.t"
+							|| clause.outputRepresentationId != "control-representation:haxe.Exception:runtime-wrapper-v1"
+							|| clause.matchPolicy != "match-haxe-exception"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-or-wrap-haxe-exception"
+							|| clause.nominalRepresentation != null) {
+							throw 'haxe.Exception control catch clause "${clause.id}" has an invalid match-all wrapper contract.';
+						}
+					case "haxe.ValueException":
+						if (clause.outputCarrierTypeId != "Haxe_ValueException.t"
+							|| clause.outputRepresentationId != "control-representation:haxe.ValueException:runtime-wrapper-v1"
+							|| clause.matchPolicy != "match-haxe-value-exception"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-or-wrap-haxe-value-exception"
+							|| clause.nominalRepresentation != null) {
+							throw 'haxe.ValueException control catch clause "${clause.id}" has an invalid wrapper-selection contract.';
 						}
 					case _:
 						final nominal = clause.nominalRepresentation;

@@ -307,6 +307,47 @@ class ControlPlanFixture {
 		};
 	}
 
+	/**
+		Builds the dedicated control-only contract for Haxe exception wrappers.
+
+		This intentionally does not claim that the program-wide representation
+		model knows either class layout. The catch boundary only promises how an
+		existing wrapper is preserved or a non-wrapper payload is wrapped once.
+	**/
+	static function haxeExceptionCatchClause(id:String, min:Int, order:Int, variableName:String, valueException:Bool):OcamlCatchClauseDecision {
+		final semanticTypeId = valueException ? "haxe.ValueException" : "haxe.Exception";
+		return {
+			id: id,
+			source: {
+				file: "test/oracle/control/Main.hx",
+				min: min,
+				max: min + 8
+			},
+			order: order,
+			variableName: variableName,
+			semanticTypeId: semanticTypeId,
+			signalCarrierTypeId: "Obj.t",
+			outputCarrierTypeId: valueException ? "Haxe_ValueException.t" : "Haxe_Exception.t",
+			outputRepresentationId: valueException ? OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID : OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID,
+			matchPolicy: valueException ? OcamlCatchMatchPolicy.MatchHaxeValueException : OcamlCatchMatchPolicy.MatchHaxeException,
+			runtimeTag: null,
+			conversion: valueException ? OcamlCatchPayloadConversion.PreserveOrWrapHaxeValueException : OcamlCatchPayloadConversion.PreserveOrWrapHaxeException,
+			nominalRepresentation: null,
+			bodyResultPolicy: OcamlCatchBranchResultPolicy.PreserveTypedResult,
+			effects: [
+				OcamlCatchEffect.SelectFirstMatchingClause,
+				OcamlCatchEffect.BindCatchVariable,
+				OcamlCatchEffect.ExecuteCatchBody
+			],
+			proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
+			proofClaim: 'fixture $semanticTypeId catch-wrapper control contract',
+			functionId: FUNCTION_ID,
+			programRevision: "program:control-fixture",
+			bodyRevision: "body:control-fixture",
+			pipelineRevision: "typed-ocaml-function-plan-v33"
+		};
+	}
+
 	static function catchChain(id:String, clauses:Array<OcamlCatchClauseDecision>, ?bodyRevision:String,
 			?tryBodyResultPolicy:OcamlCatchBranchResultPolicy):OcamlCatchChainDecision {
 		return {
@@ -401,6 +442,9 @@ class ControlPlanFixture {
 		final stringCatch = catchClause("control-catch-clause:string", 330, 2, "asString", "String");
 		final dynamicCatch = catchClause("control-catch-clause:dynamic", 340, 3, "asDynamic", "Dynamic");
 		final exactCatchChain = catchChain("control-catch-chain:exact", [intCatch, boolCatch, stringCatch, dynamicCatch]);
+		final valueExceptionCatch = haxeExceptionCatchClause("control-catch-clause:value-exception", 350, 0, "asValueException", true);
+		final exceptionCatch = haxeExceptionCatchClause("control-catch-clause:exception", 360, 1, "asException", false);
+		final haxeExceptionCatchChain = catchChain("control-catch-chain:haxe-exception", [valueExceptionCatch, exceptionCatch]);
 		final catchOnly = new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [exactCatchChain]);
 		if (catchOnly.catchChains().length != 1 || catchOnly.catchChains()[0].clauses.length != 4)
 			throw "Exact catch-chain admission lost its source-ordered clauses";
@@ -449,6 +493,9 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireLoopTarget(loop);
 		OcamlControlPlan.requireCatchChain(exactCatchChain);
 		for (clause in exactCatchChain.clauses)
+			OcamlControlPlan.requireCatchClause(clause);
+		OcamlControlPlan.requireCatchChain(haxeExceptionCatchChain);
+		for (clause in haxeExceptionCatchChain.clauses)
 			OcamlControlPlan.requireCatchClause(clause);
 
 		final missingId = returnDecision("", 50);
@@ -563,6 +610,20 @@ class ControlPlanFixture {
 		expectThrows("stale-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [staleCatch]));
 		final duplicateCatchClause = catchChain("control-catch-chain:duplicate-clause", [intCatch, intCatch]);
 		expectThrows("duplicate-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [duplicateCatchClause]));
+		final wrongValueExceptionConversion = haxeExceptionCatchClause("control-catch-clause:value-exception-wrong-conversion", 370, 0, "asValueException",
+			true);
+		Reflect.setField(wrongValueExceptionConversion, "conversion", OcamlCatchPayloadConversion.PreserveOrWrapHaxeException);
+		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [
+			catchChain("control-catch-chain:value-exception-wrong-conversion", [wrongValueExceptionConversion])
+		]));
+		final taggedExceptionCatch = haxeExceptionCatchClause("control-catch-clause:exception-with-tag", 380, 0, "asException", false);
+		Reflect.setField(taggedExceptionCatch, "runtimeTag", "Exception");
+		expectThrows("invalid-catch-clause",
+			() -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null,
+				[catchChain("control-catch-chain:exception-with-tag", [taggedExceptionCatch])]));
+		final exceptionFirstCatch = haxeExceptionCatchClause("control-catch-clause:exception-first", 390, 0, "asException", false);
+		final laterIntCatch = catchClause("control-catch-clause:int-after-exception", 400, 1, "asInt", "Int");
+		OcamlControlPlan.requireCatchChain(catchChain("control-catch-chain:exception-before-int", [exceptionFirstCatch, laterIntCatch]));
 
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, true, false, binding(), [loop], [first, loopBreak]));
 		expectThrows("duplicate-decision", () -> new OcamlControlPlan(true, false, false, binding(), [], [first, first]));

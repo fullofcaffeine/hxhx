@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 36
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v12'
+if (report.schemaVersion !== 37
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v13'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')
@@ -35,8 +35,8 @@ if (report.schemaVersion !== 36
 
 const throws = report.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (throws.length !== 9) {
-	fail(`expected 9 represented throw decisions, got ${throws.length}`)
+if (throws.length !== 10) {
+	fail(`expected 10 represented throw decisions, got ${throws.length}`)
 }
 const expectedByFunction = new Map([
 	['throwInt', 1],
@@ -46,7 +46,8 @@ const expectedByFunction = new Map([
 	['throwNullableInt', 1],
 	['throwNullableBool', 1],
 	['rethrowInt', 2],
-	['rethrowNullableInt', 1]
+	['rethrowNullableInt', 1],
+	['catchExceptionBeforeInt', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
 	const decisions = throws.filter(control =>
@@ -101,7 +102,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v38'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v39'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== `representation:${payload.inputSemanticTypeId}:internal-value`
@@ -115,6 +116,49 @@ for (const control of throws) {
 		fail(`throw decision ${control.id} has an incomplete exact-value exception crossing`)
 	}
 	ids.add(control.id)
+}
+
+const wrapperClauses = report.controlCatches.flatMap(chain =>
+	chain.clauses
+		.filter(clause => clause.semanticTypeId === 'haxe.Exception'
+			|| clause.semanticTypeId === 'haxe.ValueException')
+		.map(clause => ({ chain, clause })))
+if (wrapperClauses.length !== 6) {
+	fail(`expected 6 sealed Haxe exception-wrapper clauses, got ${wrapperClauses.length}`)
+}
+for (const { chain, clause } of wrapperClauses) {
+	const isBase = clause.semanticTypeId === 'haxe.Exception'
+	const expected = isBase ? {
+		carrier: 'Haxe_Exception.t',
+		representation: 'control-representation:haxe.Exception:runtime-wrapper-v1',
+		match: 'match-haxe-exception',
+		conversion: 'preserve-or-wrap-haxe-exception'
+	} : {
+		carrier: 'Haxe_ValueException.t',
+		representation: 'control-representation:haxe.ValueException:runtime-wrapper-v1',
+		match: 'match-haxe-value-exception',
+		conversion: 'preserve-or-wrap-haxe-value-exception'
+	}
+	if (clause.outputCarrierTypeId !== expected.carrier
+		|| clause.outputRepresentationId !== expected.representation
+		|| clause.matchPolicy !== expected.match
+		|| clause.runtimeTag !== null
+		|| clause.conversion !== expected.conversion
+		|| clause.nominalRepresentation !== null
+		|| clause.proofId !== 'represented-value-catch-control-v3'
+		|| chain.proofId !== 'represented-value-catch-control-v3'
+		|| clause.pipelineRevision !== 'ocaml-function-plans-v39'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v39') {
+		fail(`wrapper catch clause ${clause.id} has an incomplete sealed policy`)
+	}
+}
+const exceptionFirst = report.controlCatches.find(chain =>
+	chain.functionId.includes('|function|catchExceptionBeforeInt|'))
+if (!exceptionFirst
+	|| exceptionFirst.clauses.length !== 2
+	|| exceptionFirst.clauses[0].semanticTypeId !== 'haxe.Exception'
+	|| exceptionFirst.clauses[1].semanticTypeId !== 'Int') {
+	fail('the source-order Exception catch-all was forced to the final clause or lost its later concrete clause')
 }
 
 function functionBody(name, nextName) {
@@ -176,6 +220,27 @@ if (!mixedBody.includes('["Dynamic"; "Int"]')
 	|| !mixedBody.includes('["Dynamic"; "Float"]')) {
 	fail('the mixed supported/unsupported function did not remain wholly on the legacy throw path')
 }
+const valueExceptionBody = functionBody('catchValueExceptionInt', 'catchExceptionString')
+if (!valueExceptionBody.includes('"haxe.ValueException" || not (HxRuntime.tags_has')
+	|| !valueExceptionBody.includes('Haxe_ValueException.create')
+	|| valueExceptionBody.includes('catchTagForType')
+	|| valueExceptionBody.includes('isHaxeValueExceptionCatchType')) {
+	fail('ValueException catch syntax did not materialize the sealed wrapper-selection policy')
+}
+const exceptionBody = functionBody('catchExceptionString', 'catchExplicitValueException')
+if (!exceptionBody.includes('if true then let error = (if HxRuntime.tags_has')
+	|| !exceptionBody.includes('"haxe.Exception" then Obj.obj')
+	|| !exceptionBody.includes('Obj.magic (Haxe_ValueException.create')
+	|| exceptionBody.includes('catchTagForType')
+	|| exceptionBody.includes('isHaxeExceptionCatchType')) {
+	fail('Exception catch syntax did not materialize the sealed catch-all wrapper policy')
+}
+const customBody = functionBody('catchCustomException', 'catchExceptionBeforeInt')
+if (!customBody.includes('"haxe.ValueException" || not (HxRuntime.tags_has')
+	|| !customBody.includes('else if true then let error =')
+	|| !customBody.includes('"haxe.Exception" then Obj.obj')) {
+	fail('custom Exception subtype catch syntax did not preserve the sealed source order')
+}
 NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
@@ -196,10 +261,17 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const throws = report.lowering.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (report.schemaVersion !== 21
+const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
+	chain.clauses.filter(clause => clause.semanticTypeId === 'haxe.Exception'
+		|| clause.semanticTypeId === 'haxe.ValueException'))
+if (report.schemaVersion !== 22
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| throws.length !== 9
+	|| throws.length !== 10
+	|| wrapperClauses.length !== 6
+	|| wrapperClauses.some(clause =>
+		clause.runtimeTag !== null
+		|| !clause.outputRepresentationId.startsWith('control-representation:haxe.'))
 	|| throws.some(control =>
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
@@ -234,4 +306,31 @@ if ! grep -q "invalid represented Haxe exception crossing" "$TAMPER_INSPECTION";
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 
-echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=9"
+node - "$REPORT_FILE" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const clause = report.controlCatches
+	.flatMap(chain => chain.clauses)
+	.find(entry => entry.semanticTypeId === 'haxe.ValueException')
+if (!clause)
+	throw new Error('missing ValueException catch clause to corrupt')
+clause.conversion = 'preserve-or-wrap-haxe-exception'
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+
+if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	inspect --project "$PWD" --output out --require-lowering --json >"$TAMPER_INSPECTION" 2>&1; then
+	echo "Public inspection accepted a ValueException catch with a corrupt wrapper conversion" >&2
+	exit 1
+fi
+if ! grep -q "invalid wrapper-selection contract" "$TAMPER_INSPECTION"; then
+	echo "Public inspection rejected the corrupt wrapper catch without the expected actionable reason" >&2
+	cat "$TAMPER_INSPECTION" >&2
+	exit 1
+fi
+cp "$REPORT_COPY" "$REPORT_FILE"
+
+echo "REFLAXE_OCAML_EXACT_THROW_CONTROL_FIXTURE:PASS transfers=10 wrapper_catches=6"

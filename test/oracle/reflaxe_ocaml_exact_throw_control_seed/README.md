@@ -4,7 +4,12 @@ This fixture records the user-visible exception behavior that upstream Haxe
 4.3.7 already provides. An exact `Int`, `Bool`, or `String` value may cross a
 function call before a matching source `catch` receives it. `Dynamic`,
 `haxe.ValueException`, and `haxe.Exception` catches also receive the wrapper or
-value required by Haxe, and rethrowing preserves the source value.
+value required by Haxe, and rethrowing preserves the source value. The wrapper
+cases distinguish three observable rules: primitive values receive one
+`ValueException`, an explicit `ValueException` keeps its identity, and another
+`Exception` subtype skips an earlier `ValueException` clause. An `Exception`
+clause also remains source-order catch-all behavior even when a later concrete
+catch is present.
 
 The nullable primitive cases freeze a subtler rule. A non-null `Null<Int>` or
 `Null<Bool>` is caught by its concrete primitive type, but null skips that
