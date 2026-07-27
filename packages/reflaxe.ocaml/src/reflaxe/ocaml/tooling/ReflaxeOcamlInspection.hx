@@ -1000,7 +1000,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11")
+		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -1076,7 +1076,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. A class decision means constructor-produced and already-proven same-class values share one named OCaml record while preserving reference identity and field mutation; inheritance, interfaces, generics, external boundaries, and unproved null crossings remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
 		};
 	}
 
@@ -1216,6 +1216,17 @@ class ReflaxeOcamlInspection {
 				|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
 				|| decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision)) {
 			throw 'Representation decision "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		if (isNominal) {
+			final expectedStoragePolicy = switch (decision.domain) {
+				case "internal-value": "immutable-binding";
+				case "captured-local-storage": "shared-local-cell";
+				case _:
+					throw 'Representation decision "${decision.id}" selects unsupported nominal carrier domain ${decision.domain}.';
+			};
+			if (decision.storageMutationPolicy != expectedStoragePolicy) {
+				throw 'Representation decision "${decision.id}" selects ${decision.storageMutationPolicy} storage for nominal carrier domain ${decision.domain}, expected $expectedStoragePolicy.';
+			}
 		}
 		return decision;
 	}
@@ -1621,7 +1632,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11",
+			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12",
 			message: message
 		};
 	}

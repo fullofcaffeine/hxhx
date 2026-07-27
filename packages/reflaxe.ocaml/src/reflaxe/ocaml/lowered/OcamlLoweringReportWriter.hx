@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRe
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
@@ -32,7 +33,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
 	public static inline final SCHEMA_VERSION = 25;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11";
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
@@ -48,6 +49,15 @@ class OcamlLoweringReportWriter {
 			|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
 			|| decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
 			throw 'Program representation "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		final expectedStoragePolicy = switch (decision.domain) {
+			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case _:
+				throw 'Program representation "${decision.id}" selects unsupported nominal carrier domain ${decision.domain}.';
+		};
+		if (decision.storageMutationPolicy != expectedStoragePolicy) {
+			throw 'Program representation "${decision.id}" selects ${decision.storageMutationPolicy} storage for nominal carrier domain ${decision.domain}, expected $expectedStoragePolicy.';
 		}
 	}
 

@@ -29,10 +29,12 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	across internal values, local cells, and direct fields. Direct nominal
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>` remain
 	local-only decisions. Exact core `String` uses the target's nullable string
-	carrier across internal values, local cells, and direct fields.
+	carrier across internal values, local cells, and direct fields. A proven
+	monomorphic class may additionally occupy one captured local cell when every
+	whole-value replacement already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v11";
+	public static inline final MODEL_REVISION = "ocaml-representation-v12";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -173,10 +175,11 @@ class OcamlRepresentationRegistry {
 	/**
 		Selects the nominal record carrier for one proven monomorphic class value.
 
-		The first slice admits immutable internal bindings, including a closure
-		capturing that same binding without reassigning it. Mutable cells, fields
-		containing class values, arrays, calls, and external boundaries need
-		separate occurrence or conversion proofs.
+		The admitted slice includes immutable internal bindings and one captured
+		local cell whose replacements are all exact constructors or already-proven
+		values of the same class. Ordinary mutable cells, fields containing class
+		values, arrays, calls, and external boundaries need separate occurrence or
+		conversion proofs.
 	**/
 	public function selectMonomorphicClassValue(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
 		final layout = monomorphicClassForType(type);
@@ -194,8 +197,22 @@ class OcamlRepresentationRegistry {
 	}
 
 	function selectMonomorphicClassDecision(layout:OcamlMonomorphicClassDecision, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
-		if (domain != OcamlRepresentationDomain.InternalValue)
-			throw 'reflaxe.ocaml [ocaml-representation:unsupported-class-domain]: ${layout.semanticTypeId} is admitted only for immutable internal bindings, not $domain';
+		final storageMutationPolicy = switch (domain) {
+			case InternalValue:
+				OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
+			case CapturedLocalStorage:
+				OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
+			case _:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-class-domain]: ${layout.semanticTypeId} is admitted only for immutable internal bindings or captured local cells, not $domain';
+		};
+		final reason = switch (domain) {
+			case InternalValue:
+				'The exact whole-program-monomorphic class ${layout.semanticTypeId} uses nominal record ${layout.canonicalCarrierTypeId}; the carrier identity stores ${layout.targetTypeName} plus its owning target module separately so syntax can qualify it correctly. This decision admits only constructor-produced and already-proven same-class internal values.';
+			case CapturedLocalStorage:
+				'The exact whole-program-monomorphic class ${layout.semanticTypeId} uses nominal record ${layout.canonicalCarrierTypeId} inside one captured local cell. The cell owns whole-value replacement while every initializer and assignment is separately proven to produce that same nominal record.';
+			case _:
+				throw "unreachable monomorphic class representation domain";
+		};
 		return register({
 			semanticTypeId: layout.semanticTypeId,
 			domain: domain,
@@ -203,11 +220,11 @@ class OcamlRepresentationRegistry {
 			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
 			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
 			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
-			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			storageMutationPolicy: storageMutationPolicy,
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier,
 			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
-			reason: 'The exact whole-program-monomorphic class ${layout.semanticTypeId} uses nominal record ${layout.canonicalCarrierTypeId}; the carrier identity stores ${layout.targetTypeName} plus its owning target module separately so syntax can qualify it correctly. This decision admits only constructor-produced and already-proven same-class internal values.',
+			reason: reason,
 			proof: {
 				id: layout.proofId + ":" + layout.revision,
 				claim: layout.proofClaim

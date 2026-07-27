@@ -203,11 +203,20 @@ class OcamlFunctionPlanSealer {
 				fail('local ${reference.localId} expects ${reference.semanticTypeId} in representation domain ${reference.domain}, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
 					position);
 			}
-			if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)
-				&& storage.isCaptured(reference.localId)
-				&& !storage.isImmutableCapture(reference.localId)) {
-				fail('captured nominal local ${reference.localId} requires mutable shared storage, so it cannot consume immutable representation ${decision.id}',
-					position);
+			if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)) {
+				final storageDecision = storage.decisionFor(reference.localId);
+				if (storageDecision == null) {
+					if (decision.domain != OcamlRepresentationDomain.InternalValue) {
+						fail('immutable nominal local ${reference.localId} must consume an internal-value representation, but ${decision.id} selects ${decision.domain}',
+							position);
+					}
+				} else if (!storage.isCaptured(reference.localId)) {
+					fail('mutable nominal local ${reference.localId} is not captured, so its ${storageDecision.storage} storage remains outside the admitted class carrier slice',
+						position);
+				} else if (!storage.requiresRef(reference.localId) || decision.domain != OcamlRepresentationDomain.CapturedLocalStorage) {
+					fail('captured-and-reassigned nominal local ${reference.localId} must consume one captured-local-storage representation backed by a shared ref cell',
+						position);
+				}
 			}
 		}
 	}

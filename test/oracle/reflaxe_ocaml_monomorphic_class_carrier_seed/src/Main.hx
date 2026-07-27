@@ -94,22 +94,42 @@ class Main {
 		printLine("captured_local value=" + read() + " events=" + Counter.renderEvents());
 	}
 
-	#if class_carrier_mutable_capture_negative
 	/**
-		Keeps the captured-and-reassigned family in the portable target fixture.
+		Records captured-and-reassigned class behavior across every oracle route.
 
-		The immutable capture slice must not assign this local a nominal immutable
-		binding: both scopes need one shared cell because the whole object reference
-		changes after the closure is created.
+		The closure must read the replacement object, not the original binding.
+		Constructor events also prove that both direct producers run once.
 	**/
-	static function reassignedCapturedLocalBoundary():Void {
+	static function reassignedCapturedLocalCase():Void {
+		Counter.reset();
 		var counter = new Counter(10);
 		final read = function():Int {
 			return counter.value;
 		}
 		counter = new Counter(11);
-		if (read() != 11)
-			throw "captured reassignment lost shared storage";
+		printLine("captured_reassigned value=" + read() + " events=" + Counter.renderEvents());
+	}
+
+	#if class_carrier_negative_boundaries
+	/**
+		Keeps unadmitted mutable and call-produced class values executable.
+
+		These cases must stay correct through the legacy carrier until their
+		producer or storage domains gain separate typed proofs.
+	**/
+	static function excludedCarrierBoundaries():Void {
+		var ordinary = new Counter(12);
+		ordinary = new Counter(13);
+		if (ordinary.value != 13)
+			throw "ordinary mutable class local lost its replacement";
+
+		var called = new Counter(14);
+		final read = function():Int {
+			return called.value;
+		}
+		called = makeCounter();
+		if (read() != 5)
+			throw "call-produced captured class local lost shared storage";
 	}
 	#end
 
@@ -117,11 +137,12 @@ class Main {
 		constructorLocalCase();
 		aliasCase();
 		capturedLocalCase();
+		reassignedCapturedLocalCase();
 		#if class_carrier_factory_receiver
 		factoryReceiverCase();
 		#end
-		#if class_carrier_mutable_capture_negative
-		reassignedCapturedLocalBoundary();
+		#if class_carrier_negative_boundaries
+		excludedCarrierBoundaries();
 		#end
 	}
 }

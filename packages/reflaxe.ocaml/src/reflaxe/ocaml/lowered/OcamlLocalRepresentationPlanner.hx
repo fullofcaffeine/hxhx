@@ -146,8 +146,9 @@ class OcamlLocalRepresentationPlanner {
 		Only a direct constructor or a local with the same exact sealed class layout
 		is eligible. Immutable capture does not change that carrier: the closure
 		retains the same binding. Calls, parameters, fields, null, Dynamic, mutable
-		captures, hierarchy conversions, and native values remain explicit future
-		boundaries.
+		hierarchy conversions, and native values remain explicit future boundaries.
+		Whether a local may replace that value is decided separately by the sealed
+		local-storage plan.
 	**/
 	static function exactMonomorphicClassCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>, classSemanticTypeByLocalId:Map<Int, String>,
 			representations:OcamlRepresentationRegistry):Null<ExactMonomorphicClassCarrierInput> {
@@ -526,7 +527,7 @@ class OcamlLocalRepresentationPlanner {
 			if (classSemanticTypeByLocalId.exists(localId)
 				&& (identityClassInitializerByLocalId.get(localId) != true
 					|| identityClassAssignmentsByLocalId.get(localId) == false
-					|| (storage.isCaptured(localId) && !storage.isImmutableCapture(localId))))
+					|| (storage.decisionFor(localId) != null && !storage.isCaptured(localId))))
 				unsupportedClassLocalIds.set(localId, true);
 		}
 		var propagatedUnsupportedBool = true;
@@ -618,6 +619,24 @@ class OcamlLocalRepresentationPlanner {
 			final type = typeByLocalId.get(decision.localId);
 			if (type == null)
 				throw 'reflaxe.ocaml [ocaml-representation:missing-local-type]: storage decision for local ${decision.localId} has no typed local occurrence in the sealed function body';
+			if (classSemanticTypeByLocalId.exists(decision.localId)) {
+				final domain = localDomain(decision);
+				if (unsupportedClassLocalIds.exists(decision.localId) || domain != OcamlRepresentationDomain.CapturedLocalStorage) {
+					decisions.push(unmigratedDecision(decision.localId, TypeTools.toString(type)));
+				} else {
+					final representation = representations.selectMonomorphicClassValue(type, domain);
+					if (representation == null)
+						throw 'reflaxe.ocaml [ocaml-representation:missing-class-layout]: local ${decision.localId} lost its admitted monomorphic class decision';
+					decisions.push({
+						localId: decision.localId,
+						choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId, domain),
+						initializerConversion: OcamlLocalCarrierConversion.Identity,
+						assignmentConversion: OcamlLocalCarrierConversion.Identity,
+						readConversion: OcamlLocalCarrierConversion.Identity
+					});
+				}
+				continue;
+			}
 			if (OcamlRepresentationRegistry.isExactArrayInt(type)) {
 				if (identityArrayInitializerByLocalId.get(decision.localId) == true
 					&& identityArrayAssignmentsByLocalId.get(decision.localId) != false) {

@@ -39,7 +39,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 25
-	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11'
+	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12'
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v16') {
 	fail('unexpected lowering report, representation, or call-model version')
 }

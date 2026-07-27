@@ -18,12 +18,14 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 25
-	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v11') {
+	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12') {
 	fail('unexpected lowering-report schema or representation scope')
 }
 
 const decision = report.representations?.find(item =>
 	item.id === 'representation:Counter:internal-value')
+const capturedDecision = report.representations?.find(item =>
+	item.id === 'representation:Counter:captured-local-storage')
 if (decision == null
 	|| decision.semanticTypeId !== 'Counter'
 	|| decision.carrierTypeId !== 'counter_t'
@@ -36,6 +38,19 @@ if (decision == null
 	|| !/^sha256:[0-9a-f]{64}$/.test(decision.nominalLayoutRevision)
 	|| decision.proof?.id !== `whole-program-monomorphic-nominal-record-v1:${decision.nominalLayoutRevision}`) {
 	fail('the exact Counter carrier is not sealed as the expected nominal record')
+}
+if (capturedDecision == null
+	|| capturedDecision.semanticTypeId !== decision.semanticTypeId
+	|| capturedDecision.carrierTypeId !== decision.carrierTypeId
+	|| capturedDecision.domain !== 'captured-local-storage'
+	|| capturedDecision.storageMutationPolicy !== 'shared-local-cell'
+	|| capturedDecision.identityPolicy !== decision.identityPolicy
+	|| capturedDecision.aliasingPolicy !== decision.aliasingPolicy
+	|| capturedDecision.nominalTargetModuleName !== decision.nominalTargetModuleName
+	|| capturedDecision.nominalTargetTypeName !== decision.nominalTargetTypeName
+	|| capturedDecision.nominalLayoutRevision !== decision.nominalLayoutRevision
+	|| capturedDecision.proof?.id !== decision.proof?.id) {
+	fail('the captured-and-reassigned Counter local does not reuse the exact nominal record inside one shared cell')
 }
 
 const admittedReceivers = (report.plans ?? []).filter(plan =>
@@ -66,8 +81,8 @@ if (constructorBoundaries.length !== 1
 	|| constructorBoundaries[0].result?.outputRepresentationId !== decision.id) {
 	fail('the report did not seal the exact Counter construction boundary')
 }
-if (constructorCalls.length !== 6) {
-	fail(`expected six exact Counter constructions, including the excluded mutable-capture producers, got ${constructorCalls.length}`)
+if (constructorCalls.length !== 9) {
+	fail(`expected nine exact Counter constructions across admitted and excluded local-storage cases, got ${constructorCalls.length}`)
 }
 for (const constructorCall of constructorCalls) {
 	if (constructorCall.receiver !== null
@@ -125,9 +140,19 @@ for (const instanceCall of instanceCalls) {
 if (!/let counter = let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+ in let read = fun \(\) -> \(counter : counter_t\)\.value/.test(source)) {
 	fail('the immutable captured Counter local did not retain its sealed nominal carrier inside the closure')
 }
-if (!/let reassignedCapturedLocalBoundary = fun \(\) -> ignore \(let counter = ref \(Obj\.magic \(let __call_arg_0_\d+ = 10 in counter_create __call_arg_0_\d+\)\)/.test(source)
-	|| !source.includes('let read = fun () -> (Obj.magic (!counter) : counter_t).value')) {
-	fail('the captured-and-reassigned Counter local escaped its required shared-cell legacy boundary')
+if (!/let reassignedCapturedLocalCase = fun \(\) -> ignore \(\([\s\S]*let counter = ref \(let __call_arg_0_\d+ = 10 in counter_create __call_arg_0_\d+\) in let read = fun \(\) -> \(!counter : counter_t\)\.value/.test(source)
+	|| !/let __assign_\d+ = let __call_arg_0_\d+ = 11 in counter_create __call_arg_0_\d+ in \([\s\S]*counter := __assign_\d+/.test(source)) {
+	fail('the captured-and-reassigned Counter local did not use one typed nominal ref cell')
+}
+const reassignedStart = source.indexOf('let reassignedCapturedLocalCase')
+const reassignedEnd = source.indexOf('\nlet excludedCarrierBoundaries', reassignedStart)
+if (reassignedStart < 0 || reassignedEnd < 0 || source.slice(reassignedStart, reassignedEnd).includes('Obj.magic')) {
+	fail('the admitted captured-and-reassigned Counter function still contains a Dynamic carrier cast')
+}
+if (!/let ordinary = Obj\.magic \(let __call_arg_0_\d+ = 13 in counter_create __call_arg_0_\d+\)/.test(source)
+	|| !/let called = ref \(Obj\.magic \(let __call_arg_0_\d+ = 14 in counter_create __call_arg_0_\d+\)\) in let read = fun \(\) -> \(Obj\.magic \(!called\) : counter_t\)\.value/.test(source)
+	|| !/let __assign_\d+ = Obj\.magic \(makeCounter \(\)\) in \([\s\S]*called := __assign_\d+/.test(source)) {
+	fail('ordinary mutable or call-produced captured Counter boundaries were admitted without their own typed proof')
 }
 if (!/let counter = let __call_arg_0_\d+ = sourceValue \(\) in counter_create __call_arg_0_\d+/.test(source)) {
 	fail('the constructor-local path did not materialize its argument before invoking Counter.create')
@@ -153,6 +178,8 @@ if (!/\(__place_receiver_\d+ : counter_t\)\.value <- __place_rhs_\d+/.test(sourc
 const forbiddenSource = [
 	'(Obj.magic self : counter_t).value',
 	'(Obj.magic counter : counter_t).value',
+	'(Obj.magic (!counter) : counter_t).value',
+	'counter := Obj.magic',
 	'counter_bump (Obj.magic counter)',
 	'counter_bump (Obj.magic (makeCounter ()))'
 ]
@@ -167,6 +194,8 @@ first_report="$(mktemp)"
 inspection_report="$(mktemp)"
 invalid_inspection_log="$(mktemp)"
 invalid_output="out-invalid-monomorphic-class-$$"
+invalid_captured_storage_log="$(mktemp)"
+invalid_captured_storage_output="out-invalid-captured-class-storage-$$"
 invalid_receiver_log="$(mktemp)"
 invalid_receiver_output="out-invalid-monomorphic-receiver-$$"
 invalid_call_receiver_log="$(mktemp)"
@@ -179,7 +208,7 @@ missing_constructor_boundary_log="$(mktemp)"
 missing_constructor_boundary_output="out-missing-constructor-boundary-$$"
 invalid_constructor_identity_log="$(mktemp)"
 invalid_constructor_identity_output="out-invalid-constructor-identity-$$"
-trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
+trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_captured_storage_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_captured_storage_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
 
 cp "$report_file" "$first_report"
 haxe build.hxml -D ocaml_build=native
@@ -202,11 +231,15 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const decision = report.representation?.decisions?.find(item =>
 	item.id === 'representation:Counter:internal-value')
+const capturedDecision = report.representation?.decisions?.find(item =>
+	item.id === 'representation:Counter:captured-local-storage')
 if (!report.summary?.valid
 	|| decision?.nominalTargetModuleName !== 'Main'
 	|| decision?.nominalTargetTypeName !== 'counter_t'
-	|| !/^sha256:[0-9a-f]{64}$/.test(decision?.nominalLayoutRevision ?? '')) {
-	throw new Error('reflaxe.ocaml inspection did not preserve the sealed Counter carrier')
+	|| !/^sha256:[0-9a-f]{64}$/.test(decision?.nominalLayoutRevision ?? '')
+	|| capturedDecision?.storageMutationPolicy !== 'shared-local-cell'
+	|| capturedDecision?.nominalLayoutRevision !== decision?.nominalLayoutRevision) {
+	throw new Error('reflaxe.ocaml inspection did not preserve the sealed Counter carrier and captured cell')
 }
 NODE
 
@@ -236,6 +269,35 @@ fi
 if ! grep -Fq "does not match its sealed nominal carrier layout" "$invalid_inspection_log"; then
 	echo "The external inspector rejected the corrupted nominal carrier for an unexpected reason" >&2
 	cat "$invalid_inspection_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_captured_storage_output"
+node - "$invalid_captured_storage_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const decision = report.representations?.find(item =>
+	item.id === 'representation:Counter:captured-local-storage')
+if (decision == null) {
+	throw new Error('missing captured Counter representation to corrupt')
+}
+decision.storageMutationPolicy = 'immutable-binding'
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_captured_storage_output" --require-lowering --json
+) >"$invalid_captured_storage_log" 2>&1; then
+	echo "The external inspector accepted a captured nominal class carrier without shared-cell ownership" >&2
+	exit 1
+fi
+if ! grep -Fq "selects immutable-binding storage for nominal carrier domain captured-local-storage, expected shared-local-cell" "$invalid_captured_storage_log"; then
+	echo "The external inspector rejected the corrupted captured nominal storage policy for an unexpected reason" >&2
+	cat "$invalid_captured_storage_log" >&2
 	exit 1
 fi
 

@@ -5,6 +5,6 @@
 -D no-traces
 -D no_traces
 -D class_carrier_factory_receiver
--D class_carrier_mutable_capture_negative
+-D class_carrier_negative_boundaries
 -D ocaml_output=out
 -D ocaml_lowering_report

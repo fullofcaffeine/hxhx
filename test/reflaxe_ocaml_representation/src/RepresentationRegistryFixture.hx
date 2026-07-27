@@ -37,6 +37,30 @@ class RepresentationRegistryFixture {
 			throw '$label should have failed.';
 	}
 
+	/** Registers the closed fixture class with its already-sealed Int field. */
+	static function registerCounter(registry:OcamlRepresentationRegistry):Type {
+		final counterType = Context.getType("RepresentationCounter");
+		final field = registry.selectExactInt(OcamlRepresentationDomain.InstanceField);
+		registry.registerMonomorphicClass({
+			semanticTypeId: "RepresentationCounter",
+			sourceModuleId: "RepresentationCounter",
+			sourceTypeName: "RepresentationCounter",
+			targetModuleName: "RepresentationCounter",
+			targetTypeName: "representation_counter_t",
+			fields: [
+				{
+					declarationOrder: 0,
+					sourceFieldName: "value",
+					targetFieldName: "value",
+					semanticTypeId: field.semanticTypeId,
+					carrierTypeId: field.carrierTypeId,
+					representationId: field.id
+				}
+			]
+		});
+		return counterType;
+	}
+
 	/** Runs during compilation so exact built-in Haxe types are available. */
 	public static function run():Void {
 		final registry = new OcamlRepresentationRegistry();
@@ -117,6 +141,9 @@ class RepresentationRegistryFixture {
 		final stringCaptured = registry.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		final stringInstanceField = registry.selectExactString(OcamlRepresentationDomain.InstanceField);
 		final stringStaticField = registry.selectExactString(OcamlRepresentationDomain.StaticField);
+		final counterType = registerCounter(registry);
+		final counterInternal = registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.InternalValue);
+		final counterCaptured = registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.CapturedLocalStorage);
 		assertTrue(mutable.semanticTypeId == "Int" && mutable.carrierTypeId == "int", "exact Int storage should use the direct OCaml int carrier");
 		assertTrue(mutable.proof.id == "direct-exact-int-storage-64-v1"
 			&& mutable.proof.claim.indexOf("still require HxInt") >= 0
@@ -235,6 +262,14 @@ class RepresentationRegistryFixture {
 		assertTrue(stringInternal.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
 			&& stringInternal.proof.claim.indexOf("single runtime-owned HxString.hx_null_string") >= 0,
 			"the exact String proof should name and confine its runtime-null boundary");
+		assertTrue(counterInternal != null
+			&& counterCaptured != null
+			&& counterInternal.carrierTypeId == "representation_counter_t"
+			&& counterInternal.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			&& counterCaptured.carrierTypeId == counterInternal.carrierTypeId
+			&& counterCaptured.nominalLayoutRevision == counterInternal.nominalLayoutRevision
+			&& counterCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell,
+			"one nominal class carrier should serve both an immutable binding and its captured shared cell");
 		final stringMaterialization = OcamlStringRepresentationMaterializer.materialize(stringInstanceField, OcamlRepresentationDomain.InstanceField);
 		final stringCarrierIsDirect = switch (stringMaterialization.carrierType) {
 			case TIdent("string"): true;
@@ -277,7 +312,7 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 28, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 30, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -344,6 +379,8 @@ class RepresentationRegistryFixture {
 			() -> registry.selectExactNullBool(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported String array domain", "admitted only for internal, local, instance-field, or static-field storage",
 			() -> registry.selectExactString(OcamlRepresentationDomain.ArrayElement));
+		expectFailure("unsupported mutable nominal class domain", "admitted only for immutable internal bindings or captured local cells",
+			() -> registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.MutableLocalStorage));
 		expectFailure("conflicting carrier", "cannot also use Obj.t", () -> registry.register({
 			semanticTypeId: mutable.semanticTypeId,
 			domain: mutable.domain,
@@ -390,6 +427,8 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactString(OcamlRepresentationDomain.InstanceField);
 		registryAgain.selectExactString(OcamlRepresentationDomain.StaticField);
+		final counterTypeAgain = registerCounter(registryAgain);
+		registryAgain.selectMonomorphicClassValue(counterTypeAgain, OcamlRepresentationDomain.CapturedLocalStorage);
 		assertTrue(registryAgain.revision() == registry.revision(), "registration order should not change the registry revision");
 
 		registry.beginProgram("program:new-request");
