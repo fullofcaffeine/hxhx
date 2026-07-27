@@ -25,8 +25,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 37
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v13'
+if (report.schemaVersion !== 38
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
 }
@@ -64,7 +64,7 @@ for (const control of controls) {
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-void-return-signal-v1'
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v39'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v40'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -133,7 +133,7 @@ const controls = report.lowering.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-if (report.schemaVersion !== 22
+if (report.schemaVersion !== 23
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 4

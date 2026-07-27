@@ -201,6 +201,8 @@ class ControlPlanFixture {
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
+			case "haxe.Exception": "Haxe_Exception.t";
+			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: "unsupported";
 		};
 		final outputSemanticType = outputSemanticTypeId ?? semanticTypeId;
@@ -209,6 +211,8 @@ class ControlPlanFixture {
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
+			case "haxe.Exception": "Haxe_Exception.t";
+			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: "unsupported";
 		};
 		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId);
@@ -217,8 +221,18 @@ class ControlPlanFixture {
 		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
-		final representationId = semanticTypeId == "Dynamic" ? OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID : 'representation:$semanticTypeId:internal-value';
-		final outputRepresentationId = outputSemanticType == "Dynamic" ? OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID : 'representation:$outputSemanticType:internal-value';
+		final representationId = switch (semanticTypeId) {
+			case "Dynamic": OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID;
+			case "haxe.Exception": OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case "haxe.ValueException": OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case _: 'representation:$semanticTypeId:internal-value';
+		}
+		final outputRepresentationId = switch (outputSemanticType) {
+			case "Dynamic": OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID;
+			case "haxe.Exception": OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case "haxe.ValueException": OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case _: 'representation:$outputSemanticType:internal-value';
+		}
 		final proof = 'fixture exact-$semanticTypeId Haxe exception crossing';
 		return {
 			id: id,
@@ -490,6 +504,8 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-int", 192, "Null<Int>"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-bool", 194, "Null<Bool>"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
+		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-exception", 197, "haxe.Exception"));
+		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-value-exception", 198, "haxe.ValueException"));
 		OcamlControlPlan.requireLoopTarget(loop);
 		OcamlControlPlan.requireCatchChain(exactCatchChain);
 		for (clause in exactCatchChain.clauses)
@@ -575,6 +591,14 @@ class ControlPlanFixture {
 			throw "The Dynamic representation-corruption fixture lost its payload";
 		Reflect.setField(dynamicThrowWithProgramRepresentation.payload, "inputRepresentationId", "representation:Dynamic:internal-value");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [dynamicThrowWithProgramRepresentation]));
+		final wrapperThrowWithProgramRepresentation = throwDecision("control:throw:wrapper-program-representation", 256, "haxe.ValueException");
+		if (wrapperThrowWithProgramRepresentation.payload == null)
+			throw "The Haxe exception-wrapper representation-corruption fixture lost its payload";
+		Reflect.setField(wrapperThrowWithProgramRepresentation.payload, "inputRepresentationId", "representation:haxe.ValueException:internal-value");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [wrapperThrowWithProgramRepresentation]));
+		final wrapperThrowWithNominalConversion = throwDecision("control:throw:wrapper-nominal-conversion", 256, "haxe.Exception",
+			OcamlControlPayloadConversion.BoxNominalThrowCarrier);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [wrapperThrowWithNominalConversion]));
 		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 257, "Int");
 		final primitivePayload = primitiveWithNominalProof.payload;
 		if (primitivePayload == null)

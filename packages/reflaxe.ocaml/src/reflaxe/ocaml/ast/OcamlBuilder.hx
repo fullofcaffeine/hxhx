@@ -351,6 +351,8 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case PreserveDynamicThrowCarrier:
 				built;
+			case BoxHaxeExceptionWrapperThrowCarrier:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
 				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
 		}

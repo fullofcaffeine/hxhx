@@ -83,7 +83,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 22,
+			schemaVersion: 23,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -348,8 +348,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 37) {
-						throw 'Unsupported lowering report schema $version; expected 37.';
+					if (version != 38) {
+						throw 'Unsupported lowering report schema $version; expected 38.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -436,7 +436,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v13")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v14")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -591,6 +591,16 @@ class ReflaxeOcamlInspection {
 							|| payload.nominalRepresentation != null) {
 							throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
 						}
+					} else if (payload.inputSemanticTypeId == "haxe.Exception" || payload.inputSemanticTypeId == "haxe.ValueException") {
+						final valueException = payload.inputSemanticTypeId == "haxe.ValueException";
+						if (payload.inputCarrierTypeId != (valueException ? "Haxe_ValueException.t" : "Haxe_Exception.t")
+							|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+							|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+							|| payload.inputRepresentationId != (valueException ? "control-representation:haxe.ValueException:runtime-wrapper-v1" : "control-representation:haxe.Exception:runtime-wrapper-v1")
+							|| payload.outputRepresentationId != payload.inputRepresentationId
+							|| payload.nominalRepresentation != null) {
+							throw 'Control decision "${control.id}" has an invalid exact Haxe exception-wrapper carrier.';
+						}
 					} else {
 						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
 							'Control decision "${control.id}" input');
@@ -603,10 +613,11 @@ class ReflaxeOcamlInspection {
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
 						case "Dynamic": "preserve-dynamic-throw-carrier";
+						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
 						case _: payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier";
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
-						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic": ["Dynamic"];
+						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
 						case _: payload.nominalRepresentation == null ? [] : ["Dynamic"];
 					};
 					final expectedProofId = switch (payload.inputSemanticTypeId) {
@@ -614,6 +625,7 @@ class ReflaxeOcamlInspection {
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
 						case "Dynamic": "dynamic-carrier-throw-control-v1";
+						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
 						case _: payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1";
 					};
 					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,

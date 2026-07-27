@@ -159,6 +159,8 @@ class OcamlFunctionPlanSealer {
 				}
 				continue;
 			}
+			if (OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload))
+				continue;
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);
 			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, programRevision,

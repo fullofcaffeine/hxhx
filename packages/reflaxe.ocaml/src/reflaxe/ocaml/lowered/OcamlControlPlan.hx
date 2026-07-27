@@ -75,6 +75,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
 	final BoxNominalThrowCarrier = "box-nominal-throw-carrier";
 	final PreserveDynamicThrowCarrier = "preserve-dynamic-throw-carrier";
+	final BoxHaxeExceptionWrapperThrowCarrier = "box-haxe-exception-wrapper-throw-carrier";
 }
 
 /**
@@ -324,6 +325,7 @@ class OcamlControlPlan {
 	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
 	public static inline final EXACT_NOMINAL_THROW_PROOF_ID = "exact-monomorphic-class-throw-control-v1";
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
+	public static inline final HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID = "exact-haxe-exception-wrapper-throw-control-v1";
 	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v3";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
@@ -869,6 +871,10 @@ class OcamlControlPlan {
 				if (!isAdmittedDynamicThrowPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid Dynamic carrier crossing';
 				}
+			case BoxHaxeExceptionWrapperThrowCarrier:
+				if (!isAdmittedHaxeExceptionThrowPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid Haxe exception-wrapper carrier crossing';
+				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
 		}
@@ -1264,7 +1270,7 @@ class OcamlControlPlan {
 
 	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false):Array<String> {
 		return switch (semanticTypeId) {
-			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic": ["Dynamic"];
+			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
 			case _: hasNominalRepresentation ? ["Dynamic"] : [];
 		}
 	}
@@ -1276,6 +1282,7 @@ class OcamlControlPlan {
 			case "Null<Int>": OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier;
 			case "Null<Bool>": OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier;
 			case "Dynamic": OcamlControlPayloadConversion.PreserveDynamicThrowCarrier;
+			case "haxe.Exception", "haxe.ValueException": OcamlControlPayloadConversion.BoxHaxeExceptionWrapperThrowCarrier;
 			case _: hasNominalRepresentation ? OcamlControlPayloadConversion.BoxNominalThrowCarrier : null;
 		}
 	}
@@ -1287,6 +1294,7 @@ class OcamlControlPlan {
 			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
 			case "Null<Bool>": NULLABLE_BOOL_THROW_PROOF_ID;
 			case "Dynamic": DYNAMIC_THROW_PROOF_ID;
+			case "haxe.Exception", "haxe.ValueException": HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID;
 			case _: hasNominalRepresentation ? EXACT_NOMINAL_THROW_PROOF_ID : null;
 		}
 	}
@@ -1308,6 +1316,29 @@ class OcamlControlPlan {
 			&& payload.outputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID
 			&& payload.conversion == OcamlControlPayloadConversion.PreserveDynamicThrowCarrier
 			&& payload.nominalRepresentation == null;
+	}
+
+	/**
+		Reports whether an exact generated Haxe exception wrapper crosses the
+		private exception channel without changing object identity.
+
+		This is a control-only contract. It intentionally does not claim that the
+		program representation registry owns general Exception class layouts or
+		subclass recovery.
+	**/
+	public static function isAdmittedHaxeExceptionThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		if (payload.nominalRepresentation != null
+			|| payload.signalCarrierTypeId != "Obj.t"
+			|| payload.conversion != OcamlControlPayloadConversion.BoxHaxeExceptionWrapperThrowCarrier
+			|| !samePayloadSides(payload)) {
+			return false;
+		}
+		return switch (payload.inputSemanticTypeId) {
+			case "haxe.Exception": payload.inputCarrierTypeId == "Haxe_Exception.t" && payload.inputRepresentationId == HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case "haxe.ValueException": payload.inputCarrierTypeId == "Haxe_ValueException.t" && payload.inputRepresentationId == HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID;
+			case _:
+				false;
+		}
 	}
 
 	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
@@ -1332,13 +1363,15 @@ class OcamlControlPlan {
 					case _:
 						false;
 				}
+			case "haxe.Exception",
+				"haxe.ValueException": haxeExceptionWrapperTypeId(expression.t) == payload.inputSemanticTypeId && isAdmittedHaxeExceptionThrowPayload(payload);
 			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue
 					|| payload.conversion == OcamlControlPayloadConversion.BoxNominalThrowCarrier) && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
 		}
 	}
 
 	/** Returns the exact generated Haxe exception runtime class, if any. */
-	public static function haxeExceptionCatchTypeId(type:Type):Null<String> {
+	public static function haxeExceptionWrapperTypeId(type:Type):Null<String> {
 		return switch (haxe.macro.TypeTools.follow(type)) {
 			case TInst(classRef, _):
 				final classType = classRef.get();
@@ -1375,7 +1408,8 @@ class OcamlControlPlan {
 					case TDynamic(_): true;
 					case _: false;
 				}
-			case "haxe.Exception", "haxe.ValueException": haxeExceptionCatchTypeId(type) == clause.semanticTypeId && isAdmittedHaxeExceptionCatchClause(clause);
+			case "haxe.Exception",
+				"haxe.ValueException": haxeExceptionWrapperTypeId(type) == clause.semanticTypeId && isAdmittedHaxeExceptionCatchClause(clause);
 			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type); semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause);
 		}
 	}
@@ -1684,6 +1718,8 @@ class OcamlControlPlanner {
 							"The final typed Haxe body sends one exact Null<Bool>/Obj.t value through the compiler-owned Haxe exception channel. Null remains the existing sentinel; a non-null carrier is normalized once into the unambiguous boxed-Bool exception representation so it matches Bool rather than Int.";
 						case "Dynamic":
 							"The final typed Haxe body sends one Dynamic/Obj.t value through the compiler-owned Haxe exception channel without reboxing or changing the payload. Dynamic is the only static tag; the runtime derives any more specific primitive or class tag from the carried value, while null remains Dynamic-only.";
+						case "haxe.Exception", "haxe.ValueException":
+							'The final typed Haxe body sends one exact ${representation.semanticTypeId}/${representation.carrierTypeId} generated wrapper through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the original wrapper object is preserved, and its existing runtime class marker derives the applicable haxe.Exception and haxe.ValueException tags without syntax-time hierarchy reconstruction.';
 						case _ if (nominalRepresentation != null):
 							'The final typed Haxe body sends one already-sealed ${representation.semanticTypeId}/${representation.carrierTypeId} nominal record through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the existing runtime class marker derives the concrete tag for a non-null record, while null remains Dynamic-only.';
 						case _:
@@ -1981,7 +2017,7 @@ class OcamlControlPlanner {
 				nominalRepresentation: null
 			};
 		}
-		final haxeExceptionTypeId = OcamlControlPlan.haxeExceptionCatchTypeId(type);
+		final haxeExceptionTypeId = OcamlControlPlan.haxeExceptionWrapperTypeId(type);
 		if (haxeExceptionTypeId != null) {
 			return haxeExceptionTypeId == "haxe.Exception" ? {
 				semanticTypeId: haxeExceptionTypeId,
@@ -2081,6 +2117,20 @@ class OcamlControlPlanner {
 		Other control families remain on their narrower proofs.
 	**/
 	function throwRepresentation(expression:TypedExpr):Null<OcamlControlThrowRepresentation> {
+		final haxeExceptionTypeId = OcamlControlPlan.haxeExceptionWrapperTypeId(expression.t);
+		if (haxeExceptionTypeId != null) {
+			return haxeExceptionTypeId == "haxe.Exception" ? {
+				semanticTypeId: haxeExceptionTypeId,
+				carrierTypeId: "Haxe_Exception.t",
+				representationId: OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID,
+				nominalRepresentation: null
+			} : {
+				semanticTypeId: haxeExceptionTypeId,
+				carrierTypeId: "Haxe_ValueException.t",
+				representationId: OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID,
+				nominalRepresentation: null
+				};
+		}
 		final exact = exactValueRepresentation(expression);
 		if (exact != null) {
 			return {

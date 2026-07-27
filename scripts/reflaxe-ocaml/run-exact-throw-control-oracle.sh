@@ -41,4 +41,4 @@ for route in interp js neko; do
 	fi
 done
 
-echo "REFLAXE_OCAML_EXACT_THROW_ORACLE:PASS routes=3 cases=18"
+echo "REFLAXE_OCAML_EXACT_THROW_ORACLE:PASS routes=3 cases=19"

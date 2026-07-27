@@ -175,6 +175,16 @@ class Main {
 		return "explicitValueException=miss";
 	}
 
+	static function catchExplicitException():String {
+		final original:haxe.Exception = new haxe.Exception("explicit-base");
+		try {
+			throw original;
+		} catch (error:haxe.Exception) {
+			return "explicitException=" + error.message + "/" + (error == original);
+		}
+		return "explicitException=miss";
+	}
+
 	static function catchCustomException():String {
 		final original = new OracleCustomException("custom");
 		try {
@@ -232,6 +242,7 @@ class Main {
 			catchValueExceptionInt(),
 			catchExceptionString(),
 			catchExplicitValueException(),
+			catchExplicitException(),
 			catchCustomException(),
 			catchExceptionBeforeInt(),
 			catchRethrow(),
