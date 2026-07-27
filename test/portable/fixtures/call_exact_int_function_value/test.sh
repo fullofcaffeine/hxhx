@@ -20,7 +20,7 @@ fi
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v13') {
+if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
 	throw new Error('expected the function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call => call.kind === 'typed-function-value')
@@ -37,7 +37,7 @@ for (const call of calls) {
 		|| call.sourceModuleId !== ''
 		|| call.sourceTypeName !== ''
 		|| call.sourceFieldName !== ''
-		|| call.proofId !== 'typed-function-value-signature-v1') {
+		|| call.proofId !== 'typed-function-value-signature-matrix-v1:(Int)->Int') {
 		throw new Error(`call ${call.id} did not preserve the exact Int -> Int contract`)
 	}
 	const kinds = (call.evaluationSchedule ?? []).map(step => step.kind)

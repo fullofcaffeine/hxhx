@@ -180,8 +180,7 @@ typedef OcamlCallDecision = {
 **/
 class OcamlCallPlan {
 	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
-	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID = "typed-function-value-signature-v1";
-	public static inline final FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID = "typed-function-value-optional-string-signature-v1";
+	public static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 
 	final ordered:Array<OcamlCallDecision>;
 	final bySourceKey:Map<String, OcamlCallDecision> = [];
@@ -657,7 +656,7 @@ class OcamlCallPlan {
 			case TypedFunctionValue:
 				if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner assigns declaration fields to a first-class function value';
-				if (proofId != FUNCTION_VALUE_SIGNATURE_PROOF_ID && proofId != FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID)
+				if (proofId.indexOf(FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX) != 0)
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched function-value signature proof';
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported kind $kind';
@@ -693,57 +692,54 @@ class OcamlCallPlan {
 		if (programRevision.length == 0 || pipelineRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an empty program or pipeline revision';
 		if (kind == OcamlCallKind.TypedFunctionValue) {
-			switch (proofId) {
-				case FUNCTION_VALUE_SIGNATURE_PROOF_ID:
-					requireExactIntFunctionValueSignature(arguments, resultKind, result, owner);
-				case FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID:
-					requireOptionalStringFunctionValueSignature(arguments, resultKind, result, owner);
-				case _:
-					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has a mismatched function-value signature proof';
-			}
+			requireFunctionValueSignatureMatrix(arguments, resultKind, result, proofId, owner);
 		}
 	}
 
-	static function requireExactIntFunctionValueSignature(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind,
-			result:Null<OcamlCallValuePlan>, owner:String):Void {
-		if (arguments.length != 1
-			|| arguments[0].parameterOptional
-			|| !isExactIntSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId)
-			|| !sameRepresentationSides(arguments[0])
-			|| arguments[0].conversion != OcamlCallCarrierConversion.Identity
-			|| resultKind != OcamlCallResultKind.Value
-			|| result == null
-			|| !isExactIntSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-			|| !sameRepresentationSides(result)
-			|| result.conversion != OcamlCallCarrierConversion.Identity) {
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the one-argument exact Int function-value signature';
-		}
-	}
+	/**
+		Validates every computed callback against the same representation matrix.
 
-	static function requireOptionalStringFunctionValueSignature(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind,
-			result:Null<OcamlCallValuePlan>, owner:String):Void {
-		if ((arguments.length != 1 && arguments.length != 2)
-			|| !arguments[arguments.length - 1].parameterOptional
-			|| (arguments.length == 2 && arguments[0].parameterOptional)
-			|| resultKind != OcamlCallResultKind.Value
-			|| result == null
-			|| !isExactStringSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-			|| !sameRepresentationSides(result)
-			|| result.conversion != OcamlCallCarrierConversion.Identity) {
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the trailing optional String function-value signature';
-		}
-		for (index in 0...arguments.length) {
-			final argument = arguments[index];
-			if (!isExactStringSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
-				|| !sameRepresentationSides(argument)
-				|| (index < arguments.length - 1 && argument.conversion != OcamlCallCarrierConversion.Identity)
-				|| (index == arguments.length - 1
-					&& argument.conversion != OcamlCallCarrierConversion.Identity
-					&& argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedString
-					&& argument.conversion != OcamlCallCarrierConversion.MaterializeExplicitNullString)) {
-				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner is outside the trailing optional String function-value signature';
+		The occurrence has no program-wide declaration, so its sealed argument
+		and result records are the complete boundary. Signature-specific branches
+		would let validation drift each time another callback type is admitted.
+	**/
+	static function requireFunctionValueSignatureMatrix(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>,
+			proofId:String, owner:String):Void {
+		for (argument in arguments) {
+			if (!isAdmittedInternalSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+				|| !isAdmittedInternalSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner contains an argument outside the function-value signature matrix';
 			}
 		}
+		if (resultKind == OcamlCallResultKind.Value
+			&& (result == null
+				|| !isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+				|| !isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+				|| !sameRepresentationSides(result)
+				|| result.conversion != OcamlCallCarrierConversion.Identity)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner contains a result outside the function-value signature matrix';
+		}
+		final expectedProofId = functionValueProofId(arguments, resultKind, result);
+		if (proofId != expectedProofId)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner binds proof "$proofId" to the wrong canonical function-value signature; expected "$expectedProofId"';
+	}
+
+	/** Reconstructs the versioned proof identity from one sealed callback boundary. */
+	public static function functionValueProofId(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):String {
+		final parameterIds = arguments.map(argument -> (argument.parameterOptional ? "?" : "") + argument.outputSemanticTypeId);
+		final resultId = switch (resultKind) {
+			case Value:
+				if (result == null)
+					throw "reflaxe.ocaml [ocaml-call:invalid-plan]: cannot identify a value-returning function signature without a result";
+				result.outputSemanticTypeId;
+			case EffectOnlyVoid:
+				if (result != null)
+					throw "reflaxe.ocaml [ocaml-call:invalid-plan]: cannot identify an effect-only function signature with a result carrier";
+				"Void";
+			case _:
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: cannot identify unsupported function result kind "$resultKind"';
+		}
+		return FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX + '(${parameterIds.join(",")})->$resultId';
 	}
 
 	static function sameRepresentationSides(value:OcamlCallValuePlan):Bool {
@@ -772,6 +768,14 @@ class OcamlCallPlan {
 
 	static function isExactStringSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value";
+	}
+
+	static function isAdmittedInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return isExactIntSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactBoolSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactNullIntSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactNullBoolSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactStringSide(semanticTypeId, carrierTypeId, representationId);
 	}
 
 	static function isNullableSemanticType(semanticTypeId:String):Bool {
@@ -849,16 +853,37 @@ class OcamlCallPlan {
 	}
 }
 
+/** One Haxe parameter admitted by the common represented-call signature matrix. */
+private typedef OcamlAdmittedCallSignatureArgument = {
+	final type:Type;
+	final semanticTypeId:String;
+	final optional:Bool;
+}
+
+/**
+	The target-neutral callable shape selected before an occurrence is planned.
+
+	The canonical ID contains semantic parameter/result facts only. Whether the
+	function value came from a local or another call belongs to the occurrence
+	identity because it changes evaluation, not the callable signature.
+**/
+private typedef OcamlAdmittedCallSignature = {
+	final id:String;
+	final arguments:Array<OcamlAdmittedCallSignatureArgument>;
+	final resultKind:OcamlCallResultKind;
+	final resultType:Null<Type>;
+	final resultSemanticTypeId:Null<String>;
+}
+
 /**
 	Selects the first closed typed-call kinds from final Haxe expressions.
 
 	Only an ordinary, non-extern, non-generic static method whose arguments and
-	result independently select admitted representations, or one explicitly
-	listed function-value signature, is admitted. Function values currently
-	include exact `Int -> Int` locals/call results and local functions with one
-	trailing optional String. Every other computed-call shape remains on the
-	older syntax path until a later slice gives it an equally complete identity,
-	conversion plan, evaluation schedule, and fail-closed validator.
+	result independently select admitted representations, or a local/call-produced
+	function value using that same signature matrix, is admitted. Every other
+	computed-call shape remains on the older syntax path until a later slice gives
+	it an equally complete identity, conversion plan, evaluation schedule, and
+	fail-closed validator.
 **/
 class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
@@ -1068,14 +1093,17 @@ class OcamlCallPlanner {
 					};
 				}
 			case TCall(callee, arguments):
-				final signatureId = functionValueSignatureId(callee, arguments, expression.t);
-				final plannedArguments = signatureId == null ? null : functionValueArguments(signatureId, arguments, representations);
-				final plannedResult = signatureId == null ? null : functionValueResult(signatureId, representations);
-				if (signatureId == null || plannedArguments == null || plannedResult == null) {
+				final signature = functionValueSignature(callee, arguments, expression.t);
+				final plannedArguments = signature == null ? null : functionValueArguments(signature, arguments, representations);
+				final plannedResult = signature == null ? null : functionValueResult(signature, representations);
+				if (signature == null
+					|| plannedArguments == null
+					|| (signature.resultKind == OcamlCallResultKind.Value && plannedResult == null)
+					|| (signature.resultKind == OcamlCallResultKind.EffectOnlyVoid && plannedResult != null)) {
 					null;
 				} else {
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
-					final selectedCalleeId = functionValueCalleeId(callee, binding, signatureId);
+					final selectedCalleeId = functionValueCalleeId(callee, binding, signature.id);
 					final id = "call:" + Sha256.encode([
 						binding.functionId,
 						binding.programRevision,
@@ -1084,7 +1112,7 @@ class OcamlCallPlanner {
 						OcamlCallPlan.sourceKey(source),
 						selectedCalleeId
 					].join("|")).substr(0, 24);
-					final proof = functionValueProof(signatureId);
+					final proof = functionValueProof(signature);
 					{
 						id: id,
 						source: source,
@@ -1094,7 +1122,7 @@ class OcamlCallPlanner {
 						sourceFieldName: "",
 						kind: OcamlCallKind.TypedFunctionValue,
 						arguments: plannedArguments,
-						resultKind: OcamlCallResultKind.Value,
+						resultKind: signature.resultKind,
 						result: plannedResult,
 						evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, plannedArguments.length, omittedArgumentIndices(plannedArguments), true),
 						profileEligibility: ["metal", "portable"],
@@ -1127,62 +1155,60 @@ class OcamlCallPlanner {
 	/**
 		Returns the canonical admitted signature for one computed function call.
 
-		Exact `Int -> Int` and the admitted optional-String signatures accept
-		local and call-produced callees. The callee form remains part of the
-		stable identity so those occurrences cannot collide. Haxe's typed API
-		preserves the optional flag but follows a call-produced function typedef
-		to an exact `String` parameter; local method values retain `Null<String>`.
-		Both shapes therefore require the optional flag, while the exact
-		parameter carrier remains form-specific.
+		The ID depends only on semantic parameter/result types and optionality.
+		Local versus call-produced form is deliberately excluded here and retained
+		by `functionValueCalleeId`, so equivalent callback signatures compare equal
+		while different source occurrences cannot collide.
 	**/
 	public static function functionValueSignatureId(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Null<String> {
-		final calleeForm = switch (callee.expr) {
-			case TLocal(_): "local";
-			case TCall(_, _): "call-result";
-			case _: return null;
-		}
-		return switch (TypeTools.follow(callee.t)) {
-			case TFun(parameters, result)
-				if (calleeForm != null
-					&& parameters.length == 1
-					&& !parameters[0].opt
-					&& arguments.length == 1
-					&& OcamlRepresentationRegistry.isExactInt(parameters[0].t)
-					&& OcamlRepresentationRegistry.isExactInt(arguments[0].t)
-					&& OcamlRepresentationRegistry.isExactInt(result)
-					&& OcamlRepresentationRegistry.isExactInt(resultType)):
-				"(Int)->Int";
-			case TFun(parameters, result)
-				if (calleeForm != null
-					&& parameters.length == 1
-					&& parameters[0].opt
-					&& arguments.length <= 1
-					&& isAdmittedOptionalStringParameter(parameters[0].t, calleeForm)
-					&& suppliedStrings(arguments)
-					&& OcamlRepresentationRegistry.isExactString(result)
-					&& OcamlRepresentationRegistry.isExactString(resultType)):
-				"(?String)->String";
-			case TFun(parameters, result)
-				if (calleeForm != null
-					&& parameters.length == 2
-					&& !parameters[0].opt
-					&& parameters[1].opt
-					&& arguments.length >= 1
-					&& arguments.length <= 2
-					&& OcamlRepresentationRegistry.isExactString(parameters[0].t)
-					&& isAdmittedOptionalStringParameter(parameters[1].t, calleeForm)
-					&& suppliedStrings(arguments)
-					&& OcamlRepresentationRegistry.isExactString(result)
-					&& OcamlRepresentationRegistry.isExactString(resultType)):
-				"(String,?String)->String";
+		final signature = functionValueSignature(callee, arguments, resultType);
+		return signature == null ? null : signature.id;
+	}
+
+	static function functionValueSignature(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Null<OcamlAdmittedCallSignature> {
+		final calleeForm = functionValueCalleeForm(callee);
+		if (calleeForm == null)
+			return null;
+		final signature = selectAdmittedSignature(callee.t, calleeForm);
+		if (signature == null || !functionValueArgumentsMatch(signature, arguments))
+			return null;
+		return switch (signature.resultKind) {
+			case Value: signature.resultSemanticTypeId != null && semanticTypeId(resultType) == signature.resultSemanticTypeId ? signature : null;
+			case EffectOnlyVoid:
+				isExactVoid(resultType) ? signature : null;
 			case _:
 				null;
 		}
 	}
 
-	static function isAdmittedOptionalStringParameter(type:Type, calleeForm:String):Bool {
-		return OcamlRepresentationRegistry.isExactNullString(type)
-			|| (calleeForm == "call-result" && OcamlRepresentationRegistry.isExactString(type));
+	static function functionValueCalleeForm(callee:TypedExpr):Null<String> {
+		return switch (callee.expr) {
+			case TLocal(_): "local";
+			case TCall(_, _): "call-result";
+			case _: null;
+		}
+	}
+
+	static function functionValueArgumentsMatch(signature:OcamlAdmittedCallSignature, arguments:Array<TypedExpr>):Bool {
+		final omittedTrailingOptional = arguments.length + 1 == signature.arguments.length
+			&& signature.arguments.length > 0
+			&& signature.arguments[signature.arguments.length - 1].optional;
+		if (arguments.length != signature.arguments.length && !omittedTrailingOptional)
+			return false;
+		for (index in 0...arguments.length) {
+			final expected = signature.arguments[index];
+			final actualSemanticType = semanticTypeId(arguments[index].t);
+			if (actualSemanticType == expected.semanticTypeId
+				|| (actualSemanticType == "Int" && expected.semanticTypeId == "Null<Int>")
+				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Null<Bool>")
+				|| (expected.optional
+					&& expected.semanticTypeId == "String"
+					&& OcamlCallPlan.isExplicitNullExpression(arguments[index]))) {
+				continue;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -1212,56 +1238,36 @@ class OcamlCallPlanner {
 		].join("|")).substr(0, 32);
 	}
 
-	static function suppliedStrings(arguments:Array<TypedExpr>):Bool {
-		for (argument in arguments) {
-			if (!OcamlRepresentationRegistry.isExactString(argument.t) && !OcamlCallPlan.isExplicitNullExpression(argument))
-				return false;
-		}
-		return true;
-	}
-
-	static function functionValueArguments(signatureId:String, arguments:Array<TypedExpr>,
+	static function functionValueArguments(signature:OcamlAdmittedCallSignature, arguments:Array<TypedExpr>,
 			representations:OcamlRepresentationRegistry):Null<Array<OcamlCallValuePlan>> {
-		return switch (signatureId) {
-			case "(Int)->Int":
-				final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
-				[identityValue(0, representation)];
-			case "(?String)->String":
-				final representation = representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-				callArgumentValues(arguments, [identityValue(0, representation, true)], representations);
-			case "(String,?String)->String":
-				final representation = representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-				callArgumentValues(arguments, [identityValue(0, representation), identityValue(1, representation, true)], representations);
-			case _:
-				null;
+		final boundaryValues:Array<OcamlCallValuePlan> = [];
+		for (index in 0...signature.arguments.length) {
+			final argument = signature.arguments[index];
+			final representation = representationForSemanticType(argument.semanticTypeId, representations);
+			if (representation == null)
+				return null;
+			boundaryValues.push(identityValue(index, representation, argument.optional));
 		}
+		return callArgumentValues(arguments, boundaryValues, representations);
 	}
 
-	static function functionValueResult(signatureId:String, representations:OcamlRepresentationRegistry):Null<OcamlCallValuePlan> {
-		return switch (signatureId) {
-			case "(Int)->Int": identityValue(-1, representations.selectExactInt(OcamlRepresentationDomain.InternalValue));
-			case "(?String)->String", "(String,?String)->String":
-				identityValue(-1, representations.selectExactString(OcamlRepresentationDomain.InternalValue));
-			case _:
-				null;
-		}
+	static function functionValueResult(signature:OcamlAdmittedCallSignature, representations:OcamlRepresentationRegistry):Null<OcamlCallValuePlan> {
+		if (signature.resultKind == OcamlCallResultKind.EffectOnlyVoid)
+			return null;
+		final semanticType = signature.resultSemanticTypeId;
+		if (semanticType == null)
+			return null;
+		final representation = representationForSemanticType(semanticType, representations);
+		return representation == null ? null : identityValue(-1, representation);
 	}
 
-	static function functionValueProof(signatureId:String):{id:String, reason:String, claim:String} {
-		return switch (signatureId) {
-			case "(Int)->Int": {
-					id: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID,
-					reason: "The typed Haxe expression invokes one already-created Int -> Int function value. The sealed schedule evaluates and binds the callee first, evaluates and binds the exact Int argument second, then invokes the bound function and preserves its exact Int result.",
-					claim: "The followed Haxe function type selects one required exact Int parameter and an exact Int result. Its call occurrence must materialize the computed callee before the source argument, without target-side signature inference or carrier conversion."
-				};
-			case "(?String)->String", "(String,?String)->String": {
-					id: OcamlCallPlan.FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID,
-					reason: "The typed Haxe expression invokes one local or call-produced function value with one trailing optional String parameter. The sealed schedule binds the callee first, evaluates each supplied String in source order, materializes an omitted String without source evaluation, then invokes the function and preserves its exact String result.",
-					claim: "The followed Haxe function type selects exact String carriers and one trailing optional String. Every call occurrence must distinguish supplied, explicitly null, and omitted values before syntax, using the existing String null-sentinel conversion where required."
-				};
-			case _:
-				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: unsupported function-value signature "$signatureId" reached proof construction';
-		}
+	static function functionValueProof(signature:OcamlAdmittedCallSignature):{id:String, reason:String, claim:String} {
+		final resultDescription = signature.resultKind == OcamlCallResultKind.EffectOnlyVoid ? "effect-only Void" : signature.resultSemanticTypeId;
+		return {
+			id: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX + signature.id,
+			reason: 'The typed Haxe expression invokes one local or call-produced function value with canonical signature ${signature.id}. The sealed schedule binds the callee first, materializes each supplied or omitted argument in parameter order, invokes the function once, and preserves its $resultDescription result contract.',
+			claim: "The followed Haxe function type selects every parameter and result from the closed internal representation matrix. Every call occurrence must materialize its computed callee before arguments, distinguish supplied and omitted values before syntax, and apply only the recorded carrier conversions."
+		};
 	}
 
 	static function callArgumentValues(arguments:Array<TypedExpr>, boundaryValues:Array<OcamlCallValuePlan>,
@@ -1366,7 +1372,7 @@ class OcamlCallPlanner {
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
 		for (argument in signature.arguments) {
-			final representation = representationForArgument(argument.type, argument.optional, representations);
+			final representation = representationForSemanticType(argument.semanticTypeId, representations);
 			if (representation == null)
 				return null;
 			argumentRepresentations.push(representation);
@@ -1399,19 +1405,40 @@ class OcamlCallPlanner {
 		};
 	}
 
-	static function admittedSignature(field:ClassField):Null<{
-		arguments:Array<{type:Type, optional:Bool}>,
-		resultKind:OcamlCallResultKind,
-		resultType:Null<Type>
-	}> {
-		return switch (TypeTools.follow(field.type)) {
+	static function admittedSignature(field:ClassField):Null<OcamlAdmittedCallSignature> {
+		return selectAdmittedSignature(field.type, null);
+	}
+
+	/**
+		Selects one canonical callable signature over already-sealed representations.
+
+		Haxe 4.3.7 preserves the optional flag on call-produced function typedefs
+		but exposes optional primitive/String parameters as their exact types.
+		Local method values retain the nullable parameter type. This selector
+		normalizes both forms to one semantic signature while refusing exact
+		optional locals that do not have that observed typed-API shape.
+	**/
+	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>):Null<OcamlAdmittedCallSignature> {
+		return switch (TypeTools.follow(type)) {
 			case TFun(arguments, result) if (semanticTypeId(result) != null || isExactVoid(result)):
 				var optionalCount = 0;
 				var valid = true;
+				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
 				for (index in 0...arguments.length) {
 					final argument = arguments[index];
-					final semanticType = semanticTypeId(argument.t) ?? (argument.opt
-						&& OcamlRepresentationRegistry.isExactNullString(argument.t) ? "String" : null);
+					final semanticType = if (argument.opt && OcamlRepresentationRegistry.isExactNullString(argument.t)) {
+						"String";
+					} else if (argument.opt && calleeForm == "call-result" && OcamlRepresentationRegistry.isExactInt(argument.t)) {
+						"Null<Int>";
+					} else if (argument.opt && calleeForm == "call-result" && OcamlRepresentationRegistry.isExactBool(argument.t)) {
+						"Null<Bool>";
+					} else if (argument.opt
+						&& OcamlRepresentationRegistry.isExactString(argument.t)
+						&& (calleeForm == null || calleeForm == "call-result")) {
+						"String";
+					} else {
+						semanticTypeId(argument.t);
+					}
 					if (semanticType == null) {
 						valid = false;
 						break;
@@ -1425,15 +1452,27 @@ class OcamlCallPlanner {
 							break;
 						}
 					}
-				}
-				valid ? {
-					arguments: arguments.map(argument -> {
+					selectedArguments.push({
 						type: argument.t,
+						semanticTypeId: semanticType,
 						optional: argument.opt
-					}),
-					resultKind: isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value,
-					resultType: isExactVoid(result) ? null : result
-				} : null;
+					});
+				}
+				if (!valid) {
+					null;
+				} else {
+					final resultKind = isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value;
+					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeId(result) : null;
+					final parameterIds = selectedArguments.map(argument -> (argument.optional ? "?" : "") + argument.semanticTypeId);
+					final resultId = resultKind == OcamlCallResultKind.EffectOnlyVoid ? "Void" : resultSemanticTypeId;
+					{
+						id: '(${parameterIds.join(",")})->$resultId',
+						arguments: selectedArguments,
+						resultKind: resultKind,
+						resultType: resultKind == OcamlCallResultKind.EffectOnlyVoid ? null : result,
+						resultSemanticTypeId: resultSemanticTypeId
+					};
+				}
 			case _:
 				null;
 		}
@@ -1465,12 +1504,6 @@ class OcamlCallPlanner {
 	static function representationFor(type:Type, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
 		final semanticType = semanticTypeId(type);
 		return semanticType == null ? null : representationForSemanticType(semanticType, representations);
-	}
-
-	static function representationForArgument(type:Type, optional:Bool, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
-		if (optional && OcamlRepresentationRegistry.isExactNullString(type))
-			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
-		return representationFor(type, representations);
 	}
 
 	static function representationForSemanticType(semanticType:String, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {

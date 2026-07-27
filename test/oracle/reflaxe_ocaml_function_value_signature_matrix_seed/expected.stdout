@@ -1,0 +1,11 @@
+mixed_local result=yes:2 events=flag,count,mixed
+mixed_factory result=yes:2 events=factory,flag,count,mixed
+zero_local result=true events=probe
+zero_factory result=true events=factory,probe
+nullable_int result=7 events=number,keep_nullable_int
+optional_int_omitted result=-1 events=optional_int
+optional_int_factory_supplied result=7 events=factory,number,optional_int
+optional_bool_omitted result=false events=optional_bool
+optional_bool_factory_supplied result=true events=factory,flag,optional_bool
+effect_local events=text,effect
+effect_factory events=factory,text,effect

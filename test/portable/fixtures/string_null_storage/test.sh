@@ -40,8 +40,8 @@ function fail(message) {
 
 if (report.schemaVersion !== 23
 	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v13') {
-	fail('lowering schema/model did not advance with the admitted String family')
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
+	fail('unexpected lowering report, representation, or call-model version')
 }
 
 const strings = report.representations.filter(entry => entry.semanticTypeId === 'String')

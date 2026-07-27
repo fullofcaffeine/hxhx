@@ -17,12 +17,13 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v13') {
+if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
 	fail('expected the optional-function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call =>
 	call.kind === 'typed-function-value'
-	&& call.proofId === 'typed-function-value-optional-string-signature-v1')
+	&& (call.proofId === 'typed-function-value-signature-matrix-v1:(?String)->String'
+		|| call.proofId === 'typed-function-value-signature-matrix-v1:(String,?String)->String'))
 if (calls.length !== 17) {
 	fail(`expected seventeen optional String function-value calls, got ${calls.length}`)
 }
@@ -146,7 +147,8 @@ if (!report.summary?.valid) {
 }
 const calls = report.lowering?.calls?.filter(call =>
 	call.kind === 'typed-function-value'
-	&& call.proofId === 'typed-function-value-optional-string-signature-v1') ?? []
+	&& (call.proofId === 'typed-function-value-signature-matrix-v1:(?String)->String'
+		|| call.proofId === 'typed-function-value-signature-matrix-v1:(String,?String)->String')) ?? []
 if (calls.length !== 17
 	|| calls.filter(call => call.arguments?.some(argument =>
 		argument.conversion === 'materialize-omitted-string')).length !== 5
@@ -163,7 +165,8 @@ const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const selected = report.calls?.find(call =>
 	call.kind === 'typed-function-value'
-	&& call.proofId === 'typed-function-value-optional-string-signature-v1'
+	&& (call.proofId === 'typed-function-value-signature-matrix-v1:(?String)->String'
+		|| call.proofId === 'typed-function-value-signature-matrix-v1:(String,?String)->String')
 	&& call.arguments?.some(argument =>
 		argument.conversion === 'materialize-omitted-string'))
 if (selected == null) {

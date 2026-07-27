@@ -527,7 +527,7 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(FUNCTION_VALUE_CALL_ID, 1, [], true),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture exact Int function-value call",
-			proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID,
+			proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX + "(Int)->Int",
 			proofClaim: "fixture exact Int function-value signature",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
@@ -552,8 +552,37 @@ class CallPlanFixture {
 			evaluationSchedule: OcamlCallPlan.evaluationSchedule(OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID, arguments.length, omittedArgumentIndices ?? [], true),
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture trailing optional String function-value call",
-			proofId: OcamlCallPlan.FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID,
+			proofId: OcamlCallPlan.functionValueProofId(arguments, OcamlCallResultKind.Value, stringValue(-1)),
 			proofClaim: "fixture trailing optional String function-value signature",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function matrixFunctionValueCall(caller:OcamlFunctionPlanBinding, id:String, sourceMin:Int, arguments:Array<OcamlCallValuePlan>,
+			resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):OcamlCallDecision {
+		final omittedArgumentIndices = [
+			for (index in 0...arguments.length)
+				if (OcamlCallPlan.isOmittedConversion(arguments[index].conversion)) index
+		];
+		return {
+			id: id,
+			source: {file: "CallPlanFixture.hx", min: sourceMin, max: sourceMin + 1},
+			calleeId: "function-value:matrix:" + id,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.TypedFunctionValue,
+			arguments: arguments,
+			resultKind: resultKind,
+			result: result,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, arguments.length, omittedArgumentIndices, true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture represented function-value signature matrix",
+			proofId: OcamlCallPlan.functionValueProofId(arguments, resultKind, result),
+			proofClaim: "fixture represented function-value signature matrix",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -1092,7 +1121,7 @@ class CallPlanFixture {
 		Reflect.setField(wrongFunctionValueProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
 		expectThrows("mismatched function-value signature proof", () -> OcamlCallPlan.requireCall(wrongFunctionValueProof));
 		final wrongFunctionValueArgument = copyCall(selectedFunctionValueCall, null, null, [boolValue(0)]);
-		expectThrows("outside the one-argument exact Int function-value signature", () -> OcamlCallPlan.requireCall(wrongFunctionValueArgument));
+		expectThrows("wrong canonical function-value signature", () -> OcamlCallPlan.requireCall(wrongFunctionValueArgument));
 
 		final omittedOptionalStringFunctionValueCall = optionalStringFunctionValueCall(caller, [optionalStringValue(0, true)], [0]);
 		OcamlCallPlan.requireCall(omittedOptionalStringFunctionValueCall);
@@ -1104,12 +1133,27 @@ class CallPlanFixture {
 		OcamlCallPlan.requireCall(requiredThenOmittedStringFunctionValueCall);
 		final requiredThenSuppliedStringFunctionValueCall = optionalStringFunctionValueCall(caller, [stringValue(0), optionalStringValue(1)]);
 		OcamlCallPlan.requireCall(requiredThenSuppliedStringFunctionValueCall);
+		final mixedMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-mixed-matrix-fixture", 34, [boolValue(0), value(1)],
+			OcamlCallResultKind.Value, stringValue(-1));
+		OcamlCallPlan.requireCall(mixedMatrixFunctionValueCall);
+		final zeroMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-zero-matrix-fixture", 36, [], OcamlCallResultKind.Value,
+			boolValue(-1));
+		OcamlCallPlan.requireCall(zeroMatrixFunctionValueCall);
+		final nullableMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-nullable-matrix-fixture", 38,
+			[nullableArgument(0, OcamlCallCarrierConversion.BoxExactIntToNullableInt)], OcamlCallResultKind.Value, nullableValue(-1));
+		OcamlCallPlan.requireCall(nullableMatrixFunctionValueCall);
+		final optionalNullableMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-optional-matrix-fixture", 40,
+			[omittedOptionalNullableValue(0)], OcamlCallResultKind.Value, value(-1));
+		OcamlCallPlan.requireCall(optionalNullableMatrixFunctionValueCall);
+		final effectMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-effect-matrix-fixture", 42, [stringValue(0)],
+			OcamlCallResultKind.EffectOnlyVoid, null);
+		OcamlCallPlan.requireCall(effectMatrixFunctionValueCall);
 
 		final wrongOptionalStringProof = copyCall(omittedOptionalStringFunctionValueCall);
-		Reflect.setField(wrongOptionalStringProof, "proofId", OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID);
-		expectThrows("one-argument exact Int function-value signature", () -> OcamlCallPlan.requireCall(wrongOptionalStringProof));
+		Reflect.setField(wrongOptionalStringProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
+		expectThrows("mismatched function-value signature proof", () -> OcamlCallPlan.requireCall(wrongOptionalStringProof));
 		final requiredTrailingString = copyCall(requiredThenSuppliedStringFunctionValueCall, null, null, [stringValue(0), stringValue(1)]);
-		expectThrows("trailing optional String function-value signature", () -> OcamlCallPlan.requireCall(requiredTrailingString));
+		expectThrows("wrong canonical function-value signature", () -> OcamlCallPlan.requireCall(requiredTrailingString));
 		final optionalBoolArgument = boolValue(0);
 		Reflect.setField(optionalBoolArgument, "parameterOptional", true);
 		final optionalBoolClaimingStringProof = copyCall(suppliedOptionalStringFunctionValueCall, null, null, [optionalBoolArgument]);
@@ -1120,6 +1164,12 @@ class CallPlanFixture {
 		final omittedStringWithSourceEvaluation = copyCall(omittedOptionalStringFunctionValueCall);
 		Reflect.setField(omittedStringWithSourceEvaluation.evaluationSchedule[1], "sourceArgumentIndex", 0);
 		expectThrows("invalid argument materialization", () -> OcamlCallPlan.requireCall(omittedStringWithSourceEvaluation));
+		final wrongMixedMatrixProof = copyCall(mixedMatrixFunctionValueCall);
+		Reflect.setField(wrongMixedMatrixProof, "proofId", OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX + "(Int,Int)->String");
+		expectThrows("wrong canonical function-value signature", () -> OcamlCallPlan.requireCall(wrongMixedMatrixProof));
+		final effectWithValueResult = copyCall(effectMatrixFunctionValueCall);
+		Reflect.setField(effectWithValueResult, "resultKind", OcamlCallResultKind.Value);
+		expectThrows("value result kind without a value crossing", () -> OcamlCallPlan.requireCall(effectWithValueResult));
 
 		final selectedCall = call(caller);
 		final registry = new OcamlFunctionPlanRegistry();

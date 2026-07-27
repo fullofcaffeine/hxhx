@@ -1354,7 +1354,7 @@
   "callableBoundaryCount": 21,
   "representationCount": 14,
   "staticStorageRevision": "sha256:26cc8518973829953d2ebf78a46013230a2db4225df92fe40ca0f46a3b20c6d7",
-  "callModel": "typed-ocaml-directional-call-boundary-v13",
+  "callModel": "typed-ocaml-directional-call-boundary-v14",
   "localConversionModel": "typed-ocaml-local-carrier-conversions-v1",
   "representations": [
     {
