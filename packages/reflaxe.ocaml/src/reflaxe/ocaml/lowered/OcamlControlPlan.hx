@@ -12,7 +12,9 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
@@ -63,11 +65,26 @@ enum abstract OcamlControlRuntimeTagPolicy(String) from String to String {
 /** How an exact Haxe value crosses the private runtime-control payload. */
 enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
+	final BoxAndRecoverNominalValue = "box-and-recover-nominal-value";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
 	final BoxExactIntToNullableCarrier = "box-exact-int-to-nullable-carrier";
 	final BoxExactBoolToNullableCarrier = "box-exact-bool-to-nullable-carrier";
 	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
+}
+
+/**
+	The exact nominal layout that justifies one class-valued control payload.
+
+	The control plan repeats this small proof reference so validation can reject
+	a stale class layout before syntax construction. It does not duplicate field
+	shape: the program representation registry remains the sole layout owner.
+**/
+typedef OcamlControlNominalRepresentationProof = {
+	final targetModuleName:String;
+	final targetTypeName:String;
+	final layoutRevision:String;
+	final representationProofId:String;
 }
 
 /** How one source catch decides whether its clause receives an exception. */
@@ -136,6 +153,7 @@ typedef OcamlControlPayloadPlan = {
 	final outputCarrierTypeId:String;
 	final outputRepresentationId:String;
 	final conversion:OcamlControlPayloadConversion;
+	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final proofId:String;
 	final proofClaim:String;
 }
@@ -269,6 +287,7 @@ typedef OcamlCatchChainOccurrence = {
 **/
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
+	public static inline final EXACT_NOMINAL_RETURN_PROOF_ID = "exact-monomorphic-class-early-return-control-v1";
 	public static inline final NULLABLE_CARRIER_RETURN_PROOF_ID = "exact-nullable-carrier-early-return-control-v1";
 	public static inline final NULLABLE_INT_CONVERSION_RETURN_PROOF_ID = "exact-int-to-nullable-early-return-control-v1";
 	public static inline final NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID = "exact-bool-to-nullable-early-return-control-v1";
@@ -705,13 +724,22 @@ class OcamlControlPlan {
 					case BoxAndRecoverExactValue:
 						if (!isAdmittedExactSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
 							|| !samePayloadSides(payload)
+							|| payload.nominalRepresentation != null
 							|| payload.proofId != EXACT_VALUE_RETURN_PROOF_ID
 							|| decision.proofId != EXACT_VALUE_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete exact-value payload crossing';
 						}
+					case BoxAndRecoverNominalValue:
+						if (!samePayloadSides(payload)
+							|| !isAdmittedNominalPayload(payload)
+							|| payload.proofId != EXACT_NOMINAL_RETURN_PROOF_ID
+							|| decision.proofId != EXACT_NOMINAL_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete monomorphic-class payload crossing';
+						}
 					case PreserveNullableCarrier:
 						if (!isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
 							|| !samePayloadSides(payload)
+							|| payload.nominalRepresentation != null
 							|| payload.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID
 							|| decision.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid nullable-carrier payload crossing';
@@ -719,6 +747,7 @@ class OcamlControlPlan {
 					case BoxExactIntToNullableCarrier:
 						if (!isExactNullableConversion(payload, "Int", "int", "representation:Int:internal-value", "Null<Int>",
 							"representation:Null<Int>:internal-value")
+							|| payload.nominalRepresentation != null
 							|| payload.proofId != NULLABLE_INT_CONVERSION_RETURN_PROOF_ID
 							|| decision.proofId != NULLABLE_INT_CONVERSION_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid Int-to-Null<Int> payload crossing';
@@ -726,6 +755,7 @@ class OcamlControlPlan {
 					case BoxExactBoolToNullableCarrier:
 						if (!isExactNullableConversion(payload, "Bool", "bool", "representation:Bool:internal-value", "Null<Bool>",
 							"representation:Null<Bool>:internal-value")
+							|| payload.nominalRepresentation != null
 							|| payload.proofId != NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID
 							|| decision.proofId != NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid Bool-to-Null<Bool> payload crossing';
@@ -1002,8 +1032,20 @@ class OcamlControlPlan {
 			outputCarrierTypeId: payload.outputCarrierTypeId,
 			outputRepresentationId: payload.outputRepresentationId,
 			conversion: payload.conversion,
+			nominalRepresentation: copyNominalRepresentation(payload.nominalRepresentation),
 			proofId: payload.proofId,
 			proofClaim: payload.proofClaim
+		};
+	}
+
+	static function copyNominalRepresentation(proof:Null<OcamlControlNominalRepresentationProof>):Null<OcamlControlNominalRepresentationProof> {
+		if (proof == null)
+			return null;
+		return {
+			targetModuleName: proof.targetModuleName,
+			targetTypeName: proof.targetTypeName,
+			layoutRevision: proof.layoutRevision,
+			representationProofId: proof.representationProofId
 		};
 	}
 
@@ -1086,6 +1128,24 @@ class OcamlControlPlan {
 			&& payload.outputRepresentationId == outputRepresentationId;
 	}
 
+	static function isAdmittedNominalPayload(payload:OcamlControlPayloadPlan):Bool {
+		final nominal = payload.nominalRepresentation;
+		if (nominal == null)
+			return false;
+		final expectedRepresentationId = 'representation:${payload.inputSemanticTypeId}:internal-value';
+		return payload.inputSemanticTypeId.length > 0
+			&& payload.inputCarrierTypeId == nominal.targetTypeName
+			&& payload.inputRepresentationId == expectedRepresentationId
+			&& nominal.targetModuleName.length > 0
+			&& nominal.targetTypeName.length > 0
+			&& isSha256Revision(nominal.layoutRevision)
+			&& nominal.representationProofId == "whole-program-monomorphic-nominal-record-v1:" + nominal.layoutRevision;
+	}
+
+	static function isSha256Revision(value:String):Bool {
+		return ~/^sha256:[0-9a-f]{64}$/.match(value);
+	}
+
 	public static function expectedThrowTags(semanticTypeId:String):Array<String> {
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String": ["Dynamic"];
@@ -1117,7 +1177,7 @@ class OcamlControlPlan {
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(expression.t);
 			case "Null<Bool>": OcamlRepresentationRegistry.isExactNullBool(expression.t);
 			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
-			case _: false;
+			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
 		}
 	}
 
@@ -1159,8 +1219,18 @@ class OcamlControlPlan {
 			payload.outputCarrierTypeId,
 			payload.outputRepresentationId,
 			(payload.conversion : String),
+			nominalPayloadFingerprint(payload.nominalRepresentation),
 			payload.proofId,
 			payload.proofClaim
+		].join("|");
+	}
+
+	static function nominalPayloadFingerprint(proof:Null<OcamlControlNominalRepresentationProof>):String {
+		return proof == null ? "no-nominal-representation" : [
+			proof.targetModuleName,
+			proof.targetTypeName,
+			proof.layoutRevision,
+			proof.representationProofId
 		].join("|");
 	}
 
@@ -1278,10 +1348,12 @@ class OcamlControlPlan {
 **/
 class OcamlControlPlanner {
 	final representations:OcamlRepresentationRegistry;
+	final localRepresentations:OcamlLocalRepresentationPlan;
 	final binding:OcamlFunctionPlanBinding;
 
-	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding) {
+	public function new(representations:OcamlRepresentationRegistry, localRepresentations:OcamlLocalRepresentationPlan, binding:OcamlFunctionPlanBinding) {
 		this.representations = representations;
+		this.localRepresentations = localRepresentations;
 		this.binding = binding;
 	}
 
@@ -1438,6 +1510,7 @@ class OcamlControlPlanner {
 							outputCarrierTypeId: representation.carrierTypeId,
 							outputRepresentationId: representation.id,
 							conversion: conversion,
+							nominalRepresentation: null,
 							proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
 							proofClaim: proofClaim
 						},
@@ -1719,6 +1792,21 @@ class OcamlControlPlanner {
 			return representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
 		if (OcamlRepresentationRegistry.isExactString(expression.t))
 			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+		final unwrapped = unwrapTransparent(expression);
+		switch (unwrapped.expr) {
+			case TLocal(local):
+				final reference = localRepresentations.referenceFor(local.id);
+				if (reference == null
+					|| reference.domain != OcamlRepresentationDomain.InternalValue
+					|| reference.semanticTypeId != OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(unwrapped.t)) {
+					return null;
+				}
+				final representation = representations.monomorphicClassValue(reference.semanticTypeId);
+				return representation != null && representation.id == reference.representationId ? representation : null;
+			case TCast(child, _) if (representations.monomorphicClassForType(child.t) != null):
+				return exactValueRepresentation(child);
+			case _:
+		}
 		return null;
 	}
 
@@ -1730,6 +1818,21 @@ class OcamlControlPlanner {
 			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal boxes the exact ${input.carrierTypeId} carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.';
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxAndRecoverExactValue, OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID,
 				proofClaim);
+		}
+		if (sameSide && input.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier) {
+			final targetModuleName = input.nominalTargetModuleName;
+			final targetTypeName = input.nominalTargetTypeName;
+			final layoutRevision = input.nominalLayoutRevision;
+			if (targetModuleName == null || targetTypeName == null || layoutRevision == null)
+				return null;
+			final proofClaim = 'The final typed Haxe body returns one already-sealed ${input.semanticTypeId} nominal record. The private runtime signal uses Obj.t only while control is in flight, then the matching function boundary recovers ${input.carrierTypeId} under exact layout $layoutRevision. Reference identity, shared field mutation, and the callable result carrier remain unchanged.';
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxAndRecoverNominalValue, OcamlControlPlan.EXACT_NOMINAL_RETURN_PROOF_ID,
+				proofClaim, {
+					targetModuleName: targetModuleName,
+					targetTypeName: targetTypeName,
+					layoutRevision: layoutRevision,
+					representationProofId: input.proof.id
+				});
 		}
 		if (sameSide && OcamlControlPlan.isAdmittedNullableSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
 			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal already carries the exact ${input.carrierTypeId} nullable value, so syntax must preserve that carrier without another box, unchecked cast, or boundary recovery.';
@@ -1750,7 +1853,7 @@ class OcamlControlPlanner {
 	}
 
 	static function makeReturnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan, conversion:OcamlControlPayloadConversion, proofId:String,
-			proofClaim:String):OcamlControlPayloadPlan {
+			proofClaim:String, ?nominalRepresentation:OcamlControlNominalRepresentationProof):OcamlControlPayloadPlan {
 		return {
 			inputSemanticTypeId: input.semanticTypeId,
 			inputCarrierTypeId: input.carrierTypeId,
@@ -1760,6 +1863,7 @@ class OcamlControlPlanner {
 			outputCarrierTypeId: output.outputCarrierTypeId,
 			outputRepresentationId: output.outputRepresentationId,
 			conversion: conversion,
+			nominalRepresentation: nominalRepresentation,
 			proofId: proofId,
 			proofClaim: proofClaim
 		};
@@ -1771,6 +1875,8 @@ class OcamlControlPlanner {
 				'This return is nested below the function\'s direct result path, so it preserves the current exact-${payload.outputSemanticTypeId} carrier through one revision-bound private runtime signal.';
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
 				'This return is nested below the function\'s direct result path, so it performs the sealed ${payload.inputSemanticTypeId}-to-${payload.outputSemanticTypeId} conversion before one revision-bound private runtime signal.';
+			case BoxAndRecoverNominalValue:
+				'This return is nested below the function\'s direct result path, so it preserves the sealed ${payload.outputSemanticTypeId} nominal record through one revision-bound private runtime signal.';
 			case _:
 				'This return is nested below the function\'s direct result path, so it exits the current exact-${payload.outputSemanticTypeId} Haxe function through one revision-bound private runtime signal.';
 		};
@@ -1803,7 +1909,7 @@ class OcamlControlPlanner {
 		return source.file + ":" + source.min + ":" + source.max;
 	}
 
-	static function admittedBoundaryPayload(boundary:Null<OcamlCallableBoundaryPlan>):Null<OcamlCallValuePlan> {
+	function admittedBoundaryPayload(boundary:Null<OcamlCallableBoundaryPlan>):Null<OcamlCallValuePlan> {
 		if (boundary == null
 			|| boundary.kind != OcamlCallKind.DirectStaticHaxeMethod
 			|| boundary.resultKind != OcamlCallResultKind.Value
@@ -1817,6 +1923,17 @@ class OcamlControlPlanner {
 			&& result.conversion == OcamlCallCarrierConversion.Identity
 			&& OcamlControlPlan.isAdmittedExactSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId);
 		if (exactIdentity)
+			return OcamlCallPlan.copyValue(result);
+		final nominalRepresentation = representations.monomorphicClassValue(result.outputSemanticTypeId);
+		final nominalIdentity = nominalRepresentation != null
+			&& result.inputSemanticTypeId == nominalRepresentation.semanticTypeId
+			&& result.inputCarrierTypeId == nominalRepresentation.carrierTypeId
+			&& result.inputRepresentationId == nominalRepresentation.id
+			&& result.outputSemanticTypeId == nominalRepresentation.semanticTypeId
+			&& result.outputCarrierTypeId == nominalRepresentation.carrierTypeId
+			&& result.outputRepresentationId == nominalRepresentation.id
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (nominalIdentity)
 			return OcamlCallPlan.copyValue(result);
 		final nullableOutput = OcamlControlPlan.isAdmittedNullableSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId);
 		final validDirectConversion = (result.inputSemanticTypeId == "Int"
@@ -1844,6 +1961,13 @@ class OcamlControlPlanner {
 			proofId: result.proofId,
 			proofClaim: result.proofClaim
 		};
+	}
+
+	static function unwrapTransparent(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TMeta(_, child), TParenthesis(child): unwrapTransparent(child);
+			case _: expression;
+		}
 	}
 
 	static function admittedEffectOnlyVoidBoundary(boundary:Null<OcamlCallableBoundaryPlan>):Bool {

@@ -318,6 +318,14 @@ typedef InspectionCallableBoundary = {
 	final pipelineRevision:String;
 }
 
+/** One report-safe reference to the program-owned nominal class layout. **/
+typedef InspectionControlNominalRepresentationProof = {
+	final targetModuleName:String;
+	final targetTypeName:String;
+	final layoutRevision:String;
+	final representationProofId:String;
+}
+
 /** The exact value crossing carried by one private compiler-control signal. **/
 typedef InspectionControlPayload = {
 	final inputSemanticTypeId:String;
@@ -328,6 +336,7 @@ typedef InspectionControlPayload = {
 	final outputCarrierTypeId:String;
 	final outputRepresentationId:String;
 	final conversion:String;
+	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;
 	final proofClaim:String;
 }

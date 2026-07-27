@@ -98,7 +98,7 @@ class OcamlFunctionPlanSealer {
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations).plan(data.expr);
-		final controls = new OcamlControlPlanner(representations, binding).plan(data.expr, callableBoundary);
+		final controls = new OcamlControlPlanner(representations, localRepresentations, binding).plan(data.expr, callableBoundary);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -141,10 +141,37 @@ class OcamlFunctionPlanSealer {
 		visit(data.expr);
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
+		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
 		registry.sealFunction(binding, localStorage, localRepresentations, calls, controls, callableBoundary, constructionBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
+	}
+
+	function validateControlRepresentationReferences(controls:OcamlControlPlan, programRevision:String, position:Position):Void {
+		for (control in controls.decisions()) {
+			final payload = control.payload;
+			if (payload == null)
+				continue;
+			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
+				'control "${control.id}" input', position);
+			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, programRevision,
+				'control "${control.id}" output', position);
+			final nominal = payload.nominalRepresentation;
+			if (nominal == null)
+				continue;
+			final representation = try {
+				representations.require(payload.inputRepresentationId, programRevision);
+			} catch (error:Dynamic) {
+				fail(Std.string(error), position);
+			}
+			if (representation.nominalTargetModuleName != nominal.targetModuleName
+				|| representation.nominalTargetTypeName != nominal.targetTypeName
+				|| representation.nominalLayoutRevision != nominal.layoutRevision
+				|| representation.proof.id != nominal.representationProofId) {
+				fail('control "${control.id}" does not match its sealed nominal representation proof', position);
+			}
+		}
 	}
 
 	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,

@@ -82,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 17,
+			schemaVersion: 18,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 32) {
-						throw 'Unsupported lowering report schema $version; expected 32.';
+					if (version != 33) {
+						throw 'Unsupported lowering report schema $version; expected 33.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -435,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v8")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v9")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -498,11 +498,13 @@ class ReflaxeOcamlInspection {
 								&& payload.outputRepresentationId == payload.inputRepresentationId;
 							final exactPayloadValid = admittedExactInput
 								&& sameSides
+								&& payload.nominalRepresentation == null
 								&& payload.conversion == "box-and-recover-exact-value"
 								&& payload.proofId == "exact-value-early-return-control-v2"
 								&& control.proofId == "exact-value-early-return-control-v2";
 							final nullablePayloadValid = admittedNullableInput
 								&& sameSides
+								&& payload.nominalRepresentation == null
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
@@ -512,6 +514,7 @@ class ReflaxeOcamlInspection {
 								&& payload.outputSemanticTypeId == "Null<Int>"
 								&& payload.outputCarrierTypeId == "Obj.t"
 								&& payload.outputRepresentationId == "representation:Null<Int>:internal-value"
+								&& payload.nominalRepresentation == null
 								&& payload.conversion == "box-exact-int-to-nullable-carrier"
 								&& payload.proofId == "exact-int-to-nullable-early-return-control-v1"
 								&& control.proofId == "exact-int-to-nullable-early-return-control-v1";
@@ -521,13 +524,31 @@ class ReflaxeOcamlInspection {
 								&& payload.outputSemanticTypeId == "Null<Bool>"
 								&& payload.outputCarrierTypeId == "Obj.t"
 								&& payload.outputRepresentationId == "representation:Null<Bool>:internal-value"
+								&& payload.nominalRepresentation == null
 								&& payload.conversion == "box-exact-bool-to-nullable-carrier"
 								&& payload.proofId == "exact-bool-to-nullable-early-return-control-v1"
 								&& control.proofId == "exact-bool-to-nullable-early-return-control-v1";
+							final nominalDecision = representationById.get(payload.inputRepresentationId);
+							final nominal = payload.nominalRepresentation;
+							final nominalPayloadValid = nominalDecision != null
+								&& nominal != null
+								&& sameSides
+								&& nominalDecision.semanticTypeId == payload.inputSemanticTypeId
+								&& nominalDecision.carrierTypeId == payload.inputCarrierTypeId
+								&& nominalDecision.domain == "internal-value"
+								&& nominalDecision.boxingPolicy == "nullable-nominal-record-carrier"
+								&& nominalDecision.nominalTargetModuleName == nominal.targetModuleName
+								&& nominalDecision.nominalTargetTypeName == nominal.targetTypeName
+								&& nominalDecision.nominalLayoutRevision == nominal.layoutRevision
+								&& nominalDecision.proofId == nominal.representationProofId
+								&& payload.conversion == "box-and-recover-nominal-value"
+								&& payload.proofId == "exact-monomorphic-class-early-return-control-v1"
+								&& control.proofId == "exact-monomorphic-class-early-return-control-v1";
 							if (!commonPayloadValid
 								|| payload.proofClaim.length == 0
-								|| (!exactPayloadValid && !nullablePayloadValid && !nullableIntConversionValid && !nullableBoolConversionValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value, nullable-carrier, or primitive-to-nullable payload crossing.';
+								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !nullableIntConversionValid
+									&& !nullableBoolConversionValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, or primitive-to-nullable payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
@@ -806,6 +827,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function controlPayload(value:Dynamic):InspectionControlPayload {
+		final nominalValue = Reflect.field(value, "nominalRepresentation");
 		return {
 			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
 			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
@@ -815,6 +837,12 @@ class ReflaxeOcamlInspection {
 			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
 			outputRepresentationId: requiredString(value, "outputRepresentationId"),
 			conversion: requiredString(value, "conversion"),
+			nominalRepresentation: nominalValue == null ? null : {
+				targetModuleName: requiredString(nominalValue, "targetModuleName"),
+				targetTypeName: requiredString(nominalValue, "targetTypeName"),
+				layoutRevision: requiredString(nominalValue, "layoutRevision"),
+				representationProofId: requiredString(nominalValue, "representationProofId")
+			},
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim")
 		};

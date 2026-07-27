@@ -2,4 +2,8 @@ constructor_local result=3 events=arg,ctor,method
 alias identity=true value=9 events=ctor,write
 captured_local value=9 events=ctor,write
 captured_reassigned value=11 events=ctor,ctor
+return_branch value=21 fallback_value=30 events=ctor,ctor,ctor,ctor
+return_null is_null=true events=
+return_loop value=50 events=ctor,ctor
+return_catch value=70 events=ctor,ctor
 factory_receiver result=7 events=factory,ctor,delta,method

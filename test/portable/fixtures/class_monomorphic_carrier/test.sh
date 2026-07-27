@@ -17,9 +17,10 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 32
+if (report.schemaVersion !== 33
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v9'
 	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12') {
-	fail('unexpected lowering-report schema or representation scope')
+	fail('unexpected lowering-report schema, control model, or representation scope')
 }
 
 const decision = report.representations?.find(item =>
@@ -53,6 +54,42 @@ if (capturedDecision == null
 	fail('the captured-and-reassigned Counter local does not reuse the exact nominal record inside one shared cell')
 }
 
+const nominalReturns = (report.controls ?? []).filter(control =>
+	control.kind === 'return'
+	&& control.payload?.conversion === 'box-and-recover-nominal-value')
+const expectedReturnFunctions = ['chooseBranch', 'chooseLoop', 'chooseThroughCatch']
+if (nominalReturns.length !== expectedReturnFunctions.length) {
+	fail(`expected ${expectedReturnFunctions.length} exact Counter early returns, got ${nominalReturns.length}`)
+}
+for (const functionName of expectedReturnFunctions) {
+	const control = nominalReturns.find(item => item.functionId.includes(`|${functionName}|`))
+	const payload = control?.payload
+	const nominal = payload?.nominalRepresentation
+	if (control == null
+		|| control.targetId !== control.functionId
+		|| control.pipelineRevision !== 'ocaml-function-plans-v35'
+		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
+		|| payload?.inputSemanticTypeId !== 'Counter'
+		|| payload.inputCarrierTypeId !== 'counter_t'
+		|| payload.inputRepresentationId !== decision.id
+		|| payload.outputSemanticTypeId !== 'Counter'
+		|| payload.outputCarrierTypeId !== 'counter_t'
+		|| payload.outputRepresentationId !== decision.id
+		|| payload.signalCarrierTypeId !== 'Obj.t'
+		|| payload.proofId !== 'exact-monomorphic-class-early-return-control-v1'
+		|| nominal?.targetModuleName !== decision.nominalTargetModuleName
+		|| nominal?.targetTypeName !== decision.nominalTargetTypeName
+		|| nominal?.layoutRevision !== decision.nominalLayoutRevision
+		|| nominal?.representationProofId !== decision.proof?.id) {
+		fail(`${functionName} did not bind its private return crossing to the exact Counter layout`)
+	}
+}
+if ((report.controls ?? []).some(control =>
+	control.kind === 'return'
+	&& control.functionId.includes('|chooseNull|'))) {
+	fail('the unproved null-to-nominal return was admitted without its own conversion contract')
+}
+
 const admittedReceivers = (report.plans ?? []).filter(plan =>
 	plan.place?.receiverSemanticTypeId === 'Counter'
 	&& plan.place?.receiverRepresentationId === decision.id)
@@ -81,8 +118,8 @@ if (constructorBoundaries.length !== 1
 	|| constructorBoundaries[0].result?.outputRepresentationId !== decision.id) {
 	fail('the report did not seal the exact Counter construction boundary')
 }
-if (constructorCalls.length !== 9) {
-	fail(`expected nine exact Counter constructions across admitted and excluded local-storage cases, got ${constructorCalls.length}`)
+if (constructorCalls.length !== 16) {
+	fail(`expected sixteen exact Counter constructions across admitted, return, and excluded local-storage cases, got ${constructorCalls.length}`)
 }
 for (const constructorCall of constructorCalls) {
 	if (constructorCall.receiver !== null
@@ -145,9 +182,26 @@ if (!/let reassignedCapturedLocalCase = fun \(\) -> ignore \(\([\s\S]*let counte
 	fail('the captured-and-reassigned Counter local did not use one typed nominal ref cell')
 }
 const reassignedStart = source.indexOf('let reassignedCapturedLocalCase')
-const reassignedEnd = source.indexOf('\nlet excludedCarrierBoundaries', reassignedStart)
+const reassignedEnd = source.indexOf('\nlet branchEarlyReturnCase', reassignedStart)
 if (reassignedStart < 0 || reassignedEnd < 0 || source.slice(reassignedStart, reassignedEnd).includes('Obj.magic')) {
 	fail('the admitted captured-and-reassigned Counter function still contains a Dynamic carrier cast')
+}
+for (const functionName of expectedReturnFunctions) {
+	const start = source.indexOf(`let ${functionName} =`)
+	const end = source.indexOf('\nlet ', start + 1)
+	const generated = start < 0 ? '' : source.slice(start, end < 0 ? source.length : end)
+	if (generated.length === 0
+		|| generated.includes('Obj.magic')
+		|| !/HxRuntime\.Hx_return \(Obj\.repr early\)/.test(generated)
+		|| !/\(Obj\.obj __ret_\d+ : counter_t\)/.test(generated)) {
+		fail(`${functionName} did not box once and recover the sealed nominal carrier without Obj.magic`)
+	}
+}
+const nullReturnStart = source.indexOf('let chooseNull =')
+const nullReturnEnd = source.indexOf('\nlet ', nullReturnStart + 1)
+const nullReturnSource = nullReturnStart < 0 ? '' : source.slice(nullReturnStart, nullReturnEnd < 0 ? source.length : nullReturnEnd)
+if (!nullReturnSource.includes('Obj.magic')) {
+	fail('the unsupported null-to-nominal return was accidentally admitted')
 }
 if (!/let ordinary = Obj\.magic \(let __call_arg_0_\d+ = 13 in counter_create __call_arg_0_\d+\)/.test(source)
 	|| !/let called = ref \(Obj\.magic \(let __call_arg_0_\d+ = 14 in counter_create __call_arg_0_\d+\)\) in let read = fun \(\) -> \(Obj\.magic \(!called\) : counter_t\)\.value/.test(source)
@@ -194,6 +248,8 @@ first_report="$(mktemp)"
 inspection_report="$(mktemp)"
 invalid_inspection_log="$(mktemp)"
 invalid_output="out-invalid-monomorphic-class-$$"
+invalid_control_nominal_log="$(mktemp)"
+invalid_control_nominal_output="out-invalid-control-nominal-$$"
 invalid_captured_storage_log="$(mktemp)"
 invalid_captured_storage_output="out-invalid-captured-class-storage-$$"
 invalid_receiver_log="$(mktemp)"
@@ -208,7 +264,7 @@ missing_constructor_boundary_log="$(mktemp)"
 missing_constructor_boundary_output="out-missing-constructor-boundary-$$"
 invalid_constructor_identity_log="$(mktemp)"
 invalid_constructor_identity_output="out-invalid-constructor-identity-$$"
-trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_captured_storage_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_captured_storage_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
+trap 'rm -f "$first_report" "$inspection_report" "$invalid_inspection_log" "$invalid_control_nominal_log" "$invalid_captured_storage_log" "$invalid_receiver_log" "$invalid_call_receiver_log" "$invalid_call_schedule_log" "$invalid_constructor_result_log" "$missing_constructor_boundary_log" "$invalid_constructor_identity_log"; rm -rf "$invalid_output" "$invalid_control_nominal_output" "$invalid_captured_storage_output" "$invalid_receiver_output" "$invalid_call_receiver_output" "$invalid_call_schedule_output" "$invalid_constructor_result_output" "$missing_constructor_boundary_output" "$invalid_constructor_identity_output"' EXIT
 
 cp "$report_file" "$first_report"
 haxe build.hxml -D ocaml_build=native
@@ -269,6 +325,35 @@ fi
 if ! grep -Fq "does not match its sealed nominal carrier layout" "$invalid_inspection_log"; then
 	echo "The external inspector rejected the corrupted nominal carrier for an unexpected reason" >&2
 	cat "$invalid_inspection_log" >&2
+	exit 1
+fi
+
+cp -R out "$invalid_control_nominal_output"
+node - "$invalid_control_nominal_output/ocaml_lowering_report.json" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const control = report.controls?.find(item =>
+	item.payload?.conversion === 'box-and-recover-nominal-value')
+if (control?.payload?.nominalRepresentation == null) {
+	throw new Error('missing nominal return proof to corrupt')
+}
+control.payload.nominalRepresentation.layoutRevision = `sha256:${'0'.repeat(64)}`
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+if (
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$fixture_root" --output "$invalid_control_nominal_output" --require-lowering --json
+) >"$invalid_control_nominal_log" 2>&1; then
+	echo "The external inspector accepted an early return bound to a stale class layout" >&2
+	exit 1
+fi
+if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, or primitive-to-nullable payload crossing" "$invalid_control_nominal_log"; then
+	echo "The external inspector rejected the stale early-return class layout for an unexpected reason" >&2
+	cat "$invalid_control_nominal_log" >&2
 	exit 1
 fi
 

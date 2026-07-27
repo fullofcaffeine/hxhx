@@ -97,7 +97,8 @@ class ControlPlanFixture {
 				outputRepresentationId: outputRepresentationId,
 				conversion: selectedConversion,
 				proofId: selectedProofId,
-				proofClaim: proof
+				proofClaim: proof,
+				nominalRepresentation: null
 			},
 			runtimeTags: [],
 			runtimeTagPolicy: OcamlControlRuntimeTagPolicy.NoRuntimeTags,
@@ -233,7 +234,8 @@ class ControlPlanFixture {
 				outputRepresentationId: 'representation:$outputSemanticType:internal-value',
 				conversion: selectedConversion,
 				proofId: OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID,
-				proofClaim: proof
+				proofClaim: proof,
+				nominalRepresentation: null
 			},
 			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId),
 			runtimeTagPolicy: runtimeTagPolicy ?? OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,

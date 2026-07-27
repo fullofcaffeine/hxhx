@@ -751,7 +751,7 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
-	static function monomorphicClassSemanticTypeId(type:Type):Null<String> {
+	public static function monomorphicClassSemanticTypeId(type:Type):Null<String> {
 		return switch (type) {
 			case TInst(classRef, parameters):
 				final classType = classRef.get();

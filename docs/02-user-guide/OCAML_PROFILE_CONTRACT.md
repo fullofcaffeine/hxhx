@@ -221,7 +221,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `32`)
+  - `schemaVersion` (current: `33`)
   - the sealed assignment/update plans and their source locations
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
@@ -243,6 +243,13 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     private signal, and the function boundary preserves that resulting
     `Obj.t` carrier. Existing nullable and newly converted early returns may
     share one boundary; an incompatible mixed family fails before output.
+    A constructor-produced local of an admitted closed user class records
+    `box-and-recover-nominal-value`. Its payload names the exact OCaml record
+    type, layout revision, and representation proof selected for the complete
+    program. The compiler boxes that same reference only while the private
+    signal is in flight and recovers the registered record at the owning
+    function boundary. Class parameters, call-produced class locals, and
+    `return null` are not implied by this record and remain unadmitted.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and

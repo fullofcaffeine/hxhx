@@ -58,4 +58,4 @@ for route in interp js neko; do
 	run_route "$route"
 done
 
-echo "REFLAXE_OCAML_MONOMORPHIC_CLASS_CARRIER_ORACLE:PASS routes=3 cases=5"
+echo "REFLAXE_OCAML_MONOMORPHIC_CLASS_CARRIER_ORACLE:PASS routes=3 cases=9"

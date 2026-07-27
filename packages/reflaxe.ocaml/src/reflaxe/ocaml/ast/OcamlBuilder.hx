@@ -272,7 +272,7 @@ class OcamlBuilder {
 						controlPlanInvariant('return decision "${decision.id}" reached syntax without its sealed value payload', position);
 					else {
 						final payload = switch (selectedPayload.conversion) {
-							case BoxAndRecoverExactValue:
+							case BoxAndRecoverExactValue, BoxAndRecoverNominalValue:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case PreserveNullableCarrier:
 								buildExpr(value);
@@ -302,7 +302,7 @@ class OcamlBuilder {
 		if (payload == null)
 			return controlPlanInvariant('return decision "${decision.id}" reached its function boundary without a sealed value payload', position);
 		return switch (payload.conversion) {
-			case BoxAndRecoverExactValue:
+			case BoxAndRecoverExactValue, BoxAndRecoverNominalValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case PreserveNullableCarrier:

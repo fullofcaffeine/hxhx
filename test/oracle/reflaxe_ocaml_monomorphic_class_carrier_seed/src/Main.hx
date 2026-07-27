@@ -63,6 +63,59 @@ class Main {
 		return new Counter(5);
 	}
 
+	/** Returns one constructor-produced local from a nested branch. */
+	static function chooseBranch(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
+		final early = new Counter(earlyValue);
+		final fallback = new Counter(fallbackValue);
+		if (stop)
+			return early;
+		return fallback;
+	}
+
+	/** Returns one constructor-produced local from inside a lexical loop. */
+	static function chooseLoop(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
+		final early = new Counter(earlyValue);
+		final fallback = new Counter(fallbackValue);
+		var first = true;
+		while (first) {
+			first = false;
+			if (stop)
+				return early;
+		}
+		return fallback;
+	}
+
+	/**
+		Returns through a source `catch` without letting it intercept the return.
+
+		The `caught` event is observable evidence that ordinary Haxe exception
+		handling did not mistake function-local control for a source exception.
+	**/
+	static function chooseThroughCatch(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
+		final early = new Counter(earlyValue);
+		final fallback = new Counter(fallbackValue);
+		try {
+			if (stop)
+				return early;
+		} catch (_:Dynamic) {
+			Counter.record("caught");
+		}
+		return fallback;
+	}
+
+	/**
+		Keeps null-to-nominal return behavior visible but outside the first proof.
+
+		The nominal record decision does not yet own the conversion from Haxe's
+		null sentinel into a class carrier, so this function must remain on the
+		legacy path until that conversion has a separate typed contract.
+	**/
+	static function chooseNull(stop:Bool, fallbackValue:Int):Counter {
+		if (stop)
+			return null;
+		return new Counter(fallbackValue);
+	}
+
 	static function constructorLocalCase():Void {
 		Counter.reset();
 		final counter = new Counter(sourceValue());
@@ -110,6 +163,37 @@ class Main {
 		printLine("captured_reassigned value=" + read() + " events=" + Counter.renderEvents());
 	}
 
+	static function branchEarlyReturnCase():Void {
+		Counter.reset();
+		final selected = chooseBranch(true, 20, 30);
+		selected.value = 21;
+		final fallbackSelected = chooseBranch(false, 20, 30);
+		printLine("return_branch value="
+			+ selected.value
+			+ " fallback_value="
+			+ fallbackSelected.value
+			+ " events="
+			+ Counter.renderEvents());
+	}
+
+	static function nullEarlyReturnCase():Void {
+		Counter.reset();
+		final selected = chooseNull(true, 40);
+		printLine("return_null is_null=" + (selected == null) + " events=" + Counter.renderEvents());
+	}
+
+	static function loopEarlyReturnCase():Void {
+		Counter.reset();
+		final selected = chooseLoop(true, 50, 60);
+		printLine("return_loop value=" + selected.value + " events=" + Counter.renderEvents());
+	}
+
+	static function catchEarlyReturnCase():Void {
+		Counter.reset();
+		final selected = chooseThroughCatch(true, 70, 80);
+		printLine("return_catch value=" + selected.value + " events=" + Counter.renderEvents());
+	}
+
 	#if class_carrier_negative_boundaries
 	/**
 		Keeps unadmitted mutable and call-produced class values executable.
@@ -138,6 +222,10 @@ class Main {
 		aliasCase();
 		capturedLocalCase();
 		reassignedCapturedLocalCase();
+		branchEarlyReturnCase();
+		nullEarlyReturnCase();
+		loopEarlyReturnCase();
+		catchEarlyReturnCase();
 		#if class_carrier_factory_receiver
 		factoryReceiverCase();
 		#end

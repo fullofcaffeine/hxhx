@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first eight bounded control-effect slices are now executable. An ordinary
+The first nine bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -126,8 +126,40 @@ already-nullable early return in the same function. An incompatible return,
 such as a `Dynamic` value mixed into that family, rejects the whole function
 before generated source or lowering evidence is published.
 
+The ninth slice lets one already-proven monomorphic class local leave early
+without falling back to `Obj.magic`. A **monomorphic class** in this slice is a
+closed, non-generic user class for which the complete program has selected one
+exact OCaml record layout. For example:
+
+```haxe
+static function choose(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
+	final early = new Counter(earlyValue);
+	final fallback = new Counter(fallbackValue);
+	if (stop)
+		return early;
+	return fallback;
+}
+```
+
+Before OCaml syntax is written, the function-local plan proves that `early`
+already uses the registered `Counter` record. The control record then carries
+the same semantic type, target carrier, representation identity, layout
+revision, and representation proof into the function's private return signal.
+Generated OCaml uses `Obj.repr` once while control is in flight and `Obj.obj`
+once at the exact `Counter` boundary. The recovered value remains the same
+mutable object, so later field writes and aliases observe the same state.
+
+This does not admit every class-shaped value. Class parameters, call-produced
+locals, inheritance, interfaces, generics, extern classes, dynamic methods,
+and the Haxe null sentinel remain on the older path. In particular,
+`return null` from a class-valued function still needs a separate
+null-to-nominal conversion contract; the record-carrier proof does not invent
+that crossing. The lowering report and public inspector reject a control
+record whose nominal layout revision or representation proof disagrees with
+the program registry.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.8`, not closure of the parent control-effects requirement.
+`haxe_ocaml-w32h3.9`, not closure of the parent control-effects requirement.
 Additional value-return payloads, other primitive-to-nullable and nullable
 return carriers, unsupported catch and throw payloads, cleanup effects, and
 the complete runtime-requirement ledger remain unfinished.
@@ -280,14 +312,18 @@ Required semantic-safety prerequisites before release authorization:
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
   model cannot represent them (`haxe_ocaml-w32h3`); its first eight slices cover
-  exact-`Int`, exact-`Bool`, and represented-`String` early returns from
+  exact-`Int`, exact-`Bool`, represented-`String`, and the first
+  constructor-produced monomorphic-class local early returns from
   ordinary static functions, including the existing String runtime null
   sentinel; carrier-preserving early returns of exact `Null<Int>` and
   `Null<Bool>` values; and payloadless early return from ordinary static
   `Void` functions without inventing a value. A direct final or nested early
   exact `Int` or `Bool` may cross once into its matching nullable carrier
   inside that function boundary; an already-nullable early value remains
-  unchanged. The slices also cover exact lexical targets for `break` and
+  unchanged. The monomorphic-class slice binds the private crossing to the
+  exact program-owned record layout and representation proof, while class
+  parameters, call-produced locals, and null-to-nominal conversion remain
+  deliberately unadmitted. The slices also cover exact lexical targets for `break` and
   `continue` in ordinary `while` and `do ... while` loops, and
   exact-`Int`/`Bool`/represented-`String` payloads entering the global Haxe
   exception channel with upstream-compatible runtime-value tags. Complete
