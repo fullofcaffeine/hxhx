@@ -1,6 +1,12 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/**
+	Checks that Stage3 preserves resolved root/import owners and distinguishes
+	three trailing argument contracts: rest arguments receive an array even
+	when omitted, ordinary arrays remain required, and optional arrays receive
+	the null carrier when omitted.
+**/
 class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -53,7 +59,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'package php;',
 			'extern class Syntax {',
 			'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
-			'  static function codeLowered(code:String, args:Array<Dynamic>):Dynamic;',
+			'  // Haxe 4.3.7 requires this ordinary array argument at every call site.',
+			'  static function codeArray(code:String, args:Array<Dynamic>):Dynamic;',
+			'  static function codeOptional(code:String, ?args:Array<Dynamic>):Dynamic;',
 			'}',
 		].join("\n"));
 
@@ -85,8 +93,11 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function usePhpRest():Dynamic {',
 			'    return php.Syntax.code("php extern");',
 			'  }',
-			'  static function usePhpLoweredRest():Dynamic {',
-			'    return php.Syntax.codeLowered("php lowered extern");',
+			'  static function usePhpArray():Dynamic {',
+			'    return php.Syntax.codeArray("php array extern", []);',
+			'  }',
+			'  static function usePhpOptionalArray():Dynamic {',
+			'    return php.Syntax.codeOptional("php optional array extern");',
 			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
 			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Lambda.array(Type.getClassFields(c)) != null && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
@@ -98,7 +109,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'    useRest();',
 			'    useExternRest();',
 			'    usePhpRest();',
-			'    usePhpLoweredRest();',
+			'    usePhpArray();',
+			'    usePhpOptionalArray();',
 			'  }',
 			'}',
 		].join("\n");
@@ -130,8 +142,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'Expected extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('Php_Syntax.code ("php extern") (HxBootArray.create ())') >= 0,
 				'Expected packaged extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
-			assertTrue(ocaml.indexOf('Php_Syntax.codeLowered ("php lowered extern") (HxBootArray.create ())') >= 0,
-				'Expected packaged lowered variadic extern calls to lower to an explicit empty HxBootArray.');
+			assertTrue(ocaml.indexOf('Php_Syntax.codeArray ("php array extern") (HxBootArray.of_list [])') >= 0,
+				'Expected a supplied ordinary array argument to remain one explicit HxBootArray argument.');
+			assertTrue(ocaml.indexOf('Php_Syntax.codeOptional ("php optional array extern") ((Obj.magic HxRuntime.hx_null))') >= 0,
+				'Expected an omitted optional array argument to remain null rather than becoming a rest array.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');
@@ -170,7 +184,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'package php;',
 				'extern class Syntax {',
 				'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
-				'  static function codeLowered(code:String, args:Array<Dynamic>):Dynamic;',
+				'  static function codeArray(code:String, args:Array<Dynamic>):Dynamic;',
+				'  static function codeOptional(code:String, ?args:Array<Dynamic>):Dynamic;',
 				'}',
 			].join("\n"));
 			final phpBootHx = haxe.io.Path.join([phpSrcDir, 'php', 'Boot.hx']);
@@ -180,8 +195,11 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'  public static function getPrefix():Dynamic {',
 				'    return Syntax.code("self::PHP_PREFIX");',
 				'  }',
-				'  public static function getPrefixLowered():Dynamic {',
-				'    return Syntax.codeLowered("self::PHP_PREFIX");',
+				'  public static function getPrefixArray():Dynamic {',
+				'    return Syntax.codeArray("self::PHP_PREFIX", []);',
+				'  }',
+				'  public static function getPrefixOptionalArray():Dynamic {',
+				'    return Syntax.codeOptional("self::PHP_PREFIX");',
 				'  }',
 				'}',
 			].join("\n");
@@ -196,8 +214,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			final phpOcaml = File.getContent(phpBootMl);
 			assertTrue(phpOcaml.indexOf('Php_Syntax.code ("self::PHP_PREFIX") (HxBootArray.create ())') >= 0,
 				'Expected same-package short type `Syntax.code(...)` to lower with an explicit empty HxBootArray.');
-			assertTrue(phpOcaml.indexOf('Php_Syntax.codeLowered ("self::PHP_PREFIX") (HxBootArray.create ())') >= 0,
-				'Expected lowered same-package short type `Syntax.codeLowered(...)` to lower with an explicit empty HxBootArray.');
+			assertTrue(phpOcaml.indexOf('Php_Syntax.codeArray ("self::PHP_PREFIX") (HxBootArray.of_list [])') >= 0,
+				'Expected a supplied same-package ordinary array argument to remain one explicit HxBootArray argument.');
+			assertTrue(phpOcaml.indexOf('Php_Syntax.codeOptional ("self::PHP_PREFIX") ((Obj.magic HxRuntime.hx_null))') >= 0,
+				'Expected a same-package omitted optional array argument to remain null rather than becoming a rest array.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}
