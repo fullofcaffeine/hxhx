@@ -46,6 +46,7 @@ class ReflaxeOcamlInspection {
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
 	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID = "typed-function-value-signature-v1";
+	static inline final FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID = "typed-function-value-optional-string-signature-v1";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -320,8 +321,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 22) {
-						throw 'Unsupported lowering report schema $version; expected 22.';
+					if (version != 23) {
+						throw 'Unsupported lowering report schema $version; expected 23.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -370,7 +371,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v12")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v13")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -669,29 +670,18 @@ class ReflaxeOcamlInspection {
 
 	static function validateCallSignature(kind:String, arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>,
 			proofId:String, isCallableBoundary:Bool, owner:String):Void {
-		final expectedProof = kind == "typed-function-value" ? FUNCTION_VALUE_SIGNATURE_PROOF_ID : DIRECT_STATIC_SIGNATURE_PROOF_ID;
-		if (proofId != expectedProof)
-			throw '$owner has proof "$proofId" instead of "$expectedProof".';
+		if (kind == "direct-static-haxe-method" && proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
+			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
 		if (kind == "typed-function-value") {
-			if (isCallableBoundary
-				|| arguments.length != 1
-				|| arguments[0].parameterOptional
-				|| arguments[0].inputSemanticTypeId != "Int"
-				|| arguments[0].inputCarrierTypeId != "int"
-				|| arguments[0].outputSemanticTypeId != "Int"
-				|| arguments[0].outputCarrierTypeId != "int"
-				|| arguments[0].conversion != "identity"
-				|| resultKind != "value"
-				|| result == null) {
-				throw '$owner is outside the one-argument exact Int function-value signature.';
-			}
-			final functionResult:InspectionCallValue = result;
-			if (functionResult.inputSemanticTypeId != "Int"
-				|| functionResult.inputCarrierTypeId != "int"
-				|| functionResult.outputSemanticTypeId != "Int"
-				|| functionResult.outputCarrierTypeId != "int"
-				|| functionResult.conversion != "identity") {
-				throw '$owner is outside the one-argument exact Int function-value signature.';
+			if (isCallableBoundary)
+				throw '$owner cannot describe a computed function value.';
+			switch (proofId) {
+				case FUNCTION_VALUE_SIGNATURE_PROOF_ID:
+					validateExactIntFunctionValueSignature(arguments, resultKind, result, owner);
+				case FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID:
+					validateOptionalStringFunctionValueSignature(arguments, resultKind, result, owner);
+				case _:
+					throw '$owner has unsupported function-value proof "$proofId".';
 			}
 		}
 		switch (resultKind) {
@@ -736,6 +726,62 @@ class ReflaxeOcamlInspection {
 					throw '$owner has an unsupported optional-parameter shape.';
 				}
 			}
+		}
+	}
+
+	static function validateExactIntFunctionValueSignature(arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>,
+			owner:String):Void {
+		if (arguments.length != 1
+			|| arguments[0].parameterOptional
+			|| arguments[0].inputSemanticTypeId != "Int"
+			|| arguments[0].inputCarrierTypeId != "int"
+			|| arguments[0].outputSemanticTypeId != "Int"
+			|| arguments[0].outputCarrierTypeId != "int"
+			|| arguments[0].conversion != "identity"
+			|| resultKind != "value"
+			|| result == null) {
+			throw '$owner is outside the one-argument exact Int function-value signature.';
+		}
+		final functionResult:InspectionCallValue = result;
+		if (functionResult.inputSemanticTypeId != "Int"
+			|| functionResult.inputCarrierTypeId != "int"
+			|| functionResult.outputSemanticTypeId != "Int"
+			|| functionResult.outputCarrierTypeId != "int"
+			|| functionResult.conversion != "identity") {
+			throw '$owner is outside the one-argument exact Int function-value signature.';
+		}
+	}
+
+	static function validateOptionalStringFunctionValueSignature(arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>,
+			owner:String):Void {
+		if ((arguments.length != 1 && arguments.length != 2)
+			|| !arguments[arguments.length - 1].parameterOptional
+			|| (arguments.length == 2 && arguments[0].parameterOptional)
+			|| resultKind != "value"
+			|| result == null) {
+			throw '$owner is outside the trailing optional String function-value signature.';
+		}
+		for (index in 0...arguments.length) {
+			final argument = arguments[index];
+			final validConversion = index < arguments.length
+				- 1 ? argument.conversion == "identity" : argument.conversion == "identity"
+				|| argument.conversion == "materialize-omitted-string"
+				|| argument.conversion == "materialize-explicit-null-string";
+			if (argument.inputSemanticTypeId != "String"
+				|| argument.inputCarrierTypeId != "string"
+				|| argument.outputSemanticTypeId != "String"
+				|| argument.outputCarrierTypeId != "string"
+				|| !validConversion) {
+				throw '$owner is outside the trailing optional String function-value signature.';
+			}
+		}
+		final functionResult:InspectionCallValue = result;
+		if (functionResult.inputSemanticTypeId != "String"
+			|| functionResult.inputCarrierTypeId != "string"
+			|| functionResult.outputSemanticTypeId != "String"
+			|| functionResult.outputCarrierTypeId != "string"
+			|| functionResult.conversion != "identity") {
+			throw '$owner is outside the trailing optional String function-value signature.';
 		}
 	}
 

@@ -54,6 +54,8 @@ class CallPlanFixture {
 	static inline final VOID_CALL_ID = "call:void-fixture";
 	static inline final FUNCTION_VALUE_CALLEE_ID = "function-value:fixture";
 	static inline final FUNCTION_VALUE_CALL_ID = "call:function-value-fixture";
+	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALLEE_ID = "function-value:optional-string-fixture";
+	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID = "call:optional-string-function-value-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -526,6 +528,31 @@ class CallPlanFixture {
 			reason: "fixture exact Int function-value call",
 			proofId: OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture exact Int function-value signature",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function optionalStringFunctionValueCall(caller:OcamlFunctionPlanBinding, arguments:Array<OcamlCallValuePlan>,
+			?omittedArgumentIndices:Array<Int>):OcamlCallDecision {
+		return {
+			id: OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 32, max: 33},
+			calleeId: OPTIONAL_STRING_FUNCTION_VALUE_CALLEE_ID,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.TypedFunctionValue,
+			arguments: arguments,
+			resultKind: OcamlCallResultKind.Value,
+			result: stringValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID, arguments.length, omittedArgumentIndices ?? [], true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture trailing optional String function-value call",
+			proofId: OcamlCallPlan.FUNCTION_VALUE_OPTIONAL_STRING_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture trailing optional String function-value signature",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -1040,6 +1067,33 @@ class CallPlanFixture {
 		expectThrows("mismatched function-value signature proof", () -> OcamlCallPlan.requireCall(wrongFunctionValueProof));
 		final wrongFunctionValueArgument = copyCall(selectedFunctionValueCall, null, null, [boolValue(0)]);
 		expectThrows("outside the one-argument exact Int function-value signature", () -> OcamlCallPlan.requireCall(wrongFunctionValueArgument));
+
+		final omittedOptionalStringFunctionValueCall = optionalStringFunctionValueCall(caller, [optionalStringValue(0, true)], [0]);
+		OcamlCallPlan.requireCall(omittedOptionalStringFunctionValueCall);
+		final suppliedOptionalStringFunctionValueCall = optionalStringFunctionValueCall(caller, [optionalStringValue(0)]);
+		OcamlCallPlan.requireCall(suppliedOptionalStringFunctionValueCall);
+		final explicitNullOptionalStringFunctionValueCall = optionalStringFunctionValueCall(caller, [explicitNullStringValue(0)]);
+		OcamlCallPlan.requireCall(explicitNullOptionalStringFunctionValueCall);
+		final requiredThenOmittedStringFunctionValueCall = optionalStringFunctionValueCall(caller, [stringValue(0), optionalStringValue(1, true)], [1]);
+		OcamlCallPlan.requireCall(requiredThenOmittedStringFunctionValueCall);
+		final requiredThenSuppliedStringFunctionValueCall = optionalStringFunctionValueCall(caller, [stringValue(0), optionalStringValue(1)]);
+		OcamlCallPlan.requireCall(requiredThenSuppliedStringFunctionValueCall);
+
+		final wrongOptionalStringProof = copyCall(omittedOptionalStringFunctionValueCall);
+		Reflect.setField(wrongOptionalStringProof, "proofId", OcamlCallPlan.FUNCTION_VALUE_SIGNATURE_PROOF_ID);
+		expectThrows("one-argument exact Int function-value signature", () -> OcamlCallPlan.requireCall(wrongOptionalStringProof));
+		final requiredTrailingString = copyCall(requiredThenSuppliedStringFunctionValueCall, null, null, [stringValue(0), stringValue(1)]);
+		expectThrows("trailing optional String function-value signature", () -> OcamlCallPlan.requireCall(requiredTrailingString));
+		final optionalBoolArgument = boolValue(0);
+		Reflect.setField(optionalBoolArgument, "parameterOptional", true);
+		final optionalBoolClaimingStringProof = copyCall(suppliedOptionalStringFunctionValueCall, null, null, [optionalBoolArgument]);
+		expectThrows("unsupported optional-parameter shape", () -> OcamlCallPlan.requireCall(optionalBoolClaimingStringProof));
+		final wrongOptionalStringCarrier = copyCall(suppliedOptionalStringFunctionValueCall);
+		Reflect.setField(wrongOptionalStringCarrier.arguments[0], "outputCarrierTypeId", "Obj.t");
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireCall(wrongOptionalStringCarrier));
+		final omittedStringWithSourceEvaluation = copyCall(omittedOptionalStringFunctionValueCall);
+		Reflect.setField(omittedStringWithSourceEvaluation.evaluationSchedule[1], "sourceArgumentIndex", 0);
+		expectThrows("invalid argument materialization", () -> OcamlCallPlan.requireCall(omittedStringWithSourceEvaluation));
 
 		final selectedCall = call(caller);
 		final registry = new OcamlFunctionPlanRegistry();

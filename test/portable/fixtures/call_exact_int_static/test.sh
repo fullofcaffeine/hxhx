@@ -254,7 +254,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 22 || report.callModel !== 'typed-ocaml-directional-call-boundary-v12') {
+if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v13') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {

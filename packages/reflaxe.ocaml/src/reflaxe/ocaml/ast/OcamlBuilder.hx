@@ -1435,7 +1435,7 @@ class OcamlBuilder {
 				callPlanInvariant('admitted call "${OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get())}" reached syntax without its sealed occurrence plan',
 					e.pos);
 			case TCall(callee, arguments) if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, e.t)):
-				callPlanInvariant("admitted exact Int function-value call reached syntax without its sealed occurrence plan", e.pos);
+				callPlanInvariant("admitted typed function-value call reached syntax without its sealed occurrence plan", e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):

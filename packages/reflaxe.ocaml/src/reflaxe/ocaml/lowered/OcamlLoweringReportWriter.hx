@@ -178,7 +178,7 @@ class OcamlLoweringReportWriter {
 			callableBoundaries: sortedCallableBoundaries
 		});
 		final report = {
-			schemaVersion: 22,
+			schemaVersion: 23,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
@@ -194,7 +194,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v12",
+			callModel: "typed-ocaml-directional-call-boundary-v13",
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,

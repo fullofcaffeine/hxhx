@@ -49,7 +49,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v20";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v21";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
