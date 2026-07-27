@@ -20,6 +20,17 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
+The first bounded control-effect slice is now executable: an ordinary static
+Haxe function returning an exact `Int` can leave early from a nested branch,
+block, loop, or `try` body without the OCaml generator reconstructing that
+behavior from target syntax. The compiler records and validates the return
+target and payload conversion before printing OCaml, and the generated
+function catches only its own return signal. A nested anonymous function keeps
+an independent return boundary. This is evidence for `haxe_ocaml-w32h3.1`, not
+closure of the parent control-effects requirement: other return payloads,
+`throw`/`catch`, loop `break`/`continue`, and the complete runtime-requirement
+ledger remain unfinished.
+
 Accepted architecture checkpoint:
 
 - `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
@@ -167,7 +178,9 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`);
+  model cannot represent them (`haxe_ocaml-w32h3`); its first closed slice
+  covers exact-`Int` early returns from ordinary static functions, while the
+  remaining control families are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);
