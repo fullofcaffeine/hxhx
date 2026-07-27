@@ -12,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
@@ -35,7 +36,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 28;
+	public static inline final SCHEMA_VERSION = 29;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -90,8 +91,8 @@ class OcamlLoweringReportWriter {
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
 			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, staticStorage:Array<OcamlStaticStorageReportEntry>,
-			staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
+			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -215,6 +216,21 @@ class OcamlLoweringReportWriter {
 				}
 			}
 		}
+		final sortedCatchChains = controlCatchChains.copy();
+		sortedCatchChains.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final catchChainIds:Map<String, Bool> = [];
+		for (chain in sortedCatchChains) {
+			OcamlControlPlan.requireCatchChain(chain);
+			if (catchChainIds.exists(chain.id))
+				throw 'Control catch-chain identity "${chain.id}" occurs more than once.';
+			for (clause in chain.clauses) {
+				if (clause.semanticTypeId != "Dynamic") {
+					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
+						OcamlRepresentationDomain.InternalValue, 'Control catch clause "${clause.id}" output');
+				}
+			}
+			catchChainIds.set(chain.id, true);
+		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
 			if (requirementById.exists(requirement.id))
@@ -265,8 +281,10 @@ class OcamlLoweringReportWriter {
 		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
 		final canonicalControls = haxe.Json.stringify({
 			targets: sortedControlTargets,
-			decisions: sortedControls
+			decisions: sortedControls,
+			catchChains: sortedCatchChains
 		});
+		final canonicalCatchChains = haxe.Json.stringify(sortedCatchChains);
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
@@ -290,10 +308,14 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-and-throw-control-v4",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v5",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
+			controlCatchModel: "typed-ocaml-exact-primitive-catch-chain-v1",
+			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
+			controlCatchCount: sortedCatchChains.length,
+			controlCatches: sortedCatchChains,
 			controlTargetModel: "typed-ocaml-lexical-loop-target-v1",
 			controlTargetRevision: "sha256:" + Sha256.encode(canonicalControlTargets),
 			controlTargetCount: sortedControlTargets.length,

@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first four bounded control-effect slices are now executable. An ordinary
+The first five bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -52,11 +52,34 @@ lexically nearby catch. If one function also throws an unsupported payload such
 as `Float`, that function publishes no throw decisions and remains wholly on
 the older path.
 
+The fifth slice fixes the order, type test, and bound value for complete catch
+chains containing exact `Int`, exact `Bool`, represented `String`, and a final
+`Dynamic` catch before OCaml syntax is built. For example, `catch (_:Int)`
+followed by `catch (value:Bool)` tests `Int` first, then binds the exact Bool
+value through its checked carrier; adding `catch (_:Dynamic)` last makes that
+clause the catch-all. A null String still bypasses `String` and reaches
+`Dynamic`, matching the upstream Haxe 4.3.7 oracle. Both compiler-owned Haxe
+throws and target-native OCaml exceptions enter the recorded source order, but
+an unmatched value leaves through its original exception channel. Private
+return, break, and continue signals bypass source catches.
+
+Admission is all-or-nothing for each `try`, not each function. A `try` with an
+unsupported `Float`, enum, `haxe.Exception`, or `haxe.ValueException` catch
+remains entirely on the older catch path, while a separate supported `try` in
+the same function can use the sealed path. The lowering and public inspection
+reports expose the admitted chains and reject corrupt order, tags, carriers,
+conversions, result handling, or revision ownership. Result handling says
+whether a branch's completed value is discarded because the typed `try` is
+`Void`, or preserved because the branch exits through return/throw; this keeps
+OCaml handler branches type-compatible without asking the printer to infer
+control flow. This does not yet claim that the older catch families are safe
+for 1.0.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.4`, not closure of the parent control-effects requirement.
-Additional early-return payloads, `Void` early return, sealed catch
-selection/conversions, unsupported throw payloads, cleanup effects, and the
-complete runtime-requirement ledger remain unfinished.
+`haxe_ocaml-w32h3.5`, not closure of the parent control-effects requirement.
+Additional early-return payloads, `Void` early return, unsupported catch and
+throw payloads, cleanup effects, and the complete runtime-requirement ledger
+remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -205,14 +228,17 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first four slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first five slices cover
   exact-`Int`, exact-`Bool`, and represented-`String` early returns from
   ordinary static functions, including the existing String runtime null
   sentinel, plus exact lexical targets for `break` and `continue` in ordinary
   `while` and `do ... while` loops, and exact-`Int`/`Bool`/represented-`String`
   payloads entering the global Haxe exception channel with upstream-compatible
-  runtime-value tags. The remaining return-payload, catch-selection,
-  unsupported-exception, and cleanup families are still release blockers;
+  runtime-value tags. Complete source-ordered catch chains over those exact
+  primitive types and a final `Dynamic` catch are also sealed, including the
+  separate target-native exception channel and private-control bypass. The
+  remaining return-payload, unsupported-catch/exception, and cleanup families
+  are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);

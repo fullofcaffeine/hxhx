@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 28
-	|| report.controlModel !== 'typed-ocaml-function-loop-and-throw-control-v4'
+if (report.schemaVersion !== 29
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v5'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')
@@ -87,7 +87,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v30'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v31'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== `representation:${payload.inputSemanticTypeId}:internal-value`
@@ -162,14 +162,14 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const throws = report.lowering.controls.filter(control =>
 	control.kind === 'throw' && control.functionId.startsWith('Main|Main|'))
-if (report.schemaVersion !== 13
+if (report.schemaVersion !== 14
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| throws.length !== 6
 	|| throws.some(control =>
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-control-families') {
+	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
 	throw new Error('public inspection did not expose the 6 validated exact-value throw decisions')
 }
 NODE

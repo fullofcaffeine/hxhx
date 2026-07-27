@@ -12,6 +12,8 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
@@ -80,7 +82,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 13,
+			schemaVersion: 14,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -106,6 +108,7 @@ class ReflaxeOcamlInspection {
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
 				controlCount: lowering.controls.length,
+				controlCatchCount: lowering.controlCatches.length,
 				controlTargetCount: lowering.controlTargets.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
@@ -330,11 +333,13 @@ class ReflaxeOcamlInspection {
 					callableBoundaries: [],
 					controlRevision: null,
 					controls: [],
+					controlCatchRevision: null,
+					controlCatches: [],
 					controlTargetRevision: null,
 					controlTargets: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-call-and-function-loop-throw-control-families",
+					scope: "typed-place-call-and-function-loop-throw-catch-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -342,8 +347,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 28) {
-						throw 'Unsupported lowering report schema $version; expected 28.';
+					if (version != 29) {
+						throw 'Unsupported lowering report schema $version; expected 29.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -362,6 +367,7 @@ class ReflaxeOcamlInspection {
 					final callInventory = inspectCalls(value, representation);
 					final controlTargets = inspectControlTargets(value);
 					final controls = inspectControls(value, representation, controlTargets);
+					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
@@ -383,12 +389,14 @@ class ReflaxeOcamlInspection {
 						callableBoundaries: callInventory.boundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
 						controls: controls,
+						controlCatchRevision: requiredSha256Revision(value, "controlCatchRevision"),
+						controlCatches: controlCatches,
 						controlTargetRevision: requiredSha256Revision(value, "controlTargetRevision"),
 						controlTargets: controlTargets,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-call-and-function-loop-throw-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-call-and-function-loop-throw-catch-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} exact primitive/Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -427,7 +435,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-and-throw-control-v4")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v5")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -554,6 +562,161 @@ class ReflaxeOcamlInspection {
 		}
 		controls.sort((left, right) -> compareStrings(left.id, right.id));
 		return controls;
+	}
+
+	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-exact-primitive-catch-chain-v1")
+			throw "Unsupported control catch-chain report model.";
+		final rawChains = requiredArray(value, "controlCatches");
+		if (rawChains.length != requiredInt(value, "controlCatchCount"))
+			throw "Control catch-chain count does not match its inventory.";
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+
+		final chains = [for (entry in rawChains) controlCatchChain(entry)];
+		final chainIds:Map<String, Bool> = [];
+		final clauseIds:Map<String, Bool> = [];
+		for (chain in chains) {
+			if (chainIds.exists(chain.id))
+				throw 'Control catch-chain report contains duplicate identity "${chain.id}".';
+			if (chain.sourceFile.length == 0
+				|| chain.sourceMin < 0
+				|| chain.sourceMax < chain.sourceMin
+				|| chain.clauses.length == 0
+				|| !isControlCatchBranchResultPolicy(chain.tryBodyResultPolicy)
+				|| !sameStrings(chain.inputChannels, ["haxe-exception-signal", "target-native-exception"])
+				|| !sameStrings(chain.targetNativeRuntimeTags, ["OcamlExn"])
+				|| chain.haxeUnmatchedPolicy != "rethrow-haxe-exception-signal"
+				|| chain.targetNativeUnmatchedPolicy != "reraise-target-native-exception"
+				|| chain.privateControlPolicy != "propagate-private-control-signals"
+				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
+				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
+				|| chain.reason.length == 0
+				|| chain.proofId != "exact-primitive-catch-control-v1"
+				|| chain.proofClaim.length == 0
+				|| chain.functionId.length == 0
+				|| chain.programRevision.length == 0
+				|| chain.bodyRevision.length == 0
+				|| chain.pipelineRevision.length == 0) {
+				throw 'Control catch chain "${chain.id}" has incomplete channels, fallback behavior, proof, profile, or revision metadata.';
+			}
+			for (index in 0...chain.clauses.length) {
+				final clause = chain.clauses[index];
+				if (clauseIds.exists(clause.id))
+					throw 'Control catch-chain report contains duplicate clause identity "${clause.id}".';
+				if (clause.sourceFile.length == 0
+					|| clause.sourceMin < 0
+					|| clause.sourceMax < clause.sourceMin
+					|| clause.order != index
+					|| clause.variableName.length == 0
+					|| clause.signalCarrierTypeId != "Obj.t"
+					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
+					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
+					|| clause.proofId != "exact-primitive-catch-control-v1"
+					|| clause.proofClaim.length == 0
+					|| clause.functionId != chain.functionId
+					|| clause.programRevision != chain.programRevision
+					|| clause.bodyRevision != chain.bodyRevision
+					|| clause.pipelineRevision != chain.pipelineRevision) {
+					throw 'Control catch clause "${clause.id}" has incomplete order, payload, effects, proof, or revision metadata.';
+				}
+				switch (clause.semanticTypeId) {
+					case "Int":
+						validateControlCatchExactSide(clause, "int", "representation:Int:internal-value", "Int", "recover-exact-value", representationById);
+					case "Bool":
+						validateControlCatchExactSide(clause, "bool", "representation:Bool:internal-value", "Bool", "recover-checked-bool", representationById);
+					case "String":
+						validateControlCatchExactSide(clause, "string", "representation:String:internal-value", "String", "recover-exact-value",
+							representationById);
+					case "Dynamic":
+						if (clause.outputCarrierTypeId != "Obj.t"
+							|| clause.outputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| clause.matchPolicy != "match-all"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-dynamic-carrier"
+							|| index != chain.clauses.length - 1) {
+							throw 'Dynamic control catch clause "${clause.id}" has an invalid match-all, order, or carrier-preserving contract.';
+						}
+					case _:
+						throw 'Control catch clause "${clause.id}" has unsupported semantic type "${clause.semanticTypeId}".';
+				}
+				clauseIds.set(clause.id, true);
+			}
+			chainIds.set(chain.id, true);
+		}
+		chains.sort((left, right) -> compareStrings(left.id, right.id));
+		return chains;
+	}
+
+	static function isControlCatchBranchResultPolicy(policy:String):Bool {
+		return policy == "preserve-typed-result" || policy == "discard-completed-value-to-unit";
+	}
+
+	static function validateControlCatchExactSide(clause:InspectionControlCatchClause, carrierTypeId:String, representationId:String, runtimeTag:String,
+			conversion:String, representationById:Map<String, InspectionRepresentationDecision>):Void {
+		if (clause.outputCarrierTypeId != carrierTypeId
+			|| clause.outputRepresentationId != representationId
+			|| clause.matchPolicy != "exact-runtime-tag"
+			|| clause.runtimeTag != runtimeTag
+			|| clause.conversion != conversion) {
+			throw 'Exact ${clause.semanticTypeId} control catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion.';
+		}
+		validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, representationById,
+			'Control catch clause "${clause.id}" output');
+	}
+
+	static function controlCatchChain(value:Dynamic):InspectionControlCatchChain {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			clauses: [for (entry in requiredArray(value, "clauses")) controlCatchClause(entry)],
+			tryBodyResultPolicy: requiredString(value, "tryBodyResultPolicy"),
+			inputChannels: requiredStringArray(value, "inputChannels"),
+			targetNativeRuntimeTags: requiredStringArray(value, "targetNativeRuntimeTags"),
+			haxeUnmatchedPolicy: requiredString(value, "haxeUnmatchedPolicy"),
+			targetNativeUnmatchedPolicy: requiredString(value, "targetNativeUnmatchedPolicy"),
+			privateControlPolicy: requiredString(value, "privateControlPolicy"),
+			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlCatchClause(value:Dynamic):InspectionControlCatchClause {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			order: requiredInt(value, "order"),
+			variableName: requiredString(value, "variableName"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			signalCarrierTypeId: requiredString(value, "signalCarrierTypeId"),
+			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			matchPolicy: requiredString(value, "matchPolicy"),
+			runtimeTag: optionalString(value, "runtimeTag"),
+			conversion: requiredString(value, "conversion"),
+			bodyResultPolicy: requiredString(value, "bodyResultPolicy"),
+			effects: requiredStringArray(value, "effects"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
 	}
 
 	static function controlDecision(value:Dynamic):InspectionControl {
@@ -1864,11 +2027,13 @@ class ReflaxeOcamlInspection {
 			callableBoundaries: [],
 			controlRevision: null,
 			controls: [],
+			controlCatchRevision: null,
+			controlCatches: [],
 			controlTargetRevision: null,
 			controlTargets: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-call-and-function-loop-throw-control-families",
+			scope: "typed-place-call-and-function-loop-throw-catch-control-families",
 			message: message
 		};
 	}

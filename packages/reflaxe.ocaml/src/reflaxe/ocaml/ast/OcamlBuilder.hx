@@ -34,6 +34,12 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPrivateControlPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchMatchPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPayloadConversion;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchUnmatchedPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
@@ -323,6 +329,149 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tags]);
 			case _:
 				controlPlanInvariant('throw decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
+		}
+	}
+
+	/**
+		Materializes one source-ordered catch chain from its sealed typed record.
+
+		The clause tag, payload conversion, incoming channels, unmatched behavior,
+		and compiler-private control policy are already fixed. This function only
+		constructs the corresponding OCaml expressions.
+	**/
+	function buildPlannedCatchChain(chain:OcamlCatchChainDecision, tryExpression:TypedExpr, catches:Array<{v:TVar, expr:TypedExpr}>,
+			position:Position):OcamlExpr {
+		try {
+			OcamlControlPlan.requireCatchChain(chain);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		final binding = currentFunctionPlanBinding;
+		if (binding == null
+			|| chain.functionId != binding.functionId
+			|| chain.programRevision != binding.programRevision
+			|| chain.bodyRevision != binding.bodyRevision
+			|| chain.pipelineRevision != binding.pipelineRevision) {
+			return controlPlanInvariant('catch chain "${chain.id}" does not belong to the function currently building syntax', position);
+		}
+		if (chain.clauses.length != catches.length)
+			return controlPlanInvariant('catch chain "${chain.id}" has ${chain.clauses.length} clauses, but the typed try has ${catches.length}', position);
+
+		final syntax:Array<{variableName:String, variableType:OcamlTypeExpr, body:OcamlExpr}> = [];
+		for (index in 0...catches.length) {
+			final entry = catches[index];
+			final clause = chain.clauses[index];
+			if (clause.order != index || clause.variableName != entry.v.name)
+				return controlPlanInvariant('catch chain "${chain.id}" clause $index no longer matches typed variable "${entry.v.name}"', position);
+			final variableName = renameVar(entry.v.name);
+			syntax.push({
+				variableName: variableName,
+				variableType: typeExprFromHaxeType(entry.v.t),
+				body: applyCatchBranchResultPolicy(clause.bodyResultPolicy, buildExpr(entry.expr), clause.id, position)
+			});
+		}
+
+		function buildChain(valueExpression:OcamlExpr, tagsExpression:OcamlExpr, fallback:OcamlExpr):OcamlExpr {
+			var current = fallback;
+			for (offset in 0...chain.clauses.length) {
+				final index = chain.clauses.length - 1 - offset;
+				final clause = chain.clauses[index];
+				final entry = syntax[index];
+				final condition = switch (clause.matchPolicy) {
+					case ExactRuntimeTag:
+						final runtimeTag = clause.runtimeTag;
+						if (runtimeTag == null)
+							return controlPlanInvariant('exact catch clause "${clause.id}" has no sealed runtime tag', position);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+							[tagsExpression, OcamlExpr.EConst(OcamlConst.CString(runtimeTag))]);
+					case MatchAll:
+						OcamlExpr.EConst(OcamlConst.CBool(true));
+				};
+				final boundValue = switch (clause.conversion) {
+					case RecoverExactValue:
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
+					case RecoverCheckedBool:
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpression]);
+					case PreserveDynamicCarrier:
+						valueExpression;
+				};
+				final annotated = OcamlExpr.EAnnot(boundValue, entry.variableType);
+				final body = OcamlExpr.ELet(entry.variableName, annotated, OcamlExpr.ESeq([
+					OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(entry.variableName)]),
+					entry.body
+				]), false);
+				current = OcamlExpr.EIf(condition, body, current);
+			}
+			return current;
+		}
+
+		final privateControlCases:Array<OcamlMatchCase> = switch (chain.privateControlPolicy) {
+			case PropagatePrivateControlSignals:
+				final returnVariable = freshTmp("ret");
+				[
+					{
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"))
+					},
+					{
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"))
+					},
+					{
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVariable)]),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVariable)]))
+					}
+				];
+		};
+
+		final haxeValueVariable = freshTmp("exn_v");
+		final haxeTagsVariable = freshTmp("exn_tags");
+		final haxeFallback = switch (chain.haxeUnmatchedPolicy) {
+			case RethrowHaxeExceptionSignal:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"),
+					[OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable)]);
+			case _:
+				return controlPlanInvariant('catch chain "${chain.id}" selected invalid Haxe unmatched policy ${chain.haxeUnmatchedPolicy}', position);
+		};
+		final haxeHandler = buildChain(OcamlExpr.EIdent(haxeValueVariable), OcamlExpr.EIdent(haxeTagsVariable), haxeFallback);
+		final haxeCase:OcamlMatchCase = {
+			pat: OcamlPat.PConstructor("HxRuntime.Hx_exception", [OcamlPat.PVar(haxeValueVariable), OcamlPat.PVar(haxeTagsVariable)]),
+			guard: null,
+			expr: haxeHandler
+		};
+
+		final nativeExceptionVariable = freshTmp("exn");
+		final nativeFallback = switch (chain.targetNativeUnmatchedPolicy) {
+			case ReraiseTargetNativeException:
+				OcamlExpr.ERaise(OcamlExpr.EIdent(nativeExceptionVariable));
+			case _:
+				return controlPlanInvariant('catch chain "${chain.id}" selected invalid target-native unmatched policy ${chain.targetNativeUnmatchedPolicy}',
+					position);
+		};
+		final nativeTags = OcamlExpr.EList(chain.targetNativeRuntimeTags.map(tag -> OcamlExpr.EConst(OcamlConst.CString(tag))));
+		final nativeHandler = buildChain(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(nativeExceptionVariable)]),
+			nativeTags, nativeFallback);
+		final nativeCase:OcamlMatchCase = {
+			pat: OcamlPat.PVar(nativeExceptionVariable),
+			guard: null,
+			expr: nativeHandler
+		};
+
+		final builtTry = applyCatchBranchResultPolicy(chain.tryBodyResultPolicy, buildExpr(tryExpression), chain.id, position);
+		return OcamlExpr.ETry(builtTry, privateControlCases.concat([haxeCase, nativeCase]));
+	}
+
+	function applyCatchBranchResultPolicy(policy:OcamlCatchBranchResultPolicy, expression:OcamlExpr, ownerId:String, position:Position):OcamlExpr {
+		return switch (policy) {
+			case PreserveTypedResult:
+				expression;
+			case DiscardCompletedValueToUnit:
+				OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [expression]);
+			case _:
+				controlPlanInvariant('catch result policy for "$ownerId" is unsupported: $policy', position);
 		}
 	}
 
@@ -4208,6 +4357,17 @@ class OcamlBuilder {
 				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tagExpr]);
 			case TTry(tryExpr, catches):
+				if (currentControlPlan != null) {
+					if (!currentControlPlan.hasCatchDispositionFor(e))
+						return controlPlanInvariant("a typed try reached syntax without an explicit admitted or legacy catch disposition", e.pos);
+					final catchChain = try {
+						currentControlPlan.catchChainFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+					if (catchChain != null)
+						return buildPlannedCatchChain(catchChain, tryExpr, catches, e.pos);
+				}
 				if (catches.length == 0) {
 					buildExpr(tryExpr);
 				} else {

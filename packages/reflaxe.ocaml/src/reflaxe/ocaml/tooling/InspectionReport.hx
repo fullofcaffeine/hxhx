@@ -372,6 +372,55 @@ typedef InspectionControl = {
 	final pipelineRevision:String;
 }
 
+/** One exact primitive or Dynamic catch-variable binding. **/
+typedef InspectionControlCatchClause = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final order:Int;
+	final variableName:String;
+	final semanticTypeId:String;
+	final signalCarrierTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
+	final matchPolicy:String;
+	final runtimeTag:Null<String>;
+	final conversion:String;
+	final bodyResultPolicy:String;
+	final effects:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One complete source-ordered catch chain sealed before OCaml syntax. **/
+typedef InspectionControlCatchChain = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final clauses:Array<InspectionControlCatchClause>;
+	final tryBodyResultPolicy:String;
+	final inputChannels:Array<String>;
+	final targetNativeRuntimeTags:Array<String>;
+	final haxeUnmatchedPolicy:String;
+	final targetNativeUnmatchedPolicy:String;
+	final privateControlPolicy:String;
+	final runtimeCapabilityId:String;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One mutable static cell selected before generated type values are emitted. **/
 typedef InspectionStaticStorageEntry = {
 	final id:String;
@@ -417,6 +466,8 @@ typedef InspectionLowering = {
 	final callableBoundaries:Array<InspectionCallableBoundary>;
 	final controlRevision:Null<String>;
 	final controls:Array<InspectionControl>;
+	final controlCatchRevision:Null<String>;
+	final controlCatches:Array<InspectionControlCatchChain>;
 	final controlTargetRevision:Null<String>;
 	final controlTargets:Array<InspectionControlLoopTarget>;
 	final staticStorageRevision:Null<String>;
@@ -448,6 +499,7 @@ typedef InspectionSummary = {
 	final callCount:Int;
 	final callableBoundaryCount:Int;
 	final controlCount:Int;
+	final controlCatchCount:Int;
 	final controlTargetCount:Int;
 	final staticStorageCount:Int;
 }

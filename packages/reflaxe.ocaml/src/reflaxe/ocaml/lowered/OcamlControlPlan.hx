@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.ds.ObjectMap;
+import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -63,6 +64,55 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
+}
+
+/** How one source catch decides whether its clause receives an exception. */
+enum abstract OcamlCatchMatchPolicy(String) from String to String {
+	final ExactRuntimeTag = "exact-runtime-tag";
+	final MatchAll = "match-all";
+}
+
+/** How the private exception carrier becomes one typed catch variable. */
+enum abstract OcamlCatchPayloadConversion(String) from String to String {
+	final RecoverExactValue = "recover-exact-value";
+	final RecoverCheckedBool = "recover-checked-bool";
+	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
+}
+
+/** Runtime channels that may enter an admitted Haxe catch chain. */
+enum abstract OcamlCatchInputChannel(String) from String to String {
+	final HaxeExceptionSignal = "haxe-exception-signal";
+	final TargetNativeException = "target-native-exception";
+}
+
+/** What an admitted catch chain does when no source clause matches. */
+enum abstract OcamlCatchUnmatchedPolicy(String) from String to String {
+	final RethrowHaxeExceptionSignal = "rethrow-haxe-exception-signal";
+	final ReraiseTargetNativeException = "reraise-target-native-exception";
+}
+
+/** Source catches cannot intercept compiler-private non-local control. */
+enum abstract OcamlCatchPrivateControlPolicy(String) from String to String {
+	final PropagatePrivateControlSignals = "propagate-private-control-signals";
+}
+
+/** Observable operations owned by one admitted source catch clause. */
+enum abstract OcamlCatchEffect(String) from String to String {
+	final SelectFirstMatchingClause = "select-first-matching-clause";
+	final BindCatchVariable = "bind-catch-variable";
+	final ExecuteCatchBody = "execute-catch-body";
+}
+
+/**
+	How one typed `try` branch reaches the common OCaml result type.
+
+	A branch that may complete in a Haxe `Void` try discards its value. A branch
+	that exits only through return/throw keeps that non-local expression
+	polymorphic so the surrounding function boundary can recover its exact value.
+**/
+enum abstract OcamlCatchBranchResultPolicy(String) from String to String {
+	final PreserveTypedResult = "preserve-typed-result";
+	final DiscardCompletedValueToUnit = "discard-completed-value-to-unit";
 }
 
 /**
@@ -140,6 +190,71 @@ typedef OcamlControlDecisionOccurrence = {
 	final decisionId:String;
 }
 
+/** One ordered, typed clause within an admitted source catch chain. */
+typedef OcamlCatchClauseDecision = {
+	final id:String;
+	final source:OcamlLoweredSourceSpan;
+	final order:Int;
+	final variableName:String;
+	final semanticTypeId:String;
+	final signalCarrierTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
+	final matchPolicy:OcamlCatchMatchPolicy;
+	final runtimeTag:Null<String>;
+	final conversion:OcamlCatchPayloadConversion;
+	final bodyResultPolicy:OcamlCatchBranchResultPolicy;
+	final effects:Array<OcamlCatchEffect>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/**
+	One complete source-ordered catch chain selected before OCaml syntax.
+
+	The record covers both the compiler-owned Haxe exception channel and
+	target-native OCaml exceptions. Compiler-private return and loop signals are
+	not inputs: they propagate around the source catch chain.
+**/
+typedef OcamlCatchChainDecision = {
+	final id:String;
+	final source:OcamlLoweredSourceSpan;
+	final clauses:Array<OcamlCatchClauseDecision>;
+	final tryBodyResultPolicy:OcamlCatchBranchResultPolicy;
+	final inputChannels:Array<OcamlCatchInputChannel>;
+	final targetNativeRuntimeTags:Array<String>;
+	final haxeUnmatchedPolicy:OcamlCatchUnmatchedPolicy;
+	final targetNativeUnmatchedPolicy:OcamlCatchUnmatchedPolicy;
+	final privateControlPolicy:OcamlCatchPrivateControlPolicy;
+	final runtimeCapabilityId:String;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/**
+	Request-local disposition for every final typed `try` node.
+
+	`chainId = null` records an explicit legacy disposition. The stable
+	occurrence identity and source participate in the plan revision, so removing
+	an admitted chain cannot silently look like intended fallback behavior.
+**/
+typedef OcamlCatchChainOccurrence = {
+	final expression:TypedExpr;
+	final occurrenceId:String;
+	final source:OcamlLoweredSourceSpan;
+	final chainId:Null<String>;
+}
+
 /**
 	Immutable control inventory for one final function body.
 
@@ -152,11 +267,14 @@ class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
 	public static inline final LEXICAL_LOOP_CONTROL_PROOF_ID = "lexical-loop-control-v1";
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
+	public static inline final EXACT_PRIMITIVE_CATCH_PROOF_ID = "exact-primitive-catch-control-v1";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
 	public static inline final CONTINUE_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-continue-signal-v1";
 	public static inline final THROW_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-exception-signal-v1";
+	public static inline final CATCH_SIGNAL_CAPABILITY_ID = "hxhx-runtime:typed-haxe-catch-chain-v1";
 	public static inline final HAXE_EXCEPTION_CHANNEL_ID = "control-target:haxe-exception-channel:v1";
+	public static inline final DYNAMIC_CATCH_REPRESENTATION_ID = "control-representation:Dynamic:runtime-obj-v1";
 
 	public final returnFamilyAdmitted:Bool;
 	public final loopFamilyAdmitted:Bool;
@@ -166,17 +284,25 @@ class OcamlControlPlan {
 
 	final orderedTargets:Array<OcamlControlLoopTarget>;
 	final ordered:Array<OcamlControlDecision>;
+	final orderedCatchChains:Array<OcamlCatchChainDecision>;
 	final targetsById:Map<String, OcamlControlLoopTarget> = [];
 	final decisionsById:Map<String, OcamlControlDecision> = [];
+	final catchChainsById:Map<String, OcamlCatchChainDecision> = [];
 	final targetsBySourceKey:Map<String, Array<OcamlControlLoopTarget>> = [];
 	final bySourceKey:Map<String, Array<OcamlControlDecision>> = [];
+	final catchChainsBySourceKey:Map<String, Array<OcamlCatchChainDecision>> = [];
 	final targetIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
 	final decisionIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
+	final catchChainIdByExpression:ObjectMap<TypedExpr, String> = new ObjectMap();
+	final catchDispositionByExpression:ObjectMap<TypedExpr, Bool> = new ObjectMap();
 	final hasOccurrenceIndex:Bool;
+	final hasCatchOccurrenceIndex:Bool;
+	final catchOccurrenceFingerprints:Array<String>;
 
 	public function new(returnFamilyAdmitted:Bool, loopFamilyAdmitted:Bool, throwFamilyAdmitted:Bool, binding:OcamlFunctionPlanBinding,
 			targets:Array<OcamlControlLoopTarget>, decisions:Array<OcamlControlDecision>, ?targetOccurrences:Array<OcamlControlLoopTargetOccurrence>,
-			?decisionOccurrences:Array<OcamlControlDecisionOccurrence>) {
+			?decisionOccurrences:Array<OcamlControlDecisionOccurrence>, ?catchChains:Array<OcamlCatchChainDecision>,
+			?catchOccurrences:Array<OcamlCatchChainOccurrence>) {
 		this.returnFamilyAdmitted = returnFamilyAdmitted;
 		this.loopFamilyAdmitted = loopFamilyAdmitted;
 		this.throwFamilyAdmitted = throwFamilyAdmitted;
@@ -184,6 +310,7 @@ class OcamlControlPlan {
 		if ((targetOccurrences == null) != (decisionOccurrences == null))
 			throw 'reflaxe.ocaml [ocaml-control:incomplete-occurrence-index]: loop-target and transfer occurrence indexes must be supplied together';
 		hasOccurrenceIndex = targetOccurrences != null;
+		hasCatchOccurrenceIndex = catchOccurrences != null;
 
 		final sortedTargets = targets.map(copyLoopTarget);
 		sortedTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -239,6 +366,25 @@ class OcamlControlPlan {
 		}
 		ordered = normalized;
 
+		final sortedCatchChains = (catchChains ?? []).map(copyCatchChain);
+		sortedCatchChains.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final normalizedCatchChains:Array<OcamlCatchChainDecision> = [];
+		for (chain in sortedCatchChains) {
+			requireCatchChain(chain);
+			requireCatchBinding(chain, binding);
+			if (catchChainsById.exists(chain.id))
+				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-chain]: catch-chain identity "${chain.id}" occurs more than once';
+			final key = sourceKey(chain.source);
+			final candidates = catchChainsBySourceKey.get(key) ?? [];
+			if (!hasCatchOccurrenceIndex && candidates.length > 0)
+				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-source]: more than one admitted catch chain belongs to source occurrence "$key"';
+			candidates.push(copyCatchChain(chain));
+			catchChainsBySourceKey.set(key, candidates);
+			catchChainsById.set(chain.id, copyCatchChain(chain));
+			normalizedCatchChains.push(copyCatchChain(chain));
+		}
+		orderedCatchChains = normalizedCatchChains;
+
 		final indexedTargetIds:Map<String, Bool> = [];
 		for (occurrence in targetOccurrences ?? []) {
 			if (!targetsById.exists(occurrence.targetId))
@@ -275,6 +421,44 @@ class OcamlControlPlan {
 					throw 'reflaxe.ocaml [ocaml-control:missing-decision-occurrence]: control decision "${decision.id}" has no exact typed occurrence';
 			}
 		}
+		final indexedCatchChainIds:Map<String, Bool> = [];
+		final indexedCatchOccurrenceIds:Map<String, Bool> = [];
+		final normalizedCatchOccurrenceFingerprints:Array<String> = [];
+		for (occurrence in catchOccurrences ?? []) {
+			if (occurrence.occurrenceId.length == 0
+				|| occurrence.source.file.length == 0
+				|| occurrence.source.min < 0
+				|| occurrence.source.max < occurrence.source.min) {
+				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-occurrence]: typed try occurrence has incomplete stable identity or source';
+			}
+			if (indexedCatchOccurrenceIds.exists(occurrence.occurrenceId))
+				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-occurrence]: catch occurrence "${occurrence.occurrenceId}" appears more than once';
+			if (catchDispositionByExpression.exists(occurrence.expression))
+				throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-occurrence]: one typed try node has more than one admitted or legacy disposition';
+			if (occurrence.chainId != null) {
+				if (!catchChainsById.exists(occurrence.chainId))
+					throw 'reflaxe.ocaml [ocaml-control:missing-catch-occurrence]: typed try occurrence refers to missing catch chain "${occurrence.chainId}"';
+				if (indexedCatchChainIds.exists(occurrence.chainId))
+					throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-occurrence]: catch chain "${occurrence.chainId}" is indexed by more than one typed occurrence';
+				catchChainIdByExpression.set(occurrence.expression, occurrence.chainId);
+				indexedCatchChainIds.set(occurrence.chainId, true);
+			}
+			catchDispositionByExpression.set(occurrence.expression, true);
+			indexedCatchOccurrenceIds.set(occurrence.occurrenceId, true);
+			normalizedCatchOccurrenceFingerprints.push([
+				occurrence.occurrenceId,
+				sourceKey(occurrence.source),
+				occurrence.chainId ?? "legacy-catch-chain"
+			].join("|"));
+		}
+		normalizedCatchOccurrenceFingerprints.sort(Reflect.compare);
+		catchOccurrenceFingerprints = normalizedCatchOccurrenceFingerprints;
+		if (hasCatchOccurrenceIndex) {
+			for (chain in orderedCatchChains) {
+				if (!indexedCatchChainIds.exists(chain.id))
+					throw 'reflaxe.ocaml [ocaml-control:missing-catch-occurrence]: catch chain "${chain.id}" has no exact typed occurrence';
+			}
+		}
 		revision = "sha256:" + Sha256.encode([
 			returnFamilyAdmitted ? "return-admitted" : "return-legacy",
 			loopFamilyAdmitted ? "loop-admitted" : "loop-legacy",
@@ -283,7 +467,11 @@ class OcamlControlPlan {
 			binding.programRevision,
 			binding.bodyRevision,
 			binding.pipelineRevision
-		].concat(orderedTargets.map(loopTargetFingerprint)).concat(ordered.map(decisionFingerprint)).join("\n"));
+		].concat(orderedTargets.map(loopTargetFingerprint))
+			.concat(ordered.map(decisionFingerprint))
+			.concat(orderedCatchChains.map(catchChainFingerprint))
+			.concat(catchOccurrenceFingerprints)
+			.join("\n"));
 	}
 
 	/** Creates an explicit empty plan for a function outside every control slice. */
@@ -299,6 +487,11 @@ class OcamlControlPlan {
 	/** Returns immutable transfer copies in deterministic identity order. */
 	public function decisions():Array<OcamlControlDecision> {
 		return ordered.map(copyDecision);
+	}
+
+	/** Returns immutable catch-chain copies in deterministic identity order. */
+	public function catchChains():Array<OcamlCatchChainDecision> {
+		return orderedCatchChains.map(copyCatchChain);
 	}
 
 	/** Whether syntax must install the sealed private return-signal boundary. */
@@ -358,6 +551,40 @@ class OcamlControlPlan {
 		return matching.length == 0 ? null : copyDecision(matching[0]);
 	}
 
+	/** Resolves one exact typed `try` occurrence without reclassifying catches. */
+	public function catchChainFor(expression:TypedExpr):Null<OcamlCatchChainDecision> {
+		if (hasCatchOccurrenceIndex) {
+			if (!catchDispositionByExpression.exists(expression))
+				throw 'reflaxe.ocaml [ocaml-control:missing-catch-disposition]: typed try occurrence has no admitted or legacy catch disposition';
+			final chainId = catchChainIdByExpression.get(expression);
+			if (chainId == null)
+				return null;
+			final chain = catchChainsById.get(chainId);
+			if (chain == null)
+				throw 'reflaxe.ocaml [ocaml-control:missing-catch-chain]: typed try occurrence refers to missing catch chain "$chainId"';
+			final matches = switch (expression.expr) {
+				case TTry(_, catches): catchTypesMatchChain(catches, chain);
+				case _: false;
+			};
+			if (!matches)
+				throw 'reflaxe.ocaml [ocaml-control:stale-catch-chain]: admitted catch chain "$chainId" no longer matches its exact typed try occurrence';
+			return copyCatchChain(chain);
+		}
+		final candidates = catchChainsBySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
+		final matching = candidates.filter(chain -> switch (expression.expr) {
+			case TTry(_, catches): catchTypesMatchChain(catches, chain);
+			case _: false;
+		});
+		if (matching.length > 1)
+			throw 'reflaxe.ocaml [ocaml-control:ambiguous-catch-source]: ${matching.length} sealed catch chains match one typed try at ${sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))}';
+		return matching.length == 0 ? null : copyCatchChain(matching[0]);
+	}
+
+	/** Whether the planner explicitly classified this exact typed `try` node. */
+	public function hasCatchDispositionFor(expression:TypedExpr):Bool {
+		return hasCatchOccurrenceIndex ? catchDispositionByExpression.exists(expression) : true;
+	}
+
 	/** Returns the shared return payload contract for the function boundary. */
 	public function returnBoundaryDecision():Null<OcamlControlDecision> {
 		final returns = ordered.filter(decision -> decision.kind == OcamlControlTransferKind.Return);
@@ -383,6 +610,8 @@ class OcamlControlPlan {
 			requireTargetBinding(target, expected);
 		for (decision in ordered)
 			requireBinding(decision, expected);
+		for (chain in orderedCatchChains)
+			requireCatchBinding(chain, expected);
 	}
 
 	/** Validates one loop target independently for corruption and report tests. */
@@ -493,6 +722,114 @@ class OcamlControlPlan {
 		}
 	}
 
+	/** Validates one complete ordered catch chain for reports and corruption tests. */
+	public static function requireCatchChain(chain:OcamlCatchChainDecision):Void {
+		if (chain.id.length == 0
+			|| chain.source.file.length == 0
+			|| chain.source.min < 0
+			|| chain.source.max < chain.source.min
+			|| chain.clauses.length == 0
+			|| !isCatchBranchResultPolicy(chain.tryBodyResultPolicy)
+			|| chain.functionId.length == 0
+			|| chain.programRevision.length == 0
+			|| chain.bodyRevision.length == 0
+			|| chain.pipelineRevision.length == 0
+			|| chain.inputChannels.length != 2
+			|| chain.inputChannels[0] != OcamlCatchInputChannel.HaxeExceptionSignal
+			|| chain.inputChannels[1] != OcamlCatchInputChannel.TargetNativeException
+			|| !sameStrings(chain.targetNativeRuntimeTags, ["OcamlExn"])
+			|| chain.haxeUnmatchedPolicy != OcamlCatchUnmatchedPolicy.RethrowHaxeExceptionSignal
+			|| chain.targetNativeUnmatchedPolicy != OcamlCatchUnmatchedPolicy.ReraiseTargetNativeException
+			|| chain.privateControlPolicy != OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals
+			|| chain.runtimeCapabilityId != CATCH_SIGNAL_CAPABILITY_ID
+			|| chain.profileEligibility.length != 2
+			|| chain.profileEligibility[0] != "metal"
+			|| chain.profileEligibility[1] != "portable"
+			|| chain.reason.length == 0
+			|| chain.proofId != EXACT_PRIMITIVE_CATCH_PROOF_ID
+			|| chain.proofClaim.length == 0) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-catch-chain]: catch chain "${chain.id}" has incomplete channels, fallback behavior, proof, profile, or revision metadata';
+		}
+
+		final clauseIds:Map<String, Bool> = [];
+		for (index in 0...chain.clauses.length) {
+			final clause = chain.clauses[index];
+			requireCatchClause(clause);
+			if (clauseIds.exists(clause.id))
+				throw 'reflaxe.ocaml [ocaml-control:duplicate-catch-clause]: catch chain "${chain.id}" repeats clause identity "${clause.id}"';
+			if (clause.order != index)
+				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-order]: catch chain "${chain.id}" expected clause order $index, got ${clause.order}';
+			if (clause.functionId != chain.functionId
+				|| clause.programRevision != chain.programRevision
+				|| clause.bodyRevision != chain.bodyRevision
+				|| clause.pipelineRevision != chain.pipelineRevision) {
+				throw 'reflaxe.ocaml [ocaml-control:stale-catch-clause]: catch clause "${clause.id}" does not belong to chain "${chain.id}"';
+			}
+			if (clause.matchPolicy == OcamlCatchMatchPolicy.MatchAll && index != chain.clauses.length - 1)
+				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-order]: Dynamic catch clause "${clause.id}" must be the final source clause';
+			clauseIds.set(clause.id, true);
+		}
+	}
+
+	/** Validates one clause without consulting generated target syntax. */
+	public static function requireCatchClause(clause:OcamlCatchClauseDecision):Void {
+		if (clause.id.length == 0
+			|| clause.source.file.length == 0
+			|| clause.source.min < 0
+			|| clause.source.max < clause.source.min
+			|| clause.order < 0
+			|| clause.variableName.length == 0
+			|| clause.signalCarrierTypeId != "Obj.t"
+			|| !isCatchBranchResultPolicy(clause.bodyResultPolicy)
+			|| clause.effects.length != 3
+			|| clause.effects[0] != OcamlCatchEffect.SelectFirstMatchingClause
+			|| clause.effects[1] != OcamlCatchEffect.BindCatchVariable
+			|| clause.effects[2] != OcamlCatchEffect.ExecuteCatchBody
+			|| clause.proofId != EXACT_PRIMITIVE_CATCH_PROOF_ID
+			|| clause.proofClaim.length == 0
+			|| clause.functionId.length == 0
+			|| clause.programRevision.length == 0
+			|| clause.bodyRevision.length == 0
+			|| clause.pipelineRevision.length == 0) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: catch clause "${clause.id}" has incomplete identity, payload, effects, proof, or revision metadata';
+		}
+
+		switch (clause.semanticTypeId) {
+			case "Int":
+				requireExactCatchSide(clause, "int", "representation:Int:internal-value", "Int", OcamlCatchPayloadConversion.RecoverExactValue);
+			case "Bool":
+				requireExactCatchSide(clause, "bool", "representation:Bool:internal-value", "Bool", OcamlCatchPayloadConversion.RecoverCheckedBool);
+			case "String":
+				requireExactCatchSide(clause, "string", "representation:String:internal-value", "String", OcamlCatchPayloadConversion.RecoverExactValue);
+			case "Dynamic":
+				if (clause.outputCarrierTypeId != "Obj.t"
+					|| clause.outputRepresentationId != DYNAMIC_CATCH_REPRESENTATION_ID
+					|| clause.matchPolicy != OcamlCatchMatchPolicy.MatchAll
+					|| clause.runtimeTag != null
+					|| clause.conversion != OcamlCatchPayloadConversion.PreserveDynamicCarrier) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: Dynamic catch clause "${clause.id}" has an invalid match-all or carrier-preserving contract';
+				}
+			case _:
+				throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: catch clause "${clause.id}" has unsupported semantic type "${clause.semanticTypeId}"';
+		}
+	}
+
+	static function isCatchBranchResultPolicy(policy:OcamlCatchBranchResultPolicy):Bool {
+		return policy == OcamlCatchBranchResultPolicy.PreserveTypedResult
+			|| policy == OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit;
+	}
+
+	static function requireExactCatchSide(clause:OcamlCatchClauseDecision, carrierTypeId:String, representationId:String, runtimeTag:String,
+			conversion:OcamlCatchPayloadConversion):Void {
+		if (clause.outputCarrierTypeId != carrierTypeId
+			|| clause.outputRepresentationId != representationId
+			|| clause.matchPolicy != OcamlCatchMatchPolicy.ExactRuntimeTag
+			|| clause.runtimeTag != runtimeTag
+			|| clause.conversion != conversion) {
+			throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: exact ${clause.semanticTypeId} catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion';
+		}
+	}
+
 	public static function copyLoopTarget(target:OcamlControlLoopTarget):OcamlControlLoopTarget {
 		return {
 			id: target.id,
@@ -539,6 +876,61 @@ class OcamlControlPlan {
 		};
 	}
 
+	public static function copyCatchChain(chain:OcamlCatchChainDecision):OcamlCatchChainDecision {
+		return {
+			id: chain.id,
+			source: {
+				file: chain.source.file,
+				min: chain.source.min,
+				max: chain.source.max
+			},
+			clauses: chain.clauses.map(copyCatchClause),
+			tryBodyResultPolicy: chain.tryBodyResultPolicy,
+			inputChannels: chain.inputChannels.copy(),
+			targetNativeRuntimeTags: chain.targetNativeRuntimeTags.copy(),
+			haxeUnmatchedPolicy: chain.haxeUnmatchedPolicy,
+			targetNativeUnmatchedPolicy: chain.targetNativeUnmatchedPolicy,
+			privateControlPolicy: chain.privateControlPolicy,
+			runtimeCapabilityId: chain.runtimeCapabilityId,
+			profileEligibility: chain.profileEligibility.copy(),
+			reason: chain.reason,
+			proofId: chain.proofId,
+			proofClaim: chain.proofClaim,
+			functionId: chain.functionId,
+			programRevision: chain.programRevision,
+			bodyRevision: chain.bodyRevision,
+			pipelineRevision: chain.pipelineRevision
+		};
+	}
+
+	public static function copyCatchClause(clause:OcamlCatchClauseDecision):OcamlCatchClauseDecision {
+		return {
+			id: clause.id,
+			source: {
+				file: clause.source.file,
+				min: clause.source.min,
+				max: clause.source.max
+			},
+			order: clause.order,
+			variableName: clause.variableName,
+			semanticTypeId: clause.semanticTypeId,
+			signalCarrierTypeId: clause.signalCarrierTypeId,
+			outputCarrierTypeId: clause.outputCarrierTypeId,
+			outputRepresentationId: clause.outputRepresentationId,
+			matchPolicy: clause.matchPolicy,
+			runtimeTag: clause.runtimeTag,
+			conversion: clause.conversion,
+			bodyResultPolicy: clause.bodyResultPolicy,
+			effects: clause.effects.copy(),
+			proofId: clause.proofId,
+			proofClaim: clause.proofClaim,
+			functionId: clause.functionId,
+			programRevision: clause.programRevision,
+			bodyRevision: clause.bodyRevision,
+			pipelineRevision: clause.pipelineRevision
+		};
+	}
+
 	static function copyPayload(payload:Null<OcamlControlPayloadPlan>):Null<OcamlControlPayloadPlan> {
 		if (payload == null)
 			return null;
@@ -571,6 +963,15 @@ class OcamlControlPlan {
 			|| decision.bodyRevision != binding.bodyRevision
 			|| decision.pipelineRevision != binding.pipelineRevision) {
 			throw 'reflaxe.ocaml [ocaml-control:stale-binding]: control decision "${decision.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+		}
+	}
+
+	static function requireCatchBinding(chain:OcamlCatchChainDecision, binding:OcamlFunctionPlanBinding):Void {
+		if (chain.functionId != binding.functionId
+			|| chain.programRevision != binding.programRevision
+			|| chain.bodyRevision != binding.bodyRevision
+			|| chain.pipelineRevision != binding.pipelineRevision) {
+			throw 'reflaxe.ocaml [ocaml-control:stale-catch-chain]: catch chain "${chain.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
 		}
 	}
 
@@ -634,6 +1035,32 @@ class OcamlControlPlan {
 		}
 	}
 
+	static function catchTypesMatchChain(catches:Array<{v:TVar, expr:TypedExpr}>, chain:OcamlCatchChainDecision):Bool {
+		if (catches.length != chain.clauses.length)
+			return false;
+		for (index in 0...catches.length) {
+			final entry = catches[index];
+			final clause = chain.clauses[index];
+			if (entry.v.name != clause.variableName || !catchTypeMatchesClause(entry.v.t, clause))
+				return false;
+		}
+		return true;
+	}
+
+	static function catchTypeMatchesClause(type:Type, clause:OcamlCatchClauseDecision):Bool {
+		return switch (clause.semanticTypeId) {
+			case "Int": OcamlRepresentationRegistry.isExactInt(type);
+			case "Bool": OcamlRepresentationRegistry.isExactBool(type);
+			case "String": OcamlRepresentationRegistry.isExactString(type);
+			case "Dynamic":
+				switch (haxe.macro.TypeTools.follow(type)) {
+					case TDynamic(_): true;
+					case _: false;
+				}
+			case _: false;
+		}
+	}
+
 	static function payloadFingerprint(payload:Null<OcamlControlPayloadPlan>):String {
 		if (payload == null)
 			return "no-payload";
@@ -688,16 +1115,65 @@ class OcamlControlPlan {
 			decision.pipelineRevision
 		].join("|");
 	}
+
+	static function catchClauseFingerprint(clause:OcamlCatchClauseDecision):String {
+		return [
+			clause.id,
+			sourceKey(clause.source),
+			Std.string(clause.order),
+			clause.variableName,
+			clause.semanticTypeId,
+			clause.signalCarrierTypeId,
+			clause.outputCarrierTypeId,
+			clause.outputRepresentationId,
+			(clause.matchPolicy : String),
+			clause.runtimeTag ?? "no-runtime-tag",
+			(clause.conversion : String),
+			(clause.bodyResultPolicy : String),
+			clause.effects.join(","),
+			clause.proofId,
+			clause.proofClaim,
+			clause.functionId,
+			clause.programRevision,
+			clause.bodyRevision,
+			clause.pipelineRevision
+		].join("|");
+	}
+
+	static function catchChainFingerprint(chain:OcamlCatchChainDecision):String {
+		return [
+			chain.id,
+			sourceKey(chain.source),
+			(chain.tryBodyResultPolicy : String),
+			chain.inputChannels.join(","),
+			chain.targetNativeRuntimeTags.join(","),
+			(chain.haxeUnmatchedPolicy : String),
+			(chain.targetNativeUnmatchedPolicy : String),
+			(chain.privateControlPolicy : String),
+			chain.runtimeCapabilityId,
+			chain.profileEligibility.join(","),
+			chain.reason,
+			chain.proofId,
+			chain.proofClaim,
+			chain.functionId,
+			chain.programRevision,
+			chain.bodyRevision,
+			chain.pipelineRevision
+		].concat(chain.clauses.map(catchClauseFingerprint)).join("|");
+	}
 }
 
 /**
-	Selects exact-value returns and throws plus lexical loop transfers.
+	Selects exact-value returns and throws, lexical loop transfers, and exact
+	primitive/Dynamic catch chains.
 
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and initially
 	accepts only exact `Int`, `Bool`, and represented `String` payloads. Nested
 	function literals own independent boundaries and are deliberately skipped.
+	Each source `try` is admitted independently, so one unsupported catch chain
+	does not discard another exact chain in the same function.
 
 	Stable record IDs use the node's structural path through the final typed body,
 	not its source span. Haxe-generated nodes can legitimately share `(unknown):0`
@@ -724,8 +1200,10 @@ class OcamlControlPlanner {
 		var throwFamilyAdmitted = true;
 		final targets:Array<OcamlControlLoopTarget> = [];
 		var decisions:Array<OcamlControlDecision> = [];
+		final catchChains:Array<OcamlCatchChainDecision> = [];
 		final targetOccurrences:Array<OcamlControlLoopTargetOccurrence> = [];
 		var decisionOccurrences:Array<OcamlControlDecisionOccurrence> = [];
+		final catchOccurrences:Array<OcamlCatchChainOccurrence> = [];
 		final loopStack:Array<OcamlControlLoopTarget> = [];
 
 		function addLoopTransfer(expression:TypedExpr, path:String, kind:OcamlControlTransferKind):Void {
@@ -894,6 +1372,85 @@ class OcamlControlPlanner {
 					loopStack.push(target);
 					visit(loopBody, false, path + "/while-body");
 					loopStack.pop();
+				case TTry(tryExpression, catches):
+					visit(tryExpression, false, path + "/try-body");
+					for (index => entry in catches)
+						visit(entry.expr, false, path + "/catch:" + index + "/body");
+
+					final clauses:Array<OcamlCatchClauseDecision> = [];
+					var admitted = catches.length > 0;
+					for (index => entry in catches) {
+						final selected = selectCatchType(entry.v.t);
+						if (selected == null) {
+							admitted = false;
+							break;
+						}
+						final clausePath = path + "/catch:" + index;
+						final source = OcamlLoweredOrigin.sourceSpan(entry.expr.pos);
+						final proofClaim = 'The final typed Haxe try expression assigns source catch clause $index to exact ${selected.semanticTypeId}/${selected.outputCarrierTypeId} binding "${entry.v.name}". The sealed ${selected.matchPolicy} policy selects the first matching source clause, and ${selected.conversion} materializes its variable without reclassifying the payload during OCaml syntax construction.';
+						clauses.push({
+							id: catchClauseId(clausePath, index, selected.semanticTypeId),
+							source: source,
+							order: index,
+							variableName: entry.v.name,
+							semanticTypeId: selected.semanticTypeId,
+							signalCarrierTypeId: "Obj.t",
+							outputCarrierTypeId: selected.outputCarrierTypeId,
+							outputRepresentationId: selected.outputRepresentationId,
+							matchPolicy: selected.matchPolicy,
+							runtimeTag: selected.runtimeTag,
+							conversion: selected.conversion,
+							bodyResultPolicy: catchBranchResultPolicy(expression.t, entry.expr),
+							effects: [
+								OcamlCatchEffect.SelectFirstMatchingClause,
+								OcamlCatchEffect.BindCatchVariable,
+								OcamlCatchEffect.ExecuteCatchBody
+							],
+							proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+							proofClaim: proofClaim,
+							functionId: binding.functionId,
+							programRevision: binding.programRevision,
+							bodyRevision: binding.bodyRevision,
+							pipelineRevision: binding.pipelineRevision
+						});
+					}
+					final trySource = OcamlLoweredOrigin.sourceSpan(expression.pos);
+					var admittedChainId:Null<String> = null;
+					if (admitted) {
+						final chainId = catchChainId(path);
+						admittedChainId = chainId;
+						final proofClaim = 'The final typed Haxe body fixes all ${clauses.length} catch clauses in source order before target syntax. Compiler-owned Haxe exceptions and target-native exceptions enter the same ordered predicates, but unmatched values return through their original channel and compiler-private return/loop signals bypass every source catch.';
+						final chain:OcamlCatchChainDecision = {
+							id: chainId,
+							source: trySource,
+							clauses: clauses,
+							tryBodyResultPolicy: catchBranchResultPolicy(expression.t, tryExpression),
+							inputChannels: [
+								OcamlCatchInputChannel.HaxeExceptionSignal,
+								OcamlCatchInputChannel.TargetNativeException
+							],
+							targetNativeRuntimeTags: ["OcamlExn"],
+							haxeUnmatchedPolicy: OcamlCatchUnmatchedPolicy.RethrowHaxeExceptionSignal,
+							targetNativeUnmatchedPolicy: OcamlCatchUnmatchedPolicy.ReraiseTargetNativeException,
+							privateControlPolicy: OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals,
+							runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
+							profileEligibility: ["metal", "portable"],
+							reason: "This complete source catch chain has exact primitive/Dynamic matching and payload binding fixed before OCaml syntax.",
+							proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+							proofClaim: proofClaim,
+							functionId: binding.functionId,
+							programRevision: binding.programRevision,
+							bodyRevision: binding.bodyRevision,
+							pipelineRevision: binding.pipelineRevision
+						};
+						catchChains.push(chain);
+					}
+					catchOccurrences.push({
+						expression: expression,
+						occurrenceId: catchOccurrenceId(path),
+						source: trySource,
+						chainId: admittedChainId
+					});
 				case TFunction(_):
 					// The nested function owns independent function and loop targets.
 				case TBlock(expressions):
@@ -935,7 +1492,106 @@ class OcamlControlPlanner {
 			decisionOccurrences = decisionOccurrences.filter(occurrence -> admittedIds.exists(occurrence.decisionId));
 		}
 		return new OcamlControlPlan(returnFamilyAdmitted, loopFamilyAdmitted, throwFamilyAdmitted, binding, targets, decisions, targetOccurrences,
-			decisionOccurrences);
+			decisionOccurrences, catchChains, catchOccurrences);
+	}
+
+	static function catchBranchResultPolicy(tryResultType:Type, branch:TypedExpr):OcamlCatchBranchResultPolicy {
+		return isVoid(tryResultType)
+			&& !definitelyTransfers(branch) ? OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit : OcamlCatchBranchResultPolicy.PreserveTypedResult;
+	}
+
+	static function isVoid(type:Type):Bool {
+		return switch (haxe.macro.TypeTools.follow(type)) {
+			case TAbstract(abstractRef, _):
+				final abstractType = abstractRef.get();
+				(abstractType.pack ?? []).length == 0 && abstractType.name == "Void";
+			case _:
+				false;
+		}
+	}
+
+	/**
+		Recognizes only typed shapes whose normal completion is impossible.
+
+		Unknown control flow deliberately returns false. That conservative answer
+		discards a completed value to `unit`; it never guesses that a branch is
+		non-local merely to make generated OCaml type-check.
+	**/
+	static function definitelyTransfers(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TReturn(_) | TThrow(_):
+				true;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				definitelyTransfers(inner);
+			case TBlock(expressions):
+				Lambda.exists(expressions, definitelyTransfers);
+			case TIf(_, thenExpression, elseExpression): elseExpression != null && definitelyTransfers(thenExpression) && definitelyTransfers(elseExpression);
+			case TSwitch(_, cases, defaultExpression):
+				defaultExpression != null
+				&& cases.length > 0
+				&& Lambda.foreach(cases, entry -> definitelyTransfers(entry.expr))
+				&& definitelyTransfers(defaultExpression);
+			case TTry(tryExpression, catches): definitelyTransfers(tryExpression) && catches.length > 0 && Lambda.foreach(catches,
+					entry -> definitelyTransfers(entry.expr));
+			case _:
+				false;
+		}
+	}
+
+	function selectCatchType(type:Type):Null<{
+		semanticTypeId:String,
+		outputCarrierTypeId:String,
+		outputRepresentationId:String,
+		matchPolicy:OcamlCatchMatchPolicy,
+		runtimeTag:Null<String>,
+		conversion:OcamlCatchPayloadConversion
+	}> {
+		if (OcamlRepresentationRegistry.isExactInt(type)) {
+			final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			return {
+				semanticTypeId: "Int",
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: "Int",
+				conversion: OcamlCatchPayloadConversion.RecoverExactValue
+			};
+		}
+		if (OcamlRepresentationRegistry.isExactBool(type)) {
+			final representation = representations.selectExactBool(OcamlRepresentationDomain.InternalValue);
+			return {
+				semanticTypeId: "Bool",
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: "Bool",
+				conversion: OcamlCatchPayloadConversion.RecoverCheckedBool
+			};
+		}
+		if (OcamlRepresentationRegistry.isExactString(type)) {
+			final representation = representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+			return {
+				semanticTypeId: "String",
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: "String",
+				conversion: OcamlCatchPayloadConversion.RecoverExactValue
+			};
+		}
+		return switch (haxe.macro.TypeTools.follow(type)) {
+			case TDynamic(_):
+				{
+					semanticTypeId: "Dynamic",
+					outputCarrierTypeId: "Obj.t",
+					outputRepresentationId: OcamlControlPlan.DYNAMIC_CATCH_REPRESENTATION_ID,
+					matchPolicy: OcamlCatchMatchPolicy.MatchAll,
+					runtimeTag: null,
+					conversion: OcamlCatchPayloadConversion.PreserveDynamicCarrier
+				};
+			case _:
+				null;
+		}
 	}
 
 	function exactValueRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
@@ -957,6 +1613,18 @@ class OcamlControlPlanner {
 			+ (kind : String)
 			+ ":"
 			+ Sha256.encode(binding.functionId + "|" + (kind : String) + "|" + targetId + "|" + path).substr(0, 24);
+	}
+
+	function catchChainId(path:String):String {
+		return "control-catch-chain:" + Sha256.encode(binding.functionId + "|" + path).substr(0, 24);
+	}
+
+	function catchOccurrenceId(path:String):String {
+		return "control-catch-occurrence:" + Sha256.encode(binding.functionId + "|" + path).substr(0, 24);
+	}
+
+	function catchClauseId(path:String, order:Int, semanticTypeId:String):String {
+		return "control-catch-clause:" + Sha256.encode(binding.functionId + "|" + path + "|" + order + "|" + semanticTypeId).substr(0, 24);
 	}
 
 	static function sourceKey(source:OcamlLoweredSourceSpan):String {

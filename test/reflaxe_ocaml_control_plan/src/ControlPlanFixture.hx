@@ -3,6 +3,15 @@ import haxe.macro.Context;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchClauseDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchEffect;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchInputChannel;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchMatchPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPayloadConversion;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchPrivateControlPolicy;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchUnmatchedPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlEffect;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopKind;
@@ -14,6 +23,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /**
 	Checks control-family independence, immutability, and fail-closed validation.
@@ -31,7 +41,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision,
-			pipelineRevision: "typed-ocaml-function-plan-v30"
+			pipelineRevision: "typed-ocaml-function-plan-v31"
 		};
 	}
 
@@ -91,7 +101,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v30"
+			pipelineRevision: "typed-ocaml-function-plan-v31"
 		};
 	}
 
@@ -107,7 +117,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: bodyRevision ?? "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v30",
+			pipelineRevision: "typed-ocaml-function-plan-v31",
 			proofId: OcamlControlPlan.LEXICAL_LOOP_CONTROL_PROOF_ID,
 			proofClaim: "fixture lexical loop target"
 		};
@@ -139,7 +149,7 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v30"
+			pipelineRevision: "typed-ocaml-function-plan-v31"
 		};
 	}
 
@@ -197,7 +207,85 @@ class ControlPlanFixture {
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
 			bodyRevision: "body:control-fixture",
-			pipelineRevision: "typed-ocaml-function-plan-v30"
+			pipelineRevision: "typed-ocaml-function-plan-v31"
+		};
+	}
+
+	static function catchClause(id:String, min:Int, order:Int, variableName:String, semanticTypeId:String, ?runtimeTag:String,
+			?conversion:OcamlCatchPayloadConversion, ?bodyResultPolicy:OcamlCatchBranchResultPolicy):OcamlCatchClauseDecision {
+		final exact = semanticTypeId != "Dynamic";
+		final carrier = switch (semanticTypeId) {
+			case "Int": "int";
+			case "Bool": "bool";
+			case "String": "string";
+			case "Dynamic": "Obj.t";
+			case _: "unsupported";
+		}
+		final representation = semanticTypeId == "Dynamic" ? OcamlControlPlan.DYNAMIC_CATCH_REPRESENTATION_ID : 'representation:$semanticTypeId:internal-value';
+		final selectedConversion = conversion ?? switch (semanticTypeId) {
+			case "Bool": OcamlCatchPayloadConversion.RecoverCheckedBool;
+			case "Dynamic": OcamlCatchPayloadConversion.PreserveDynamicCarrier;
+			case _: OcamlCatchPayloadConversion.RecoverExactValue;
+		}
+		return {
+			id: id,
+			source: {
+				file: "test/oracle/control/Main.hx",
+				min: min,
+				max: min + 8
+			},
+			order: order,
+			variableName: variableName,
+			semanticTypeId: semanticTypeId,
+			signalCarrierTypeId: "Obj.t",
+			outputCarrierTypeId: carrier,
+			outputRepresentationId: representation,
+			matchPolicy: exact ? OcamlCatchMatchPolicy.ExactRuntimeTag : OcamlCatchMatchPolicy.MatchAll,
+			runtimeTag: exact ? (runtimeTag ?? semanticTypeId) : runtimeTag,
+			conversion: selectedConversion,
+			bodyResultPolicy: bodyResultPolicy ?? OcamlCatchBranchResultPolicy.PreserveTypedResult,
+			effects: [
+				OcamlCatchEffect.SelectFirstMatchingClause,
+				OcamlCatchEffect.BindCatchVariable,
+				OcamlCatchEffect.ExecuteCatchBody
+			],
+			proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+			proofClaim: 'fixture exact-$semanticTypeId catch clause',
+			functionId: FUNCTION_ID,
+			programRevision: "program:control-fixture",
+			bodyRevision: "body:control-fixture",
+			pipelineRevision: "typed-ocaml-function-plan-v31"
+		};
+	}
+
+	static function catchChain(id:String, clauses:Array<OcamlCatchClauseDecision>, ?bodyRevision:String,
+			?tryBodyResultPolicy:OcamlCatchBranchResultPolicy):OcamlCatchChainDecision {
+		return {
+			id: id,
+			source: {
+				file: "test/oracle/control/Main.hx",
+				min: 300,
+				max: 380
+			},
+			clauses: clauses,
+			tryBodyResultPolicy: tryBodyResultPolicy ?? OcamlCatchBranchResultPolicy.PreserveTypedResult,
+			inputChannels: [
+				OcamlCatchInputChannel.HaxeExceptionSignal,
+				OcamlCatchInputChannel.TargetNativeException
+			],
+			targetNativeRuntimeTags: ["OcamlExn"],
+			haxeUnmatchedPolicy: OcamlCatchUnmatchedPolicy.RethrowHaxeExceptionSignal,
+			targetNativeUnmatchedPolicy: OcamlCatchUnmatchedPolicy.ReraiseTargetNativeException,
+			privateControlPolicy: OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals,
+			runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact primitive catch chain",
+			proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+			proofClaim: "fixture exact primitive catch chain",
+			functionId: FUNCTION_ID,
+			programRevision: "program:control-fixture",
+			bodyRevision: bodyRevision ?? "body:control-fixture",
+			pipelineRevision: "typed-ocaml-function-plan-v31"
 		};
 	}
 
@@ -259,8 +347,21 @@ class ControlPlanFixture {
 			|| throwOnly.decisions().length != 1) {
 			throw "Throw-family admission accidentally claimed or discarded another control family";
 		}
+		final intCatch = catchClause("control-catch-clause:int", 310, 0, "asInt", "Int");
+		final boolCatch = catchClause("control-catch-clause:bool", 320, 1, "asBool", "Bool");
+		final stringCatch = catchClause("control-catch-clause:string", 330, 2, "asString", "String");
+		final dynamicCatch = catchClause("control-catch-clause:dynamic", 340, 3, "asDynamic", "Dynamic");
+		final exactCatchChain = catchChain("control-catch-chain:exact", [intCatch, boolCatch, stringCatch, dynamicCatch]);
+		final catchOnly = new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [exactCatchChain]);
+		if (catchOnly.catchChains().length != 1 || catchOnly.catchChains()[0].clauses.length != 4)
+			throw "Exact catch-chain admission lost its source-ordered clauses";
+		final copiedCatchChains = catchOnly.catchChains();
+		copiedCatchChains[0].clauses[0].effects.push(cast "corrupted");
+		if (catchOnly.catchChains()[0].clauses[0].effects.length != 3)
+			throw "Catch decisions leaked mutable clause effects";
 		final legacy = OcamlControlPlan.notAdmitted(binding());
-		if (legacy.returnFamilyAdmitted || legacy.loopFamilyAdmitted || legacy.throwFamilyAdmitted || legacy.hasReturnTransfers())
+		if (legacy.returnFamilyAdmitted || legacy.loopFamilyAdmitted || legacy.throwFamilyAdmitted || legacy.hasReturnTransfers()
+			|| legacy.catchChains().length != 0)
 			throw "A legacy function became control-plan admitted";
 
 		OcamlControlPlan.requireDecision(returnDecision("control:return:bool", 40, null, null, null, "Bool"));
@@ -271,6 +372,9 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:bool", 180, "Bool"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:string", 190, "String"));
 		OcamlControlPlan.requireLoopTarget(loop);
+		OcamlControlPlan.requireCatchChain(exactCatchChain);
+		for (clause in exactCatchChain.clauses)
+			OcamlControlPlan.requireCatchClause(clause);
 
 		final missingId = returnDecision("", 50);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [missingId]));
@@ -306,6 +410,28 @@ class ControlPlanFixture {
 		final mismatchedThrow = throwDecision("control:throw:mismatched", 250, "Int", null, null, null, null, null, "Bool");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [mismatchedThrow]));
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, false, binding(), [], [intThrow]));
+
+		final badCatchOrder = catchChain("control-catch-chain:bad-order", [
+			catchClause("control-catch-clause:bad-order:dynamic", 350, 0, "asDynamic", "Dynamic"),
+			catchClause("control-catch-clause:bad-order:int", 360, 1, "asInt", "Int")
+		]);
+		expectThrows("invalid-catch-order", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchOrder]));
+		final badCatchTag = catchChain("control-catch-chain:bad-tag", [catchClause("control-catch-clause:bad-tag", 350, 0, "asInt", "Int", "Bool")]);
+		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchTag]));
+		final badCatchConversion = catchChain("control-catch-chain:bad-conversion", [
+			catchClause("control-catch-clause:bad-conversion", 350, 0, "asBool", "Bool", null, OcamlCatchPayloadConversion.RecoverExactValue)
+		]);
+		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchConversion]));
+		final badCatchBodyResult = catchChain("control-catch-chain:bad-body-result", [
+			catchClause("control-catch-clause:bad-body-result", 350, 0, "asInt", "Int", null, null, cast "infer-in-printer")
+		]);
+		expectThrows("invalid-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badCatchBodyResult]));
+		final badTryBodyResult = catchChain("control-catch-chain:bad-try-result", [intCatch], null, cast "infer-in-printer");
+		expectThrows("invalid-catch-chain", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [badTryBodyResult]));
+		final staleCatch = catchChain("control-catch-chain:stale", [intCatch], "body:other");
+		expectThrows("stale-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [staleCatch]));
+		final duplicateCatchClause = catchChain("control-catch-chain:duplicate-clause", [intCatch, intCatch]);
+		expectThrows("duplicate-catch-clause", () -> new OcamlControlPlan(false, false, false, binding(), [], [], null, null, [duplicateCatchClause]));
 
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, true, false, binding(), [loop], [first, loopBreak]));
 		expectThrows("duplicate-decision", () -> new OcamlControlPlan(true, false, false, binding(), [], [first, first]));
@@ -396,6 +522,85 @@ class ControlPlanFixture {
 			|| indexedThrows.decisionFor(typedThrows[1])?.id != sameSourceThrowB.id) {
 			throw "The typed occurrence index collapsed distinct same-span throw nodes";
 		}
+
+		final typedCatchRoot = Context.typeExpr(macro try {
+			throw true;
+		} catch (asInt:Int) {
+			Sys.println(Std.string(asInt));
+		} catch (asBool:Bool) {
+			Sys.println(Std.string(asBool));
+		} catch (asString:String) {
+			Sys.println(Std.string(asString));
+		} catch (asDynamic:Dynamic) {
+			Sys.println(Std.string(asDynamic));
+		});
+		final typedTries:Array<TypedExpr> = [];
+		function collectTryNodes(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TTry(_, _):
+					typedTries.push(expression);
+				case _:
+			}
+			TypedExprTools.iter(expression, collectTryNodes);
+		}
+		collectTryNodes(typedCatchRoot);
+		if (typedTries.length != 1)
+			throw "The exact catch occurrence fixture did not produce one typed try";
+		final typedCatchSource:OcamlLoweredSourceSpan = {
+			file: "test/oracle/control/Main.hx",
+			min: 300,
+			max: 380
+		};
+		final indexedCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:exact",
+				source: typedCatchSource,
+				chainId: exactCatchChain.id
+			}
+		]);
+		if (!indexedCatch.hasCatchDispositionFor(typedTries[0]) || indexedCatch.catchChainFor(typedTries[0])?.id != exactCatchChain.id)
+			throw "The typed catch occurrence did not resolve its exact source-ordered chain";
+		final indexedLegacyCatch = new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:legacy",
+				source: typedCatchSource,
+				chainId: null
+			}
+		]);
+		if (!indexedLegacyCatch.hasCatchDispositionFor(typedTries[0]) || indexedLegacyCatch.catchChainFor(typedTries[0]) != null)
+			throw "An explicit legacy catch disposition became an admitted chain";
+		expectThrows("missing-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:legacy-only",
+				source: typedCatchSource,
+				chainId: null
+			}
+		]));
+		expectThrows("duplicate-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [exactCatchChain], [
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:duplicate",
+				source: typedCatchSource,
+				chainId: exactCatchChain.id
+			},
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:duplicate",
+				source: typedCatchSource,
+				chainId: exactCatchChain.id
+			}
+		]));
+		expectThrows("missing-catch-occurrence", () -> new OcamlControlPlan(false, false, false, binding(), [], [], [], [], [], [
+			{
+				expression: typedTries[0],
+				occurrenceId: "control-catch-occurrence:missing-chain",
+				source: typedCatchSource,
+				chainId: "control-catch-chain:missing"
+			}
+		]));
 
 		expectThrows("missing-target", () -> new OcamlControlPlan(false, true, false, binding(), [], [loopBreak]));
 		final wrongTargetKind = loopDecision("control:break:wrong-kind", 130, loop.id, OcamlControlTransferKind.Break, OcamlControlTargetKind.Function);
