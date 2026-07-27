@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first two bounded control-effect slices are now executable: an ordinary
+The first three bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -28,11 +28,23 @@ represented String carrier also preserves the target's existing runtime null
 sentinel; this does not admit the separate nullable-primitive carriers such as
 `Null<Int>` or `Null<Bool>`. The compiler records and validates the return
 target and exact input/output carrier before printing OCaml, and the generated
-function catches only its own return signal. A nested anonymous function keeps
-an independent return boundary. This is evidence for
-`haxe_ocaml-w32h3.1` and `haxe_ocaml-w32h3.2`, not closure of the parent
-control-effects requirement: nullable primitives, nominal values, `Dynamic`,
-`Void`, `throw`/`catch`, loop `break`/`continue`, and the complete
+function catches only its own return signal.
+
+The third slice gives every ordinary `while` and `do ... while` loop a sealed
+target before OCaml syntax is built. Each `break` or `continue` names the exact
+innermost loop it affects, and an ordinary source `catch` rethrows the
+compiler-private loop signal instead of intercepting it. Loop admission is
+independent from return-carrier support, so the target is also sealed in
+`Void`, `Float`, and other functions whose early-return payload family remains
+unsupported. Stable record identities follow the final typed body's structural
+path because Haxe-generated nodes can legitimately share the same source
+position; source positions remain diagnostic evidence rather than a uniqueness
+key. Nested anonymous functions keep independent return and loop boundaries.
+
+This is evidence for `haxe_ocaml-w32h3.1`, `haxe_ocaml-w32h3.2`, and
+`haxe_ocaml-w32h3.3`, not closure of the parent control-effects requirement.
+Additional early-return payloads, `Void` early return, Haxe `throw`/`catch`
+payload behavior, non-lexical control, cleanup effects, and the complete
 runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
@@ -182,11 +194,12 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first two slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first three slices cover
   exact-`Int`, exact-`Bool`, and represented-`String` early returns from
   ordinary static functions, including the existing String runtime null
-  sentinel, while the remaining payload and control families are still release
-  blockers;
+  sentinel, plus exact lexical targets for `break` and `continue` in ordinary
+  `while` and `do ... while` loops. The remaining return-payload,
+  source-exception, and cleanup families are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);
