@@ -70,6 +70,13 @@ optional-bool-exact=true
 optional-bool-existing
 optional-bool-callee
 optional-bool-existing-value=false
+optional-string-callee
+optional-string-omitted=missing
+optional-string-callee
+optional-string-null=missing
+optional-string-source
+optional-string-callee
+optional-string-exact=ready
 void-zero-callee
 void-int-source
 void-bool-source

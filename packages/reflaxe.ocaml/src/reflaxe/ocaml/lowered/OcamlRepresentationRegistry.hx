@@ -165,6 +165,29 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/**
+		Returns whether Haxe wrapped the direct built-in `String` class in its
+		core `Null` abstract.
+
+		This predicate does not select a separate `Null<String>` representation.
+		It lets call-boundary planning recognize the macro type of `?value:String`
+		and deliberately map that optional parameter to the existing exact String
+		carrier and its runtime null sentinel.
+	**/
+	public static function isExactNullString(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, [TInst(classRef, _)]):
+				final abstractType = abstractRef.get();
+				final classType = classRef.get();
+				abstractType.pack.length == 0
+				&& abstractType.name == "Null"
+				&& classType.pack.length == 0
+				&& classType.name == "String";
+			case _:
+				false;
+		}
+	}
+
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {

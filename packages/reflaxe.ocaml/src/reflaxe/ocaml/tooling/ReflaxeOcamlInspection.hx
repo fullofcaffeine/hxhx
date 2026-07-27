@@ -44,7 +44,7 @@ class ReflaxeOcamlInspection {
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
-	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v2";
+	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -319,8 +319,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 20) {
-						throw 'Unsupported lowering report schema $version; expected 20.';
+					if (version != 21) {
+						throw 'Unsupported lowering report schema $version; expected 21.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -369,7 +369,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v10")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v11")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -534,8 +534,7 @@ class ReflaxeOcamlInspection {
 		var sourceArgumentIndex = 0;
 		for (index in 0...arguments.length) {
 			final step = schedule[index];
-			final omitted = arguments[index].conversion == "materialize-omitted-nullable-int"
-				|| arguments[index].conversion == "materialize-omitted-nullable-bool";
+			final omitted = isOmittedConversion(arguments[index].conversion);
 			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
@@ -627,6 +626,20 @@ class ReflaxeOcamlInspection {
 					|| value.inputCarrierTypeId != "Obj.t"
 					|| value.proofId != "omitted-nullable-bool-call-materialization-v1")
 					throw '$owner has an invalid omitted optional Null<Bool> materialization.';
+			case "materialize-omitted-string":
+				if (!value.parameterOptional
+					|| !sameSides
+					|| value.inputSemanticTypeId != "String"
+					|| value.inputCarrierTypeId != "string"
+					|| value.proofId != "omitted-string-call-materialization-v1")
+					throw '$owner has an invalid omitted optional String materialization.';
+			case "materialize-explicit-null-string":
+				if (!value.parameterOptional
+					|| !sameSides
+					|| value.inputSemanticTypeId != "String"
+					|| value.inputCarrierTypeId != "string"
+					|| value.proofId != "explicit-null-string-call-materialization-v1")
+					throw '$owner has an invalid explicitly supplied null String materialization.';
 			case _:
 				throw '$owner has unsupported conversion "${value.conversion}".';
 		}
@@ -672,11 +685,19 @@ class ReflaxeOcamlInspection {
 				optionalCount += 1;
 				if (optionalCount > 1
 					|| index != arguments.length - 1
-					|| (argument.outputSemanticTypeId != "Null<Int>" && argument.outputSemanticTypeId != "Null<Bool>")) {
+					|| (argument.outputSemanticTypeId != "Null<Int>"
+						&& argument.outputSemanticTypeId != "Null<Bool>"
+						&& argument.outputSemanticTypeId != "String")) {
 					throw '$owner has an unsupported optional-parameter shape.';
 				}
 			}
 		}
+	}
+
+	static function isOmittedConversion(conversion:String):Bool {
+		return conversion == "materialize-omitted-nullable-int"
+			|| conversion == "materialize-omitted-nullable-bool"
+			|| conversion == "materialize-omitted-string";
 	}
 
 	static function isAdmittedCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {

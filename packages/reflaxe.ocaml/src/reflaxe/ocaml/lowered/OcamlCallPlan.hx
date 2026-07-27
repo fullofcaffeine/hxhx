@@ -38,6 +38,8 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
 	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
 	final MaterializeOmittedNullableBool = "materialize-omitted-nullable-bool";
+	final MaterializeOmittedString = "materialize-omitted-string";
+	final MaterializeExplicitNullString = "materialize-explicit-null-string";
 }
 
 /** The only runtime actions admitted in a direct-call evaluation schedule. */
@@ -175,7 +177,7 @@ typedef OcamlCallDecision = {
 	Plan-to-plan span collisions are also rejected during construction.
 **/
 class OcamlCallPlan {
-	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v2";
+	public static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
 
 	final ordered:Array<OcamlCallDecision>;
 	final bySourceKey:Map<String, OcamlCallDecision> = [];
@@ -212,12 +214,18 @@ class OcamlCallPlan {
 	static function suppliedArgumentCount(arguments:Array<OcamlCallValuePlan>):Int {
 		var count = 0;
 		for (argument in arguments) {
-			if (argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableInt
-				&& argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableBool) {
+			if (!isOmittedConversion(argument.conversion)) {
 				count += 1;
 			}
 		}
 		return count;
+	}
+
+	/** Returns whether a crossing materializes an omitted source argument. */
+	public static function isOmittedConversion(conversion:OcamlCallCarrierConversion):Bool {
+		return conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
+			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool
+			|| conversion == OcamlCallCarrierConversion.MaterializeOmittedString;
 	}
 
 	/** Returns whether one exact argument preserves the sealed `Null<Bool>` carrier. */
@@ -529,6 +537,20 @@ class OcamlCallPlan {
 					|| value.proofId != "omitted-nullable-bool-call-materialization-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional Null<Bool> carrier';
 				}
+			case MaterializeOmittedString:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "omitted-string-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one omitted optional String carrier';
+				}
+			case MaterializeExplicitNullString:
+				if (!value.parameterOptional
+					|| !sameRepresentationSides(value)
+					|| !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "explicit-null-string-call-materialization-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must materialize one explicitly supplied null String carrier';
+				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has unsupported conversion "${value.conversion}"';
 		}
@@ -566,8 +588,7 @@ class OcamlCallPlan {
 		for (index in 0...call.arguments.length) {
 			final argument = call.arguments[index];
 			final step = call.evaluationSchedule[index];
-			final omitted = argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
-				|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool;
+			final omitted = isOmittedConversion(argument.conversion);
 			final expectedKind = omitted ? OcamlCallEvaluationStepKind.MaterializeOmittedArgument : OcamlCallEvaluationStepKind.MaterializeArgument;
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			if (step.kind != expectedKind
@@ -609,7 +630,7 @@ class OcamlCallPlan {
 		for (index in 0...arguments.length) {
 			final argument = arguments[index];
 			if (argument.parameterOptional) {
-				if (optionalSeen || index != arguments.length - 1 || !isNullableSemanticType(argument.outputSemanticTypeId))
+				if (optionalSeen || index != arguments.length - 1 || !isOptionalSemanticType(argument.outputSemanticTypeId))
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner has an unsupported optional-parameter shape';
 				optionalSeen = true;
 			}
@@ -665,6 +686,18 @@ class OcamlCallPlan {
 
 	static function isNullableSemanticType(semanticTypeId:String):Bool {
 		return semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>";
+	}
+
+	static function isOptionalSemanticType(semanticTypeId:String):Bool {
+		return isNullableSemanticType(semanticTypeId) || semanticTypeId == "String";
+	}
+
+	/** Returns whether the typed source occurrence is the explicit null literal. */
+	public static function isExplicitNullExpression(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TConst(TNull): true;
+			case _: false;
+		}
 	}
 
 	/** Returns the stable plan-local carrier slot for one source argument. */
@@ -940,10 +973,17 @@ class OcamlCallPlanner {
 		final planned:Array<OcamlCallValuePlan> = [];
 		for (index in 0...arguments.length) {
 			final boundary = boundaryValues[index];
-			final input = representationFor(arguments[index].t, representations);
 			final output = representationForSemanticType(boundary.outputSemanticTypeId, representations);
-			if (input == null || output == null)
+			if (output == null)
 				return null;
+			final input = representationFor(arguments[index].t, representations);
+			if (input == null) {
+				if (output.semanticTypeId == "String" && OcamlCallPlan.isExplicitNullExpression(arguments[index])) {
+					planned.push(crossingValue(index, output, output, OcamlCallCarrierConversion.MaterializeExplicitNullString, boundary.parameterOptional));
+					continue;
+				}
+				return null;
+			}
 			if (input.semanticTypeId == output.semanticTypeId) {
 				if (output.semanticTypeId == "Null<Int>") {
 					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableIntCarrier, boundary.parameterOptional));
@@ -971,6 +1011,7 @@ class OcamlCallPlanner {
 			final conversion = switch (boundary.outputSemanticTypeId) {
 				case "Null<Int>": OcamlCallCarrierConversion.MaterializeOmittedNullableInt;
 				case "Null<Bool>": OcamlCallCarrierConversion.MaterializeOmittedNullableBool;
+				case "String": OcamlCallCarrierConversion.MaterializeOmittedString;
 				case _: return null;
 			}
 			planned.push(crossingValue(boundary.index, representation, representation, conversion, true));
@@ -981,8 +1022,7 @@ class OcamlCallPlanner {
 	static function omittedArgumentIndices(arguments:Array<OcamlCallValuePlan>):Array<Int> {
 		return [
 			for (argument in arguments)
-				if (argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
-					|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool) argument.index
+				if (OcamlCallPlan.isOmittedConversion(argument.conversion)) argument.index
 		];
 	}
 
@@ -996,8 +1036,8 @@ class OcamlCallPlanner {
 	}
 
 	static function callReason(arguments:Array<OcamlCallValuePlan>, resultKind:OcamlCallResultKind, result:Null<OcamlCallValuePlan>):String {
-		final conversions = arguments.map(argument -> argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableInt
-			|| argument.conversion == OcamlCallCarrierConversion.MaterializeOmittedNullableBool ? 'omitted optional ${argument.outputSemanticTypeId} via ${argument.conversion}' : '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
+		final conversions = arguments.map(argument ->
+			OcamlCallPlan.isOmittedConversion(argument.conversion) ? 'omitted optional ${argument.outputSemanticTypeId} via ${argument.conversion}' : '${argument.inputSemanticTypeId} -> ${argument.outputSemanticTypeId} via ${argument.conversion}');
 		final resultDescription = switch (resultKind) {
 			case Value:
 				if (result == null)
@@ -1024,7 +1064,7 @@ class OcamlCallPlanner {
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
 		for (argument in signature.arguments) {
-			final representation = representationFor(argument.type, representations);
+			final representation = representationForArgument(argument.type, argument.optional, representations);
 			if (representation == null)
 				return null;
 			argumentRepresentations.push(representation);
@@ -1049,7 +1089,7 @@ class OcamlCallPlanner {
 			resultKind: signature.resultKind,
 			result: resultRepresentation == null ? null : identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int> or Null<Bool> parameter may be optional.',
+			reason: 'An ordinary static Haxe method with arguments [$semanticSignature] and result $resultDescription independently selects one sealed internal carrier for each represented boundary value. Effect-only Void owns no result carrier. At most one trailing Null<Int>, Null<Bool>, or exact String parameter may be optional.',
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
 			programRevision: programRevision,
@@ -1068,7 +1108,8 @@ class OcamlCallPlanner {
 				var valid = true;
 				for (index in 0...arguments.length) {
 					final argument = arguments[index];
-					final semanticType = semanticTypeId(argument.t);
+					final semanticType = semanticTypeId(argument.t) ?? (argument.opt
+						&& OcamlRepresentationRegistry.isExactNullString(argument.t) ? "String" : null);
 					if (semanticType == null) {
 						valid = false;
 						break;
@@ -1077,7 +1118,7 @@ class OcamlCallPlanner {
 						optionalCount += 1;
 						if (optionalCount > 1
 							|| index != arguments.length - 1
-							|| (semanticType != "Null<Int>" && semanticType != "Null<Bool>")) {
+							|| (semanticType != "Null<Int>" && semanticType != "Null<Bool>" && semanticType != "String")) {
 							valid = false;
 							break;
 						}
@@ -1122,6 +1163,12 @@ class OcamlCallPlanner {
 	static function representationFor(type:Type, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
 		final semanticType = semanticTypeId(type);
 		return semanticType == null ? null : representationForSemanticType(semanticType, representations);
+	}
+
+	static function representationForArgument(type:Type, optional:Bool, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
+		if (optional && OcamlRepresentationRegistry.isExactNullString(type))
+			return representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+		return representationFor(type, representations);
 	}
 
 	static function representationForSemanticType(semanticType:String, representations:OcamlRepresentationRegistry):Null<OcamlRepresentationDecision> {
@@ -1198,6 +1245,14 @@ class OcamlCallPlanner {
 			case MaterializeOmittedNullableBool: {
 					id: "omitted-nullable-bool-call-materialization-v1",
 					claim: "The Haxe call omits one trailing optional Null<Bool> parameter, so the sealed schedule materializes the selected null Obj.t carrier without evaluating a source expression."
+				};
+			case MaterializeOmittedString: {
+					id: "omitted-string-call-materialization-v1",
+					claim: "The Haxe call omits one trailing optional String parameter, so the sealed schedule materializes the selected Haxe String null sentinel without evaluating a source expression."
+				};
+			case MaterializeExplicitNullString: {
+					id: "explicit-null-string-call-materialization-v1",
+					claim: "The Haxe call explicitly supplies the null literal to one trailing optional String parameter, so the sealed supplied-argument step materializes the selected Haxe String null sentinel."
 				};
 			case Identity:
 				throw "reflaxe.ocaml [ocaml-call:invalid-plan]: a directional call crossing cannot use the identity helper";

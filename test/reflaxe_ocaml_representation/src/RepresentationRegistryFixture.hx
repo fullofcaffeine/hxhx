@@ -64,6 +64,8 @@ class RepresentationRegistryFixture {
 			"the direct core String should be admitted by its dedicated predicate");
 		assertTrue(OcamlRepresentationRegistry.isExactString(Context.typeof(macro(null : String))),
 			"the direct core String predicate should not confuse its nullable value with a different semantic type");
+		assertTrue(OcamlRepresentationRegistry.isExactNullString(Context.typeof(macro(null : Null<String>))),
+			"the core Null<String> macro type should be recognized only for optional String boundary normalization");
 		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro("value" : StringAlias))),
 			"a String typedef should need its own proof instead of following the typedef implicitly");
 		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro(0 : Int))), "Int should remain outside the exact String slice");

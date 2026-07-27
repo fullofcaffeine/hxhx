@@ -85,6 +85,11 @@ class Main {
 		return value;
 	}
 
+	static function optionalStringSource():String {
+		Sys.println("optional-string-source");
+		return "ready";
+	}
+
 	static function voidIntSource():Int {
 		Sys.println("void-int-source");
 		return 21;
@@ -151,6 +156,9 @@ class Main {
 		Sys.println(OptionalCalls.optionalBool(optionalBoolSource()) ? "optional-bool-exact=true" : "optional-bool-exact=false");
 		final existingOptionalBool:Null<Bool> = false;
 		Sys.println(OptionalCalls.optionalBool(observeOptionalBool(existingOptionalBool)) ? "optional-bool-existing-value=true" : "optional-bool-existing-value=false");
+		Sys.println("optional-string-omitted=" + OptionalCalls.optionalString());
+		Sys.println("optional-string-null=" + OptionalCalls.optionalString(null));
+		Sys.println("optional-string-exact=" + OptionalCalls.optionalString(optionalStringSource()));
 		VoidCalls.noArguments();
 		VoidCalls.withArguments(voidIntSource(), voidBoolSource(), voidStringSource());
 		Sys.println("void-calls-complete");

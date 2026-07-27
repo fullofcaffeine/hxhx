@@ -173,14 +173,18 @@ class OcamlBuilder {
 	/** Mechanically applies one conversion already selected by the call plan. */
 	function buildPlannedCallArgument(value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
-		final built = buildExpr(expression);
 		return switch (value.conversion) {
 			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier:
-				built;
+				buildExpr(expression);
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
-			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString:
 				callPlanInvariant('call argument ${value.index} claims an omitted conversion but received a source expression', expression.pos);
+			case MaterializeExplicitNullString:
+				if (!OcamlCallPlan.isExplicitNullExpression(expression))
+					callPlanInvariant('call argument ${value.index} claims an explicit null String conversion for a non-null source expression',
+						expression.pos);
+				exactStringNullValue(OcamlRepresentationDomain.InternalValue);
 		}
 	}
 
@@ -190,6 +194,8 @@ class OcamlBuilder {
 		return switch (value.conversion) {
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
 				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+			case MaterializeOmittedString:
+				exactStringNullValue(OcamlRepresentationDomain.InternalValue);
 			case _:
 				callPlanInvariant('call argument ${value.index} has no sealed omitted-argument conversion', position);
 		}
@@ -203,7 +209,7 @@ class OcamlBuilder {
 				body;
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
-			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
 				callPlanInvariant("a callable result cannot use an omitted-argument conversion", position);
 		}
 	}
@@ -221,9 +227,7 @@ class OcamlBuilder {
 		} catch (error:Dynamic) {
 			return callPlanInvariant(Std.string(error), position);
 		}
-		final suppliedArgumentCount = call.arguments.filter(argument -> argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableInt
-			&& argument.conversion != OcamlCallCarrierConversion.MaterializeOmittedNullableBool)
-			.length;
+		final suppliedArgumentCount = call.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length;
 		if (arguments.length != suppliedArgumentCount)
 			return
 				callPlanInvariant('call "${call.id}" has ${arguments.length} source arguments but its sealed plan expects $suppliedArgumentCount supplied arguments',

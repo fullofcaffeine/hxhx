@@ -146,9 +146,21 @@ if ! grep -q '^let optionalInt = fun (value : Obj.t) ->' "$optional_source" \
 	echo "Optional Int and Bool declarations must expose their Haxe Null<T> boundary as Obj.t" >&2
 	exit 1
 fi
+if ! grep -q '^let optionalString = fun (value : string) ->' "$optional_source"; then
+	echo "The optional String declaration must retain the exact Haxe String carrier" >&2
+	exit 1
+fi
 if ! grep -Eq 'let __call_arg_0_[0-9]+ = HxRuntime\.hx_null in OptionalCalls\.optionalInt __call_arg_0_[0-9]+' "$main_source" \
 	|| ! grep -Eq 'let __call_arg_0_[0-9]+ = HxRuntime\.hx_null in OptionalCalls\.optionalBool __call_arg_0_[0-9]+' "$main_source"; then
 	echo "Omitted optional primitive arguments must materialize the selected null carrier before invocation" >&2
+	exit 1
+fi
+if [ "$(grep -Ec 'let __call_arg_0_[0-9]+ = HxString\.hx_null_string in OptionalCalls\.optionalString __call_arg_0_[0-9]+' "$main_source")" -ne 2 ]; then
+	echo "Omitted and explicitly null optional Strings must each materialize the dedicated Haxe String null sentinel" >&2
+	exit 1
+fi
+if grep -Eq 'let __call_arg_0_[0-9]+ = (HxRuntime\.hx_null|\"\") in OptionalCalls\.optionalString __call_arg_0_[0-9]+' "$main_source"; then
+	echo "An omitted optional String must not use the object null carrier or an empty string" >&2
 	exit 1
 fi
 if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(optionalIntSource \(\)\) in OptionalCalls\.optionalInt __call_arg_0_[0-9]+' "$main_source" \
@@ -158,6 +170,10 @@ if ! grep -Eq 'let __call_arg_0_[0-9]+ = Obj\.repr \(optionalIntSource \(\)\) in
 fi
 if grep -Eq 'Obj\.repr \(Obj\.repr \(optional(Int|Bool)Source \(\)\)\)' "$main_source"; then
 	echo "A supplied optional primitive argument must not be boxed twice" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = optionalStringSource \(\) in OptionalCalls\.optionalString __call_arg_0_[0-9]+' "$main_source"; then
+	echo "A supplied optional String must be evaluated once and preserve its exact carrier" >&2
 	exit 1
 fi
 if ! grep -q '^let noArguments = fun () ->' "$void_source"; then
@@ -238,7 +254,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 20 || report.callModel !== 'typed-ocaml-directional-call-boundary-v10') {
+if (report.schemaVersion !== 21 || report.callModel !== 'typed-ocaml-directional-call-boundary-v11') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -295,7 +311,7 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 		}
 	}
 }
-const signatureProofId = 'direct-static-representation-signature-v2'
+const signatureProofId = 'direct-static-representation-signature-v3'
 if (report.calls.some(call => call.proofId !== signatureProofId)
 	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
@@ -322,6 +338,7 @@ for (const call of report.calls) {
 		const argument = call.arguments[index]
 		const omitted = argument.conversion === 'materialize-omitted-nullable-int'
 			|| argument.conversion === 'materialize-omitted-nullable-bool'
+			|| argument.conversion === 'materialize-omitted-string'
 		const step = call.evaluationSchedule?.[index]
 		if (step?.kind !== (omitted ? 'materialize-omitted-argument' : 'materialize-argument')
 			|| step.argumentIndex !== index
@@ -625,6 +642,45 @@ function verifyOptionalCalls(fieldName, semanticTypeId, resultSemanticTypeId, re
 }
 verifyOptionalCalls('optionalInt', 'Null<Int>', 'Int', 'int')
 verifyOptionalCalls('optionalBool', 'Null<Bool>', 'Bool', 'bool')
+function verifyOptionalString() {
+	const calls = report.calls?.filter(item => item.sourceTypeName === 'OptionalCalls' && item.sourceFieldName === 'optionalString') ?? []
+	const boundary = report.callableBoundaries?.find(
+		item => item.sourceTypeName === 'OptionalCalls' && item.sourceFieldName === 'optionalString'
+	)
+	if (calls.length !== 3 || !boundary
+		|| boundary.arguments?.length !== 1
+		|| boundary.arguments[0]?.parameterOptional !== true
+		|| !isIdentity(boundary.arguments[0], 'String', 'string')
+		|| !isIdentity(boundary.result, 'String', 'string')) {
+		throw new Error('the lowering report did not seal optional String with its exact callable shape')
+	}
+	const omitted = calls.filter(call => call.arguments?.[0]?.conversion === 'materialize-omitted-string')
+	const explicitNull = calls.filter(call => call.arguments?.[0]?.conversion === 'materialize-explicit-null-string')
+	const supplied = calls.filter(call => call.arguments?.[0]?.conversion === 'identity')
+	if (omitted.length !== 1 || explicitNull.length !== 1 || supplied.length !== 1) {
+		throw new Error('optional String did not distinguish omission from explicit null and a supplied value')
+	}
+	const omittedArgument = omitted[0].arguments[0]
+	if (omittedArgument.parameterOptional !== true
+		|| omittedArgument.inputSemanticTypeId !== 'String'
+		|| omittedArgument.inputCarrierTypeId !== 'string'
+		|| omittedArgument.proofId !== 'omitted-string-call-materialization-v1'
+		|| omitted[0].evaluationSchedule?.[0]?.kind !== 'materialize-omitted-argument'
+		|| omitted[0].evaluationSchedule?.[0]?.sourceArgumentIndex !== null) {
+		throw new Error('optional String omission does not own one source-free sentinel materialization')
+	}
+	if (explicitNull[0].arguments[0]?.proofId !== 'explicit-null-string-call-materialization-v1') {
+		throw new Error('the explicitly supplied null String does not own its sentinel materialization proof')
+	}
+	for (const call of [...explicitNull, ...supplied]) {
+		if (call.arguments[0]?.parameterOptional !== true
+			|| call.evaluationSchedule?.[0]?.kind !== 'materialize-argument'
+			|| call.evaluationSchedule?.[0]?.sourceArgumentIndex !== 0) {
+			throw new Error('a supplied optional String did not retain its source argument materialization')
+		}
+	}
+}
+verifyOptionalString()
 function verifyVoidCall(fieldName, arity) {
 	const calls = report.calls?.filter(item => item.sourceTypeName === 'VoidCalls' && item.sourceFieldName === fieldName) ?? []
 	const boundary = report.callableBoundaries?.find(
@@ -686,12 +742,12 @@ if (zeroCalls.length !== 4
 }
 const optionalCalls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'OptionalCalls') ?? []
 const optionalBoundaries = report.lowering?.callableBoundaries?.filter(item => item.sourceTypeName === 'OptionalCalls') ?? []
-if (optionalCalls.length !== 8
-	|| optionalBoundaries.length !== 2
+if (optionalCalls.length !== 11
+	|| optionalBoundaries.length !== 3
 	|| optionalBoundaries.some(item => item.arguments?.length !== 1 || item.arguments[0]?.parameterOptional !== true)
-	|| optionalCalls.filter(call => call.evaluationSchedule?.[0]?.kind === 'materialize-omitted-argument').length !== 2
+	|| optionalCalls.filter(call => call.evaluationSchedule?.[0]?.kind === 'materialize-omitted-argument').length !== 3
 	|| optionalCalls.some(call => call.arguments?.[0]?.parameterOptional !== true)) {
-	throw new Error('reflaxe.ocaml inspection did not preserve optional primitive presence and callable shape')
+	throw new Error('reflaxe.ocaml inspection did not preserve optional primitive/String presence and callable shape')
 }
 const voidCalls = report.lowering?.calls?.filter(item => item.sourceTypeName === 'VoidCalls') ?? []
 const voidBoundaries = report.lowering?.callableBoundaries?.filter(item => item.sourceTypeName === 'VoidCalls') ?? []

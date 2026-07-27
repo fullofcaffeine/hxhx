@@ -168,6 +168,40 @@ class CallPlanFixture {
 		};
 	}
 
+	static function optionalStringValue(index:Int, omitted:Bool = false):OcamlCallValuePlan {
+		final selected = stringValue(index);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: omitted ? OcamlCallCarrierConversion.MaterializeOmittedString : selected.conversion,
+			proofId: omitted ? "omitted-string-call-materialization-v1" : selected.proofId,
+			proofClaim: omitted ? "fixture omitted optional String" : selected.proofClaim
+		};
+	}
+
+	static function explicitNullStringValue(index:Int):OcamlCallValuePlan {
+		final selected = optionalStringValue(index);
+		return {
+			index: selected.index,
+			parameterOptional: true,
+			inputSemanticTypeId: selected.inputSemanticTypeId,
+			inputCarrierTypeId: selected.inputCarrierTypeId,
+			inputRepresentationId: selected.inputRepresentationId,
+			outputSemanticTypeId: selected.outputSemanticTypeId,
+			outputCarrierTypeId: selected.outputCarrierTypeId,
+			outputRepresentationId: selected.outputRepresentationId,
+			conversion: OcamlCallCarrierConversion.MaterializeExplicitNullString,
+			proofId: "explicit-null-string-call-materialization-v1",
+			proofClaim: "fixture explicitly supplied null String"
+		};
+	}
+
 	static function nullableArgument(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
 		return switch (conversion) {
 			case PreserveNullableIntCarrier:
@@ -200,7 +234,8 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
-			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
+				MaterializeOmittedString, MaterializeExplicitNullString:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -253,7 +288,8 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
-			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool:
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
+				MaterializeOmittedString, MaterializeExplicitNullString:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}
@@ -1141,6 +1177,29 @@ class CallPlanFixture {
 		final nonTrailingOptionalDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
 		Reflect.setField(nonTrailingOptionalDeclaration, "arguments", [optionalNullableValue(0), value(1)]);
 		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalDeclaration));
+
+		final optionalStringDeclaration = OcamlCallPlan.copyDeclaration(optionalDeclaration());
+		Reflect.setField(optionalStringDeclaration, "arguments", [optionalStringValue(0)]);
+		Reflect.setField(optionalStringDeclaration, "result", stringValue(-1));
+		OcamlCallPlan.requireDirectStaticDeclaration(optionalStringDeclaration);
+		final omittedOptionalString = copyCall(omittedOptionalCall, null, null, [optionalStringValue(0, true)], stringValue(-1));
+		OcamlCallPlan.requireDirectStaticCall(omittedOptionalString);
+		final explicitNullOptionalString = copyCall(suppliedOptionalCall, null, null, [explicitNullStringValue(0)], stringValue(-1));
+		OcamlCallPlan.requireDirectStaticCall(explicitNullOptionalString);
+		final optionalStringBoundary = optionalBoundary(optionalCallee);
+		Reflect.setField(optionalStringBoundary, "arguments", [optionalStringValue(0)]);
+		Reflect.setField(optionalStringBoundary, "result", stringValue(-1));
+		OcamlCallPlan.requireDirectStaticBoundary(optionalStringBoundary);
+
+		final omittedStringWithWrongProof = OcamlCallPlan.copyValue(optionalStringValue(0, true));
+		Reflect.setField(omittedStringWithWrongProof, "proofId", "omitted-nullable-int-call-materialization-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticValue(omittedStringWithWrongProof, 0, "fixture omitted optional String"));
+		final explicitNullStringWithWrongProof = OcamlCallPlan.copyValue(explicitNullStringValue(0));
+		Reflect.setField(explicitNullStringWithWrongProof, "proofId", "identity-call-carrier-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticValue(explicitNullStringWithWrongProof, 0, "fixture explicit null String"));
+		final nonTrailingOptionalStringDeclaration = OcamlCallPlan.copyDeclaration(optionalStringDeclaration);
+		Reflect.setField(nonTrailingOptionalStringDeclaration, "arguments", [optionalStringValue(0), value(1)]);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireDirectStaticDeclaration(nonTrailingOptionalStringDeclaration));
 
 		final voidCaller = binding("Main|Main::voidCalls", "body:void-caller");
 		final voidCallee = binding(VOID_CALLEE_ID, "body:void-callee");
