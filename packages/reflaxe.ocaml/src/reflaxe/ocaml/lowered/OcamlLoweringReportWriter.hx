@@ -12,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -32,7 +33,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 25;
+	public static inline final SCHEMA_VERSION = 26;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -87,7 +88,8 @@ class OcamlLoweringReportWriter {
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
 			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
+			controls:Array<OcamlControlDecision>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
+			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -175,6 +177,19 @@ class OcamlLoweringReportWriter {
 					throw 'Call "${call.id}" argument $index disagrees with callable boundary "${boundary.id}".';
 			}
 		}
+		final sortedControls = controls.copy();
+		sortedControls.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final controlById:Map<String, Bool> = [];
+		for (control in sortedControls) {
+			OcamlControlPlan.requireDecision(control);
+			if (controlById.exists(control.id))
+				throw 'Control decision identity "${control.id}" occurs more than once.';
+			controlById.set(control.id, true);
+			requireRepresentation(representationById, control.payload.inputRepresentationId, control.payload.inputSemanticTypeId,
+				control.payload.inputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
+			requireRepresentation(representationById, control.payload.outputRepresentationId, control.payload.outputSemanticTypeId,
+				control.payload.outputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
 			if (requirementById.exists(requirement.id))
@@ -222,6 +237,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaries: sortedCallableBoundaries
 		});
+		final canonicalControls = haxe.Json.stringify(sortedControls);
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
@@ -245,6 +261,10 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
+			controlModel: "typed-ocaml-exact-int-return-control-v1",
+			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
+			controlCount: sortedControls.length,
+			controls: sortedControls,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,

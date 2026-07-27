@@ -11,6 +11,8 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
@@ -77,7 +79,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 10,
+			schemaVersion: 11,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -102,6 +104,7 @@ class ReflaxeOcamlInspection {
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
+				controlCount: lowering.controls.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -153,6 +156,12 @@ class ReflaxeOcamlInspection {
 					.join(", ");
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
+			}
+			lines.push('[PASS] Typed control: ${report.lowering.controls.length} early return${report.lowering.controls.length == 1 ? "" : "s"} sealed before syntax.');
+			for (control in report.lowering.controls) {
+				lines.push('  - ${control.sourceFile} bytes ${control.sourceMin}-${control.sourceMax}: ${control.kind} -> ${control.targetFunctionId}');
+				lines.push('    payload: ${control.payload.inputSemanticTypeId}/${control.payload.inputCarrierTypeId} -${control.payload.conversion}-> ${control.payload.signalCarrierTypeId} -> ${control.payload.outputSemanticTypeId}/${control.payload.outputCarrierTypeId}');
+				lines.push('    mechanism: ${control.mechanism}; runtime capability: ${control.runtimeCapabilityId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -312,9 +321,11 @@ class ReflaxeOcamlInspection {
 					callRevision: null,
 					calls: [],
 					callableBoundaries: [],
+					controlRevision: null,
+					controls: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-and-first-call-families",
+					scope: "typed-place-call-and-first-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -322,8 +333,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 25) {
-						throw 'Unsupported lowering report schema $version; expected 25.';
+					if (version != 26) {
+						throw 'Unsupported lowering report schema $version; expected 26.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -340,6 +351,7 @@ class ReflaxeOcamlInspection {
 					final localConversions = inspectLocalConversions(value);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
 					final callInventory = inspectCalls(value, representation);
+					final controls = inspectControls(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
@@ -359,14 +371,113 @@ class ReflaxeOcamlInspection {
 						callRevision: requiredSha256Revision(value, "callRevision"),
 						calls: callInventory.calls,
 						callableBoundaries: callInventory.boundaries,
+						controlRevision: requiredSha256Revision(value, "controlRevision"),
+						controls: controls,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-and-first-call-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-call-and-first-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} early return${controls.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
 				}
+		};
+	}
+
+	static function inspectControls(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControl> {
+		if (requiredString(value, "controlModel") != "typed-ocaml-exact-int-return-control-v1")
+			throw "Unsupported control report model.";
+		final rawControls = requiredArray(value, "controls");
+		if (rawControls.length != requiredInt(value, "controlCount"))
+			throw "Control count does not match its inventory.";
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final controls = [for (entry in rawControls) controlDecision(entry)];
+		final ids:Map<String, Bool> = [];
+		for (control in controls) {
+			if (ids.exists(control.id))
+				throw 'Control report contains duplicate identity "${control.id}".';
+			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
+				throw 'Control decision "${control.id}" has an invalid source span.';
+			if (control.kind != "return"
+				|| control.effect != "exit-function"
+				|| control.mechanism != "runtime-return-signal"
+				|| control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1"
+				|| control.targetFunctionId != control.functionId) {
+				throw 'Control decision "${control.id}" has an invalid transfer, target, effect, mechanism, or runtime capability.';
+			}
+			final payload = control.payload;
+			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+				'Control decision "${control.id}" input');
+			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
+				'Control decision "${control.id}" output');
+			if (payload.inputSemanticTypeId != "Int"
+				|| payload.inputCarrierTypeId != "int"
+				|| payload.inputRepresentationId != "representation:Int:internal-value"
+				|| payload.signalCarrierTypeId != "Obj.t"
+				|| payload.outputSemanticTypeId != "Int"
+				|| payload.outputCarrierTypeId != "int"
+				|| payload.outputRepresentationId != "representation:Int:internal-value"
+				|| payload.conversion != "box-and-recover-exact-int"
+				|| payload.proofId != "exact-int-early-return-control-v1"
+				|| control.proofId != "exact-int-early-return-control-v1") {
+				throw 'Control decision "${control.id}" has an invalid exact-Int payload crossing.';
+			}
+			if (payload.proofClaim.length == 0
+				|| control.proofClaim.length == 0
+				|| control.reason.length == 0
+				|| control.functionId.length == 0
+				|| control.programRevision.length == 0
+				|| control.bodyRevision.length == 0
+				|| control.pipelineRevision.length == 0
+				|| control.profileEligibility.length != 2
+				|| control.profileEligibility[0] != "metal"
+				|| control.profileEligibility[1] != "portable") {
+				throw 'Control decision "${control.id}" has incomplete proof, revision, or profile metadata.';
+			}
+			ids.set(control.id, true);
+		}
+		controls.sort((left, right) -> compareStrings(left.id, right.id));
+		return controls;
+	}
+
+	static function controlDecision(value:Dynamic):InspectionControl {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			kind: requiredString(value, "kind"),
+			effect: requiredString(value, "effect"),
+			targetFunctionId: requiredString(value, "targetFunctionId"),
+			payload: controlPayload(requiredObject(value, "payload")),
+			mechanism: requiredString(value, "mechanism"),
+			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlPayload(value:Dynamic):InspectionControlPayload {
+		return {
+			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
+			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
+			inputRepresentationId: requiredString(value, "inputRepresentationId"),
+			signalCarrierTypeId: requiredString(value, "signalCarrierTypeId"),
+			outputSemanticTypeId: requiredString(value, "outputSemanticTypeId"),
+			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			conversion: requiredString(value, "conversion"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
 		};
 	}
 
@@ -1617,9 +1728,11 @@ class ReflaxeOcamlInspection {
 			callRevision: null,
 			calls: [],
 			callableBoundaries: [],
+			controlRevision: null,
+			controls: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-and-first-call-families",
+			scope: "typed-place-call-and-first-control-families",
 			message: message
 		};
 	}

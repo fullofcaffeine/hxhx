@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -33,6 +34,7 @@ typedef OcamlSealedFunctionPlan = {
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final calls:OcamlCallPlan;
+	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
 }
@@ -52,7 +54,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v25";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v26";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -197,7 +199,8 @@ class OcamlFunctionPlanRegistry {
 
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
-			calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
+			calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		for (call in calls.decisions()) {
@@ -206,6 +209,7 @@ class OcamlFunctionPlanRegistry {
 			if (requiresDeclaredCallable(call))
 				requireCallableDeclaration(call);
 		}
+		controls.requirePlanBinding(binding);
 		if (callableBoundary != null) {
 			registerCallableBoundary(callableBoundary, binding);
 		}
@@ -220,6 +224,7 @@ class OcamlFunctionPlanRegistry {
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
 				calls: calls,
+				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
 				constructionBoundary: constructionBoundary == null ? null : OcamlCallPlan.copyBoundary(constructionBoundary)
 			},
@@ -354,6 +359,22 @@ class OcamlFunctionPlanRegistry {
 		}
 		calls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return calls;
+	}
+
+	/** Returns every admitted control transfer in deterministic identity order. */
+	public function controlDecisions():Array<OcamlControlDecision> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final controls:Array<OcamlControlDecision> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (decision in sealed.plan.controls.decisions())
+					controls.push(decision);
+			}
+		}
+		controls.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return controls;
 	}
 
 	/** Returns every admitted callable definition in canonical callee order. */

@@ -2195,7 +2195,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
 				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
-				functionPlanRegistry.callableBoundaries(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(), staticStoragePlan.reportEntries(),
+				staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

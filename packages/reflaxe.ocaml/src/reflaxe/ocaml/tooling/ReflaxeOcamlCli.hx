@@ -324,7 +324,7 @@ class ReflaxeOcamlCli {
 			"  --help                         Show this help",
 			"",
 			"Run a successful build before inspection. Add -D ocaml_lowering_report to the HXML",
-			"to inspect the migrated assignment/update lowering family. Native timing appears when",
+			"to inspect the migrated typed-lowering families. Native timing appears when",
 			"the build used -D ocaml_build_timing_report (build/watch request it automatically).",
 			""
 		].join("\n");

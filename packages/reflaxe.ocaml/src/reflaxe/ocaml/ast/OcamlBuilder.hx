@@ -33,6 +33,10 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPayloadConversion;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
@@ -60,11 +64,12 @@ import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
 
 	Behavior-sensitive families move through focused typed OCaml lowering modules
-	before this class constructs syntax. Admitted place operations and local
-	mutable-storage choices now arrive in one revision-sealed function plan. New
-	representation, scheduling, mutation, runtime, or ABI decisions do not belong
-	in this already-large builder; legacy `unit` fallbacks remain migration debt,
-	not the contract for a newly admitted family.
+	before this class constructs syntax. Admitted place operations, local
+	mutable-storage choices, typed calls, and exact-Int early returns now arrive
+	in one revision-sealed function plan. New representation, scheduling,
+	mutation, control, runtime, or ABI decisions do not belong in this
+	already-large builder; legacy `unit` fallbacks remain migration debt, not the
+	contract for a newly admitted family.
 **/
 class OcamlBuilder {
 	static final injectionPrinter = new OcamlASTPrinter();
@@ -79,6 +84,7 @@ class OcamlBuilder {
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
+	var currentControlPlan:Null<OcamlControlPlan> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -164,6 +170,14 @@ class OcamlBuilder {
 		throw diagnostic;
 	}
 
+	function controlPlanInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-control:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
 	function requireCallValue(value:OcamlCallValuePlan, expectedIndex:Int, owner:String, position:Position):Void {
 		try {
 			OcamlCallPlan.requireCallValue(value, expectedIndex, owner);
@@ -213,6 +227,53 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
 				callPlanInvariant("a callable result cannot use an omitted-argument conversion", position);
+		}
+	}
+
+	/** Raises one exact early return using only its sealed payload mechanism. */
+	function buildPlannedReturn(decision:OcamlControlDecision, value:Null<TypedExpr>, position:Position):OcamlExpr {
+		try {
+			OcamlControlPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		final binding = currentFunctionPlanBinding;
+		if (binding == null)
+			return controlPlanInvariant('control decision "${decision.id}" reached syntax without a sealed function binding', position);
+		if (decision.targetFunctionId != binding.functionId)
+			return
+				controlPlanInvariant('control decision "${decision.id}" targets "${decision.targetFunctionId}" while syntax is building "${binding.functionId}"',
+					position);
+		if (value == null)
+			return controlPlanInvariant('control decision "${decision.id}" expects an exact-Int return value, but the typed return is empty', position);
+		final payload = switch (decision.payload.conversion) {
+			case BoxAndRecoverExactInt:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
+			case _:
+				return controlPlanInvariant('control decision "${decision.id}" selected unsupported payload conversion ${decision.payload.conversion}',
+					position);
+		}
+		return switch (decision.mechanism) {
+			case RuntimeReturnSignal:
+				OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+			case _:
+				controlPlanInvariant('control decision "${decision.id}" selected unsupported target mechanism ${decision.mechanism}', position);
+		}
+	}
+
+	/** Recovers the sealed early-return payload at its exact function boundary. */
+	function buildPlannedReturnBoundary(decision:OcamlControlDecision, returnVarName:String, position:Position):OcamlExpr {
+		try {
+			OcamlControlPlan.requireDecision(decision);
+		} catch (error:Dynamic) {
+			return controlPlanInvariant(Std.string(error), position);
+		}
+		return switch (decision.payload.conversion) {
+			case BoxAndRecoverExactInt:
+				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
+					OcamlTypeExpr.TIdent(decision.payload.outputCarrierTypeId));
+			case _:
+				controlPlanInvariant('control decision "${decision.id}" selected unsupported boundary conversion ${decision.payload.conversion}', position);
 		}
 	}
 
@@ -4190,18 +4251,29 @@ class OcamlBuilder {
 					OcamlExpr.ETry(builtTry, [breakCase, continueCase, returnCase, hxExceptionCase, ocamlExnCase]);
 				}
 			case TReturn(ret):
-				final valueExpr = switch (ret) {
-					case null:
-						OcamlExpr.EConst(OcamlConst.CUnit);
-					case value:
-						if (currentFunctionReturnType != null && !isVoidType(currentFunctionReturnType)) {
-							coerceForAssignment(currentFunctionReturnType, value);
-						} else {
-							buildExpr(value);
-						}
+				if (currentControlPlan != null && currentControlPlan.admittedFunction) {
+					final decision = try {
+						currentControlPlan.decisionFor(e);
+					} catch (error:Dynamic) {
+						return controlPlanInvariant(Std.string(error), e.pos);
+					}
+					if (decision == null)
+						return controlPlanInvariant("an exact-Int early return reached syntax without its sealed control decision", e.pos);
+					buildPlannedReturn(decision, ret, e.pos);
+				} else {
+					final valueExpr = switch (ret) {
+						case null:
+							OcamlExpr.EConst(OcamlConst.CUnit);
+						case value:
+							if (currentFunctionReturnType != null && !isVoidType(currentFunctionReturnType)) {
+								coerceForAssignment(currentFunctionReturnType, value);
+							} else {
+								buildExpr(value);
+							}
+					}
+					final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+					OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
 				}
-				final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
-				OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
 			case _:
 				OcamlExpr.EConst(OcamlConst.CUnit);
 		};
@@ -6505,6 +6577,15 @@ class OcamlBuilder {
 					// `return` terminates the block: ignore any following expressions.
 					base = if (allowDirectReturn) {
 						ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+					} else if (currentControlPlan != null && currentControlPlan.admittedFunction) {
+						final decision = try {
+							currentControlPlan.decisionFor(e);
+						} catch (error:Dynamic) {
+							return controlPlanInvariant(Std.string(error), e.pos);
+						}
+						if (decision == null)
+							return controlPlanInvariant("an exact-Int early return reached block syntax without its sealed control decision", e.pos);
+						buildPlannedReturn(decision, ret, e.pos);
 					} else {
 						final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 						final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
@@ -6781,8 +6862,10 @@ class OcamlBuilder {
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousCallPlan = currentCallPlan;
+		final previousControlPlan = currentControlPlan;
 		currentFunctionPlanBinding = functionPlan.binding;
 		currentCallPlan = functionPlan.calls;
+		currentControlPlan = functionPlan.controls;
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6823,7 +6906,7 @@ class OcamlBuilder {
 		#if macro
 		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final needsReturnCatch = containsNestedReturnInFunctionBody(bodyExpr);
+		final needsReturnCatch = functionPlan.controls.admittedFunction ? functionPlan.controls.hasReturnTransfers() : containsNestedReturnInFunctionBody(bodyExpr);
 		#if macro
 		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6852,12 +6935,18 @@ class OcamlBuilder {
 
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
+			final plannedReturn = functionPlan.controls.admittedFunction ? functionPlan.controls.returnBoundaryDecision() : null;
+			if (functionPlan.controls.admittedFunction && plannedReturn == null)
+				return controlPlanInvariant("an admitted function requires a return catch but has no sealed return-boundary decision", bodyExpr.pos);
 			final returnCase:OcamlMatchCase = {
 				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 				guard: null,
-				expr: returnPayloadToFunctionType(returnVar, resolvedReturnType)
+				expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
+					resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
 			};
-			final fallbackBody = if (isVoidType(resolvedReturnType)) {
+			final fallbackBody = if (functionPlan.controls.admittedFunction) {
+				body;
+			} else if (isVoidType(resolvedReturnType)) {
 				body;
 			} else {
 				final fallbackResultName = freshTmp("fallback_result");
@@ -6899,6 +6988,7 @@ class OcamlBuilder {
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentCallPlan = previousCallPlan;
+		currentControlPlan = previousControlPlan;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6923,6 +7013,8 @@ class OcamlBuilder {
 			}
 		}
 
+		final previousControlPlan = currentControlPlan;
+		currentControlPlan = null;
 		final needsReturnCatch = containsNestedReturnInFunctionBody(tfunc.expr);
 		final functionReturnType:Type = switch (tfunc.t) {
 			case TFun(_, ret): ret;
@@ -6971,6 +7063,7 @@ class OcamlBuilder {
 		body = ensureParamUsage(body, params);
 
 		currentFunctionReturnType = prevFunctionReturnType;
+		currentControlPlan = previousControlPlan;
 		return OcamlExpr.EFun(params, body);
 	}
 

@@ -318,6 +318,42 @@ typedef InspectionCallableBoundary = {
 	final pipelineRevision:String;
 }
 
+/** The exact value crossing carried by one private compiler-control signal. **/
+typedef InspectionControlPayload = {
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final inputRepresentationId:String;
+	final signalCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
+	final conversion:String;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/** One early return whose target and payload were sealed before OCaml syntax. **/
+typedef InspectionControl = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final effect:String;
+	final targetFunctionId:String;
+	final payload:InspectionControlPayload;
+	final mechanism:String;
+	final runtimeCapabilityId:String;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One mutable static cell selected before generated type values are emitted. **/
 typedef InspectionStaticStorageEntry = {
 	final id:String;
@@ -361,6 +397,8 @@ typedef InspectionLowering = {
 	final callRevision:Null<String>;
 	final calls:Array<InspectionCall>;
 	final callableBoundaries:Array<InspectionCallableBoundary>;
+	final controlRevision:Null<String>;
+	final controls:Array<InspectionControl>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -389,6 +427,7 @@ typedef InspectionSummary = {
 	final unsafeOperationCount:Int;
 	final callCount:Int;
 	final callableBoundaryCount:Int;
+	final controlCount:Int;
 	final staticStorageCount:Int;
 }
 
