@@ -221,7 +221,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `34`)
+  - `schemaVersion` (current: `35`)
   - the sealed assignment/update plans and their source locations
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
@@ -257,6 +257,17 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     boxed-Bool exception carrier. Both records keep only `Dynamic` as a static
     tag; the exception channel derives `Int` or `Bool` from the actual
     non-null payload, so null reaches only a `Dynamic` catch.
+    A throw of one admitted whole-program-monomorphic class records
+    `box-nominal-throw-carrier` plus the exact target record name, layout
+    revision, and representation proof. Its matching class catch records
+    `recover-nominal-value`: it checks the runtime class tag and recovers that
+    exact registered record without copying the object. Only `Dynamic` is a
+    static throw tag. A real class record contributes its exact tag through
+    the existing runtime `__hx_type` marker, while a class-typed null has no
+    such marker and therefore reaches only `Dynamic`. The reported proof is
+    limited to concrete, non-extern, non-generic classes without hierarchy,
+    interfaces, or dynamic methods; it does not admit general class,
+    `haxe.Exception`, enum, abstract, or nullable-catch behavior.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and

@@ -36,7 +36,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 34;
+	public static inline final SCHEMA_VERSION = 35;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -239,6 +239,17 @@ class OcamlLoweringReportWriter {
 					requireRepresentation(representationById, clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control catch clause "${clause.id}" output');
 				}
+				final nominal = clause.nominalRepresentation;
+				if (nominal != null) {
+					final representation = representationById.get(clause.outputRepresentationId);
+					if (representation == null
+						|| representation.nominalTargetModuleName != nominal.targetModuleName
+						|| representation.nominalTargetTypeName != nominal.targetTypeName
+						|| representation.nominalLayoutRevision != nominal.layoutRevision
+						|| representation.proof.id != nominal.representationProofId) {
+						throw 'Control catch clause "${clause.id}" does not match its sealed nominal representation proof.';
+					}
+				}
 			}
 			catchChainIds.set(chain.id, true);
 		}
@@ -319,11 +330,11 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v10",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v11",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
-			controlCatchModel: "typed-ocaml-exact-primitive-catch-chain-v1",
+			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v2",
 			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
 			controlCatchCount: sortedCatchChains.length,
 			controlCatches: sortedCatchChains,

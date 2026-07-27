@@ -172,6 +172,28 @@ class OcamlFunctionPlanSealer {
 				fail('control "${control.id}" does not match its sealed nominal representation proof', position);
 			}
 		}
+		for (chain in controls.catchChains()) {
+			for (clause in chain.clauses) {
+				if (clause.semanticTypeId == "Dynamic")
+					continue;
+				validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, programRevision,
+					'control catch clause "${clause.id}" output', position);
+				final nominal = clause.nominalRepresentation;
+				if (nominal == null)
+					continue;
+				final representation = try {
+					representations.require(clause.outputRepresentationId, programRevision);
+				} catch (error:Dynamic) {
+					fail(Std.string(error), position);
+				}
+				if (representation.nominalTargetModuleName != nominal.targetModuleName
+					|| representation.nominalTargetTypeName != nominal.targetTypeName
+					|| representation.nominalLayoutRevision != nominal.layoutRevision
+					|| representation.proof.id != nominal.representationProofId) {
+					fail('control catch clause "${clause.id}" does not match its sealed nominal representation proof', position);
+				}
+			}
+		}
 	}
 
 	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,

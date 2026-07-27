@@ -381,7 +381,7 @@ typedef InspectionControl = {
 	final pipelineRevision:String;
 }
 
-/** One exact primitive or Dynamic catch-variable binding. **/
+/** One represented primitive, monomorphic class, or Dynamic catch binding. **/
 typedef InspectionControlCatchClause = {
 	final id:String;
 	final sourceFile:String;
@@ -396,6 +396,7 @@ typedef InspectionControlCatchClause = {
 	final matchPolicy:String;
 	final runtimeTag:Null<String>;
 	final conversion:String;
+	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final bodyResultPolicy:String;
 	final effects:Array<String>;
 	final proofId:String;

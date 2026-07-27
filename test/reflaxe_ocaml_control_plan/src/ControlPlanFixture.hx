@@ -289,13 +289,14 @@ class ControlPlanFixture {
 			matchPolicy: exact ? OcamlCatchMatchPolicy.ExactRuntimeTag : OcamlCatchMatchPolicy.MatchAll,
 			runtimeTag: exact ? (runtimeTag ?? semanticTypeId) : runtimeTag,
 			conversion: selectedConversion,
+			nominalRepresentation: null,
 			bodyResultPolicy: bodyResultPolicy ?? OcamlCatchBranchResultPolicy.PreserveTypedResult,
 			effects: [
 				OcamlCatchEffect.SelectFirstMatchingClause,
 				OcamlCatchEffect.BindCatchVariable,
 				OcamlCatchEffect.ExecuteCatchBody
 			],
-			proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+			proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 			proofClaim: 'fixture exact-$semanticTypeId catch clause',
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
@@ -326,7 +327,7 @@ class ControlPlanFixture {
 			runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
 			profileEligibility: ["metal", "portable"],
 			reason: "fixture exact primitive catch chain",
-			proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+			proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 			proofClaim: "fixture exact primitive catch chain",
 			functionId: FUNCTION_ID,
 			programRevision: "program:control-fixture",
@@ -517,6 +518,18 @@ class ControlPlanFixture {
 		final preservedNullableBoolThrow = throwDecision("control:throw:preserved-nullable-bool", 254, "Null<Bool>",
 			OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [preservedNullableBoolThrow]));
+		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 256, "Int");
+		final primitivePayload = primitiveWithNominalProof.payload;
+		if (primitivePayload == null)
+			throw "The primitive nominal-corruption fixture lost its payload";
+		final fakeLayoutRevision = "sha256:" + StringTools.lpad("", "0", 64);
+		Reflect.setField(primitivePayload, "nominalRepresentation", {
+			targetModuleName: "Main",
+			targetTypeName: "box_t",
+			layoutRevision: fakeLayoutRevision,
+			representationProofId: "whole-program-monomorphic-nominal-record-v1:" + fakeLayoutRevision
+		});
+		expectThrows("invalid proof", () -> new OcamlControlPlan(false, false, true, binding(), [], [primitiveWithNominalProof]));
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, false, binding(), [], [intThrow]));
 
 		final badCatchOrder = catchChain("control-catch-chain:bad-order", [

@@ -73,6 +73,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
 	final PreserveNullableIntThrowCarrier = "preserve-nullable-int-throw-carrier";
 	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
+	final BoxNominalThrowCarrier = "box-nominal-throw-carrier";
 }
 
 /**
@@ -99,6 +100,7 @@ enum abstract OcamlCatchMatchPolicy(String) from String to String {
 enum abstract OcamlCatchPayloadConversion(String) from String to String {
 	final RecoverExactValue = "recover-exact-value";
 	final RecoverCheckedBool = "recover-checked-bool";
+	final RecoverNominalValue = "recover-nominal-value";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
 }
 
@@ -227,6 +229,7 @@ typedef OcamlCatchClauseDecision = {
 	final matchPolicy:OcamlCatchMatchPolicy;
 	final runtimeTag:Null<String>;
 	final conversion:OcamlCatchPayloadConversion;
+	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final bodyResultPolicy:OcamlCatchBranchResultPolicy;
 	final effects:Array<OcamlCatchEffect>;
 	final proofId:String;
@@ -298,7 +301,8 @@ class OcamlControlPlan {
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
 	public static inline final NULLABLE_INT_THROW_PROOF_ID = "nullable-int-throw-control-v1";
 	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
-	public static inline final EXACT_PRIMITIVE_CATCH_PROOF_ID = "exact-primitive-catch-control-v1";
+	public static inline final EXACT_NOMINAL_THROW_PROOF_ID = "exact-monomorphic-class-throw-control-v1";
+	public static inline final REPRESENTED_VALUE_CATCH_PROOF_ID = "represented-value-catch-control-v2";
 	public static inline final RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-return-signal-v1";
 	public static inline final VOID_RETURN_SIGNAL_CAPABILITY_ID = "hxhx-runtime:function-void-return-signal-v1";
 	public static inline final BREAK_SIGNAL_CAPABILITY_ID = "hxhx-runtime:loop-break-signal-v1";
@@ -802,16 +806,19 @@ class OcamlControlPlan {
 			|| payload == null
 			|| payload.signalCarrierTypeId != "Obj.t"
 			|| !samePayloadSides(payload)
-			|| payload.nominalRepresentation != null
-			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId)
+			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId, payload.nominalRepresentation != null)
 			|| payload.proofClaim.length == 0
-			|| !sameStrings(decision.runtimeTags, expectedThrowTags(payload.inputSemanticTypeId))
+			|| !sameStrings(decision.runtimeTags, expectedThrowTags(payload.inputSemanticTypeId, payload.nominalRepresentation != null))
 			|| decision.runtimeTagPolicy != OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an unsupported exception target or incomplete value payload crossing';
 		}
 
-		final expectedProofId = expectedThrowProofId(payload.inputSemanticTypeId);
-		if (expectedProofId == null || payload.proofId != expectedProofId || decision.proofId != expectedProofId) {
+		final hasNominalRepresentation = payload.nominalRepresentation != null;
+		final expectedProofId = expectedThrowProofId(payload.inputSemanticTypeId, hasNominalRepresentation);
+		if (expectedProofId == null
+			|| hasNominalRepresentation != (expectedProofId == EXACT_NOMINAL_THROW_PROOF_ID)
+			|| payload.proofId != expectedProofId
+			|| decision.proofId != expectedProofId) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid proof for ${payload.inputSemanticTypeId}';
 		}
 
@@ -829,6 +836,10 @@ class OcamlControlPlan {
 				if (payload.inputSemanticTypeId != "Null<Bool>"
 					|| !isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid nullable-Bool signal normalization';
+				}
+			case BoxNominalThrowCarrier:
+				if (!isAdmittedNominalPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an incomplete monomorphic-class payload crossing';
 				}
 			case _:
 				throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" selected unsupported value conversion ${payload.conversion}';
@@ -859,7 +870,7 @@ class OcamlControlPlan {
 			|| chain.profileEligibility[0] != "metal"
 			|| chain.profileEligibility[1] != "portable"
 			|| chain.reason.length == 0
-			|| chain.proofId != EXACT_PRIMITIVE_CATCH_PROOF_ID
+			|| chain.proofId != REPRESENTED_VALUE_CATCH_PROOF_ID
 			|| chain.proofClaim.length == 0) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-catch-chain]: catch chain "${chain.id}" has incomplete channels, fallback behavior, proof, profile, or revision metadata';
 		}
@@ -898,7 +909,7 @@ class OcamlControlPlan {
 			|| clause.effects[0] != OcamlCatchEffect.SelectFirstMatchingClause
 			|| clause.effects[1] != OcamlCatchEffect.BindCatchVariable
 			|| clause.effects[2] != OcamlCatchEffect.ExecuteCatchBody
-			|| clause.proofId != EXACT_PRIMITIVE_CATCH_PROOF_ID
+			|| clause.proofId != REPRESENTED_VALUE_CATCH_PROOF_ID
 			|| clause.proofClaim.length == 0
 			|| clause.functionId.length == 0
 			|| clause.programRevision.length == 0
@@ -914,12 +925,17 @@ class OcamlControlPlan {
 				requireExactCatchSide(clause, "bool", "representation:Bool:internal-value", "Bool", OcamlCatchPayloadConversion.RecoverCheckedBool);
 			case "String":
 				requireExactCatchSide(clause, "string", "representation:String:internal-value", "String", OcamlCatchPayloadConversion.RecoverExactValue);
+			case _ if (clause.nominalRepresentation != null):
+				if (!isAdmittedNominalCatchClause(clause)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: nominal catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof';
+				}
 			case "Dynamic":
 				if (clause.outputCarrierTypeId != "Obj.t"
 					|| clause.outputRepresentationId != DYNAMIC_CATCH_REPRESENTATION_ID
 					|| clause.matchPolicy != OcamlCatchMatchPolicy.MatchAll
 					|| clause.runtimeTag != null
-					|| clause.conversion != OcamlCatchPayloadConversion.PreserveDynamicCarrier) {
+					|| clause.conversion != OcamlCatchPayloadConversion.PreserveDynamicCarrier
+					|| clause.nominalRepresentation != null) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: Dynamic catch clause "${clause.id}" has an invalid match-all or carrier-preserving contract';
 				}
 			case _:
@@ -938,7 +954,8 @@ class OcamlControlPlan {
 			|| clause.outputRepresentationId != representationId
 			|| clause.matchPolicy != OcamlCatchMatchPolicy.ExactRuntimeTag
 			|| clause.runtimeTag != runtimeTag
-			|| clause.conversion != conversion) {
+			|| clause.conversion != conversion
+			|| clause.nominalRepresentation != null) {
 			throw 'reflaxe.ocaml [ocaml-control:invalid-catch-clause]: exact ${clause.semanticTypeId} catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion';
 		}
 	}
@@ -1033,6 +1050,7 @@ class OcamlControlPlan {
 			matchPolicy: clause.matchPolicy,
 			runtimeTag: clause.runtimeTag,
 			conversion: clause.conversion,
+			nominalRepresentation: copyNominalRepresentation(clause.nominalRepresentation),
 			bodyResultPolicy: clause.bodyResultPolicy,
 			effects: clause.effects.copy(),
 			proofId: clause.proofId,
@@ -1166,34 +1184,50 @@ class OcamlControlPlan {
 			&& nominal.representationProofId == "whole-program-monomorphic-nominal-record-v1:" + nominal.layoutRevision;
 	}
 
+	static function isAdmittedNominalCatchClause(clause:OcamlCatchClauseDecision):Bool {
+		final nominal = clause.nominalRepresentation;
+		if (nominal == null)
+			return false;
+		return clause.semanticTypeId.length > 0
+			&& clause.outputCarrierTypeId == nominal.targetTypeName
+			&& clause.outputRepresentationId == 'representation:${clause.semanticTypeId}:internal-value'
+			&& clause.matchPolicy == OcamlCatchMatchPolicy.ExactRuntimeTag
+			&& clause.runtimeTag == clause.semanticTypeId
+			&& clause.conversion == OcamlCatchPayloadConversion.RecoverNominalValue
+			&& nominal.targetModuleName.length > 0
+			&& nominal.targetTypeName.length > 0
+			&& isSha256Revision(nominal.layoutRevision)
+			&& nominal.representationProofId == "whole-program-monomorphic-nominal-record-v1:" + nominal.layoutRevision;
+	}
+
 	static function isSha256Revision(value:String):Bool {
 		return ~/^sha256:[0-9a-f]{64}$/.match(value);
 	}
 
-	public static function expectedThrowTags(semanticTypeId:String):Array<String> {
+	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false):Array<String> {
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
-			case _: [];
+			case _: hasNominalRepresentation ? ["Dynamic"] : [];
 		}
 	}
 
-	public static function expectedThrowConversion(semanticTypeId:String):Null<OcamlControlPayloadConversion> {
+	public static function expectedThrowConversion(semanticTypeId:String, hasNominalRepresentation:Bool = false):Null<OcamlControlPayloadConversion> {
 		return switch (semanticTypeId) {
 			case "Int", "String": OcamlControlPayloadConversion.ReprAndRecoverExactValue;
 			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
 			case "Null<Int>": OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier;
 			case "Null<Bool>": OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier;
-			case _: null;
+			case _: hasNominalRepresentation ? OcamlControlPayloadConversion.BoxNominalThrowCarrier : null;
 		}
 	}
 
 	/** Selects the proof family required by one admitted throw payload. */
-	public static function expectedThrowProofId(semanticTypeId:String):Null<String> {
+	public static function expectedThrowProofId(semanticTypeId:String, hasNominalRepresentation:Bool = false):Null<String> {
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String": EXACT_VALUE_THROW_PROOF_ID;
 			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
 			case "Null<Bool>": NULLABLE_BOOL_THROW_PROOF_ID;
-			case _: null;
+			case _: hasNominalRepresentation ? EXACT_NOMINAL_THROW_PROOF_ID : null;
 		}
 	}
 
@@ -1213,7 +1247,8 @@ class OcamlControlPlan {
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(expression.t);
 			case "Null<Bool>": OcamlRepresentationRegistry.isExactNullBool(expression.t);
 			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
-			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
+			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue
+					|| payload.conversion == OcamlControlPayloadConversion.BoxNominalThrowCarrier) && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
 		}
 	}
 
@@ -1239,7 +1274,7 @@ class OcamlControlPlan {
 					case TDynamic(_): true;
 					case _: false;
 				}
-			case _: false;
+			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type); semanticTypeId != null && semanticTypeId == clause.semanticTypeId && isAdmittedNominalCatchClause(clause);
 		}
 	}
 
@@ -1330,6 +1365,7 @@ class OcamlControlPlan {
 			(clause.matchPolicy : String),
 			clause.runtimeTag ?? "no-runtime-tag",
 			(clause.conversion : String),
+			nominalPayloadFingerprint(clause.nominalRepresentation),
 			(clause.bodyResultPolicy : String),
 			clause.effects.join(","),
 			clause.proofId,
@@ -1365,16 +1401,18 @@ class OcamlControlPlan {
 }
 
 /**
-	Selects exact-value or effect-only `Void` returns, represented primitive throws,
-	lexical loop transfers, and exact primitive/Dynamic catch chains.
+	Selects exact-value or effect-only `Void` returns, represented primitive or
+	monomorphic-class throws, lexical loop transfers, and represented
+	primitive/monomorphic-class/Dynamic catch chains.
 
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
-	`Int`, `Bool`, represented `String`, `Null<Int>`, and `Null<Bool>` payloads. Nested
-	function literals own independent boundaries and are deliberately skipped.
-	Each source `try` is admitted independently, so one unsupported catch chain
-	does not discard another exact chain in the same function.
+	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, and one exact
+	whole-program-monomorphic class payload. Nested function literals own
+	independent boundaries and are deliberately skipped. Each source `try` is
+	admitted independently, so one unsupported catch chain does not discard
+	another represented chain in the same function.
 
 	Stable record IDs use the node's structural path through the final typed body,
 	not its source span. Haxe-generated nodes can legitimately share `(unknown):0`
@@ -1386,6 +1424,7 @@ class OcamlControlPlanner {
 	final representations:OcamlRepresentationRegistry;
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final binding:OcamlFunctionPlanBinding;
+	final nominalCatchRepresentations:Map<Int, OcamlRepresentationDecision> = [];
 
 	public function new(representations:OcamlRepresentationRegistry, localRepresentations:OcamlLocalRepresentationPlan, binding:OcamlFunctionPlanBinding) {
 		this.representations = representations;
@@ -1522,14 +1561,16 @@ class OcamlControlPlanner {
 					});
 				case TThrow(value):
 					visit(value, false, path + "/throw-value");
-					final representation = exactValueRepresentation(value);
-					final conversion = representation == null ? null : OcamlControlPlan.expectedThrowConversion(representation.semanticTypeId);
+					final representation = throwRepresentation(value);
+					final nominalRepresentation = representation == null ? null : nominalProofFor(representation);
+					final conversion = representation == null ? null : OcamlControlPlan.expectedThrowConversion(representation.semanticTypeId,
+						nominalRepresentation != null);
 					if (representation == null || conversion == null) {
 						throwFamilyAdmitted = false;
 						return;
 					}
 					final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
-					final proofId = OcamlControlPlan.expectedThrowProofId(representation.semanticTypeId);
+					final proofId = OcamlControlPlan.expectedThrowProofId(representation.semanticTypeId, nominalRepresentation != null);
 					if (proofId == null) {
 						throwFamilyAdmitted = false;
 						return;
@@ -1539,6 +1580,8 @@ class OcamlControlPlanner {
 							"The final typed Haxe body sends one exact Null<Int>/Obj.t value through the compiler-owned Haxe exception channel without another box. The runtime tag comes from the carried value, so non-null matches Int while null remains Dynamic-only.";
 						case "Null<Bool>":
 							"The final typed Haxe body sends one exact Null<Bool>/Obj.t value through the compiler-owned Haxe exception channel. Null remains the existing sentinel; a non-null carrier is normalized once into the unambiguous boxed-Bool exception representation so it matches Bool rather than Int.";
+						case _ if (nominalRepresentation != null):
+							'The final typed Haxe body sends one already-sealed ${representation.semanticTypeId}/${representation.carrierTypeId} nominal record through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier; the existing runtime class marker derives the concrete tag for a non-null record, while null remains Dynamic-only.';
 						case _:
 							'The final typed Haxe body sends this exact ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. The selected payload conversion preserves that represented value in the private Obj.t carrier. The sealed tag policy always admits Dynamic and derives the exact primitive tag from the carried runtime value, so a null String remains Dynamic rather than matching String.';
 					};
@@ -1558,11 +1601,11 @@ class OcamlControlPlanner {
 							outputCarrierTypeId: representation.carrierTypeId,
 							outputRepresentationId: representation.id,
 							conversion: conversion,
-							nominalRepresentation: null,
+							nominalRepresentation: nominalRepresentation,
 							proofId: proofId,
 							proofClaim: proofClaim
 						},
-						runtimeTags: OcamlControlPlan.expectedThrowTags(representation.semanticTypeId),
+						runtimeTags: OcamlControlPlan.expectedThrowTags(representation.semanticTypeId, nominalRepresentation != null),
 						runtimeTagPolicy: OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 						mechanism: OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 						runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -1608,12 +1651,27 @@ class OcamlControlPlanner {
 					visit(loopBody, false, path + "/while-body");
 					loopStack.pop();
 				case TTry(tryExpression, catches):
+					var catchTypesAdmitted = catches.length > 0;
+					for (entry in catches) {
+						if (selectCatchType(entry.v.t) == null) {
+							catchTypesAdmitted = false;
+							break;
+						}
+					}
 					visit(tryExpression, false, path + "/try-body");
-					for (index => entry in catches)
+					for (index => entry in catches) {
+						final selected = catchTypesAdmitted ? selectCatchType(entry.v.t) : null;
+						final nominal = selected == null
+							|| selected.nominalRepresentation == null ? null : representations.monomorphicClassValue(selected.semanticTypeId);
+						if (nominal != null)
+							nominalCatchRepresentations.set(entry.v.id, nominal);
 						visit(entry.expr, false, path + "/catch:" + index + "/body");
+						if (nominal != null)
+							nominalCatchRepresentations.remove(entry.v.id);
+					}
 
 					final clauses:Array<OcamlCatchClauseDecision> = [];
-					var admitted = catches.length > 0;
+					var admitted = catchTypesAdmitted;
 					for (index => entry in catches) {
 						final selected = selectCatchType(entry.v.t);
 						if (selected == null) {
@@ -1635,13 +1693,14 @@ class OcamlControlPlanner {
 							matchPolicy: selected.matchPolicy,
 							runtimeTag: selected.runtimeTag,
 							conversion: selected.conversion,
+							nominalRepresentation: selected.nominalRepresentation,
 							bodyResultPolicy: catchBranchResultPolicy(expression.t, entry.expr),
 							effects: [
 								OcamlCatchEffect.SelectFirstMatchingClause,
 								OcamlCatchEffect.BindCatchVariable,
 								OcamlCatchEffect.ExecuteCatchBody
 							],
-							proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+							proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 							proofClaim: proofClaim,
 							functionId: binding.functionId,
 							programRevision: binding.programRevision,
@@ -1670,8 +1729,8 @@ class OcamlControlPlanner {
 							privateControlPolicy: OcamlCatchPrivateControlPolicy.PropagatePrivateControlSignals,
 							runtimeCapabilityId: OcamlControlPlan.CATCH_SIGNAL_CAPABILITY_ID,
 							profileEligibility: ["metal", "portable"],
-							reason: "This complete source catch chain has exact primitive/Dynamic matching and payload binding fixed before OCaml syntax.",
-							proofId: OcamlControlPlan.EXACT_PRIMITIVE_CATCH_PROOF_ID,
+							reason: "This complete source catch chain has represented primitive, monomorphic-class, or Dynamic matching and payload binding fixed before OCaml syntax.",
+							proofId: OcamlControlPlan.REPRESENTED_VALUE_CATCH_PROOF_ID,
 							proofClaim: proofClaim,
 							functionId: binding.functionId,
 							programRevision: binding.programRevision,
@@ -1779,7 +1838,8 @@ class OcamlControlPlanner {
 		outputRepresentationId:String,
 		matchPolicy:OcamlCatchMatchPolicy,
 		runtimeTag:Null<String>,
-		conversion:OcamlCatchPayloadConversion
+		conversion:OcamlCatchPayloadConversion,
+		nominalRepresentation:Null<OcamlControlNominalRepresentationProof>
 	}> {
 		if (OcamlRepresentationRegistry.isExactInt(type)) {
 			final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
@@ -1789,7 +1849,8 @@ class OcamlControlPlanner {
 				outputRepresentationId: representation.id,
 				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
 				runtimeTag: "Int",
-				conversion: OcamlCatchPayloadConversion.RecoverExactValue
+				conversion: OcamlCatchPayloadConversion.RecoverExactValue,
+				nominalRepresentation: null
 			};
 		}
 		if (OcamlRepresentationRegistry.isExactBool(type)) {
@@ -1800,7 +1861,8 @@ class OcamlControlPlanner {
 				outputRepresentationId: representation.id,
 				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
 				runtimeTag: "Bool",
-				conversion: OcamlCatchPayloadConversion.RecoverCheckedBool
+				conversion: OcamlCatchPayloadConversion.RecoverCheckedBool,
+				nominalRepresentation: null
 			};
 		}
 		if (OcamlRepresentationRegistry.isExactString(type)) {
@@ -1811,7 +1873,24 @@ class OcamlControlPlanner {
 				outputRepresentationId: representation.id,
 				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
 				runtimeTag: "String",
-				conversion: OcamlCatchPayloadConversion.RecoverExactValue
+				conversion: OcamlCatchPayloadConversion.RecoverExactValue,
+				nominalRepresentation: null
+			};
+		}
+		final nominalClass = representations.monomorphicClassForType(type);
+		if (nominalClass != null) {
+			final representation = representations.monomorphicClassValue(nominalClass.semanticTypeId);
+			final nominalRepresentation = representation == null ? null : nominalProofFor(representation);
+			if (representation == null || nominalRepresentation == null)
+				return null;
+			return {
+				semanticTypeId: representation.semanticTypeId,
+				outputCarrierTypeId: representation.carrierTypeId,
+				outputRepresentationId: representation.id,
+				matchPolicy: OcamlCatchMatchPolicy.ExactRuntimeTag,
+				runtimeTag: representation.semanticTypeId,
+				conversion: OcamlCatchPayloadConversion.RecoverNominalValue,
+				nominalRepresentation: nominalRepresentation
 			};
 		}
 		return switch (haxe.macro.TypeTools.follow(type)) {
@@ -1822,7 +1901,8 @@ class OcamlControlPlanner {
 					outputRepresentationId: OcamlControlPlan.DYNAMIC_CATCH_REPRESENTATION_ID,
 					matchPolicy: OcamlCatchMatchPolicy.MatchAll,
 					runtimeTag: null,
-					conversion: OcamlCatchPayloadConversion.PreserveDynamicCarrier
+					conversion: OcamlCatchPayloadConversion.PreserveDynamicCarrier,
+					nominalRepresentation: null
 				};
 			case _:
 				null;
@@ -1843,6 +1923,11 @@ class OcamlControlPlanner {
 		final unwrapped = unwrapTransparent(expression);
 		switch (unwrapped.expr) {
 			case TLocal(local):
+				final nominalCatchRepresentation = nominalCatchRepresentations.get(local.id);
+				if (nominalCatchRepresentation != null
+					&& nominalCatchRepresentation.semanticTypeId == OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(unwrapped.t)) {
+					return nominalCatchRepresentation;
+				}
 				final reference = localRepresentations.referenceFor(local.id);
 				if (reference == null
 					|| reference.domain != OcamlRepresentationDomain.InternalValue
@@ -1858,6 +1943,24 @@ class OcamlControlPlanner {
 		return null;
 	}
 
+	/**
+		Selects a represented value that can cross the exception channel opaquely.
+
+		Throwing does not read fields or expose a callable/storage carrier, so an
+		exact whole-program-monomorphic class can use its nullable nominal record
+		decision even when the surrounding expression has no separately admitted
+		local or call-boundary proof. `Obj.repr` preserves either the real record
+		or the null sentinel, and runtime marker inspection adds the class tag only
+		for a real record. Other control families remain on their narrower proofs.
+	**/
+	function throwRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+		final exact = exactValueRepresentation(expression);
+		if (exact != null)
+			return exact;
+		final nominalClass = representations.monomorphicClassForType(expression.t);
+		return nominalClass == null ? null : representations.monomorphicClassValue(nominalClass.semanticTypeId);
+	}
+
 	static function returnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan):Null<OcamlControlPayloadPlan> {
 		final sameSide = input.semanticTypeId == output.outputSemanticTypeId
 			&& input.carrierTypeId == output.outputCarrierTypeId
@@ -1868,19 +1971,12 @@ class OcamlControlPlanner {
 				proofClaim);
 		}
 		if (sameSide && input.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier) {
-			final targetModuleName = input.nominalTargetModuleName;
-			final targetTypeName = input.nominalTargetTypeName;
-			final layoutRevision = input.nominalLayoutRevision;
-			if (targetModuleName == null || targetTypeName == null || layoutRevision == null)
+			final nominalRepresentation = nominalProofFor(input);
+			if (nominalRepresentation == null)
 				return null;
-			final proofClaim = 'The final typed Haxe body returns one already-sealed ${input.semanticTypeId} nominal record. The private runtime signal uses Obj.t only while control is in flight, then the matching function boundary recovers ${input.carrierTypeId} under exact layout $layoutRevision. Reference identity, shared field mutation, and the callable result carrier remain unchanged.';
+			final proofClaim = 'The final typed Haxe body returns one already-sealed ${input.semanticTypeId} nominal record. The private runtime signal uses Obj.t only while control is in flight, then the matching function boundary recovers ${input.carrierTypeId} under exact layout ${nominalRepresentation.layoutRevision}. Reference identity, shared field mutation, and the callable result carrier remain unchanged.';
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxAndRecoverNominalValue, OcamlControlPlan.EXACT_NOMINAL_RETURN_PROOF_ID,
-				proofClaim, {
-					targetModuleName: targetModuleName,
-					targetTypeName: targetTypeName,
-					layoutRevision: layoutRevision,
-					representationProofId: input.proof.id
-				});
+				proofClaim, nominalRepresentation);
 		}
 		if (sameSide && OcamlControlPlan.isAdmittedNullableSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
 			final proofClaim = 'The final typed Haxe body assigns this return to the current ${input.semanticTypeId} function. The selected private runtime signal already carries the exact ${input.carrierTypeId} nullable value, so syntax must preserve that carrier without another box, unchecked cast, or boundary recovery.';
@@ -1898,6 +1994,24 @@ class OcamlControlPlanner {
 				OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID, proofClaim);
 		}
 		return null;
+	}
+
+	static function nominalProofFor(representation:OcamlRepresentationDecision):Null<OcamlControlNominalRepresentationProof> {
+		final targetModuleName = representation.nominalTargetModuleName;
+		final targetTypeName = representation.nominalTargetTypeName;
+		final layoutRevision = representation.nominalLayoutRevision;
+		if (representation.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier
+			|| targetModuleName == null
+			|| targetTypeName == null
+			|| layoutRevision == null) {
+			return null;
+		}
+		return {
+			targetModuleName: targetModuleName,
+			targetTypeName: targetTypeName,
+			layoutRevision: layoutRevision,
+			representationProofId: representation.proof.id
+		};
 	}
 
 	static function makeReturnPayload(input:OcamlRepresentationDecision, output:OcamlCallValuePlan, conversion:OcamlControlPayloadConversion, proofId:String,

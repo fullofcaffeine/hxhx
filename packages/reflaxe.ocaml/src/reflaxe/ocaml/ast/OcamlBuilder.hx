@@ -347,6 +347,8 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [carrier])
 				]);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
+			case BoxNominalThrowCarrier:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case _:
 				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
 		}
@@ -419,6 +421,8 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 					case RecoverCheckedBool:
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [valueExpression]);
+					case RecoverNominalValue:
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpression]);
 					case PreserveDynamicCarrier:
 						valueExpression;
 				};

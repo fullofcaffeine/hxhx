@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 34
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v10'
+if (report.schemaVersion !== 35
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v11'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
 }
@@ -67,7 +67,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v36'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v37'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -218,7 +218,7 @@ const preserved = controls.filter(control =>
 const directional = controls.filter(control =>
 	control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
 	|| control.payload?.conversion === 'box-exact-bool-to-nullable-carrier')
-if (report.schemaVersion !== 19
+if (report.schemaVersion !== 20
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 12

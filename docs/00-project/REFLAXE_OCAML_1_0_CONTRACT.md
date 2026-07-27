@@ -20,7 +20,7 @@ interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
 
-The first ten bounded control-effect slices are now executable. An ordinary
+The first eleven bounded control-effect slices are now executable. An ordinary
 static Haxe function returning an exact `Int`, `Bool`, or represented `String`
 can leave early from a nested branch, block, loop, or `try` body without the
 OCaml generator reconstructing that behavior from target syntax. The
@@ -175,11 +175,53 @@ carrier. The shared exception channel then derives the concrete tag from the
 actual payload. Generated syntax does not select catch compatibility, use
 `Obj.magic`, or create a second exception mechanism.
 
+The eleventh slice extends that same exception channel to one exact
+whole-program-monomorphic class. A **whole-program-monomorphic class** here is
+a concrete, non-extern, non-generic user class with no superclass, subclasses,
+interfaces, or dynamic methods, for which the compiler has selected one OCaml
+record layout. For example:
+
+```haxe
+final thrown = new Box(4);
+final alias = thrown;
+try {
+	throw thrown;
+} catch (_:Int) {
+	trace("wrong");
+} catch (caught:Box) {
+	caught.value++;
+	trace(caught == alias);
+}
+```
+
+Before target syntax is written, the throw record names the exact `Box`
+representation, layout revision, and representation proof. The payload crosses
+the shared exception channel opaquely as `Obj.t`; the matching `Box` catch first
+checks the runtime `Box` marker and then recovers the registered record type.
+The catch therefore receives the same mutable object rather than a copy, and a
+later rethrow preserves both the object identity and any field mutation.
+
+Only `Dynamic` is attached as a static throw tag. For a real record, the
+existing runtime derives `Box` from its `__hx_type` marker; for a class-typed
+null, there is no `Box` marker, so the value skips `catch (_:Box)` and reaches
+`Dynamic`, matching upstream Haxe 4.3.7. This avoids a stale type tag that could
+make null look like an instance. The lowering report and public inspector bind
+both throw and catch records to the same program-owned layout proof and reject
+a stale or conflicting revision.
+
+This is deliberately not general class-exception support. Inheritance,
+interfaces, generics, extern classes, dynamic methods, `haxe.Exception`,
+`haxe.ValueException`, enums, abstracts, nullable catch declarations, and
+arbitrary values crossing calls or storage without an existing representation
+proof remain unadmitted. The slice proves only the exception crossing and
+recovery boundary; it does not claim that every operation on a class value is
+already free of older target fallbacks.
+
 This is evidence for `haxe_ocaml-w32h3.1` through
-`haxe_ocaml-w32h3.10`, not closure of the parent control-effects requirement.
+`haxe_ocaml-w32h3.11`, not closure of the parent control-effects requirement.
 Additional value-return payloads, other primitive-to-nullable and nullable
-return carriers, unsupported catch and throw payloads, cleanup effects, and
-the complete runtime-requirement ledger remain unfinished.
+return carriers, wider nominal/exception families, cleanup effects, and the
+complete runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -328,7 +370,7 @@ Required semantic-safety prerequisites before release authorization:
   admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`); its first eight slices cover
+  model cannot represent them (`haxe_ocaml-w32h3`); its first eleven slices cover
   exact-`Int`, exact-`Bool`, represented-`String`, and the first
   constructor-produced monomorphic-class local early returns from
   ordinary static functions, including the existing String runtime null
@@ -344,11 +386,15 @@ Required semantic-safety prerequisites before release authorization:
   `continue` in ordinary `while` and `do ... while` loops, and
   exact-`Int`/`Bool`/represented-`String` payloads entering the global Haxe
   exception channel with upstream-compatible runtime-value tags. Complete
-  source-ordered catch chains over those exact primitive types and a final
-  `Dynamic` catch are also sealed, including the separate target-native
-  exception channel and private-control bypass. The remaining value/nullable
-  return conversions, unsupported-catch/exception, and cleanup families are
-  still release blockers;
+  source-ordered catch chains over those exact primitive types, one exact
+  whole-program-monomorphic class, and a final `Dynamic` catch are also sealed,
+  including the separate target-native exception channel and private-control
+  bypass. A nominal payload carries the program registry's exact layout proof,
+  preserves object identity and mutation through rethrow, and derives its
+  class tag only from a real runtime record so null still reaches `Dynamic`.
+  Wider class hierarchies, `haxe.Exception`, `haxe.ValueException`, enums,
+  abstracts, the remaining value/nullable return conversions, unsupported
+  catches, and cleanup families are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);

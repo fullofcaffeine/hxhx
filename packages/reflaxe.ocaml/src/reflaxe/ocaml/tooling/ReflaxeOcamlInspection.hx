@@ -15,6 +15,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlNominalRepresentationProof;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
@@ -82,7 +83,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 19,
+			schemaVersion: 20,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -347,8 +348,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 34) {
-						throw 'Unsupported lowering report schema $version; expected 34.';
+					if (version != 35) {
+						throw 'Unsupported lowering report schema $version; expected 35.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -396,7 +397,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} exact primitive/Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -435,7 +436,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v10")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v11")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -590,18 +591,21 @@ class ReflaxeOcamlInspection {
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
-						case _: null;
+						case _: payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier";
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>": ["Dynamic"];
-						case _: [];
+						case _: payload.nominalRepresentation == null ? [] : ["Dynamic"];
 					};
 					final expectedProofId = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
-						case _: null;
+						case _: payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1";
 					};
+					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,
+						payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.nominalRepresentation,
+						representationById);
 					if (expectedConversion == null
 						|| expectedProofId == null
 						|| payload.signalCarrierTypeId != "Obj.t"
@@ -609,7 +613,7 @@ class ReflaxeOcamlInspection {
 						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
 						|| payload.outputRepresentationId != payload.inputRepresentationId
 						|| payload.conversion != expectedConversion
-						|| payload.nominalRepresentation != null
+						|| !nominalPayloadValid
 						|| payload.proofId != expectedProofId
 						|| payload.proofClaim.length == 0
 						|| control.proofId != expectedProofId
@@ -638,7 +642,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
-		if (requiredString(value, "controlCatchModel") != "typed-ocaml-exact-primitive-catch-chain-v1")
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v2")
 			throw "Unsupported control catch-chain report model.";
 		final rawChains = requiredArray(value, "controlCatches");
 		if (rawChains.length != requiredInt(value, "controlCatchCount"))
@@ -666,7 +670,7 @@ class ReflaxeOcamlInspection {
 				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
 				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
 				|| chain.reason.length == 0
-				|| chain.proofId != "exact-primitive-catch-control-v1"
+				|| chain.proofId != "represented-value-catch-control-v2"
 				|| chain.proofClaim.length == 0
 				|| chain.functionId.length == 0
 				|| chain.programRevision.length == 0
@@ -686,7 +690,7 @@ class ReflaxeOcamlInspection {
 					|| clause.signalCarrierTypeId != "Obj.t"
 					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
 					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
-					|| clause.proofId != "exact-primitive-catch-control-v1"
+					|| clause.proofId != "represented-value-catch-control-v2"
 					|| clause.proofClaim.length == 0
 					|| clause.functionId != chain.functionId
 					|| clause.programRevision != chain.programRevision
@@ -708,11 +712,20 @@ class ReflaxeOcamlInspection {
 							|| clause.matchPolicy != "match-all"
 							|| clause.runtimeTag != null
 							|| clause.conversion != "preserve-dynamic-carrier"
+							|| clause.nominalRepresentation != null
 							|| index != chain.clauses.length - 1) {
 							throw 'Dynamic control catch clause "${clause.id}" has an invalid match-all, order, or carrier-preserving contract.';
 						}
 					case _:
-						throw 'Control catch clause "${clause.id}" has unsupported semantic type "${clause.semanticTypeId}".';
+						final nominal = clause.nominalRepresentation;
+						if (nominal == null
+							|| clause.matchPolicy != "exact-runtime-tag"
+							|| clause.runtimeTag != clause.semanticTypeId
+							|| clause.conversion != "recover-nominal-value"
+							|| !validControlNominalRepresentation(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, nominal,
+								representationById)) {
+							throw 'Monomorphic-class control catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof.';
+						}
 				}
 				clauseIds.set(clause.id, true);
 			}
@@ -732,7 +745,8 @@ class ReflaxeOcamlInspection {
 			|| clause.outputRepresentationId != representationId
 			|| clause.matchPolicy != "exact-runtime-tag"
 			|| clause.runtimeTag != runtimeTag
-			|| clause.conversion != conversion) {
+			|| clause.conversion != conversion
+			|| clause.nominalRepresentation != null) {
 			throw 'Exact ${clause.semanticTypeId} control catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion.';
 		}
 		validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, representationById,
@@ -767,6 +781,7 @@ class ReflaxeOcamlInspection {
 
 	static function controlCatchClause(value:Dynamic):InspectionControlCatchClause {
 		final source = requiredObject(value, "source");
+		final nominalValue = Reflect.field(value, "nominalRepresentation");
 		return {
 			id: requiredString(value, "id"),
 			sourceFile: requiredString(source, "file"),
@@ -781,6 +796,7 @@ class ReflaxeOcamlInspection {
 			matchPolicy: requiredString(value, "matchPolicy"),
 			runtimeTag: optionalString(value, "runtimeTag"),
 			conversion: requiredString(value, "conversion"),
+			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			bodyResultPolicy: requiredString(value, "bodyResultPolicy"),
 			effects: requiredStringArray(value, "effects"),
 			proofId: requiredString(value, "proofId"),
@@ -847,15 +863,33 @@ class ReflaxeOcamlInspection {
 			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
 			outputRepresentationId: requiredString(value, "outputRepresentationId"),
 			conversion: requiredString(value, "conversion"),
-			nominalRepresentation: nominalValue == null ? null : {
-				targetModuleName: requiredString(nominalValue, "targetModuleName"),
-				targetTypeName: requiredString(nominalValue, "targetTypeName"),
-				layoutRevision: requiredString(nominalValue, "layoutRevision"),
-				representationProofId: requiredString(nominalValue, "representationProofId")
-			},
+			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim")
 		};
+	}
+
+	static function controlNominalRepresentation(value:Dynamic):InspectionControlNominalRepresentationProof {
+		return {
+			targetModuleName: requiredString(value, "targetModuleName"),
+			targetTypeName: requiredString(value, "targetTypeName"),
+			layoutRevision: requiredString(value, "layoutRevision"),
+			representationProofId: requiredString(value, "representationProofId")
+		};
+	}
+
+	static function validControlNominalRepresentation(representationId:String, semanticTypeId:String, carrierTypeId:String,
+			nominal:InspectionControlNominalRepresentationProof, representationById:Map<String, InspectionRepresentationDecision>):Bool {
+		final decision = representationById.get(representationId);
+		return decision != null
+			&& decision.semanticTypeId == semanticTypeId
+			&& decision.carrierTypeId == carrierTypeId
+			&& decision.domain == "internal-value"
+			&& decision.boxingPolicy == "nullable-nominal-record-carrier"
+			&& decision.nominalTargetModuleName == nominal.targetModuleName
+			&& decision.nominalTargetTypeName == nominal.targetTypeName
+			&& decision.nominalLayoutRevision == nominal.layoutRevision
+			&& decision.proofId == nominal.representationProofId;
 	}
 
 	static function inspectCalls(value:Dynamic,
