@@ -94,12 +94,34 @@ class Main {
 		printLine("captured_local value=" + read() + " events=" + Counter.renderEvents());
 	}
 
+	#if class_carrier_mutable_capture_negative
+	/**
+		Keeps the captured-and-reassigned family in the portable target fixture.
+
+		The immutable capture slice must not assign this local a nominal immutable
+		binding: both scopes need one shared cell because the whole object reference
+		changes after the closure is created.
+	**/
+	static function reassignedCapturedLocalBoundary():Void {
+		var counter = new Counter(10);
+		final read = function():Int {
+			return counter.value;
+		}
+		counter = new Counter(11);
+		if (read() != 11)
+			throw "captured reassignment lost shared storage";
+	}
+	#end
+
 	static function main():Void {
 		constructorLocalCase();
 		aliasCase();
 		capturedLocalCase();
 		#if class_carrier_factory_receiver
 		factoryReceiverCase();
+		#end
+		#if class_carrier_mutable_capture_negative
+		reassignedCapturedLocalBoundary();
 		#end
 	}
 }

@@ -144,8 +144,10 @@ class OcamlLocalRepresentationPlanner {
 		Returns whether an expression already produces one admitted nominal record.
 
 		Only a direct constructor or a local with the same exact sealed class layout
-		is eligible. Calls, parameters, fields, null, Dynamic, captures, hierarchy
-		conversions, and native values remain explicit future boundaries.
+		is eligible. Immutable capture does not change that carrier: the closure
+		retains the same binding. Calls, parameters, fields, null, Dynamic, mutable
+		captures, hierarchy conversions, and native values remain explicit future
+		boundaries.
 	**/
 	static function exactMonomorphicClassCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>, classSemanticTypeByLocalId:Map<Int, String>,
 			representations:OcamlRepresentationRegistry):Null<ExactMonomorphicClassCarrierInput> {
@@ -524,7 +526,7 @@ class OcamlLocalRepresentationPlanner {
 			if (classSemanticTypeByLocalId.exists(localId)
 				&& (identityClassInitializerByLocalId.get(localId) != true
 					|| identityClassAssignmentsByLocalId.get(localId) == false
-					|| storage.isCaptured(localId)))
+					|| (storage.isCaptured(localId) && !storage.isImmutableCapture(localId))))
 				unsupportedClassLocalIds.set(localId, true);
 		}
 		var propagatedUnsupportedBool = true;

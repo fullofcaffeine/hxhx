@@ -136,7 +136,7 @@ class OcamlFunctionPlanSealer {
 		}
 
 		visit(data.expr);
-		validateLocalRepresentationReferences(localRepresentations, binding.programRevision, data.expr.pos);
+		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		registry.sealFunction(binding, localStorage, localRepresentations, calls, callableBoundary, constructionBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
@@ -191,7 +191,8 @@ class OcamlFunctionPlanSealer {
 		}
 	}
 
-	function validateLocalRepresentationReferences(plan:OcamlLocalRepresentationPlan, programRevision:String, position:Position):Void {
+	function validateLocalRepresentationReferences(storage:OcamlLocalStoragePlan, plan:OcamlLocalRepresentationPlan, programRevision:String,
+			position:Position):Void {
 		for (reference in plan.references()) {
 			final decision = try {
 				representations.require(reference.representationId, programRevision);
@@ -200,6 +201,12 @@ class OcamlFunctionPlanSealer {
 			}
 			if (decision.semanticTypeId != reference.semanticTypeId || decision.domain != reference.domain) {
 				fail('local ${reference.localId} expects ${reference.semanticTypeId} in representation domain ${reference.domain}, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
+					position);
+			}
+			if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)
+				&& storage.isCaptured(reference.localId)
+				&& !storage.isImmutableCapture(reference.localId)) {
+				fail('captured nominal local ${reference.localId} requires mutable shared storage, so it cannot consume immutable representation ${decision.id}',
 					position);
 			}
 		}

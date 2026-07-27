@@ -173,9 +173,10 @@ class OcamlRepresentationRegistry {
 	/**
 		Selects the nominal record carrier for one proven monomorphic class value.
 
-		The first slice admits immutable internal bindings only. Mutable cells,
-		captures, fields containing class values, arrays, calls, and external
-		boundaries need separate occurrence or conversion proofs.
+		The first slice admits immutable internal bindings, including a closure
+		capturing that same binding without reassigning it. Mutable cells, fields
+		containing class values, arrays, calls, and external boundaries need
+		separate occurrence or conversion proofs.
 	**/
 	public function selectMonomorphicClassValue(type:Type, domain:OcamlRepresentationDomain):Null<OcamlRepresentationDecision> {
 		final layout = monomorphicClassForType(type);

@@ -147,8 +147,35 @@ class LocalStoragePlannerFixture {
 				}
 			case _:
 		}
-		assertTrue(capturedLocalId != null && immutableCapture.decisions().length == 0 && immutableCapture.isCaptured(capturedLocalId),
+		assertTrue(capturedLocalId != null
+			&& immutableCapture.decisions().length == 0
+			&& immutableCapture.isCaptured(capturedLocalId)
+			&& immutableCapture.isImmutableCapture(capturedLocalId),
 			"an immutable captured local should remain storage-free while exposing its capture boundary");
+		final capturedIds = immutableCapture.capturedIds();
+		assertTrue(capturedIds.length == 1 && capturedIds[0] == capturedLocalId, "an immutable capture should expose one deterministic local identity");
+		capturedIds.push(-1);
+		assertTrue(immutableCapture.capturedIds().length == 1, "mutating a returned capture inventory must not change the retained plan");
+		final sameCaptureA = new OcamlLocalStoragePlan([], [7, 3, 7]);
+		final sameCaptureB = new OcamlLocalStoragePlan([], [3, 7]);
+		final noCapture = new OcamlLocalStoragePlan([]);
+		assertTrue(sameCaptureA.revision == sameCaptureB.revision,
+			"equivalent captured-local sets should have one revision regardless of input order or duplicates");
+		assertTrue(sameCaptureA.revision != noCapture.revision, "captured-local evidence must participate in the storage-plan revision");
+		expectFailure("captured immutable rebinding", "captured-mutation-without-cell", () -> new OcamlLocalStoragePlan([
+			{
+				localId: 7,
+				storage: OcamlLocalStorageKind.ImmutableRebinding,
+				reasons: [OcamlLocalStorageReason.CapturedAndMutated]
+			}
+		], [7]));
+		expectFailure("captured decision without evidence", "contradictory-capture-storage", () -> new OcamlLocalStoragePlan([
+			{
+				localId: 7,
+				storage: OcamlLocalStorageKind.RefCell,
+				reasons: [OcamlLocalStorageReason.CapturedAndMutated]
+			}
+		]));
 
 		final nestedFunction = plan(macro {
 			var outer = 0;

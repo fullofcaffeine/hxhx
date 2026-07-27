@@ -57,6 +57,7 @@ typedef OcamlLocalStorageDecision = {
 class OcamlLocalStoragePlan {
 	final orderedDecisions:Array<OcamlLocalStorageDecision>;
 	final decisionsByLocalId:Map<Int, OcamlLocalStorageDecision> = [];
+	final orderedCapturedLocalIds:Array<Int>;
 	final capturedLocalIds:Map<Int, Bool> = [];
 
 	public final count:Int;
@@ -72,10 +73,26 @@ class OcamlLocalStoragePlan {
 				throw 'reflaxe.ocaml [ocaml-lowering:duplicate-local-storage-decision]: local ${decision.localId} was planned more than once';
 			decisionsByLocalId.set(decision.localId, decision);
 		}
-		for (localId in captured ?? [])
+		for (localId in captured ?? []) {
+			if (localId < 0)
+				throw 'reflaxe.ocaml [ocaml-lowering:invalid-captured-local]: captured local identity $localId is negative';
 			capturedLocalIds.set(localId, true);
+		}
+		orderedCapturedLocalIds = [for (localId in capturedLocalIds.keys()) localId];
+		orderedCapturedLocalIds.sort((left, right) -> left - right);
+		for (decision in orderedDecisions) {
+			final capturedAndMutated = hasReason(decision, OcamlLocalStorageReason.CapturedAndMutated);
+			if (capturedAndMutated != capturedLocalIds.exists(decision.localId)) {
+				throw 'reflaxe.ocaml [ocaml-lowering:contradictory-capture-storage]: local ${decision.localId} must record capture and ${OcamlLocalStorageReason.CapturedAndMutated} together';
+			}
+			if (capturedAndMutated && decision.storage != OcamlLocalStorageKind.RefCell)
+				throw 'reflaxe.ocaml [ocaml-lowering:captured-mutation-without-cell]: captured and mutated local ${decision.localId} must use ${OcamlLocalStorageKind.RefCell}';
+		}
 		count = orderedDecisions.length;
-		revision = "sha256:" + Sha256.encode(orderedDecisions.map(decisionFingerprint).join("\n"));
+		final fingerprints = orderedDecisions.map(decision -> "storage|" + decisionFingerprint(decision));
+		for (localId in orderedCapturedLocalIds)
+			fingerprints.push('capture|$localId');
+		revision = "sha256:" + Sha256.encode(fingerprints.join("\n"));
 	}
 
 	/** Returns whether the local needs one shared mutable cell. */
@@ -93,6 +110,23 @@ class OcamlLocalStoragePlan {
 	**/
 	public function isCaptured(localId:Int):Bool {
 		return capturedLocalIds.exists(localId);
+	}
+
+	/**
+		Returns whether a closure keeps the local alive without sharing mutable
+		whole-local storage.
+
+		The referenced value may still be a mutable object or array. This answer
+		only proves that the Haxe local itself is never assigned a replacement, so
+		the closure can retain the same immutable OCaml binding directly.
+	**/
+	public function isImmutableCapture(localId:Int):Bool {
+		return capturedLocalIds.exists(localId) && !decisionsByLocalId.exists(localId);
+	}
+
+	/** Returns captured local identities in deterministic order. */
+	public function capturedIds():Array<Int> {
+		return orderedCapturedLocalIds.copy();
 	}
 
 	/** Returns a defensive copy of one decision, when the local was mutated. */
@@ -132,6 +166,16 @@ class OcamlLocalStoragePlan {
 			return reasonId;
 		});
 		return '${decision.localId}|$storageId|${reasonIds.join(",")}';
+	}
+
+	static function hasReason(decision:OcamlLocalStorageDecision, expected:OcamlLocalStorageReason):Bool {
+		final expectedId:String = expected;
+		for (reason in decision.reasons) {
+			final reasonId:String = reason;
+			if (reasonId == expectedId)
+				return true;
+		}
+		return false;
 	}
 }
 #end

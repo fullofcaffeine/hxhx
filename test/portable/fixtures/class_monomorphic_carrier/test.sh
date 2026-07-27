@@ -41,11 +41,11 @@ if (decision == null
 const admittedReceivers = (report.plans ?? []).filter(plan =>
 	plan.place?.receiverSemanticTypeId === 'Counter'
 	&& plan.place?.receiverRepresentationId === decision.id)
-if (admittedReceivers.length !== 3
+if (admittedReceivers.length !== 4
 	|| admittedReceivers.some(plan =>
 		plan.place.receiverCarrierTypeId !== 'counter_t'
 		|| plan.place.kind !== 'instance-field')) {
-	fail(`expected three Counter field plans to consume the sealed receiver, got ${admittedReceivers.length}`)
+	fail(`expected four Counter field plans, including the closure read, to consume the sealed receiver, got ${admittedReceivers.length}`)
 }
 
 const instanceCalls = (report.calls ?? []).filter(call =>
@@ -66,8 +66,8 @@ if (constructorBoundaries.length !== 1
 	|| constructorBoundaries[0].result?.outputRepresentationId !== decision.id) {
 	fail('the report did not seal the exact Counter construction boundary')
 }
-if (constructorCalls.length !== 4) {
-	fail(`expected four exact Counter constructions, got ${constructorCalls.length}`)
+if (constructorCalls.length !== 6) {
+	fail(`expected six exact Counter constructions, including the excluded mutable-capture producers, got ${constructorCalls.length}`)
 }
 for (const constructorCall of constructorCalls) {
 	if (constructorCall.receiver !== null
@@ -122,9 +122,12 @@ for (const instanceCall of instanceCalls) {
 	}
 }
 
-if (!/let counter = Obj\.magic \(let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+\)/.test(source)
-	|| !source.includes('(Obj.magic counter : counter_t).value')) {
-	fail('the captured Counter local crossed the first-slice boundary instead of retaining the legacy path')
+if (!/let counter = let __call_arg_0_\d+ = 6 in counter_create __call_arg_0_\d+ in let read = fun \(\) -> \(counter : counter_t\)\.value/.test(source)) {
+	fail('the immutable captured Counter local did not retain its sealed nominal carrier inside the closure')
+}
+if (!/let reassignedCapturedLocalBoundary = fun \(\) -> ignore \(let counter = ref \(Obj\.magic \(let __call_arg_0_\d+ = 10 in counter_create __call_arg_0_\d+\)\)/.test(source)
+	|| !source.includes('let read = fun () -> (Obj.magic (!counter) : counter_t).value')) {
+	fail('the captured-and-reassigned Counter local escaped its required shared-cell legacy boundary')
 }
 if (!/let counter = let __call_arg_0_\d+ = sourceValue \(\) in counter_create __call_arg_0_\d+/.test(source)) {
 	fail('the constructor-local path did not materialize its argument before invoking Counter.create')
@@ -149,6 +152,7 @@ if (!/\(__place_receiver_\d+ : counter_t\)\.value <- __place_rhs_\d+/.test(sourc
 }
 const forbiddenSource = [
 	'(Obj.magic self : counter_t).value',
+	'(Obj.magic counter : counter_t).value',
 	'counter_bump (Obj.magic counter)',
 	'counter_bump (Obj.magic (makeCounter ()))'
 ]
