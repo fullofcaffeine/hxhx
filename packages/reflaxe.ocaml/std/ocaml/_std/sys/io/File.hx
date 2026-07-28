@@ -70,6 +70,11 @@ class File {
 	}
 }
 
+/**
+	Typed whole-file boundary whose runtime declaration validates and explains
+	the packaged `HxFile` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file")
 @:native("HxFile")
 private extern class NativeHxFile {
 	static function getContent(path:String):String;
@@ -79,6 +84,11 @@ private extern class NativeHxFile {
 	static function copy(srcPath:String, dstPath:String):Void;
 }
 
+/**
+	Typed file-open boundary whose runtime declaration validates and explains
+	the packaged `HxFileStream` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file-stream")
 @:native("HxFileStream")
 private extern class NativeHxFileStream {
 	static function open_in(path:String, binary:Bool):Dynamic;

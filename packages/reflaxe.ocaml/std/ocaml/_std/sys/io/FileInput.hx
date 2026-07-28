@@ -78,6 +78,11 @@ class FileInput extends Input {
 	}
 }
 
+/**
+	Typed input-stream boundary whose runtime declaration validates and explains
+	the packaged `HxFileStream` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file-stream")
 @:native("HxFileStream")
 private extern class NativeHxFileStream {
 	static function close_in(h:Dynamic):Void;

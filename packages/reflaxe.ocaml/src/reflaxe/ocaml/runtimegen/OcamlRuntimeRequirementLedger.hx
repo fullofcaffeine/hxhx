@@ -37,6 +37,8 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
 	public static inline final HAXE_PROCESS = "haxe-process";
+	public static inline final HAXE_FILE = "haxe-file";
+	public static inline final HAXE_FILE_STREAM = "haxe-file-stream";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -409,6 +411,18 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-process-v1",
 					module: "HxProcess",
 					explanation: "The typed Haxe process facade uses HxProcess to spawn and control child processes and to exchange bytes, lines, and strings through their standard streams."
+				};
+			case HAXE_FILE:
+				{
+					feature: "haxe-file-v1",
+					module: "HxFile",
+					explanation: "The typed Haxe file facade uses HxFile to read, write, and copy whole file contents with exact String and BytesData carriers."
+				};
+			case HAXE_FILE_STREAM:
+				{
+					feature: "haxe-file-stream-v1",
+					module: "HxFileStream",
+					explanation: "The typed Haxe file-stream facades use HxFileStream to open, read, write, seek, flush, query, and close file channels."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';
