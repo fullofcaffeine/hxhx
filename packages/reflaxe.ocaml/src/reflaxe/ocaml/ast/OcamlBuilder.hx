@@ -1326,18 +1326,6 @@ class OcamlBuilder {
 		}
 	}
 
-	static inline function isHaxeDsStringMapClass(cls:ClassType):Bool {
-		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "StringMap";
-	}
-
-	static inline function isHaxeDsIntMapClass(cls:ClassType):Bool {
-		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "IntMap";
-	}
-
-	static inline function isHaxeDsObjectMapClass(cls:ClassType):Bool {
-		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "ObjectMap";
-	}
-
 	static inline function isHaxeConstraintsIMapClass(cls:ClassType):Bool {
 		// `haxe.Constraints.IMap`
 		return cls.pack != null
@@ -2234,15 +2222,18 @@ class OcamlBuilder {
 				final cls = clsRef.get();
 				if (isStdArrayClass(cls) && args.length == 0) {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-				} else if (args.length == 0 && (isHaxeDsStringMapClass(cls) || isHaxeDsIntMapClass(cls) || isHaxeDsObjectMapClass(cls))) {
-					final ctor = if (isHaxeDsStringMapClass(cls)) {
-						"create_string";
-					} else if (isHaxeDsIntMapClass(cls)) {
-						"create_int";
-					} else {
-						"create_object";
-					}
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), ctor), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				} else if (cls.isExtern
+					&& cls.constructor != null
+					&& extractNativeString(cls.constructor.get().meta) != null
+					&& OcamlNativeRuntimeBoundary.hasDeclaredRuntimeCapability(cls, cls.constructor.get())) {
+					final constructor = cls.constructor.get();
+					final nativeClassPath = extractNativeString(cls.meta);
+					final nativeFieldPath = extractNativeString(constructor.meta);
+					final resolved = resolveNativeStaticPath(moduleIdToOcamlModuleName(cls.module), "new", nativeClassPath, nativeFieldPath);
+					OcamlNativeRuntimeBoundary.recordUsedExternCallable(ctx, cls, constructor, resolved.modulePath + "." + resolved.fieldName);
+					final builtArgs = args.map(buildExpr);
+					OcamlExpr.EApp(OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName),
+						builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 				} else if (isStdBytesClass(cls)) {
 					bytesProducerInvariant("the internal Bytes constructor reached legacy syntax without its sealed occurrence plan", e.pos);
 				} else {
@@ -3528,17 +3519,8 @@ class OcamlBuilder {
 															#end
 															OcamlExpr.EConst(OcamlConst.CUnit);
 													}
-												} else if (isHaxeDsStringMapClass(cls) || isHaxeDsIntMapClass(cls) || isHaxeDsObjectMapClass(cls)
-													|| isHaxeConstraintsIMapClass(cls)) {
-													final kind = if (isHaxeDsStringMapClass(cls)) {
-														"string";
-													} else if (isHaxeDsIntMapClass(cls)) {
-														"int";
-													} else if (isHaxeDsObjectMapClass(cls)) {
-														"object";
-													} else {
-														mapKeyKindFromIMapExpr(objExpr);
-													}
+												} else if (isHaxeConstraintsIMapClass(cls)) {
+													final kind = mapKeyKindFromIMapExpr(objExpr);
 													if (kind == null) {
 														#if macro
 														guardrailError("reflaxe.ocaml (M6): could not determine Map key kind for IMap call.", e.pos);
@@ -8058,7 +8040,7 @@ class OcamlBuilder {
 					}
 
 					final resolved = resolveNativeStaticPath(moduleIdToOcamlModuleName(cls.module), cf.name, nativeClassPath, nativeFieldPath);
-					OcamlNativeRuntimeBoundary.recordUsedStaticExtern(ctx, cls, cf, resolved.modulePath + "." + resolved.fieldName);
+					OcamlNativeRuntimeBoundary.recordUsedExternCallable(ctx, cls, cf, resolved.modulePath + "." + resolved.fieldName);
 
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
 				} else {

@@ -207,13 +207,16 @@ source-bundle packaging as blocked because not every runtime file has a
 source-operation explanation yet, and the structured native-dependency
 inventory has not landed. Runtime-enabled builds now write
 `ocaml_runtime_requirement_report.json`, which traces typed
-assignments and updates to their checked runtime source files. It explicitly
-lists runtime references from other compiler paths as unexplained, so the
-current runtime selection is not presented as a whole-program semantic
-manifest. The place report likewise covers one migrated semantic family rather
-than a whole-program IR. Program-wide representation, native dependency,
-raw/unsafe, binding, and curated export-ABI inspection stay marked unavailable
-until their owning typed manifests exist.
+assignments and updates to their checked runtime source files. It also traces
+standard `StringMap`, `IntMap`, and `ObjectMap` declarations to the checked
+`HxMap` and `HxIterator` sources selected before OCaml syntax generation. Calls
+known only as the generic `IMap` interface are not included in that typed Map
+claim. The report explicitly lists runtime references from other compiler paths
+as unexplained, so the current runtime selection is not presented as a whole-
+program semantic manifest. The place report likewise covers one migrated
+semantic family rather than a whole-program IR. Program-wide representation,
+native dependency, raw/unsafe, binding, and curated export-ABI inspection stay
+marked unavailable until their owning typed manifests exist.
 
 `ocaml_output` is a compiler-owned directory. Do not mix handwritten OCaml or
 project files into it: the build now rejects unknown non-cache files so they

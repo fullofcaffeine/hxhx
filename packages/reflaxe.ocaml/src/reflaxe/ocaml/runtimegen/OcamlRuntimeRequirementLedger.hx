@@ -43,6 +43,8 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_THREAD = "haxe-thread";
 	public static inline final HAXE_FILE_SYSTEM = "haxe-file-system";
 	public static inline final HAXE_SYSTEM = "haxe-system";
+	public static inline final HAXE_MAP = "haxe-map";
+	public static inline final HAXE_ITERATOR = "haxe-iterator";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -457,6 +459,18 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-system-v1",
 					module: "HxSys",
 					explanation: "Typed Haxe Sys declarations use HxSys for process arguments, environment access, command execution, timing, working-directory operations, host identity, program paths, process exit, and character input."
+				};
+			case HAXE_MAP:
+				{
+					feature: "haxe-map-v1",
+					module: "HxMap",
+					explanation: "Typed Haxe StringMap, IntMap, and ObjectMap declarations use HxMap for checked mutable storage with the selected string, integer, or identity-key representation."
+				};
+			case HAXE_ITERATOR:
+				{
+					feature: "haxe-iterator-v1",
+					module: "HxIterator",
+					explanation: "Typed Haxe iterator-producing declarations use HxIterator to preserve the structural hasNext and next carrier over a target runtime array."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';

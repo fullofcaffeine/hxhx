@@ -26,12 +26,25 @@ expression required `HxInt` or `HxArray`?”, “why did the compiler-generated
 stack-trace facades require `HxStdio` and `HxBacktrace`?", and “why is the core
 runtime packaged?” in `ocaml_runtime_requirement_report.json` on every runtime-
 enabled build. The same report explains why typed binary Float conversion uses
-`HxFPHelper`. Each explanation names the supported Haxe type, generated module,
-compiler rule, or typed native boundary; the decision that required
-support; the implementation
-feature; the eligible profiles; and the checked root module. The report then
-follows that root through the catalog to the exact source hashes, dependencies,
-Dune libraries, profiles, and licenses that were packaged.
+`HxFPHelper`.
+
+Standard `haxe.ds.StringMap`, `IntMap`, and `ObjectMap` operations now select
+their runtime support through typed Haxe target-standard-library classes before
+OCaml syntax is generated. Their constructors and storage methods name the
+checked `HxMap` boundary, while map iterators name `HxIterator`. User-visible
+Map text is assembled by the typed Haxe target standard library over that
+iterator; it is not a placeholder chosen by the OCaml storage primitive. The
+report therefore connects a concrete Haxe declaration such as `StringMap.set`
+to the exact runtime source that implements it. Calls whose static type is only
+the generic `haxe.Constraints.IMap` interface still use the older compiler-
+observed path; they are not yet covered by this typed standard-Map claim.
+
+Each explanation names the supported Haxe type, generated module, compiler
+rule, or typed native boundary; the decision that required support; the
+implementation feature; the eligible profiles; and the checked root module.
+The report then follows that root through the catalog to the exact source
+hashes, dependencies, Dune libraries, profiles, and licenses that were
+packaged.
 
 When `-D ocaml_lowering_report` is enabled, `ocaml_lowering_report.json` shows
 the same requirement identities next to the typed assignment/update plans that
@@ -57,7 +70,8 @@ correctly remain incomplete under `haxe_ocaml-0uwin`.
 Typed target-runtime externs declare their need by capability rather than by
 copying a module name into the packaging plan. For example,
 `@:ocamlRuntime("haxe-standard-io")` selects the checked `HxStdio`
-implementation and is validated against the resolved `@:native` target. See
+implementation, while `@:ocamlRuntime("haxe-map")` selects `HxMap`. Each
+capability is validated against the resolved `@:native` target. See
 `OCAML_NATIVE_MODE.md` for the target-authoring contract. This metadata is not
 used for ordinary external OCaml libraries.
 
@@ -93,8 +107,8 @@ used for ordinary external OCaml libraries.
 | `HxHxNativeLexer` | yes | `tooling-only` | hxhx native frontend support module. |
 | `HxHxNativeParser` | yes | `tooling-only` | hxhx native frontend support module. |
 | `HxInt` | yes | `metal-supported` | Int helpers; hot-path specialization tracked separately. |
-| `HxIterator` | yes | `metal-supported` | Iterator helpers for typed iteration patterns. |
-| `HxMap` | yes | `metal-supported` | Map helpers; metal-specialized paths may reduce usage later. |
+| `HxIterator` | yes | `metal-supported` | Iterator helpers, including iterators selected by the typed standard Map classes. |
+| `HxMap` | yes | `metal-supported` | Target-native storage for typed `StringMap`, `IntMap`, and `ObjectMap` operations. The Haxe target-standard-library classes own the public API behavior. |
 | `HxProcess` | yes | `metal-supported` | Process execution helpers; linked only when needed. |
 | `HxReflect` | yes | `metal-forbidden (current)` | Reflection-heavy APIs are blocked by MetalProfileVerifier (`Reflect.*`). |
 | `HxRuntime` | yes | `metal-required` | Core runtime module; always linked in metal mode. |

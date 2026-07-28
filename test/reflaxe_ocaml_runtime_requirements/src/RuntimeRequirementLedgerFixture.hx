@@ -113,8 +113,11 @@ class RuntimeRequirementLedgerFixture {
 			"HxThread.thread_current");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FILE_SYSTEM, "sys.FileSystem::sys.FileSystem.stat", source, "HxFileSystem.stat");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_SYSTEM, "Sys::Sys.args", source, "HxSys.args");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_MAP, "haxe.ds.NativeHxMap::haxe.ds.NativeHxMap.set_string", source, "HxMap.set_string");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_ITERATOR, "haxe.ds.NativeHxMapIterator::haxe.ds.NativeHxMapIterator.of_array", source,
+			"HxIterator.of_array");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 19,
+		assertTrue(requirements.length == 21,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
@@ -178,8 +181,15 @@ class RuntimeRequirementLedgerFixture {
 		final systemRequirement = requirementById(requirements, "native:Sys::Sys.args:runtime:haxe-system");
 		assertTrue(systemRequirement.subject.id.indexOf("HxSys.args") >= 0, "the system boundary should name the checked target symbol");
 		assertTrue(systemRequirement.rootModules[0] == "HxSys", "Haxe system operations should select the HxSys implementation root");
+		final mapRequirement = requirementById(requirements, "native:haxe.ds.NativeHxMap::haxe.ds.NativeHxMap.set_string:runtime:haxe-map");
+		assertTrue(mapRequirement.subject.id.indexOf("HxMap.set_string") >= 0, "the Map boundary should name the checked target symbol");
+		assertTrue(mapRequirement.rootModules[0] == "HxMap", "typed Haxe Map operations should select the HxMap implementation root");
+		final iteratorRequirement = requirementById(requirements,
+			"native:haxe.ds.NativeHxMapIterator::haxe.ds.NativeHxMapIterator.of_array:runtime:haxe-iterator");
+		assertTrue(iteratorRequirement.subject.id.indexOf("HxIterator.of_array") >= 0, "the iterator boundary should name the checked target symbol");
+		assertTrue(iteratorRequirement.rootModules[0] == "HxIterator", "typed Haxe iterators should select the HxIterator implementation root");
 		assertTrue(ledger.rootModulesSorted()
-			.join(",") == "HxArray,HxBacktrace,HxFPHelper,HxFile,HxFileStream,HxFileSystem,HxInt,HxProcess,HxRuntime,HxStdio,HxString,HxSys,HxThread,HxType",
+			.join(",") == "HxArray,HxBacktrace,HxFPHelper,HxFile,HxFileStream,HxFileSystem,HxInt,HxIterator,HxMap,HxProcess,HxRuntime,HxStdio,HxString,HxSys,HxThread,HxType",
 			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
@@ -209,6 +219,10 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FILE_SYSTEM, "fixture.NativeFileSystem.stat", source, "OtherRuntime.stat"));
 		expectFailure("system native module mismatch", "requires \"HxSys\"",
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_SYSTEM, "fixture.Sys.args", source, "OtherRuntime.args"));
+		expectFailure("map native module mismatch", "requires \"HxMap\"",
+			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_MAP, "fixture.NativeMap.set_string", source, "OtherRuntime.set_string"));
+		expectFailure("iterator native module mismatch", "requires \"HxIterator\"",
+			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_ITERATOR, "fixture.NativeIterator.of_array", source, "OtherRuntime.of_array"));
 		final invalidStringRepresentation:Dynamic = Reflect.copy(stringRepresentation);
 		invalidStringRepresentation.carrierTypeId = "Obj.t";
 		expectFailure("invalid String representation", "does not match the sealed exact String null-sentinel contract",

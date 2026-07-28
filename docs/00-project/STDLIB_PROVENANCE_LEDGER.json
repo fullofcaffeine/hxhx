@@ -74,6 +74,36 @@
       "notes": "Repo-authored OCaml target implementation used by typed catch lowering; package builds flatten it to haxe/ValueException.cross.hx."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/IntMap.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/ds/IntMap.hx",
+      "notes": "Independently authored OCaml-target IntMap declaration. Haxe 4.3.7 supplies the public behavior oracle; typed Haxe selects the checked HxMap integer-key primitive."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/NativeHxMap.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/ds/Map.hx",
+      "notes": "Repo-authored private typed boundary from the standard Map specializations to checked target-runtime storage operations; it is not copied or mechanically translated from upstream."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/NativeHxMapIterator.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/iterators/MapKeyValueIterator.hx",
+      "notes": "Repo-authored private typed adapter from runtime arrays to the structural Haxe Iterator carrier."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/ObjectMap.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/ds/ObjectMap.hx",
+      "notes": "Independently authored OCaml-target ObjectMap declaration. Haxe 4.3.7 supplies the public behavior oracle; typed Haxe selects the checked HxMap identity-key primitive."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ds/StringMap.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/ds/StringMap.hx",
+      "notes": "Independently authored OCaml-target StringMap declaration. Haxe 4.3.7 supplies the public behavior oracle; typed Haxe selects the checked HxMap string-key primitive."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Sys.hx",

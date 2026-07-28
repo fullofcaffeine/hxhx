@@ -156,14 +156,16 @@ blocked until every runtime need and native dependency has an explicit, locked
 explanation. Runtime-enabled builds now write
 `ocaml_runtime_requirement_report.json`: it traces typed assignments and
 updates, the compiler-generated type registry, declared static native runtime
-boundaries such as `HxStdio`, `HxBacktrace`, and `HxFPHelper`, and the core
-packaging rule to the exact checked runtime files that were packaged. The
-report labels itself `partial`, lists which observed module names are directly
-selected by at least one recorded compiler reason, and lists which are not.
-This name overlap does not mean every use site is explained. The existing
-runtime selection report
-therefore remains the current compiler/runtime report, not a complete
-explanation for the whole program.
+boundaries such as `HxStdio`, `HxBacktrace`, and `HxFPHelper`, typed standard
+Map operations through `HxMap` and `HxIterator`, and the core packaging rule to
+the exact checked runtime files that were packaged. Standard `StringMap`,
+`IntMap`, and `ObjectMap` calls have declaration-level explanations; calls
+known only as the generic `IMap` interface do not yet have that typed boundary.
+The report labels itself `partial`, lists which observed module names are
+directly selected by at least one recorded compiler reason, and lists which are
+not. This name overlap does not mean every use site is explained. The existing
+runtime selection report therefore remains the current compiler/runtime report,
+not a complete explanation for the whole program.
 Program-wide representation, native dependency, raw/unsafe, typed binding, and
 curated export-ABI inspection remain visibly unavailable until their owning
 checked records land. The command never scans emitted OCaml or Dune text to

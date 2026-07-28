@@ -25,11 +25,23 @@ class OcamlNativeRuntimeBoundary {
 	static inline final REAL_PATH_METADATA = ":realPath";
 
 	/**
-		Records class- and field-level declarations for one emitted static extern
-		field. Repeated uses of the same declaration produce the same immutable
-		requirement.
+		Reports whether a native extern callable declares a checked runtime
+		capability on either its class or field.
+
+		This check keeps the generic native-constructor path closed: an arbitrary
+		`@:native` constructor is not enough to opt into a reflaxe.ocaml runtime
+		module.
 	**/
-	public static function recordUsedStaticExtern(context:CompilationContext, classType:ClassType, field:ClassField, nativeSymbol:String):Void {
+	public static function hasDeclaredRuntimeCapability(classType:ClassType, field:ClassField):Bool {
+		return classType.meta.has(METADATA) || field.meta.has(METADATA);
+	}
+
+	/**
+		Records class- and field-level declarations for one emitted extern
+		callable, including constructors and static functions. Repeated uses of
+		the same declaration produce the same immutable requirement.
+	**/
+	public static function recordUsedExternCallable(context:CompilationContext, classType:ClassType, field:ClassField, nativeSymbol:String):Void {
 		final capabilities = new Array<String>();
 		final seen:Map<String, Bool> = [];
 		collectCapabilities(classType.meta, "extern class", capabilities, seen);
