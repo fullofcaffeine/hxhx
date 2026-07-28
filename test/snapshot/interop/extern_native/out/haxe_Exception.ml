@@ -57,7 +57,7 @@ let unwrap__impl = fun (self : t) () -> (Obj.magic self : t).__nativeException
 let toString__impl = fun (self : t) () -> (Obj.magic self : t).get_message (Obj.magic self) ()
 
 let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
-  ignore (if (Obj.magic self : t).get_previous (Obj.magic self) () == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref ("" : string) in let tmp = (Obj.magic self : t).get_stack (Obj.magic self) () in (
+  ignore (if (Obj.magic self : t).get_previous (Obj.magic self) () == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tmp = (Obj.magic self : t).get_stack (Obj.magic self) () in (
     ignore (if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("null" : string) in (
       tempRight := __assign_14;
       __assign_14
@@ -67,9 +67,9 @@ let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
     ));
     raise (HxRuntime.Hx_return (Obj.repr (("Exception: " ^ HxString.toStdString ((Obj.magic self : t).toString (Obj.magic self) ())) ^ HxString.toStdString (!tempRight))))
   )) else ());
-  let result = ref ("" : string) in let current = ref (Obj.magic self) in let prev = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : t) in (
+  let result = ref "" in let current = ref (Obj.magic self) in let prev = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : t) in (
     ignore (while !current != Obj.magic (HxRuntime.hx_null) do ignore ((
-      ignore (if !prev == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight1 = ref ("" : string) in let tmp = let __obj_16 = !current in (Obj.magic __obj_16 : t).get_stack (Obj.magic __obj_16) () in (
+      ignore (if !prev == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight1 = ref (HxString.hx_null_string : string) in let tmp = let __obj_16 = !current in (Obj.magic __obj_16 : t).get_stack (Obj.magic __obj_16) () in (
         ignore (if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("null" : string) in (
           tempRight1 := __assign_17;
           __assign_17
@@ -77,11 +77,11 @@ let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
           tempRight1 := __assign_18;
           __assign_18
         ));
-        let __assign_19 = ((("Exception: " ^ HxString.toStdString (let __obj_20 = !current in (Obj.magic __obj_20 : t).get_message (Obj.magic __obj_20) ())) ^ HxString.toStdString (!tempRight1)) ^ HxString.toStdString (!result) : string) in (
+        let __assign_19 = (("Exception: " ^ HxString.toStdString (let __obj_20 = !current in (Obj.magic __obj_20 : t).get_message (Obj.magic __obj_20) ())) ^ HxString.toStdString (!tempRight1)) ^ HxString.toStdString (!result) in (
           result := __assign_19;
           __assign_19
         )
-      )) else ignore (let prevStack = Haxe_CallStack.subtract (Obj.magic (let __obj_21 = !current in (Obj.magic __obj_21 : t).get_stack (Obj.magic __obj_21) ())) (let __obj_22 = !prev in (Obj.magic __obj_22 : t).get_stack (Obj.magic __obj_22) ()) in let tempString = ref ("" : string) in (
+      )) else ignore (let prevStack = Haxe_CallStack.subtract (Obj.magic (let __obj_21 = !current in (Obj.magic __obj_21 : t).get_stack (Obj.magic __obj_21) ())) (let __obj_22 = !prev in (Obj.magic __obj_22 : t).get_stack (Obj.magic __obj_22) ()) in let tempString = ref (HxString.hx_null_string : string) in (
         ignore (if prevStack == Obj.magic (HxRuntime.hx_null) then let __assign_23 = ("null" : string) in (
           tempString := __assign_23;
           __assign_23
@@ -89,7 +89,7 @@ let details__impl = fun (self : t) () -> try let __fallback_result_31 = (
           tempString := __assign_24;
           __assign_24
         ));
-        let __assign_25 = (((("Exception: " ^ HxString.toStdString (let __obj_26 = !current in (Obj.magic __obj_26 : t).get_message (Obj.magic __obj_26) ())) ^ HxString.toStdString (!tempString)) ^ "\n\nNext ") ^ HxString.toStdString (!result) : string) in (
+        let __assign_25 = ((("Exception: " ^ HxString.toStdString (let __obj_26 = !current in (Obj.magic __obj_26 : t).get_message (Obj.magic __obj_26) ())) ^ HxString.toStdString (!tempString)) ^ "\n\nNext ") ^ HxString.toStdString (!result) in (
           result := __assign_25;
           __assign_25
         )
@@ -138,7 +138,7 @@ let get_stack__impl = fun (self : t) () -> let tempResult = ref (Obj.magic (HxRu
   !tempResult
 )
 
-let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.class_ "haxe.Exception"; message = ""; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = ""; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.class_ "haxe.Exception"; message = HxString.hx_null_string; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = HxString.hx_null_string; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).__skipStack <- __place_rhs_2;
@@ -187,13 +187,13 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.Exception"; message = ""; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = ""; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.Exception"; message = HxString.hx_null_string; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = HxString.hx_null_string; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t)
 
 let caught = fun value -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : t) in (
   ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_41 = Obj.magic (Obj.obj value) in (
     tempResult := __assign_41;
     __assign_41
-  ) else let tempString = ref ("" : string) in (
+  ) else let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_42 = ("null" : string) in (
       tempString := __assign_42;
       __assign_42

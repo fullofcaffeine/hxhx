@@ -29,6 +29,7 @@ let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBy
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_5 -> raise (HxRuntime.Hx_return __ret_5)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_6, __exn_tags_7) -> if HxRuntime.tags_has __exn_tags_7 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_6 : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
@@ -86,7 +87,7 @@ let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : H
 let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
   ignore (try (
-    ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    ignore (if s == HxString.hx_null_string || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
   ) with
     | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7)

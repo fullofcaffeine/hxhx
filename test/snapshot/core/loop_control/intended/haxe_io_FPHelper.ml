@@ -19,4 +19,4 @@ let floatToI32 = fun f -> HxFPHelper.floatToI32 f
 
 let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high
 
-let doubleToI64 = fun v -> let parts = Obj.magic (HxFPHelper.doubleToI64Parts v) in let x = Obj.magic (Haxe_Int64.___int64_create (HxArray.get (Obj.magic parts) 1) (HxArray.get (Obj.magic parts) 0)) in let tempResult = x in tempResult
+let doubleToI64 = fun v -> let parts = HxFPHelper.doubleToI64Parts v in let x = Obj.magic (Haxe_Int64.___int64_create (HxArray.get parts 1) (HxArray.get parts 0)) in let tempResult = x in tempResult

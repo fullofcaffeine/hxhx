@@ -17,7 +17,7 @@ let main = fun () -> ignore (let args = Obj.magic (HxSys.args ()) in (
   ignore (print_endline (string_of_int (HxArray.length args)));
   ignore (print_endline (string_of_float (HxSys.time ())));
   ignore (print_endline (string_of_float (HxSys.cpuTime ())));
-  let p = ("tmp.txt" : string) in (
+  let p = "tmp.txt" in (
     ignore (HxFile.saveContent (p : string) ("hello" : string));
     ignore (print_endline (HxString.toStdString (HxFile.getContent (p : string))));
     let st = HxFileSystem.stat p in (

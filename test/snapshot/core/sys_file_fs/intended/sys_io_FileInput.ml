@@ -31,6 +31,7 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_4 -> raise (HxRuntime.Hx_return __ret_4)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_5, __exn_tags_6) -> if HxRuntime.tags_has __exn_tags_6 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_5 : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
