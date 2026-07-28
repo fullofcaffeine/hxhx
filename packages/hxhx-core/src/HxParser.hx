@@ -1734,6 +1734,8 @@ class HxParser {
 				//   can lower them without requiring a real enum runtime/type model.
 				// - Treat ALL_CAPS constants (e.g. `TRIALS`, `UTF8`) as identifiers so arithmetic and
 				//   comparisons don't accidentally become string operations.
+				// - Keep underscore-bearing helper names as identifiers. The bootstrap compiler uses
+				//   generated helpers such as `TitleCase_Helper`, which are calls rather than enum tags.
 				//
 				// Note
 				// - This is intentionally imperfect. It's a pragmatic bring-up choice to keep upstream
@@ -1748,7 +1750,7 @@ class HxParser {
 					}
 					return false;
 				}
-				(isUpperStart(name) && !cur.kind.match(TDot) && hasLowerAlpha(name)) ? EEnumValue(name) : EIdent(name);
+				(isUpperStart(name) && !cur.kind.match(TDot) && hasLowerAlpha(name) && name.indexOf("_") == -1) ? EEnumValue(name) : EIdent(name);
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c) if (c == "$".code):

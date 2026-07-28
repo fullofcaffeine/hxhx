@@ -2898,16 +2898,13 @@ class EmitterStage {
 							+ "else HxBootArray.of_list (Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))))";
 					case EField(sysObj, "putEnv") if (args.length == 2 && isRootSysReceiverExpr(sysObj)):
 						// Haxe: `Sys.putEnv(name, value)` accepts null for removal.
-						// Our runtime provides the option-based API; bridge through the hx_null sentinel.
+						// Keep this diagnostic Stage3 path on the same narrow runtime ABI as the
+						// Haxe-owned standalone target facade. Stage3 still owns its source-level
+						// null test until this bring-up emitter is retired.
 						final rawName = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 						final rawValue = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-						return "(let __v = Obj.repr ("
-							+ rawValue
-							+ ") in "
-							+ "let __opt : string option = if __v == HxRuntime.hx_null then None else Some (Obj.obj __v) in "
-							+ "HxSys.putEnv ("
-							+ rawName
-							+ ") __opt)";
+						return "(let __v = Obj.repr (" + rawValue + ") in " + "if __v == HxRuntime.hx_null then HxSys.removeEnv (" + rawName
+							+ ") else HxSys.putEnvValue (" + rawName + ") (Obj.obj __v))";
 					case EField(sysObj, "setCwd") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "(Stdlib.Sys.chdir ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
