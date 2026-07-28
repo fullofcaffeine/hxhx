@@ -4281,7 +4281,7 @@ class OcamlBuilder {
 						null;
 				}
 				if (isStdBytesType(arr.t)) {
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [arrValue, buildExpr(idx)]);
+					bytesAccessInvariant("standard Bytes bracket reads are not Haxe 4.3.7 API and must not bypass sealed Bytes.get", e.pos);
 				} else {
 					final arrExpr = coerceArrayReceiver(arrValue, arr);
 					final arrObjExpr = coerceArrayReceiverToObj(arrValue, arr.t);
@@ -5263,10 +5263,7 @@ class OcamlBuilder {
 						final arrExpr = buildExpr(arr);
 						final idxExpr = buildExpr(idx);
 						if (isStdBytesType(arr.t)) {
-							OcamlExpr.ELet(tmp, rhs, OcamlExpr.ESeq([
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"), [arrExpr, idxExpr, OcamlExpr.EIdent(tmp)]),
-								OcamlExpr.EIdent(tmp)
-							]), false);
+							bytesAccessInvariant("standard Bytes bracket assignments are not Haxe 4.3.7 API and must not bypass sealed Bytes.set", e1.pos);
 						} else {
 							final coercedArrExpr = coerceArrayReceiver(arrExpr, arr);
 							OcamlExpr.ELet(tmp, rhs, // `HxArray.set` already returns the assigned value, matching Haxe's
@@ -5473,15 +5470,14 @@ class OcamlBuilder {
 							return
 								placeLoweringInvariant("admitted array-element compound assignment reached the legacy syntax branch without a stable origin",
 									e1.pos);
+						if (isStdBytesType(arr.t))
+							return bytesAccessInvariant("standard Bytes bracket compound assignments are not Haxe 4.3.7 API", e1.pos);
 						// a[i] += v  ->  set a i ((get a i) + v)
 						final arrExpr = buildExpr(arr);
 						final idxExpr = buildExpr(idx);
 						final tmpArr = freshTmp("arr");
 						final tmpIdx = freshTmp("idx");
-						final useBytesOps = isStdBytesType(arr.t);
-						final lhs = useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
-							[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
-								[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]);
+						final lhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]);
 						final floatMode = isFloatType(e1.t) || nullablePrimitiveKind(e1.t) == "float";
 						final rhs = switch (inner) {
 							case OpAdd:
@@ -5519,12 +5515,9 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-						final setExpr = useBytesOps ? OcamlExpr.ESeq([
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]),
-							rhs
-						]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]);
-						OcamlExpr.ELet(tmpArr, useBytesOps ? arrExpr : coerceArrayReceiver(arrExpr, arr), OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false),
-							false);
+						final setExpr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+							[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]);
+						OcamlExpr.ELet(tmpArr, coerceArrayReceiver(arrExpr, arr), OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false), false);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -6618,20 +6611,18 @@ class OcamlBuilder {
 						case TArray(arr, idx):
 							if (OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(op, e))
 								return placeLoweringInvariant("admitted array-element update reached the legacy syntax branch without a stable origin", e.pos);
+							if (isStdBytesType(arr.t))
+								return bytesAccessInvariant("standard Bytes bracket updates are not Haxe 4.3.7 API", e.pos);
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
-							final useBytesOps = isStdBytesType(arr.t);
-							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr),
+							OcamlExpr.ELet(arrName, coerceArrayReceiver(buildExpr(arr), arr),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
-									incDecDynamic(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
-										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
-											"get"), [OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
-										(newVal) -> useBytesOps ? OcamlExpr.ESeq([
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
-												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]),
-											newVal
-										]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
-											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])), false), false);
+									incDecDynamic(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
+										(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])),
+									false),
+								false);
 						case _:
 							OcamlExpr.EConst(OcamlConst.CUnit);
 					}
@@ -6735,20 +6726,18 @@ class OcamlBuilder {
 						case TArray(arr, idx):
 							if (OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(op, e))
 								return placeLoweringInvariant("admitted array-element update reached the legacy syntax branch without a stable origin", e.pos);
+							if (isStdBytesType(arr.t))
+								return bytesAccessInvariant("standard Bytes bracket updates are not Haxe 4.3.7 API", e.pos);
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
-							final useBytesOps = isStdBytesType(arr.t);
-							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr),
+							OcamlExpr.ELet(arrName, coerceArrayReceiver(buildExpr(arr), arr),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
-									incDec(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
-										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
-											"get"), [OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
-										(newVal) -> useBytesOps ? OcamlExpr.ESeq([
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
-												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]),
-											newVal
-										]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
-											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])), false), false);
+									incDec(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
+										(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])),
+									false),
+								false);
 						case _:
 							OcamlExpr.EConst(OcamlConst.CUnit);
 					}
