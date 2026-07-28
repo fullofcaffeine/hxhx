@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessInvocationKin
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessKind;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessResultKind;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -217,6 +218,12 @@ class OcamlBytesAccessPlan {
 				OcamlBytesAccessKind.GetInt32;
 			case "setInt32" if (matchesExactArguments(arguments, [isExactIntInput, isExactIntInput]) && isExactVoid(resultType)):
 				OcamlBytesAccessKind.SetInt32;
+			case "getInt64" if (matchesExactArguments(arguments, [isExactIntInput])
+				&& OcamlRepresentationRegistry.isExactInt64(resultType)):
+				OcamlBytesAccessKind.GetInt64;
+			case "setInt64" if (matchesExactArguments(arguments, [isExactIntInput, OcamlRepresentationRegistry.isExactInt64])
+				&& isExactVoid(resultType)):
+				OcamlBytesAccessKind.SetInt64;
 			case "getData" if (arguments.length == 0 && OcamlRepresentationRegistry.isExactBytesData(resultType)):
 				OcamlBytesAccessKind.GetData;
 			case _:
@@ -383,6 +390,8 @@ class OcamlBytesAccessPlan {
 			representations.requireExactBytesInternal(representationId, representationRevision, programRevision);
 		} else if (semanticTypeId == OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID) {
 			representations.requireExactBytesDataInternal(representationId, representationRevision, programRevision);
+		} else if (semanticTypeId == OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID) {
+			representations.requireExactInt64Internal(representationId, representationRevision, programRevision);
 		} else {
 			representations.require(representationId, programRevision);
 		}
@@ -439,6 +448,7 @@ class OcamlBytesAccessPlanner {
 		final argumentRepresentations = occurrence.arguments.map(argument -> outputRepresentation(argument.t));
 		final resultRepresentation = switch (OcamlBytesAccessContract.resultKind(occurrence.kind)) {
 			case ExactInt: representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			case ExactInt64: representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
 			case ExactBytesData: representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue);
 			case EffectOnlyVoid: null;
 		}
@@ -507,12 +517,17 @@ class OcamlBytesAccessPlanner {
 			return representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue);
 		if (OcamlRepresentationRegistry.isExactNullInt(type))
 			return representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactInt64(type))
+			return representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
 		return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 	}
 
 	function outputRepresentation(type:Type):OcamlRepresentationDecision {
-		return
-			OcamlRepresentationRegistry.isExactBytesData(type) ? representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue) : representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactBytesData(type))
+			return representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactInt64(type))
+			return representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
+		return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 	}
 
 	static function copyWithIdentity(decision:OcamlBytesAccessDecision, id:String):OcamlBytesAccessDecision {

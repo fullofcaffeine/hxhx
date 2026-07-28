@@ -28,6 +28,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
 using StringTools;
 
@@ -348,8 +349,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 39) {
-						throw 'Unsupported lowering report schema $version; expected 39.';
+					if (version != 40) {
+						throw 'Unsupported lowering report schema $version; expected 40.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1565,7 +1566,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -1641,7 +1642,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, the exact nominal Int64 value, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. The Int64 decision fixes one value-semantic high/low record layout. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
 		};
 	}
 
@@ -1771,18 +1772,41 @@ class ReflaxeOcamlInspection {
 		};
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
-		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier";
+		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier"
+			|| decision.boxingPolicy == "direct-nominal-value-carrier";
 		if (isNominal != (nominalCount == 3))
 			throw 'Representation decision "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
 		if (isNominal
-			&& (decision.nominalTargetModuleName.length == 0
+			&& (decision.nominalTargetModuleName == null
+				|| decision.nominalTargetModuleName.length == 0
+				|| decision.nominalTargetTypeName == null
 				|| decision.nominalTargetTypeName.length == 0
 				|| decision.carrierTypeId != decision.nominalTargetTypeName
-				|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
-				|| decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision)) {
+				|| decision.nominalLayoutRevision == null
+				|| !StringTools.startsWith((cast decision.nominalLayoutRevision : String), "sha256:"))) {
 			throw 'Representation decision "${decision.id}" does not match its sealed nominal carrier layout.';
 		}
-		if (isNominal) {
+		if (decision.boxingPolicy == "direct-nominal-value-carrier") {
+			if (decision.id != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID
+				|| decision.semanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+				|| decision.domain != "internal-value"
+				|| decision.carrierTypeId != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				|| decision.nullPolicy != "non-null"
+				|| decision.identityPolicy != "primitive-value"
+				|| decision.aliasingPolicy != "no-value-alias"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "immutable-value"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.nominalTargetModuleName != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+				|| decision.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				|| decision.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION
+				|| decision.proofId != OcamlInt64RepresentationContract.PROOF_ID) {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
+			}
+		} else if (decision.boxingPolicy == "nullable-nominal-record-carrier") {
+			if (decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
+				throw 'Representation decision "${decision.id}" does not match its sealed monomorphic-class carrier proof.';
+			}
 			final expectedStoragePolicy = switch (decision.domain) {
 				case "internal-value": "immutable-binding";
 				case "captured-local-storage": "shared-local-cell";
@@ -2236,7 +2260,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12",
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13",
 			message: message
 		};
 	}

@@ -8,10 +8,10 @@ import haxe.io.BytesData;
 
 	The macro fixture observes the target-selected declarations. Running this
 	class directly exercises upstream Haxe's public behavior: evaluation order,
-	unsigned byte and UInt16 values, signed Int32 values, little-endian ordering,
-	write masking, shared data, and single-byte nullable-argument conversion.
-	The target runtime fixture separately proves reflaxe.ocaml's deterministic
-	checked-bounds policy.
+	unsigned byte and UInt16 values, signed Int32 and Int64 values, little-endian
+	ordering, write masking or bit preservation, shared data, and single-byte
+	nullable-argument conversion. The target runtime fixture separately proves
+	reflaxe.ocaml's deterministic checked-bounds policy.
 **/
 class BytesAccessCases {
 	static function bytes(values:Array<Int>):Bytes {
@@ -64,6 +64,14 @@ class BytesAccessCases {
 		bytes.setInt32(position, value);
 	}
 
+	public static function getInt64(bytes:Bytes, position:Int):haxe.Int64 {
+		return bytes.getInt64(position);
+	}
+
+	public static function setInt64(bytes:Bytes, position:Int, value:haxe.Int64):Void {
+		bytes.setInt64(position, value);
+	}
+
 	public static function getData(bytes:Bytes):BytesData {
 		return bytes.getData();
 	}
@@ -86,6 +94,14 @@ class BytesAccessCases {
 
 	public static function setInt32InSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Int):Void {
 		receiver().setInt32(position(), value());
+	}
+
+	public static function getInt64InSourceOrder(receiver:Void->Bytes, position:Void->Int):haxe.Int64 {
+		return receiver().getInt64(position());
+	}
+
+	public static function setInt64InSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->haxe.Int64):Void {
+		receiver().setInt64(position(), value());
 	}
 
 	public static function getDataInSourceOrder(receiver:Void->Bytes):BytesData {
@@ -166,6 +182,44 @@ class BytesAccessCases {
 		if (orderedInt32.toHex() != "78563412" || order.join(",") != "int32-receiver,int32-position,int32-value")
 			throw "Haxe Bytes Int32 evaluation order changed";
 
+		final int64Bytes = Bytes.alloc(8);
+		final int64Value = haxe.Int64.make(0x12345678, -1985229329);
+		int64Bytes.setInt64(0, int64Value);
+		final int64Read = int64Bytes.getInt64(0);
+		if (int64Bytes.toHex() != "efcdab8978563412" || int64Read.high != 0x12345678 || int64Read.low != -1985229329)
+			throw "Haxe Bytes Int64 word order or bit preservation changed";
+
+		order.resize(0);
+		final orderedInt64Read = getInt64InSourceOrder(() -> {
+			order.push("int64-get-receiver");
+			return int64Bytes;
+		}, () -> {
+			order.push("int64-get-position");
+			return 0;
+		});
+		if (orderedInt64Read.high != 0x12345678
+			|| orderedInt64Read.low != -1985229329
+			|| order.join(",") != "int64-get-receiver,int64-get-position") {
+			throw "Haxe Bytes Int64 read evaluation order changed";
+		}
+
+		order.resize(0);
+		final orderedInt64Write = Bytes.alloc(8);
+		setInt64InSourceOrder(() -> {
+			order.push("int64-set-receiver");
+			return orderedInt64Write;
+		}, () -> {
+			order.push("int64-set-position");
+			return 0;
+		}, () -> {
+			order.push("int64-set-value");
+			return haxe.Int64.make(-1985229329, 0x01234567);
+		});
+		if (orderedInt64Write.toHex() != "67452301efcdab89"
+			|| order.join(",") != "int64-set-receiver,int64-set-position,int64-set-value") {
+			throw "Haxe Bytes Int64 write evaluation order changed";
+		}
+
 		order.resize(0);
 		final data = getDataInSourceOrder(() -> {
 			order.push("data-receiver");
@@ -193,6 +247,8 @@ class BytesAccessCases {
 		expectFailure("OutsideBounds", () -> numeric.setUInt16(numeric.length - 1, 1));
 		expectFailure("OutsideBounds", () -> numeric.getInt32(numeric.length - 3));
 		expectFailure("OutsideBounds", () -> numeric.setInt32(numeric.length - 3, 1));
+		expectFailure("OutsideBounds", () -> int64Bytes.getInt64(1));
+		expectFailure("OutsideBounds", () -> int64Bytes.setInt64(1, int64Value));
 		Sys.println("HAXE_4_3_7_BYTES_ACCESS_ORACLE:PASS");
 	}
 }

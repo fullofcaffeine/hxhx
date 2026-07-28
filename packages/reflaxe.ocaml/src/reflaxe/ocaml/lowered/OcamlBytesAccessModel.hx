@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /** Exact byte, multi-byte integer, and data-alias operations admitted from the target Bytes override. */
@@ -13,6 +14,8 @@ enum abstract OcamlBytesAccessKind(String) from String to String {
 	final SetUInt16 = "set-uint16";
 	final GetInt32 = "get-int32";
 	final SetInt32 = "set-int32";
+	final GetInt64 = "get-int64";
+	final SetInt64 = "set-int64";
 	final GetData = "get-data";
 	final FastGet = "fast-get";
 }
@@ -50,6 +53,8 @@ enum abstract OcamlBytesAccessValuePolicy(String) from String to String {
 	final MaskLowSixteenBits = "mask-low-sixteen-bits";
 	final SignedThirtyTwoBitRead = "signed-thirty-two-bit-read";
 	final PreserveLowThirtyTwoBits = "preserve-low-thirty-two-bits";
+	final SignedSixtyFourBitRead = "signed-sixty-four-bit-read";
+	final PreserveSixtyFourBits = "preserve-sixty-four-bits";
 	final PreserveNativeData = "preserve-native-data";
 }
 
@@ -70,6 +75,7 @@ enum abstract OcamlBytesAccessAliasPolicy(String) from String to String {
 /** Result shape fixed before target syntax. */
 enum abstract OcamlBytesAccessResultKind(String) from String to String {
 	final ExactInt = "exact-int";
+	final ExactInt64 = "exact-int64";
 	final EffectOnlyVoid = "effect-only-void";
 	final ExactBytesData = "exact-bytes-data";
 }
@@ -133,8 +139,8 @@ class OcamlBytesAccessContract {
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-access";
 	public static inline final VOID_SEMANTIC_TYPE_ID = "Void";
 	public static inline final OCCURRENCE_ID_PREFIX = "bytes-access-occurrence:";
-	public static inline final PROOF_ID = "exact-haxe-bytes-access-v2";
-	public static inline final PROOF_CLAIM = "This exact call from the reflaxe.ocaml haxe.io.Bytes override evaluates its receiver, when present, and every argument once in Haxe source order. Before syntax, the decision fixes exact Bytes, BytesData, and Int carriers; checked declared-Bytes or native-data bounds behavior; access width and little-endian ordering where applicable; unsigned byte or UInt16 reads; signed Int32 reads; low-eight-, low-sixteen-, or low-thirty-two-bit writes; result shape; shared getData aliasing; and the selected HxBytes operation. It does not reconstruct vanilla inline bodies, admit arbitrary BytesData indexing, promise unsafe invalid fastGet behavior, or cover Float, Int64, nullable Int arguments for multi-byte operations, nullable Bytes or BytesData materialization, or user-defined lookalikes.";
+	public static inline final PROOF_ID = "exact-haxe-bytes-access-v3";
+	public static inline final PROOF_CLAIM = "This exact call from the reflaxe.ocaml haxe.io.Bytes override evaluates its receiver, when present, and every argument once in Haxe source order. Before syntax, the decision fixes exact Bytes, BytesData, Int, and Int64 carriers; the OCaml target's deterministic checked declared-Bytes or native-data bounds policy; access width and little-endian ordering where applicable; unsigned byte or UInt16 reads; signed Int32 or Int64 reads; low-eight-, low-sixteen-, low-thirty-two-, or exact-sixty-four-bit writes; result shape; shared getData aliasing; and the selected HxBytes operation. For Int64, HxBytes owns bounds and word order while syntax only adapts the exact generated nominal record without making a semantic choice. Haxe 4.3.7 leaves invalid Int64 bounds behavior unspecified across targets. This proof does not reconstruct vanilla inline bodies, admit arbitrary BytesData indexing, promise unsafe invalid fastGet behavior, or cover Float, nullable Int arguments for multi-byte operations, nullable Bytes or BytesData materialization, or user-defined lookalikes.";
 
 	/** Computes the deterministic identity shared by planning and validation. */
 	public static function idFor(decision:OcamlBytesAccessDecision):String {
@@ -184,6 +190,8 @@ class OcamlBytesAccessContract {
 			case SetUInt16: "setUInt16";
 			case GetInt32: "getInt32";
 			case SetInt32: "setInt32";
+			case GetInt64: "getInt64";
+			case SetInt64: "setInt64";
 			case GetData: "getData";
 			case FastGet: "fastGet";
 		}
@@ -195,15 +203,15 @@ class OcamlBytesAccessContract {
 
 	public static function expectedArgumentCount(kind:OcamlBytesAccessKind):Int {
 		return switch (kind) {
-			case Get, GetUInt16, GetInt32: 1;
-			case Set, SetUInt16, SetInt32, FastGet: 2;
+			case Get, GetUInt16, GetInt32, GetInt64: 1;
+			case Set, SetUInt16, SetInt32, SetInt64, FastGet: 2;
 			case GetData: 0;
 		}
 	}
 
 	public static function boundsPolicy(kind:OcamlBytesAccessKind):OcamlBytesAccessBoundsPolicy {
 		return switch (kind) {
-			case Get, Set, GetUInt16, SetUInt16, GetInt32, SetInt32: DeclaredBytesChecked;
+			case Get, Set, GetUInt16, SetUInt16, GetInt32, SetInt32, GetInt64, SetInt64: DeclaredBytesChecked;
 			case FastGet: NativeDataChecked;
 			case GetData: NotApplicable;
 		}
@@ -214,13 +222,14 @@ class OcamlBytesAccessContract {
 			case Get, Set, FastGet: 1;
 			case GetUInt16, SetUInt16: 2;
 			case GetInt32, SetInt32: 4;
+			case GetInt64, SetInt64: 8;
 			case GetData: 0;
 		}
 	}
 
 	public static function byteOrderPolicy(kind:OcamlBytesAccessKind):OcamlBytesAccessByteOrderPolicy {
 		return switch (kind) {
-			case GetUInt16, SetUInt16, GetInt32, SetInt32: LittleEndian;
+			case GetUInt16, SetUInt16, GetInt32, SetInt32, GetInt64, SetInt64: LittleEndian;
 			case Get, Set, GetData, FastGet: NotApplicable;
 		}
 	}
@@ -233,15 +242,17 @@ class OcamlBytesAccessContract {
 			case SetUInt16: MaskLowSixteenBits;
 			case GetInt32: SignedThirtyTwoBitRead;
 			case SetInt32: PreserveLowThirtyTwoBits;
+			case GetInt64: SignedSixtyFourBitRead;
+			case SetInt64: PreserveSixtyFourBits;
 			case GetData: PreserveNativeData;
 		}
 	}
 
 	public static function mutationPolicy(kind:OcamlBytesAccessKind):OcamlBytesAccessMutationPolicy {
 		return switch (kind) {
-			case Get, GetUInt16, GetInt32, FastGet: ReadOnly;
+			case Get, GetUInt16, GetInt32, GetInt64, FastGet: ReadOnly;
 			case Set: MutateReceiverByte;
-			case SetUInt16, SetInt32: MutateReceiverBytes;
+			case SetUInt16, SetInt32, SetInt64: MutateReceiverBytes;
 			case GetData: ReturnMutableAlias;
 		}
 	}
@@ -253,7 +264,8 @@ class OcamlBytesAccessContract {
 	public static function resultKind(kind:OcamlBytesAccessKind):OcamlBytesAccessResultKind {
 		return switch (kind) {
 			case Get, GetUInt16, GetInt32, FastGet: ExactInt;
-			case Set, SetUInt16, SetInt32: EffectOnlyVoid;
+			case GetInt64: ExactInt64;
+			case Set, SetUInt16, SetInt32, SetInt64: EffectOnlyVoid;
 			case GetData: ExactBytesData;
 		}
 	}
@@ -345,8 +357,9 @@ class OcamlBytesAccessContract {
 	static function requireArguments(decision:OcamlBytesAccessDecision):Void {
 		for (index in 0...decision.argumentCount) {
 			final expectsData = decision.kind == OcamlBytesAccessKind.FastGet && index == 0;
+			final expectsInt64 = decision.kind == OcamlBytesAccessKind.SetInt64 && index == 1;
 			final requiresExactInt = switch (decision.kind) {
-				case GetUInt16, SetUInt16, GetInt32, SetInt32: true;
+				case GetUInt16, SetUInt16, GetInt32, SetInt32, GetInt64, SetInt64: !expectsInt64;
 				case Get, Set, GetData, FastGet: false;
 			}
 			final inputSemantic = decision.argumentInputSemanticTypeIds[index];
@@ -357,6 +370,12 @@ class OcamlBytesAccessContract {
 			final valid = if (expectsData) {
 				inputSemantic == OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID
 				&& inputCarrier == OcamlBytesRepresentationContract.DATA_CARRIER_TYPE_ID
+				&& outputSemantic == inputSemantic
+				&& outputCarrier == inputCarrier
+				&& conversion == OcamlBytesAccessArgumentConversion.Identity;
+			} else if (expectsInt64) {
+				inputSemantic == OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+				&& inputCarrier == OcamlInt64RepresentationContract.TARGET_TYPE_NAME
 				&& outputSemantic == inputSemantic
 				&& outputCarrier == inputCarrier
 				&& conversion == OcamlBytesAccessArgumentConversion.Identity;
@@ -390,6 +409,11 @@ class OcamlBytesAccessContract {
 				decision.resultSemanticTypeId == "Int"
 				&& decision.resultCarrierTypeId == "int"
 				&& decision.resultRepresentationId.length > 0
+				&& StringTools.startsWith(decision.resultRepresentationRevision, "sha256:");
+			case ExactInt64:
+				decision.resultSemanticTypeId == OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+				&& decision.resultCarrierTypeId == OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				&& decision.resultRepresentationId == OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID
 				&& StringTools.startsWith(decision.resultRepresentationRevision, "sha256:");
 			case EffectOnlyVoid:
 				decision.resultSemanticTypeId == VOID_SEMANTIC_TYPE_ID

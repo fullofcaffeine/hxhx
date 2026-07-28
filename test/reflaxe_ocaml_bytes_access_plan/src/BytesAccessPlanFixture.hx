@@ -21,6 +21,9 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
@@ -51,12 +54,16 @@ class BytesAccessPlanFixture {
 			"setUInt16" => OcamlBytesAccessKind.SetUInt16,
 			"getInt32" => OcamlBytesAccessKind.GetInt32,
 			"setInt32" => OcamlBytesAccessKind.SetInt32,
+			"getInt64" => OcamlBytesAccessKind.GetInt64,
+			"setInt64" => OcamlBytesAccessKind.SetInt64,
 			"getData" => OcamlBytesAccessKind.GetData,
 			"fastGet" => OcamlBytesAccessKind.FastGet,
 			"getInSourceOrder" => OcamlBytesAccessKind.Get,
 			"setInSourceOrder" => OcamlBytesAccessKind.Set,
 			"getUInt16InSourceOrder" => OcamlBytesAccessKind.GetUInt16,
 			"setInt32InSourceOrder" => OcamlBytesAccessKind.SetInt32,
+			"getInt64InSourceOrder" => OcamlBytesAccessKind.GetInt64,
+			"setInt64InSourceOrder" => OcamlBytesAccessKind.SetInt64,
 			"getDataInSourceOrder" => OcamlBytesAccessKind.GetData,
 			"fastGetInSourceOrder" => OcamlBytesAccessKind.FastGet
 		];
@@ -116,6 +123,22 @@ class BytesAccessPlanFixture {
 				case SetInt32:
 					requireNumericPolicy(decision, 4, OcamlBytesAccessValuePolicy.PreserveLowThirtyTwoBits,
 						OcamlBytesAccessMutationPolicy.MutateReceiverBytes, OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+				case GetInt64:
+					requireNumericPolicy(decision, 8, OcamlBytesAccessValuePolicy.SignedSixtyFourBitRead, OcamlBytesAccessMutationPolicy.ReadOnly,
+						OcamlBytesAccessResultKind.ExactInt64, field.pos);
+					if (decision.resultSemanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+						|| decision.resultCarrierTypeId != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+						|| decision.resultRepresentationId != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID) {
+						Context.error('Bytes access case "$name" did not seal the exact Int64 result carrier.', field.pos);
+					}
+				case SetInt64:
+					requireNumericPolicy(decision, 8, OcamlBytesAccessValuePolicy.PreserveSixtyFourBits, OcamlBytesAccessMutationPolicy.MutateReceiverBytes,
+						OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+					if (decision.argumentSemanticTypeIds[1] != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+						|| decision.argumentCarrierTypeIds[1] != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+						|| decision.argumentRepresentationIds[1] != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID) {
+						Context.error('Bytes access case "$name" did not seal the exact Int64 value argument.', field.pos);
+					}
 				case _:
 			}
 			if (kind == OcamlBytesAccessKind.FastGet
@@ -151,6 +174,21 @@ class BytesAccessPlanFixture {
 			|| dataRepresentation.proof.id != OcamlBytesRepresentationContract.DATA_PROOF_ID) {
 			Context.error("The exact BytesData representation does not preserve the target-native mutable alias.", Context.currentPos());
 		}
+		final int64Representation = representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
+		if (int64Representation.semanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+			|| int64Representation.carrierTypeId != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+			|| int64Representation.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier
+			|| int64Representation.nominalTargetModuleName != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+			|| int64Representation.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+			|| int64Representation.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION) {
+			Context.error("The exact Int64 representation does not preserve its sealed nominal value carrier.", Context.currentPos());
+		}
+		if (OcamlInt64RepresentationContract.LAYOUT_REVISION != "sha256:a209a8988fdb10e76ef47bed3d5f136791f380450f862b72bf9cad0683df6a2d") {
+			Context.error("The exact Int64 carrier layout changed without an explicit field-layout review.", Context.currentPos());
+		}
+		representations.requireExactInt64Internal(int64Representation.id, int64Representation.revision, PROGRAM_REVISION);
+		expectThrows("representation-mismatch",
+			() -> representations.requireExactInt64Internal(int64Representation.id, "sha256:" + StringTools.lpad("", "0", 64), PROGRAM_REVISION));
 
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
@@ -196,6 +234,56 @@ class BytesAccessPlanFixture {
 				argumentInputSemanticTypeIds: ["Null<Int>"],
 				argumentInputCarrierTypeIds: ["Obj.t"],
 				argumentConversions: [OcamlBytesAccessArgumentConversion.RequireNonNullInt]
+			})
+		]));
+		final int64ReadSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.GetInt64 && decision.functionId == "BytesAccessCases.getInt64");
+		if (int64ReadSample == null)
+			Context.error("The Bytes access fixture has no getInt64 decision.", Context.currentPos());
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(int64ReadSample, {accessWidthBytes: 4})]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(int64ReadSample, {boundsPolicy: OcamlBytesAccessBoundsPolicy.NativeDataChecked})
+		]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(int64ReadSample, {byteOrderPolicy: OcamlBytesAccessByteOrderPolicy.NotApplicable})
+		]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(int64ReadSample, {valuePolicy: OcamlBytesAccessValuePolicy.SignedThirtyTwoBitRead})
+		]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(int64ReadSample, {runtimeOperation: "getInt32"})]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(int64ReadSample, {evaluationOrder: [0, -1]})]));
+		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([
+			reseal(int64ReadSample, {
+				resultSemanticTypeId: "Int",
+				resultCarrierTypeId: "int",
+				resultRepresentationId: numericSample.resultRepresentationId,
+				resultRepresentationRevision: numericSample.resultRepresentationRevision
+			})
+		]));
+		expectThrows("stale-access", () -> new OcamlBytesAccessPlan([int64ReadSample]).requirePlanBinding({
+			functionId: int64ReadSample.functionId,
+			programRevision: int64ReadSample.programRevision,
+			bodyRevision: int64ReadSample.bodyRevision,
+			pipelineRevision: int64ReadSample.pipelineRevision + ":changed"
+		}));
+		final int64WriteSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.SetInt64 && decision.functionId == "BytesAccessCases.setInt64");
+		if (int64WriteSample == null)
+			Context.error("The Bytes access fixture has no setInt64 decision.", Context.currentPos());
+		final wrongInt64InputSemantics = int64WriteSample.argumentInputSemanticTypeIds.copy();
+		final wrongInt64InputCarriers = int64WriteSample.argumentInputCarrierTypeIds.copy();
+		final wrongInt64Semantics = int64WriteSample.argumentSemanticTypeIds.copy();
+		final wrongInt64Carriers = int64WriteSample.argumentCarrierTypeIds.copy();
+		wrongInt64InputSemantics[1] = "Int";
+		wrongInt64InputCarriers[1] = "int";
+		wrongInt64Semantics[1] = "Int";
+		wrongInt64Carriers[1] = "int";
+		expectThrows("invalid-access-argument", () -> new OcamlBytesAccessPlan([
+			reseal(int64WriteSample, {
+				argumentInputSemanticTypeIds: wrongInt64InputSemantics,
+				argumentInputCarrierTypeIds: wrongInt64InputCarriers,
+				argumentSemanticTypeIds: wrongInt64Semantics,
+				argumentCarrierTypeIds: wrongInt64Carriers
 			})
 		]));
 		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
@@ -330,20 +418,6 @@ class BytesAccessPlanFixture {
 					bytes.setFloat(position, value);
 				})
 			},
-			{
-				name: "getInt64",
-				fieldName: "getInt64",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int):haxe.Int64 {
-					return bytes.getInt64(position);
-				})
-			},
-			{
-				name: "setInt64",
-				fieldName: "setInt64",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:haxe.Int64):Void {
-					bytes.setInt64(position, value);
-				})
-			}
 		];
 	}
 

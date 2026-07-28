@@ -6,6 +6,7 @@ import haxe.ds.StringMap;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
@@ -38,7 +39,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v14";
+	public static inline final MODEL_REVISION = "ocaml-representation-v15";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -274,6 +275,26 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/**
+		Returns whether a type is the exact standard-library `haxe.Int64` abstract.
+
+		The predicate keeps the nominal abstract visible instead of following it
+		into its target-specific backing class. Typedefs, nullable wrappers, user
+		abstracts, monomorphs, and Dynamic require separate representation proofs.
+	**/
+	public static function isExactInt64(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, parameters):
+				final abstractType = abstractRef.get();
+				parameters.length == 0
+				&& abstractType.pack.length == 1
+				&& abstractType.pack[0] == "haxe"
+				&& abstractType.name == "Int64";
+			case _:
+				false;
+		}
+	}
+
 	/** Returns whether a Haxe type resolves to the non-null built-in `Bool`. */
 	public static function isExactBool(type:Type):Bool {
 		var current = type;
@@ -476,6 +497,40 @@ class OcamlRepresentationRegistry {
 				claim: "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
 			},
 			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Registers the exact nominal value carrier for an internal `haxe.Int64`.
+
+		This is deliberately narrower than a general Int64 storage decision.
+		Bytes access needs to pass or return one already-typed value; nullable
+		storage, fields, arrays, calls, and ABI boundaries remain separate work.
+	**/
+	public function selectExactInt64(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		if (domain != OcamlRepresentationDomain.InternalValue) {
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-int64-domain]: exact haxe.Int64 is admitted only as an internal value, not $domain';
+		}
+		return register({
+			semanticTypeId: OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID,
+			domain: domain,
+			carrierTypeId: OcamlInt64RepresentationContract.TARGET_TYPE_NAME,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: OcamlInt64RepresentationContract.PROOF_CLAIM,
+			proof: {
+				id: OcamlInt64RepresentationContract.PROOF_ID,
+				claim: OcamlInt64RepresentationContract.PROOF_CLAIM
+			},
+			profileEligibility: ["metal", "portable"],
+			nominalTargetModuleName: OcamlInt64RepresentationContract.TARGET_MODULE_NAME,
+			nominalTargetTypeName: OcamlInt64RepresentationContract.TARGET_TYPE_NAME,
+			nominalLayoutRevision: OcamlInt64RepresentationContract.LAYOUT_REVISION
 		});
 	}
 
@@ -766,6 +821,30 @@ class OcamlRepresentationRegistry {
 			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
 			|| decision.proof.id != OcamlBytesRepresentationContract.DATA_PROOF_ID) {
 			throw 'reflaxe.ocaml [ocaml-bytes:data-representation-mismatch]: access planning expects the sealed BytesData internal carrier, but "$representationId" selects incompatible facts';
+		}
+		return decision;
+	}
+
+	/** Revalidates the exact generated nominal record for one internal Int64. */
+	public function requireExactInt64Internal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
+		final decision = require(representationId, programRevision);
+		if (decision.id != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID
+			|| decision.revision != representationRevision
+			|| decision.semanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.carrierTypeId != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+			|| decision.domain != OcamlRepresentationDomain.InternalValue
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.NonNull
+			|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.PrimitiveValue
+			|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.NoValueAlias
+			|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.ImmutableValue
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			|| decision.proof.id != OcamlInt64RepresentationContract.PROOF_ID
+			|| decision.nominalTargetModuleName != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+			|| decision.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+			|| decision.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION) {
+			throw 'reflaxe.ocaml [ocaml-int64:representation-mismatch]: Bytes access expects the sealed exact Int64 internal carrier, but "$representationId" selects incompatible facts';
 		}
 		return decision;
 	}

@@ -7,6 +7,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessContract;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessInvocationKind;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessKind;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
 /**
 	Constructs OCaml syntax from one already-validated Bytes access decision.
@@ -63,7 +64,24 @@ class OcamlBytesAccessSyntax {
 			callArguments.push(required(decision, argumentValues[index], 'argument $index'));
 		if (decision.kind == OcamlBytesAccessKind.GetData)
 			callArguments.push(OcamlExpr.EConst(OcamlConst.CUnit));
-		var out = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), decision.runtimeOperation), callArguments);
+		final runtimeArguments = switch (decision.kind) {
+			case GetInt64:
+				callArguments.concat([
+					OcamlExpr.EField(OcamlExpr.EIdent(OcamlInt64RepresentationContract.TARGET_MODULE_NAME), "___int64_create")
+				]);
+			case SetInt64:
+				final value = required(decision, argumentValues[1], "Int64 argument");
+				final typedValue = OcamlExpr.EAnnot(value, OcamlTypeExpr.TIdent(OcamlInt64RepresentationContract.QUALIFIED_CARRIER_TYPE_ID));
+				[
+					required(decision, receiverValue, "receiver"),
+					required(decision, argumentValues[0], "position argument"),
+					OcamlExpr.EField(typedValue, "low"),
+					OcamlExpr.EField(typedValue, "high")
+				];
+			case _:
+				callArguments;
+		}
+		var out = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), decision.runtimeOperation), runtimeArguments);
 		for (offset in 0...materialized.length) {
 			final binding = materialized[materialized.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);

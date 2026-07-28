@@ -1,3 +1,7 @@
+import haxe.Json;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
+import reflaxe.ocaml.tooling.ReflaxeOcamlInspection;
+
 class M6BytesIntegrationTest {
 	static function assertContains(haystack:String, needle:String, label:String):Void {
 		if (haystack.indexOf(needle) < 0) {
@@ -51,6 +55,8 @@ class M6BytesIntegrationTest {
 			"-D",
 			"ocaml_no_build",
 			"-D",
+			"ocaml_lowering_report",
+			"-D",
 			"ocaml_output=" + outDir
 		];
 
@@ -77,6 +83,9 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.setUInt16", "setUInt16");
 		assertContains(content, "HxBytes.getInt32", "getInt32");
 		assertContains(content, "HxBytes.setInt32", "setInt32");
+		assertContains(content, "HxBytes.getInt64", "planned getInt64");
+		assertContains(content, "HxBytes.setInt64", "planned setInt64");
+		assertContains(content, "Haxe_Int64.___int64_create", "exact generated Int64 constructor");
 		assertContains(content, "HxBytes.blit", "blit");
 		assertContains(content, "HxBytes.sub", "sub");
 		assertContains(content, "HxBytes.compare", "compare");
@@ -106,10 +115,38 @@ class M6BytesIntegrationTest {
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-access"', "Bytes access runtime capability");
-		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v2"', "Bytes access runtime explanation");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v3"', "Bytes access runtime explanation");
 		assertContains(requirementReport, "2-byte access", "UInt16 access width explanation");
 		assertContains(requirementReport, "4-byte access", "Int32 access width explanation");
+		assertContains(requirementReport, "8-byte access", "Int64 access width explanation");
 		assertContains(requirementReport, "little-endian ordering", "multi-byte ordering explanation");
+
+		final loweringReportPath = outDir + "/ocaml_lowering_report.json";
+		if (!sys.FileSystem.exists(loweringReportPath))
+			throw "missing lowering report: " + loweringReportPath;
+		final loweringReportText = sys.io.File.getContent(loweringReportPath);
+		final loweringReport:Dynamic = Json.parse(loweringReportText);
+		final representations:Array<Dynamic> = cast Reflect.field(loweringReport, "representations");
+		final int64Representation = Lambda.find(representations,
+			decision -> Reflect.field(decision, "id") == OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID);
+		if (int64Representation == null
+			|| Reflect.field(int64Representation, "boxingPolicy") != "direct-nominal-value-carrier"
+			|| Reflect.field(int64Representation, "nominalTargetModuleName") != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+			|| Reflect.field(int64Representation, "nominalTargetTypeName") != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+			|| Reflect.field(int64Representation, "nominalLayoutRevision") != OcamlInt64RepresentationContract.LAYOUT_REVISION) {
+			throw "lowering report did not seal the exact Int64 nominal value carrier";
+		}
+		final inspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
+		if (inspection.lowering.status != "present" || !inspection.summary.valid)
+			throw "public inspection rejected the valid exact Int64 representation";
+		Reflect.setField(int64Representation, "nominalLayoutRevision", "sha256:" + StringTools.lpad("", "0", 64));
+		sys.io.File.saveContent(loweringReportPath, Json.stringify(loweringReport, null, "  ") + "\n");
+		final corruptedInspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
+		sys.io.File.saveContent(loweringReportPath, loweringReportText);
+		if (corruptedInspection.lowering.status != "invalid"
+			|| corruptedInspection.lowering.message.indexOf("sealed exact Int64 nominal value carrier") < 0) {
+			throw "public inspection accepted a corrupted Int64 carrier layout";
+		}
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {

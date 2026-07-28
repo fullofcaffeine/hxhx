@@ -32,6 +32,11 @@ class BytesMain {
 		return value;
 	}
 
+	static function orderedInt64(label:String, value:haxe.Int64):haxe.Int64 {
+		evaluationOrder.push(label);
+		return value;
+	}
+
 	static function orderedData(label:String, value:BytesData):BytesData {
 		evaluationOrder.push(label);
 		return value;
@@ -234,9 +239,28 @@ class BytesMain {
 		if (numeric.getInt32(6) != -2 || evaluationOrder.join(",") != "int32-receiver,int32-position,int32-value")
 			throw "Bytes Int32 evaluation order changed";
 
+		final int64Bytes = Bytes.alloc(8);
+		final int64Value = haxe.Int64.make(0x12345678, -1985229329);
+		evaluationOrder.resize(0);
+		orderedBytesValue("int64-set-receiver", int64Bytes).setInt64(orderedInt("int64-set-position", 0), orderedInt64("int64-set-value", int64Value));
+		if (int64Bytes.toHex() != "efcdab8978563412"
+			|| evaluationOrder.join(",") != "int64-set-receiver,int64-set-position,int64-set-value") {
+			throw "Bytes Int64 write order, bits, or evaluation order changed";
+		}
+
+		evaluationOrder.resize(0);
+		final int64Read = orderedBytesValue("int64-get-receiver", int64Bytes).getInt64(orderedInt("int64-get-position", 0));
+		if (int64Read.high != 0x12345678
+			|| int64Read.low != -1985229329
+			|| evaluationOrder.join(",") != "int64-get-receiver,int64-get-position") {
+			throw "Bytes Int64 read order, bits, or evaluation order changed";
+		}
+
 		expectOutsideBounds(() -> numeric.getUInt16(numeric.length - 1));
 		expectOutsideBounds(() -> numeric.setUInt16(numeric.length - 1, 1));
 		expectOutsideBounds(() -> numeric.getInt32(numeric.length - 3));
 		expectOutsideBounds(() -> numeric.setInt32(numeric.length - 3, 1));
+		expectOutsideBounds(() -> int64Bytes.getInt64(1));
+		expectOutsideBounds(() -> int64Bytes.setInt64(1, int64Value));
 	}
 }

@@ -94,6 +94,15 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 	final DirectRuntimeContainer = "direct-runtime-container";
 
 	/**
+		A Haxe value-semantic type uses one canonical nominal OCaml record.
+
+		The record needs no additional Dynamic box, but its target module, type,
+		and exact field-layout revision remain part of the representation proof.
+		The carrier does not imply source-visible reference identity or aliasing.
+	**/
+	final DirectNominalValueCarrier = "direct-nominal-value-carrier";
+
+	/**
 		Primitive values are boxed only when they enter this nullable carrier.
 
 		The carrier itself is `Obj.t`: it preserves the shared Haxe null sentinel

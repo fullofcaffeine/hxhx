@@ -42,8 +42,8 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 39
-	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12'
+if (report.schemaVersion !== 40
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
 	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {

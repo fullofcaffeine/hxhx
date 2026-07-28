@@ -29,7 +29,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 39
+if (report.schemaVersion !== 40
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14') {
 	fail('unexpected Dynamic throw report schema or control model')
 }
@@ -42,7 +42,7 @@ if (controls.length !== 2) {
 }
 for (const control of controls) {
 	const payload = control.payload
-	if (control.pipelineRevision !== 'ocaml-function-plans-v48'
+	if (control.pipelineRevision !== 'ocaml-function-plans-v49'
 		|| control.proofId !== 'dynamic-carrier-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'

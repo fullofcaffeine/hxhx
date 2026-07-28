@@ -194,7 +194,7 @@ class OcamlRuntimeRequirementLedger {
 				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
 				id: OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
 			},
-			implementationFeature: "haxe-bytes-access-v2",
+			implementationFeature: "haxe-bytes-access-v3",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation calls HxBytes after fixing ${decision.boundsPolicy} bounds, a ${decision.accessWidthBytes}-byte access, ${decision.byteOrderPolicy} ordering, ${decision.valuePolicy} value behavior, ${decision.mutationPolicy} mutation, ${decision.aliasPolicy} aliasing, and ${decision.resultKind} result behavior; other Bytes and BytesData operations require separate decisions.'

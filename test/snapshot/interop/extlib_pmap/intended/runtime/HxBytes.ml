@@ -126,6 +126,21 @@ let setInt32 (b : t) (pos : int) (v : int) : unit =
   set b (pos + 2) (byte 16);
   set b (pos + 3) (byte 24)
 
+(* Int64 stays a generated Haxe nominal record, so the reusable runtime cannot
+   depend on Haxe_Int64 directly. The sealed syntax adapter supplies the exact
+   constructor on reads and projects the exact low/high words once on writes.
+   This module still owns range validation and little-endian word ordering. *)
+let getInt64 (b : t) (pos : int) create =
+  check_access b pos 8;
+  let low = getInt32 b pos in
+  let high = getInt32 b (pos + 4) in
+  create high low
+
+let setInt64 (b : t) (pos : int) (low : int) (high : int) : unit =
+  check_access b pos 8;
+  setInt32 b pos low;
+  setInt32 b (pos + 4) high
+
 let getFloat (b : t) (pos : int) : float =
   let bits = Int32.of_int (getInt32 b pos) in
   Int32.float_of_bits bits

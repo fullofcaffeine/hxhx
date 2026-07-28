@@ -24,6 +24,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecisio
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -37,13 +38,14 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 39;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v12";
+	public static inline final SCHEMA_VERSION = 40;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
-		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier;
+		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier;
 		if (isNominal != (nominalCount == 3))
 			throw 'Program representation "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
 		if (!isNominal)
@@ -51,9 +53,23 @@ class OcamlLoweringReportWriter {
 		if (decision.nominalTargetModuleName.length == 0
 			|| decision.nominalTargetTypeName.length == 0
 			|| decision.carrierTypeId != decision.nominalTargetTypeName
-			|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")
-			|| decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
+			|| !StringTools.startsWith(decision.nominalLayoutRevision, "sha256:")) {
 			throw 'Program representation "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		if (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier) {
+			if (decision.semanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+				|| decision.nominalTargetModuleName != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+				|| decision.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				|| decision.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION
+				|| decision.proof.id != OcamlInt64RepresentationContract.PROOF_ID
+				|| decision.domain != OcamlRepresentationDomain.InternalValue
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
+				throw 'Program representation "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
+			}
+			return;
+		}
+		if (decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
+			throw 'Program representation "${decision.id}" does not match its sealed monomorphic-class proof.';
 		}
 		final expectedStoragePolicy = switch (decision.domain) {
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;

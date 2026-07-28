@@ -3481,17 +3481,7 @@ class OcamlBuilder {
 														case "getInt32" if (args.length == 1):
 															bytesAccessInvariant("standard Bytes.getInt32 bypassed its sealed access plan", e.pos);
 														case "getInt64" if (args.length == 1):
-															final posName = freshTmp("pos");
-															OcamlExpr.ELet(posName, buildExpr(args[0]),
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Haxe_Int64"), "___int64_create"), [
-																	OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"), [
-																		self,
-																		OcamlExpr.EBinop(OcamlBinop.Add, OcamlExpr.EIdent(posName),
-																			OcamlExpr.EConst(OcamlConst.CInt(4)))
-																	]),
-																	OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"),
-																		[self, OcamlExpr.EIdent(posName)])
-																]), false);
+															bytesAccessInvariant("standard Bytes.getInt64 bypassed its sealed access plan", e.pos);
 														case "set" if (args.length == 2):
 															bytesAccessInvariant("standard Bytes.set bypassed its sealed access plan", e.pos);
 														case "setDouble" if (args.length == 2):
@@ -3505,22 +3495,7 @@ class OcamlBuilder {
 														case "setInt32" if (args.length == 2):
 															bytesAccessInvariant("standard Bytes.setInt32 bypassed its sealed access plan", e.pos);
 														case "setInt64" if (args.length == 2):
-															final posName = freshTmp("pos");
-															final vName = freshTmp("i64");
-															final vTyped = OcamlExpr.EAnnot(OcamlExpr.EIdent(vName),
-																OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t"));
-															OcamlExpr.ELet(posName, buildExpr(args[0]),
-																OcamlExpr.ELet(vName, buildExpr(args[1]), OcamlExpr.ESeq([
-																	OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"),
-																		[self, OcamlExpr.EIdent(posName), OcamlExpr.EField(vTyped, "low")]),
-																	OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"), [
-																		self,
-																		OcamlExpr.EBinop(OcamlBinop.Add, OcamlExpr.EIdent(posName),
-																			OcamlExpr.EConst(OcamlConst.CInt(4))),
-																		OcamlExpr.EField(vTyped, "high")
-																	]),
-																	OcamlExpr.EConst(OcamlConst.CUnit)
-																]), false), false);
+															bytesAccessInvariant("standard Bytes.setInt64 bypassed its sealed access plan", e.pos);
 														case "blit", "fill":
 															bytesMutationInvariant('standard Bytes mutation "${cf.name}" bypassed its sealed mutation plan',
 																e.pos);
