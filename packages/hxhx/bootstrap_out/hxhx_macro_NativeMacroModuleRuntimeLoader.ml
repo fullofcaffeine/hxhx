@@ -16,12 +16,12 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.NativeMacroModu
 let loadConfigured = fun artifactKind loadModule -> try let __fallback_result_4 = let activation = Hxhxmacrohost_NativeMacroModuleReceipt.loadFromEnvironment (artifactKind : string) in (
   ignore (if activation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let actualExpressions = Obj.magic (loadModule (Obj.obj (HxAnon.get activation "artifactPath") : string) (Obj.obj (HxAnon.get activation "pluginId") : string)) in (
-    ignore (if HxArray.length actualExpressions <> HxArray.length (Obj.obj (HxAnon.get activation "expressions")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((("native macro module receipt: registered expression count mismatch for plugin `" ^ HxString.toStdString (Obj.obj (HxAnon.get activation "pluginId"))) ^ "` (receipt=") ^ string_of_int (HxArray.length (Obj.obj (HxAnon.get activation "expressions")))) ^ ", module=") ^ string_of_int (HxArray.length actualExpressions)) ^ ")")) ["Dynamic"; "String"]) else ());
+    ignore (if HxArray.length actualExpressions <> HxArray.length (Obj.obj (HxAnon.get activation "expressions")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((("native macro module receipt: registered expression count mismatch for plugin `" ^ HxString.toStdString (Obj.obj (HxAnon.get activation "pluginId"))) ^ "` (receipt=") ^ string_of_int (HxArray.length (Obj.obj (HxAnon.get activation "expressions")))) ^ ", module=") ^ string_of_int (HxArray.length actualExpressions)) ^ ")")) ["Dynamic"]) else ());
     let _g = ref 0 in let _g1 = HxArray.length (Obj.obj (HxAnon.get activation "expressions")) in (
       ignore (while !_g < _g1 do ignore (let idx = let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
         ignore (_g := __new_2);
         __old_1
-      ) in let expected = (HxArray.get (Obj.magic (Obj.obj (HxAnon.get activation "expressions"))) idx : string) in let actual = (HxArray.get (Obj.magic actualExpressions) idx : string) in if not (HxString.equals actual expected) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((("native macro module receipt: registered expression mismatch at index " ^ string_of_int idx) ^ " (receipt=`") ^ HxString.toStdString expected) ^ "`, module=`") ^ HxString.toStdString actual) ^ "`)")) ["Dynamic"; "String"]) else ()) done);
+      ) in let expected = (HxArray.get (Obj.magic (Obj.obj (HxAnon.get activation "expressions"))) idx : string) in let actual = (HxArray.get (Obj.magic actualExpressions) idx : string) in if not (HxString.equals actual expected) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((("native macro module receipt: registered expression mismatch at index " ^ string_of_int idx) ^ " (receipt=`") ^ HxString.toStdString expected) ^ "`, module=`") ^ HxString.toStdString actual) ^ "`)")) ["Dynamic"]) else ()) done);
       activation
     )
   )

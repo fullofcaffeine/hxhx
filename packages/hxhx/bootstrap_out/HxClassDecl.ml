@@ -6,99 +6,99 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t; mutable isInterface : bool; mutable implementsPaths : string HxArray.t; mutable visibility : HxVisibility.hxvisibility }
 
-let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 visibility2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 visibility2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = hasStaticMain2 in (
-      (Obj.magic self : t).hasStaticMain <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_2 = self in let __place_rhs_3 = hasStaticMain2 in (
+      (__place_receiver_2 : t).hasStaticMain <- __place_rhs_3;
+      __place_rhs_3
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
-      ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else let __assign_5 = Obj.magic functions2 in (
-        tempRight := __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).functions <- __assign_6;
+      ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
+        tempRight := __assign_4;
+        __assign_4
+      ) else let __assign_6 = Obj.magic functions2 in (
+        tempRight := __assign_6;
         __assign_6
       ));
+      ignore (let __assign_7 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).functions <- __assign_7;
+        __assign_7
+      ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : HxFieldDecl.t HxArray.t) in (
-        ignore (if fields2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
-          tempRight1 := __assign_7;
-          __assign_7
-        ) else let __assign_9 = Obj.magic fields2 in (
-          tempRight1 := __assign_9;
-          __assign_9
-        ));
-        ignore (let __assign_10 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).fields <- __assign_10;
+        ignore (if fields2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
+          tempRight1 := __assign_8;
+          __assign_8
+        ) else let __assign_10 = Obj.magic fields2 in (
+          tempRight1 := __assign_10;
           __assign_10
         ));
-        let tempRight2 = ref ("" : string) in (
-          ignore (if extendsPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_11 = ("" : string) in (
-            tempRight2 := __assign_11;
-            __assign_11
-          ) else let __assign_12 = (extendsPath2 : string) in (
+        ignore (let __assign_11 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).fields <- __assign_11;
+          __assign_11
+        ));
+        let tempRight2 = ref (HxString.hx_null_string : string) in (
+          ignore (if extendsPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
             tempRight2 := __assign_12;
             __assign_12
-          ));
-          ignore (let __assign_13 = (!tempRight2 : string) in (
-            (Obj.magic self : t).extendsPath <- __assign_13;
+          ) else let __assign_13 = (extendsPath2 : string) in (
+            tempRight2 := __assign_13;
             __assign_13
           ));
+          ignore (let __assign_14 = (!tempRight2 : string) in (
+            (Obj.magic self : t).extendsPath <- __assign_14;
+            __assign_14
+          ));
           let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-            ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in (
-              tempRight3 := __assign_14;
-              __assign_14
-            ) else let __assign_16 = Obj.magic metadata2 in (
-              tempRight3 := __assign_16;
-              __assign_16
-            ));
-            ignore (let __assign_17 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).metadata <- __assign_17;
+            ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
+              tempRight3 := __assign_15;
+              __assign_15
+            ) else let __assign_17 = Obj.magic metadata2 in (
+              tempRight3 := __assign_17;
               __assign_17
             ));
+            ignore (let __assign_18 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).metadata <- __assign_18;
+              __assign_18
+            ));
             let tempRight4 = ref (false : bool) in (
-              ignore (if isInterface2 == HxRuntime.hx_null then let __assign_18 = false in (
-                tempRight4 := __assign_18;
-                __assign_18
-              ) else let __assign_19 = let __nullable_bool_20 = isInterface2 in if __nullable_bool_20 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_20 in (
+              ignore (if isInterface2 == HxRuntime.hx_null then let __assign_19 = false in (
                 tempRight4 := __assign_19;
                 __assign_19
+              ) else let __assign_20 = let __nullable_bool_21 = isInterface2 in if __nullable_bool_21 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_21 in (
+                tempRight4 := __assign_20;
+                __assign_20
               ));
-              ignore (let __assign_21 = !tempRight4 in (
-                (Obj.magic self : t).isInterface <- __assign_21;
-                __assign_21
+              ignore (let __place_receiver_22 = self in let __place_rhs_23 = !tempRight4 in (
+                (__place_receiver_22 : t).isInterface <- __place_rhs_23;
+                __place_rhs_23
               ));
               let tempRight5 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-                ignore (if implementsPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (let __arr_23 = HxArray.create () in __arr_23) in (
-                  tempRight5 := __assign_22;
-                  __assign_22
-                ) else let __assign_24 = Obj.magic implementsPaths2 in (
+                ignore (if implementsPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_24 = Obj.magic (let __arr_25 = HxArray.create () in __arr_25) in (
                   tempRight5 := __assign_24;
                   __assign_24
+                ) else let __assign_26 = Obj.magic implementsPaths2 in (
+                  tempRight5 := __assign_26;
+                  __assign_26
                 ));
-                ignore (let __assign_25 = Obj.magic (!tempRight5) in (
-                  (Obj.magic self : t).implementsPaths <- __assign_25;
-                  __assign_25
+                ignore (let __assign_27 = Obj.magic (!tempRight5) in (
+                  (Obj.magic self : t).implementsPaths <- __assign_27;
+                  __assign_27
                 ));
                 let tempRight6 = ref (Obj.magic (HxRuntime.hx_null) : HxVisibility.hxvisibility) in (
-                  ignore (if visibility2 == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (HxVisibility.Public) in (
-                    tempRight6 := __assign_26;
-                    __assign_26
-                  ) else let __assign_27 = Obj.obj (HxEnum.unbox_or_obj "HxVisibility" visibility2) in (
-                    tempRight6 := __assign_27;
-                    __assign_27
-                  ));
-                  let __assign_28 = Obj.magic (!tempRight6) in (
-                    (Obj.magic self : t).visibility <- __assign_28;
+                  ignore (if visibility2 == Obj.magic (HxRuntime.hx_null) then let __assign_28 = Obj.magic (HxVisibility.Public) in (
+                    tempRight6 := __assign_28;
                     __assign_28
+                  ) else let __assign_29 = Obj.obj (HxEnum.unbox_or_obj "HxVisibility" visibility2) in (
+                    tempRight6 := __assign_29;
+                    __assign_29
+                  ));
+                  let __assign_30 = Obj.magic (!tempRight6) in (
+                    (Obj.magic self : t).visibility <- __assign_30;
+                    __assign_30
                   )
                 )
               )
@@ -111,7 +111,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null); visibility = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun c -> (Obj.magic c : t).name
 

@@ -13,25 +13,25 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDriver" 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDriver" } : t)
 
-let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/fixtures/src" : string) in let legacyFixtureRoot = ("examples/hih-compiler/fixtures/src" : string) in let tempString = ref ("" : string) in (
-  ignore (if HxFileSystem.exists preferredFixtureRoot then let __assign_1 = (preferredFixtureRoot : string) in (
+let run = fun () -> ignore (let preferredFixtureRoot = "workloads/hih-compiler/fixtures/src" in let legacyFixtureRoot = "examples/hih-compiler/fixtures/src" in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if HxFileSystem.exists (preferredFixtureRoot : string) then let __assign_1 = preferredFixtureRoot in (
     tempString := __assign_1;
     __assign_1
-  ) else let __assign_2 = (legacyFixtureRoot : string) in (
+  ) else let __assign_2 = legacyFixtureRoot in (
     tempString := __assign_2;
     __assign_2
   ));
-  let classPaths = Obj.magic (let __arr_3 = HxArray.create () in (
-    ignore (HxArray.push __arr_3 (!tempString));
+  let fixtureRoot = !tempString in let classPaths = Obj.magic (let __arr_3 = HxArray.create () in (
+    ignore (HxArray.push __arr_3 fixtureRoot);
     __arr_3
-  )) in let mainModule = ("demo.A" : string) in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
+  )) in let mainModule = "demo.A" in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
     ignore (ResolvedModule.getParsed);
     let root = Obj.magic (HxArray.get (Obj.magic resolved) 0) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in (
       ignore (print_endline "parse=ok");
       ignore (print_endline ("modules=" ^ string_of_int (HxArray.length resolved)));
       ignore (print_endline ("main=" ^ HxString.toStdString mainModule));
       ignore (print_endline ("mainFile=" ^ HxString.toStdString (ResolvedModule.getFilePath (Obj.magic root))));
-      let tempString1 = ref ("" : string) in (
+      let tempString1 = ref (HxString.hx_null_string : string) in (
         ignore (if HxString.length pkg = 0 then let __assign_4 = ("<none>" : string) in (
           tempString1 := __assign_4;
           __assign_4
@@ -42,11 +42,11 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
         ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
         ignore (print_endline ("module_directives=" ^ string_of_int (HxArray.length directives)));
         ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic mainClass))));
-        let tempString2 = ref ("" : string) in (
-          ignore (if HxClassDecl.getHasStaticMain (Obj.magic mainClass) then let __assign_6 = ("yes" : string) in (
+        let tempString2 = ref (HxString.hx_null_string : string) in (
+          ignore (if HxClassDecl.getHasStaticMain (Obj.magic mainClass) then let __assign_6 = "yes" in (
             tempString2 := __assign_6;
             __assign_6
-          ) else let __assign_7 = ("no" : string) in (
+          ) else let __assign_7 = "no" in (
             tempString2 := __assign_7;
             __assign_7
           ));
@@ -59,17 +59,17 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                   ignore (_g := __new_9);
                   __new_9
                 ));
-                let tempString3 = ref ("" : string) in (
+                let tempString3 = ref (HxString.hx_null_string : string) in (
                   ignore (let _g2 = Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn)) in match _g2 with
-                    | HxVisibility.Public -> let __assign_10 = ("public" : string) in (
+                    | HxVisibility.Public -> let __assign_10 = "public" in (
                       tempString3 := __assign_10;
                       __assign_10
                     )
-                    | HxVisibility.Private -> let __assign_11 = ("private" : string) in (
+                    | HxVisibility.Private -> let __assign_11 = "private" in (
                       tempString3 := __assign_11;
                       __assign_11
                     ));
-                  let vis = (!tempString3 : string) in let retHint = (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) in let tempString4 = ref ("" : string) in (
+                  let vis = !tempString3 in let retHint = (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) in let tempString4 = ref (HxString.hx_null_string : string) in (
                     ignore (if HxString.length retHint = 0 then let __assign_12 = ("<none>" : string) in (
                       tempString4 := __assign_12;
                       __assign_12
@@ -77,7 +77,7 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                       tempString4 := __assign_13;
                       __assign_13
                     ));
-                    let ret = (!tempString4 : string) in let retStrLit = (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) in let tempString5 = ref ("" : string) in (
+                    let ret = (!tempString4 : string) in let retStrLit = (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) in let tempString5 = ref (HxString.hx_null_string : string) in (
                       ignore (if HxString.length retStrLit = 0 then let __assign_14 = ("<none>" : string) in (
                         tempString5 := __assign_14;
                         __assign_14
@@ -85,11 +85,11 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                         tempString5 := __assign_15;
                         __assign_15
                       ));
-                      let retStr = (!tempString5 : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString6 = ref ("" : string) in (
-                        ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_16 = ("yes" : string) in (
+                      let retStr = (!tempString5 : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString6 = ref (HxString.hx_null_string : string) in (
+                        ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_16 = "yes" in (
                           tempString6 := __assign_16;
                           __assign_16
-                        ) else let __assign_17 = ("no" : string) in (
+                        ) else let __assign_17 = "no" in (
                           tempString6 := __assign_17;
                           __assign_17
                         ));
@@ -99,20 +99,21 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                   )
                 )
               )) done);
-              ignore (try (
+              ignore (try ignore ((
                 ignore (ResolverStage.parseProject (Obj.magic classPaths) ("demo.B" : string) (Obj.magic (HxRuntime.hx_null)));
                 print_endline "missing_import=fail"
-              ) with
+              )) with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                 | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
+                | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
                 | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
                   ignore _hx;
-                  print_endline "missing_import=ok"
+                  ignore (print_endline "missing_import=ok")
                 ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
                 | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
                   ignore _hx;
-                  print_endline "missing_import=ok"
+                  ignore (print_endline "missing_import=ok")
                 ) else raise (__exn_21));
               let parserFixtures = Obj.magic (let __arr_22 = HxArray.create () in (
                 ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseMod.hx" : string) (HxArray.join (let __arr_23 = HxArray.create () in (

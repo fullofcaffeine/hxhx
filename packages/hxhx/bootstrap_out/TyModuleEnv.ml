@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable packagePath : string; mutable directives : HxModuleDirective.t HxArray.t; mutable resolvedDirectives : TyModuleDirective.t HxArray.t; mutable mainClass : TyClassEnv.t }
 
-let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
       (Obj.magic self : t).packagePath <- __assign_1;
@@ -46,7 +46,7 @@ let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 

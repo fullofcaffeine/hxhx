@@ -7,26 +7,26 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable requested : bool }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerStopSignal"; requested = false } : t) in (
-  ignore (ignore (let __assign_1 = false in (
-    (Obj.magic self : t).requested <- __assign_1;
-    __assign_1
+  ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
+    (__place_receiver_1 : t).requested <- __place_rhs_2;
+    __place_rhs_2
   )));
   self
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerStopSignal"; requested = false } : t)
 
-let record = fun self (value : bool) -> ignore (ignore (let __assign_2 = value in (
-  (Obj.magic self : t).requested <- __assign_2;
-  __assign_2
+let record = fun self (value : bool) -> ignore (ignore (let __place_receiver_3 = self in let __place_rhs_4 = value in (
+  (__place_receiver_3 : t).requested <- __place_rhs_4;
+  __place_rhs_4
 )))
 
-let take = fun self () -> try let __fallback_result_5 = (
-  ignore (if not ((Obj.magic self : t).requested) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (let __assign_3 = false in (
-    (Obj.magic self : t).requested <- __assign_3;
-    __assign_3
+let take = fun self () -> (try let __fallback_result_8 = (
+  ignore (if not ((self : t).requested) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (let __place_receiver_5 = self in let __place_rhs_6 = false in (
+    (__place_receiver_5 : t).requested <- __place_rhs_6;
+    __place_rhs_6
   ));
   true
-) in Obj.magic __fallback_result_5 with
-  | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
+) in Obj.magic __fallback_result_8 with
+  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7 : bool)

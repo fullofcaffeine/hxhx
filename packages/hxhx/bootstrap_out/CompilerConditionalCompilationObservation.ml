@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable decisions : CompilerConditionalDecision.t HxArray.t; mutable inputIdentitiesByName : string HxArray.t HxMap.string_map; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic (HxRuntime.hx_null); inputIdentitiesByName = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic (HxRuntime.hx_null); inputIdentitiesByName = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -23,7 +23,7 @@ let sameIdentities = fun left right -> try let __fallback_result_30 = (
 ) in Obj.magic __fallback_result_30 with
   | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
 
-let compareText = fun left right -> let tempResult = ref (0 : int) in (
+let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
   ignore (if left < right then let __assign_31 = -1 in (
     tempResult := __assign_31;
     __assign_31
@@ -35,9 +35,9 @@ let compareText = fun left right -> let tempResult = ref (0 : int) in (
     __assign_33
   ));
   !tempResult
-)
+) : int)
 
-let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic (HxRuntime.hx_null); inputIdentitiesByName = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic (HxRuntime.hx_null); inputIdentitiesByName = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerConditionalDecision.t HxArray.t) in (
     ignore (if decisions2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
@@ -62,7 +62,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
             ignore (_g := __new_7);
             __new_7
           ));
-          ignore (if decision == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation observation contains a null decision") ["Dynamic"; "String"]) else ());
+          ignore (if decision == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation observation contains a null decision") ["Dynamic"]) else ());
           ignore (HxArray.push values (CompilerConditionalDecision.getCanonicalIdentity (Obj.magic decision) ()));
           let _g2 = ref 0 in let _g3 = Obj.magic (CompilerConditionalDecision.getInputs (Obj.magic decision) ()) in while !_g2 < HxArray.length _g3 do ignore (let input = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
             ignore (let __old_8 = !_g2 in let __new_9 = HxInt.add __old_8 1 in (
@@ -70,7 +70,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
               __new_9
             ));
             let previousRevision = (HxMap.get_string revisionByAccess (CompilerConditionalDefineInput.accessKey (Obj.magic input) ()) : string) in (
-              ignore (if previousRevision != Obj.magic (HxRuntime.hx_null) && not (HxString.equals previousRevision (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic input) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conditional-compilation observation contains conflicting observations for definition: " ^ HxString.toStdString ((Obj.magic input : CompilerConditionalDefineInput.t).name))) ["Dynamic"; "String"]) else ());
+              ignore (if previousRevision != Obj.magic (HxRuntime.hx_null) && not (HxString.equals previousRevision (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic input) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conditional-compilation observation contains conflicting observations for definition: " ^ HxString.toStdString ((Obj.magic input : CompilerConditionalDefineInput.t).name))) ["Dynamic"]) else ());
               ignore (HxMap.set_string revisionByAccess (CompilerConditionalDefineInput.accessKey (Obj.magic input) ()) (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic input) ()));
               let identities = ref (Obj.magic (HxMap.get_string ((Obj.magic self : t).inputIdentitiesByName) ((Obj.magic input : CompilerConditionalDefineInput.t).name))) in (
                 ignore (if !identities == Obj.magic (HxRuntime.hx_null) then ignore ((

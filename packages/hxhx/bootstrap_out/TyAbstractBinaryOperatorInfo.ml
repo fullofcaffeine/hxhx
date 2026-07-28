@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable op : string; mutable declaration : TyDeclarationInfo.t; mutable leftType : TyType.t; mutable rightType : TyType.t; mutable resultType : TyType.t; mutable commutative : bool }
 
-let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = ""; declaration = Obj.magic (HxRuntime.hx_null); leftType = Obj.magic (HxRuntime.hx_null); rightType = Obj.magic (HxRuntime.hx_null); resultType = Obj.magic (HxRuntime.hx_null); commutative = false } : t) in (
+let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic (HxRuntime.hx_null); leftType = Obj.magic (HxRuntime.hx_null); rightType = Obj.magic (HxRuntime.hx_null); resultType = Obj.magic (HxRuntime.hx_null); commutative = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (op2 : string) in (
       (Obj.magic self : t).op <- __assign_1;
@@ -28,15 +28,15 @@ let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 
       (Obj.magic self : t).resultType <- __assign_5;
       __assign_5
     ));
-    let __assign_6 = commutative2 in (
-      (Obj.magic self : t).commutative <- __assign_6;
-      __assign_6
+    let __place_receiver_6 = self in let __place_rhs_7 = commutative2 in (
+      (__place_receiver_6 : t).commutative <- __place_rhs_7;
+      __place_rhs_7
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = ""; declaration = Obj.magic (HxRuntime.hx_null); leftType = Obj.magic (HxRuntime.hx_null); rightType = Obj.magic (HxRuntime.hx_null); resultType = Obj.magic (HxRuntime.hx_null); commutative = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic (HxRuntime.hx_null); leftType = Obj.magic (HxRuntime.hx_null); rightType = Obj.magic (HxRuntime.hx_null); resultType = Obj.magic (HxRuntime.hx_null); commutative = false } : t)
 
 let getOperator = fun self () -> (Obj.magic self : t).op
 

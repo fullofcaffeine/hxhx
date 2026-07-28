@@ -8,15 +8,15 @@ type t = { __hx_type : Obj.t; mutable field : TyFieldInfo.t; mutable requiresOwn
 
 let create = fun field2 requiresOwnerQualification2 -> let self = ({ __hx_type = HxType.class_ "TypedFieldResolution"; field = Obj.magic (HxRuntime.hx_null); requiresOwnerQualification = false } : t) in (
   ignore (let requiresOwnerQualification2 = if Obj.repr requiresOwnerQualification2 == HxRuntime.hx_null then false else requiresOwnerQualification2 in ignore ((
-    ignore (if field2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field resolution requires an exact field") ["Dynamic"; "String"]) else ());
-    ignore (if requiresOwnerQualification2 && not (TyFieldInfo.getIsStatic (Obj.magic field2) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified field resolution requires a static field") ["Dynamic"; "String"]) else ());
+    ignore (if field2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field resolution requires an exact field") ["Dynamic"]) else ());
+    ignore (if requiresOwnerQualification2 && not (TyFieldInfo.getIsStatic (Obj.magic field2) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified field resolution requires a static field") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic field2 in (
       (Obj.magic self : t).field <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = requiresOwnerQualification2 in (
-      (Obj.magic self : t).requiresOwnerQualification <- __assign_2;
-      __assign_2
+    let __place_receiver_2 = self in let __place_rhs_3 = requiresOwnerQualification2 in (
+      (__place_receiver_2 : t).requiresOwnerQualification <- __place_rhs_3;
+      __place_rhs_3
     )
   )));
   self

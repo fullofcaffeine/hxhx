@@ -6,18 +6,18 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable text : string; mutable isErrorStream : bool }
 
-let create = fun text2 isErrorStream2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = ""; isErrorStream = false } : t) in (
+let create = fun text2 isErrorStream2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (text2 : string) in (
       (Obj.magic self : t).text <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = isErrorStream2 in (
-      (Obj.magic self : t).isErrorStream <- __assign_2;
-      __assign_2
+    let __place_receiver_2 = self in let __place_rhs_3 = isErrorStream2 in (
+      (__place_receiver_2 : t).isErrorStream <- __place_rhs_3;
+      __place_rhs_3
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = ""; isErrorStream = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t)

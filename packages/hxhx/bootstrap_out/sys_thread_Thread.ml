@@ -17,7 +17,7 @@ let create = fun handle2 -> let self = ({ __hx_type = HxType.class_ "sys.thread.
 let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.Thread"; handle = 0 } : t)
 
 let get_events = fun self () -> let currentLoop = Obj.magic (Obj.obj (HxThread.thread_get_events ((Obj.magic self : t).handle))) in (
-  ignore (if currentLoop == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Sys_thread_NoEventLoopException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "sys.thread.NoEventLoopException"; "haxe.Exception"]) else ());
+  ignore (if currentLoop == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Sys_thread_NoEventLoopException.create (HxString.hx_null_string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "sys.thread.NoEventLoopException"; "haxe.Exception"]) else ());
   currentLoop
 )
 
@@ -27,19 +27,19 @@ let current = fun () -> create (HxThread.thread_current ())
 
 let spawn = fun job -> create (HxThread.thread_create job)
 
-let runWithEventLoop = fun job -> ignore (try let thread = Obj.magic (current ()) in let existingLoop = Obj.magic (Obj.obj (HxThread.thread_get_events ((Obj.magic thread : t).handle))) in (
+let runWithEventLoop = fun job -> ignore (try ignore (let thread = Obj.magic (current ()) in let existingLoop = Obj.magic (Obj.obj (HxThread.thread_get_events ((Obj.magic thread : t).handle))) in (
   ignore (if existingLoop != Obj.magic (HxRuntime.hx_null) then ignore ((
-    ignore (job ());
+    ignore (let __call_callee_3 = job in __call_callee_3 ());
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   let created = Obj.magic (Sys_thread_EventLoop.create ()) in (
     ignore (HxThread.thread_set_events ((Obj.magic thread : t).handle) (Obj.repr created));
-    ignore (job ());
+    ignore (let __call_callee_4 = job in __call_callee_4 ());
     ignore (Sys_thread_EventLoop.loop (Obj.magic created) ());
     HxThread.thread_set_events ((Obj.magic thread : t).handle) (HxRuntime.hx_null)
   )
-) with
-  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3)
+)) with
+  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5)
 
 let createWithEventLoop = fun job -> spawn (fun () -> ignore (runWithEventLoop job))
 

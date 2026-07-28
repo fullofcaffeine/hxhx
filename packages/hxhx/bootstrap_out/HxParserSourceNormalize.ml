@@ -13,22 +13,24 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxParserSourceNo
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxParserSourceNormalize" } : t)
 
-let normalizeDenseKeywordSpacing = fun source -> try let __fallback_result_6 = (
-  ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (source : string))) else ());
+let normalizeDenseKeywordSpacing = fun (source : string) -> (try (
+  ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr source)) else ());
   let compactNewExpr = Obj.magic (EReg.create ("(^|[^A-Za-z0-9_])new([A-Za-z_])" : string) ("g" : string)) in EReg.map (Obj.magic compactNewExpr) (source : string) (fun re -> (HxString.toStdString (EReg.matched (Obj.magic re) 1) ^ "new ") ^ HxString.toStdString (EReg.matched (Obj.magic re) 2))
-) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) with
+  | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : string) : string)
 
-let normalizeDenseEscapedQuotes = fun source -> let source = ref source in try let __fallback_result_4 = (
-  ignore (if !source == Obj.magic (HxRuntime.hx_null) || HxString.length (!source) = 0 then raise (HxRuntime.Hx_return (Obj.repr (!source : string))) else ());
-  ignore (if HxString.indexOf (!source) "\"\"\"" 0 <> -1 then ignore (let q = ("\"" : string) in let triple = ((HxString.toStdString q ^ HxString.toStdString q) ^ HxString.toStdString q : string) in let escapedQuoteString = (((HxString.toStdString q ^ "\\") ^ HxString.toStdString q) ^ HxString.toStdString q : string) in let __assign_1 = (StringTools.replace (!source : string) (triple : string) (escapedQuoteString : string) : string) in (
-    source := __assign_1;
-    __assign_1
-  )) else ());
-  ignore (let __assign_2 = (normalizeDenseKeywordSpacing (!source : string) : string) in (
-    source := __assign_2;
-    __assign_2
-  ));
-  !source
-) in Obj.magic __fallback_result_4 with
-  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
+let normalizeDenseEscapedQuotes = fun (source : string) -> (try (
+  ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr source)) else ());
+  let normalized = ref (source : string) in (
+    ignore (if HxString.indexOf (!normalized) "\"\"\"" 0 <> -1 then ignore (let q = "\"" in let triple = (HxString.toStdString q ^ HxString.toStdString q) ^ HxString.toStdString q in let escapedQuoteString = ((HxString.toStdString q ^ "\\") ^ HxString.toStdString q) ^ HxString.toStdString q in let __assign_1 = (let __call_arg_0_2 = !normalized in let __call_arg_1_3 = triple in let __call_arg_2_4 = escapedQuoteString in StringTools.replace __call_arg_0_2 __call_arg_1_3 __call_arg_2_4 : string) in (
+      normalized := __assign_1;
+      __assign_1
+    )) else ());
+    ignore (let __assign_5 = (let __call_arg_0_6 = !normalized in normalizeDenseKeywordSpacing __call_arg_0_6 : string) in (
+      normalized := __assign_5;
+      __assign_5
+    ));
+    !normalized
+  )
+) with
+  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : string) : string)

@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool; mutable isRest : bool; mutable defaultValueText : string }
 
-let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = "" } : t) in (
+let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string } : t) in (
   ignore (let isOptional2 = if Obj.repr isOptional2 == HxRuntime.hx_null then false else isOptional2 in let isRest2 = if Obj.repr isRest2 == HxRuntime.hx_null then false else isRest2 in ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -20,32 +20,32 @@ let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueT
       (Obj.magic self : t).defaultValue <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = isOptional2 in (
-      (Obj.magic self : t).isOptional <- __assign_4;
-      __assign_4
+    ignore (let __place_receiver_4 = self in let __place_rhs_5 = isOptional2 in (
+      (__place_receiver_4 : t).isOptional <- __place_rhs_5;
+      __place_rhs_5
     ));
-    ignore (let __assign_5 = isRest2 in (
-      (Obj.magic self : t).isRest <- __assign_5;
-      __assign_5
+    ignore (let __place_receiver_6 = self in let __place_rhs_7 = isRest2 in (
+      (__place_receiver_6 : t).isRest <- __place_rhs_7;
+      __place_rhs_7
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if defaultValueText2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
-        tempRight := __assign_6;
-        __assign_6
-      ) else let __assign_7 = (defaultValueText2 : string) in (
-        tempRight := __assign_7;
-        __assign_7
-      ));
-      let __assign_8 = (!tempRight : string) in (
-        (Obj.magic self : t).defaultValueText <- __assign_8;
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if defaultValueText2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = ("" : string) in (
+        tempRight := __assign_8;
         __assign_8
+      ) else let __assign_9 = (defaultValueText2 : string) in (
+        tempRight := __assign_9;
+        __assign_9
+      ));
+      let __assign_10 = (!tempRight : string) in (
+        (Obj.magic self : t).defaultValueText <- __assign_10;
+        __assign_10
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string } : t)
 
 let getName = fun a -> (Obj.magic a : t).name
 

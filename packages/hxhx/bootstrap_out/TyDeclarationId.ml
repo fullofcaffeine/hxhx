@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable canonicalKey : string }
 
-let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if canonicalKey2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if canonicalKey2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (canonicalKey2 : string) in (
@@ -23,10 +23,10 @@ let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyDec
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t)
 
-let getCanonicalKey = fun self () -> (Obj.magic self : t).canonicalKey
+let getCanonicalKey = fun self () -> ((self : t).canonicalKey : string)
 
-let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((Obj.magic self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
+let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
 
-let toString = fun self () -> (Obj.magic self : t).canonicalKey
+let toString = fun self () -> ((self : t).canonicalKey : string)

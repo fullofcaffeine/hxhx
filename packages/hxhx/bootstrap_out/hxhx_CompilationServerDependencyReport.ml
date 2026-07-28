@@ -6,68 +6,68 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable enabled : bool; mutable hasPrevious : bool; mutable moduleCount : int; mutable edgeCount : int; mutable snapshotFingerprint : string; mutable comparison : CompilerDependencyComparison.t }
 
-let create = fun enabled2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = ""; comparison = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun enabled2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = enabled2 in (
-      (Obj.magic self : t).enabled <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = enabled2 in (
+      (__place_receiver_1 : t).enabled <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = false in (
-      (Obj.magic self : t).hasPrevious <- __assign_2;
-      __assign_2
-    ));
-    ignore (let __place_receiver_3 = self in let __place_rhs_4 = 0 in (
-      (__place_receiver_3 : t).moduleCount <- __place_rhs_4;
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = false in (
+      (__place_receiver_3 : t).hasPrevious <- __place_rhs_4;
       __place_rhs_4
     ));
     ignore (let __place_receiver_5 = self in let __place_rhs_6 = 0 in (
-      (__place_receiver_5 : t).edgeCount <- __place_rhs_6;
+      (__place_receiver_5 : t).moduleCount <- __place_rhs_6;
       __place_rhs_6
     ));
-    ignore (let __assign_7 = ("none" : string) in (
-      (Obj.magic self : t).snapshotFingerprint <- __assign_7;
-      __assign_7
+    ignore (let __place_receiver_7 = self in let __place_rhs_8 = 0 in (
+      (__place_receiver_7 : t).edgeCount <- __place_rhs_8;
+      __place_rhs_8
     ));
-    let __assign_8 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      (Obj.magic self : t).comparison <- __assign_8;
-      __assign_8
+    ignore (let __place_receiver_9 = self in let __place_rhs_10 = "none" in (
+      (__place_receiver_9 : t).snapshotFingerprint <- __place_rhs_10;
+      __place_rhs_10
+    ));
+    let __assign_11 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      (Obj.magic self : t).comparison <- __assign_11;
+      __assign_11
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = ""; comparison = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic (HxRuntime.hx_null) } : t)
 
-let record = fun self (snapshot : CompilerDependencySnapshot.t) (previous : CompilerDependencySnapshot.t) -> ignore (ignore (try (
+let record = fun self (snapshot : CompilerDependencySnapshot.t) (previous : CompilerDependencySnapshot.t) -> ignore (ignore (try ignore ((
   ignore (if not ((Obj.magic self : t).enabled) || snapshot == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (let __place_receiver_9 = self in let __place_rhs_10 = HxArray.length (CompilerDependencySnapshot.getModules (Obj.magic snapshot) ()) in (
-    (__place_receiver_9 : t).moduleCount <- __place_rhs_10;
-    __place_rhs_10
+  ignore (let __place_receiver_12 = self in let __place_rhs_13 = HxArray.length (CompilerDependencySnapshot.getModules (Obj.magic snapshot) ()) in (
+    (__place_receiver_12 : t).moduleCount <- __place_rhs_13;
+    __place_rhs_13
   ));
-  ignore (let __place_receiver_11 = self in let __place_rhs_12 = HxArray.length (CompilerDependencySnapshot.getEdges (Obj.magic snapshot) ()) in (
-    (__place_receiver_11 : t).edgeCount <- __place_rhs_12;
-    __place_rhs_12
+  ignore (let __place_receiver_14 = self in let __place_rhs_15 = HxArray.length (CompilerDependencySnapshot.getEdges (Obj.magic snapshot) ()) in (
+    (__place_receiver_14 : t).edgeCount <- __place_rhs_15;
+    __place_rhs_15
   ));
-  ignore (let __assign_13 = (CompilerObservationFingerprint.display (CompilerDependencySnapshot.getCanonicalIdentity (Obj.magic snapshot) () : string) : string) in (
-    (Obj.magic self : t).snapshotFingerprint <- __assign_13;
-    __assign_13
+  ignore (let __assign_16 = (let __call_arg_0_17 = CompilerDependencySnapshot.getCanonicalIdentity (Obj.magic snapshot) () in CompilerObservationFingerprint.display __call_arg_0_17 : string) in (
+    (Obj.magic self : t).snapshotFingerprint <- __assign_16;
+    __assign_16
   ));
-  ignore (let __assign_14 = previous != Obj.magic (HxRuntime.hx_null) in (
-    (Obj.magic self : t).hasPrevious <- __assign_14;
-    __assign_14
+  ignore (let __place_receiver_18 = self in let __place_rhs_19 = previous != Obj.magic (HxRuntime.hx_null) in (
+    (__place_receiver_18 : t).hasPrevious <- __place_rhs_19;
+    __place_rhs_19
   ));
   let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerDependencyComparison.t) in (
-    ignore (if previous == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempRight := __assign_15;
-      __assign_15
-    ) else let __assign_16 = Obj.magic (Obj.magic (CompilerDependencyInvalidator.compare (Obj.magic previous) (Obj.magic snapshot))) in (
-      tempRight := __assign_16;
-      __assign_16
+    ignore (if previous == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempRight := __assign_20;
+      __assign_20
+    ) else let __assign_21 = Obj.magic (Obj.magic (CompilerDependencyInvalidator.compare (Obj.magic previous) (Obj.magic snapshot))) in (
+      tempRight := __assign_21;
+      __assign_21
     ));
-    let __assign_17 = Obj.magic (!tempRight) in (
-      (Obj.magic self : t).comparison <- __assign_17;
-      __assign_17
+    let __assign_22 = Obj.magic (!tempRight) in (
+      (Obj.magic self : t).comparison <- __assign_22;
+      __assign_22
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18))
+)) with
+  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23))

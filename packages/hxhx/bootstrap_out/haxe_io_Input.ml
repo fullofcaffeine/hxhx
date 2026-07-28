@@ -12,49 +12,50 @@ let __ctor = fun (self : t) () -> ignore ((
 ))
 
 let set_bigEndian__impl = fun (self : t) (b : bool) -> (
-  ignore (let __assign_1 = b in (
-    (Obj.magic self : t).bigEndian <- __assign_1;
-    __assign_1
+  ignore (let __place_receiver_1 = self in let __place_rhs_2 = b in (
+    (__place_receiver_1 : t).bigEndian <- __place_rhs_2;
+    __place_rhs_2
   ));
   b
 )
 
 let readByte__impl = fun (self : t) () -> (
   ignore self;
-  HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_2 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "haxe/io/Input.hx"));
-    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 38));
-    ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.io.Input"));
-    ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "readByte"));
-    __anon_2
+  HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_3 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_3 "fileName" (Obj.repr "haxe/io/Input.hx"));
+    ignore (HxAnon.set __anon_3 "lineNumber" (Obj.repr 38));
+    ignore (HxAnon.set __anon_3 "className" (Obj.repr "haxe.io.Input"));
+    ignore (HxAnon.set __anon_3 "methodName" (Obj.repr "readByte"));
+    __anon_3
   )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"]
 )
 
 let readBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> let pos = ref pos in (
-  ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > HxBytes.length s then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
+  ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > (let __bytes_receiver_4 = s in HxBytes.length __bytes_receiver_4) then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
   let k = ref len in (
     ignore (try while !k > 0 do ignore ((
-      ignore (HxBytes.set s (!pos) ((Obj.magic self : t).readByte (Obj.magic self) ()));
-      ignore (let __old_3 = !pos in let __new_4 = HxInt.add __old_3 1 in (
-        ignore (pos := __new_4);
-        __old_3
+      ignore (let __bytes_access_receiver_5 = s in let __bytes_access_arg_0_6 = !pos in let __bytes_access_arg_1_7 = (Obj.magic self : t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_5 __bytes_access_arg_0_6 __bytes_access_arg_1_7);
+      ignore (let __old_8 = !pos in let __new_9 = HxInt.add __old_8 1 in (
+        ignore (pos := __new_9);
+        __old_8
       ));
-      let __old_5 = !k in let __new_6 = HxInt.add __old_5 (-1) in (
-        ignore (k := __new_6);
-        __old_5
+      let __old_10 = !k in let __new_11 = HxInt.add __old_10 (-1) in (
+        ignore (k := __new_11);
+        __old_10
       )
     )) done with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
-      | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if HxRuntime.tags_has __exn_tags_9 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_8 : Haxe_io_Eof.t) in (
+      | HxRuntime.Hx_return __ret_12 -> raise (HxRuntime.Hx_return __ret_12)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_exception (__exn_v_13, __exn_tags_14) -> if HxRuntime.tags_has __exn_tags_14 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_13 : Haxe_io_Eof.t) in (
         ignore _hx;
         ()
-      ) else HxRuntime.hx_throw_typed __exn_v_8 __exn_tags_9
-      | __exn_10 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_10) : Haxe_io_Eof.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_13 __exn_tags_14
+      | __exn_15 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_15) : Haxe_io_Eof.t) in (
         ignore _hx;
         ()
-      ) else raise (__exn_10));
+      ) else raise (__exn_15));
     HxInt.sub len (!k)
   )
 )
@@ -65,12 +66,12 @@ let close__impl = fun (self : t) () -> ignore ((
 ))
 
 let readAll__impl = fun (self : t) (bufsize : Obj.t) -> let tempNumber = ref (0 : int) in (
-  ignore (if bufsize == HxRuntime.hx_null then let __assign_11 = 16384 in (
-    tempNumber := __assign_11;
-    __assign_11
-  ) else let __assign_12 = let __nullable_int_13 = bufsize in if __nullable_int_13 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_13 in (
-    tempNumber := __assign_12;
-    __assign_12
+  ignore (if bufsize == HxRuntime.hx_null then let __assign_16 = 16384 in (
+    tempNumber := __assign_16;
+    __assign_16
+  ) else let __assign_17 = let __nullable_int_18 = bufsize in if __nullable_int_18 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_18 in (
+    tempNumber := __assign_17;
+    __assign_17
   ));
   let size = !tempNumber in let buf = Obj.magic (HxBytes.alloc size) in let total = Obj.magic (Haxe_io_BytesBuffer.create ()) in (
     ignore (try while true do try ignore (let len = (Obj.magic self : t).readBytes (Obj.magic self) (Obj.magic buf) 0 size in (
@@ -100,158 +101,159 @@ let read__impl = fun (self : t) (nbytes : int) -> let nbytes = ref nbytes in let
 
 let readUntil__impl = fun (self : t) (hx_end : int) -> let buf = Obj.magic (Haxe_io_BytesBuffer.create ()) in let last = ref (0 : int) in (
   ignore (try while true do try ignore ((
-    ignore (let __assign_14 = (Obj.magic self : t).readByte (Obj.magic self) () in (
-      last := __assign_14;
-      __assign_14
+    ignore (let __assign_19 = (Obj.magic self : t).readByte (Obj.magic self) () in (
+      last := __assign_19;
+      __assign_19
     ));
     ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> hx_end))) then raise (HxRuntime.Hx_break) else ());
     HxArray.push ((Obj.magic buf : Haxe_io_BytesBuffer.t).b) (!last)
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  HxBytes.toString (Haxe_io_BytesBuffer.getBytes (Obj.magic buf) ()) ()
+  let __bytes_receiver_20 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_20 ()
 )
 
-let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuffer.create ()) in let last = ref (0 : int) in let s = ref ("" : string) in (
+let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuffer.create ()) in let last = ref (0 : int) in let s = ref (HxString.hx_null_string : string) in (
   ignore (try (
     ignore (try while true do try ignore ((
-      ignore (let __assign_15 = (Obj.magic self : t).readByte (Obj.magic self) () in (
-        last := __assign_15;
-        __assign_15
+      ignore (let __assign_21 = (Obj.magic self : t).readByte (Obj.magic self) () in (
+        last := __assign_21;
+        __assign_21
       ));
       ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> 10))) then raise (HxRuntime.Hx_break) else ());
       HxArray.push ((Obj.magic buf : Haxe_io_BytesBuffer.t).b) (!last)
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    ignore (let __assign_16 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes (Obj.magic buf) ()) () : string) in (
-      s := __assign_16;
-      __assign_16
+    ignore (let __assign_22 = (let __bytes_receiver_23 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_23 () : string) in (
+      s := __assign_22;
+      __assign_22
     ));
-    if HxString.length (!s) > 0 && (let __nullable_17 = HxString.charCodeAt (!s) (HxInt.sub (HxString.length (!s)) 1) in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 = 13) then ignore (let __assign_18 = (HxString.substr (!s) 0 (-1) : string) in (
-      s := __assign_18;
-      __assign_18
+    if HxString.length (!s) > 0 && (let __nullable_24 = HxString.charCodeAt (!s) (HxInt.sub (HxString.length (!s)) 1) in if __nullable_24 == HxRuntime.hx_null then false else Obj.obj __nullable_24 = 13) then ignore (let __assign_25 = (HxString.substr (!s) 0 (-1) : string) in (
+      s := __assign_25;
+      __assign_25
     )) else ()
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_19 -> raise (HxRuntime.Hx_return __ret_19)
-    | HxRuntime.Hx_exception (__exn_v_20, __exn_tags_21) -> if HxRuntime.tags_has __exn_tags_21 "haxe.io.Eof" then let e = (Obj.obj __exn_v_20 : Haxe_io_Eof.t) in (
+    | HxRuntime.Hx_return __ret_26 -> raise (HxRuntime.Hx_return __ret_26)
+    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_exception (__exn_v_27, __exn_tags_28) -> if HxRuntime.tags_has __exn_tags_28 "haxe.io.Eof" then let e = (Obj.obj __exn_v_27 : Haxe_io_Eof.t) in (
       ignore e;
       (
-        ignore (let __assign_22 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes (Obj.magic buf) ()) () : string) in (
-          s := __assign_22;
-          __assign_22
+        ignore (let __assign_29 = (let __bytes_receiver_30 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_30 () : string) in (
+          s := __assign_29;
+          __assign_29
         ));
         if HxString.length (!s) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.io.Eof"]) else ()
       )
-    ) else HxRuntime.hx_throw_typed __exn_v_20 __exn_tags_21
-    | __exn_23 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let e = (Obj.obj (Obj.repr __exn_23) : Haxe_io_Eof.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_27 __exn_tags_28
+    | __exn_31 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let e = (Obj.obj (Obj.repr __exn_31) : Haxe_io_Eof.t) in (
       ignore e;
       (
-        ignore (let __assign_24 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes (Obj.magic buf) ()) () : string) in (
-          s := __assign_24;
-          __assign_24
+        ignore (let __assign_32 = (let __bytes_receiver_33 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_33 () : string) in (
+          s := __assign_32;
+          __assign_32
         ));
         if HxString.length (!s) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.io.Eof"]) else ()
       )
-    ) else raise (__exn_23));
+    ) else raise (__exn_31));
   !s
 )
 
 let readFloat__impl = fun (self : t) () -> Haxe_io_FPHelper.i32ToFloat ((Obj.magic self : t).readInt32 (Obj.magic self) ())
 
 let readDouble__impl = fun (self : t) () -> let i1 = (Obj.magic self : t).readInt32 (Obj.magic self) () in let i2 = (Obj.magic self : t).readInt32 (Obj.magic self) () in let tempResult = ref (0. : float) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_25 = Haxe_io_FPHelper.i64ToDouble i2 i1 in (
-    tempResult := __assign_25;
-    __assign_25
-  ) else let __assign_26 = Haxe_io_FPHelper.i64ToDouble i1 i2 in (
-    tempResult := __assign_26;
-    __assign_26
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_34 = Haxe_io_FPHelper.i64ToDouble i2 i1 in (
+    tempResult := __assign_34;
+    __assign_34
+  ) else let __assign_35 = Haxe_io_FPHelper.i64ToDouble i1 i2 in (
+    tempResult := __assign_35;
+    __assign_35
   ));
   !tempResult
 )
 
 let readInt8__impl = fun (self : t) () -> let n = (Obj.magic self : t).readByte (Obj.magic self) () in let tempResult = ref (0 : int) in (
-  ignore (if n >= 128 then let __assign_27 = HxInt.sub n 256 in (
-    tempResult := __assign_27;
-    __assign_27
-  ) else let __assign_28 = n in (
-    tempResult := __assign_28;
-    __assign_28
+  ignore (if n >= 128 then let __assign_36 = HxInt.sub n 256 in (
+    tempResult := __assign_36;
+    __assign_36
+  ) else let __assign_37 = n in (
+    tempResult := __assign_37;
+    __assign_37
   ));
   !tempResult
 )
 
 let readInt16__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch2 = (Obj.magic self : t).readByte (Obj.magic self) () in let tempNumber = ref (0 : int) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_29 = HxInt.logor ch2 (HxInt.shl ch1 8) in (
-    tempNumber := __assign_29;
-    __assign_29
-  ) else let __assign_30 = HxInt.logor ch1 (HxInt.shl ch2 8) in (
-    tempNumber := __assign_30;
-    __assign_30
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_38 = HxInt.logor ch2 (HxInt.shl ch1 8) in (
+    tempNumber := __assign_38;
+    __assign_38
+  ) else let __assign_39 = HxInt.logor ch1 (HxInt.shl ch2 8) in (
+    tempNumber := __assign_39;
+    __assign_39
   ));
   let n = !tempNumber in let tempResult = ref (0 : int) in (
-    ignore (if HxInt.logand n 32768 <> 0 then let __assign_31 = HxInt.sub n 65536 in (
-      tempResult := __assign_31;
-      __assign_31
-    ) else let __assign_32 = n in (
-      tempResult := __assign_32;
-      __assign_32
+    ignore (if HxInt.logand n 32768 <> 0 then let __assign_40 = HxInt.sub n 65536 in (
+      tempResult := __assign_40;
+      __assign_40
+    ) else let __assign_41 = n in (
+      tempResult := __assign_41;
+      __assign_41
     ));
     !tempResult
   )
 )
 
 let readUInt16__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch2 = (Obj.magic self : t).readByte (Obj.magic self) () in let tempResult = ref (0 : int) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_33 = HxInt.logor ch2 (HxInt.shl ch1 8) in (
-    tempResult := __assign_33;
-    __assign_33
-  ) else let __assign_34 = HxInt.logor ch1 (HxInt.shl ch2 8) in (
-    tempResult := __assign_34;
-    __assign_34
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_42 = HxInt.logor ch2 (HxInt.shl ch1 8) in (
+    tempResult := __assign_42;
+    __assign_42
+  ) else let __assign_43 = HxInt.logor ch1 (HxInt.shl ch2 8) in (
+    tempResult := __assign_43;
+    __assign_43
   ));
   !tempResult
 )
 
 let readInt24__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch2 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch3 = (Obj.magic self : t).readByte (Obj.magic self) () in let tempNumber = ref (0 : int) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_35 = HxInt.logor (HxInt.logor ch3 (HxInt.shl ch2 8)) (HxInt.shl ch1 16) in (
-    tempNumber := __assign_35;
-    __assign_35
-  ) else let __assign_36 = HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16) in (
-    tempNumber := __assign_36;
-    __assign_36
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_44 = HxInt.logor (HxInt.logor ch3 (HxInt.shl ch2 8)) (HxInt.shl ch1 16) in (
+    tempNumber := __assign_44;
+    __assign_44
+  ) else let __assign_45 = HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16) in (
+    tempNumber := __assign_45;
+    __assign_45
   ));
   let n = !tempNumber in let tempResult = ref (0 : int) in (
-    ignore (if HxInt.logand n 8388608 <> 0 then let __assign_37 = HxInt.sub n 16777216 in (
-      tempResult := __assign_37;
-      __assign_37
-    ) else let __assign_38 = n in (
-      tempResult := __assign_38;
-      __assign_38
+    ignore (if HxInt.logand n 8388608 <> 0 then let __assign_46 = HxInt.sub n 16777216 in (
+      tempResult := __assign_46;
+      __assign_46
+    ) else let __assign_47 = n in (
+      tempResult := __assign_47;
+      __assign_47
     ));
     !tempResult
   )
 )
 
 let readUInt24__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch2 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch3 = (Obj.magic self : t).readByte (Obj.magic self) () in let tempResult = ref (0 : int) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_39 = HxInt.logor (HxInt.logor ch3 (HxInt.shl ch2 8)) (HxInt.shl ch1 16) in (
-    tempResult := __assign_39;
-    __assign_39
-  ) else let __assign_40 = HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16) in (
-    tempResult := __assign_40;
-    __assign_40
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_48 = HxInt.logor (HxInt.logor ch3 (HxInt.shl ch2 8)) (HxInt.shl ch1 16) in (
+    tempResult := __assign_48;
+    __assign_48
+  ) else let __assign_49 = HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16) in (
+    tempResult := __assign_49;
+    __assign_49
   ));
   !tempResult
 )
 
 let readInt32__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch2 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch3 = (Obj.magic self : t).readByte (Obj.magic self) () in let ch4 = (Obj.magic self : t).readByte (Obj.magic self) () in let tempResult = ref (0 : int) in (
-  ignore (if (Obj.magic self : t).bigEndian then let __assign_41 = HxInt.logor (HxInt.logor (HxInt.logor ch4 (HxInt.shl ch3 8)) (HxInt.shl ch2 16)) (HxInt.shl ch1 24) in (
-    tempResult := __assign_41;
-    __assign_41
-  ) else let __assign_42 = HxInt.logor (HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16)) (HxInt.shl ch4 24) in (
-    tempResult := __assign_42;
-    __assign_42
+  ignore (if (Obj.magic self : t).bigEndian then let __assign_50 = HxInt.logor (HxInt.logor (HxInt.logor ch4 (HxInt.shl ch3 8)) (HxInt.shl ch2 16)) (HxInt.shl ch1 24) in (
+    tempResult := __assign_50;
+    __assign_50
+  ) else let __assign_51 = HxInt.logor (HxInt.logor (HxInt.logor ch1 (HxInt.shl ch2 8)) (HxInt.shl ch3 16)) (HxInt.shl ch4 24) in (
+    tempResult := __assign_51;
+    __assign_51
   ));
   !tempResult
 )
@@ -260,7 +262,7 @@ let readString__impl = fun (self : t) (len : int) (encoding : Obj.t) -> (
   ignore encoding;
   let b = Obj.magic (HxBytes.alloc len) in (
     ignore ((Obj.magic self : t).readFullBytes (Obj.magic self) (Obj.magic b) 0 len);
-    HxBytes.getString b 0 len ()
+    let __bytes_receiver_52 = b in let __bytes_arg_0_53 = 0 in let __bytes_arg_1_54 = len in HxBytes.getString __bytes_receiver_52 __bytes_arg_0_53 __bytes_arg_1_54 ()
   )
 )
 

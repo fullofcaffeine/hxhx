@@ -2706,7 +2706,7 @@ let init () : unit =
   );
   HxType.register_class_ctor "sys.thread.NoEventLoopException" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
-    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else Obj.magic HxRuntime.hx_null in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else HxString.hx_null_string in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (Sys_thread_NoEventLoopException.create a0 a1)
   );
@@ -3516,7 +3516,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleHostAbi" [];
   HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleHostAbi" [ "decodeRow"; "decodeSnapshot"; "exprsForPlugin"; "exprsForPluginAllowEmpty"; "exprsForPluginInternal"; "fail"; "normalizeSourceLabel"; "requireHeaderInt"; "requireToken"; "trim"; "trimTrailingCr" ];
   HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleReceipt" [];
-  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleReceipt" [ "decodeExpressions"; "fail"; "loadFromEnvironment"; "normalizeDigest"; "normalizeDirectory"; "requiredField"; "requiredInt"; "requiredString"; "resolveContainedArtifact" ];
+  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleReceipt" [ "decodeExpressions"; "failureMessage"; "loadFromEnvironment"; "normalizeDigest"; "normalizeDirectory"; "requiredField"; "requiredInt"; "requiredString"; "resolveContainedArtifact" ];
   HxType.register_class_instance_fields "ocaml._Buffer.Buffer_Impl_" [];
   HxType.register_class_static_fields "ocaml._Buffer.Buffer_Impl_" [ "_new"; "addString"; "contents"; "create"; "length" ];
   HxType.register_class_instance_fields "sys.io.File" [];

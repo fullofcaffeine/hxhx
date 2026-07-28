@@ -6,11 +6,11 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable provider : TyNominalInfo.t; mutable memberName : string; mutable candidates : TyFunSig.t HxArray.t }
 
-let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic (HxRuntime.hx_null); memberName = ""; candidates = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic (HxRuntime.hx_null); memberName = HxString.hx_null_string; candidates = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if provider2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its exact provider") ["Dynamic"; "String"]) else ());
-    ignore (if memberName2 == Obj.magic (HxRuntime.hx_null) || HxString.length memberName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its original member name") ["Dynamic"; "String"]) else ());
-    ignore (if candidates2 == Obj.magic (HxRuntime.hx_null) || HxArray.length candidates2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires at least one eligible overload") ["Dynamic"; "String"]) else ());
+    ignore (if provider2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its exact provider") ["Dynamic"]) else ());
+    ignore (if memberName2 == HxString.hx_null_string || HxString.length memberName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its original member name") ["Dynamic"]) else ());
+    ignore (if candidates2 == Obj.magic (HxRuntime.hx_null) || HxArray.length candidates2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires at least one eligible overload") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic provider2 in (
       (Obj.magic self : t).provider <- __assign_1;
       __assign_1
@@ -27,7 +27,7 @@ let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic (HxRuntime.hx_null); memberName = ""; candidates = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic (HxRuntime.hx_null); memberName = HxString.hx_null_string; candidates = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getProvider = fun self () -> (Obj.magic self : t).provider
 

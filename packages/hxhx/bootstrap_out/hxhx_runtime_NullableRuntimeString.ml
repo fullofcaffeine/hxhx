@@ -31,11 +31,11 @@ let trimToEmpty = fun s -> let tempMaybeString = ref (Obj.magic (HxRuntime.hx_nu
     tempMaybeString := __assign_5;
     __assign_5
   ));
-  let tempResult = ref ("" : string) in (
-    ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
+  let normalized = (!tempMaybeString : string) in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_6 = "" in (
       tempResult := __assign_6;
       __assign_6
-    ) else let __assign_7 = (StringTools.trim (!tempMaybeString : string) : string) in (
+    ) else let __assign_7 = let __call_arg_0_8 = normalized in StringTools.trim __call_arg_0_8 in (
       tempResult := __assign_7;
       __assign_7
     ));

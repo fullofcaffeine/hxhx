@@ -6,110 +6,110 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable requestedModulePath : string; mutable sourceModulePath : string; mutable selectedClassPathIndex : int; mutable usedSecondaryTypeFallback : bool; mutable isSynthetic : bool; mutable sourceIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = ""; sourceModulePath = ""; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t)
 
-let getSourceIdentity = fun self () -> (Obj.magic self : t).sourceIdentity
+let getSourceIdentity = fun self () -> ((self : t).sourceIdentity : string)
 
-let describeSource = fun self () -> let tempResult = ref ("" : string) in (
-  ignore (if (Obj.magic self : t).isSynthetic then let __assign_14 = (HxString.toStdString ((Obj.magic self : t).sourceModulePath) ^ "@synthetic" : string) in (
-    tempResult := __assign_14;
-    __assign_14
-  ) else let __assign_15 = (((HxString.toStdString ((Obj.magic self : t).sourceModulePath) ^ "@classpath[") ^ string_of_int ((Obj.magic self : t).selectedClassPathIndex)) ^ "]" : string) in (
-    tempResult := __assign_15;
-    __assign_15
+let describeSource = fun self () -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if (self : t).isSynthetic then let __assign_18 = HxString.toStdString ((self : t).sourceModulePath) ^ "@synthetic" in (
+    tempResult := __assign_18;
+    __assign_18
+  ) else let __assign_19 = ((HxString.toStdString ((self : t).sourceModulePath) ^ "@classpath[") ^ string_of_int ((self : t).selectedClassPathIndex)) ^ "]" in (
+    tempResult := __assign_19;
+    __assign_19
   ));
   !tempResult
-)
+) : string)
 
-let describeLookup = fun self () -> let tempString = ref ("" : string) in (
-  ignore (if (Obj.magic self : t).isSynthetic then let __assign_16 = (":synthetic" : string) in (
-    tempString := __assign_16;
-    __assign_16
-  ) else if (Obj.magic self : t).usedSecondaryTypeFallback then let __assign_17 = (":secondary-type" : string) in (
-    tempString := __assign_17;
-    __assign_17
-  ) else let __assign_18 = (":direct" : string) in (
-    tempString := __assign_18;
-    __assign_18
-  ));
-  ((HxString.toStdString ((Obj.magic self : t).requestedModulePath) ^ "->") ^ HxString.toStdString (describeSource (Obj.magic self) ())) ^ HxString.toStdString (!tempString)
-)
-
-let parentModule = fun modulePath -> let dot = HxString.lastIndexOf modulePath "." (HxString.length modulePath) in let tempResult = ref ("" : string) in (
-  ignore (if dot < 0 then let __assign_21 = ("" : string) in (
-    tempResult := __assign_21;
+let describeLookup = fun self () -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if (self : t).isSynthetic then let __assign_20 = ":synthetic" in (
+    tempString := __assign_20;
+    __assign_20
+  ) else if (self : t).usedSecondaryTypeFallback then let __assign_21 = ":secondary-type" in (
+    tempString := __assign_21;
     __assign_21
-  ) else let __assign_22 = (HxString.substr modulePath 0 dot : string) in (
-    tempResult := __assign_22;
+  ) else let __assign_22 = ":direct" in (
+    tempString := __assign_22;
     __assign_22
   ));
-  !tempResult
-)
+  ((HxString.toStdString ((self : t).requestedModulePath) ^ "->") ^ HxString.toStdString (describeSource (Obj.magic self) ())) ^ HxString.toStdString (!tempString)
+) : string)
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_23 = ("" : string) in (
-    tempResult := __assign_23;
-    __assign_23
-  ) else let __assign_24 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_24;
-    __assign_24
+let parentModule = fun (modulePath : string) -> (let dot = HxString.lastIndexOf modulePath "." (HxString.length modulePath) in let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if dot < 0 then let __assign_26 = ("" : string) in (
+    tempResult := __assign_26;
+    __assign_26
+  ) else let __assign_27 = (HxString.substr modulePath 0 dot : string) in (
+    tempResult := __assign_27;
+    __assign_27
   ));
   !tempResult
-)
+) : string)
 
-let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = ""; sourceModulePath = ""; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = "" } : t) in (
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_28 = "" in (
+    tempResult := __assign_28;
+    __assign_28
+  ) else let __assign_29 = let __call_arg_0_30 = value in StringTools.trim __call_arg_0_30 in (
+    tempResult := __assign_29;
+    __assign_29
+  ));
+  !tempResult
+) : string)
+
+let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t) in (
   ignore (let isSynthetic2 = if Obj.repr isSynthetic2 == HxRuntime.hx_null then false else isSynthetic2 in ignore ((
-    ignore (let __assign_1 = (normalize (requestedModulePath2 : string) : string) in (
+    ignore (let __assign_1 = (let __call_arg_0_2 = requestedModulePath2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).requestedModulePath <- __assign_1;
       __assign_1
     ));
-    ignore (let __place_receiver_2 = self in let __place_rhs_3 = selectedClassPathIndex2 in (
-      (__place_receiver_2 : t).selectedClassPathIndex <- __place_rhs_3;
-      __place_rhs_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = selectedClassPathIndex2 in (
+      (__place_receiver_3 : t).selectedClassPathIndex <- __place_rhs_4;
+      __place_rhs_4
     ));
-    ignore (let __assign_4 = usedSecondaryTypeFallback2 in (
-      (Obj.magic self : t).usedSecondaryTypeFallback <- __assign_4;
-      __assign_4
+    ignore (let __place_receiver_5 = self in let __place_rhs_6 = usedSecondaryTypeFallback2 in (
+      (__place_receiver_5 : t).usedSecondaryTypeFallback <- __place_rhs_6;
+      __place_rhs_6
     ));
-    ignore (let __assign_5 = isSynthetic2 in (
-      (Obj.magic self : t).isSynthetic <- __assign_5;
-      __assign_5
+    ignore (let __place_receiver_7 = self in let __place_rhs_8 = isSynthetic2 in (
+      (__place_receiver_7 : t).isSynthetic <- __place_rhs_8;
+      __place_rhs_8
     ));
-    ignore (if HxString.length ((Obj.magic self : t).requestedModulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "module source origin requires a requested module path") ["Dynamic"; "String"]) else ());
-    ignore (if selectedClassPathIndex2 < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "module source origin requires a selected class-path slot") ["Dynamic"; "String"]) else ());
-    let tempRight = ref ("" : string) in (
-      ignore (if usedSecondaryTypeFallback2 then let __assign_6 = (parentModule ((Obj.magic self : t).requestedModulePath : string) : string) in (
-        tempRight := __assign_6;
-        __assign_6
-      ) else let __assign_7 = ((Obj.magic self : t).requestedModulePath : string) in (
-        tempRight := __assign_7;
-        __assign_7
+    ignore (if HxString.length ((self : t).requestedModulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "module source origin requires a requested module path") ["Dynamic"]) else ());
+    ignore (if selectedClassPathIndex2 < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "module source origin requires a selected class-path slot") ["Dynamic"]) else ());
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if usedSecondaryTypeFallback2 then let __assign_9 = (let __call_arg_0_10 = (self : t).requestedModulePath in parentModule __call_arg_0_10 : string) in (
+        tempRight := __assign_9;
+        __assign_9
+      ) else let __assign_11 = ((self : t).requestedModulePath : string) in (
+        tempRight := __assign_11;
+        __assign_11
       ));
-      ignore (let __assign_8 = (!tempRight : string) in (
-        (Obj.magic self : t).sourceModulePath <- __assign_8;
-        __assign_8
+      ignore (let __assign_12 = (!tempRight : string) in (
+        (Obj.magic self : t).sourceModulePath <- __assign_12;
+        __assign_12
       ));
-      ignore (if HxString.length ((Obj.magic self : t).sourceModulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "secondary-type module origin requires a parent source module") ["Dynamic"; "String"]) else ());
-      let tempRight1 = ref ("" : string) in (
-        ignore (if isSynthetic2 then let __assign_9 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_10 = HxArray.create () in (
-          ignore (HxArray.push __arr_10 "synthetic-module-origin-v1");
-          ignore (HxArray.push __arr_10 ((Obj.magic self : t).sourceModulePath));
-          __arr_10
+      ignore (if HxString.length ((self : t).sourceModulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "secondary-type module origin requires a parent source module") ["Dynamic"]) else ());
+      let tempRight1 = ref (HxString.hx_null_string : string) in (
+        ignore (if isSynthetic2 then let __assign_13 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_14 = HxArray.create () in (
+          ignore (HxArray.push __arr_14 "synthetic-module-origin-v1");
+          ignore (HxArray.push __arr_14 ((self : t).sourceModulePath));
+          __arr_14
         ))) : string) in (
-          tempRight1 := __assign_9;
-          __assign_9
-        ) else let __assign_11 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_12 = HxArray.create () in (
-          ignore (HxArray.push __arr_12 "module-source-origin-v1");
-          ignore (HxArray.push __arr_12 ((Obj.magic self : t).sourceModulePath));
-          ignore (HxArray.push __arr_12 (string_of_int selectedClassPathIndex2));
-          __arr_12
-        ))) : string) in (
-          tempRight1 := __assign_11;
-          __assign_11
-        ));
-        let __assign_13 = (!tempRight1 : string) in (
-          (Obj.magic self : t).sourceIdentity <- __assign_13;
+          tempRight1 := __assign_13;
           __assign_13
+        ) else let __assign_15 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_16 = HxArray.create () in (
+          ignore (HxArray.push __arr_16 "module-source-origin-v1");
+          ignore (HxArray.push __arr_16 ((self : t).sourceModulePath));
+          ignore (HxArray.push __arr_16 (string_of_int selectedClassPathIndex2));
+          __arr_16
+        ))) : string) in (
+          tempRight1 := __assign_15;
+          __assign_15
+        ));
+        let __assign_17 = (!tempRight1 : string) in (
+          (Obj.magic self : t).sourceIdentity <- __assign_17;
+          __assign_17
         )
       )
     )
@@ -117,15 +117,15 @@ let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeF
   self
 )
 
-let direct = fun modulePath selectedClassPathIndex2 -> create (modulePath : string) selectedClassPathIndex2 false (Obj.magic (HxRuntime.hx_null))
+let direct = fun (modulePath : string) (selectedClassPathIndex2 : int) -> (create (modulePath : string) selectedClassPathIndex2 false (Obj.magic (HxRuntime.hx_null)) : t)
 
-let synthetic = fun modulePath -> let normalized = (normalize (modulePath : string) : string) in let tempString = ref ("" : string) in (
-  ignore (if HxString.length normalized = 0 then let __assign_19 = ("<synthetic-module>" : string) in (
-    tempString := __assign_19;
-    __assign_19
-  ) else let __assign_20 = (normalized : string) in (
-    tempString := __assign_20;
-    __assign_20
+let synthetic = fun (modulePath : string) -> (let normalized = let __call_arg_0_23 = modulePath in normalize __call_arg_0_23 in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if HxString.length normalized = 0 then let __assign_24 = "<synthetic-module>" in (
+    tempString := __assign_24;
+    __assign_24
+  ) else let __assign_25 = normalized in (
+    tempString := __assign_25;
+    __assign_25
   ));
-  create (!tempString : string) 0 false true
-)
+  let safeModule = !tempString in create (safeModule : string) 0 false true
+) : t)

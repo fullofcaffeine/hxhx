@@ -13,11 +13,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependen
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyCollector" } : t)
 
-let addEdge = fun edgeByKey consumerModule providerModule phase kind factIdentity -> ignore (try (
-  ignore (if providerModule == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (providerModule : string)) = 0 || HxString.equals consumerModule providerModule then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+let addEdge = fun edgeByKey consumerModule providerModule phase kind factIdentity -> ignore (try ignore ((
+  ignore (if providerModule == HxString.hx_null_string || HxString.length (let __call_arg_0_101 = providerModule in StringTools.trim __call_arg_0_101) = 0 || HxString.equals consumerModule providerModule then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let edge = Obj.magic (CompilerDependencyEdge.create (consumerModule : string) (providerModule : string) (Obj.magic phase) (Obj.magic kind) (factIdentity : string)) in HxMap.set_string edgeByKey (CompilerDependencyEdge.canonicalKey (Obj.magic edge) ()) edge
-) with
-  | HxRuntime.Hx_return __ret_101 -> Obj.obj __ret_101)
+)) with
+  | HxRuntime.Hx_return __ret_102 -> Obj.obj __ret_102)
 
 let collectConstantRead = fun edgeByKey consumerModule index currentOwner expression -> ignore (let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let selectedField = Obj.magic (TypedExpr.getFieldInfo (Obj.magic expression) ()) in let tempMaybeTyFieldInfo = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
   ignore (if selectedField != Obj.magic (HxRuntime.hx_null) then let __assign_44 = Obj.magic (Obj.magic selectedField) in (
@@ -201,7 +201,7 @@ let collectConstantRead = fun edgeByKey consumerModule index currentOwner expres
   let field = Obj.magic (!tempMaybeTyFieldInfo) in if field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.canEmbedCrossModuleValue (Obj.magic field) () then ignore (addEdge (Obj.magic edgeByKey) (consumerModule : string) (TyFieldInfo.getModulePath (Obj.magic field) () : string) (Obj.magic (CompilerDependencyPhase.SharedTyping)) (Obj.magic (CompilerDependencyKind.ConstantValue)) ("field:" ^ HxString.toStdString (TyFieldInfo.getCanonicalKey (Obj.magic field) ()) : string)) else ()
 ))
 
-let rec collectType = fun edgeByKey consumerModule index hx_type factIdentity -> ignore (try (
+let rec collectType = fun edgeByKey consumerModule index hx_type factIdentity -> ignore (try ignore ((
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
     ignore (if identity != Obj.magic (HxRuntime.hx_null) then ignore (let tempMaybeTyNominalInfo = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
@@ -235,10 +235,10 @@ let rec collectType = fun edgeByKey consumerModule index hx_type factIdentity ->
       )) else ()
     )
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_95 -> Obj.obj __ret_95)
 
-let rec collectExpression = fun edgeByKey consumerModule index currentOwner expression -> ignore (try (
+let rec collectExpression = fun edgeByKey consumerModule index currentOwner expression -> ignore (try ignore ((
   ignore (if expression == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (collectType (Obj.magic edgeByKey) (consumerModule : string) (Obj.magic index) (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) ("expression-type" : string));
   ignore (collectConstantRead (Obj.magic edgeByKey) (consumerModule : string) (Obj.magic index) (Obj.magic currentOwner) (Obj.magic expression));
@@ -270,10 +270,10 @@ let rec collectExpression = fun edgeByKey consumerModule index currentOwner expr
       collectExpression (Obj.magic edgeByKey) (consumerModule : string) (Obj.magic index) (Obj.magic currentOwner) (Obj.magic child)
     )) done
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43)
 
-let rec collectStatement = fun edgeByKey consumerModule index currentOwner statement -> ignore (try (
+let rec collectStatement = fun edgeByKey consumerModule index currentOwner statement -> ignore (try ignore ((
   ignore (if statement == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let expression = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -291,10 +291,10 @@ let rec collectStatement = fun edgeByKey consumerModule index currentOwner state
       collectStatement (Obj.magic edgeByKey) (consumerModule : string) (Obj.magic index) (Obj.magic currentOwner) (Obj.magic child)
     )) done
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36)
 
-let collectResolvedHeaderType = fun edgeByKey consumerModule index hx_type label -> ignore (try (
+let collectResolvedHeaderType = fun edgeByKey consumerModule index hx_type label -> ignore (try ignore ((
   ignore (if index == Obj.magic (HxRuntime.hx_null) || hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in let tempMaybeTyNominalInfo = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
     ignore (if identity == Obj.magic (HxRuntime.hx_null) then let __assign_96 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -315,7 +315,7 @@ let collectResolvedHeaderType = fun edgeByKey consumerModule index hx_type label
       )) done
     )
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_100 -> Obj.obj __ret_100)
 
 let collectModuleEdges = fun hx_module consumerModule index edgeByKey -> ignore (let _g = ref 0 in let _g1 = Obj.magic (TyModuleEnv.getResolvedDirectives (Obj.magic (TypedModule.getEnv (Obj.magic hx_module) ())) ()) in (
@@ -399,19 +399,19 @@ let collectModuleEdges = fun hx_module consumerModule index edgeByKey -> ignore 
   )) done
 ))
 
-let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_102 = -1 in (
-    tempResult := __assign_102;
-    __assign_102
-  ) else if left > right then let __assign_103 = 1 in (
+let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_103 = -1 in (
     tempResult := __assign_103;
     __assign_103
-  ) else let __assign_104 = 0 in (
+  ) else if left > right then let __assign_104 = 1 in (
     tempResult := __assign_104;
     __assign_104
+  ) else let __assign_105 = 0 in (
+    tempResult := __assign_105;
+    __assign_105
   ));
   !tempResult
-)
+) : int)
 
 let collect = fun modules index -> let contributionsByModule = Obj.magic (HxMap.create_string ()) in let edgeByKey = Obj.magic (HxMap.create_string ()) in (
   ignore (if modules != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in try while !_g < HxArray.length modules do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic modules) (!_g)) in (
@@ -432,19 +432,19 @@ let collect = fun modules index -> let contributionsByModule = Obj.magic (HxMap.
     | HxRuntime.Hx_break -> ()) else ());
   let _g = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in let modulePath = HxIterator.of_array (HxMap.keys_string contributionsByModule) in (
     ignore (while (let __iter_5 = modulePath in fun () -> HxIterator.hasNext (Obj.magic __iter_5)) () do ignore (let modulePath2 = ((let __iter_6 = modulePath in fun () -> HxIterator.next (Obj.magic __iter_6)) () : string) in HxArray.push _g modulePath2) done);
-    let tempArray = Obj.magic _g in (
-      ignore (HxArray.sort tempArray compareText);
+    let tempArray = Obj.magic _g in let modulePaths = Obj.magic tempArray in (
+      ignore (HxArray.sort modulePaths compareText);
       let _g = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in let _g1 = ref 0 in (
-        ignore (while !_g1 < HxArray.length tempArray do ignore (let modulePath = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
+        ignore (while !_g1 < HxArray.length modulePaths do ignore (let modulePath = (HxArray.get (Obj.magic modulePaths) (!_g1) : string) in (
           ignore (let __old_8 = !_g1 in let __new_9 = HxInt.add __old_8 1 in (
             ignore (_g1 := __new_9);
             __new_9
           ));
           HxArray.push _g (CompilerTypedModuleRevision.mergeContributions (modulePath : string) (Obj.magic (HxMap.get_string contributionsByModule modulePath)))
         )) done);
-        let tempArray1 = Obj.magic _g in let edges = Obj.magic (HxArray.create ()) in let edge = HxIterator.of_array (HxMap.values_string edgeByKey) in (
+        let tempArray1 = Obj.magic _g in let revisions = Obj.magic tempArray1 in let edges = Obj.magic (HxArray.create ()) in let edge = HxIterator.of_array (HxMap.values_string edgeByKey) in (
           ignore (while (let __iter_10 = edge in fun () -> HxIterator.hasNext (Obj.magic __iter_10)) () do ignore (let edge2 = Obj.magic ((let __iter_11 = edge in fun () -> HxIterator.next (Obj.magic __iter_11)) ()) in HxArray.push edges edge2) done);
-          CompilerDependencySnapshot.create (Obj.magic tempArray1) (Obj.magic edges)
+          CompilerDependencySnapshot.create (Obj.magic revisions) (Obj.magic edges)
         )
       )
     )

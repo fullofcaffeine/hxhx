@@ -13,45 +13,47 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxModuleDirectiv
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDirectiveProtocol" } : t)
 
-let requireEmptyAlias = fun kind alias -> ignore (if HxString.length alias > 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("Native frontend: " ^ HxString.toStdString kind) ^ " directive must not carry an alias")) ["Dynamic"; "String"]) else ())
+let requireEmptyAlias = fun (kind : string) (alias : string) -> ignore (if HxString.length alias > 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("Native frontend: " ^ HxString.toStdString kind) ^ " directive must not carry an alias")) ["Dynamic"]) else ())
 
 let decode = fun payload -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (if payload == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
+  ignore (if payload == HxString.hx_null_string then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
     tempArray := __assign_1;
     __assign_1
   ) else let __assign_3 = Obj.magic (HxString.split payload "\n") in (
     tempArray := __assign_3;
     __assign_3
   ));
-  ignore (if HxArray.length (!tempArray) <> 3 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Native frontend: malformed module directive") ["Dynamic"; "String"]) else ());
-  let kind = (HxArray.get (Obj.magic (!tempArray)) 0 : string) in let path = (HxArray.get (Obj.magic (!tempArray)) 1 : string) in let alias = (HxArray.get (Obj.magic (!tempArray)) 2 : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDirective.t) in (
-    ignore (match kind with
-      | "import-alias" -> let __assign_4 = Obj.magic (HxModuleDirective.aliasImport (path : string) (alias : string)) in (
-        tempResult := __assign_4;
-        __assign_4
-      )
-      | "import-all" -> (
-        ignore (requireEmptyAlias (kind : string) (alias : string));
-        let __assign_5 = Obj.magic (HxModuleDirective.wildcardImport (path : string)) in (
-          tempResult := __assign_5;
-          __assign_5
+  let fields = Obj.magic (!tempArray) in (
+    ignore (if HxArray.length fields <> 3 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Native frontend: malformed module directive") ["Dynamic"]) else ());
+    let kind = (HxArray.get (Obj.magic fields) 0 : string) in let path = (HxArray.get (Obj.magic fields) 1 : string) in let alias = (HxArray.get (Obj.magic fields) 2 : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDirective.t) in (
+      ignore (match kind with
+        | "import-alias" -> let __assign_4 = Obj.magic (HxModuleDirective.aliasImport (path : string) (alias : string)) in (
+          tempResult := __assign_4;
+          __assign_4
         )
-      )
-      | "import-normal" -> (
-        ignore (requireEmptyAlias (kind : string) (alias : string));
-        let __assign_6 = Obj.magic (HxModuleDirective.normalImport (path : string)) in (
-          tempResult := __assign_6;
-          __assign_6
+        | "import-all" -> (
+          ignore (let __call_arg_0_5 = kind in let __call_arg_1_6 = alias in requireEmptyAlias __call_arg_0_5 __call_arg_1_6);
+          let __assign_7 = Obj.magic (HxModuleDirective.wildcardImport (path : string)) in (
+            tempResult := __assign_7;
+            __assign_7
+          )
         )
-      )
-      | "using" -> (
-        ignore (requireEmptyAlias (kind : string) (alias : string));
-        let __assign_7 = Obj.magic (HxModuleDirective.usingDirective (path : string)) in (
-          tempResult := __assign_7;
-          __assign_7
+        | "import-normal" -> (
+          ignore (let __call_arg_0_8 = kind in let __call_arg_1_9 = alias in requireEmptyAlias __call_arg_0_8 __call_arg_1_9);
+          let __assign_10 = Obj.magic (HxModuleDirective.normalImport (path : string)) in (
+            tempResult := __assign_10;
+            __assign_10
+          )
         )
-      )
-      | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("Native frontend: unknown module directive kind: " ^ HxString.toStdString kind)) ["Dynamic"; "String"]);
-    !tempResult
+        | "using" -> (
+          ignore (let __call_arg_0_11 = kind in let __call_arg_1_12 = alias in requireEmptyAlias __call_arg_0_11 __call_arg_1_12);
+          let __assign_13 = Obj.magic (HxModuleDirective.usingDirective (path : string)) in (
+            tempResult := __assign_13;
+            __assign_13
+          )
+        )
+        | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("Native frontend: unknown module directive kind: " ^ HxString.toStdString kind)) ["Dynamic"]);
+      !tempResult
+    )
   )
 )

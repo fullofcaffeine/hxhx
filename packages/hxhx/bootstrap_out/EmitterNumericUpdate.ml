@@ -80,37 +80,37 @@ let isStandardInt64Provider = fun owner -> let tempResult = ref (false : bool) i
   !tempResult
 )
 
-let operation = fun isInt64 increment -> try let __fallback_result_14 = (
-  ignore (if isInt64 then ignore (let tempResult = ref ("" : string) in (
-    ignore (if increment then let __assign_9 = ("Haxe_Int64.add" : string) in (
+let operation = fun (isInt64 : bool) (increment : bool) -> (try (
+  ignore (if isInt64 then ignore (let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if increment then let __assign_9 = "Haxe_Int64.add" in (
       tempResult := __assign_9;
       __assign_9
-    ) else let __assign_10 = ("Haxe_Int64.sub" : string) in (
+    ) else let __assign_10 = "Haxe_Int64.sub" in (
       tempResult := __assign_10;
       __assign_10
     ));
     raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   )) else ());
-  let tempResult1 = ref ("" : string) in (
-    ignore (if increment then let __assign_11 = ("HxInt.add" : string) in (
+  let tempResult1 = ref (HxString.hx_null_string : string) in (
+    ignore (if increment then let __assign_11 = "HxInt.add" in (
       tempResult1 := __assign_11;
       __assign_11
-    ) else let __assign_12 = ("HxInt.sub" : string) in (
+    ) else let __assign_12 = "HxInt.sub" in (
       tempResult1 := __assign_12;
       __assign_12
     ));
     !tempResult1
   )
-) in Obj.magic __fallback_result_14 with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+) with
+  | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : string) : string)
 
-let one = fun isInt64 -> let tempResult = ref ("" : string) in (
-  ignore (if isInt64 then let __assign_15 = ("(Haxe_Int64.ofInt (1))" : string) in (
+let one = fun (isInt64 : bool) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if isInt64 then let __assign_14 = "(Haxe_Int64.ofInt (1))" in (
+    tempResult := __assign_14;
+    __assign_14
+  ) else let __assign_15 = "1" in (
     tempResult := __assign_15;
     __assign_15
-  ) else let __assign_16 = ("1" : string) in (
-    tempResult := __assign_16;
-    __assign_16
   ));
   !tempResult
-)
+) : string)

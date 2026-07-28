@@ -41,15 +41,15 @@ let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
   )) done
 )))
 
-let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed2) ()) in let packagePath = (StringTools.trim (HxModuleDecl.getPackagePath (Obj.magic declaration) : string) : string) in let fileName = (Haxe_io_Path.withoutExtension (Haxe_io_Path.withoutDirectory (ParsedModule.getFilePath (Obj.magic parsed2) () : string) : string) : string) in let tempString = ref ("" : string) in (
-  ignore (if HxString.length packagePath = 0 then let __assign_24 = (fileName : string) in (
-    tempString := __assign_24;
-    __assign_24
-  ) else let __assign_25 = ((HxString.toStdString packagePath ^ ".") ^ HxString.toStdString fileName : string) in (
-    tempString := __assign_25;
-    __assign_25
+let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed2) ()) in let packagePath = let __call_arg_0_24 = HxModuleDecl.getPackagePath (Obj.magic declaration) in StringTools.trim __call_arg_0_24 in let fileName = let __call_arg_0_25 = let __call_arg_0_26 = ParsedModule.getFilePath (Obj.magic parsed2) () in Haxe_io_Path.withoutDirectory __call_arg_0_26 in Haxe_io_Path.withoutExtension __call_arg_0_25 in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if HxString.length packagePath = 0 then let __assign_27 = fileName in (
+    tempString := __assign_27;
+    __assign_27
+  ) else let __assign_28 = (HxString.toStdString packagePath ^ ".") ^ HxString.toStdString fileName in (
+    tempString := __assign_28;
+    __assign_28
   ));
-  CompilerModuleOrigin.synthetic (!tempString : string)
+  let __call_arg_0_29 = !tempString in CompilerModuleOrigin.synthetic __call_arg_0_29
 )
 
 let create = fun parsed2 env2 typedClasses2 revision2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null); backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t) in (

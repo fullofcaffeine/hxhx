@@ -13,143 +13,147 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.NativeBacke
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.NativeBackendPluginHostAbi" } : t)
 
-let trim = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_1 = "" in (
     tempResult := __assign_1;
     __assign_1
-  ) else let __assign_2 = (StringTools.trim (value : string) : string) in (
+  ) else let __assign_2 = let __call_arg_0_3 = value in StringTools.trim __call_arg_0_3 in (
     tempResult := __assign_2;
     __assign_2
   ));
   !tempResult
 )
 
-let normalizeSourceLabel = fun sourceLabel -> let tempString = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
-    tempString := __assign_3;
-    __assign_3
-  ) else let __assign_4 = (StringTools.trim (sourceLabel : string) : string) in (
+let normalizeSourceLabel = fun sourceLabel -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_4 = "" in (
     tempString := __assign_4;
     __assign_4
+  ) else let __assign_5 = let __call_arg_0_6 = sourceLabel in StringTools.trim __call_arg_0_6 in (
+    tempString := __assign_5;
+    __assign_5
   ));
-  let tempResult = ref ("" : string) in (
-    ignore (if HxString.length (!tempString) = 0 then let __assign_5 = ("<unknown-native-plugin-source>" : string) in (
-      tempResult := __assign_5;
-      __assign_5
-    ) else let __assign_6 = (!tempString : string) in (
-      tempResult := __assign_6;
-      __assign_6
+  let normalized = !tempString in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length normalized = 0 then let __assign_7 = "<unknown-native-plugin-source>" in (
+      tempResult := __assign_7;
+      __assign_7
+    ) else let __assign_8 = normalized in (
+      tempResult := __assign_8;
+      __assign_8
     ));
     !tempResult
   )
 )
 
-let fail = fun sourceLabel message -> ignore (let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
-    tempString := __assign_7;
-    __assign_7
-  ) else let __assign_8 = (StringTools.trim (sourceLabel : string) : string) in (
-    tempString := __assign_8;
-    __assign_8
-  ));
-  ignore (if HxString.length (!tempString) = 0 then let __assign_9 = ("<unknown-native-plugin-source>" : string) in (
-    tempRight := __assign_9;
+let fail = fun (sourceLabel : string) (message : string) -> ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_9 = "" in (
+    tempString := __assign_9;
     __assign_9
-  ) else let __assign_10 = (!tempString : string) in (
-    tempRight := __assign_10;
+  ) else let __assign_10 = let __call_arg_0_11 = sourceLabel in StringTools.trim __call_arg_0_11 in (
+    tempString := __assign_10;
     __assign_10
   ));
-  HxType.hx_throw_typed_rtti (Obj.repr ((("native backend plugin registration (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+  let normalized = !tempString in (
+    ignore (if HxString.length normalized = 0 then let __assign_12 = "<unknown-native-plugin-source>" in (
+      tempRight := __assign_12;
+      __assign_12
+    ) else let __assign_13 = normalized in (
+      tempRight := __assign_13;
+      __assign_13
+    ));
+    HxType.hx_throw_typed_rtti (Obj.repr ((("native backend plugin registration (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+  )
 ))
 
-let trimTrailingCr = fun line -> try let __fallback_result_15 = (
-  ignore (if line == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+let trimTrailingCr = fun line -> try let __fallback_result_18 = (
+  ignore (if line == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let len = HxString.length line in (
     ignore (if len = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-    let tempResult = ref ("" : string) in (
-      ignore (if let __nullable_11 = HxString.charCodeAt line (HxInt.sub len 1) in if __nullable_11 == HxRuntime.hx_null then false else Obj.obj __nullable_11 = 13 then let __assign_12 = (HxString.substr line 0 (HxInt.sub len 1) : string) in (
-        tempResult := __assign_12;
-        __assign_12
-      ) else let __assign_13 = (line : string) in (
-        tempResult := __assign_13;
-        __assign_13
+    let tempResult = ref (HxString.hx_null_string : string) in (
+      ignore (if let __nullable_14 = HxString.charCodeAt line (HxInt.sub len 1) in if __nullable_14 == HxRuntime.hx_null then false else Obj.obj __nullable_14 = 13 then let __assign_15 = (HxString.substr line 0 (HxInt.sub len 1) : string) in (
+        tempResult := __assign_15;
+        __assign_15
+      ) else let __assign_16 = (line : string) in (
+        tempResult := __assign_16;
+        __assign_16
       ));
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_15 with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
+) in Obj.magic __fallback_result_18 with
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let requireToken = fun value field sourceLabel -> let tempString = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
-    tempString := __assign_16;
-    __assign_16
-  ) else let __assign_17 = (StringTools.trim (value : string) : string) in (
-    tempString := __assign_17;
-    __assign_17
-  ));
-  ignore (if HxString.length (!tempString) = 0 then ignore (fail (sourceLabel : string) (HxString.toStdString field ^ " is required" : string)) else ());
-  ignore (if HxString.indexOf (!tempString) "\n" 0 >= 0 || HxString.indexOf (!tempString) "\r" 0 >= 0 || HxString.indexOf (!tempString) "\t" 0 >= 0 then ignore (fail (sourceLabel : string) (HxString.toStdString field ^ " must not contain tab/newline characters" : string)) else ());
-  !tempString
-)
-
-let decodeRow = fun line lineNumber sourceLabel -> let idx = HxString.indexOf line "\t" 0 in (
-  ignore (if idx <= 0 || HxInt.add idx (HxString.length "\t") >= HxString.length line then ignore (fail (sourceLabel : string) (("invalid registration row at line " ^ string_of_int lineNumber) ^ " (expected pluginId<TAB>providerType)" : string)) else ());
-  ignore (if HxString.indexOf line "\t" (HxInt.add idx (HxString.length "\t")) >= 0 then ignore (fail (sourceLabel : string) (("invalid registration row at line " ^ string_of_int lineNumber) ^ " (too many separators)" : string)) else ());
-  let pluginId = (requireToken (HxString.substr line 0 idx : string) ("pluginId" : string) (sourceLabel : string) : string) in let providerType = (requireToken (HxString.substr line (HxInt.add idx (HxString.length "\t")) (-1) : string) ("providerType" : string) (sourceLabel : string) : string) in let __anon_18 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_18 "pluginId" (Obj.repr pluginId));
-    ignore (HxAnon.set __anon_18 "providerType" (Obj.repr providerType));
-    __anon_18
-  )
-)
-
-let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref ("" : string) in (
-  ignore (if snapshot == Obj.magic (HxRuntime.hx_null) then let __assign_19 = ("" : string) in (
+let requireToken = fun (value : string) (field : string) (sourceLabel : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_19 = "" in (
     tempString := __assign_19;
     __assign_19
-  ) else let __assign_20 = (snapshot : string) in (
+  ) else let __assign_20 = let __call_arg_0_21 = value in StringTools.trim __call_arg_0_21 in (
     tempString := __assign_20;
     __assign_20
   ));
-  let lines = Obj.magic (HxString.split (!tempString) "\n") in let rows = Obj.magic (HxArray.create ()) in let sawVersion = ref false in let lineNumber = ref 0 in let _g = ref 0 in (
+  let token = !tempString in (
+    ignore (if HxString.length token = 0 then ignore (let __call_arg_0_22 = sourceLabel in let __call_arg_1_23 = HxString.toStdString field ^ " is required" in fail __call_arg_0_22 __call_arg_1_23) else ());
+    ignore (if HxString.indexOf token "\n" 0 >= 0 || HxString.indexOf token "\r" 0 >= 0 || HxString.indexOf token "\t" 0 >= 0 then ignore (let __call_arg_0_24 = sourceLabel in let __call_arg_1_25 = HxString.toStdString field ^ " must not contain tab/newline characters" in fail __call_arg_0_24 __call_arg_1_25) else ());
+    token
+  )
+) : string)
+
+let decodeRow = fun line lineNumber sourceLabel -> let idx = HxString.indexOf line "\t" 0 in (
+  ignore (if idx <= 0 || HxInt.add idx (HxString.length "\t") >= HxString.length line then ignore (let __call_arg_0_26 = sourceLabel in let __call_arg_1_27 = ("invalid registration row at line " ^ string_of_int lineNumber) ^ " (expected pluginId<TAB>providerType)" in fail __call_arg_0_26 __call_arg_1_27) else ());
+  ignore (if HxString.indexOf line "\t" (HxInt.add idx (HxString.length "\t")) >= 0 then ignore (let __call_arg_0_28 = sourceLabel in let __call_arg_1_29 = ("invalid registration row at line " ^ string_of_int lineNumber) ^ " (too many separators)" in fail __call_arg_0_28 __call_arg_1_29) else ());
+  let pluginId = let __call_arg_0_30 = HxString.substr line 0 idx in let __call_arg_1_31 = "pluginId" in let __call_arg_2_32 = sourceLabel in requireToken __call_arg_0_30 __call_arg_1_31 __call_arg_2_32 in let providerType = let __call_arg_0_33 = HxString.substr line (HxInt.add idx (HxString.length "\t")) (-1) in let __call_arg_1_34 = "providerType" in let __call_arg_2_35 = sourceLabel in requireToken __call_arg_0_33 __call_arg_1_34 __call_arg_2_35 in let __anon_36 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_36 "pluginId" (Obj.repr pluginId));
+    ignore (HxAnon.set __anon_36 "providerType" (Obj.repr providerType));
+    __anon_36
+  )
+)
+
+let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if snapshot == HxString.hx_null_string then let __assign_37 = ("" : string) in (
+    tempString := __assign_37;
+    __assign_37
+  ) else let __assign_38 = (snapshot : string) in (
+    tempString := __assign_38;
+    __assign_38
+  ));
+  let raw = (!tempString : string) in let lines = Obj.magic (HxString.split raw "\n") in let rows = Obj.magic (HxArray.create ()) in let sawVersion = ref false in let lineNumber = ref 0 in let _g = ref 0 in (
     ignore (try while !_g < HxArray.length lines do try ignore (let line = (HxArray.get (Obj.magic lines) (!_g) : string) in (
-      ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
-        ignore (_g := __new_22);
-        __new_22
+      ignore (let __old_39 = !_g in let __new_40 = HxInt.add __old_39 1 in (
+        ignore (_g := __new_40);
+        __new_40
       ));
-      ignore (let __old_23 = !lineNumber in let __new_24 = HxInt.add __old_23 1 in (
-        ignore (lineNumber := __new_24);
-        __old_23
+      ignore (let __old_41 = !lineNumber in let __new_42 = HxInt.add __old_41 1 in (
+        ignore (lineNumber := __new_42);
+        __old_41
       ));
-      let tempString1 = ref ("" : string) in let tempString2 = ref ("" : string) in (
-        ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
-          tempString2 := __assign_25;
-          __assign_25
-        ) else let len = HxString.length line in if len = 0 then let __assign_26 = ("" : string) in (
-          tempString2 := __assign_26;
-          __assign_26
-        ) else if let __nullable_27 = HxString.charCodeAt line (HxInt.sub len 1) in if __nullable_27 == HxRuntime.hx_null then false else Obj.obj __nullable_27 = 13 then let __assign_28 = (HxString.substr line 0 (HxInt.sub len 1) : string) in (
-          tempString2 := __assign_28;
-          __assign_28
-        ) else let __assign_29 = (line : string) in (
-          tempString2 := __assign_29;
-          __assign_29
+      let tempString1 = ref (HxString.hx_null_string : string) in let tempString2 = ref (HxString.hx_null_string : string) in (
+        ignore (if line == HxString.hx_null_string then let __assign_43 = ("" : string) in (
+          tempString2 := __assign_43;
+          __assign_43
+        ) else let len = HxString.length line in if len = 0 then let __assign_44 = ("" : string) in (
+          tempString2 := __assign_44;
+          __assign_44
+        ) else if let __nullable_45 = HxString.charCodeAt line (HxInt.sub len 1) in if __nullable_45 == HxRuntime.hx_null then false else Obj.obj __nullable_45 = 13 then let __assign_46 = (HxString.substr line 0 (HxInt.sub len 1) : string) in (
+          tempString2 := __assign_46;
+          __assign_46
+        ) else let __assign_47 = (line : string) in (
+          tempString2 := __assign_47;
+          __assign_47
         ));
         let value = (!tempString2 : string) in (
-          ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
-            tempString1 := __assign_30;
-            __assign_30
-          ) else let __assign_31 = (StringTools.trim (value : string) : string) in (
-            tempString1 := __assign_31;
-            __assign_31
+          ignore (if value == HxString.hx_null_string then let __assign_48 = "" in (
+            tempString1 := __assign_48;
+            __assign_48
+          ) else let __assign_49 = let __call_arg_0_50 = value in StringTools.trim __call_arg_0_50 in (
+            tempString1 := __assign_49;
+            __assign_49
           ));
-          let normalized = (!tempString1 : string) in (
+          let normalized = !tempString1 in (
             ignore (if HxString.length normalized = 0 then raise (HxRuntime.Hx_continue) else ());
             ignore (if not (!sawVersion) then ignore ((
-              ignore (if not (HxString.equals normalized "v1") then ignore (fail (sourceLabel : string) (((("invalid snapshot version `" ^ HxString.toStdString normalized) ^ "` (expected `") ^ "v1") ^ "`)" : string)) else ());
-              ignore (let __assign_32 = true in (
-                sawVersion := __assign_32;
-                __assign_32
+              ignore (if not (HxString.equals normalized "v1") then ignore (let __call_arg_0_51 = sourceLabel in let __call_arg_1_52 = ((("invalid snapshot version `" ^ HxString.toStdString normalized) ^ "` (expected `") ^ "v1") ^ "`)" in fail __call_arg_0_51 __call_arg_1_52) else ());
+              ignore (let __assign_53 = true in (
+                sawVersion := __assign_53;
+                __assign_53
               ));
               raise (HxRuntime.Hx_continue)
             )) else ());
@@ -160,23 +164,23 @@ let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref ("" : stri
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    ignore (if not (!sawVersion) then ignore (fail (sourceLabel : string) (("snapshot is missing version header `" ^ "v1") ^ "`" : string)) else ());
+    ignore (if not (!sawVersion) then ignore (let __call_arg_0_54 = sourceLabel in let __call_arg_1_55 = ("snapshot is missing version header `" ^ "v1") ^ "`" in fail __call_arg_0_54 __call_arg_1_55) else ());
     rows
   )
 )
 
-let providerTypesForPluginInternal = fun snapshot pluginId sourceLabel allowEmpty -> let expectedPluginId = (requireToken (pluginId : string) ("pluginId" : string) (sourceLabel : string) : string) in let rows = Obj.magic (decodeSnapshot (snapshot : string) (sourceLabel : string)) in let out = Obj.magic (HxArray.create ()) in let seenProviderTypes = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
+let providerTypesForPluginInternal = fun snapshot pluginId sourceLabel allowEmpty -> let expectedPluginId = let __call_arg_0_56 = pluginId in let __call_arg_1_57 = "pluginId" in let __call_arg_2_58 = sourceLabel in requireToken __call_arg_0_56 __call_arg_1_57 __call_arg_2_58 in let rows = Obj.magic (decodeSnapshot (snapshot : string) (sourceLabel : string)) in let out = Obj.magic (HxArray.create ()) in let seenProviderTypes = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length rows do ignore (let row = HxArray.get (Obj.magic rows) (!_g) in (
-    ignore (let __old_33 = !_g in let __new_34 = HxInt.add __old_33 1 in (
-      ignore (_g := __new_34);
-      __new_34
+    ignore (let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
+      ignore (_g := __new_60);
+      __new_60
     ));
-    ignore (if not (HxString.equals (Obj.obj (HxAnon.get row "pluginId")) expectedPluginId) then ignore (fail (sourceLabel : string) (((((("registration pluginId mismatch: expected `" ^ HxString.toStdString expectedPluginId) ^ "`, got `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "pluginId"))) ^ "` (providerType `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "`)" : string)) else ());
-    ignore (if HxMap.exists_string seenProviderTypes (Obj.obj (HxAnon.get row "providerType")) then ignore (fail (sourceLabel : string) (((("duplicate providerType registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" : string)) else ());
+    ignore (if not (HxString.equals (Obj.obj (HxAnon.get row "pluginId")) expectedPluginId) then ignore (let __call_arg_0_61 = sourceLabel in let __call_arg_1_62 = ((((("registration pluginId mismatch: expected `" ^ HxString.toStdString expectedPluginId) ^ "`, got `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "pluginId"))) ^ "` (providerType `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "`)" in fail __call_arg_0_61 __call_arg_1_62) else ());
+    ignore (if HxMap.exists_string seenProviderTypes (Obj.obj (HxAnon.get row "providerType")) then ignore (let __call_arg_0_63 = sourceLabel in let __call_arg_1_64 = ((("duplicate providerType registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" in fail __call_arg_0_63 __call_arg_1_64) else ());
     ignore (HxMap.set_string seenProviderTypes (Obj.obj (HxAnon.get row "providerType")) true);
     HxArray.push out (Obj.obj (HxAnon.get row "providerType"))
   )) done);
-  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (fail (sourceLabel : string) (("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any provider types" : string)) else ());
+  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (let __call_arg_0_65 = sourceLabel in let __call_arg_1_66 = ("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any provider types" in fail __call_arg_0_65 __call_arg_1_66) else ());
   out
 )
 
@@ -188,18 +192,18 @@ let captureProviderTypesForPlugin = fun pluginId sourceLabel -> let snapshot = (
 
 let beginCapture = fun () -> ignore (HxHxBackendPluginHost.clear ())
 
-let assertNoDescriptorConflicts = fun pluginId specs sourceLabel -> ignore (let normalizedPluginId = (requireToken (pluginId : string) ("pluginId" : string) (sourceLabel : string) : string) in (
-  ignore (if specs == Obj.magic (HxRuntime.hx_null) || HxArray.length specs = 0 then ignore (fail (sourceLabel : string) (("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` did not provide backend registration specs" : string)) else ());
+let assertNoDescriptorConflicts = fun pluginId specs sourceLabel -> ignore (let normalizedPluginId = let __call_arg_0_67 = pluginId in let __call_arg_1_68 = "pluginId" in let __call_arg_2_69 = sourceLabel in requireToken __call_arg_0_67 __call_arg_1_68 __call_arg_2_69 in (
+  ignore (if specs == Obj.magic (HxRuntime.hx_null) || HxArray.length specs = 0 then ignore (let __call_arg_0_70 = sourceLabel in let __call_arg_1_71 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` did not provide backend registration specs" in fail __call_arg_0_70 __call_arg_1_71) else ());
   let seenImplIds = Obj.magic (HxMap.create_string ()) in let targetToImpl = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in while !_g < HxArray.length specs do ignore (let spec = HxArray.get (Obj.magic specs) (!_g) in (
-    ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
-      ignore (_g := __new_36);
-      __new_36
+    ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
+      ignore (_g := __new_73);
+      __new_73
     ));
-    ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (fail (sourceLabel : string) (("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` produced invalid backend registration spec (descriptor/create required)" : string)) else ());
-    let descriptor = Obj.obj (HxAnon.get spec "descriptor") in let implId = (requireToken (Obj.obj (HxAnon.get descriptor "implId") : string) ("descriptor.implId" : string) (sourceLabel : string) : string) in let targetId = (requireToken (Obj.obj (HxAnon.get descriptor "id") : string) ("descriptor.id" : string) (sourceLabel : string) : string) in (
-      ignore (if HxMap.exists_string seenImplIds implId then ignore (fail (sourceLabel : string) (((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate implId `") ^ HxString.toStdString implId) ^ "`" : string)) else ());
+    ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_74 = sourceLabel in let __call_arg_1_75 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` produced invalid backend registration spec (descriptor/create required)" in fail __call_arg_0_74 __call_arg_1_75) else ());
+    let descriptor = Obj.obj (HxAnon.get spec "descriptor") in let implId = let __call_arg_0_76 = Obj.obj (HxAnon.get descriptor "implId") in let __call_arg_1_77 = "descriptor.implId" in let __call_arg_2_78 = sourceLabel in requireToken __call_arg_0_76 __call_arg_1_77 __call_arg_2_78 in let targetId = let __call_arg_0_79 = Obj.obj (HxAnon.get descriptor "id") in let __call_arg_1_80 = "descriptor.id" in let __call_arg_2_81 = sourceLabel in requireToken __call_arg_0_79 __call_arg_1_80 __call_arg_2_81 in (
+      ignore (if HxMap.exists_string seenImplIds implId then ignore (let __call_arg_0_82 = sourceLabel in let __call_arg_1_83 = ((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate implId `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_82 __call_arg_1_83) else ());
       ignore (HxMap.set_string seenImplIds implId true);
-      let existingTargetImpl = (HxMap.get_string targetToImpl targetId : string) in if existingTargetImpl == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string targetToImpl targetId implId) else ignore (if not (HxString.equals existingTargetImpl implId) then ignore (fail (sourceLabel : string) (((((((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate target id `") ^ HxString.toStdString targetId) ^ "` mapped to implIds `") ^ HxString.toStdString existingTargetImpl) ^ "` and `") ^ HxString.toStdString implId) ^ "`" : string)) else ())
+      let existingTargetImpl = (HxMap.get_string targetToImpl targetId : string) in if existingTargetImpl == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string targetToImpl targetId implId) else ignore (if not (HxString.equals existingTargetImpl implId) then ignore (let __call_arg_0_84 = sourceLabel in let __call_arg_1_85 = ((((((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate target id `") ^ HxString.toStdString targetId) ^ "` mapped to implIds `") ^ HxString.toStdString existingTargetImpl) ^ "` and `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_84 __call_arg_1_85) else ())
     )
   )) done
 ))

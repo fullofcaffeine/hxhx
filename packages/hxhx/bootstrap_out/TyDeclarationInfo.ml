@@ -48,13 +48,13 @@ let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 positi
           (Obj.magic self : t).position <- __assign_11;
           __assign_11
         ));
-        ignore (let __assign_12 = isInline2 in (
-          (Obj.magic self : t).isInline <- __assign_12;
-          __assign_12
+        ignore (let __place_receiver_12 = self in let __place_rhs_13 = isInline2 in (
+          (__place_receiver_12 : t).isInline <- __place_rhs_13;
+          __place_rhs_13
         ));
-        let __assign_13 = isPublic2 in (
-          (Obj.magic self : t).isPublic <- __assign_13;
-          __assign_13
+        let __place_receiver_14 = self in let __place_rhs_15 = isPublic2 in (
+          (__place_receiver_14 : t).isPublic <- __place_rhs_15;
+          __place_rhs_15
         )
       )
     )
@@ -82,32 +82,32 @@ let getIsInline = fun self () -> (Obj.magic self : t).isInline
 
 let getIsPublic = fun self () -> (Obj.magic self : t).isPublic
 
-let getNoImportGlobal = fun self () -> try let __fallback_result_20 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
+let getNoImportGlobal = fun self () -> try let __fallback_result_27 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
-      ignore (_g := __new_15);
-      __new_15
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
     ));
-    let tempString = ref ("" : string) in (
-      ignore (if entry == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
-        tempString := __assign_16;
-        __assign_16
-      ) else let __assign_17 = (StringTools.trim (entry : string) : string) in (
-        tempString := __assign_17;
-        __assign_17
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if entry == HxString.hx_null_string then let __assign_18 = "" in (
+        tempString := __assign_18;
+        __assign_18
+      ) else let __assign_19 = let __call_arg_0_20 = entry in StringTools.trim __call_arg_0_20 in (
+        tempString := __assign_19;
+        __assign_19
       ));
       let clean = ref (!tempString : string) in (
-        ignore (while StringTools.startsWith (!clean : string) ("@" : string) || StringTools.startsWith (!clean : string) (":" : string) do ignore (let __assign_18 = (HxString.substr (!clean) 1 (-1) : string) in (
-          clean := __assign_18;
-          __assign_18
+        ignore (while (let __call_arg_0_21 = !clean in let __call_arg_1_22 = "@" in StringTools.startsWith __call_arg_0_21 __call_arg_1_22) || (let __call_arg_0_23 = !clean in let __call_arg_1_24 = ":" in StringTools.startsWith __call_arg_0_23 __call_arg_1_24) do ignore (let __assign_25 = (HxString.substr (!clean) 1 (-1) : string) in (
+          clean := __assign_25;
+          __assign_25
         )) done);
         if HxString.equals (!clean) "noImportGlobal" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
       )
     )
   )) done);
   false
-) in Obj.magic __fallback_result_20 with
-  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
+) in Obj.magic __fallback_result_27 with
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26
 
 let getHasBody = fun self () -> HxFunctionDecl.getHasBody (Obj.magic ((Obj.magic self : t).sourceDeclaration))
 

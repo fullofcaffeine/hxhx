@@ -13,28 +13,28 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerProtocol" } : t)
 
-let requestLengthProblem = fun length -> try let __fallback_result_2 = (
-  ignore (if length < 0 then raise (HxRuntime.Hx_return (Obj.repr ("negative request frame length " ^ string_of_int length : string))) else ());
-  ignore (if length > 67108864 then raise (HxRuntime.Hx_return (Obj.repr ((("request frame is " ^ string_of_int length) ^ " bytes; maximum is ") ^ string_of_int 67108864 : string))) else ());
+let requestLengthProblem = fun (length : int) -> (try (
+  ignore (if length < 0 then raise (HxRuntime.Hx_return (Obj.repr ("negative request frame length " ^ string_of_int length))) else ());
+  ignore (if length > 67108864 then raise (HxRuntime.Hx_return (Obj.repr ((("request frame is " ^ string_of_int length) ^ " bytes; maximum is ") ^ string_of_int 67108864))) else ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_2 with
-  | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
+) with
+  | HxRuntime.Hx_return __ret_1 -> (Obj.obj __ret_1 : string) : string)
 
-let parseRequestTimeoutMs = fun value -> try let __fallback_result_8 = (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+let parseRequestTimeoutMs = fun (value : string) -> (try Obj.repr ((
+  ignore (if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
   let result = ref 0 in let _g = ref 0 in let _g1 = HxString.length value in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-      ignore (_g := __new_4);
-      __old_3
-    ) in let digit = HxInt.sub (let __nullable_int_5 = HxString.charCodeAt value index in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5) 48 in (
-      ignore (if digit < 0 || digit > 9 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-      ignore (if !result > HxInt.sub 86400000 digit / 10 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-      let __assign_6 = HxInt.add (HxInt.mul (!result) 10) digit in (
-        result := __assign_6;
-        __assign_6
+    ignore (while !_g < _g1 do ignore (let index = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
+      ignore (_g := __new_3);
+      __old_2
+    ) in let digit = HxInt.sub (let __nullable_int_4 = HxString.charCodeAt value index in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4) 48 in (
+      ignore (if digit < 0 || digit > 9 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      ignore (if !result > HxInt.sub 86400000 digit / 10 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      let __assign_5 = HxInt.add (HxInt.mul (!result) 10) digit in (
+        result := __assign_5;
+        __assign_5
       )
     )) done);
     !result
   )
-) in Obj.magic __fallback_result_8 with
-  | HxRuntime.Hx_return __ret_7 -> Obj.magic __ret_7
+)) with
+  | HxRuntime.Hx_return __ret_6 -> (__ret_6 : Obj.t) : Obj.t)

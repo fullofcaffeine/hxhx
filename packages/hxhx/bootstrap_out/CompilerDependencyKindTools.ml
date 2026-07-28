@@ -13,41 +13,41 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependen
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyKindTools" } : t)
 
-let name = fun kind -> let tempResult = ref ("" : string) in (
+let name = fun kind -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match kind with
-    | CompilerDependencyKind.ModuleResolution -> let __assign_1 = ("module-resolution" : string) in (
+    | CompilerDependencyKind.ModuleResolution -> let __assign_1 = "module-resolution" in (
       tempResult := __assign_1;
       __assign_1
     )
-    | CompilerDependencyKind.PublicInterface -> let __assign_2 = ("public-interface" : string) in (
+    | CompilerDependencyKind.PublicInterface -> let __assign_2 = "public-interface" in (
       tempResult := __assign_2;
       __assign_2
     )
-    | CompilerDependencyKind.InlineImplementation -> let __assign_3 = ("inline-implementation" : string) in (
+    | CompilerDependencyKind.InlineImplementation -> let __assign_3 = "inline-implementation" in (
       tempResult := __assign_3;
       __assign_3
     )
-    | CompilerDependencyKind.ConstantValue -> let __assign_4 = ("constant-value" : string) in (
+    | CompilerDependencyKind.ConstantValue -> let __assign_4 = "constant-value" in (
       tempResult := __assign_4;
       __assign_4
     )
-    | CompilerDependencyKind.ConditionalCompilation -> let __assign_5 = ("conditional-compilation" : string) in (
+    | CompilerDependencyKind.ConditionalCompilation -> let __assign_5 = "conditional-compilation" in (
       tempResult := __assign_5;
       __assign_5
     )
-    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_6 = ("generated-declaration" : string) in (
+    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_6 = "generated-declaration" in (
       tempResult := __assign_6;
       __assign_6
     )
-    | CompilerDependencyKind.StaticInitialization -> let __assign_7 = ("static-initialization" : string) in (
+    | CompilerDependencyKind.StaticInitialization -> let __assign_7 = "static-initialization" in (
       tempResult := __assign_7;
       __assign_7
     )
-    | CompilerDependencyKind.FeatureSelection -> let __assign_8 = ("feature-selection" : string) in (
+    | CompilerDependencyKind.FeatureSelection -> let __assign_8 = "feature-selection" in (
       tempResult := __assign_8;
       __assign_8
     )
-    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_9 = ("target-neutral-program" : string) in (
+    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_9 = "target-neutral-program" in (
       tempResult := __assign_9;
       __assign_9
     ));

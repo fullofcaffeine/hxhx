@@ -24,7 +24,7 @@ let addInt = fun state value -> ignore ((
   )
 ))
 
-let addString = fun state value -> ignore (try (
+let addString = fun state value -> ignore (try ignore ((
   ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (addInt (Obj.magic state) (-1));
     raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -34,10 +34,10 @@ let addString = fun state value -> ignore (try (
     ignore (_g := __new_9);
     __old_8
   ) in addInt (Obj.magic state) (let __nullable_int_10 = HxString.charCodeAt value index in if __nullable_int_10 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_10)) done
-) with
+)) with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11)
 
-let addPosition = fun state position -> ignore (try (
+let addPosition = fun state position -> ignore (try ignore ((
   ignore (if position == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (addInt (Obj.magic state) (-1));
     raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -45,7 +45,7 @@ let addPosition = fun state position -> ignore (try (
   ignore (addInt (Obj.magic state) (HxPos.getIndex (Obj.magic position) ()));
   ignore (addInt (Obj.magic state) (HxPos.getLine (Obj.magic position) ()));
   addInt (Obj.magic state) (HxPos.getColumn (Obj.magic position) ())
-) with
+)) with
   | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12)
 
 let addStrings = fun state values -> ignore (let tempNumber = ref (0 : int) in (
@@ -647,20 +647,20 @@ and addStatement = fun state statement -> ignore (match statement with
     addPosition (Obj.magic state) (Obj.magic position)
   )))
 
-let forStatements = fun statements -> let state = Obj.magic (let __arr_69 = HxArray.create () in (
+let forStatements = fun statements -> let state = let __arr_69 = HxArray.create () in (
   ignore (HxArray.push __arr_69 17);
   ignore (HxArray.push __arr_69 0);
   __arr_69
-)) in (
+) in (
   ignore (addStatements (Obj.magic state) (Obj.magic statements));
-  (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)
+  (string_of_int (HxArray.get state 1) ^ ":") ^ string_of_int (HxArray.get state 0)
 )
 
-let forExpression = fun expression -> let state = Obj.magic (let __arr_70 = HxArray.create () in (
+let forExpression = fun expression -> let state = let __arr_70 = HxArray.create () in (
   ignore (HxArray.push __arr_70 17);
   ignore (HxArray.push __arr_70 0);
   __arr_70
-)) in (
+) in (
   ignore (if expression == Obj.magic (HxRuntime.hx_null) then ignore (addInt (Obj.magic state) (-1)) else ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expression))));
-  (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)
+  (string_of_int (HxArray.get state 1) ^ ":") ^ string_of_int (HxArray.get state 0)
 )

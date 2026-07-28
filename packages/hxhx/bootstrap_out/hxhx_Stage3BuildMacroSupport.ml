@@ -19,7 +19,7 @@ let parseGeneratedMembers = fun members -> try let __fallback_result_6 = (
     ignore (HxAnon.set __anon_1 "fields" (Obj.repr (let __arr_3 = HxArray.create () in __arr_3)));
     __anon_1
   )))) else ());
-  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = (("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" : string) in let parser = Obj.magic (HxParser.create (fake : string) (Obj.magic (HxRuntime.hx_null))) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
+  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = ("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" in let parser = Obj.magic (HxParser.create (fake : string) (Obj.magic (HxRuntime.hx_null))) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
     ignore (HxAnon.set __anon_4 "functions" (Obj.repr (HxClassDecl.getFunctions (Obj.magic cls))));
     ignore (HxAnon.set __anon_4 "fields" (Obj.repr (HxClassDecl.getFields (Obj.magic cls))));
     __anon_4
@@ -28,7 +28,7 @@ let parseGeneratedMembers = fun members -> try let __fallback_result_6 = (
   | HxRuntime.Hx_return __ret_5 -> Obj.magic __ret_5
 
 let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_26 = (
-  ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "build-macro generated members require a resolved module") ["Dynamic"; "String"]) else ());
+  ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "build-macro generated members require a resolved module") ["Dynamic"]) else ());
   ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hx_module))) else ());
   let generated = parseGeneratedMembers (Obj.magic members) in let parsed = Obj.magic (ResolvedModule.getParsed (Obj.magic hx_module)) in let oldDeclaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let oldClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic oldDeclaration)) in let generatedFunctionNames = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "functions")) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -123,14 +123,14 @@ let buildFieldsPayloadForParsed = fun pm -> Hxhx_macro_BuildFieldSnapshotPayload
 let collectBuildMacroExprs = fun source modulePath -> Hxhx_BuildMetadataCollector.collectBuildMacroExprs (source : string) (modulePath : string)
 
 let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> try let __fallback_result_30 = (
-  ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let hooks = Obj.magic (Hxhx_macro_MacroState.listOnTypeNotFoundHookIds ()) in (
+  ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == HxString.hx_null_string || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let hooks = Hxhx_macro_MacroState.listOnTypeNotFoundHookIds () in (
     ignore (if HxArray.length hooks = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let _g = ref 0 in let _g1 = HxArray.length hooks in (
       ignore (while !_g < _g1 do ignore (let i = let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
         ignore (_g := __new_28);
         __old_27
-      ) in if Obj.obj (HxAnon.get macroSession "runTypeNotFoundHook") (HxArray.get (Obj.magic hooks) i) (typePath : string) then ignore ((
+      ) in if Obj.obj (HxAnon.get macroSession "runTypeNotFoundHook") (HxArray.get hooks i) (typePath : string) then ignore ((
         ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath : string));
         raise (HxRuntime.Hx_return (Obj.repr true))
       )) else ()) done);

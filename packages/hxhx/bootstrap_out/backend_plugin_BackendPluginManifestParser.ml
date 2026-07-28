@@ -13,257 +13,261 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.plugin.B
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.plugin.BackendPluginManifestParser" } : t)
 
-let normalizeSourceLabel = fun sourceLabel -> let tempString = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let normalizeSourceLabel = fun sourceLabel -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_1 = "" in (
     tempString := __assign_1;
     __assign_1
-  ) else let __assign_2 = (StringTools.trim (sourceLabel : string) : string) in (
+  ) else let __assign_2 = let __call_arg_0_3 = sourceLabel in StringTools.trim __call_arg_0_3 in (
     tempString := __assign_2;
     __assign_2
   ));
-  let tempResult = ref ("" : string) in (
-    ignore (if HxString.length (!tempString) = 0 then let __assign_3 = ("<unknown-source>" : string) in (
-      tempResult := __assign_3;
-      __assign_3
-    ) else let __assign_4 = (!tempString : string) in (
+  let s = !tempString in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length s = 0 then let __assign_4 = "<unknown-source>" in (
       tempResult := __assign_4;
       __assign_4
+    ) else let __assign_5 = s in (
+      tempResult := __assign_5;
+      __assign_5
     ));
     !tempResult
   )
 )
 
-let fail = fun sourceLabel message -> let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
-    tempString := __assign_5;
-    __assign_5
-  ) else let __assign_6 = (StringTools.trim (sourceLabel : string) : string) in (
+let fail = fun sourceLabel message -> let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_6 = "" in (
     tempString := __assign_6;
     __assign_6
-  ));
-  ignore (if HxString.length (!tempString) = 0 then let __assign_7 = ("<unknown-source>" : string) in (
-    tempRight := __assign_7;
+  ) else let __assign_7 = let __call_arg_0_8 = sourceLabel in StringTools.trim __call_arg_0_8 in (
+    tempString := __assign_7;
     __assign_7
-  ) else let __assign_8 = (!tempString : string) in (
-    tempRight := __assign_8;
-    __assign_8
   ));
-  HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+  let s = !tempString in (
+    ignore (if HxString.length s = 0 then let __assign_9 = "<unknown-source>" in (
+      tempRight := __assign_9;
+      __assign_9
+    ) else let __assign_10 = s in (
+      tempRight := __assign_10;
+      __assign_10
+    ));
+    HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+  )
 )
 
 let requireObject = fun value fieldPath sourceLabel -> (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
-      tempString := __assign_9;
-      __assign_9
-    ) else let __assign_10 = (StringTools.trim (sourceLabel : string) : string) in (
-      tempString := __assign_10;
-      __assign_10
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_11 = "" in (
+      tempString := __assign_11;
+      __assign_11
+    ) else let __assign_12 = let __call_arg_0_13 = sourceLabel in StringTools.trim __call_arg_0_13 in (
+      tempString := __assign_12;
+      __assign_12
     ));
-    let s = (!tempString : string) in (
-      ignore (if HxString.length s = 0 then let __assign_11 = ("<unknown-source>" : string) in (
-        tempRight := __assign_11;
-        __assign_11
-      ) else let __assign_12 = (s : string) in (
-        tempRight := __assign_12;
-        __assign_12
+    let s = !tempString in (
+      ignore (if HxString.length s = 0 then let __assign_14 = "<unknown-source>" in (
+        tempRight := __assign_14;
+        __assign_14
+      ) else let __assign_15 = s in (
+        tempRight := __assign_15;
+        __assign_15
       ));
-      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "missing required object `") ^ HxString.toStdString fieldPath) ^ "`")) ["Dynamic"; "String"]
+      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "missing required object `") ^ HxString.toStdString fieldPath) ^ "`")) ["Dynamic"]
     )
   )) else ());
-  ignore (if HxType.isOfType value (HxType.class_ "String") || (let __isBool_13 = value in if __isBool_13 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_13) || (let __isInt_14 = value in if __isInt_14 == HxRuntime.hx_null then false else Obj.is_int __isInt_14 && not (HxRuntime.is_boxed_bool __isInt_14)) || (let __isFloat_15 = value in if __isFloat_15 == HxRuntime.hx_null then false else Obj.is_int __isFloat_15 && not (HxRuntime.is_boxed_bool __isFloat_15) || Obj.tag __isFloat_15 = Obj.double_tag) || HxType.isOfType value (HxType.class_ "Array") || HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let tempRight1 = ref ("" : string) in let tempString1 = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
-      tempString1 := __assign_16;
-      __assign_16
-    ) else let __assign_17 = (StringTools.trim (sourceLabel : string) : string) in (
-      tempString1 := __assign_17;
-      __assign_17
+  ignore (if HxType.isOfType value (HxType.class_ "String") || (let __isBool_16 = value in if __isBool_16 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_16) || (let __isInt_17 = value in if __isInt_17 == HxRuntime.hx_null then false else Obj.is_int __isInt_17 && not (HxRuntime.is_boxed_bool __isInt_17)) || (let __isFloat_18 = value in if __isFloat_18 == HxRuntime.hx_null then false else Obj.is_int __isFloat_18 && not (HxRuntime.is_boxed_bool __isFloat_18) || Obj.tag __isFloat_18 = Obj.double_tag) || HxType.isOfType value (HxType.class_ "Array") || HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let tempRight1 = ref (HxString.hx_null_string : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_19 = "" in (
+      tempString1 := __assign_19;
+      __assign_19
+    ) else let __assign_20 = let __call_arg_0_21 = sourceLabel in StringTools.trim __call_arg_0_21 in (
+      tempString1 := __assign_20;
+      __assign_20
     ));
-    let s = (!tempString1 : string) in (
-      ignore (if HxString.length s = 0 then let __assign_18 = ("<unknown-source>" : string) in (
-        tempRight1 := __assign_18;
-        __assign_18
-      ) else let __assign_19 = (s : string) in (
-        tempRight1 := __assign_19;
-        __assign_19
+    let s = !tempString1 in (
+      ignore (if HxString.length s = 0 then let __assign_22 = "<unknown-source>" in (
+        tempRight1 := __assign_22;
+        __assign_22
+      ) else let __assign_23 = s in (
+        tempRight1 := __assign_23;
+        __assign_23
       ));
-      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an object")) ["Dynamic"; "String"]
+      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an object")) ["Dynamic"]
     )
   )) else ());
   value
 )
 
 let requireField = fun hx_object fieldName fieldPath sourceLabel -> (
-  ignore (if not (HxAnon.has hx_object (HxString.toStdString fieldName)) then ignore (let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
-      tempString := __assign_20;
-      __assign_20
-    ) else let __assign_21 = (StringTools.trim (sourceLabel : string) : string) in (
-      tempString := __assign_21;
-      __assign_21
+  ignore (if not (HxAnon.has hx_object (HxString.toStdString fieldName)) then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_24 = "" in (
+      tempString := __assign_24;
+      __assign_24
+    ) else let __assign_25 = let __call_arg_0_26 = sourceLabel in StringTools.trim __call_arg_0_26 in (
+      tempString := __assign_25;
+      __assign_25
     ));
-    let s = (!tempString : string) in (
-      ignore (if HxString.length s = 0 then let __assign_22 = ("<unknown-source>" : string) in (
-        tempRight := __assign_22;
-        __assign_22
-      ) else let __assign_23 = (s : string) in (
-        tempRight := __assign_23;
-        __assign_23
+    let s = !tempString in (
+      ignore (if HxString.length s = 0 then let __assign_27 = "<unknown-source>" in (
+        tempRight := __assign_27;
+        __assign_27
+      ) else let __assign_28 = s in (
+        tempRight := __assign_28;
+        __assign_28
       ));
-      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "missing required field `") ^ HxString.toStdString fieldPath) ^ "`")) ["Dynamic"; "String"]
+      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "missing required field `") ^ HxString.toStdString fieldPath) ^ "`")) ["Dynamic"]
     )
   )) else ());
   Obj.obj (HxAnon.get hx_object (HxString.toStdString fieldName))
 )
 
 let requireString = fun value fieldPath sourceLabel -> (
-  ignore (if not (HxType.isOfType value (HxType.class_ "String")) then ignore (let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_24 = ("" : string) in (
-      tempString := __assign_24;
-      __assign_24
-    ) else let __assign_25 = (StringTools.trim (sourceLabel : string) : string) in (
-      tempString := __assign_25;
-      __assign_25
+  ignore (if not (HxType.isOfType value (HxType.class_ "String")) then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_29 = "" in (
+      tempString := __assign_29;
+      __assign_29
+    ) else let __assign_30 = let __call_arg_0_31 = sourceLabel in StringTools.trim __call_arg_0_31 in (
+      tempString := __assign_30;
+      __assign_30
     ));
-    let s = (!tempString : string) in (
-      ignore (if HxString.length s = 0 then let __assign_26 = ("<unknown-source>" : string) in (
-        tempRight := __assign_26;
-        __assign_26
-      ) else let __assign_27 = (s : string) in (
-        tempRight := __assign_27;
-        __assign_27
+    let s = !tempString in (
+      ignore (if HxString.length s = 0 then let __assign_32 = "<unknown-source>" in (
+        tempRight := __assign_32;
+        __assign_32
+      ) else let __assign_33 = s in (
+        tempRight := __assign_33;
+        __assign_33
       ));
-      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be a string")) ["Dynamic"; "String"]
+      HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be a string")) ["Dynamic"]
     )
   )) else ());
-  let s = (Obj.obj value : string) in let normalized = (StringTools.trim (s : string) : string) in (
-    ignore (if HxString.length normalized = 0 then ignore (let tempRight1 = ref ("" : string) in let tempString1 = ref ("" : string) in (
-      ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_28 = ("" : string) in (
-        tempString1 := __assign_28;
-        __assign_28
-      ) else let __assign_29 = (StringTools.trim (sourceLabel : string) : string) in (
-        tempString1 := __assign_29;
-        __assign_29
+  let s = (Obj.obj value : string) in let normalized = let __call_arg_0_34 = s in StringTools.trim __call_arg_0_34 in (
+    ignore (if HxString.length normalized = 0 then ignore (let tempRight1 = ref (HxString.hx_null_string : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if sourceLabel == HxString.hx_null_string then let __assign_35 = "" in (
+        tempString1 := __assign_35;
+        __assign_35
+      ) else let __assign_36 = let __call_arg_0_37 = sourceLabel in StringTools.trim __call_arg_0_37 in (
+        tempString1 := __assign_36;
+        __assign_36
       ));
-      let s2 = (!tempString1 : string) in (
-        ignore (if HxString.length s2 = 0 then let __assign_30 = ("<unknown-source>" : string) in (
-          tempRight1 := __assign_30;
-          __assign_30
-        ) else let __assign_31 = (s2 : string) in (
-          tempRight1 := __assign_31;
-          __assign_31
+      let s2 = !tempString1 in (
+        ignore (if HxString.length s2 = 0 then let __assign_38 = "<unknown-source>" in (
+          tempRight1 := __assign_38;
+          __assign_38
+        ) else let __assign_39 = s2 in (
+          tempRight1 := __assign_39;
+          __assign_39
         ));
-        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be a non-empty string")) ["Dynamic"; "String"]
+        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be a non-empty string")) ["Dynamic"]
       )
     )) else ());
     normalized
   )
 )
 
-let requireInt = fun value fieldPath sourceLabel -> try let __fallback_result_39 = (
-  ignore (if let __isInt_32 = value in if __isInt_32 == HxRuntime.hx_null then false else Obj.is_int __isInt_32 && not (HxRuntime.is_boxed_bool __isInt_32) then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
-  ignore (if let __isFloat_33 = value in if __isFloat_33 == HxRuntime.hx_null then false else Obj.is_int __isFloat_33 && not (HxRuntime.is_boxed_bool __isFloat_33) || Obj.tag __isFloat_33 = Obj.double_tag then ignore (let f = Std.parseFloat (HxRuntime.dynamic_toStdString value : string) in let i = int_of_float f in let iAsFloat = float_of_int i in if iAsFloat = f then raise (HxRuntime.Hx_return (Obj.repr i)) else ()) else ());
-  let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_34 = ("" : string) in (
-      tempString := __assign_34;
-      __assign_34
-    ) else let __assign_35 = (StringTools.trim (sourceLabel : string) : string) in (
-      tempString := __assign_35;
-      __assign_35
-    ));
-    ignore (if HxString.length (!tempString) = 0 then let __assign_36 = ("<unknown-source>" : string) in (
-      tempRight := __assign_36;
-      __assign_36
-    ) else let __assign_37 = (!tempString : string) in (
-      tempRight := __assign_37;
-      __assign_37
-    ));
-    ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an integer")) ["Dynamic"; "String"]);
-    -1
-  )
-) in Obj.magic __fallback_result_39 with
-  | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
-
-let requireStringArray = fun value fieldPath sourceLabel -> let raw = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-  ignore (if HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let __assign_40 = Obj.magic ((Obj.magic (Obj.obj value) : Hxhx_CompilerJsonArray.t).values) in (
-    raw := __assign_40;
-    __assign_40
-  )) else ignore (if HxType.isOfType value (HxType.class_ "Array") then ignore (let __assign_41 = Obj.magic (Obj.obj value) in (
-    raw := __assign_41;
-    __assign_41
-  )) else ignore (let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-    ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_42 = ("" : string) in (
+let requireInt = fun value fieldPath sourceLabel -> try let __fallback_result_48 = (
+  ignore (if let __isInt_40 = value in if __isInt_40 == HxRuntime.hx_null then false else Obj.is_int __isInt_40 && not (HxRuntime.is_boxed_bool __isInt_40) then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+  ignore (if let __isFloat_41 = value in if __isFloat_41 == HxRuntime.hx_null then false else Obj.is_int __isFloat_41 && not (HxRuntime.is_boxed_bool __isFloat_41) || Obj.tag __isFloat_41 = Obj.double_tag then ignore (let f = Std.parseFloat (HxRuntime.dynamic_toStdString value : string) in let i = int_of_float f in let iAsFloat = float_of_int i in if iAsFloat = f then raise (HxRuntime.Hx_return (Obj.repr i)) else ()) else ());
+  let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_42 = "" in (
       tempString := __assign_42;
       __assign_42
-    ) else let __assign_43 = (StringTools.trim (sourceLabel : string) : string) in (
+    ) else let __assign_43 = let __call_arg_0_44 = sourceLabel in StringTools.trim __call_arg_0_44 in (
       tempString := __assign_43;
       __assign_43
     ));
-    let s = (!tempString : string) in (
-      ignore (if HxString.length s = 0 then let __assign_44 = ("<unknown-source>" : string) in (
-        tempRight := __assign_44;
-        __assign_44
-      ) else let __assign_45 = (s : string) in (
+    let s = !tempString in (
+      ignore (if HxString.length s = 0 then let __assign_45 = "<unknown-source>" in (
         tempRight := __assign_45;
         __assign_45
-      ));
-      ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an array of strings")) ["Dynamic"; "String"]);
-      let __assign_46 = Obj.magic (let __arr_47 = HxArray.create () in __arr_47) in (
-        raw := __assign_46;
+      ) else let __assign_46 = s in (
+        tempRight := __assign_46;
         __assign_46
+      ));
+      ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an integer")) ["Dynamic"]);
+      -1
+    )
+  )
+) in Obj.magic __fallback_result_48 with
+  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
+
+let requireStringArray = fun value fieldPath sourceLabel -> let raw = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+  ignore (if HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let __assign_49 = Obj.magic ((Obj.magic (Obj.obj value) : Hxhx_CompilerJsonArray.t).values) in (
+    raw := __assign_49;
+    __assign_49
+  )) else ignore (if HxType.isOfType value (HxType.class_ "Array") then ignore (let __assign_50 = Obj.magic (Obj.obj value) in (
+    raw := __assign_50;
+    __assign_50
+  )) else ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceLabel == HxString.hx_null_string then let __assign_51 = "" in (
+      tempString := __assign_51;
+      __assign_51
+    ) else let __assign_52 = let __call_arg_0_53 = sourceLabel in StringTools.trim __call_arg_0_53 in (
+      tempString := __assign_52;
+      __assign_52
+    ));
+    let s = !tempString in (
+      ignore (if HxString.length s = 0 then let __assign_54 = "<unknown-source>" in (
+        tempRight := __assign_54;
+        __assign_54
+      ) else let __assign_55 = s in (
+        tempRight := __assign_55;
+        __assign_55
+      ));
+      ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an array of strings")) ["Dynamic"]);
+      let __assign_56 = Obj.magic (let __arr_57 = HxArray.create () in __arr_57) in (
+        raw := __assign_56;
+        __assign_56
       )
     )
   ))));
   let out = Obj.magic (HxArray.create ()) in let index = ref 0 in let _g = ref 0 in (
     ignore (while !_g < HxArray.length (!raw) do ignore (let entry = HxArray.get (Obj.magic (!raw)) (!_g) in (
-      ignore (let __old_48 = !_g in let __new_49 = HxInt.add __old_48 1 in (
-        ignore (_g := __new_49);
-        __new_49
+      ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
+        ignore (_g := __new_59);
+        __new_59
       ));
-      let itemPath = (((HxString.toStdString fieldPath ^ "[") ^ string_of_int (!index)) ^ "]" : string) in (
-        ignore (if not (HxType.isOfType entry (HxType.class_ "String")) then ignore (let tempRight1 = ref ("" : string) in let tempString1 = ref ("" : string) in (
-          ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_50 = ("" : string) in (
-            tempString1 := __assign_50;
-            __assign_50
-          ) else let __assign_51 = (StringTools.trim (sourceLabel : string) : string) in (
-            tempString1 := __assign_51;
-            __assign_51
+      let itemPath = ((HxString.toStdString fieldPath ^ "[") ^ string_of_int (!index)) ^ "]" in (
+        ignore (if not (HxType.isOfType entry (HxType.class_ "String")) then ignore (let tempRight1 = ref (HxString.hx_null_string : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+          ignore (if sourceLabel == HxString.hx_null_string then let __assign_60 = "" in (
+            tempString1 := __assign_60;
+            __assign_60
+          ) else let __assign_61 = let __call_arg_0_62 = sourceLabel in StringTools.trim __call_arg_0_62 in (
+            tempString1 := __assign_61;
+            __assign_61
           ));
-          let s = (!tempString1 : string) in (
-            ignore (if HxString.length s = 0 then let __assign_52 = ("<unknown-source>" : string) in (
-              tempRight1 := __assign_52;
-              __assign_52
-            ) else let __assign_53 = (s : string) in (
-              tempRight1 := __assign_53;
-              __assign_53
+          let s = !tempString1 in (
+            ignore (if HxString.length s = 0 then let __assign_63 = "<unknown-source>" in (
+              tempRight1 := __assign_63;
+              __assign_63
+            ) else let __assign_64 = s in (
+              tempRight1 := __assign_64;
+              __assign_64
             ));
-            HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString itemPath) ^ "` must be a string")) ["Dynamic"; "String"]
+            HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ "field `") ^ HxString.toStdString itemPath) ^ "` must be a string")) ["Dynamic"]
           )
         )) else ());
-        let normalized = (StringTools.trim (Obj.obj entry : string) : string) in (
-          ignore (if HxString.length normalized = 0 then ignore (let tempRight2 = ref ("" : string) in let tempString2 = ref ("" : string) in (
-            ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_54 = ("" : string) in (
-              tempString2 := __assign_54;
-              __assign_54
-            ) else let __assign_55 = (StringTools.trim (sourceLabel : string) : string) in (
-              tempString2 := __assign_55;
-              __assign_55
+        let normalized = let __call_arg_0_65 = Obj.obj entry in StringTools.trim __call_arg_0_65 in (
+          ignore (if HxString.length normalized = 0 then ignore (let tempRight2 = ref (HxString.hx_null_string : string) in let tempString2 = ref (HxString.hx_null_string : string) in (
+            ignore (if sourceLabel == HxString.hx_null_string then let __assign_66 = "" in (
+              tempString2 := __assign_66;
+              __assign_66
+            ) else let __assign_67 = let __call_arg_0_68 = sourceLabel in StringTools.trim __call_arg_0_68 in (
+              tempString2 := __assign_67;
+              __assign_67
             ));
-            let s = (!tempString2 : string) in (
-              ignore (if HxString.length s = 0 then let __assign_56 = ("<unknown-source>" : string) in (
-                tempRight2 := __assign_56;
-                __assign_56
-              ) else let __assign_57 = (s : string) in (
-                tempRight2 := __assign_57;
-                __assign_57
+            let s = !tempString2 in (
+              ignore (if HxString.length s = 0 then let __assign_69 = "<unknown-source>" in (
+                tempRight2 := __assign_69;
+                __assign_69
+              ) else let __assign_70 = s in (
+                tempRight2 := __assign_70;
+                __assign_70
               ));
-              HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight2)) ^ "): ") ^ "field `") ^ HxString.toStdString itemPath) ^ "` must be a non-empty string")) ["Dynamic"; "String"]
+              HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight2)) ^ "): ") ^ "field `") ^ HxString.toStdString itemPath) ^ "` must be a non-empty string")) ["Dynamic"]
             )
           )) else ());
           ignore (HxArray.push out normalized);
-          let __old_58 = !index in let __new_59 = HxInt.add __old_58 1 in (
-            ignore (index := __new_59);
-            __old_58
+          let __old_71 = !index in let __new_72 = HxInt.add __old_71 1 in (
+            ignore (index := __new_72);
+            __old_71
           )
         )
       )
@@ -274,235 +278,246 @@ let requireStringArray = fun value fieldPath sourceLabel -> let raw = ref (Obj.m
 
 let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match value with
-    | "linked-provider" -> let __assign_64 = ("linked-provider" : string) in (
-      tempResult := __assign_64;
-      __assign_64
+    | "linked-provider" -> let __assign_78 = ("linked-provider" : string) in (
+      tempResult := __assign_78;
+      __assign_78
     )
-    | "ocaml-dynlink" -> let __assign_65 = ("ocaml-dynlink" : string) in (
-      tempResult := __assign_65;
-      __assign_65
+    | "ocaml-dynlink" -> let __assign_79 = ("ocaml-dynlink" : string) in (
+      tempResult := __assign_79;
+      __assign_79
     )
-    | _ -> let tempRight = ref ("" : string) in let tempString = ref ("" : string) in (
-      ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_60 = ("" : string) in (
-        tempString := __assign_60;
-        __assign_60
-      ) else let __assign_61 = (StringTools.trim (sourceLabel : string) : string) in (
-        tempString := __assign_61;
-        __assign_61
+    | _ -> let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if sourceLabel == HxString.hx_null_string then let __assign_73 = "" in (
+        tempString := __assign_73;
+        __assign_73
+      ) else let __assign_74 = let __call_arg_0_75 = sourceLabel in StringTools.trim __call_arg_0_75 in (
+        tempString := __assign_74;
+        __assign_74
       ));
-      let s = (!tempString : string) in (
-        ignore (if HxString.length s = 0 then let __assign_62 = ("<unknown-source>" : string) in (
-          tempRight := __assign_62;
-          __assign_62
-        ) else let __assign_63 = (s : string) in (
-          tempRight := __assign_63;
-          __assign_63
+      let s = !tempString in (
+        ignore (if HxString.length s = 0 then let __assign_76 = "<unknown-source>" in (
+          tempRight := __assign_76;
+          __assign_76
+        ) else let __assign_77 = s in (
+          tempRight := __assign_77;
+          __assign_77
         ));
-        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "unsupported backend kind `") ^ HxString.toStdString value) ^ "` (supported: linked-provider, ocaml-dynlink)")) ["Dynamic"; "String"]
+        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "unsupported backend kind `") ^ HxString.toStdString value) ^ "` (supported: linked-provider, ocaml-dynlink)")) ["Dynamic"]
       )
     ));
   !tempResult
 )
 
-let validate = fun manifest -> try let __fallback_result_79 = (
+let validate = fun manifest -> try let __fallback_result_105 = (
   ignore (if manifest == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("manifest is required" : string))) else ());
   ignore (if Obj.obj (HxAnon.get manifest "schemaVersion") <> 1 then raise (HxRuntime.Hx_return (Obj.repr ((("schemaVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int (Obj.obj (HxAnon.get manifest "schemaVersion")) : string))) else ());
-  let tempString = ref ("" : string) in (
-    ignore (if Obj.obj (HxAnon.get manifest "pluginId") == Obj.magic (HxRuntime.hx_null) then let __assign_66 = ("" : string) in (
-      tempString := __assign_66;
-      __assign_66
-    ) else let __assign_67 = (StringTools.trim (Obj.obj (HxAnon.get manifest "pluginId") : string) : string) in (
-      tempString := __assign_67;
-      __assign_67
+  let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if Obj.obj (HxAnon.get manifest "pluginId") == HxString.hx_null_string then let __assign_80 = "" in (
+      tempString := __assign_80;
+      __assign_80
+    ) else let __assign_81 = let __call_arg_0_82 = Obj.obj (HxAnon.get manifest "pluginId") in StringTools.trim __call_arg_0_82 in (
+      tempString := __assign_81;
+      __assign_81
     ));
-    ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("pluginId must be a non-empty string" : string))) else ());
-    let tempString1 = ref ("" : string) in (
-      ignore (if Obj.obj (HxAnon.get manifest "pluginVersion") == Obj.magic (HxRuntime.hx_null) then let __assign_68 = ("" : string) in (
-        tempString1 := __assign_68;
-        __assign_68
-      ) else let __assign_69 = (StringTools.trim (Obj.obj (HxAnon.get manifest "pluginVersion") : string) : string) in (
-        tempString1 := __assign_69;
-        __assign_69
-      ));
-      ignore (if HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("pluginVersion must be a non-empty string" : string))) else ());
-      ignore (if Obj.obj (HxAnon.get manifest "backend") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("backend section is required" : string))) else ());
-      let tempString2 = ref ("" : string) in (
-        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") == Obj.magic (HxRuntime.hx_null) then let __assign_70 = ("" : string) in (
-          tempString2 := __assign_70;
-          __assign_70
-        ) else let __assign_71 = (StringTools.trim (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") : string) : string) in (
-          tempString2 := __assign_71;
-          __assign_71
+    let pluginId = !tempString in (
+      ignore (if HxString.length pluginId = 0 then raise (HxRuntime.Hx_return (Obj.repr ("pluginId must be a non-empty string" : string))) else ());
+      let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if Obj.obj (HxAnon.get manifest "pluginVersion") == HxString.hx_null_string then let __assign_83 = "" in (
+          tempString1 := __assign_83;
+          __assign_83
+        ) else let __assign_84 = let __call_arg_0_85 = Obj.obj (HxAnon.get manifest "pluginVersion") in StringTools.trim __call_arg_0_85 in (
+          tempString1 := __assign_84;
+          __assign_84
         ));
-        ignore (if HxString.length (!tempString2) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("backend.entry must be a non-empty string" : string))) else ());
-        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds") == Obj.magic (HxRuntime.hx_null) || HxArray.length (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds")) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("backend.targetIds must contain at least one target id" : string))) else ());
-        let seenTargetIds = Obj.magic (HxMap.create_string ()) in let targetIndex = ref 0 in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds")) in (
-          ignore (while !_g < HxArray.length _g1 do ignore (let targetId = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-            ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
-              ignore (_g := __new_73);
-              __new_73
+        let pluginVersion = !tempString1 in (
+          ignore (if HxString.length pluginVersion = 0 then raise (HxRuntime.Hx_return (Obj.repr ("pluginVersion must be a non-empty string" : string))) else ());
+          ignore (if Obj.obj (HxAnon.get manifest "backend") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("backend section is required" : string))) else ());
+          let tempString2 = ref (HxString.hx_null_string : string) in (
+            ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") == HxString.hx_null_string then let __assign_86 = "" in (
+              tempString2 := __assign_86;
+              __assign_86
+            ) else let __assign_87 = let __call_arg_0_88 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") in StringTools.trim __call_arg_0_88 in (
+              tempString2 := __assign_87;
+              __assign_87
             ));
-            let tempString3 = ref ("" : string) in (
-              ignore (if targetId == Obj.magic (HxRuntime.hx_null) then let __assign_74 = ("" : string) in (
-                tempString3 := __assign_74;
-                __assign_74
-              ) else let __assign_75 = (StringTools.trim (targetId : string) : string) in (
-                tempString3 := __assign_75;
-                __assign_75
-              ));
-              let normalized = (!tempString3 : string) in (
-                ignore (if HxString.length normalized = 0 then raise (HxRuntime.Hx_return (Obj.repr (("backend.targetIds[" ^ string_of_int (!targetIndex)) ^ "] must be a non-empty string" : string))) else ());
-                ignore (if HxMap.exists_string seenTargetIds normalized then raise (HxRuntime.Hx_return (Obj.repr (("backend.targetIds contains duplicate value `" ^ HxString.toStdString normalized) ^ "`" : string))) else ());
-                ignore (HxMap.set_string seenTargetIds normalized true);
-                let __old_76 = !targetIndex in let __new_77 = HxInt.add __old_76 1 in (
-                  ignore (targetIndex := __new_77);
-                  __old_76
+            let entry = !tempString2 in (
+              ignore (if HxString.length entry = 0 then raise (HxRuntime.Hx_return (Obj.repr ("backend.entry must be a non-empty string" : string))) else ());
+              ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds") == Obj.magic (HxRuntime.hx_null) || HxArray.length (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds")) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("backend.targetIds must contain at least one target id" : string))) else ());
+              let seenTargetIds = Obj.magic (HxMap.create_string ()) in let targetIndex = ref 0 in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "targetIds")) in (
+                ignore (while !_g < HxArray.length _g1 do ignore (let targetId = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                  ignore (let __old_89 = !_g in let __new_90 = HxInt.add __old_89 1 in (
+                    ignore (_g := __new_90);
+                    __new_90
+                  ));
+                  let tempString3 = ref (HxString.hx_null_string : string) in (
+                    ignore (if targetId == HxString.hx_null_string then let __assign_91 = "" in (
+                      tempString3 := __assign_91;
+                      __assign_91
+                    ) else let __assign_92 = let __call_arg_0_93 = targetId in StringTools.trim __call_arg_0_93 in (
+                      tempString3 := __assign_92;
+                      __assign_92
+                    ));
+                    let normalized = !tempString3 in (
+                      ignore (if HxString.length normalized = 0 then raise (HxRuntime.Hx_return (Obj.repr (("backend.targetIds[" ^ string_of_int (!targetIndex)) ^ "] must be a non-empty string" : string))) else ());
+                      ignore (if HxMap.exists_string seenTargetIds normalized then raise (HxRuntime.Hx_return (Obj.repr (("backend.targetIds contains duplicate value `" ^ HxString.toStdString normalized) ^ "`" : string))) else ());
+                      ignore (HxMap.set_string seenTargetIds normalized true);
+                      let __old_94 = !targetIndex in let __new_95 = HxInt.add __old_94 1 in (
+                        ignore (targetIndex := __new_95);
+                        __old_94
+                      )
+                    )
+                  )
+                )) done);
+                ignore (if Obj.obj (HxAnon.get manifest "requires") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("requires section is required" : string))) else ());
+                let requiresError = (let __call_arg_0_96 = pluginId in let __call_arg_1_97 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "abiVersion") in let __call_arg_2_98 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "genIrVersion") in let __call_arg_3_99 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "macroApiVersion") in Backend_BackendAbi.validateManifestRequires __call_arg_0_96 __call_arg_1_97 __call_arg_2_98 __call_arg_3_99 : string) in (
+                  ignore (if requiresError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (requiresError : string))) else ());
+                  let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
+                    | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+                    | "ocaml-dynlink" -> ignore ((
+                      ignore (if not (let __call_arg_0_100 = entry in let __call_arg_1_101 = ".cmxs" in StringTools.endsWith __call_arg_0_100 __call_arg_1_101) && not (let __call_arg_0_102 = entry in let __call_arg_1_103 = ".cma" in StringTools.endsWith __call_arg_0_102 __call_arg_1_103) then raise (HxRuntime.Hx_return (Obj.repr ("backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-dynlink`" : string))) else ());
+                      raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+                    ))
+                    | _ -> raise (HxRuntime.Hx_return (Obj.repr (("unsupported backend kind `" ^ "<unsupported>") ^ "`" : string)))
                 )
               )
             )
-          )) done);
-          ignore (if Obj.obj (HxAnon.get manifest "requires") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("requires section is required" : string))) else ());
-          let requiresError = (Backend_BackendAbi.validateManifestRequires (!tempString : string) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "abiVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "genIrVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "macroApiVersion")) : string) in (
-            ignore (if requiresError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (requiresError : string))) else ());
-            let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
-              | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-              | "ocaml-dynlink" -> ignore ((
-                ignore (if not (StringTools.endsWith (!tempString2 : string) (".cmxs" : string)) && not (StringTools.endsWith (!tempString2 : string) (".cma" : string)) then raise (HxRuntime.Hx_return (Obj.repr ("backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-dynlink`" : string))) else ());
-                raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-              ))
-              | _ -> raise (HxRuntime.Hx_return (Obj.repr (("unsupported backend kind `" ^ "<unsupported>") ^ "`" : string)))
           )
         )
       )
     )
   )
-) in Obj.magic __fallback_result_79 with
-  | HxRuntime.Hx_return __ret_78 -> Obj.obj __ret_78
+) in Obj.magic __fallback_result_105 with
+  | HxRuntime.Hx_return __ret_104 -> Obj.obj __ret_104
 
-let parse = fun content sourceLabel -> let tempString = ref ("" : string) in let tempString1 = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_80 = ("" : string) in (
-    tempString1 := __assign_80;
-    __assign_80
-  ) else let __assign_81 = (StringTools.trim (sourceLabel : string) : string) in (
-    tempString1 := __assign_81;
-    __assign_81
+let parse = fun content sourceLabel -> let tempString = ref (HxString.hx_null_string : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_106 = "" in (
+    tempString1 := __assign_106;
+    __assign_106
+  ) else let __assign_107 = let __call_arg_0_108 = sourceLabel in StringTools.trim __call_arg_0_108 in (
+    tempString1 := __assign_107;
+    __assign_107
   ));
-  ignore (if HxString.length (!tempString1) = 0 then let __assign_82 = ("<unknown-source>" : string) in (
-    tempString := __assign_82;
-    __assign_82
-  ) else let __assign_83 = (!tempString1 : string) in (
-    tempString := __assign_83;
-    __assign_83
-  ));
-  ignore (if content == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (content : string)) = 0 then ignore (let tempRight = ref ("" : string) in let tempString2 = ref ("" : string) in (
-    ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_84 = ("" : string) in (
-      tempString2 := __assign_84;
-      __assign_84
-    ) else let __assign_85 = (StringTools.trim (!tempString : string) : string) in (
-      tempString2 := __assign_85;
-      __assign_85
+  let s = !tempString1 in (
+    ignore (if HxString.length s = 0 then let __assign_109 = "<unknown-source>" in (
+      tempString := __assign_109;
+      __assign_109
+    ) else let __assign_110 = s in (
+      tempString := __assign_110;
+      __assign_110
     ));
-    let s = (!tempString2 : string) in (
-      ignore (if HxString.length s = 0 then let __assign_86 = ("<unknown-source>" : string) in (
-        tempRight := __assign_86;
-        __assign_86
-      ) else let __assign_87 = (s : string) in (
-        tempRight := __assign_87;
-        __assign_87
-      ));
-      HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "content is empty")) ["Dynamic"; "String"]
-    )
-  )) else ());
-  let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-    ignore (try let __assign_88 = Obj.magic (Hxhx_CompilerJsonParser.parse (content : string)) in (
-      tempVar := __assign_88;
-      __assign_88
-    ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_89 -> raise (HxRuntime.Hx_return __ret_89)
-      | HxRuntime.Hx_exception (__exn_v_90, __exn_tags_91) -> if true then let error = (__exn_v_90 : Obj.t) in (
-        ignore error;
-        let message = ("invalid JSON: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) : string) in let tempRight1 = ref ("" : string) in let tempString3 = ref ("" : string) in (
-          ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_92 = ("" : string) in (
-            tempString3 := __assign_92;
-            __assign_92
-          ) else let __assign_93 = (StringTools.trim (!tempString : string) : string) in (
-            tempString3 := __assign_93;
-            __assign_93
-          ));
-          let s = (!tempString3 : string) in (
-            ignore (if HxString.length s = 0 then let __assign_94 = ("<unknown-source>" : string) in (
-              tempRight1 := __assign_94;
-              __assign_94
-            ) else let __assign_95 = (s : string) in (
-              tempRight1 := __assign_95;
-              __assign_95
-            ));
-            HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
-          )
-        )
-      ) else HxRuntime.hx_throw_typed __exn_v_90 __exn_tags_91
-      | __exn_96 -> if true then let error = (Obj.repr __exn_96 : Obj.t) in (
-        ignore error;
-        let message = ("invalid JSON: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) : string) in let tempRight1 = ref ("" : string) in let tempString3 = ref ("" : string) in (
-          ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_97 = ("" : string) in (
-            tempString3 := __assign_97;
-            __assign_97
-          ) else let __assign_98 = (StringTools.trim (!tempString : string) : string) in (
-            tempString3 := __assign_98;
-            __assign_98
-          ));
-          let s = (!tempString3 : string) in (
-            ignore (if HxString.length s = 0 then let __assign_99 = ("<unknown-source>" : string) in (
-              tempRight1 := __assign_99;
-              __assign_99
-            ) else let __assign_100 = (s : string) in (
-              tempRight1 := __assign_100;
-              __assign_100
-            ));
-            HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
-          )
-        )
-      ) else raise (__exn_96));
-    let root = Obj.repr (requireObject (Obj.magic (!tempVar)) ("$" : string) (!tempString : string)) in let backendObj = Obj.repr (requireObject (requireField (Obj.repr root) ("backend" : string) ("backend" : string) (!tempString : string)) ("backend" : string) (!tempString : string)) in let requiresObj = Obj.repr (requireObject (requireField (Obj.repr root) ("requires" : string) ("requires" : string) (!tempString : string)) ("requires" : string) (!tempString : string)) in let kind = (parseKind (requireString (requireField (Obj.repr backendObj) ("kind" : string) ("backend.kind" : string) (!tempString : string)) ("backend.kind" : string) (!tempString : string) : string) (!tempString : string) : string) in let manifest = let __anon_101 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_101 "schemaVersion" (Obj.repr (requireInt (requireField (Obj.repr root) ("schemaVersion" : string) ("schemaVersion" : string) (!tempString : string)) ("schemaVersion" : string) (!tempString : string))));
-      ignore (HxAnon.set __anon_101 "pluginId" (Obj.repr (requireString (requireField (Obj.repr root) ("pluginId" : string) ("pluginId" : string) (!tempString : string)) ("pluginId" : string) (!tempString : string))));
-      ignore (HxAnon.set __anon_101 "pluginVersion" (Obj.repr (requireString (requireField (Obj.repr root) ("pluginVersion" : string) ("pluginVersion" : string) (!tempString : string)) ("pluginVersion" : string) (!tempString : string))));
-      ignore (HxAnon.set __anon_101 "backend" (let __anon_102 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_102 "kind" (Obj.repr kind));
-        ignore (HxAnon.set __anon_102 "entry" (Obj.repr (requireString (requireField (Obj.repr backendObj) ("entry" : string) ("backend.entry" : string) (!tempString : string)) ("backend.entry" : string) (!tempString : string))));
-        ignore (HxAnon.set __anon_102 "targetIds" (Obj.repr (requireStringArray (requireField (Obj.repr backendObj) ("targetIds" : string) ("backend.targetIds" : string) (!tempString : string)) ("backend.targetIds" : string) (!tempString : string))));
-        __anon_102
-      )));
-      ignore (HxAnon.set __anon_101 "requires" (let __anon_103 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_103 "abiVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("abiVersion" : string) ("requires.abiVersion" : string) (!tempString : string)) ("requires.abiVersion" : string) (!tempString : string))));
-        ignore (HxAnon.set __anon_103 "genIrVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("genIrVersion" : string) ("requires.genIrVersion" : string) (!tempString : string)) ("requires.genIrVersion" : string) (!tempString : string))));
-        ignore (HxAnon.set __anon_103 "macroApiVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("macroApiVersion" : string) ("requires.macroApiVersion" : string) (!tempString : string)) ("requires.macroApiVersion" : string) (!tempString : string))));
-        __anon_103
-      )));
-      __anon_101
-    ) in let validationError = (validate manifest : string) in (
-      ignore (if validationError != Obj.magic (HxRuntime.hx_null) then ignore (let tempRight2 = ref ("" : string) in let tempString4 = ref ("" : string) in (
-        ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_104 = ("" : string) in (
-          tempString4 := __assign_104;
-          __assign_104
-        ) else let __assign_105 = (StringTools.trim (!tempString : string) : string) in (
-          tempString4 := __assign_105;
-          __assign_105
+    let source = !tempString in (
+      ignore (if content == HxString.hx_null_string || HxString.length (let __call_arg_0_111 = content in StringTools.trim __call_arg_0_111) = 0 then ignore (let tempRight = ref (HxString.hx_null_string : string) in let tempString2 = ref (HxString.hx_null_string : string) in (
+        ignore (if source == HxString.hx_null_string then let __assign_112 = "" in (
+          tempString2 := __assign_112;
+          __assign_112
+        ) else let __assign_113 = let __call_arg_0_114 = source in StringTools.trim __call_arg_0_114 in (
+          tempString2 := __assign_113;
+          __assign_113
         ));
-        let s = (!tempString4 : string) in (
-          ignore (if HxString.length s = 0 then let __assign_106 = ("<unknown-source>" : string) in (
-            tempRight2 := __assign_106;
-            __assign_106
-          ) else let __assign_107 = (s : string) in (
-            tempRight2 := __assign_107;
-            __assign_107
+        let s = !tempString2 in (
+          ignore (if HxString.length s = 0 then let __assign_115 = "<unknown-source>" in (
+            tempRight := __assign_115;
+            __assign_115
+          ) else let __assign_116 = s in (
+            tempRight := __assign_116;
+            __assign_116
           ));
-          HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight2)) ^ "): ") ^ HxString.toStdString validationError)) ["Dynamic"; "String"]
+          HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "content is empty")) ["Dynamic"]
         )
       )) else ());
-      manifest
+      let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+        ignore (try let __assign_126 = Obj.magic (Hxhx_CompilerJsonParser.parse (content : string)) in (
+          tempVar := __assign_126;
+          __assign_126
+        ) with
+          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+          | HxRuntime.Hx_return __ret_122 -> raise (HxRuntime.Hx_return __ret_122)
+          | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+          | HxRuntime.Hx_exception (__exn_v_123, __exn_tags_124) -> if true then let error = (__exn_v_123 : Obj.t) in (
+            ignore error;
+            let message = "invalid JSON: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) in let tempRight1 = ref (HxString.hx_null_string : string) in let tempString3 = ref (HxString.hx_null_string : string) in (
+              ignore (if source == HxString.hx_null_string then let __assign_117 = "" in (
+                tempString3 := __assign_117;
+                __assign_117
+              ) else let __assign_118 = let __call_arg_0_119 = source in StringTools.trim __call_arg_0_119 in (
+                tempString3 := __assign_118;
+                __assign_118
+              ));
+              let s = !tempString3 in (
+                ignore (if HxString.length s = 0 then let __assign_120 = "<unknown-source>" in (
+                  tempRight1 := __assign_120;
+                  __assign_120
+                ) else let __assign_121 = s in (
+                  tempRight1 := __assign_121;
+                  __assign_121
+                ));
+                HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+              )
+            )
+          ) else HxRuntime.hx_throw_typed __exn_v_123 __exn_tags_124
+          | __exn_125 -> if true then let error = (Obj.repr __exn_125 : Obj.t) in (
+            ignore error;
+            let message = "invalid JSON: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) in let tempRight1 = ref (HxString.hx_null_string : string) in let tempString3 = ref (HxString.hx_null_string : string) in (
+              ignore (if source == HxString.hx_null_string then let __assign_117 = "" in (
+                tempString3 := __assign_117;
+                __assign_117
+              ) else let __assign_118 = let __call_arg_0_119 = source in StringTools.trim __call_arg_0_119 in (
+                tempString3 := __assign_118;
+                __assign_118
+              ));
+              let s = !tempString3 in (
+                ignore (if HxString.length s = 0 then let __assign_120 = "<unknown-source>" in (
+                  tempRight1 := __assign_120;
+                  __assign_120
+                ) else let __assign_121 = s in (
+                  tempRight1 := __assign_121;
+                  __assign_121
+                ));
+                HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+              )
+            )
+          ) else raise (__exn_125));
+        let raw = Obj.magic (!tempVar) in let root = Obj.repr (requireObject raw ("$" : string) (source : string)) in let backendObj = Obj.repr (requireObject (requireField (Obj.repr root) ("backend" : string) ("backend" : string) (source : string)) ("backend" : string) (source : string)) in let requiresObj = Obj.repr (requireObject (requireField (Obj.repr root) ("requires" : string) ("requires" : string) (source : string)) ("requires" : string) (source : string)) in let kind = (parseKind (requireString (requireField (Obj.repr backendObj) ("kind" : string) ("backend.kind" : string) (source : string)) ("backend.kind" : string) (source : string) : string) (source : string) : string) in let manifest = let __anon_127 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_127 "schemaVersion" (Obj.repr (requireInt (requireField (Obj.repr root) ("schemaVersion" : string) ("schemaVersion" : string) (source : string)) ("schemaVersion" : string) (source : string))));
+          ignore (HxAnon.set __anon_127 "pluginId" (Obj.repr (requireString (requireField (Obj.repr root) ("pluginId" : string) ("pluginId" : string) (source : string)) ("pluginId" : string) (source : string))));
+          ignore (HxAnon.set __anon_127 "pluginVersion" (Obj.repr (requireString (requireField (Obj.repr root) ("pluginVersion" : string) ("pluginVersion" : string) (source : string)) ("pluginVersion" : string) (source : string))));
+          ignore (HxAnon.set __anon_127 "backend" (let __anon_128 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_128 "kind" (Obj.repr kind));
+            ignore (HxAnon.set __anon_128 "entry" (Obj.repr (requireString (requireField (Obj.repr backendObj) ("entry" : string) ("backend.entry" : string) (source : string)) ("backend.entry" : string) (source : string))));
+            ignore (HxAnon.set __anon_128 "targetIds" (Obj.repr (requireStringArray (requireField (Obj.repr backendObj) ("targetIds" : string) ("backend.targetIds" : string) (source : string)) ("backend.targetIds" : string) (source : string))));
+            __anon_128
+          )));
+          ignore (HxAnon.set __anon_127 "requires" (let __anon_129 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_129 "abiVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("abiVersion" : string) ("requires.abiVersion" : string) (source : string)) ("requires.abiVersion" : string) (source : string))));
+            ignore (HxAnon.set __anon_129 "genIrVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("genIrVersion" : string) ("requires.genIrVersion" : string) (source : string)) ("requires.genIrVersion" : string) (source : string))));
+            ignore (HxAnon.set __anon_129 "macroApiVersion" (Obj.repr (requireInt (requireField (Obj.repr requiresObj) ("macroApiVersion" : string) ("requires.macroApiVersion" : string) (source : string)) ("requires.macroApiVersion" : string) (source : string))));
+            __anon_129
+          )));
+          __anon_127
+        ) in let validationError = (validate manifest : string) in (
+          ignore (if validationError != Obj.magic (HxRuntime.hx_null) then ignore (let tempRight2 = ref (HxString.hx_null_string : string) in let tempString4 = ref (HxString.hx_null_string : string) in (
+            ignore (if source == HxString.hx_null_string then let __assign_130 = "" in (
+              tempString4 := __assign_130;
+              __assign_130
+            ) else let __assign_131 = let __call_arg_0_132 = source in StringTools.trim __call_arg_0_132 in (
+              tempString4 := __assign_131;
+              __assign_131
+            ));
+            let s = !tempString4 in (
+              ignore (if HxString.length s = 0 then let __assign_133 = "<unknown-source>" in (
+                tempRight2 := __assign_133;
+                __assign_133
+              ) else let __assign_134 = s in (
+                tempRight2 := __assign_134;
+                __assign_134
+              ));
+              HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight2)) ^ "): ") ^ HxString.toStdString validationError)) ["Dynamic"]
+            )
+          )) else ());
+          manifest
+        )
+      )
     )
   )
 )

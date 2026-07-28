@@ -41,15 +41,15 @@ let dynamicRegistrations = Obj.magic (let __arr_27 = HxArray.create () in __arr_
 
 let allRegistrations = fun () -> HxArray.concat builtinRegistrations dynamicRegistrations
 
-let sortedForTarget = fun targetId -> let tempString = ref ("" : string) in (
-  ignore (if targetId == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+let sortedForTarget = fun targetId -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if targetId == HxString.hx_null_string then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
   ) else let __assign_4 = (targetId : string) in (
     tempString := __assign_4;
     __assign_4
   ));
-  let candidates = Obj.magic (HxArray.filter (allRegistrations ()) (fun r -> HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id")) (!tempString))) in (
+  let normalized = (!tempString : string) in let candidates = Obj.magic (HxArray.filter (allRegistrations ()) (fun r -> HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id")) normalized)) in (
     ignore (HxArray.sort candidates (fun a b -> try let __fallback_result_9 = (
       ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
       let tempResult = ref (0 : int) in (
@@ -93,8 +93,8 @@ let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ())
 let register = fun spec -> ignore ((
   ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration (descriptor/create required)") ["Dynamic"; "String"]) else ());
   let d = Obj.obj (HxAnon.get spec "descriptor") in (
-    ignore (if Obj.obj (HxAnon.get d "id") == Obj.magic (HxRuntime.hx_null) || HxString.length (Obj.obj (HxAnon.get d "id")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.id is required") ["Dynamic"; "String"]) else ());
-    ignore (if Obj.obj (HxAnon.get d "implId") == Obj.magic (HxRuntime.hx_null) || HxString.length (Obj.obj (HxAnon.get d "implId")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.implId is required") ["Dynamic"; "String"]) else ());
+    ignore (if Obj.obj (HxAnon.get d "id") == HxString.hx_null_string || HxString.length (Obj.obj (HxAnon.get d "id")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.id is required") ["Dynamic"; "String"]) else ());
+    ignore (if Obj.obj (HxAnon.get d "implId") == HxString.hx_null_string || HxString.length (Obj.obj (HxAnon.get d "implId")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.implId is required") ["Dynamic"; "String"]) else ());
     let compatibilityError = (Backend_BackendAbi.validateDescriptor d : string) in (
       ignore (if compatibilityError != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr compatibilityError) ["Dynamic"; "String"]) else ());
       let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
@@ -166,7 +166,7 @@ let requireForTarget = fun targetId -> try let __fallback_result_26 = let backen
       ));
       !tempResult
     )));
-    HxType.hx_throw_typed_rtti (Obj.repr (((("unknown Stage3 backend: " ^ HxString.toStdString targetId) ^ " (supported: ") ^ HxString.toStdString (HxArray.join supported ", " (fun x -> x))) ^ ")")) ["Dynamic"; "String"]
+    HxType.hx_throw_typed_rtti (Obj.repr (((("unknown Stage3 backend: " ^ HxString.toStdString targetId) ^ " (supported: ") ^ HxString.toStdString (HxArray.join supported ", " (fun x -> x))) ^ ")")) ["Dynamic"]
   )
 ) in Obj.magic __fallback_result_26 with
   | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25

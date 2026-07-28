@@ -16,21 +16,21 @@ let create = fun services2 -> let self = ({ __hx_type = HxType.class_ "backend.c
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic (HxRuntime.hx_null) } : t)
 
-let preludeMethodReturnType = fun self (className : string) (methodName : string) -> try let __fallback_result_145 = let tempString = ref ("" : string) in (
-  ignore (if className == Obj.magic (HxRuntime.hx_null) then let __assign_140 = ("" : string) in (
-    tempString := __assign_140;
-    __assign_140
-  ) else let __assign_141 = (className : string) in (
-    tempString := __assign_141;
-    __assign_141
+let preludeMethodReturnType = fun self (className : string) (methodName : string) -> try let __fallback_result_163 = let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if className == HxString.hx_null_string then let __assign_158 = ("" : string) in (
+    tempString := __assign_158;
+    __assign_158
+  ) else let __assign_159 = (className : string) in (
+    tempString := __assign_159;
+    __assign_159
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref ("" : string) in (
-    ignore (if methodName == Obj.magic (HxRuntime.hx_null) then let __assign_142 = ("" : string) in (
-      tempString1 := __assign_142;
-      __assign_142
-    ) else let __assign_143 = (methodName : string) in (
-      tempString1 := __assign_143;
-      __assign_143
+  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if methodName == HxString.hx_null_string then let __assign_160 = ("" : string) in (
+      tempString1 := __assign_160;
+      __assign_160
+    ) else let __assign_161 = (methodName : string) in (
+      tempString1 := __assign_161;
+      __assign_161
     ));
     let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in (
       ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "stamp" then raise (HxRuntime.Hx_return (Obj.repr ("double" : string))) else ());
@@ -51,30 +51,30 @@ let preludeMethodReturnType = fun self (className : string) (methodName : string
       ""
     )
   )
-) in Obj.magic __fallback_result_145 with
-  | HxRuntime.Hx_return __ret_144 -> Obj.obj __ret_144
+) in Obj.magic __fallback_result_163 with
+  | HxRuntime.Hx_return __ret_162 -> Obj.obj __ret_162
 
-let concreteClassReferenceCppType = fun self (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> let lookup = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupForScope") scope classLookup in let cls = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupClassForTypeHint") (typeHint : string) scope lookup) in let tempString = ref ("" : string) in (
-  ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_146 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (typeHint : string) : string) : string) in (
-    tempString := __assign_146;
-    __assign_146
-  ) else let __assign_147 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "renderedClassName") (Obj.magic cls) lookup : string) in (
-    tempString := __assign_147;
-    __assign_147
+let concreteClassReferenceCppType = fun self (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> let lookup = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupForScope") scope classLookup in let cls = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupClassForTypeHint") (typeHint : string) scope lookup) in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_164 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (typeHint : string) : string) : string) in (
+    tempString := __assign_164;
+    __assign_164
+  ) else let __assign_165 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "renderedClassName") (Obj.magic cls) lookup : string) in (
+    tempString := __assign_165;
+    __assign_165
   ));
-  ("std::shared_ptr<" ^ HxString.toStdString (!tempString)) ^ ">"
+  let rendered = (!tempString : string) in ("std::shared_ptr<" ^ HxString.toStdString rendered) ^ ">"
 )
 
-let methodReturnCppType = fun self (className : string) (methodName : string) (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> try let __fallback_result_139 = let tempString = ref ("" : string) in (
-  ignore (if className == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
+let methodReturnCppType = fun self (className : string) (methodName : string) (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> try let __fallback_result_157 = let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if className == HxString.hx_null_string then let __assign_2 = ("" : string) in (
     tempString := __assign_2;
     __assign_2
   ) else let __assign_3 = (className : string) in (
     tempString := __assign_3;
     __assign_3
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref ("" : string) in (
-    ignore (if methodName == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
+  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if methodName == HxString.hx_null_string then let __assign_4 = ("" : string) in (
       tempString1 := __assign_4;
       __assign_4
     ) else let __assign_5 = (methodName : string) in (
@@ -86,821 +86,753 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
       ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isStringIteratorHelper") (owner : string) then ignore ((
         ignore (if HxString.equals owner "StringIteratorUnicode" && HxString.equals hx_method "unicodeIterator" || HxString.equals owner "StringKeyValueIteratorUnicode" && HxString.equals hx_method "unicodeKeyValueIterator" then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") (owner : string) scope classLookup : string))) else ());
         ignore (if HxString.equals hx_method "hasNext" then raise (HxRuntime.Hx_return (Obj.repr ("bool" : string))) else ());
-        if HxString.equals hx_method "next" then ignore (let tempResult = ref ("" : string) in (
-          ignore (if HxString.equals owner "StringIterator" || HxString.equals owner "StringIteratorUnicode" then let __assign_6 = ("int" : string) in (
+        if HxString.equals hx_method "next" then ignore (let tempResult = ref (HxString.hx_null_string : string) in (
+          ignore (if HxString.equals owner "StringIterator" || HxString.equals owner "StringIteratorUnicode" then let __assign_6 = "int" in (
             tempResult := __assign_6;
             __assign_6
-          ) else let __assign_7 = ("auto" : string) in (
+          ) else let __assign_7 = "auto" in (
             tempResult := __assign_7;
             __assign_7
           ));
           raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
         )) else ()
       )) else ());
-      ignore (if HxString.equals owner "BalancedTree" then ignore (let treeNode = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TreeNode<K,V>" : string) scope classLookup : string) in let tempResult1 = ref ("" : string) in (
+      ignore (if HxString.equals owner "BalancedTree" then ignore (let treeNode = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TreeNode<K,V>" : string) scope classLookup : string) in let tempResult1 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "balance" | "merge" | "minBinding" | "removeLoop" | "removeMinBinding" | "setLoop" -> let __assign_12 = (treeNode : string) in (
-            tempResult1 := __assign_12;
-            __assign_12
-          )
-          | "compare" -> let __assign_13 = ("int" : string) in (
+          | "balance" | "merge" | "minBinding" | "removeLoop" | "removeMinBinding" | "setLoop" -> let __assign_13 = (treeNode : string) in (
             tempResult1 := __assign_13;
             __assign_13
           )
-          | _ -> let tempString2 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_8 = ("" : string) in (
+          | "compare" -> let __assign_14 = ("int" : string) in (
+            tempResult1 := __assign_14;
+            __assign_14
+          )
+          | _ -> let tempString2 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_8 = ("" : string) in (
               tempString2 := __assign_8;
               __assign_8
             ) else let __assign_9 = (typeHint : string) in (
               tempString2 := __assign_9;
               __assign_9
             ));
-            if HxString.length (StringTools.trim (!tempString2 : string)) > 0 then let __assign_10 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult1 := __assign_10;
-              __assign_10
-            ) else let __assign_11 = ("" : string) in (
+            if HxString.length (let __call_arg_0_10 = !tempString2 in StringTools.trim __call_arg_0_10) > 0 then let __assign_11 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
               tempResult1 := __assign_11;
               __assign_11
+            ) else let __assign_12 = ("" : string) in (
+              tempResult1 := __assign_12;
+              __assign_12
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
       )) else ());
-      ignore (if HxString.equals owner "Template" then ignore (let tempResult2 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Template" then ignore (let tempResult2 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "parse" | "parseBlock" -> let __assign_18 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TemplateExpr" : string) scope classLookup : string) in (
-            tempResult2 := __assign_18;
-            __assign_18
-          )
-          | "parseExpr" -> let __assign_19 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Void->Dynamic" : string) scope classLookup : string) in (
-            tempResult2 := __assign_19;
-            __assign_19
-          )
-          | "parseTokens" -> let __assign_20 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("List<Token>" : string) scope classLookup : string) in (
+          | "parse" | "parseBlock" -> let __assign_20 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TemplateExpr" : string) scope classLookup : string) in (
             tempResult2 := __assign_20;
             __assign_20
           )
-          | _ -> let tempString3 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
-              tempString3 := __assign_14;
-              __assign_14
-            ) else let __assign_15 = (typeHint : string) in (
+          | "parseExpr" -> let __assign_21 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Void->Dynamic" : string) scope classLookup : string) in (
+            tempResult2 := __assign_21;
+            __assign_21
+          )
+          | "parseTokens" -> let __assign_22 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("List<Token>" : string) scope classLookup : string) in (
+            tempResult2 := __assign_22;
+            __assign_22
+          )
+          | _ -> let tempString3 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_15 = ("" : string) in (
               tempString3 := __assign_15;
               __assign_15
-            ));
-            if HxString.length (StringTools.trim (!tempString3 : string)) > 0 then let __assign_16 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult2 := __assign_16;
+            ) else let __assign_16 = (typeHint : string) in (
+              tempString3 := __assign_16;
               __assign_16
-            ) else let __assign_17 = ("" : string) in (
-              tempResult2 := __assign_17;
-              __assign_17
+            ));
+            if HxString.length (let __call_arg_0_17 = !tempString3 in StringTools.trim __call_arg_0_17) > 0 then let __assign_18 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult2 := __assign_18;
+              __assign_18
+            ) else let __assign_19 = ("" : string) in (
+              tempResult2 := __assign_19;
+              __assign_19
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult2)))
       )) else ());
-      ignore (if HxString.equals owner "Bytes" then ignore (let tempResult3 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Bytes" then ignore (let tempResult3 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "compare" | "fastGet" | "get" | "getInt32" | "getUInt16" -> let __assign_25 = ("int" : string) in (
-            tempResult3 := __assign_25;
-            __assign_25
-          )
-          | "getData" -> let __assign_26 = ("std::vector<int>" : string) in (
-            tempResult3 := __assign_26;
-            __assign_26
-          )
-          | "getDouble" | "getFloat" -> let __assign_27 = ("double" : string) in (
-            tempResult3 := __assign_27;
-            __assign_27
-          )
-          | "getInt64" -> let __assign_28 = ("long long" : string) in (
+          | "compare" | "fastGet" | "get" | "getInt32" | "getUInt16" -> let __assign_28 = ("int" : string) in (
             tempResult3 := __assign_28;
             __assign_28
           )
-          | "alloc" | "ofData" | "ofHex" | "ofString" | "sub" -> let __assign_29 = (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup : string) in (
+          | "getData" -> let __assign_29 = ("std::vector<int>" : string) in (
             tempResult3 := __assign_29;
             __assign_29
           )
-          | "blit" | "fill" | "set" | "setDouble" | "setFloat" | "setInt32" | "setInt64" | "setUInt16" -> let __assign_30 = ("void" : string) in (
+          | "getDouble" | "getFloat" -> let __assign_30 = ("double" : string) in (
             tempResult3 := __assign_30;
             __assign_30
           )
-          | "getString" | "readString" | "toHex" | "toString" -> let __assign_31 = ("std::string" : string) in (
+          | "getInt64" -> let __assign_31 = ("long long" : string) in (
             tempResult3 := __assign_31;
             __assign_31
           )
-          | _ -> let tempString4 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_21 = ("" : string) in (
-              tempString4 := __assign_21;
-              __assign_21
-            ) else let __assign_22 = (typeHint : string) in (
-              tempString4 := __assign_22;
-              __assign_22
-            ));
-            if HxString.length (StringTools.trim (!tempString4 : string)) > 0 then let __assign_23 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult3 := __assign_23;
+          | "alloc" | "ofData" | "ofHex" | "ofString" | "sub" -> let __assign_32 = (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup : string) in (
+            tempResult3 := __assign_32;
+            __assign_32
+          )
+          | "blit" | "fill" | "set" | "setDouble" | "setFloat" | "setInt32" | "setInt64" | "setUInt16" -> let __assign_33 = ("void" : string) in (
+            tempResult3 := __assign_33;
+            __assign_33
+          )
+          | "getString" | "readString" | "toHex" | "toString" -> let __assign_34 = ("std::string" : string) in (
+            tempResult3 := __assign_34;
+            __assign_34
+          )
+          | _ -> let tempString4 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_23 = ("" : string) in (
+              tempString4 := __assign_23;
               __assign_23
-            ) else let __assign_24 = ("" : string) in (
-              tempResult3 := __assign_24;
+            ) else let __assign_24 = (typeHint : string) in (
+              tempString4 := __assign_24;
               __assign_24
+            ));
+            if HxString.length (let __call_arg_0_25 = !tempString4 in StringTools.trim __call_arg_0_25) > 0 then let __assign_26 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult3 := __assign_26;
+              __assign_26
+            ) else let __assign_27 = ("" : string) in (
+              tempResult3 := __assign_27;
+              __assign_27
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult3)))
       )) else ());
-      ignore (if HxString.equals owner "BytesBuffer" then ignore (let tempResult4 = ref ("" : string) in (
+      ignore (if HxString.equals owner "BytesBuffer" then ignore (let tempResult4 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "add" | "addByte" | "addBytes" | "addDouble" | "addFloat" | "addInt32" | "addInt64" | "addString" -> let __assign_36 = ("void" : string) in (
-            tempResult4 := __assign_36;
-            __assign_36
+          | "add" | "addByte" | "addBytes" | "addDouble" | "addFloat" | "addInt32" | "addInt64" | "addString" -> let __assign_40 = ("void" : string) in (
+            tempResult4 := __assign_40;
+            __assign_40
           )
-          | "getBytes" -> let __assign_37 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult4 := __assign_37;
-            __assign_37
+          | "getBytes" -> let __assign_41 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+            tempResult4 := __assign_41;
+            __assign_41
           )
-          | "get_length" -> let __assign_38 = ("int" : string) in (
-            tempResult4 := __assign_38;
-            __assign_38
+          | "get_length" -> let __assign_42 = ("int" : string) in (
+            tempResult4 := __assign_42;
+            __assign_42
           )
-          | _ -> let tempString5 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_32 = ("" : string) in (
-              tempString5 := __assign_32;
-              __assign_32
-            ) else let __assign_33 = (typeHint : string) in (
-              tempString5 := __assign_33;
-              __assign_33
-            ));
-            if HxString.length (StringTools.trim (!tempString5 : string)) > 0 then let __assign_34 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult4 := __assign_34;
-              __assign_34
-            ) else let __assign_35 = ("" : string) in (
-              tempResult4 := __assign_35;
+          | _ -> let tempString5 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_35 = ("" : string) in (
+              tempString5 := __assign_35;
               __assign_35
+            ) else let __assign_36 = (typeHint : string) in (
+              tempString5 := __assign_36;
+              __assign_36
+            ));
+            if HxString.length (let __call_arg_0_37 = !tempString5 in StringTools.trim __call_arg_0_37) > 0 then let __assign_38 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult4 := __assign_38;
+              __assign_38
+            ) else let __assign_39 = ("" : string) in (
+              tempResult4 := __assign_39;
+              __assign_39
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult4)))
       )) else ());
-      ignore (if HxString.equals owner "Input" then ignore (let tempResult5 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Input" then ignore (let tempResult5 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "read" | "readAll" -> let __assign_43 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult5 := __assign_43;
-            __assign_43
-          )
-          | "readDouble" | "readFloat" -> let __assign_44 = ("double" : string) in (
-            tempResult5 := __assign_44;
-            __assign_44
-          )
-          | "close" | "readFullBytes" -> let __assign_45 = ("void" : string) in (
-            tempResult5 := __assign_45;
-            __assign_45
-          )
-          | "readByte" | "readBytes" | "readInt16" | "readInt24" | "readInt32" | "readInt8" | "readUInt16" | "readUInt24" -> let __assign_46 = ("int" : string) in (
-            tempResult5 := __assign_46;
-            __assign_46
-          )
-          | "readLine" | "readString" | "readUntil" -> let __assign_47 = ("std::string" : string) in (
-            tempResult5 := __assign_47;
-            __assign_47
-          )
-          | "set_bigEndian" -> let __assign_48 = ("bool" : string) in (
+          | "read" | "readAll" -> let __assign_48 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
             tempResult5 := __assign_48;
             __assign_48
           )
-          | _ -> let tempString6 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_39 = ("" : string) in (
-              tempString6 := __assign_39;
-              __assign_39
-            ) else let __assign_40 = (typeHint : string) in (
-              tempString6 := __assign_40;
-              __assign_40
+          | "readDouble" | "readFloat" -> let __assign_49 = ("double" : string) in (
+            tempResult5 := __assign_49;
+            __assign_49
+          )
+          | "close" | "readFullBytes" -> let __assign_50 = ("void" : string) in (
+            tempResult5 := __assign_50;
+            __assign_50
+          )
+          | "readByte" | "readBytes" | "readInt16" | "readInt24" | "readInt32" | "readInt8" | "readUInt16" | "readUInt24" -> let __assign_51 = ("int" : string) in (
+            tempResult5 := __assign_51;
+            __assign_51
+          )
+          | "readLine" | "readString" | "readUntil" -> let __assign_52 = ("std::string" : string) in (
+            tempResult5 := __assign_52;
+            __assign_52
+          )
+          | "set_bigEndian" -> let __assign_53 = ("bool" : string) in (
+            tempResult5 := __assign_53;
+            __assign_53
+          )
+          | _ -> let tempString6 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_43 = ("" : string) in (
+              tempString6 := __assign_43;
+              __assign_43
+            ) else let __assign_44 = (typeHint : string) in (
+              tempString6 := __assign_44;
+              __assign_44
             ));
-            if HxString.length (StringTools.trim (!tempString6 : string)) > 0 then let __assign_41 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult5 := __assign_41;
-              __assign_41
-            ) else let __assign_42 = ("" : string) in (
-              tempResult5 := __assign_42;
-              __assign_42
+            if HxString.length (let __call_arg_0_45 = !tempString6 in StringTools.trim __call_arg_0_45) > 0 then let __assign_46 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult5 := __assign_46;
+              __assign_46
+            ) else let __assign_47 = ("" : string) in (
+              tempResult5 := __assign_47;
+              __assign_47
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult5)))
       )) else ());
-      ignore (if HxString.equals owner "Output" then ignore (let tempResult6 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Output" then ignore (let tempResult6 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "set_bigEndian" -> let __assign_53 = ("bool" : string) in (
-            tempResult6 := __assign_53;
-            __assign_53
+          | "set_bigEndian" -> let __assign_59 = ("bool" : string) in (
+            tempResult6 := __assign_59;
+            __assign_59
           )
-          | "writeBytes" -> let __assign_54 = ("int" : string) in (
-            tempResult6 := __assign_54;
-            __assign_54
+          | "writeBytes" -> let __assign_60 = ("int" : string) in (
+            tempResult6 := __assign_60;
+            __assign_60
           )
-          | "close" | "flush" | "prepare" | "write" | "writeByte" | "writeDouble" | "writeFloat" | "writeFullBytes" | "writeInput" | "writeInt16" | "writeInt24" | "writeInt32" | "writeInt8" | "writeString" | "writeUInt16" | "writeUInt24" -> let __assign_55 = ("void" : string) in (
-            tempResult6 := __assign_55;
-            __assign_55
+          | "close" | "flush" | "prepare" | "write" | "writeByte" | "writeDouble" | "writeFloat" | "writeFullBytes" | "writeInput" | "writeInt16" | "writeInt24" | "writeInt32" | "writeInt8" | "writeString" | "writeUInt16" | "writeUInt24" -> let __assign_61 = ("void" : string) in (
+            tempResult6 := __assign_61;
+            __assign_61
           )
-          | _ -> let tempString7 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_49 = ("" : string) in (
-              tempString7 := __assign_49;
-              __assign_49
-            ) else let __assign_50 = (typeHint : string) in (
-              tempString7 := __assign_50;
-              __assign_50
+          | _ -> let tempString7 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_54 = ("" : string) in (
+              tempString7 := __assign_54;
+              __assign_54
+            ) else let __assign_55 = (typeHint : string) in (
+              tempString7 := __assign_55;
+              __assign_55
             ));
-            if HxString.length (StringTools.trim (!tempString7 : string)) > 0 then let __assign_51 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult6 := __assign_51;
-              __assign_51
-            ) else let __assign_52 = ("" : string) in (
-              tempResult6 := __assign_52;
-              __assign_52
+            if HxString.length (let __call_arg_0_56 = !tempString7 in StringTools.trim __call_arg_0_56) > 0 then let __assign_57 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult6 := __assign_57;
+              __assign_57
+            ) else let __assign_58 = ("" : string) in (
+              tempResult6 := __assign_58;
+              __assign_58
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult6)))
       )) else ());
-      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isTypeResolverHelper") (owner : string) then ignore (let tempResult7 = ref ("" : string) in (
+      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isTypeResolverHelper") (owner : string) then ignore (let tempResult7 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "resolveClass" -> let __assign_60 = ("std::shared_ptr<Class>" : string) in (
-            tempResult7 := __assign_60;
-            __assign_60
+          | "resolveClass" -> let __assign_67 = ("std::shared_ptr<Class>" : string) in (
+            tempResult7 := __assign_67;
+            __assign_67
           )
-          | "resolveEnum" -> let __assign_61 = ("std::shared_ptr<Enum>" : string) in (
-            tempResult7 := __assign_61;
-            __assign_61
+          | "resolveEnum" -> let __assign_68 = ("std::shared_ptr<Enum>" : string) in (
+            tempResult7 := __assign_68;
+            __assign_68
           )
-          | _ -> let tempString8 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_56 = ("" : string) in (
-              tempString8 := __assign_56;
-              __assign_56
-            ) else let __assign_57 = (typeHint : string) in (
-              tempString8 := __assign_57;
-              __assign_57
+          | _ -> let tempString8 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_62 = ("" : string) in (
+              tempString8 := __assign_62;
+              __assign_62
+            ) else let __assign_63 = (typeHint : string) in (
+              tempString8 := __assign_63;
+              __assign_63
             ));
-            if HxString.length (StringTools.trim (!tempString8 : string)) > 0 then let __assign_58 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult7 := __assign_58;
-              __assign_58
-            ) else let __assign_59 = ("" : string) in (
-              tempResult7 := __assign_59;
-              __assign_59
+            if HxString.length (let __call_arg_0_64 = !tempString8 in StringTools.trim __call_arg_0_64) > 0 then let __assign_65 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult7 := __assign_65;
+              __assign_65
+            ) else let __assign_66 = ("" : string) in (
+              tempResult7 := __assign_66;
+              __assign_66
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult7)))
       )) else ());
-      ignore (if HxString.equals owner "BaseCode" then ignore (let tempResult8 = ref ("" : string) in (
+      ignore (if HxString.equals owner "BaseCode" then ignore (let tempResult8 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "decode" | "decodeString" | "encode" | "encodeString" -> let __assign_66 = ("std::string" : string) in (
-            tempResult8 := __assign_66;
-            __assign_66
+          | "decode" | "decodeString" | "encode" | "encodeString" -> let __assign_74 = ("std::string" : string) in (
+            tempResult8 := __assign_74;
+            __assign_74
           )
-          | "decodeBytes" | "encodeBytes" -> let __assign_67 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult8 := __assign_67;
-            __assign_67
+          | "decodeBytes" | "encodeBytes" -> let __assign_75 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+            tempResult8 := __assign_75;
+            __assign_75
           )
-          | "initTable" -> let __assign_68 = ("void" : string) in (
-            tempResult8 := __assign_68;
-            __assign_68
+          | "initTable" -> let __assign_76 = ("void" : string) in (
+            tempResult8 := __assign_76;
+            __assign_76
           )
-          | _ -> let tempString9 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_62 = ("" : string) in (
-              tempString9 := __assign_62;
-              __assign_62
-            ) else let __assign_63 = (typeHint : string) in (
-              tempString9 := __assign_63;
-              __assign_63
+          | _ -> let tempString9 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_69 = ("" : string) in (
+              tempString9 := __assign_69;
+              __assign_69
+            ) else let __assign_70 = (typeHint : string) in (
+              tempString9 := __assign_70;
+              __assign_70
             ));
-            if HxString.length (StringTools.trim (!tempString9 : string)) > 0 then let __assign_64 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult8 := __assign_64;
-              __assign_64
-            ) else let __assign_65 = ("" : string) in (
-              tempResult8 := __assign_65;
-              __assign_65
+            if HxString.length (let __call_arg_0_71 = !tempString9 in StringTools.trim __call_arg_0_71) > 0 then let __assign_72 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult8 := __assign_72;
+              __assign_72
+            ) else let __assign_73 = ("" : string) in (
+              tempResult8 := __assign_73;
+              __assign_73
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult8)))
       )) else ());
-      ignore (if HxString.equals owner "Base64" then ignore (let tempResult9 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Base64" then ignore (let tempResult9 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "decode" | "urlDecode" -> let __assign_73 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult9 := __assign_73;
-            __assign_73
+          | "decode" | "urlDecode" -> let __assign_82 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+            tempResult9 := __assign_82;
+            __assign_82
           )
-          | "encode" | "urlEncode" -> let __assign_74 = ("std::string" : string) in (
-            tempResult9 := __assign_74;
-            __assign_74
+          | "encode" | "urlEncode" -> let __assign_83 = ("std::string" : string) in (
+            tempResult9 := __assign_83;
+            __assign_83
           )
-          | _ -> let tempString10 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_69 = ("" : string) in (
-              tempString10 := __assign_69;
-              __assign_69
-            ) else let __assign_70 = (typeHint : string) in (
-              tempString10 := __assign_70;
-              __assign_70
+          | _ -> let tempString10 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_77 = ("" : string) in (
+              tempString10 := __assign_77;
+              __assign_77
+            ) else let __assign_78 = (typeHint : string) in (
+              tempString10 := __assign_78;
+              __assign_78
             ));
-            if HxString.length (StringTools.trim (!tempString10 : string)) > 0 then let __assign_71 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult9 := __assign_71;
-              __assign_71
-            ) else let __assign_72 = ("" : string) in (
-              tempResult9 := __assign_72;
-              __assign_72
+            if HxString.length (let __call_arg_0_79 = !tempString10 in StringTools.trim __call_arg_0_79) > 0 then let __assign_80 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult9 := __assign_80;
+              __assign_80
+            ) else let __assign_81 = ("" : string) in (
+              tempResult9 := __assign_81;
+              __assign_81
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult9)))
       )) else ());
-      ignore (if HxString.equals owner "Resource" then ignore (let tempResult10 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Resource" then ignore (let tempResult10 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "__init__" -> let __assign_79 = ("void" : string) in (
-            tempResult10 := __assign_79;
-            __assign_79
+          | "__init__" -> let __assign_89 = ("void" : string) in (
+            tempResult10 := __assign_89;
+            __assign_89
           )
-          | "getBytes" -> let __assign_80 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult10 := __assign_80;
-            __assign_80
+          | "getBytes" -> let __assign_90 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+            tempResult10 := __assign_90;
+            __assign_90
           )
-          | "getString" -> let __assign_81 = ("std::string" : string) in (
-            tempResult10 := __assign_81;
-            __assign_81
+          | "getString" -> let __assign_91 = ("std::string" : string) in (
+            tempResult10 := __assign_91;
+            __assign_91
           )
-          | "listNames" -> let __assign_82 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Array<String>" : string) scope classLookup : string) in (
-            tempResult10 := __assign_82;
-            __assign_82
+          | "listNames" -> let __assign_92 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Array<String>" : string) scope classLookup : string) in (
+            tempResult10 := __assign_92;
+            __assign_92
           )
-          | _ -> let tempString11 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_75 = ("" : string) in (
-              tempString11 := __assign_75;
-              __assign_75
-            ) else let __assign_76 = (typeHint : string) in (
-              tempString11 := __assign_76;
-              __assign_76
+          | _ -> let tempString11 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_84 = ("" : string) in (
+              tempString11 := __assign_84;
+              __assign_84
+            ) else let __assign_85 = (typeHint : string) in (
+              tempString11 := __assign_85;
+              __assign_85
             ));
-            if HxString.length (StringTools.trim (!tempString11 : string)) > 0 then let __assign_77 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult10 := __assign_77;
-              __assign_77
-            ) else let __assign_78 = ("" : string) in (
-              tempResult10 := __assign_78;
-              __assign_78
+            if HxString.length (let __call_arg_0_86 = !tempString11 in StringTools.trim __call_arg_0_86) > 0 then let __assign_87 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult10 := __assign_87;
+              __assign_87
+            ) else let __assign_88 = ("" : string) in (
+              tempResult10 := __assign_88;
+              __assign_88
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult10)))
       )) else ());
-      ignore (if HxString.equals owner "Json" then ignore (let tempResult11 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Json" then ignore (let tempResult11 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "parse" -> let __assign_87 = ("std::any" : string) in (
-            tempResult11 := __assign_87;
-            __assign_87
+          | "parse" -> let __assign_98 = ("std::any" : string) in (
+            tempResult11 := __assign_98;
+            __assign_98
           )
-          | "stringify" -> let __assign_88 = ("std::string" : string) in (
-            tempResult11 := __assign_88;
-            __assign_88
+          | "stringify" -> let __assign_99 = ("std::string" : string) in (
+            tempResult11 := __assign_99;
+            __assign_99
           )
-          | _ -> let tempString12 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_83 = ("" : string) in (
-              tempString12 := __assign_83;
-              __assign_83
-            ) else let __assign_84 = (typeHint : string) in (
-              tempString12 := __assign_84;
-              __assign_84
+          | _ -> let tempString12 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_93 = ("" : string) in (
+              tempString12 := __assign_93;
+              __assign_93
+            ) else let __assign_94 = (typeHint : string) in (
+              tempString12 := __assign_94;
+              __assign_94
             ));
-            if HxString.length (StringTools.trim (!tempString12 : string)) > 0 then let __assign_85 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult11 := __assign_85;
-              __assign_85
-            ) else let __assign_86 = ("" : string) in (
-              tempResult11 := __assign_86;
-              __assign_86
+            if HxString.length (let __call_arg_0_95 = !tempString12 in StringTools.trim __call_arg_0_95) > 0 then let __assign_96 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult11 := __assign_96;
+              __assign_96
+            ) else let __assign_97 = ("" : string) in (
+              tempResult11 := __assign_97;
+              __assign_97
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult11)))
       )) else ());
-      ignore (if HxString.equals owner "JsonParser" then ignore (let tempResult12 = ref ("" : string) in (
+      ignore (if HxString.equals owner "JsonParser" then ignore (let tempResult12 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "invalidChar" | "invalidNumber" -> let __assign_93 = ("void" : string) in (
-            tempResult12 := __assign_93;
-            __assign_93
+          | "invalidChar" | "invalidNumber" -> let __assign_105 = ("void" : string) in (
+            tempResult12 := __assign_105;
+            __assign_105
           )
-          | "nextChar" -> let __assign_94 = ("int" : string) in (
-            tempResult12 := __assign_94;
-            __assign_94
+          | "nextChar" -> let __assign_106 = ("int" : string) in (
+            tempResult12 := __assign_106;
+            __assign_106
           )
-          | "doParse" | "parse" | "parseNumber" | "parseRec" -> let __assign_95 = ("std::any" : string) in (
-            tempResult12 := __assign_95;
-            __assign_95
+          | "doParse" | "parse" | "parseNumber" | "parseRec" -> let __assign_107 = ("std::any" : string) in (
+            tempResult12 := __assign_107;
+            __assign_107
           )
-          | "parseString" -> let __assign_96 = ("std::string" : string) in (
-            tempResult12 := __assign_96;
-            __assign_96
+          | "parseString" -> let __assign_108 = ("std::string" : string) in (
+            tempResult12 := __assign_108;
+            __assign_108
           )
-          | _ -> let tempString13 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_89 = ("" : string) in (
-              tempString13 := __assign_89;
-              __assign_89
-            ) else let __assign_90 = (typeHint : string) in (
-              tempString13 := __assign_90;
-              __assign_90
+          | _ -> let tempString13 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_100 = ("" : string) in (
+              tempString13 := __assign_100;
+              __assign_100
+            ) else let __assign_101 = (typeHint : string) in (
+              tempString13 := __assign_101;
+              __assign_101
             ));
-            if HxString.length (StringTools.trim (!tempString13 : string)) > 0 then let __assign_91 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult12 := __assign_91;
-              __assign_91
-            ) else let __assign_92 = ("" : string) in (
-              tempResult12 := __assign_92;
-              __assign_92
+            if HxString.length (let __call_arg_0_102 = !tempString13 in StringTools.trim __call_arg_0_102) > 0 then let __assign_103 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult12 := __assign_103;
+              __assign_103
+            ) else let __assign_104 = ("" : string) in (
+              tempResult12 := __assign_104;
+              __assign_104
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult12)))
       )) else ());
-      ignore (if HxString.equals owner "JsonPrinter" then ignore (let tempResult13 = ref ("" : string) in (
+      ignore (if HxString.equals owner "JsonPrinter" then ignore (let tempResult13 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "print" -> let __assign_101 = ("std::string" : string) in (
-            tempResult13 := __assign_101;
-            __assign_101
+          | "print" -> let __assign_114 = ("std::string" : string) in (
+            tempResult13 := __assign_114;
+            __assign_114
           )
-          | "add" | "addChar" | "classString" | "fieldsString" | "newl" | "objString" | "quote" | "quoteUtf8" | "write" -> let __assign_102 = ("void" : string) in (
-            tempResult13 := __assign_102;
-            __assign_102
+          | "add" | "addChar" | "classString" | "fieldsString" | "newl" | "objString" | "quote" | "quoteUtf8" | "write" -> let __assign_115 = ("void" : string) in (
+            tempResult13 := __assign_115;
+            __assign_115
           )
-          | _ -> let tempString14 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_97 = ("" : string) in (
-              tempString14 := __assign_97;
-              __assign_97
-            ) else let __assign_98 = (typeHint : string) in (
-              tempString14 := __assign_98;
-              __assign_98
+          | _ -> let tempString14 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_109 = ("" : string) in (
+              tempString14 := __assign_109;
+              __assign_109
+            ) else let __assign_110 = (typeHint : string) in (
+              tempString14 := __assign_110;
+              __assign_110
             ));
-            if HxString.length (StringTools.trim (!tempString14 : string)) > 0 then let __assign_99 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult13 := __assign_99;
-              __assign_99
-            ) else let __assign_100 = ("" : string) in (
-              tempResult13 := __assign_100;
-              __assign_100
+            if HxString.length (let __call_arg_0_111 = !tempString14 in StringTools.trim __call_arg_0_111) > 0 then let __assign_112 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult13 := __assign_112;
+              __assign_112
+            ) else let __assign_113 = ("" : string) in (
+              tempResult13 := __assign_113;
+              __assign_113
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult13)))
       )) else ());
-      ignore (if HxString.equals owner "Unserializer" then ignore (let tempResult14 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Unserializer" then ignore (let tempResult14 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "fastCharAt" | "fastSubstr" -> let __assign_107 = ("std::string" : string) in (
-            tempResult14 := __assign_107;
-            __assign_107
+          | "fastCharAt" | "fastSubstr" -> let __assign_121 = ("std::string" : string) in (
+            tempResult14 := __assign_121;
+            __assign_121
           )
-          | "initCodes" -> let __assign_108 = ("std::vector<int>" : string) in (
-            tempResult14 := __assign_108;
-            __assign_108
+          | "initCodes" -> let __assign_122 = ("std::vector<int>" : string) in (
+            tempResult14 := __assign_122;
+            __assign_122
           )
-          | "fastCharCodeAt" | "fastLength" | "get" | "readDigits" -> let __assign_109 = ("int" : string) in (
-            tempResult14 := __assign_109;
-            __assign_109
+          | "fastCharCodeAt" | "fastLength" | "get" | "readDigits" -> let __assign_123 = ("int" : string) in (
+            tempResult14 := __assign_123;
+            __assign_123
           )
-          | "run" | "unserialize" -> let __assign_110 = ("std::any" : string) in (
-            tempResult14 := __assign_110;
-            __assign_110
+          | "run" | "unserialize" -> let __assign_124 = ("std::any" : string) in (
+            tempResult14 := __assign_124;
+            __assign_124
           )
-          | _ -> let tempString15 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_103 = ("" : string) in (
-              tempString15 := __assign_103;
-              __assign_103
-            ) else let __assign_104 = (typeHint : string) in (
-              tempString15 := __assign_104;
-              __assign_104
+          | _ -> let tempString15 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_116 = ("" : string) in (
+              tempString15 := __assign_116;
+              __assign_116
+            ) else let __assign_117 = (typeHint : string) in (
+              tempString15 := __assign_117;
+              __assign_117
             ));
-            if HxString.length (StringTools.trim (!tempString15 : string)) > 0 then let __assign_105 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult14 := __assign_105;
-              __assign_105
-            ) else let __assign_106 = ("" : string) in (
-              tempResult14 := __assign_106;
-              __assign_106
+            if HxString.length (let __call_arg_0_118 = !tempString15 in StringTools.trim __call_arg_0_118) > 0 then let __assign_119 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult14 := __assign_119;
+              __assign_119
+            ) else let __assign_120 = ("" : string) in (
+              tempResult14 := __assign_120;
+              __assign_120
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult14)))
       )) else ());
-      ignore (if HxString.equals owner "Parser" && Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isXmlParserSupportClass") (className : string) scope classLookup then ignore (let tempResult15 = ref ("" : string) in (
-        ignore (if HxString.equals hx_method "parse" then let __assign_111 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
-          tempResult15 := __assign_111;
-          __assign_111
-        ) else let tempString16 = ref ("" : string) in (
-          ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_112 = ("" : string) in (
-            tempString16 := __assign_112;
-            __assign_112
-          ) else let __assign_113 = (typeHint : string) in (
-            tempString16 := __assign_113;
-            __assign_113
+      ignore (if HxString.equals owner "Parser" && Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isXmlParserSupportClass") (className : string) scope classLookup then ignore (let tempResult15 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.equals hx_method "parse" then let __assign_125 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
+          tempResult15 := __assign_125;
+          __assign_125
+        ) else let tempString16 = ref (HxString.hx_null_string : string) in (
+          ignore (if typeHint == HxString.hx_null_string then let __assign_126 = ("" : string) in (
+            tempString16 := __assign_126;
+            __assign_126
+          ) else let __assign_127 = (typeHint : string) in (
+            tempString16 := __assign_127;
+            __assign_127
           ));
-          if HxString.length (StringTools.trim (!tempString16 : string)) > 0 then let __assign_114 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-            tempResult15 := __assign_114;
-            __assign_114
-          ) else let __assign_115 = ("" : string) in (
-            tempResult15 := __assign_115;
-            __assign_115
+          if HxString.length (let __call_arg_0_128 = !tempString16 in StringTools.trim __call_arg_0_128) > 0 then let __assign_129 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            tempResult15 := __assign_129;
+            __assign_129
+          ) else let __assign_130 = ("" : string) in (
+            tempResult15 := __assign_130;
+            __assign_130
           )
         ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult15)))
       )) else ());
-      ignore (if HxString.equals owner "Xml" then ignore (let tempResult16 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Xml" then ignore (let tempResult16 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "attributes" -> let __assign_120 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<String>" : string) scope classLookup : string) in (
-            tempResult16 := __assign_120;
-            __assign_120
+          | "attributes" -> let __assign_136 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<String>" : string) scope classLookup : string) in (
+            tempResult16 := __assign_136;
+            __assign_136
           )
-          | "elements" | "elementsNamed" | "iterator" -> let __assign_121 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<Xml>" : string) scope classLookup : string) in (
-            tempResult16 := __assign_121;
-            __assign_121
+          | "elements" | "elementsNamed" | "iterator" -> let __assign_137 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<Xml>" : string) scope classLookup : string) in (
+            tempResult16 := __assign_137;
+            __assign_137
           )
-          | "addChild" | "ensureElementType" | "insertChild" | "remove" | "set" -> let __assign_122 = ("void" : string) in (
-            tempResult16 := __assign_122;
-            __assign_122
+          | "addChild" | "ensureElementType" | "insertChild" | "remove" | "set" -> let __assign_138 = ("void" : string) in (
+            tempResult16 := __assign_138;
+            __assign_138
           )
-          | "createCData" | "createComment" | "createDocType" | "createDocument" | "createElement" | "createPCData" | "createProcessingInstruction" | "firstChild" | "firstElement" | "parse" -> let __assign_123 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
-            tempResult16 := __assign_123;
-            __assign_123
+          | "createCData" | "createComment" | "createDocType" | "createDocument" | "createElement" | "createPCData" | "createProcessingInstruction" | "firstChild" | "firstElement" | "parse" -> let __assign_139 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
+            tempResult16 := __assign_139;
+            __assign_139
           )
-          | "exists" | "removeChild" -> let __assign_124 = ("bool" : string) in (
-            tempResult16 := __assign_124;
-            __assign_124
+          | "exists" | "removeChild" -> let __assign_140 = ("bool" : string) in (
+            tempResult16 := __assign_140;
+            __assign_140
           )
-          | "get" | "get_nodeName" | "get_nodeValue" | "set_nodeName" | "set_nodeValue" | "toString" -> let __assign_125 = ("std::string" : string) in (
-            tempResult16 := __assign_125;
-            __assign_125
+          | "get" | "get_nodeName" | "get_nodeValue" | "set_nodeName" | "set_nodeValue" | "toString" -> let __assign_141 = ("std::string" : string) in (
+            tempResult16 := __assign_141;
+            __assign_141
           )
-          | _ -> let tempString17 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_116 = ("" : string) in (
-              tempString17 := __assign_116;
-              __assign_116
-            ) else let __assign_117 = (typeHint : string) in (
-              tempString17 := __assign_117;
-              __assign_117
+          | _ -> let tempString17 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_131 = ("" : string) in (
+              tempString17 := __assign_131;
+              __assign_131
+            ) else let __assign_132 = (typeHint : string) in (
+              tempString17 := __assign_132;
+              __assign_132
             ));
-            if HxString.length (StringTools.trim (!tempString17 : string)) > 0 then let __assign_118 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult16 := __assign_118;
-              __assign_118
-            ) else let __assign_119 = ("" : string) in (
-              tempResult16 := __assign_119;
-              __assign_119
+            if HxString.length (let __call_arg_0_133 = !tempString17 in StringTools.trim __call_arg_0_133) > 0 then let __assign_134 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult16 := __assign_134;
+              __assign_134
+            ) else let __assign_135 = ("" : string) in (
+              tempResult16 := __assign_135;
+              __assign_135
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult16)))
       )) else ());
-      ignore (if HxString.equals owner "Md5" then ignore (let tempResult17 = ref ("" : string) in (
+      ignore (if HxString.equals owner "Md5" then ignore (let tempResult17 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "bytes2blks" | "doEncode" | "str2blks" -> let __assign_130 = ("std::vector<int>" : string) in (
-            tempResult17 := __assign_130;
-            __assign_130
+          | "bytes2blks" | "doEncode" | "str2blks" -> let __assign_147 = ("std::vector<int>" : string) in (
+            tempResult17 := __assign_147;
+            __assign_147
           )
-          | "encode" | "hex" -> let __assign_131 = ("std::string" : string) in (
-            tempResult17 := __assign_131;
-            __assign_131
+          | "encode" | "hex" -> let __assign_148 = ("std::string" : string) in (
+            tempResult17 := __assign_148;
+            __assign_148
           )
-          | "addme" | "bitAND" | "bitOR" | "bitXOR" | "cmn" | "ff" | "gg" | "hh" | "ii" | "rol" -> let __assign_132 = ("int" : string) in (
-            tempResult17 := __assign_132;
-            __assign_132
+          | "addme" | "bitAND" | "bitOR" | "bitXOR" | "cmn" | "ff" | "gg" | "hh" | "ii" | "rol" -> let __assign_149 = ("int" : string) in (
+            tempResult17 := __assign_149;
+            __assign_149
           )
-          | "make" -> let __assign_133 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
-            tempResult17 := __assign_133;
-            __assign_133
+          | "make" -> let __assign_150 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+            tempResult17 := __assign_150;
+            __assign_150
           )
-          | _ -> let tempString18 = ref ("" : string) in (
-            ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_126 = ("" : string) in (
-              tempString18 := __assign_126;
-              __assign_126
-            ) else let __assign_127 = (typeHint : string) in (
-              tempString18 := __assign_127;
-              __assign_127
+          | _ -> let tempString18 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint == HxString.hx_null_string then let __assign_142 = ("" : string) in (
+              tempString18 := __assign_142;
+              __assign_142
+            ) else let __assign_143 = (typeHint : string) in (
+              tempString18 := __assign_143;
+              __assign_143
             ));
-            if HxString.length (StringTools.trim (!tempString18 : string)) > 0 then let __assign_128 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-              tempResult17 := __assign_128;
-              __assign_128
-            ) else let __assign_129 = ("" : string) in (
-              tempResult17 := __assign_129;
-              __assign_129
+            if HxString.length (let __call_arg_0_144 = !tempString18 in StringTools.trim __call_arg_0_144) > 0 then let __assign_145 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+              tempResult17 := __assign_145;
+              __assign_145
+            ) else let __assign_146 = ("" : string) in (
+              tempResult17 := __assign_146;
+              __assign_146
             )
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult17)))
       )) else ());
       ignore (if HxString.equals owner "EReg" && HxString.equals hx_method "matchedPos" then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("{pos:Int,len:Int}" : string) scope classLookup : string))) else ());
       ignore (if HxString.equals owner "Exception" && (HxString.equals hx_method "caught" || HxString.equals hx_method "thrown") then raise (HxRuntime.Hx_return (Obj.repr ("std::shared_ptr<Exception>" : string))) else ());
-      let tempResult18 = ref ("" : string) in let tempString19 = ref ("" : string) in (
-        ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_134 = ("" : string) in (
-          tempString19 := __assign_134;
-          __assign_134
-        ) else let __assign_135 = (typeHint : string) in (
-          tempString19 := __assign_135;
-          __assign_135
+      let tempResult18 = ref (HxString.hx_null_string : string) in let tempString19 = ref (HxString.hx_null_string : string) in (
+        ignore (if typeHint == HxString.hx_null_string then let __assign_151 = ("" : string) in (
+          tempString19 := __assign_151;
+          __assign_151
+        ) else let __assign_152 = (typeHint : string) in (
+          tempString19 := __assign_152;
+          __assign_152
         ));
-        ignore (if HxString.length (StringTools.trim (!tempString19 : string)) > 0 then let __assign_136 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
-          tempResult18 := __assign_136;
-          __assign_136
-        ) else let __assign_137 = ("" : string) in (
-          tempResult18 := __assign_137;
-          __assign_137
+        ignore (if HxString.length (let __call_arg_0_153 = !tempString19 in StringTools.trim __call_arg_0_153) > 0 then let __assign_154 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+          tempResult18 := __assign_154;
+          __assign_154
+        ) else let __assign_155 = ("" : string) in (
+          tempResult18 := __assign_155;
+          __assign_155
         ));
         !tempResult18
       )
     )
   )
-) in Obj.magic __fallback_result_139 with
-  | HxRuntime.Hx_return __ret_138 -> Obj.obj __ret_138
+) in Obj.magic __fallback_result_157 with
+  | HxRuntime.Hx_return __ret_156 -> Obj.obj __ret_156
 
-let preludeMethodParamTypes = fun self (className : string) (methodName : string) -> try let __fallback_result_158 = let tempString = ref ("" : string) in (
-  ignore (if className == Obj.magic (HxRuntime.hx_null) then let __assign_148 = ("" : string) in (
-    tempString := __assign_148;
-    __assign_148
-  ) else let __assign_149 = (className : string) in (
-    tempString := __assign_149;
-    __assign_149
+let preludeMethodParamTypes = fun self (className : string) (methodName : string) -> try let __fallback_result_176 = let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if className == HxString.hx_null_string then let __assign_166 = ("" : string) in (
+    tempString := __assign_166;
+    __assign_166
+  ) else let __assign_167 = (className : string) in (
+    tempString := __assign_167;
+    __assign_167
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref ("" : string) in (
-    ignore (if methodName == Obj.magic (HxRuntime.hx_null) then let __assign_150 = ("" : string) in (
-      tempString1 := __assign_150;
-      __assign_150
-    ) else let __assign_151 = (methodName : string) in (
-      tempString1 := __assign_151;
-      __assign_151
+  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if methodName == HxString.hx_null_string then let __assign_168 = ("" : string) in (
+      tempString1 := __assign_168;
+      __assign_168
+    ) else let __assign_169 = (methodName : string) in (
+      tempString1 := __assign_169;
+      __assign_169
     ));
     let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in (
-      ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "delay" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_152 = HxArray.create () in (
-        ignore (HxArray.push __arr_152 "std::function<void()>");
-        ignore (HxArray.push __arr_152 "double");
-        __arr_152
+      ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "delay" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_170 = HxArray.create () in (
+        ignore (HxArray.push __arr_170 "std::function<void()>");
+        ignore (HxArray.push __arr_170 "double");
+        __arr_170
       ))))) else ());
-      ignore (if HxString.equals owner "MainLoop" && HxString.equals hx_method "add" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_153 = HxArray.create () in (
-        ignore (HxArray.push __arr_153 "std::function<void()>");
-        ignore (HxArray.push __arr_153 "int");
-        __arr_153
+      ignore (if HxString.equals owner "MainLoop" && HxString.equals hx_method "add" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_171 = HxArray.create () in (
+        ignore (HxArray.push __arr_171 "std::function<void()>");
+        ignore (HxArray.push __arr_171 "int");
+        __arr_171
       ))))) else ());
-      ignore (if HxString.equals owner "EntryPoint" && (HxString.equals hx_method "runInMainThread" || HxString.equals hx_method "addThread") then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_154 = HxArray.create () in (
-        ignore (HxArray.push __arr_154 "std::function<void()>");
-        __arr_154
+      ignore (if HxString.equals owner "EntryPoint" && (HxString.equals hx_method "runInMainThread" || HxString.equals hx_method "addThread") then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_172 = HxArray.create () in (
+        ignore (HxArray.push __arr_172 "std::function<void()>");
+        __arr_172
       ))))) else ());
-      ignore (if HxString.equals owner "Http" && HxString.equals hx_method "setPostData" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_155 = HxArray.create () in (
-        ignore (HxArray.push __arr_155 "std::string");
-        __arr_155
+      ignore (if HxString.equals owner "Http" && HxString.equals hx_method "setPostData" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_173 = HxArray.create () in (
+        ignore (HxArray.push __arr_173 "std::string");
+        __arr_173
       ))))) else ());
-      let __arr_156 = HxArray.create () in __arr_156
+      let __arr_174 = HxArray.create () in __arr_174
     )
   )
-) in Obj.magic __fallback_result_158 with
-  | HxRuntime.Hx_return __ret_157 -> Obj.obj __ret_157
+) in Obj.magic __fallback_result_176 with
+  | HxRuntime.Hx_return __ret_175 -> Obj.obj __ret_175
 
-let methodParamCppTypes = fun self (className : string) (methodName : string) (scope : Obj.t) (classLookup : Obj.t) (providedArgCount : int) -> let providedArgCount = if Obj.repr providedArgCount == HxRuntime.hx_null then -1 else providedArgCount in let tempString = ref ("" : string) in (
-  ignore (if className == Obj.magic (HxRuntime.hx_null) then let __assign_159 = ("" : string) in (
-    tempString := __assign_159;
-    __assign_159
-  ) else let __assign_160 = (className : string) in (
-    tempString := __assign_160;
-    __assign_160
+let methodParamCppTypes = fun self (className : string) (methodName : string) (scope : Obj.t) (classLookup : Obj.t) (providedArgCount : int) -> let providedArgCount = if Obj.repr providedArgCount == HxRuntime.hx_null then -1 else providedArgCount in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if className == HxString.hx_null_string then let __assign_177 = ("" : string) in (
+    tempString := __assign_177;
+    __assign_177
+  ) else let __assign_178 = (className : string) in (
+    tempString := __assign_178;
+    __assign_178
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref ("" : string) in (
-    ignore (if methodName == Obj.magic (HxRuntime.hx_null) then let __assign_161 = ("" : string) in (
-      tempString1 := __assign_161;
-      __assign_161
-    ) else let __assign_162 = (methodName : string) in (
-      tempString1 := __assign_162;
-      __assign_162
+  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if methodName == HxString.hx_null_string then let __assign_179 = ("" : string) in (
+      tempString1 := __assign_179;
+      __assign_179
+    ) else let __assign_180 = (methodName : string) in (
+      tempString1 := __assign_180;
+      __assign_180
     ));
     let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
       ignore (match owner with
         | "Base64" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
-          | "decode" | "urlDecode" -> let __assign_167 = Obj.magic (let __arr_168 = HxArray.create () in (
-            ignore (HxArray.push __arr_168 "std::string");
-            ignore (HxArray.push __arr_168 "bool");
-            __arr_168
-          )) in (
-            tempResult := __assign_167;
-            __assign_167
-          )
-          | "encode" | "urlEncode" -> let __assign_169 = Obj.magic (let __arr_170 = HxArray.create () in (
-            ignore (HxArray.push __arr_170 bytesType);
-            ignore (HxArray.push __arr_170 "bool");
-            __arr_170
-          )) in (
-            tempResult := __assign_169;
-            __assign_169
-          )
-          | _ -> let __assign_165 = Obj.magic (let __arr_166 = HxArray.create () in __arr_166) in (
-            tempResult := __assign_165;
-            __assign_165
-          ))
-        | "BaseCode" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
-          | "decode" | "encode" -> let __assign_173 = Obj.magic (let __arr_174 = HxArray.create () in (
-            ignore (HxArray.push __arr_174 "std::string");
-            ignore (HxArray.push __arr_174 "std::string");
-            __arr_174
-          )) in (
-            tempResult := __assign_173;
-            __assign_173
-          )
-          | "decodeBytes" | "encodeBytes" -> let __assign_175 = Obj.magic (let __arr_176 = HxArray.create () in (
-            ignore (HxArray.push __arr_176 bytesType);
-            __arr_176
-          )) in (
-            tempResult := __assign_175;
-            __assign_175
-          )
-          | "decodeString" | "encodeString" -> let __assign_177 = Obj.magic (let __arr_178 = HxArray.create () in (
-            ignore (HxArray.push __arr_178 "std::string");
-            __arr_178
-          )) in (
-            tempResult := __assign_177;
-            __assign_177
-          )
-          | _ -> let __assign_171 = Obj.magic (let __arr_172 = HxArray.create () in __arr_172) in (
-            tempResult := __assign_171;
-            __assign_171
-          ))
-        | "Bytes" -> (match hx_method with
-          | "alloc" -> let __assign_181 = Obj.magic (let __arr_182 = HxArray.create () in (
-            ignore (HxArray.push __arr_182 "int");
-            __arr_182
-          )) in (
-            tempResult := __assign_181;
-            __assign_181
-          )
-          | "blit" -> let __assign_183 = Obj.magic (let __arr_184 = HxArray.create () in (
-            ignore (HxArray.push __arr_184 "int");
-            ignore (HxArray.push __arr_184 (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup));
-            ignore (HxArray.push __arr_184 "int");
-            ignore (HxArray.push __arr_184 "int");
-            __arr_184
-          )) in (
-            tempResult := __assign_183;
-            __assign_183
-          )
-          | "compare" -> let __assign_185 = Obj.magic (let __arr_186 = HxArray.create () in (
-            ignore (HxArray.push __arr_186 (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup));
+          | "decode" | "urlDecode" -> let __assign_185 = Obj.magic (let __arr_186 = HxArray.create () in (
+            ignore (HxArray.push __arr_186 "std::string");
+            ignore (HxArray.push __arr_186 "bool");
             __arr_186
           )) in (
             tempResult := __assign_185;
             __assign_185
           )
-          | "fastGet" -> let __assign_187 = Obj.magic (let __arr_188 = HxArray.create () in (
-            ignore (HxArray.push __arr_188 "std::vector<int>");
-            ignore (HxArray.push __arr_188 "int");
+          | "encode" | "urlEncode" -> let __assign_187 = Obj.magic (let __arr_188 = HxArray.create () in (
+            ignore (HxArray.push __arr_188 bytesType);
+            ignore (HxArray.push __arr_188 "bool");
             __arr_188
           )) in (
             tempResult := __assign_187;
             __assign_187
           )
-          | "fill" -> let __assign_189 = Obj.magic (let __arr_190 = HxArray.create () in (
-            ignore (HxArray.push __arr_190 "int");
-            ignore (HxArray.push __arr_190 "int");
-            ignore (HxArray.push __arr_190 "int");
-            __arr_190
-          )) in (
-            tempResult := __assign_189;
-            __assign_189
-          )
-          | "get" | "getDouble" | "getFloat" | "getInt32" | "getInt64" | "getUInt16" -> let __assign_191 = Obj.magic (let __arr_192 = HxArray.create () in (
-            ignore (HxArray.push __arr_192 "int");
+          | _ -> let __assign_183 = Obj.magic (let __arr_184 = HxArray.create () in __arr_184) in (
+            tempResult := __assign_183;
+            __assign_183
+          ))
+        | "BaseCode" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
+          | "decode" | "encode" -> let __assign_191 = Obj.magic (let __arr_192 = HxArray.create () in (
+            ignore (HxArray.push __arr_192 "std::string");
+            ignore (HxArray.push __arr_192 "std::string");
             __arr_192
           )) in (
             tempResult := __assign_191;
             __assign_191
           )
-          | "getString" -> let __assign_193 = Obj.magic (let __arr_194 = HxArray.create () in (
-            ignore (HxArray.push __arr_194 "int");
-            ignore (HxArray.push __arr_194 "int");
-            ignore (HxArray.push __arr_194 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
+          | "decodeBytes" | "encodeBytes" -> let __assign_193 = Obj.magic (let __arr_194 = HxArray.create () in (
+            ignore (HxArray.push __arr_194 bytesType);
             __arr_194
           )) in (
             tempResult := __assign_193;
             __assign_193
           )
-          | "ofData" -> let __assign_195 = Obj.magic (let __arr_196 = HxArray.create () in (
-            ignore (HxArray.push __arr_196 "std::vector<int>");
+          | "decodeString" | "encodeString" -> let __assign_195 = Obj.magic (let __arr_196 = HxArray.create () in (
+            ignore (HxArray.push __arr_196 "std::string");
             __arr_196
           )) in (
             tempResult := __assign_195;
             __assign_195
           )
-          | "ofHex" -> let __assign_197 = Obj.magic (let __arr_198 = HxArray.create () in (
-            ignore (HxArray.push __arr_198 "std::string");
-            __arr_198
-          )) in (
-            tempResult := __assign_197;
-            __assign_197
-          )
-          | "ofString" -> if providedArgCount = 1 then let __assign_199 = Obj.magic (let __arr_200 = HxArray.create () in (
-            ignore (HxArray.push __arr_200 "std::string");
+          | _ -> let __assign_189 = Obj.magic (let __arr_190 = HxArray.create () in __arr_190) in (
+            tempResult := __assign_189;
+            __assign_189
+          ))
+        | "Bytes" -> (match hx_method with
+          | "alloc" -> let __assign_199 = Obj.magic (let __arr_200 = HxArray.create () in (
+            ignore (HxArray.push __arr_200 "int");
             __arr_200
           )) in (
             tempResult := __assign_199;
             __assign_199
-          ) else let __assign_201 = Obj.magic (let __arr_202 = HxArray.create () in (
-            ignore (HxArray.push __arr_202 "std::string");
-            ignore (HxArray.push __arr_202 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
+          )
+          | "blit" -> let __assign_201 = Obj.magic (let __arr_202 = HxArray.create () in (
+            ignore (HxArray.push __arr_202 "int");
+            ignore (HxArray.push __arr_202 (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup));
+            ignore (HxArray.push __arr_202 "int");
+            ignore (HxArray.push __arr_202 "int");
             __arr_202
           )) in (
             tempResult := __assign_201;
             __assign_201
           )
-          | "readString" -> let __assign_203 = Obj.magic (let __arr_204 = HxArray.create () in (
-            ignore (HxArray.push __arr_204 "int");
-            ignore (HxArray.push __arr_204 "int");
+          | "compare" -> let __assign_203 = Obj.magic (let __arr_204 = HxArray.create () in (
+            ignore (HxArray.push __arr_204 (concreteClassReferenceCppType (Obj.magic self) ("Bytes" : string) scope classLookup));
             __arr_204
           )) in (
             tempResult := __assign_203;
             __assign_203
           )
-          | "setDouble" | "setFloat" -> let __assign_205 = Obj.magic (let __arr_206 = HxArray.create () in (
+          | "fastGet" -> let __assign_205 = Obj.magic (let __arr_206 = HxArray.create () in (
+            ignore (HxArray.push __arr_206 "std::vector<int>");
             ignore (HxArray.push __arr_206 "int");
-            ignore (HxArray.push __arr_206 "double");
             __arr_206
           )) in (
             tempResult := __assign_205;
             __assign_205
           )
-          | "set" | "setInt32" | "setUInt16" -> let __assign_207 = Obj.magic (let __arr_208 = HxArray.create () in (
+          | "fill" -> let __assign_207 = Obj.magic (let __arr_208 = HxArray.create () in (
+            ignore (HxArray.push __arr_208 "int");
             ignore (HxArray.push __arr_208 "int");
             ignore (HxArray.push __arr_208 "int");
             __arr_208
@@ -908,428 +840,496 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_207;
             __assign_207
           )
-          | "setInt64" -> let __assign_209 = Obj.magic (let __arr_210 = HxArray.create () in (
+          | "get" | "getDouble" | "getFloat" | "getInt32" | "getInt64" | "getUInt16" -> let __assign_209 = Obj.magic (let __arr_210 = HxArray.create () in (
             ignore (HxArray.push __arr_210 "int");
-            ignore (HxArray.push __arr_210 "long long");
             __arr_210
           )) in (
             tempResult := __assign_209;
             __assign_209
           )
-          | "sub" -> let __assign_211 = Obj.magic (let __arr_212 = HxArray.create () in (
+          | "getString" -> let __assign_211 = Obj.magic (let __arr_212 = HxArray.create () in (
             ignore (HxArray.push __arr_212 "int");
             ignore (HxArray.push __arr_212 "int");
+            ignore (HxArray.push __arr_212 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
             __arr_212
           )) in (
             tempResult := __assign_211;
             __assign_211
           )
-          | _ -> let __assign_179 = Obj.magic (let __arr_180 = HxArray.create () in __arr_180) in (
-            tempResult := __assign_179;
-            __assign_179
-          ))
-        | "BytesBuffer" -> (match hx_method with
-          | "add" -> let __assign_215 = Obj.magic (let __arr_216 = HxArray.create () in (
-            ignore (HxArray.push __arr_216 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
+          | "ofData" -> let __assign_213 = Obj.magic (let __arr_214 = HxArray.create () in (
+            ignore (HxArray.push __arr_214 "std::vector<int>");
+            __arr_214
+          )) in (
+            tempResult := __assign_213;
+            __assign_213
+          )
+          | "ofHex" -> let __assign_215 = Obj.magic (let __arr_216 = HxArray.create () in (
+            ignore (HxArray.push __arr_216 "std::string");
             __arr_216
           )) in (
             tempResult := __assign_215;
             __assign_215
           )
-          | "addBytes" -> let __assign_217 = Obj.magic (let __arr_218 = HxArray.create () in (
-            ignore (HxArray.push __arr_218 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
-            ignore (HxArray.push __arr_218 "int");
-            ignore (HxArray.push __arr_218 "int");
+          | "ofString" -> if providedArgCount = 1 then let __assign_217 = Obj.magic (let __arr_218 = HxArray.create () in (
+            ignore (HxArray.push __arr_218 "std::string");
             __arr_218
           )) in (
             tempResult := __assign_217;
             __assign_217
-          )
-          | "addDouble" | "addFloat" -> let __assign_219 = Obj.magic (let __arr_220 = HxArray.create () in (
-            ignore (HxArray.push __arr_220 "double");
+          ) else let __assign_219 = Obj.magic (let __arr_220 = HxArray.create () in (
+            ignore (HxArray.push __arr_220 "std::string");
+            ignore (HxArray.push __arr_220 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
             __arr_220
           )) in (
             tempResult := __assign_219;
             __assign_219
           )
-          | "addByte" | "addInt32" -> let __assign_221 = Obj.magic (let __arr_222 = HxArray.create () in (
+          | "readString" -> let __assign_221 = Obj.magic (let __arr_222 = HxArray.create () in (
+            ignore (HxArray.push __arr_222 "int");
             ignore (HxArray.push __arr_222 "int");
             __arr_222
           )) in (
             tempResult := __assign_221;
             __assign_221
           )
-          | "addInt64" -> let __assign_223 = Obj.magic (let __arr_224 = HxArray.create () in (
-            ignore (HxArray.push __arr_224 "long long");
+          | "setDouble" | "setFloat" -> let __assign_223 = Obj.magic (let __arr_224 = HxArray.create () in (
+            ignore (HxArray.push __arr_224 "int");
+            ignore (HxArray.push __arr_224 "double");
             __arr_224
           )) in (
             tempResult := __assign_223;
             __assign_223
           )
-          | "addString" -> let __assign_225 = Obj.magic (let __arr_226 = HxArray.create () in (
-            ignore (HxArray.push __arr_226 "std::string");
-            ignore (HxArray.push __arr_226 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
+          | "set" | "setInt32" | "setUInt16" -> let __assign_225 = Obj.magic (let __arr_226 = HxArray.create () in (
+            ignore (HxArray.push __arr_226 "int");
+            ignore (HxArray.push __arr_226 "int");
             __arr_226
           )) in (
             tempResult := __assign_225;
             __assign_225
           )
-          | _ -> let __assign_213 = Obj.magic (let __arr_214 = HxArray.create () in __arr_214) in (
-            tempResult := __assign_213;
-            __assign_213
-          ))
-        | "Input" -> (match hx_method with
-          | "readAll" -> let __assign_229 = Obj.magic (let __arr_230 = HxArray.create () in (
-            ignore (HxArray.push __arr_230 "std::optional<int>");
+          | "setInt64" -> let __assign_227 = Obj.magic (let __arr_228 = HxArray.create () in (
+            ignore (HxArray.push __arr_228 "int");
+            ignore (HxArray.push __arr_228 "long long");
+            __arr_228
+          )) in (
+            tempResult := __assign_227;
+            __assign_227
+          )
+          | "sub" -> let __assign_229 = Obj.magic (let __arr_230 = HxArray.create () in (
+            ignore (HxArray.push __arr_230 "int");
+            ignore (HxArray.push __arr_230 "int");
             __arr_230
           )) in (
             tempResult := __assign_229;
             __assign_229
           )
-          | "readBytes" | "readFullBytes" -> let __assign_231 = Obj.magic (let __arr_232 = HxArray.create () in (
-            ignore (HxArray.push __arr_232 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
-            ignore (HxArray.push __arr_232 "int");
-            ignore (HxArray.push __arr_232 "int");
-            __arr_232
-          )) in (
-            tempResult := __assign_231;
-            __assign_231
-          )
-          | "readString" -> let __assign_233 = Obj.magic (let __arr_234 = HxArray.create () in (
-            ignore (HxArray.push __arr_234 "int");
-            ignore (HxArray.push __arr_234 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
+          | _ -> let __assign_197 = Obj.magic (let __arr_198 = HxArray.create () in __arr_198) in (
+            tempResult := __assign_197;
+            __assign_197
+          ))
+        | "BytesBuffer" -> (match hx_method with
+          | "add" -> let __assign_233 = Obj.magic (let __arr_234 = HxArray.create () in (
+            ignore (HxArray.push __arr_234 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
             __arr_234
           )) in (
             tempResult := __assign_233;
             __assign_233
           )
-          | "read" | "readUntil" -> let __assign_235 = Obj.magic (let __arr_236 = HxArray.create () in (
+          | "addBytes" -> let __assign_235 = Obj.magic (let __arr_236 = HxArray.create () in (
+            ignore (HxArray.push __arr_236 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
+            ignore (HxArray.push __arr_236 "int");
             ignore (HxArray.push __arr_236 "int");
             __arr_236
           )) in (
             tempResult := __assign_235;
             __assign_235
           )
-          | "set_bigEndian" -> let __assign_237 = Obj.magic (let __arr_238 = HxArray.create () in (
-            ignore (HxArray.push __arr_238 "bool");
+          | "addDouble" | "addFloat" -> let __assign_237 = Obj.magic (let __arr_238 = HxArray.create () in (
+            ignore (HxArray.push __arr_238 "double");
             __arr_238
           )) in (
             tempResult := __assign_237;
             __assign_237
           )
-          | _ -> let __assign_227 = Obj.magic (let __arr_228 = HxArray.create () in __arr_228) in (
-            tempResult := __assign_227;
-            __assign_227
-          ))
-        | "JsonParser" -> (match hx_method with
-          | "invalidNumber" | "parseNumber" -> let __assign_241 = Obj.magic (let __arr_242 = HxArray.create () in (
-            ignore (HxArray.push __arr_242 "int");
+          | "addByte" | "addInt32" -> let __assign_239 = Obj.magic (let __arr_240 = HxArray.create () in (
+            ignore (HxArray.push __arr_240 "int");
+            __arr_240
+          )) in (
+            tempResult := __assign_239;
+            __assign_239
+          )
+          | "addInt64" -> let __assign_241 = Obj.magic (let __arr_242 = HxArray.create () in (
+            ignore (HxArray.push __arr_242 "long long");
             __arr_242
           )) in (
             tempResult := __assign_241;
             __assign_241
           )
-          | "parse" -> let __assign_243 = Obj.magic (let __arr_244 = HxArray.create () in (
+          | "addString" -> let __assign_243 = Obj.magic (let __arr_244 = HxArray.create () in (
             ignore (HxArray.push __arr_244 "std::string");
+            ignore (HxArray.push __arr_244 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
             __arr_244
           )) in (
             tempResult := __assign_243;
             __assign_243
           )
-          | _ -> let __assign_239 = Obj.magic (let __arr_240 = HxArray.create () in __arr_240) in (
-            tempResult := __assign_239;
-            __assign_239
+          | _ -> let __assign_231 = Obj.magic (let __arr_232 = HxArray.create () in __arr_232) in (
+            tempResult := __assign_231;
+            __assign_231
           ))
-        | "JsonPrinter" -> (let jsonPrinterReplacerType = ("std::function<std::string(std::string, std::string)>" : string) in match hx_method with
-          | "addChar" -> let __assign_247 = Obj.magic (let __arr_248 = HxArray.create () in (
-            ignore (HxArray.push __arr_248 "int");
+        | "Input" -> (match hx_method with
+          | "readAll" -> let __assign_247 = Obj.magic (let __arr_248 = HxArray.create () in (
+            ignore (HxArray.push __arr_248 "std::optional<int>");
             __arr_248
           )) in (
             tempResult := __assign_247;
             __assign_247
           )
-          | "fieldsString" -> let __assign_249 = Obj.magic (let __arr_250 = HxArray.create () in (
-            ignore (HxArray.push __arr_250 "std::any");
-            ignore (HxArray.push __arr_250 "std::vector<std::string>");
+          | "readBytes" | "readFullBytes" -> let __assign_249 = Obj.magic (let __arr_250 = HxArray.create () in (
+            ignore (HxArray.push __arr_250 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
+            ignore (HxArray.push __arr_250 "int");
+            ignore (HxArray.push __arr_250 "int");
             __arr_250
           )) in (
             tempResult := __assign_249;
             __assign_249
           )
-          | "classString" | "objString" -> let __assign_251 = Obj.magic (let __arr_252 = HxArray.create () in (
-            ignore (HxArray.push __arr_252 "std::any");
+          | "readString" -> let __assign_251 = Obj.magic (let __arr_252 = HxArray.create () in (
+            ignore (HxArray.push __arr_252 "int");
+            ignore (HxArray.push __arr_252 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
             __arr_252
           )) in (
             tempResult := __assign_251;
             __assign_251
           )
-          | "print" -> let __assign_253 = Obj.magic (let __arr_254 = HxArray.create () in (
-            ignore (HxArray.push __arr_254 "std::any");
-            ignore (HxArray.push __arr_254 (("std::optional<" ^ HxString.toStdString jsonPrinterReplacerType) ^ ">"));
-            ignore (HxArray.push __arr_254 "std::optional<std::string>");
+          | "read" | "readUntil" -> let __assign_253 = Obj.magic (let __arr_254 = HxArray.create () in (
+            ignore (HxArray.push __arr_254 "int");
             __arr_254
           )) in (
             tempResult := __assign_253;
             __assign_253
           )
-          | "add" | "quote" | "quoteUtf8" -> let __assign_255 = Obj.magic (let __arr_256 = HxArray.create () in (
-            ignore (HxArray.push __arr_256 "std::string");
+          | "set_bigEndian" -> let __assign_255 = Obj.magic (let __arr_256 = HxArray.create () in (
+            ignore (HxArray.push __arr_256 "bool");
             __arr_256
           )) in (
             tempResult := __assign_255;
             __assign_255
           )
-          | "write" -> let __assign_257 = Obj.magic (let __arr_258 = HxArray.create () in (
-            ignore (HxArray.push __arr_258 "std::any");
-            ignore (HxArray.push __arr_258 "std::any");
-            __arr_258
-          )) in (
-            tempResult := __assign_257;
-            __assign_257
-          )
           | _ -> let __assign_245 = Obj.magic (let __arr_246 = HxArray.create () in __arr_246) in (
             tempResult := __assign_245;
             __assign_245
           ))
-        | "Md5" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
-          | "encode" -> let __assign_261 = Obj.magic (let __arr_262 = HxArray.create () in (
+        | "JsonParser" -> (match hx_method with
+          | "invalidNumber" | "parseNumber" -> let __assign_259 = Obj.magic (let __arr_260 = HxArray.create () in (
+            ignore (HxArray.push __arr_260 "int");
+            __arr_260
+          )) in (
+            tempResult := __assign_259;
+            __assign_259
+          )
+          | "parse" -> let __assign_261 = Obj.magic (let __arr_262 = HxArray.create () in (
             ignore (HxArray.push __arr_262 "std::string");
             __arr_262
           )) in (
             tempResult := __assign_261;
             __assign_261
           )
-          | "make" -> let __assign_263 = Obj.magic (let __arr_264 = HxArray.create () in (
-            ignore (HxArray.push __arr_264 bytesType);
-            __arr_264
-          )) in (
-            tempResult := __assign_263;
-            __assign_263
-          )
-          | _ -> let __assign_259 = Obj.magic (let __arr_260 = HxArray.create () in __arr_260) in (
-            tempResult := __assign_259;
-            __assign_259
+          | _ -> let __assign_257 = Obj.magic (let __arr_258 = HxArray.create () in __arr_258) in (
+            tempResult := __assign_257;
+            __assign_257
           ))
-        | "DefaultResolver" | "NullResolver" | "TypeResolver" -> (match hx_method with
-          | "resolveClass" | "resolveEnum" -> let __assign_267 = Obj.magic (let __arr_268 = HxArray.create () in (
-            ignore (HxArray.push __arr_268 "std::string");
+        | "JsonPrinter" -> (let jsonPrinterReplacerType = "std::function<std::string(std::string, std::string)>" in match hx_method with
+          | "addChar" -> let __assign_265 = Obj.magic (let __arr_266 = HxArray.create () in (
+            ignore (HxArray.push __arr_266 "int");
+            __arr_266
+          )) in (
+            tempResult := __assign_265;
+            __assign_265
+          )
+          | "fieldsString" -> let __assign_267 = Obj.magic (let __arr_268 = HxArray.create () in (
+            ignore (HxArray.push __arr_268 "std::any");
+            ignore (HxArray.push __arr_268 "std::vector<std::string>");
             __arr_268
           )) in (
             tempResult := __assign_267;
             __assign_267
           )
-          | _ -> let __assign_265 = Obj.magic (let __arr_266 = HxArray.create () in __arr_266) in (
-            tempResult := __assign_265;
-            __assign_265
-          ))
-        | "Output" -> (match hx_method with
-          | "prepare" | "writeByte" | "writeInt16" | "writeInt24" | "writeInt32" | "writeInt8" | "writeUInt16" | "writeUInt24" -> let __assign_271 = Obj.magic (let __arr_272 = HxArray.create () in (
-            ignore (HxArray.push __arr_272 "int");
+          | "classString" | "objString" -> let __assign_269 = Obj.magic (let __arr_270 = HxArray.create () in (
+            ignore (HxArray.push __arr_270 "std::any");
+            __arr_270
+          )) in (
+            tempResult := __assign_269;
+            __assign_269
+          )
+          | "print" -> let __assign_271 = Obj.magic (let __arr_272 = HxArray.create () in (
+            ignore (HxArray.push __arr_272 "std::any");
+            ignore (HxArray.push __arr_272 (("std::optional<" ^ HxString.toStdString jsonPrinterReplacerType) ^ ">"));
+            ignore (HxArray.push __arr_272 "std::optional<std::string>");
             __arr_272
           )) in (
             tempResult := __assign_271;
             __assign_271
           )
-          | "set_bigEndian" -> let __assign_273 = Obj.magic (let __arr_274 = HxArray.create () in (
-            ignore (HxArray.push __arr_274 "bool");
+          | "add" | "quote" | "quoteUtf8" -> let __assign_273 = Obj.magic (let __arr_274 = HxArray.create () in (
+            ignore (HxArray.push __arr_274 "std::string");
             __arr_274
           )) in (
             tempResult := __assign_273;
             __assign_273
           )
           | "write" -> let __assign_275 = Obj.magic (let __arr_276 = HxArray.create () in (
-            ignore (HxArray.push __arr_276 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
+            ignore (HxArray.push __arr_276 "std::any");
+            ignore (HxArray.push __arr_276 "std::any");
             __arr_276
           )) in (
             tempResult := __assign_275;
             __assign_275
           )
-          | "writeDouble" | "writeFloat" -> let __assign_277 = Obj.magic (let __arr_278 = HxArray.create () in (
-            ignore (HxArray.push __arr_278 "double");
-            __arr_278
-          )) in (
-            tempResult := __assign_277;
-            __assign_277
-          )
-          | "writeBytes" | "writeFullBytes" -> let __assign_279 = Obj.magic (let __arr_280 = HxArray.create () in (
-            ignore (HxArray.push __arr_280 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
-            ignore (HxArray.push __arr_280 "int");
-            ignore (HxArray.push __arr_280 "int");
+          | _ -> let __assign_263 = Obj.magic (let __arr_264 = HxArray.create () in __arr_264) in (
+            tempResult := __assign_263;
+            __assign_263
+          ))
+        | "Md5" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
+          | "encode" -> let __assign_279 = Obj.magic (let __arr_280 = HxArray.create () in (
+            ignore (HxArray.push __arr_280 "std::string");
             __arr_280
           )) in (
             tempResult := __assign_279;
             __assign_279
           )
-          | "writeInput" -> let __assign_281 = Obj.magic (let __arr_282 = HxArray.create () in (
-            ignore (HxArray.push __arr_282 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Input" : string) scope classLookup));
-            ignore (HxArray.push __arr_282 "std::optional<int>");
+          | "make" -> let __assign_281 = Obj.magic (let __arr_282 = HxArray.create () in (
+            ignore (HxArray.push __arr_282 bytesType);
             __arr_282
           )) in (
             tempResult := __assign_281;
             __assign_281
           )
-          | "writeString" -> let __assign_283 = Obj.magic (let __arr_284 = HxArray.create () in (
-            ignore (HxArray.push __arr_284 "std::string");
-            ignore (HxArray.push __arr_284 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
-            __arr_284
-          )) in (
-            tempResult := __assign_283;
-            __assign_283
-          )
-          | _ -> let __assign_269 = Obj.magic (let __arr_270 = HxArray.create () in __arr_270) in (
-            tempResult := __assign_269;
-            __assign_269
+          | _ -> let __assign_277 = Obj.magic (let __arr_278 = HxArray.create () in __arr_278) in (
+            tempResult := __assign_277;
+            __assign_277
           ))
-        | "Resource" -> (match hx_method with
-          | "getBytes" | "getString" -> let __assign_287 = Obj.magic (let __arr_288 = HxArray.create () in (
-            ignore (HxArray.push __arr_288 "std::string");
-            __arr_288
+        | "DefaultResolver" | "NullResolver" | "TypeResolver" -> (match hx_method with
+          | "resolveClass" | "resolveEnum" -> let __assign_285 = Obj.magic (let __arr_286 = HxArray.create () in (
+            ignore (HxArray.push __arr_286 "std::string");
+            __arr_286
           )) in (
-            tempResult := __assign_287;
-            __assign_287
-          )
-          | _ -> let __assign_285 = Obj.magic (let __arr_286 = HxArray.create () in __arr_286) in (
             tempResult := __assign_285;
             __assign_285
+          )
+          | _ -> let __assign_283 = Obj.magic (let __arr_284 = HxArray.create () in __arr_284) in (
+            tempResult := __assign_283;
+            __assign_283
           ))
-        | "Runner" -> (let utestTargetType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "utestTestObjectCppType") scope classLookup : string) in if HxString.length utestTargetType = 0 then let __assign_289 = Obj.magic (let __arr_290 = HxArray.create () in __arr_290) in (
-          tempResult := __assign_289;
-          __assign_289
-        ) else match hx_method with
-          | "addCase" | "addCaseOld" | "isMethod" -> let __assign_293 = Obj.magic (let __arr_294 = HxArray.create () in (
-            ignore (HxArray.push __arr_294 utestTargetType);
+        | "Output" -> (match hx_method with
+          | "prepare" | "writeByte" | "writeInt16" | "writeInt24" | "writeInt32" | "writeInt8" | "writeUInt16" | "writeUInt24" -> let __assign_289 = Obj.magic (let __arr_290 = HxArray.create () in (
+            ignore (HxArray.push __arr_290 "int");
+            __arr_290
+          )) in (
+            tempResult := __assign_289;
+            __assign_289
+          )
+          | "set_bigEndian" -> let __assign_291 = Obj.magic (let __arr_292 = HxArray.create () in (
+            ignore (HxArray.push __arr_292 "bool");
+            __arr_292
+          )) in (
+            tempResult := __assign_291;
+            __assign_291
+          )
+          | "write" -> let __assign_293 = Obj.magic (let __arr_294 = HxArray.create () in (
+            ignore (HxArray.push __arr_294 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
             __arr_294
           )) in (
             tempResult := __assign_293;
             __assign_293
           )
-          | _ -> let __assign_291 = Obj.magic (let __arr_292 = HxArray.create () in __arr_292) in (
-            tempResult := __assign_291;
-            __assign_291
-          ))
-        | "Test" -> (match hx_method with
-          | "exc" | "unspec" -> let __assign_297 = Obj.magic (let __arr_298 = HxArray.create () in (
-            ignore (HxArray.push __arr_298 "std::function<void()>");
-            ignore (HxArray.push __arr_298 "std::optional<PosInfos>");
+          | "writeDouble" | "writeFloat" -> let __assign_295 = Obj.magic (let __arr_296 = HxArray.create () in (
+            ignore (HxArray.push __arr_296 "double");
+            __arr_296
+          )) in (
+            tempResult := __assign_295;
+            __assign_295
+          )
+          | "writeBytes" | "writeFullBytes" -> let __assign_297 = Obj.magic (let __arr_298 = HxArray.create () in (
+            ignore (HxArray.push __arr_298 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup));
+            ignore (HxArray.push __arr_298 "int");
+            ignore (HxArray.push __arr_298 "int");
             __arr_298
           )) in (
             tempResult := __assign_297;
             __assign_297
           )
-          | _ -> let __assign_295 = Obj.magic (let __arr_296 = HxArray.create () in __arr_296) in (
-            tempResult := __assign_295;
-            __assign_295
-          ))
-        | "Type" -> (match hx_method with
-          | "allEnums" | "getEnumConstructs" | "getEnumName" -> let __assign_301 = Obj.magic (let __arr_302 = HxArray.create () in (
-            ignore (HxArray.push __arr_302 "std::shared_ptr<Enum>");
+          | "writeInput" -> let __assign_299 = Obj.magic (let __arr_300 = HxArray.create () in (
+            ignore (HxArray.push __arr_300 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Input" : string) scope classLookup));
+            ignore (HxArray.push __arr_300 "std::optional<int>");
+            __arr_300
+          )) in (
+            tempResult := __assign_299;
+            __assign_299
+          )
+          | "writeString" -> let __assign_301 = Obj.magic (let __arr_302 = HxArray.create () in (
+            ignore (HxArray.push __arr_302 "std::string");
+            ignore (HxArray.push __arr_302 (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup));
             __arr_302
           )) in (
             tempResult := __assign_301;
             __assign_301
           )
-          | "createEnum" -> let __assign_303 = Obj.magic (let __arr_304 = HxArray.create () in (
-            ignore (HxArray.push __arr_304 "std::shared_ptr<Enum>");
-            ignore (HxArray.push __arr_304 "std::string");
-            ignore (HxArray.push __arr_304 "std::vector<std::any>");
-            __arr_304
-          )) in (
-            tempResult := __assign_303;
-            __assign_303
-          )
-          | "createEnumIndex" -> let __assign_305 = Obj.magic (let __arr_306 = HxArray.create () in (
-            ignore (HxArray.push __arr_306 "std::shared_ptr<Enum>");
-            ignore (HxArray.push __arr_306 "int");
+          | _ -> let __assign_287 = Obj.magic (let __arr_288 = HxArray.create () in __arr_288) in (
+            tempResult := __assign_287;
+            __assign_287
+          ))
+        | "Resource" -> (match hx_method with
+          | "getBytes" | "getString" -> let __assign_305 = Obj.magic (let __arr_306 = HxArray.create () in (
+            ignore (HxArray.push __arr_306 "std::string");
             __arr_306
           )) in (
             tempResult := __assign_305;
             __assign_305
           )
-          | "resolveClass" | "resolveEnum" -> let __assign_307 = Obj.magic (let __arr_308 = HxArray.create () in (
-            ignore (HxArray.push __arr_308 "std::string");
-            __arr_308
-          )) in (
-            tempResult := __assign_307;
-            __assign_307
-          )
-          | _ -> let __assign_299 = Obj.magic (let __arr_300 = HxArray.create () in __arr_300) in (
-            tempResult := __assign_299;
-            __assign_299
+          | _ -> let __assign_303 = Obj.magic (let __arr_304 = HxArray.create () in __arr_304) in (
+            tempResult := __assign_303;
+            __assign_303
           ))
-        | "Unserializer" -> (match hx_method with
-          | "fastCharAt" | "fastCharCodeAt" -> let __assign_311 = Obj.magic (let __arr_312 = HxArray.create () in (
-            ignore (HxArray.push __arr_312 "std::string");
-            ignore (HxArray.push __arr_312 "int");
+        | "Runner" -> (let utestTargetType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "utestTestObjectCppType") scope classLookup : string) in if HxString.length utestTargetType = 0 then let __assign_307 = Obj.magic (let __arr_308 = HxArray.create () in __arr_308) in (
+          tempResult := __assign_307;
+          __assign_307
+        ) else match hx_method with
+          | "addCase" | "addCaseOld" | "isMethod" -> let __assign_311 = Obj.magic (let __arr_312 = HxArray.create () in (
+            ignore (HxArray.push __arr_312 utestTargetType);
             __arr_312
           )) in (
             tempResult := __assign_311;
             __assign_311
           )
-          | "fastLength" -> let __assign_313 = Obj.magic (let __arr_314 = HxArray.create () in (
-            ignore (HxArray.push __arr_314 "std::string");
-            __arr_314
-          )) in (
-            tempResult := __assign_313;
-            __assign_313
-          )
-          | "fastSubstr" -> let __assign_315 = Obj.magic (let __arr_316 = HxArray.create () in (
-            ignore (HxArray.push __arr_316 "std::string");
-            ignore (HxArray.push __arr_316 "int");
-            ignore (HxArray.push __arr_316 "int");
+          | _ -> let __assign_309 = Obj.magic (let __arr_310 = HxArray.create () in __arr_310) in (
+            tempResult := __assign_309;
+            __assign_309
+          ))
+        | "Test" -> (match hx_method with
+          | "exc" | "unspec" -> let __assign_315 = Obj.magic (let __arr_316 = HxArray.create () in (
+            ignore (HxArray.push __arr_316 "std::function<void()>");
+            ignore (HxArray.push __arr_316 "std::optional<PosInfos>");
             __arr_316
           )) in (
             tempResult := __assign_315;
             __assign_315
           )
-          | "unserializeObject" -> let __assign_317 = Obj.magic (let __arr_318 = HxArray.create () in (
-            ignore (HxArray.push __arr_318 "std::any");
-            __arr_318
-          )) in (
-            tempResult := __assign_317;
-            __assign_317
-          )
-          | _ -> let __assign_309 = Obj.magic (let __arr_310 = HxArray.create () in __arr_310) in (
-            tempResult := __assign_309;
-            __assign_309
+          | _ -> let __assign_313 = Obj.magic (let __arr_314 = HxArray.create () in __arr_314) in (
+            tempResult := __assign_313;
+            __assign_313
           ))
-        | "Xml" -> (let xmlType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in match hx_method with
-          | "createCData" | "createComment" | "createDocType" | "createElement" | "createPCData" | "createProcessingInstruction" | "elementsNamed" | "exists" | "get" | "parse" | "remove" | "set_nodeName" | "set_nodeValue" -> let __assign_321 = Obj.magic (let __arr_322 = HxArray.create () in (
+        | "Type" -> (match hx_method with
+          | "allEnums" | "getEnumConstructs" | "getEnumName" -> let __assign_319 = Obj.magic (let __arr_320 = HxArray.create () in (
+            ignore (HxArray.push __arr_320 "std::shared_ptr<Enum>");
+            __arr_320
+          )) in (
+            tempResult := __assign_319;
+            __assign_319
+          )
+          | "createEnum" -> let __assign_321 = Obj.magic (let __arr_322 = HxArray.create () in (
+            ignore (HxArray.push __arr_322 "std::shared_ptr<Enum>");
             ignore (HxArray.push __arr_322 "std::string");
+            ignore (HxArray.push __arr_322 "std::vector<std::any>");
             __arr_322
           )) in (
             tempResult := __assign_321;
             __assign_321
           )
-          | "insertChild" -> let __assign_323 = Obj.magic (let __arr_324 = HxArray.create () in (
-            ignore (HxArray.push __arr_324 xmlType);
+          | "createEnumIndex" -> let __assign_323 = Obj.magic (let __arr_324 = HxArray.create () in (
+            ignore (HxArray.push __arr_324 "std::shared_ptr<Enum>");
             ignore (HxArray.push __arr_324 "int");
             __arr_324
           )) in (
             tempResult := __assign_323;
             __assign_323
           )
-          | "addChild" | "removeChild" -> let __assign_325 = Obj.magic (let __arr_326 = HxArray.create () in (
-            ignore (HxArray.push __arr_326 xmlType);
+          | "resolveClass" | "resolveEnum" -> let __assign_325 = Obj.magic (let __arr_326 = HxArray.create () in (
+            ignore (HxArray.push __arr_326 "std::string");
             __arr_326
           )) in (
             tempResult := __assign_325;
             __assign_325
           )
-          | "set" -> let __assign_327 = Obj.magic (let __arr_328 = HxArray.create () in (
-            ignore (HxArray.push __arr_328 "std::string");
-            ignore (HxArray.push __arr_328 "std::string");
-            __arr_328
+          | _ -> let __assign_317 = Obj.magic (let __arr_318 = HxArray.create () in __arr_318) in (
+            tempResult := __assign_317;
+            __assign_317
+          ))
+        | "Unserializer" -> (match hx_method with
+          | "fastCharAt" | "fastCharCodeAt" -> let __assign_329 = Obj.magic (let __arr_330 = HxArray.create () in (
+            ignore (HxArray.push __arr_330 "std::string");
+            ignore (HxArray.push __arr_330 "int");
+            __arr_330
           )) in (
+            tempResult := __assign_329;
+            __assign_329
+          )
+          | "fastLength" -> let __assign_331 = Obj.magic (let __arr_332 = HxArray.create () in (
+            ignore (HxArray.push __arr_332 "std::string");
+            __arr_332
+          )) in (
+            tempResult := __assign_331;
+            __assign_331
+          )
+          | "fastSubstr" -> let __assign_333 = Obj.magic (let __arr_334 = HxArray.create () in (
+            ignore (HxArray.push __arr_334 "std::string");
+            ignore (HxArray.push __arr_334 "int");
+            ignore (HxArray.push __arr_334 "int");
+            __arr_334
+          )) in (
+            tempResult := __assign_333;
+            __assign_333
+          )
+          | "unserializeObject" -> let __assign_335 = Obj.magic (let __arr_336 = HxArray.create () in (
+            ignore (HxArray.push __arr_336 "std::any");
+            __arr_336
+          )) in (
+            tempResult := __assign_335;
+            __assign_335
+          )
+          | _ -> let __assign_327 = Obj.magic (let __arr_328 = HxArray.create () in __arr_328) in (
             tempResult := __assign_327;
             __assign_327
-          )
-          | _ -> let __assign_319 = Obj.magic (let __arr_320 = HxArray.create () in __arr_320) in (
-            tempResult := __assign_319;
-            __assign_319
           ))
-        | _ -> let __assign_163 = Obj.magic (let __arr_164 = HxArray.create () in __arr_164) in (
-          tempResult := __assign_163;
-          __assign_163
+        | "Xml" -> (let xmlType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in match hx_method with
+          | "createCData" | "createComment" | "createDocType" | "createElement" | "createPCData" | "createProcessingInstruction" | "elementsNamed" | "exists" | "get" | "parse" | "remove" | "set_nodeName" | "set_nodeValue" -> let __assign_339 = Obj.magic (let __arr_340 = HxArray.create () in (
+            ignore (HxArray.push __arr_340 "std::string");
+            __arr_340
+          )) in (
+            tempResult := __assign_339;
+            __assign_339
+          )
+          | "insertChild" -> let __assign_341 = Obj.magic (let __arr_342 = HxArray.create () in (
+            ignore (HxArray.push __arr_342 xmlType);
+            ignore (HxArray.push __arr_342 "int");
+            __arr_342
+          )) in (
+            tempResult := __assign_341;
+            __assign_341
+          )
+          | "addChild" | "removeChild" -> let __assign_343 = Obj.magic (let __arr_344 = HxArray.create () in (
+            ignore (HxArray.push __arr_344 xmlType);
+            __arr_344
+          )) in (
+            tempResult := __assign_343;
+            __assign_343
+          )
+          | "set" -> let __assign_345 = Obj.magic (let __arr_346 = HxArray.create () in (
+            ignore (HxArray.push __arr_346 "std::string");
+            ignore (HxArray.push __arr_346 "std::string");
+            __arr_346
+          )) in (
+            tempResult := __assign_345;
+            __assign_345
+          )
+          | _ -> let __assign_337 = Obj.magic (let __arr_338 = HxArray.create () in __arr_338) in (
+            tempResult := __assign_337;
+            __assign_337
+          ))
+        | _ -> let __assign_181 = Obj.magic (let __arr_182 = HxArray.create () in __arr_182) in (
+          tempResult := __assign_181;
+          __assign_181
         ));
       !tempResult
     )

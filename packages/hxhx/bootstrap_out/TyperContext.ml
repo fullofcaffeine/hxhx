@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable loader : LazyTypeLoader.t; mutable filePath : string; mutable modulePath : string; mutable packagePath : string; mutable directives : HxModuleDirective.t HxArray.t; mutable resolvedDirectives : TyModuleDirective.t HxArray.t; mutable classFullName : string }
 
-let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFullName2 loader2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t) in (
+let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFullName2 loader2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic index2 in (
       (Obj.magic self : t).index <- __assign_1;
@@ -16,8 +16,8 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
       (Obj.magic self : t).loader <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if filePath2 == Obj.magic (HxRuntime.hx_null) || HxString.length filePath2 = 0 then let __assign_3 = ("<unknown>" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if filePath2 == HxString.hx_null_string || HxString.length filePath2 = 0 then let __assign_3 = ("<unknown>" : string) in (
         tempRight := __assign_3;
         __assign_3
       ) else let __assign_4 = (filePath2 : string) in (
@@ -28,8 +28,8 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
         (Obj.magic self : t).filePath <- __assign_5;
         __assign_5
       ));
-      let tempRight1 = ref ("" : string) in (
-        ignore (if modulePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
+      let tempRight1 = ref (HxString.hx_null_string : string) in (
+        ignore (if modulePath2 == HxString.hx_null_string then let __assign_6 = ("" : string) in (
           tempRight1 := __assign_6;
           __assign_6
         ) else let __assign_7 = (modulePath2 : string) in (
@@ -40,8 +40,8 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
           (Obj.magic self : t).modulePath <- __assign_8;
           __assign_8
         ));
-        let tempRight2 = ref ("" : string) in (
-          ignore (if packagePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
+        let tempRight2 = ref (HxString.hx_null_string : string) in (
+          ignore (if packagePath2 == HxString.hx_null_string then let __assign_9 = ("" : string) in (
             tempRight2 := __assign_9;
             __assign_9
           ) else let __assign_10 = (packagePath2 : string) in (
@@ -76,8 +76,8 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
                 (Obj.magic self : t).resolvedDirectives <- __assign_19;
                 __assign_19
               ));
-              let tempRight5 = ref ("" : string) in (
-                ignore (if classFullName2 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
+              let tempRight5 = ref (HxString.hx_null_string : string) in (
+                ignore (if classFullName2 == HxString.hx_null_string then let __assign_20 = ("" : string) in (
                   tempRight5 := __assign_20;
                   __assign_20
                 ) else let __assign_21 = (classFullName2 : string) in (
@@ -98,7 +98,7 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); resolvedDirectives = Obj.magic (HxRuntime.hx_null); classFullName = HxString.hx_null_string } : t)
 
 let getIndex = fun self () -> (Obj.magic self : t).index
 
@@ -228,7 +228,7 @@ let importedStaticMethod = fun self (name : string) -> try let __fallback_result
     __old_46
   ) in let directive = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).resolvedDirectives)) (HxInt.sub (HxInt.sub (HxArray.length ((Obj.magic self : t).resolvedDirectives)) 1) offset)) in let provider = Obj.magic (resolvedProvider (Obj.magic self) (Obj.magic directive)) in (
     ignore (if provider == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-    let tempString = ref ("" : string) in (
+    let tempString = ref (HxString.hx_null_string : string) in (
       ignore (let _g2 = Obj.magic (TyModuleDirective.getKind (Obj.magic directive) ()) in match _g2 with
         | TyModuleDirectiveKind.StaticMemberImport _p0 -> let _g3 = (_p0 : string) in let exactName = (_g3 : string) in if HxString.equals (TyModuleDirective.getStaticLocalName (Obj.magic directive) ()) name then let __assign_49 = (exactName : string) in (
           tempString := __assign_49;

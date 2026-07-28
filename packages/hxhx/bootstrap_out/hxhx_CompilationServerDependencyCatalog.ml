@@ -28,7 +28,7 @@ let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.class_ "hxh
         (__place_receiver_7 : t).maxInvocations <- __place_rhs_8;
         __place_rhs_8
       ));
-      if (Obj.magic self : t).maxInvocations <= 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation catalog requires a positive invocation limit") ["Dynamic"; "String"]) else ()
+      if (Obj.magic self : t).maxInvocations <= 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation catalog requires a positive invocation limit") ["Dynamic"]) else ()
     )
   )));
   self

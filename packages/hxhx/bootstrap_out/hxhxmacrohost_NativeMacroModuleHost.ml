@@ -15,6 +15,6 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroM
 
 let clear = fun () -> ignore (HxHxMacroModuleHost.clear ())
 
-let snapshot = fun () -> HxHxMacroModuleHost.snapshot ()
+let snapshot = fun () -> (HxHxMacroModuleHost.snapshot () : string)
 
-let runExpr = fun expr -> HxHxMacroModuleHost.run_expr (expr : string)
+let runExpr = fun (expr : string) -> (HxHxMacroModuleHost.run_expr (expr : string) : string)

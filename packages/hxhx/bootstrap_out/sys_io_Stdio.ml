@@ -16,31 +16,32 @@ let ocamlstdioinput_readByte__impl = fun (self : ocamlstdioinput_t) () -> let b 
   b
 )
 
-let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_10 = (
+let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_13 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
-      ignore (HxBytes.set buf (HxInt.add pos (!i)) ((Obj.magic self : ocamlstdioinput_t).readByte (Obj.magic self) ()));
-      let __old_3 = !i in let __new_4 = HxInt.add __old_3 1 in (
-        ignore (i := __new_4);
-        __old_3
+      ignore (let __bytes_access_receiver_3 = buf in let __bytes_access_arg_0_4 = HxInt.add pos (!i) in let __bytes_access_arg_1_5 = (Obj.magic self : ocamlstdioinput_t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_3 __bytes_access_arg_0_4 __bytes_access_arg_1_5);
+      let __old_6 = !i in let __new_7 = HxInt.add __old_6 1 in (
+        ignore (i := __new_7);
+        __old_6
       )
     )) done with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_5 -> raise (HxRuntime.Hx_return __ret_5)
-      | HxRuntime.Hx_exception (__exn_v_6, __exn_tags_7) -> if HxRuntime.tags_has __exn_tags_7 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_6 : Haxe_io_Eof.t) in (
+      | HxRuntime.Hx_return __ret_8 -> raise (HxRuntime.Hx_return __ret_8)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_exception (__exn_v_9, __exn_tags_10) -> if HxRuntime.tags_has __exn_tags_10 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_9 : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else HxRuntime.hx_throw_typed __exn_v_6 __exn_tags_7
-      | __exn_8 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_8) : Haxe_io_Eof.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_9 __exn_tags_10
+      | __exn_11 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_11) : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else raise (__exn_8));
+      ) else raise (__exn_11));
     !i
   )
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_13 with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
 let ocamlstdioinput_readLine__impl = fun (self : ocamlstdioinput_t) () -> let s = (HxStdio.read_line ((Obj.magic self : ocamlstdioinput_t).stream) : string) in (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
@@ -71,25 +72,25 @@ let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore 
 
 let ocamlstdiooutput_writeByte__impl = fun (self : ocamlstdiooutput_t) (c : int) -> ignore (ignore (HxStdio.write_byte ((Obj.magic self : ocamlstdiooutput_t).stream) c))
 
-let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_6 = (
+let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_8 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
       ignore (_g := __new_4);
       __old_3
-    ) in (Obj.magic self : ocamlstdiooutput_t).writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
+    ) in (Obj.magic self : ocamlstdiooutput_t).writeByte (Obj.magic self) (let __bytes_access_receiver_5 = buf in let __bytes_access_arg_0_6 = HxInt.add pos i in HxBytes.get __bytes_access_receiver_5 __bytes_access_arg_0_6)) done);
     len
   )
-) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) in Obj.magic __fallback_result_8 with
+  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
 let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
-  ignore (try (
-    ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (try ignore ((
+    ignore (if s == HxString.hx_null_string || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
-  ) with
-    | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7)
+  )) with
+    | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
 ))
 
 let ocamlstdiooutput_flush__impl = fun (self : ocamlstdiooutput_t) () -> ignore (ignore (HxStdio.flush ((Obj.magic self : ocamlstdiooutput_t).stream)))

@@ -13,10 +13,10 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.NativeBacke
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.NativeBackendPluginDynlink" } : t)
 
-let loadAndCapture = fun manifestPath entryPath pluginId -> try let __fallback_result_2 = let response = (HxHxBackendPluginDynlink.load_and_capture_safe (manifestPath : string) (entryPath : string) (pluginId : string) : string) in (
-  ignore (if response == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned no response") ["Dynamic"; "String"]) else ());
-  ignore (if StringTools.startsWith (response : string) ("ok\n" : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr response 3 (-1) : string))) else ());
-  ignore (if StringTools.startsWith (response : string) ("err\n" : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxString.substr response 4 (-1))) ["Dynamic"; "String"]) else ());
-  HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned malformed response") ["Dynamic"; "String"]
-) in Obj.magic __fallback_result_2 with
-  | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
+let loadAndCapture = fun manifestPath entryPath pluginId -> try let __fallback_result_6 = let response = (HxHxBackendPluginDynlink.load_and_capture_safe (manifestPath : string) (entryPath : string) (pluginId : string) : string) in (
+  ignore (if response == HxString.hx_null_string then ignore (HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned no response") ["Dynamic"]) else ());
+  ignore (if let __call_arg_0_1 = response in let __call_arg_1_2 = "ok\n" in StringTools.startsWith __call_arg_0_1 __call_arg_1_2 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr response 3 (-1) : string))) else ());
+  ignore (if let __call_arg_0_3 = response in let __call_arg_1_4 = "err\n" in StringTools.startsWith __call_arg_0_3 __call_arg_1_4 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxString.substr response 4 (-1))) ["Dynamic"]) else ());
+  HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned malformed response") ["Dynamic"]
+) in Obj.magic __fallback_result_6 with
+  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5

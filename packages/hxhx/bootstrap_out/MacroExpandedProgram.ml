@@ -27,21 +27,21 @@ let create = fun typedModules2 macroMode2 generatedOcamlModules2 -> let self = (
         ));
         TypedModule.assertBodyRevisionCurrent (Obj.magic typedModule) ()
       )) done);
-      ignore (let __assign_7 = macroMode2 in (
-        (Obj.magic self : t).macroMode <- __assign_7;
-        __assign_7
+      ignore (let __place_receiver_7 = self in let __place_rhs_8 = macroMode2 in (
+        (__place_receiver_7 : t).macroMode <- __place_rhs_8;
+        __place_rhs_8
       ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-        ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
-          tempRight1 := __assign_8;
-          __assign_8
-        ) else let __assign_10 = Obj.magic (HxArray.copy generatedOcamlModules2) in (
-          tempRight1 := __assign_10;
-          __assign_10
-        ));
-        let __assign_11 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).generatedOcamlModules <- __assign_11;
+        ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_9 = Obj.magic (let __arr_10 = HxArray.create () in __arr_10) in (
+          tempRight1 := __assign_9;
+          __assign_9
+        ) else let __assign_11 = Obj.magic (HxArray.copy generatedOcamlModules2) in (
+          tempRight1 := __assign_11;
           __assign_11
+        ));
+        let __assign_12 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).generatedOcamlModules <- __assign_12;
+          __assign_12
         )
       )
     )
@@ -54,9 +54,9 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedProgram"; mac
 let getTypedModules = fun self () -> HxArray.copy ((Obj.magic self : t).typedModules)
 
 let assertTypedBodyRevisionsCurrent = fun self () -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typedModules) in while !_g < HxArray.length _g1 do ignore (let typedModule = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-  ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
-    ignore (_g := __new_13);
-    __new_13
+  ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+    ignore (_g := __new_14);
+    __new_14
   ));
   TypedModule.assertBodyRevisionCurrent (Obj.magic typedModule) ()
 )) done))

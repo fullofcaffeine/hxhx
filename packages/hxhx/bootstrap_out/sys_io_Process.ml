@@ -22,31 +22,32 @@ let ocamlprocessinput_readByte__impl = fun (self : ocamlprocessinput_t) () -> le
   b
 )
 
-let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_12 = (
+let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_15 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
-      ignore (HxBytes.set buf (HxInt.add pos (!i)) ((Obj.magic self : ocamlprocessinput_t).readByte (Obj.magic self) ()));
-      let __old_5 = !i in let __new_6 = HxInt.add __old_5 1 in (
-        ignore (i := __new_6);
-        __old_5
+      ignore (let __bytes_access_receiver_5 = buf in let __bytes_access_arg_0_6 = HxInt.add pos (!i) in let __bytes_access_arg_1_7 = (Obj.magic self : ocamlprocessinput_t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_5 __bytes_access_arg_0_6 __bytes_access_arg_1_7);
+      let __old_8 = !i in let __new_9 = HxInt.add __old_8 1 in (
+        ignore (i := __new_9);
+        __old_8
       )
     )) done with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
-      | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if HxRuntime.tags_has __exn_tags_9 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_8 : Haxe_io_Eof.t) in (
+      | HxRuntime.Hx_return __ret_10 -> raise (HxRuntime.Hx_return __ret_10)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_exception (__exn_v_11, __exn_tags_12) -> if HxRuntime.tags_has __exn_tags_12 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_11 : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else HxRuntime.hx_throw_typed __exn_v_8 __exn_tags_9
-      | __exn_10 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_10) : Haxe_io_Eof.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_11 __exn_tags_12
+      | __exn_13 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_13) : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else raise (__exn_10));
+      ) else raise (__exn_13));
     !i
   )
-) in Obj.magic __fallback_result_12 with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let ocamlprocessinput_readLine__impl = fun (self : ocamlprocessinput_t) () -> let s = (HxProcess.read_line ((Obj.magic self : ocamlprocessinput_t).handle) ((Obj.magic self : ocamlprocessinput_t).stream) : string) in (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
@@ -83,25 +84,25 @@ let ocamlprocessoutput___ctor = fun (self : ocamlprocessoutput_t) handle2 -> ign
 
 let ocamlprocessoutput_writeByte__impl = fun (self : ocamlprocessoutput_t) (c : int) -> ignore (ignore (HxProcess.write_byte ((Obj.magic self : ocamlprocessoutput_t).handle) c))
 
-let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_6 = (
+let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_8 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
       ignore (_g := __new_4);
       __old_3
-    ) in (Obj.magic self : ocamlprocessoutput_t).writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
+    ) in (Obj.magic self : ocamlprocessoutput_t).writeByte (Obj.magic self) (let __bytes_access_receiver_5 = buf in let __bytes_access_arg_0_6 = HxInt.add pos i in HxBytes.get __bytes_access_receiver_5 __bytes_access_arg_0_6)) done);
     len
   )
-) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) in Obj.magic __fallback_result_8 with
+  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
 let ocamlprocessoutput_writeString__impl = fun (self : ocamlprocessoutput_t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
-  ignore (try (
-    ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (try ignore ((
+    ignore (if s == HxString.hx_null_string || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     HxProcess.write_string ((Obj.magic self : ocamlprocessoutput_t).handle) (s : string)
-  ) with
-    | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7)
+  )) with
+    | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
 ))
 
 let ocamlprocessoutput_flush__impl = fun (self : ocamlprocessoutput_t) () -> ignore (ignore (HxProcess.flush_stdin ((Obj.magic self : ocamlprocessoutput_t).handle)))
@@ -129,34 +130,36 @@ let create = fun cmd args detached -> let self = ({ __hx_type = HxType.class_ "s
       (Obj.magic self : t).cachedExitCode <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = false in (
-      (Obj.magic self : t).closed <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_2 = self in let __place_rhs_3 = false in (
+      (__place_receiver_2 : t).closed <- __place_rhs_3;
+      __place_rhs_3
     ));
     let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (Obj.magic (let __arr_4 = HxArray.create () in __arr_4)) in (
-        tempMaybeArray := __assign_3;
-        __assign_3
-      ) else let __assign_5 = Obj.magic (Obj.magic args) in (
-        tempMaybeArray := __assign_5;
-        __assign_5
+      ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (Obj.magic (let __arr_5 = HxArray.create () in __arr_5)) in (
+        tempMaybeArray := __assign_4;
+        __assign_4
+      ) else let __assign_6 = Obj.magic (Obj.magic args) in (
+        tempMaybeArray := __assign_6;
+        __assign_6
       ));
-      ignore (detached != HxRuntime.hx_null);
-      ignore (let __place_receiver_6 = self in let __place_rhs_7 = HxProcess.spawn (cmd : string) (Obj.magic (!tempMaybeArray)) in (
-        (__place_receiver_6 : t).handle <- __place_rhs_7;
-        __place_rhs_7
-      ));
-      ignore (let __assign_8 = Obj.magic (ocamlprocessinput_create ((Obj.magic self : t).handle) 1) in (
-        (Obj.magic self : t).stdout <- __assign_8;
-        __assign_8
-      ));
-      ignore (let __assign_9 = Obj.magic (ocamlprocessinput_create ((Obj.magic self : t).handle) 2) in (
-        (Obj.magic self : t).stderr <- __assign_9;
-        __assign_9
-      ));
-      let __assign_10 = Obj.magic (ocamlprocessoutput_create ((Obj.magic self : t).handle)) in (
-        (Obj.magic self : t).stdin <- __assign_10;
-        __assign_10
+      let argv = Obj.magic (!tempMaybeArray) in (
+        ignore (detached != HxRuntime.hx_null);
+        ignore (let __place_receiver_7 = self in let __place_rhs_8 = HxProcess.spawn (cmd : string) (Obj.magic argv) in (
+          (__place_receiver_7 : t).handle <- __place_rhs_8;
+          __place_rhs_8
+        ));
+        ignore (let __assign_9 = Obj.magic (ocamlprocessinput_create ((Obj.magic self : t).handle) 1) in (
+          (Obj.magic self : t).stdout <- __assign_9;
+          __assign_9
+        ));
+        ignore (let __assign_10 = Obj.magic (ocamlprocessinput_create ((Obj.magic self : t).handle) 2) in (
+          (Obj.magic self : t).stderr <- __assign_10;
+          __assign_10
+        ));
+        let __assign_11 = Obj.magic (ocamlprocessoutput_create ((Obj.magic self : t).handle)) in (
+          (Obj.magic self : t).stdin <- __assign_11;
+          __assign_11
+        )
       )
     )
   )));
@@ -170,37 +173,37 @@ let getPid = fun self () -> (
   -1
 )
 
-let kill = fun self () -> ignore (ignore (try (
+let kill = fun self () -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).closed then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   HxProcess.kill ((Obj.magic self : t).handle)
-) with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11))
+)) with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12))
 
-let close = fun self () -> ignore (ignore (try (
+let close = fun self () -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).closed then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (let __assign_12 = Obj.magic (Obj.repr (HxProcess.close ((Obj.magic self : t).handle))) in (
-    (Obj.magic self : t).cachedExitCode <- __assign_12;
-    __assign_12
-  ));
-  let __assign_13 = true in (
-    (Obj.magic self : t).closed <- __assign_13;
+  ignore (let __assign_13 = Obj.magic (Obj.repr (HxProcess.close ((Obj.magic self : t).handle))) in (
+    (Obj.magic self : t).cachedExitCode <- __assign_13;
     __assign_13
+  ));
+  let __place_receiver_14 = self in let __place_rhs_15 = true in (
+    (__place_receiver_14 : t).closed <- __place_rhs_15;
+    __place_rhs_15
   )
-) with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14))
+)) with
+  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16))
 
-let exitCode = fun self () -> try let __fallback_result_20 = (
-  ignore (if (Obj.magic self : t).cachedExitCode != HxRuntime.hx_null then raise (HxRuntime.Hx_return (Obj.repr (let __nullable_int_15 = (Obj.magic self : t).cachedExitCode in if __nullable_int_15 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_15))) else ());
+let exitCode = fun self () -> try let __fallback_result_22 = (
+  ignore (if (Obj.magic self : t).cachedExitCode != HxRuntime.hx_null then raise (HxRuntime.Hx_return (Obj.repr (let __nullable_int_17 = (Obj.magic self : t).cachedExitCode in if __nullable_int_17 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_17))) else ());
   ignore (close (Obj.magic self) ());
   let tempResult = ref (0 : int) in (
-    ignore (if (Obj.magic self : t).cachedExitCode == HxRuntime.hx_null then let __assign_16 = 0 in (
-      tempResult := __assign_16;
-      __assign_16
-    ) else let __assign_17 = let __nullable_int_18 = (Obj.magic self : t).cachedExitCode in if __nullable_int_18 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_18 in (
-      tempResult := __assign_17;
-      __assign_17
+    ignore (if (Obj.magic self : t).cachedExitCode == HxRuntime.hx_null then let __assign_18 = 0 in (
+      tempResult := __assign_18;
+      __assign_18
+    ) else let __assign_19 = let __nullable_int_20 = (Obj.magic self : t).cachedExitCode in if __nullable_int_20 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_20 in (
+      tempResult := __assign_19;
+      __assign_19
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_20 with
-  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
+) in Obj.magic __fallback_result_22 with
+  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21

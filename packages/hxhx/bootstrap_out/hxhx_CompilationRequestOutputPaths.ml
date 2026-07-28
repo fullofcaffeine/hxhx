@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable finalOutDir : string; mutable workingOutDir : string; mutable finalBackendOutputDir : string; mutable workingBackendOutputDir : string; mutable finalOutputFileHint : string; mutable workingOutputFileHint : string }
 
-let create = fun finalOutDir2 workingOutDir2 finalBackendOutputDir2 workingBackendOutputDir2 finalOutputFileHint2 workingOutputFileHint2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputPaths"; finalOutDir = ""; workingOutDir = ""; finalBackendOutputDir = ""; workingBackendOutputDir = ""; finalOutputFileHint = Obj.magic (HxRuntime.hx_null); workingOutputFileHint = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun finalOutDir2 workingOutDir2 finalBackendOutputDir2 workingBackendOutputDir2 finalOutputFileHint2 workingOutputFileHint2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputPaths"; finalOutDir = HxString.hx_null_string; workingOutDir = HxString.hx_null_string; finalBackendOutputDir = HxString.hx_null_string; workingBackendOutputDir = HxString.hx_null_string; finalOutputFileHint = Obj.magic (HxRuntime.hx_null); workingOutputFileHint = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (finalOutDir2 : string) in (
       (Obj.magic self : t).finalOutDir <- __assign_1;
@@ -36,6 +36,6 @@ let create = fun finalOutDir2 workingOutDir2 finalBackendOutputDir2 workingBacke
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputPaths"; finalOutDir = ""; workingOutDir = ""; finalBackendOutputDir = ""; workingBackendOutputDir = ""; finalOutputFileHint = Obj.magic (HxRuntime.hx_null); workingOutputFileHint = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputPaths"; finalOutDir = HxString.hx_null_string; workingOutDir = HxString.hx_null_string; finalBackendOutputDir = HxString.hx_null_string; workingBackendOutputDir = HxString.hx_null_string; finalOutputFileHint = Obj.magic (HxRuntime.hx_null); workingOutputFileHint = Obj.magic (HxRuntime.hx_null) } : t)
 
 let direct = fun outDir backendOutputDir outputFileHint -> create (outDir : string) (outDir : string) (backendOutputDir : string) (backendOutputDir : string) (outputFileHint : string) (outputFileHint : string)

@@ -18,7 +18,7 @@ let resetRequestState = fun () -> ignore ((
   HxHxBackendPluginHost.clear ()
 ))
 
-let trim = fun value -> let tempResult = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_1;
     __assign_1
@@ -29,136 +29,142 @@ let trim = fun value -> let tempResult = ref ("" : string) in let tempMaybeStrin
     tempMaybeString := __assign_3;
     __assign_3
   ));
-  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
-    tempResult := __assign_4;
-    __assign_4
-  ) else let __assign_5 = (StringTools.trim (!tempMaybeString : string) : string) in (
-    tempResult := __assign_5;
-    __assign_5
-  ));
-  !tempResult
+  let normalized = (!tempMaybeString : string) in (
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_4 = "" in (
+      tempResult := __assign_4;
+      __assign_4
+    ) else let __assign_5 = let __call_arg_0_6 = normalized in StringTools.trim __call_arg_0_6 in (
+      tempResult := __assign_5;
+      __assign_5
+    ));
+    !tempResult
+  )
 )
 
-let isTrueEnv = fun name -> let tempString = ref ("" : string) in let value = (HxSys.getEnv name : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_6;
-    __assign_6
-  ) else if HxString.isNull (value : string) then let __assign_7 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+let isTrueEnv = fun (name : string) -> (let tempString = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv (name : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_7;
     __assign_7
-  ) else let __assign_8 = Obj.magic (value : string) in (
+  ) else if HxString.isNull (value : string) then let __assign_8 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_8;
     __assign_8
-  ));
-  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
-    tempString := __assign_9;
+  ) else let __assign_9 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_9;
     __assign_9
-  ) else let __assign_10 = (StringTools.trim (!tempMaybeString : string) : string) in (
-    tempString := __assign_10;
-    __assign_10
   ));
-  HxString.equals (!tempString) "1" || HxString.equals (!tempString) "true" || HxString.equals (!tempString) "yes"
-)
+  let normalized = (!tempMaybeString : string) in (
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_10 = "" in (
+      tempString := __assign_10;
+      __assign_10
+    ) else let __assign_11 = let __call_arg_0_12 = normalized in StringTools.trim __call_arg_0_12 in (
+      tempString := __assign_11;
+      __assign_11
+    ));
+    let value = !tempString in HxString.equals value "1" || HxString.equals value "true" || HxString.equals value "yes"
+  )
+) : bool)
 
-let parseDelimitedList = fun raw -> try let __fallback_result_19 = let out = Obj.magic (HxArray.create ()) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_11;
-    __assign_11
-  ) else if HxString.isNull (raw : string) then let __assign_12 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_12;
-    __assign_12
-  ) else let __assign_13 = Obj.magic (raw : string) in (
+let parseDelimitedList = fun raw -> try let __fallback_result_23 = let out = Obj.magic (HxArray.create ()) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_13 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_13;
     __assign_13
+  ) else if HxString.isNull (raw : string) then let __assign_14 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_14;
+    __assign_14
+  ) else let __assign_15 = Obj.magic (raw : string) in (
+    tempMaybeString := __assign_15;
+    __assign_15
   ));
-  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
-  let value = (StringTools.trim (!tempMaybeString : string) : string) in (
-    ignore (if HxString.length value = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
-    let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if HxString.indexOf value ";" 0 <> -1 then let __assign_14 = Obj.magic (HxString.split value ";") in (
-        tempArray := __assign_14;
-        __assign_14
-      ) else let __assign_15 = Obj.magic (HxString.split value ",") in (
-        tempArray := __assign_15;
-        __assign_15
-      ));
-      let _g = ref 0 in (
-        ignore (try while !_g < HxArray.length (!tempArray) do try ignore (let part = (HxArray.get (Obj.magic (!tempArray)) (!_g) : string) in (
-          ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
-            ignore (_g := __new_17);
-            __new_17
-          ));
-          ignore (if part == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-          let trimmed = (StringTools.trim (part : string) : string) in (
-            ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
-            if HxArray.indexOf out trimmed 0 = -1 then ignore (HxArray.push out trimmed) else ()
-          )
-        )) with
-          | HxRuntime.Hx_continue -> () done with
-          | HxRuntime.Hx_break -> ());
-        out
+  let normalized = (!tempMaybeString : string) in (
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+    let value = let __call_arg_0_16 = normalized in StringTools.trim __call_arg_0_16 in (
+      ignore (if HxString.length value = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+      let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+        ignore (if HxString.indexOf value ";" 0 <> -1 then let __assign_17 = Obj.magic (HxString.split value ";") in (
+          tempArray := __assign_17;
+          __assign_17
+        ) else let __assign_18 = Obj.magic (HxString.split value ",") in (
+          tempArray := __assign_18;
+          __assign_18
+        ));
+        let parts = Obj.magic (!tempArray) in let _g = ref 0 in (
+          ignore (try while !_g < HxArray.length parts do try ignore (let part = (HxArray.get (Obj.magic parts) (!_g) : string) in (
+            ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+              ignore (_g := __new_20);
+              __new_20
+            ));
+            ignore (if part == HxString.hx_null_string then raise (HxRuntime.Hx_continue) else ());
+            let trimmed = let __call_arg_0_21 = part in StringTools.trim __call_arg_0_21 in (
+              ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
+              if HxArray.indexOf out trimmed 0 = -1 then ignore (HxArray.push out trimmed) else ()
+            )
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ());
+          out
+        )
       )
     )
   )
-) in Obj.magic __fallback_result_19 with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+) in Obj.magic __fallback_result_23 with
+  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let collectDeclarationValues = fun rawDefines envName defineNames -> try let __fallback_result_35 = let out = Obj.magic (parseDelimitedList (HxSys.getEnv envName : string)) in (
+let collectDeclarationValues = fun rawDefines envName defineNames -> try let __fallback_result_41 = let out = Obj.magic (parseDelimitedList (HxSys.getEnv (envName : string) : string)) in (
   ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) || defineNames == Obj.magic (HxRuntime.hx_null) || HxArray.length defineNames = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let _g = ref 0 in (
     ignore (try while !_g < HxArray.length rawDefines do try ignore (let raw = (HxArray.get (Obj.magic rawDefines) (!_g) : string) in (
-      ignore (let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
-        ignore (_g := __new_21);
-        __new_21
+      ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
+        ignore (_g := __new_25);
+        __new_25
       ));
-      let tempString = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeString := __assign_22;
-          __assign_22
-        ) else if HxString.isNull (raw : string) then let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeString := __assign_23;
-          __assign_23
-        ) else let __assign_24 = Obj.magic (raw : string) in (
-          tempMaybeString := __assign_24;
-          __assign_24
+      let tempString = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_26;
+          __assign_26
+        ) else if HxString.isNull (raw : string) then let __assign_27 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_27;
+          __assign_27
+        ) else let __assign_28 = Obj.magic (raw : string) in (
+          tempMaybeString := __assign_28;
+          __assign_28
         ));
         let normalized = (!tempMaybeString : string) in (
-          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
-            tempString := __assign_25;
-            __assign_25
-          ) else let __assign_26 = (StringTools.trim (normalized : string) : string) in (
-            tempString := __assign_26;
-            __assign_26
+          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_29 = "" in (
+            tempString := __assign_29;
+            __assign_29
+          ) else let __assign_30 = let __call_arg_0_31 = normalized in StringTools.trim __call_arg_0_31 in (
+            tempString := __assign_30;
+            __assign_30
           ));
-          let define = (!tempString : string) in (
+          let define = !tempString in (
             ignore (if HxString.length define = 0 then raise (HxRuntime.Hx_continue) else ());
             let eq = HxString.indexOf define "=" 0 in (
               ignore (if eq = -1 || HxInt.add eq 1 >= HxString.length define then raise (HxRuntime.Hx_continue) else ());
-              let tempString1 = ref ("" : string) in let value = (HxString.substr define 0 eq : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                  tempMaybeString1 := __assign_27;
-                  __assign_27
-                ) else if HxString.isNull (value : string) then let __assign_28 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                  tempMaybeString1 := __assign_28;
-                  __assign_28
-                ) else let __assign_29 = Obj.magic (value : string) in (
-                  tempMaybeString1 := __assign_29;
-                  __assign_29
+              let tempString1 = ref (HxString.hx_null_string : string) in let value = (HxString.substr define 0 eq : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                  tempMaybeString1 := __assign_32;
+                  __assign_32
+                ) else if HxString.isNull (value : string) then let __assign_33 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                  tempMaybeString1 := __assign_33;
+                  __assign_33
+                ) else let __assign_34 = Obj.magic (value : string) in (
+                  tempMaybeString1 := __assign_34;
+                  __assign_34
                 ));
                 let normalized = (!tempMaybeString1 : string) in (
-                  ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
-                    tempString1 := __assign_30;
-                    __assign_30
-                  ) else let __assign_31 = (StringTools.trim (normalized : string) : string) in (
-                    tempString1 := __assign_31;
-                    __assign_31
+                  ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_35 = "" in (
+                    tempString1 := __assign_35;
+                    __assign_35
+                  ) else let __assign_36 = let __call_arg_0_37 = normalized in StringTools.trim __call_arg_0_37 in (
+                    tempString1 := __assign_36;
+                    __assign_36
                   ));
-                  let name = (!tempString1 : string) in (
+                  let name = !tempString1 in (
                     ignore (if HxArray.indexOf defineNames name 0 = -1 then raise (HxRuntime.Hx_continue) else ());
                     let values = Obj.magic (parseDelimitedList (HxString.substr define (HxInt.add eq 1) (-1) : string)) in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g2) : string) in (
-                      ignore (let __old_32 = !_g2 in let __new_33 = HxInt.add __old_32 1 in (
-                        ignore (_g2 := __new_33);
-                        __new_33
+                      ignore (let __old_38 = !_g2 in let __new_39 = HxInt.add __old_38 1 in (
+                        ignore (_g2 := __new_39);
+                        __new_39
                       ));
                       if HxArray.indexOf out value 0 = -1 then ignore (HxArray.push out value) else ()
                     )) done
@@ -174,120 +180,126 @@ let collectDeclarationValues = fun rawDefines envName defineNames -> try let __f
       | HxRuntime.Hx_break -> ());
     out
   )
-) in Obj.magic __fallback_result_35 with
-  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34
+) in Obj.magic __fallback_result_41 with
+  | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
 
-let collectExplicitBackendProviderTypeNames = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_PROVIDERS" : string) (Obj.magic (let __arr_36 = HxArray.create () in (
-  ignore (HxArray.push __arr_36 "hxhx_backend_provider");
-  ignore (HxArray.push __arr_36 "hxhx_backend_providers");
-  ignore (HxArray.push __arr_36 "hxhx.backend.provider");
-  __arr_36
+let collectExplicitBackendProviderTypeNames = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_PROVIDERS" : string) (Obj.magic (let __arr_42 = HxArray.create () in (
+  ignore (HxArray.push __arr_42 "hxhx_backend_provider");
+  ignore (HxArray.push __arr_42 "hxhx_backend_providers");
+  ignore (HxArray.push __arr_42 "hxhx.backend.provider");
+  __arr_42
 )))
 
-let collectBundledBackendProviderTypeNames = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_BUNDLED_PROVIDERS" : string) (Obj.magic (let __arr_37 = HxArray.create () in (
-  ignore (HxArray.push __arr_37 "hxhx_backend_bundled_provider");
-  ignore (HxArray.push __arr_37 "hxhx_backend_bundled_providers");
-  ignore (HxArray.push __arr_37 "hxhx.backend.bundled.provider");
-  __arr_37
+let collectBundledBackendProviderTypeNames = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_BUNDLED_PROVIDERS" : string) (Obj.magic (let __arr_43 = HxArray.create () in (
+  ignore (HxArray.push __arr_43 "hxhx_backend_bundled_provider");
+  ignore (HxArray.push __arr_43 "hxhx_backend_bundled_providers");
+  ignore (HxArray.push __arr_43 "hxhx.backend.bundled.provider");
+  __arr_43
 )))
 
-let collectExplicitBackendPluginManifestPaths = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_PLUGIN_MANIFESTS" : string) (Obj.magic (let __arr_38 = HxArray.create () in (
-  ignore (HxArray.push __arr_38 "hxhx_backend_plugin_manifest");
-  ignore (HxArray.push __arr_38 "hxhx_backend_plugin_manifests");
-  ignore (HxArray.push __arr_38 "hxhx.backend.plugin.manifest");
-  __arr_38
+let collectExplicitBackendPluginManifestPaths = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_PLUGIN_MANIFESTS" : string) (Obj.magic (let __arr_44 = HxArray.create () in (
+  ignore (HxArray.push __arr_44 "hxhx_backend_plugin_manifest");
+  ignore (HxArray.push __arr_44 "hxhx_backend_plugin_manifests");
+  ignore (HxArray.push __arr_44 "hxhx.backend.plugin.manifest");
+  __arr_44
 )))
 
-let collectBundledBackendPluginManifestPaths = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_BUNDLED_PLUGIN_MANIFESTS" : string) (Obj.magic (let __arr_39 = HxArray.create () in (
-  ignore (HxArray.push __arr_39 "hxhx_backend_bundled_plugin_manifest");
-  ignore (HxArray.push __arr_39 "hxhx_backend_bundled_plugin_manifests");
-  ignore (HxArray.push __arr_39 "hxhx.backend.bundled.plugin.manifest");
-  __arr_39
+let collectBundledBackendPluginManifestPaths = fun rawDefines -> collectDeclarationValues (Obj.magic rawDefines) ("HXHX_BACKEND_BUNDLED_PLUGIN_MANIFESTS" : string) (Obj.magic (let __arr_45 = HxArray.create () in (
+  ignore (HxArray.push __arr_45 "hxhx_backend_bundled_plugin_manifest");
+  ignore (HxArray.push __arr_45 "hxhx_backend_bundled_plugin_manifests");
+  ignore (HxArray.push __arr_45 "hxhx.backend.bundled.plugin.manifest");
+  __arr_45
 )))
 
-let appendPluginLoadRequest = fun out source providerType origin -> ignore (try let tempString = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if providerType == Obj.magic (HxRuntime.hx_null) then let __assign_40 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_40;
-    __assign_40
-  ) else if HxString.isNull (providerType : string) then let __assign_41 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_41;
-    __assign_41
-  ) else let __assign_42 = Obj.magic (providerType : string) in (
-    tempMaybeString := __assign_42;
-    __assign_42
+let appendPluginLoadRequest = fun out source providerType origin -> ignore (try ignore (let tempString = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if providerType == Obj.magic (HxRuntime.hx_null) then let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_46;
+    __assign_46
+  ) else if HxString.isNull (providerType : string) then let __assign_47 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_47;
+    __assign_47
+  ) else let __assign_48 = Obj.magic (providerType : string) in (
+    tempMaybeString := __assign_48;
+    __assign_48
   ));
-  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_43 = ("" : string) in (
-    tempString := __assign_43;
-    __assign_43
-  ) else let __assign_44 = (StringTools.trim (!tempMaybeString : string) : string) in (
-    tempString := __assign_44;
-    __assign_44
-  ));
-  ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString1 = ref ("" : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if origin == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString1 := __assign_45;
-      __assign_45
-    ) else if HxString.isNull (origin : string) then let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString1 := __assign_46;
-      __assign_46
-    ) else let __assign_47 = Obj.magic (origin : string) in (
-      tempMaybeString1 := __assign_47;
-      __assign_47
-    ));
-    ignore (if !tempMaybeString1 == Obj.magic (HxRuntime.hx_null) then let __assign_48 = ("" : string) in (
-      tempString1 := __assign_48;
-      __assign_48
-    ) else let __assign_49 = (StringTools.trim (!tempMaybeString1 : string) : string) in (
-      tempString1 := __assign_49;
+  let normalized = (!tempMaybeString : string) in (
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_49 = "" in (
+      tempString := __assign_49;
       __assign_49
+    ) else let __assign_50 = let __call_arg_0_51 = normalized in StringTools.trim __call_arg_0_51 in (
+      tempString := __assign_50;
+      __assign_50
     ));
-    let _g = ref 0 in (
-      ignore (while !_g < HxArray.length out do ignore (let existing = HxArray.get (Obj.magic out) (!_g) in (
-        ignore (let __old_50 = !_g in let __new_51 = HxInt.add __old_50 1 in (
-          ignore (_g := __new_51);
-          __new_51
-        ));
-        if HxString.equals (Obj.obj (HxAnon.get existing "source")) source && HxString.equals (Obj.obj (HxAnon.get existing "providerType")) (!tempString) then raise (HxRuntime.Hx_return (Obj.repr ())) else ()
-      )) done);
-      let tempString2 = ref ("" : string) in (
-        ignore (if HxString.length (!tempString1) = 0 then let __assign_52 = (!tempString : string) in (
-          tempString2 := __assign_52;
+    let normalizedProvider = !tempString in (
+      ignore (if HxString.length normalizedProvider = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      let tempString1 = ref (HxString.hx_null_string : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if origin == Obj.magic (HxRuntime.hx_null) then let __assign_52 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString1 := __assign_52;
           __assign_52
-        ) else let __assign_53 = (!tempString1 : string) in (
-          tempString2 := __assign_53;
+        ) else if HxString.isNull (origin : string) then let __assign_53 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString1 := __assign_53;
           __assign_53
+        ) else let __assign_54 = Obj.magic (origin : string) in (
+          tempMaybeString1 := __assign_54;
+          __assign_54
         ));
-        HxArray.push out (let __anon_54 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_54 "source" (Obj.repr source));
-          ignore (HxAnon.set __anon_54 "providerType" (Obj.repr (!tempString)));
-          ignore (HxAnon.set __anon_54 "origin" (Obj.repr (!tempString2)));
-          __anon_54
-        ))
+        let normalized = (!tempMaybeString1 : string) in (
+          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_55 = "" in (
+            tempString1 := __assign_55;
+            __assign_55
+          ) else let __assign_56 = let __call_arg_0_57 = normalized in StringTools.trim __call_arg_0_57 in (
+            tempString1 := __assign_56;
+            __assign_56
+          ));
+          let normalizedOrigin = !tempString1 in let _g = ref 0 in (
+            ignore (while !_g < HxArray.length out do ignore (let existing = HxArray.get (Obj.magic out) (!_g) in (
+              ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
+                ignore (_g := __new_59);
+                __new_59
+              ));
+              if HxString.equals (Obj.obj (HxAnon.get existing "source")) source && HxString.equals (Obj.obj (HxAnon.get existing "providerType")) normalizedProvider then raise (HxRuntime.Hx_return (Obj.repr ())) else ()
+            )) done);
+            let tempString2 = ref (HxString.hx_null_string : string) in (
+              ignore (if HxString.length normalizedOrigin = 0 then let __assign_60 = normalizedProvider in (
+                tempString2 := __assign_60;
+                __assign_60
+              ) else let __assign_61 = normalizedOrigin in (
+                tempString2 := __assign_61;
+                __assign_61
+              ));
+              HxArray.push out (let __anon_62 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_62 "source" (Obj.repr source));
+                ignore (HxAnon.set __anon_62 "providerType" (Obj.repr normalizedProvider));
+                ignore (HxAnon.set __anon_62 "origin" (Obj.repr (!tempString2)));
+                __anon_62
+              ))
+            )
+          )
+        )
       )
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55)
+)) with
+  | HxRuntime.Hx_return __ret_63 -> Obj.obj __ret_63)
 
 let appendProviderRequests = fun out source providerTypes originPrefix -> ignore (let _g = ref 0 in while !_g < HxArray.length providerTypes do ignore (let providerType = (HxArray.get (Obj.magic providerTypes) (!_g) : string) in (
-  ignore (let __old_56 = !_g in let __new_57 = HxInt.add __old_56 1 in (
-    ignore (_g := __new_57);
-    __new_57
+  ignore (let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
+    ignore (_g := __new_65);
+    __new_65
   ));
   appendPluginLoadRequest (Obj.magic out) (source : string) (providerType : string) ((HxString.toStdString originPrefix ^ ":") ^ HxString.toStdString providerType : string)
 )) done)
 
 let appendManifestRequests = fun out source manifestPaths trace output -> ignore (let _g = ref 0 in while !_g < HxArray.length manifestPaths do ignore (let manifestPath = (HxArray.get (Obj.magic manifestPaths) (!_g) : string) in (
-  ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
-    ignore (_g := __new_59);
-    __new_59
+  ignore (let __old_66 = !_g in let __new_67 = HxInt.add __old_66 1 in (
+    ignore (_g := __new_67);
+    __new_67
   ));
   let providers = Obj.magic (Hxhx_BackendPluginManifestResolver.providerTypeNamesForManifestPath (manifestPath : string)) in let _g2 = ref 0 in (
     ignore (while !_g2 < HxArray.length providers do ignore (let providerType = (HxArray.get (Obj.magic providers) (!_g2) : string) in (
-      ignore (let __old_60 = !_g2 in let __new_61 = HxInt.add __old_60 1 in (
-        ignore (_g2 := __new_61);
-        __new_61
+      ignore (let __old_68 = !_g2 in let __new_69 = HxInt.add __old_68 1 in (
+        ignore (_g2 := __new_69);
+        __new_69
       ));
       appendPluginLoadRequest (Obj.magic out) (source : string) (providerType : string) ("manifest:" ^ HxString.toStdString manifestPath : string)
     )) done);
@@ -295,9 +307,9 @@ let appendManifestRequests = fun out source manifestPaths trace output -> ignore
   )
 )) done)
 
-let loadDynamicBackendProviders = fun rawDefines output -> ignore (try (
+let loadDynamicBackendProviders = fun rawDefines output -> ignore (try ignore ((
   ignore (resetRequestState ());
-  let trace = isTrueEnv ("HXHX_TRACE_BACKEND_PROVIDERS" : string) in let requests = Obj.magic (HxArray.create ()) in (
+  let trace = let __call_arg_0_70 = "HXHX_TRACE_BACKEND_PROVIDERS" in isTrueEnv __call_arg_0_70 in let requests = Obj.magic (HxArray.create ()) in (
     ignore (appendProviderRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendProviderTypeNames (Obj.magic rawDefines))) ("bundled-provider" : string));
     ignore (appendManifestRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendPluginManifestPaths (Obj.magic rawDefines))) trace (Obj.magic output));
     ignore (appendProviderRequests (Obj.magic requests) ("explicit" : string) (Obj.magic (collectExplicitBackendProviderTypeNames (Obj.magic rawDefines))) ("explicit-provider" : string));
@@ -308,66 +320,70 @@ let loadDynamicBackendProviders = fun rawDefines output -> ignore (try (
       Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_provider_total=" ^ string_of_int registered : string)
     )) else ()
   )
-) with
-  | HxRuntime.Hx_return __ret_62 -> Obj.obj __ret_62)
+)) with
+  | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71)
 
 let buildProviderDefines = fun allDefines -> let providerDefines = Obj.magic (HxArray.copy allDefines) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let name = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_63 = !_g in let __new_64 = HxInt.add __old_63 1 in (
-      ignore (_g := __new_64);
-      __new_64
+    ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
+      ignore (_g := __new_73);
+      __new_73
     ));
-    let value = (Hxhx_macro_MacroState.definedValue (name : string) : string) in if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 || HxString.equals value "1" then ignore (HxArray.push providerDefines name) else ignore (HxArray.push providerDefines ((HxString.toStdString name ^ "=") ^ HxString.toStdString value))
+    let value = let __call_arg_0_74 = name in Hxhx_macro_MacroState.definedValue __call_arg_0_74 in if value == HxString.hx_null_string || HxString.length value = 0 || HxString.equals value "1" then ignore (HxArray.push providerDefines name) else ignore (HxArray.push providerDefines ((HxString.toStdString name ^ "=") ^ HxString.toStdString value))
   )) done);
   providerDefines
 )
 
 let selectBackend = fun backendId providerDefines output -> (
-  ignore (try (
-    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_load_dynamic_backend_providers" : string)) else ());
+  ignore (try ignore ((
+    ignore (if let __call_arg_0_79 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_79 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_load_dynamic_backend_providers" : string)) else ());
     ignore (loadDynamicBackendProviders (Obj.magic providerDefines) (Obj.magic output));
-    if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_load_dynamic_backend_providers" : string)) else ()
-  ) with
+    if let __call_arg_0_80 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_80 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_load_dynamic_backend_providers" : string)) else ()
+  )) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_65 -> raise (HxRuntime.Hx_return __ret_65)
-    | HxRuntime.Hx_exception (__exn_v_66, __exn_tags_67) -> if HxRuntime.tags_has __exn_tags_67 "String" then let e = (Obj.obj __exn_v_66 : string) in (
+    | HxRuntime.Hx_return __ret_75 -> raise (HxRuntime.Hx_return __ret_75)
+    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_exception (__exn_v_76, __exn_tags_77) -> if HxRuntime.tags_has __exn_tags_77 "String" then let e = (Obj.obj __exn_v_76 : string) in (
       ignore e;
-      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
-    ) else HxRuntime.hx_throw_typed __exn_v_66 __exn_tags_67
-    | __exn_68 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_68) : string) in (
+      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"]
+    ) else HxRuntime.hx_throw_typed __exn_v_76 __exn_tags_77
+    | __exn_78 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_78) : string) in (
       ignore e;
-      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
-    ) else raise (__exn_68));
+      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"]
+    ) else raise (__exn_78));
   let tempIBackend = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
     ignore (try (
-      ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_resolve_builtin_backend id=" ^ HxString.toStdString backendId : string)) else ());
-      let __assign_69 = Obj.magic (Backend_BackendRegistry.requireForTarget (backendId : string)) in (
-        tempIBackend := __assign_69;
-        __assign_69
+      ignore (if let __call_arg_0_85 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_85 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_resolve_builtin_backend id=" ^ HxString.toStdString backendId : string)) else ());
+      let __assign_86 = Obj.magic (Backend_BackendRegistry.requireForTarget (backendId : string)) in (
+        tempIBackend := __assign_86;
+        __assign_86
       )
     ) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_70 -> raise (HxRuntime.Hx_return __ret_70)
-      | HxRuntime.Hx_exception (__exn_v_71, __exn_tags_72) -> if HxRuntime.tags_has __exn_tags_72 "String" then let e = (Obj.obj __exn_v_71 : string) in (
+      | HxRuntime.Hx_return __ret_81 -> raise (HxRuntime.Hx_return __ret_81)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_exception (__exn_v_82, __exn_tags_83) -> if HxRuntime.tags_has __exn_tags_83 "String" then let e = (Obj.obj __exn_v_82 : string) in (
         ignore e;
-        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
-      ) else HxRuntime.hx_throw_typed __exn_v_71 __exn_tags_72
-      | __exn_73 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_73) : string) in (
+        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"]
+      ) else HxRuntime.hx_throw_typed __exn_v_82 __exn_tags_83
+      | __exn_84 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_84) : string) in (
         ignore e;
-        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
-      ) else raise (__exn_73));
-    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_resolve_builtin_backend" : string)) else ());
-    let selected = Backend_BackendRegistry.descriptorForTarget (backendId : string) in (
-      ignore (if isTrueEnv ("HXHX_TRACE_BACKEND_SELECTION" : string) then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=<unknown>" : string)) else ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId")) : string))) else ());
-      ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend descriptor not found after selection: " ^ HxString.toStdString backendId)) ["Dynamic"; "String"]) else ());
-      let backendCaps = Obj.obj (HxAnon.get selected "capabilities") in let __anon_74 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_74 "backend" (Obj.repr (!tempIBackend)));
-        ignore (HxAnon.set __anon_74 "descriptor" selected);
-        ignore (HxAnon.set __anon_74 "supportsCustomOutputFile" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsCustomOutputFile") = true)));
-        ignore (HxAnon.set __anon_74 "supportsBuildExecutable" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsBuildExecutable") = true)));
-        __anon_74
+        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"]
+      ) else raise (__exn_84));
+    let backend = Obj.magic (!tempIBackend) in (
+      ignore (if let __call_arg_0_87 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_87 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_resolve_builtin_backend" : string)) else ());
+      let selected = Backend_BackendRegistry.descriptorForTarget (backendId : string) in (
+        ignore (if let __call_arg_0_88 = "HXHX_TRACE_BACKEND_SELECTION" in isTrueEnv __call_arg_0_88 then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=<unknown>" : string)) else ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId")) : string))) else ());
+        ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend descriptor not found after selection: " ^ HxString.toStdString backendId)) ["Dynamic"]) else ());
+        let backendCaps = Obj.obj (HxAnon.get selected "capabilities") in let __anon_89 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_89 "backend" (Obj.repr backend));
+          ignore (HxAnon.set __anon_89 "descriptor" selected);
+          ignore (HxAnon.set __anon_89 "supportsCustomOutputFile" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsCustomOutputFile") = true)));
+          ignore (HxAnon.set __anon_89 "supportsBuildExecutable" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsBuildExecutable") = true)));
+          __anon_89
+        )
       )
     )
   )

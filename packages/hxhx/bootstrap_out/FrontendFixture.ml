@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable label : string; mutable source : string; mutable expectPackagePath : string; mutable expectMainClassName : string; mutable expectHasStaticMain : bool }
 
-let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.class_ "FrontendFixture"; label = ""; source = ""; expectPackagePath = ""; expectMainClassName = ""; expectHasStaticMain = false } : t) in (
+let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.class_ "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (label2 : string) in (
       (Obj.magic self : t).label <- __assign_1;
@@ -24,22 +24,22 @@ let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHa
       (Obj.magic self : t).expectMainClassName <- __assign_4;
       __assign_4
     ));
-    let __assign_5 = expectHasStaticMain2 in (
-      (Obj.magic self : t).expectHasStaticMain <- __assign_5;
-      __assign_5
+    let __place_receiver_5 = self in let __place_rhs_6 = expectHasStaticMain2 in (
+      (__place_receiver_5 : t).expectHasStaticMain <- __place_rhs_6;
+      __place_rhs_6
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "FrontendFixture"; label = ""; source = ""; expectPackagePath = ""; expectMainClassName = ""; expectHasStaticMain = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t)
 
-let getLabel = fun self () -> (Obj.magic self : t).label
+let getLabel = fun self () -> ((self : t).label : string)
 
-let getSource = fun self () -> (Obj.magic self : t).source
+let getSource = fun self () -> ((self : t).source : string)
 
-let getExpectPackagePath = fun self () -> (Obj.magic self : t).expectPackagePath
+let getExpectPackagePath = fun self () -> ((self : t).expectPackagePath : string)
 
-let getExpectMainClassName = fun self () -> (Obj.magic self : t).expectMainClassName
+let getExpectMainClassName = fun self () -> ((self : t).expectMainClassName : string)
 
-let getExpectHasStaticMain = fun self () -> (Obj.magic self : t).expectHasStaticMain
+let getExpectHasStaticMain = fun self () -> ((self : t).expectHasStaticMain : bool)

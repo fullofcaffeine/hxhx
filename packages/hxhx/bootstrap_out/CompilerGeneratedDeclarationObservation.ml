@@ -6,14 +6,14 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable generatedMemberCount : int; mutable resultRevision : string; mutable canonicalIdentity : string }
 
-let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = ""; canonicalIdentity = "" } : t) in (
+let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = generatedMemberCount2 in (
       (__place_receiver_1 : t).generatedMemberCount <- __place_rhs_2;
       __place_rhs_2
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if resultRevision2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if resultRevision2 == HxString.hx_null_string then let __assign_3 = ("" : string) in (
         tempRight := __assign_3;
         __assign_3
       ) else let __assign_4 = (resultRevision2 : string) in (
@@ -24,12 +24,12 @@ let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_typ
         (Obj.magic self : t).resultRevision <- __assign_5;
         __assign_5
       ));
-      ignore (if (Obj.magic self : t).generatedMemberCount < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "generated-declaration observation requires a non-negative member count") ["Dynamic"; "String"]) else ());
-      ignore (if HxString.length ((Obj.magic self : t).resultRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "generated-declaration observation requires a result revision") ["Dynamic"; "String"]) else ());
+      ignore (if (self : t).generatedMemberCount < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "generated-declaration observation requires a non-negative member count") ["Dynamic"]) else ());
+      ignore (if HxString.length ((self : t).resultRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "generated-declaration observation requires a result revision") ["Dynamic"]) else ());
       let __assign_6 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_7 = HxArray.create () in (
         ignore (HxArray.push __arr_7 "generated-declaration-observation-v1");
-        ignore (HxArray.push __arr_7 (string_of_int ((Obj.magic self : t).generatedMemberCount)));
-        ignore (HxArray.push __arr_7 ((Obj.magic self : t).resultRevision));
+        ignore (HxArray.push __arr_7 (string_of_int ((self : t).generatedMemberCount)));
+        ignore (HxArray.push __arr_7 ((self : t).resultRevision));
         __arr_7
       ))) : string) in (
         (Obj.magic self : t).canonicalIdentity <- __assign_6;
@@ -40,17 +40,17 @@ let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = ""; canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
-let getGeneratedMemberCount = fun self () -> (Obj.magic self : t).generatedMemberCount
+let getGeneratedMemberCount = fun self () -> ((self : t).generatedMemberCount : int)
 
-let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
+let getCanonicalIdentity = fun self () -> ((self : t).canonicalIdentity : string)
 
 let hx_EMPTY = Obj.magic (create 0 ("generated-declaration-empty-v1" : string))
 
-let empty = fun () -> hx_EMPTY
+let empty = fun () -> (hx_EMPTY : t)
 
-let fromGeneratedMemberSnippets = fun members -> try let __fallback_result_13 = (
+let fromGeneratedMemberSnippets = fun members -> try let __fallback_result_14 = (
   ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (empty ())))) else ());
   let values = Obj.magic (HxArray.create ()) in (
     ignore (HxArray.push values "generated-declaration-result-v1");
@@ -62,7 +62,7 @@ let fromGeneratedMemberSnippets = fun members -> try let __fallback_result_13 = 
           __new_9
         ));
         let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if member == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic ("" : string) in (
+          ignore (if member == HxString.hx_null_string then let __assign_10 = Obj.magic ("" : string) in (
             tempMaybeString := __assign_10;
             __assign_10
           ) else let __assign_11 = Obj.magic (member : string) in (
@@ -72,8 +72,8 @@ let fromGeneratedMemberSnippets = fun members -> try let __fallback_result_13 = 
           HxArray.push values (!tempMaybeString)
         )
       )) done);
-      create (HxArray.length members) (Haxe_crypto_Sha256.encode (CompilerCacheIdentity.encode (Obj.magic values) : string) : string)
+      create (HxArray.length members) (let __call_arg_0_12 = CompilerCacheIdentity.encode (Obj.magic values) in Haxe_crypto_Sha256.encode __call_arg_0_12 : string)
     )
   )
-) in Obj.magic __fallback_result_13 with
-  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
+) in Obj.magic __fallback_result_14 with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13

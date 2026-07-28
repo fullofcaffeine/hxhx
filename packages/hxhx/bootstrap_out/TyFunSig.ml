@@ -6,87 +6,87 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable isStatic : bool; mutable argNames : string HxArray.t; mutable args : TyType.t HxArray.t; mutable argOptional : bool HxArray.t; mutable argRest : bool HxArray.t; mutable returnType : TyType.t; mutable pos : HxPos.t }
 
-let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnType2 pos2 -> let self = ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; argNames = Obj.magic (HxRuntime.hx_null); args = Obj.magic (HxRuntime.hx_null); argOptional = Obj.magic (HxRuntime.hx_null); argRest = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnType2 pos2 -> let self = ({ __hx_type = HxType.class_ "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic (HxRuntime.hx_null); args = Obj.magic (HxRuntime.hx_null); argOptional = Obj.magic (HxRuntime.hx_null); argRest = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = isStatic2 in (
-      (Obj.magic self : t).isStatic <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_2 = self in let __place_rhs_3 = isStatic2 in (
+      (__place_receiver_2 : t).isStatic <- __place_rhs_3;
+      __place_rhs_3
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if argNames2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else let __assign_5 = Obj.magic argNames2 in (
-        tempRight := __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).argNames <- __assign_6;
+      ignore (if argNames2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
+        tempRight := __assign_4;
+        __assign_4
+      ) else let __assign_6 = Obj.magic argNames2 in (
+        tempRight := __assign_6;
         __assign_6
       ));
+      ignore (let __assign_7 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).argNames <- __assign_7;
+        __assign_7
+      ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
-        ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
-          tempRight1 := __assign_7;
-          __assign_7
-        ) else let __assign_9 = Obj.magic args2 in (
-          tempRight1 := __assign_9;
-          __assign_9
-        ));
-        ignore (let __assign_10 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).args <- __assign_10;
+        ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
+          tempRight1 := __assign_8;
+          __assign_8
+        ) else let __assign_10 = Obj.magic args2 in (
+          tempRight1 := __assign_10;
           __assign_10
         ));
+        ignore (let __assign_11 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).args <- __assign_11;
+          __assign_11
+        ));
         let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : bool HxArray.t) in (
-          ignore (if argOptional2 == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (let __arr_12 = HxArray.create () in __arr_12) in (
-            tempRight2 := __assign_11;
-            __assign_11
-          ) else let __assign_13 = Obj.magic argOptional2 in (
-            tempRight2 := __assign_13;
-            __assign_13
-          ));
-          ignore (let __assign_14 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).argOptional <- __assign_14;
+          ignore (if argOptional2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
+            tempRight2 := __assign_12;
+            __assign_12
+          ) else let __assign_14 = Obj.magic argOptional2 in (
+            tempRight2 := __assign_14;
             __assign_14
           ));
+          ignore (let __assign_15 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).argOptional <- __assign_15;
+            __assign_15
+          ));
           let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : bool HxArray.t) in (
-            ignore (if argRest2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
-              tempRight3 := __assign_15;
-              __assign_15
-            ) else let __assign_17 = Obj.magic argRest2 in (
-              tempRight3 := __assign_17;
-              __assign_17
-            ));
-            ignore (let __assign_18 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).argRest <- __assign_18;
+            ignore (if argRest2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in (
+              tempRight3 := __assign_16;
+              __assign_16
+            ) else let __assign_18 = Obj.magic argRest2 in (
+              tempRight3 := __assign_18;
               __assign_18
             ));
+            ignore (let __assign_19 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).argRest <- __assign_19;
+              __assign_19
+            ));
             let tempRight4 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-              ignore (if returnType2 == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (TyType.unknown ()) in (
-                tempRight4 := __assign_19;
-                __assign_19
-              ) else let __assign_20 = Obj.magic returnType2 in (
+              ignore (if returnType2 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (TyType.unknown ()) in (
                 tempRight4 := __assign_20;
                 __assign_20
-              ));
-              ignore (let __assign_21 = Obj.magic (!tempRight4) in (
-                (Obj.magic self : t).returnType <- __assign_21;
+              ) else let __assign_21 = Obj.magic returnType2 in (
+                tempRight4 := __assign_21;
                 __assign_21
               ));
+              ignore (let __assign_22 = Obj.magic (!tempRight4) in (
+                (Obj.magic self : t).returnType <- __assign_22;
+                __assign_22
+              ));
               let tempRight5 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-                ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (HxPos.unknown ()) in (
-                  tempRight5 := __assign_22;
-                  __assign_22
-                ) else let __assign_23 = Obj.magic pos2 in (
+                ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic (HxPos.unknown ()) in (
                   tempRight5 := __assign_23;
                   __assign_23
-                ));
-                let __assign_24 = Obj.magic (!tempRight5) in (
-                  (Obj.magic self : t).pos <- __assign_24;
+                ) else let __assign_24 = Obj.magic pos2 in (
+                  tempRight5 := __assign_24;
                   __assign_24
+                ));
+                let __assign_25 = Obj.magic (!tempRight5) in (
+                  (Obj.magic self : t).pos <- __assign_25;
+                  __assign_25
                 )
               )
             )
@@ -98,7 +98,7 @@ let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; argNames = Obj.magic (HxRuntime.hx_null); args = Obj.magic (HxRuntime.hx_null); argOptional = Obj.magic (HxRuntime.hx_null); argRest = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic (HxRuntime.hx_null); args = Obj.magic (HxRuntime.hx_null); argOptional = Obj.magic (HxRuntime.hx_null); argRest = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -116,26 +116,26 @@ let getReturnType = fun self () -> (Obj.magic self : t).returnType
 
 let getPos = fun self () -> (Obj.magic self : t).pos
 
-let acceptsArity = fun self (arity : int) -> try let __fallback_result_31 = let required = ref 0 in let hasRest = ref false in let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).args) in (
-  ignore (try while !_g < _g1 do try ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-    ignore (_g := __new_26);
-    __old_25
+let acceptsArity = fun self (arity : int) -> try let __fallback_result_32 = let required = ref 0 in let hasRest = ref false in let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).args) in (
+  ignore (try while !_g < _g1 do try ignore (let i = let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+    ignore (_g := __new_27);
+    __old_26
   ) in (
     ignore (if i < HxArray.length ((Obj.magic self : t).argRest) && HxArray.get (Obj.magic ((Obj.magic self : t).argRest)) i then ignore ((
-      ignore (let __assign_27 = true in (
-        hasRest := __assign_27;
-        __assign_27
+      ignore (let __assign_28 = true in (
+        hasRest := __assign_28;
+        __assign_28
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
-    if not (i < HxArray.length ((Obj.magic self : t).argOptional) && HxArray.get (Obj.magic ((Obj.magic self : t).argOptional)) i) then ignore (let __old_28 = !required in let __new_29 = HxInt.add __old_28 1 in (
-      ignore (required := __new_29);
-      __old_28
+    if not (i < HxArray.length ((Obj.magic self : t).argOptional) && HxArray.get (Obj.magic ((Obj.magic self : t).argOptional)) i) then ignore (let __old_29 = !required in let __new_30 = HxInt.add __old_29 1 in (
+      ignore (required := __new_30);
+      __old_29
     )) else ()
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   ignore (if arity < !required then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   !hasRest || arity <= HxArray.length ((Obj.magic self : t).args)
-) in Obj.magic __fallback_result_31 with
-  | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30
+) in Obj.magic __fallback_result_32 with
+  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31

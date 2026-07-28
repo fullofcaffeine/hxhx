@@ -13,64 +13,64 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpAbstractFacadeSupport" } : t)
 
-let hasAbstractMarker = fun cls -> try let __fallback_result_12 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
+let hasAbstractMarker = fun cls -> try let __fallback_result_18 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let meta = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
-      ignore (_g := __new_10);
-      __new_10
+    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
+      ignore (_g := __new_16);
+      __new_16
     ));
     if HxString.equals meta "__hxhx_abstract" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_12 with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
-
-let abstractUnderlyingTypeName = fun cls -> try let __fallback_result_18 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let raw = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
-      ignore (_g := __new_14);
-      __new_14
-    ));
-    let tempString = ref ("" : string) in (
-      ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_15 = ("" : string) in (
-        tempString := __assign_15;
-        __assign_15
-      ) else let __assign_16 = (raw : string) in (
-        tempString := __assign_16;
-        __assign_16
-      ));
-      let text = (StringTools.trim (!tempString : string) : string) in if StringTools.startsWith (text : string) ("__hxhx_abstract_underlying=" : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr text (HxString.length "__hxhx_abstract_underlying=") (-1) : string))) else ()
-    )
-  )) done);
-  Obj.magic (HxRuntime.hx_null)
 ) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let classFunctionsWithFacadeMethods = fun cls className scanClasses normalizeTypePath normalizeMemberName -> try let __fallback_result_8 = let out = Obj.magic (HxArray.copy (HxClassDecl.getFunctions (Obj.magic cls))) in let seen = HxMap.create_string () in let _g = ref 0 in (
+let abstractUnderlyingTypeName = fun cls -> try let __fallback_result_27 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let raw = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+      ignore (_g := __new_20);
+      __new_20
+    ));
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if raw == HxString.hx_null_string then let __assign_21 = ("" : string) in (
+        tempString := __assign_21;
+        __assign_21
+      ) else let __assign_22 = (raw : string) in (
+        tempString := __assign_22;
+        __assign_22
+      ));
+      let text = let __call_arg_0_23 = !tempString in StringTools.trim __call_arg_0_23 in if let __call_arg_0_24 = text in let __call_arg_1_25 = "__hxhx_abstract_underlying=" in StringTools.startsWith __call_arg_0_24 __call_arg_1_25 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr text (HxString.length "__hxhx_abstract_underlying=") (-1) : string))) else ()
+    )
+  )) done);
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_27 with
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26
+
+let classFunctionsWithFacadeMethods = fun cls className scanClasses normalizeTypePath normalizeMemberName -> try let __fallback_result_14 = let out = Obj.magic (HxArray.copy (HxClassDecl.getFunctions (Obj.magic cls))) in let seen = HxMap.create_string () in let _g = ref 0 in (
   ignore (while !_g < HxArray.length out do ignore (let fn = Obj.magic (HxArray.get (Obj.magic out) (!_g)) in (
     ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
       ignore (_g := __new_2);
       __new_2
     ));
-    let key = (normalizeMemberName (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in HxMap.set_string seen key true
+    let key = let __call_callee_3 = normalizeMemberName in let __call_arg_0_4 = HxFunctionDecl.getName (Obj.magic fn) in __call_callee_3 __call_arg_0_4 in HxMap.set_string seen key true
   )) done);
   ignore (if scanClasses == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let _g = ref 0 in (
     ignore (try while !_g < HxArray.length scanClasses do try ignore (let facade = Obj.magic (HxArray.get (Obj.magic scanClasses) (!_g)) in (
-      ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-        ignore (_g := __new_4);
-        __new_4
+      ignore (let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
+        ignore (_g := __new_6);
+        __new_6
       ));
       ignore (if Obj.repr facade == Obj.repr cls || not (hasAbstractMarker (Obj.magic facade)) then raise (HxRuntime.Hx_continue) else ());
       let underlying = (abstractUnderlyingTypeName (Obj.magic facade) : string) in (
-        ignore (if underlying == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (normalizeTypePath (underlying : string)) className) then raise (HxRuntime.Hx_continue) else ());
+        ignore (if underlying == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (let __call_callee_7 = normalizeTypePath in let __call_arg_0_8 = underlying in __call_callee_7 __call_arg_0_8) className) then raise (HxRuntime.Hx_continue) else ());
         let _g2 = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic facade)) in try while !_g2 < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
-          ignore (let __old_5 = !_g2 in let __new_6 = HxInt.add __old_5 1 in (
-            ignore (_g2 := __new_6);
-            __new_6
+          ignore (let __old_9 = !_g2 in let __new_10 = HxInt.add __old_9 1 in (
+            ignore (_g2 := __new_10);
+            __new_10
           ));
           ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) || HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new" then raise (HxRuntime.Hx_continue) else ());
-          let methodName = (normalizeMemberName (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
+          let methodName = let __call_callee_11 = normalizeMemberName in let __call_arg_0_12 = HxFunctionDecl.getName (Obj.magic fn) in __call_callee_11 __call_arg_0_12 in (
             ignore (if HxMap.exists_string seen methodName then raise (HxRuntime.Hx_continue) else ());
             ignore (HxMap.set_string seen methodName true);
             HxArray.push out fn
@@ -84,5 +84,5 @@ let classFunctionsWithFacadeMethods = fun cls className scanClasses normalizeTyp
       | HxRuntime.Hx_break -> ());
     out
   )
-) in Obj.magic __fallback_result_8 with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+) in Obj.magic __fallback_result_14 with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13

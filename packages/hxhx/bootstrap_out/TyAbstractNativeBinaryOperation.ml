@@ -64,13 +64,13 @@ let permitsResultConversion = fun actual expected -> HxString.equals (TyType.get
 
 let validate = fun info index filePath -> let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let resultType = Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()) in (
   ignore (if TyType.isUnknown (Obj.magic resultType) () || TyType.isVoid (Obj.magic resultType) () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ("Bodyless abstract binary operator requires an explicit value result: " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"]) else ());
-  let left = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let right = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let result = Obj.magic (carrierType (Obj.magic resultType) (Obj.magic index)) in let baseOperator = (HxBinaryOperatorTools.baseOperator (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) : string) in let tempString = ref ("" : string) in (
-    ignore (if baseOperator == Obj.magic (HxRuntime.hx_null) then let __assign_11 = (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) in (
-      tempString := __assign_11;
-      __assign_11
-    ) else let __assign_12 = (baseOperator : string) in (
+  let left = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let right = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let result = Obj.magic (carrierType (Obj.magic resultType) (Obj.magic index)) in let baseOperator = (let __call_arg_0_11 = TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () in HxBinaryOperatorTools.baseOperator __call_arg_0_11 : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if baseOperator == Obj.magic (HxRuntime.hx_null) then let __assign_12 = (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) in (
       tempString := __assign_12;
       __assign_12
+    ) else let __assign_13 = (baseOperator : string) in (
+      tempString := __assign_13;
+      __assign_13
     ));
     let nativeType = Obj.magic (operationType (!tempString : string) (Obj.magic left) (Obj.magic right) (Obj.magic declaration) (filePath : string)) in (
       ignore (if not (permitsResultConversion (Obj.magic nativeType) (Obj.magic result)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ((((("Unsupported abstract binary conversion from " ^ HxString.toStdString (TyType.getDisplay (Obj.magic nativeType) ())) ^ " to ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic result) ())) ^ " for ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"]) else ());

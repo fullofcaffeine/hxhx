@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable invocationIdentity : string; mutable previousSnapshot : CompilerDependencySnapshot.t; mutable publishCallback : string -> CompilerDependencySnapshot.t -> unit; mutable reportState : Hxhx_CompilationServerDependencyReport.t; mutable stagedSnapshot : CompilerDependencySnapshot.t; mutable snapshotRequired : bool; mutable preparedForSuccess : bool; mutable finished : bool }
 
-let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = ""; previousSnapshot = Obj.magic (HxRuntime.hx_null); publishCallback = Obj.magic (HxRuntime.hx_null); reportState = Obj.magic (HxRuntime.hx_null); stagedSnapshot = Obj.magic (HxRuntime.hx_null); snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
+let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic (HxRuntime.hx_null); publishCallback = Obj.magic (HxRuntime.hx_null); reportState = Obj.magic (HxRuntime.hx_null); stagedSnapshot = Obj.magic (HxRuntime.hx_null); snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (invocationIdentity2 : string) in (
       (Obj.magic self : t).invocationIdentity <- __assign_1;
@@ -28,72 +28,72 @@ let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ 
       (Obj.magic self : t).stagedSnapshot <- __assign_5;
       __assign_5
     ));
-    ignore (let __assign_6 = false in (
-      (Obj.magic self : t).snapshotRequired <- __assign_6;
-      __assign_6
+    ignore (let __place_receiver_6 = self in let __place_rhs_7 = false in (
+      (__place_receiver_6 : t).snapshotRequired <- __place_rhs_7;
+      __place_rhs_7
     ));
-    ignore (let __assign_7 = false in (
-      (Obj.magic self : t).preparedForSuccess <- __assign_7;
-      __assign_7
+    ignore (let __place_receiver_8 = self in let __place_rhs_9 = false in (
+      (__place_receiver_8 : t).preparedForSuccess <- __place_rhs_9;
+      __place_rhs_9
     ));
-    let __assign_8 = false in (
-      (Obj.magic self : t).finished <- __assign_8;
-      __assign_8
+    let __place_receiver_10 = self in let __place_rhs_11 = false in (
+      (__place_receiver_10 : t).finished <- __place_rhs_11;
+      __place_rhs_11
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = ""; previousSnapshot = Obj.magic (HxRuntime.hx_null); publishCallback = Obj.magic (HxRuntime.hx_null); reportState = Obj.magic (HxRuntime.hx_null); stagedSnapshot = Obj.magic (HxRuntime.hx_null); snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic (HxRuntime.hx_null); publishCallback = Obj.magic (HxRuntime.hx_null); reportState = Obj.magic (HxRuntime.hx_null); stagedSnapshot = Obj.magic (HxRuntime.hx_null); snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
 
 let report = fun self () -> (Obj.magic self : t).reportState
 
-let ensureOpen = fun self () -> ignore (ignore (if (Obj.magic self : t).finished then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency observation request is already closed") ["Dynamic"; "String"]) else ()))
+let ensureOpen = fun self () -> ignore (ignore (if (Obj.magic self : t).finished then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency observation request is already closed") ["Dynamic"]) else ()))
 
 let requireSnapshot = fun self () -> ignore (ignore ((
   ignore (ensureOpen (Obj.magic self) ());
-  let __assign_9 = true in (
-    (Obj.magic self : t).snapshotRequired <- __assign_9;
-    __assign_9
+  let __place_receiver_12 = self in let __place_rhs_13 = true in (
+    (__place_receiver_12 : t).snapshotRequired <- __place_rhs_13;
+    __place_rhs_13
   )
 )))
 
 let record = fun self (snapshot : CompilerDependencySnapshot.t) -> ignore (ignore ((
   ignore (ensureOpen (Obj.magic self) ());
-  ignore (if snapshot == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation cannot record a null snapshot") ["Dynamic"; "String"]) else ());
-  ignore (if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation already recorded a typed program for this request") ["Dynamic"; "String"]) else ());
-  ignore (let __assign_10 = Obj.magic snapshot in (
-    (Obj.magic self : t).stagedSnapshot <- __assign_10;
-    __assign_10
+  ignore (if snapshot == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation cannot record a null snapshot") ["Dynamic"]) else ());
+  ignore (if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation already recorded a typed program for this request") ["Dynamic"]) else ());
+  ignore (let __assign_14 = Obj.magic snapshot in (
+    (Obj.magic self : t).stagedSnapshot <- __assign_14;
+    __assign_14
   ));
   Hxhx_CompilationServerDependencyReport.record (Obj.magic ((Obj.magic self : t).reportState)) (Obj.magic snapshot) (Obj.magic ((Obj.magic self : t).previousSnapshot))
 )))
 
-let prepareFinish = fun self (requestSucceeded : bool) -> ignore (ignore (try (
+let prepareFinish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
   ignore (ensureOpen (Obj.magic self) ());
   ignore (if not (requestSucceeded) || (Obj.magic self : t).preparedForSuccess then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (if (Obj.magic self : t).snapshotRequired && (Obj.magic self : t).stagedSnapshot == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "successful dependency observation request did not record the complete typed program") ["Dynamic"; "String"]) else ());
-  ignore (if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) && HxString.length (CompilerDependencySnapshot.getCanonicalIdentity (Obj.magic ((Obj.magic self : t).stagedSnapshot)) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation produced an empty snapshot identity") ["Dynamic"; "String"]) else ());
-  let __assign_11 = true in (
-    (Obj.magic self : t).preparedForSuccess <- __assign_11;
-    __assign_11
+  ignore (if (Obj.magic self : t).snapshotRequired && (Obj.magic self : t).stagedSnapshot == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "successful dependency observation request did not record the complete typed program") ["Dynamic"]) else ());
+  ignore (if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) && HxString.length (CompilerDependencySnapshot.getCanonicalIdentity (Obj.magic ((Obj.magic self : t).stagedSnapshot)) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation produced an empty snapshot identity") ["Dynamic"]) else ());
+  let __place_receiver_15 = self in let __place_rhs_16 = true in (
+    (__place_receiver_15 : t).preparedForSuccess <- __place_rhs_16;
+    __place_rhs_16
   )
-) with
-  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12))
+)) with
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17))
 
-let finish = fun self (requestSucceeded : bool) -> ignore (ignore (try (
+let finish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).finished then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (if requestSucceeded then ignore ((
     ignore (prepareFinish (Obj.magic self) true);
     if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) then ignore ((Obj.magic self : t).publishCallback ((Obj.magic self : t).invocationIdentity : string) (Obj.magic ((Obj.magic self : t).stagedSnapshot))) else ()
   )) else ());
-  ignore (let __assign_13 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    (Obj.magic self : t).stagedSnapshot <- __assign_13;
-    __assign_13
+  ignore (let __assign_18 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    (Obj.magic self : t).stagedSnapshot <- __assign_18;
+    __assign_18
   ));
-  let __assign_14 = true in (
-    (Obj.magic self : t).finished <- __assign_14;
-    __assign_14
+  let __place_receiver_19 = self in let __place_rhs_20 = true in (
+    (__place_receiver_19 : t).finished <- __place_rhs_20;
+    __place_rhs_20
   )
-) with
-  | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15))
+)) with
+  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21))

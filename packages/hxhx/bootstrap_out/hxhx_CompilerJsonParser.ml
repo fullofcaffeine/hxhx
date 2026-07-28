@@ -23,7 +23,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable input : string; mutable length : int; mutable index : int }
 
-let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilerJsonParser"; input = ""; length = 0; index = 0 } : t) in (
+let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilerJsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (input2 : string) in (
       (Obj.magic self : t).input <- __assign_1;
@@ -41,9 +41,9 @@ let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Compile
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilerJsonParser"; input = ""; length = 0; index = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilerJsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t)
 
-let skipWhitespace = fun self () -> ignore (ignore (try while (Obj.magic self : t).index < (Obj.magic self : t).length do ignore (let tempNumber = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+let skipWhitespace = fun self () -> ignore (ignore (try ignore (while (self : t).index < (self : t).length do ignore (let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
   ignore (let __assign_71 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
     tempNumber := __assign_71;
     __assign_71
@@ -54,14 +54,14 @@ let skipWhitespace = fun self () -> ignore (ignore (try while (Obj.magic self : 
       __place_old_73
     ))
     | _ -> raise (HxRuntime.Hx_return (Obj.repr ()))
-)) done with
+)) done) with
   | HxRuntime.Hx_return __ret_75 -> Obj.obj __ret_75))
 
-let isEof = fun self () -> (Obj.magic self : t).index >= (Obj.magic self : t).length
+let isEof = fun self () -> (self : t).index >= (self : t).length
 
-let peekCode = fun self () -> let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempResult = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in tempResult
+let peekCode = fun self () -> let s = ((self : t).input : string) in let index2 = (self : t).index in let tempResult = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in tempResult
 
-let nextCode = fun self () -> let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
+let nextCode = fun self () -> let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
   ignore (let __place_receiver_76 = self in let __place_old_77 = (__place_receiver_76 : t).index in let __place_new_78 = HxInt.add __place_old_77 1 in (
     (__place_receiver_76 : t).index <- __place_new_78;
     __place_old_77
@@ -69,26 +69,26 @@ let nextCode = fun self () -> let s = ((Obj.magic self : t).input : string) in l
   code
 )
 
-let consumeIf = fun self (expected : int) -> try let __fallback_result_83 = let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempLeft = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
-  ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length || tempLeft <> expected then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+let consumeIf = fun self (expected : int) -> (try let __fallback_result_83 = let s = ((self : t).input : string) in let index2 = (self : t).index in let tempLeft = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+  ignore (if (self : t).index >= (self : t).length || tempLeft <> expected then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (let __place_receiver_79 = self in let __place_old_80 = (__place_receiver_79 : t).index in let __place_new_81 = HxInt.add __place_old_80 1 in (
     (__place_receiver_79 : t).index <- __place_new_81;
     __place_old_80
   ));
   true
 ) in Obj.magic __fallback_result_83 with
-  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82
+  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82 : bool)
 
-let fail = fun self (message : string) -> ignore (ignore (HxType.hx_throw_typed_rtti (Obj.repr ((HxString.toStdString message ^ " at position ") ^ string_of_int ((Obj.magic self : t).index))) ["Dynamic"; "String"]))
+let fail = fun self (message : string) -> ignore (ignore (HxType.hx_throw_typed_rtti (Obj.repr ((HxString.toStdString message ^ " at position ") ^ string_of_int ((self : t).index))) ["Dynamic"]))
 
-let parseUnicodeEscape = fun self () -> let value = ref 0 in let _g = ref 0 in (
+let parseUnicodeEscape = fun self () -> (let value = ref 0 in let _g = ref 0 in (
   ignore (while !_g < 4 do ignore ((
     ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
       ignore (_g := __new_32);
       __old_31
     ));
-    ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then ignore (fail (Obj.magic self) ("invalid unicode escape" : string)) else ());
-    let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+    ignore (if (self : t).index >= (self : t).length then ignore (fail (Obj.magic self) ("invalid unicode escape" : string)) else ());
+    let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
       ignore (let __assign_33 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
         tempNumber1 := __assign_33;
         __assign_33
@@ -128,17 +128,17 @@ let parseUnicodeEscape = fun self () -> let value = ref 0 in let _g = ref 0 in (
     )
   )) done);
   !value
-)
+) : int)
 
 let parseDigits = fun self (requireAtLeastOne : bool) -> ignore (ignore (let count = ref 0 in (
-  ignore (try while (Obj.magic self : t).index < (Obj.magic self : t).length do try ignore (let tempNumber = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+  ignore (try while (self : t).index < (self : t).length do try ignore (let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
     ignore (let __assign_57 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
       tempNumber := __assign_57;
       __assign_57
     ));
     let code = !tempNumber in (
       ignore (if code < 48 || code > 57 then raise (HxRuntime.Hx_break) else ());
-      let tempNumber1 = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+      let tempNumber1 = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
         ignore (let __assign_58 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
           tempNumber1 := __assign_58;
           __assign_58
@@ -160,7 +160,7 @@ let parseDigits = fun self (requireAtLeastOne : bool) -> ignore (ignore (let cou
   if requireAtLeastOne && !count = 0 then ignore (fail (Obj.magic self) ("expected digit" : string)) else ()
 )))
 
-let parseNumber = fun self () -> try let __fallback_result_56 = let start = (Obj.magic self : t).index in (
+let parseNumber = fun self () -> try let __fallback_result_56 = let start = (self : t).index in (
   ignore (consumeIf (Obj.magic self) 45);
   ignore (parseDigits (Obj.magic self) false);
   let isFloat = ref false in (
@@ -172,10 +172,10 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (Obj
       parseDigits (Obj.magic self) true
     )) else ());
     let tempNumber = ref (0 : int) in (
-      ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then let __assign_44 = -1 in (
+      ignore (if (self : t).index >= (self : t).length then let __assign_44 = -1 in (
         tempNumber := __assign_44;
         __assign_44
-      ) else let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let __assign_45 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+      ) else let s = ((self : t).input : string) in let index2 = (self : t).index in let __assign_45 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
         tempNumber := __assign_45;
         __assign_45
       ));
@@ -185,22 +185,22 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (Obj
             isFloat := __assign_46;
             __assign_46
           ));
-          let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempNumber1 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+          let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber1 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
             ignore tempNumber1;
             ignore (let __place_receiver_47 = self in let __place_old_48 = (__place_receiver_47 : t).index in let __place_new_49 = HxInt.add __place_old_48 1 in (
               (__place_receiver_47 : t).index <- __place_new_49;
               __place_old_48
             ));
             let tempNumber2 = ref (0 : int) in (
-              ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then let __assign_50 = -1 in (
+              ignore (if (self : t).index >= (self : t).length then let __assign_50 = -1 in (
                 tempNumber2 := __assign_50;
                 __assign_50
-              ) else let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let __assign_51 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+              ) else let s = ((self : t).input : string) in let index2 = (self : t).index in let __assign_51 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
                 tempNumber2 := __assign_51;
                 __assign_51
               ));
               let signCode = !tempNumber2 in (
-                ignore (if signCode = 43 || signCode = 45 then ignore (let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempNumber3 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber3 in (
+                ignore (if signCode = 43 || signCode = 45 then ignore (let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber3 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber3 in (
                   ignore (let __place_receiver_52 = self in let __place_old_53 = (__place_receiver_52 : t).index in let __place_new_54 = HxInt.add __place_old_53 1 in (
                     (__place_receiver_52 : t).index <- __place_new_54;
                     __place_old_53
@@ -212,7 +212,7 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (Obj
             )
           )
         )) else ());
-        let token = (HxString.substr ((Obj.magic self : t).input) start (HxInt.sub ((Obj.magic self : t).index) start) : string) in (
+        let token = (HxString.substr ((self : t).input) start (HxInt.sub ((self : t).index) start) : string) in (
           ignore (if !isFloat then ignore (let parsedFloat = Std.parseFloat (token : string) in (
             ignore (if Math.isNaN parsedFloat then ignore (fail (Obj.magic self) ("invalid float literal" : string)) else ());
             raise (HxRuntime.Hx_return (Obj.repr parsedFloat))
@@ -231,7 +231,7 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (Obj
 let expectKeyword = fun self (keyword : string) -> ignore (ignore (let _g = ref 0 in let _g1 = HxString.length keyword in while !_g < _g1 do ignore (let i = let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
   ignore (_g := __new_65);
   __old_64
-) in let tempLeft = ref (0 : int) in let tempNumber = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+) in let tempLeft = ref (0 : int) in let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
   ignore (let __assign_66 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
     tempNumber := __assign_66;
     __assign_66
@@ -245,24 +245,24 @@ let expectKeyword = fun self (keyword : string) -> ignore (ignore (let _g = ref 
       tempLeft := __assign_70;
       __assign_70
     ));
-    if (Obj.magic self : t).index >= (Obj.magic self : t).length || !tempLeft <> Obj.obj (HxAnon.get (Obj.repr keyword) "cca") i then ignore (fail (Obj.magic self) ("invalid keyword" : string)) else ()
+    if (self : t).index >= (self : t).length || !tempLeft <> Obj.obj (HxAnon.get (Obj.repr keyword) "cca") i then ignore (fail (Obj.magic self) ("invalid keyword" : string)) else ()
   )
 )) done))
 
-let expectCode = fun self (expected : int) -> ignore (ignore (let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
+let expectCode = fun self (expected : int) -> ignore (ignore (let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
   ignore (let __place_receiver_84 = self in let __place_old_85 = (__place_receiver_84 : t).index in let __place_new_86 = HxInt.add __place_old_85 1 in (
     (__place_receiver_84 : t).index <- __place_new_86;
     __place_old_85
   ));
-  let tempLeft = code in if (Obj.magic self : t).index >= (Obj.magic self : t).length || tempLeft <> expected then ignore (fail (Obj.magic self) ("unexpected token" : string)) else ()
+  let tempLeft = code in if (self : t).index >= (self : t).length || tempLeft <> expected then ignore (fail (Obj.magic self) ("unexpected token" : string)) else ()
 )))
 
-let parseString = fun self () -> try let __fallback_result_30 = (
+let parseString = fun self () -> (try let __fallback_result_30 = (
   ignore (expectCode (Obj.magic self) 34);
   let buffer = Obj.magic (StringBuf.create ()) in (
     ignore (while true do ignore ((
-      ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then ignore (fail (Obj.magic self) ("unclosed string literal" : string)) else ());
-      let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+      ignore (if (self : t).index >= (self : t).length then ignore (fail (Obj.magic self) ("unclosed string literal" : string)) else ());
+      let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
         ignore (let __assign_19 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
           tempNumber1 := __assign_19;
           __assign_19
@@ -279,8 +279,8 @@ let parseString = fun self () -> try let __fallback_result_30 = (
           let code = !tempNumber in (
             ignore (if code = 34 then raise (HxRuntime.Hx_return (Obj.repr (StringBuf.toString (Obj.magic buffer) () : string))) else ());
             if code = 92 then ignore ((
-              ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then ignore (fail (Obj.magic self) ("invalid escape sequence" : string)) else ());
-              let tempNumber2 = ref (0 : int) in let tempNumber3 = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in (
+              ignore (if (self : t).index >= (self : t).length then ignore (fail (Obj.magic self) ("invalid escape sequence" : string)) else ());
+              let tempNumber2 = ref (0 : int) in let tempNumber3 = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
                 ignore (let __assign_24 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
                   tempNumber3 := __assign_24;
                   __assign_24
@@ -313,11 +313,11 @@ let parseString = fun self () -> try let __fallback_result_30 = (
     ""
   )
 ) in Obj.magic __fallback_result_30 with
-  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
+  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29 : string)
 
 let rec parseValue = fun self () -> (
-  ignore (if (Obj.magic self : t).index >= (Obj.magic self : t).length then ignore (fail (Obj.magic self) ("unexpected EOF" : string)) else ());
-  let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in let value = ref (Obj.magic (compilerjsonvaluebox_create (HxRuntime.hx_null))) in (
+  ignore (if (self : t).index >= (self : t).length then ignore (fail (Obj.magic self) ("unexpected EOF" : string)) else ());
+  let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in let value = ref (Obj.magic (compilerjsonvaluebox_create (HxRuntime.hx_null))) in (
     ignore (if code = 123 then ignore (let __assign_6 = Obj.magic (compilerjsonvaluebox_create (parseObject (Obj.magic self) ())) in (
       value := __assign_6;
       __assign_6
@@ -396,7 +396,7 @@ let parseDocument = fun self () -> (
   ignore (skipWhitespace (Obj.magic self) ());
   let value = Obj.magic (parseValue (Obj.magic self) ()) in (
     ignore (skipWhitespace (Obj.magic self) ());
-    ignore (if (Obj.magic self : t).index < (Obj.magic self : t).length then ignore (fail (Obj.magic self) ("unexpected trailing token" : string)) else ());
+    ignore (if (self : t).index < (self : t).length then ignore (fail (Obj.magic self) ("unexpected trailing token" : string)) else ());
     (Obj.magic value : compilerjsonvaluebox_t).value
   )
 )
