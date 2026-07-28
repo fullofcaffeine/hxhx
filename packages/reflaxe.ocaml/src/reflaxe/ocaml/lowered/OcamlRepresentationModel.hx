@@ -44,6 +44,14 @@ enum abstract OcamlRepresentationIdentityPolicy(String) from String to String {
 
 	/** Copies preserve the identity of one reference-bearing runtime value. */
 	final ReferenceIdentity = "reference-identity";
+
+	/**
+		The carrier preserves the identity policy of its dynamically stored payload.
+
+		Primitive payloads retain value semantics. Reference-bearing payloads keep
+		their existing runtime identity; entering Dynamic never clones them.
+	**/
+	final DynamicPayloadIdentity = "dynamic-payload-identity";
 }
 
 /** How source aliases can observe this represented value. */
@@ -53,6 +61,14 @@ enum abstract OcamlRepresentationAliasingPolicy(String) from String to String {
 
 	/** Copies share one reference-bearing value and observe the same mutations. */
 	final SharedReferenceAliases = "shared-reference-aliases";
+
+	/**
+		Aliasing follows the payload stored in Dynamic.
+
+		Primitive payloads have no source-visible alias identity. Reference-bearing
+		payloads continue to share the same underlying value and mutations.
+	**/
+	final DynamicPayloadAliases = "dynamic-payload-aliases";
 }
 
 /** Which surrounding storage location owns replacement of the represented value. */
@@ -80,6 +96,14 @@ enum abstract OcamlRepresentationValueMutationPolicy(String) from String to Stri
 
 	/** The carrier is a mutable runtime container shared by reference aliases. */
 	final MutableRuntimeContainer = "mutable-runtime-container";
+
+	/**
+		Whether mutation is observable depends on the value stored in Dynamic.
+
+		The `Obj.t` carrier itself adds no mutation. It preserves a mutable
+		reference payload or an immutable primitive payload unchanged.
+	**/
+	final DynamicPayloadMutation = "dynamic-payload-mutation";
 }
 
 /** Whether the Haxe value needs an additional target box or wrapper. */
@@ -130,6 +154,17 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		null-to-record crossing is not implied by the carrier decision.
 	**/
 	final NullableNominalRecordCarrier = "nullable-nominal-record-carrier";
+
+	/**
+		Haxe Dynamic stores one already-produced target value in `Obj.t`.
+
+		Every concrete-to-Dynamic occurrence owns one explicit conversion.
+		`Obj.repr` preserves ordinary concrete values; exact Bool uses the runtime's
+		distinguishable Bool box because OCaml Bool and Int are both immediate
+		values. Existing Dynamic values and the canonical null sentinel preserve
+		the carrier directly.
+	**/
+	final DynamicCarrier = "dynamic-carrier";
 }
 
 /**

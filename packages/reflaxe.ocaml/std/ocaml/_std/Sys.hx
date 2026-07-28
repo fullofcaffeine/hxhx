@@ -6,21 +6,28 @@
 
 	Stream access names the generated Haxe `sys.io.Stdio` implementation directly.
 	Methods needing nullable branching implement that choice in Haxe, then call
-	narrow checked `HxSys` operations. Dynamic output conversion remains an
-	explicit compiler case until inline `Dynamic` parameters have a sealed OCaml
-	carrier.
+	narrow checked `HxSys` operations. Dynamic output now follows the same facade:
+	the compiler seals the `Dynamic` carrier before this inline method calls the
+	runtime boundary, so the target builder does not need a `Sys.print` method-name
+	special case.
 **/
 @:require(sys)
 extern class Sys {
 	/**
 		Prints any value to the standard output.
 	**/
-	static function print(v:Dynamic):Void;
+	static inline function print(v:Dynamic):Void {
+		final value:Dynamic = v;
+		NativeHxSys.printValue(value);
+	}
 
 	/**
 		Prints any value to the standard output, followed by a newline.
 	**/
-	static function println(v:Dynamic):Void;
+	static inline function println(v:Dynamic):Void {
+		final value:Dynamic = v;
+		NativeHxSys.printlnValue(value);
+	}
 
 	/**
 		Returns all the arguments that were passed in the command line.
@@ -162,6 +169,8 @@ extern class Sys {
 @:ocamlRuntime("haxe-system")
 @:native("HxSys")
 private extern class NativeHxSys {
+	static function printValue(value:Dynamic):Void;
+	static function printlnValue(value:Dynamic):Void;
 	static function putEnvValue(name:String, value:String):Void;
 	static function removeEnv(name:String):Void;
 	static function commandShell(command:String):Int;

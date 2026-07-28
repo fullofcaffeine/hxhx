@@ -579,6 +579,90 @@ class LocalStoragePlannerFixture {
 			"a nullable copy must not claim carrier preservation when its source local was excluded by a concrete-Bool boundary");
 		assertTrue(excludedNullableCopyPlan.conversions().length == 0,
 			"excluding a nullable source must also remove dependent carrier-preserving occurrence records");
+		final dynamicCarrierInput = Context.typeExpr(macro {
+			final text:Dynamic = cast("text" : String);
+			final decimal:Dynamic = cast(1.5 : Float);
+			final flag:Dynamic = cast(true : Bool);
+			final empty:Dynamic = null;
+			Std.string(text) + Std.string(decimal) + Std.string(flag) + Std.string(empty);
+		});
+		final dynamicCarrierBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-carrier",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-carrier-v1",
+			pipelineRevision: "ocaml-function-plans-v52"
+		};
+		final dynamicCarrierPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicCarrierInput,
+			OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput), representations, dynamicCarrierBinding);
+		final dynamicReferences = dynamicCarrierPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic");
+		final dynamicConversions = dynamicCarrierPlan.conversions();
+		assertTrue(dynamicReferences.length == 4
+			&& dynamicReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue
+				&& reference.representationId == "representation:Dynamic:internal-value")
+				.length == 4,
+			'each immutable Dynamic local should reference the one internal Obj.t representation; observed ${dynamicReferences.length} references and ${dynamicConversions.map(conversion -> conversion.conversion + ":" + conversion.inputSemanticTypeId).join(",")} conversions');
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
+			&& conversion.inputSemanticTypeId == "String")
+			.length == 1,
+			"a concrete String should enter Dynamic through one proof-backed Obj.repr conversion");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
+			&& conversion.inputSemanticTypeId == "Float")
+			.length == 1,
+			"an exact Float should enter Dynamic through one proof-backed Obj.repr conversion");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+			&& conversion.inputSemanticTypeId == "Bool")
+			.length == 1,
+			"exact Bool should enter Dynamic through its distinguishable runtime box");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.PreserveDynamicCarrier
+			&& conversion.inputSemanticTypeId == "Dynamic")
+			.length == 1,
+			"the null sentinel should preserve the already-selected Dynamic carrier");
+		final dynamicUnsafe = dynamicCarrierPlan.unsafeOperations();
+		assertTrue(dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprConcreteToDynamic).length == 2
+			&& dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.BoxExactBoolToDynamic).length == 1,
+			"only concrete and Bool Dynamic crossings should publish unsafe-operation proof records");
+		final uninitializedDynamicInput = Context.typeExpr(macro {
+			var value:Dynamic;
+			value;
+		});
+		final uninitializedDynamicPlan = OcamlLocalRepresentationPlanner.planExpression(uninitializedDynamicInput,
+			OcamlLocalStoragePlanner.planExpression(uninitializedDynamicInput), representations, {
+				functionId: "fixture|uninitialized-dynamic",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:uninitialized-dynamic-v1",
+				pipelineRevision: "ocaml-function-plans-v52"
+			});
+		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& uninitializedDynamicPlan.conversions().length == 0,
+			"an implicitly initialized Dynamic local must remain outside the immutable occurrence-bound slice");
+		final reassignedDynamicInput = Context.typeExpr(macro {
+			var value:Dynamic = cast("first" : String);
+			value = cast(7 : Int);
+			Std.string(value);
+		});
+		final reassignedDynamicPlan = OcamlLocalRepresentationPlanner.planExpression(reassignedDynamicInput,
+			OcamlLocalStoragePlanner.planExpression(reassignedDynamicInput), representations, {
+				functionId: "fixture|reassigned-dynamic",
+				programRevision: "program:local-storage-fixture",
+				bodyRevision: "body:reassigned-dynamic-v1",
+				pipelineRevision: "ocaml-function-plans-v52"
+			});
+		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& reassignedDynamicPlan.conversions().length == 0,
+			"a reassigned Dynamic local must reject the entire immutable slice instead of publishing its initializer conversion");
+		final wrongDynamicRole:Dynamic = Reflect.copy(dynamicConversions[0]);
+		Reflect.setField(wrongDynamicRole, "role", OcamlLocalConversionRole.Assignment);
+		final dynamicDecisions:Array<OcamlLocalRepresentationDecision> = dynamicReferences.map(reference -> ({
+			localId: reference.localId,
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(reference.representationId, reference.semanticTypeId, reference.domain),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		}));
+		final wrongDynamicConversions = dynamicConversions.copy();
+		wrongDynamicConversions[0] = cast wrongDynamicRole;
+		expectFailure("wrong Dynamic conversion role", "invalid-dynamic-conversion-role",
+			() -> new OcamlLocalRepresentationPlan(dynamicDecisions, wrongDynamicConversions));
 		final returnedConversion = nullIntConversions[0];
 		Reflect.setField(returnedConversion, "proofId", "changed-by-caller");
 		assertTrue(nullIntPlan.conversions()[0].proofId != "changed-by-caller", "mutating a returned conversion must not change the sealed occurrence plan");

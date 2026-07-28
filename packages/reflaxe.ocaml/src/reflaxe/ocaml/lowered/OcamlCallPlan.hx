@@ -40,6 +40,7 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final CheckedUnboxNullableInt = "checked-unbox-nullable-int";
 	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
+	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
 	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
 	final MaterializeOmittedNullableBool = "materialize-omitted-nullable-bool";
 	final MaterializeOmittedString = "materialize-omitted-string";
@@ -123,12 +124,14 @@ typedef OcamlCallableDeclarationPlan = {
 
 	This boundary deliberately admits ordinary static methods whose required
 	arguments independently use the closed exact `Int`, `Bool`, `Null<Int>`,
-	`Null<Bool>`, or `String` representation matrix. A result either uses the
-	same represented matrix or explicitly records effect-only Haxe `Void`, which
-	has no carrier. The argument vector may be empty; OCaml's synthetic unit
-	parameter is added mechanically at the syntax boundary and is not represented
-	as a Haxe argument. Later call kinds extend the planner rather than teaching
-	the syntax builder new rules.
+	`Null<Bool>`, `String`, or `Dynamic` representation matrix. A result either
+	uses the same represented matrix or explicitly records effect-only Haxe
+	`Void`, which has no carrier. `Dynamic` always crosses as its already-sealed
+	`Obj.t`; concrete-to-Dynamic boxing belongs to the local occurrence that
+	created that carrier. The argument vector may be empty; OCaml's synthetic
+	unit parameter is added mechanically at the syntax boundary and is not
+	represented as a Haxe argument. Later call kinds extend the planner rather
+	than teaching the syntax builder new rules.
 **/
 typedef OcamlCallableBoundaryPlan = {
 	final id:String;
@@ -546,6 +549,7 @@ class OcamlCallPlan {
 						&& !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !isExactStringSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+						&& !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 						&& !(expectedIndex < 0
 							&& isNominalInternalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)))
 					|| value.proofId != "identity-call-carrier-v1") {
@@ -576,6 +580,12 @@ class OcamlCallPlan {
 					|| !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 					|| value.proofId != "nullable-bool-call-carrier-preserve-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must preserve one exact Null<Bool> Obj.t carrier';
+				}
+			case PreserveDynamicCarrier:
+				if (!sameRepresentationSides(value)
+					|| !isExactDynamicSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| value.proofId != "dynamic-call-carrier-preserve-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must preserve one exact Dynamic Obj.t carrier';
 				}
 			case BoxExactBoolToNullableBool:
 				if (!isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
@@ -648,7 +658,8 @@ class OcamlCallPlan {
 		if (call.result != null && call.result.conversion != OcamlCallCarrierConversion.Identity)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must preserve its exact declared result carrier';
 		for (argument in call.arguments) {
-			if (isNullableSemanticType(argument.outputSemanticTypeId) && argument.conversion == OcamlCallCarrierConversion.Identity) {
+			if ((isNullableSemanticType(argument.outputSemanticTypeId) || argument.outputSemanticTypeId == "Dynamic")
+				&& argument.conversion == OcamlCallCarrierConversion.Identity) {
 				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" must explicitly preserve an existing ${argument.outputSemanticTypeId} carrier or box its exact primitive';
 			}
 		}
@@ -882,12 +893,17 @@ class OcamlCallPlan {
 		return semanticTypeId == "String" && carrierTypeId == "string" && representationId == "representation:String:internal-value";
 	}
 
+	static function isExactDynamicSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return semanticTypeId == "Dynamic" && carrierTypeId == "Obj.t" && representationId == "representation:Dynamic:internal-value";
+	}
+
 	static function isAdmittedInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return isExactIntSide(semanticTypeId, carrierTypeId, representationId)
 			|| isExactBoolSide(semanticTypeId, carrierTypeId, representationId)
 			|| isExactNullIntSide(semanticTypeId, carrierTypeId, representationId)
 			|| isExactNullBoolSide(semanticTypeId, carrierTypeId, representationId)
-			|| isExactStringSide(semanticTypeId, carrierTypeId, representationId);
+			|| isExactStringSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactDynamicSide(semanticTypeId, carrierTypeId, representationId);
 	}
 
 	static function isNullableSemanticType(semanticTypeId:String):Bool {
@@ -1661,6 +1677,8 @@ class OcamlCallPlanner {
 					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableIntCarrier, boundary.parameterOptional));
 				} else if (output.semanticTypeId == "Null<Bool>") {
 					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveNullableBoolCarrier, boundary.parameterOptional));
+				} else if (output.semanticTypeId == "Dynamic") {
+					planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.PreserveDynamicCarrier, boundary.parameterOptional));
 				} else {
 					if (boundary.inputRepresentationId != input.id || boundary.outputRepresentationId != output.id)
 						return null;
@@ -1967,6 +1985,8 @@ class OcamlCallPlanner {
 			return "Null<Bool>";
 		if (OcamlRepresentationRegistry.isExactString(type) || OcamlRepresentationRegistry.isExactNullString(type))
 			return "String";
+		if (OcamlRepresentationRegistry.isExactDynamic(type))
+			return "Dynamic";
 		return null;
 	}
 
@@ -2003,6 +2023,7 @@ class OcamlCallPlanner {
 			case "Null<Int>": representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 			case "Null<Bool>": representations.selectExactNullBool(OcamlRepresentationDomain.InternalValue);
 			case "String": representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+			case "Dynamic": representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 			case _: representations.monomorphicClassValue(semanticType);
 		}
 	}
@@ -2062,6 +2083,10 @@ class OcamlCallPlanner {
 			case PreserveNullableBoolCarrier: {
 					id: "nullable-bool-call-carrier-preserve-v1",
 					claim: "The source value already produces the selected exact Null<Bool> Obj.t carrier, so the boundary preserves it without another box."
+				};
+			case PreserveDynamicCarrier: {
+					id: "dynamic-call-carrier-preserve-v1",
+					claim: "The source value already produces the selected Dynamic Obj.t carrier, so the call boundary preserves its null, primitive, or reference-bearing payload without another box."
 				};
 			case BoxExactBoolToNullableBool: {
 					id: "nullable-bool-call-box-v1",

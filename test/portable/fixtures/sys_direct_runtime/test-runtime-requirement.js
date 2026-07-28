@@ -26,6 +26,8 @@ const expectedBoundaries = [
 	['Sys::Sys.time', 'time'],
 	['Sys::_Sys.NativeHxSys.commandArgs', 'commandArgs'],
 	['Sys::_Sys.NativeHxSys.commandShell', 'commandShell'],
+	['Sys::_Sys.NativeHxSys.printValue', 'printValue'],
+	['Sys::_Sys.NativeHxSys.printlnValue', 'printlnValue'],
 	['Sys::_Sys.NativeHxSys.putEnvValue', 'putEnvValue'],
 	['Sys::_Sys.NativeHxSys.removeEnv', 'removeEnv'],
 ]
@@ -54,7 +56,7 @@ for (const [boundary, nativeField] of expectedBoundaries) {
 }
 
 const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
-for (const nativeField of ['putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
+for (const nativeField of ['printValue', 'printlnValue', 'putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
 	assert(generatedMain.includes(`HxSys.${nativeField}`), `Generated Haxe facade must call HxSys.${nativeField}`)
 assert(!generatedMain.includes('HxSys.putEnv '), 'Generated code must not use the removed nullable-option putEnv ABI')
 assert(!generatedMain.includes('HxSys.command '), 'Generated code must not use the removed optional command ABI')
@@ -65,24 +67,22 @@ const builderSource = fs.readFileSync(path.join(repositoryRoot, 'packages/reflax
 const sysSource = fs.readFileSync(path.join(repositoryRoot, 'packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx'), 'utf8')
 const hxSysSource = fs.readFileSync(path.join(repositoryRoot, 'packages/reflaxe.ocaml/std/runtime/HxSys.ml'), 'utf8')
 const stage3EmitterSource = fs.readFileSync(path.join(repositoryRoot, 'packages/hxhx-core/src/EmitterStage.hx'), 'utf8')
-const sysBranchStart = builderSource.indexOf('final isBuilderOwnedSysCall')
-const sysBranchEnd = builderSource.indexOf('} else if (cls.pack', sysBranchStart)
-assert(sysBranchStart >= 0 && sysBranchEnd > sysBranchStart, 'Could not locate the bounded builder-owned Sys branch')
-const sysBranch = builderSource.slice(sysBranchStart, sysBranchEnd)
-assert(sysBranch.includes('case "print", "println"'), 'Dynamic output must remain the only explicit builder-owned Sys family')
-for (const removedField of ['putEnv', 'command', 'setTimeLocale'])
-	assert(!sysBranch.includes(`"${removedField}"`), `OcamlBuilder must not own Sys.${removedField}`)
+assert(!builderSource.includes('isBuilderOwnedSysCall'), 'OcamlBuilder must not retain a builder-owned Sys dispatch branch')
+assert(!builderSource.includes('case "print", "println"'), 'OcamlBuilder must not select Dynamic output by Sys method name')
 
+assert.match(sysSource, /static inline function print\(v:Dynamic\):Void/)
+assert.match(sysSource, /static inline function println\(v:Dynamic\):Void/)
 assert.match(sysSource, /static inline function putEnv\(s:String, v:Null<String>\):Void/)
 assert.match(sysSource, /static inline function command\(cmd:String, \?args:Array<String>\):Int/)
 assert.match(sysSource, /static inline function setTimeLocale\(loc:String\):Bool/)
-for (const nativeField of ['putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
+for (const nativeField of ['printValue', 'printlnValue', 'putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
 	assert(sysSource.includes(`static function ${nativeField}(`), `Sys facade must declare typed NativeHxSys.${nativeField}`)
 
 assert(!hxSysSource.includes('let putEnv ('), 'HxSys must not retain the old option-taking putEnv ABI')
 assert(!hxSysSource.includes('let command ('), 'HxSys must not retain the old optional command ABI')
-for (const nativeField of ['putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
+for (const nativeField of ['printValue', 'printlnValue', 'putEnvValue', 'removeEnv', 'commandShell', 'commandArgs'])
 	assert(hxSysSource.includes(`let ${nativeField} (`), `HxSys must implement ${nativeField}`)
+assert(hxSysSource.includes('HxDynamic.toStdString value'), 'HxSys output must delegate Dynamic text semantics to HxDynamic')
 
 assert(!stage3EmitterSource.includes('HxSys.putEnv ('), 'The diagnostic Stage3 emitter must not retain the removed HxSys.putEnv ABI')
 for (const nativeField of ['putEnvValue', 'removeEnv'])

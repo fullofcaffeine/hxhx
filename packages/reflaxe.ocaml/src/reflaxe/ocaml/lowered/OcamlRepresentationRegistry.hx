@@ -37,12 +37,14 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	`Null<haxe.io.Bytes>` have internal-value decisions that preserve their
 	distinct typed forms while sharing one nullable reference carrier. Exact core
 	`String` uses the target's nullable string carrier across internal values,
-	local cells, and direct fields. A proven monomorphic class may additionally
-	occupy one captured local cell when every whole-value replacement already
-	produces that exact nominal carrier.
+	local cells, and direct fields. Exact `Dynamic` uses one internal `Obj.t`
+	carrier with occurrence-bound conversions that either preserve an existing
+	Dynamic value or box one typed concrete value. A proven monomorphic class may
+	additionally occupy one captured local cell when every whole-value replacement
+	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v16";
+	public static inline final MODEL_REVISION = "ocaml-representation-v17";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -398,6 +400,20 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
+		Returns whether the typed value is Haxe `Dynamic` itself.
+
+		Typedefs, monomorphs, and concrete values cast to Dynamic remain visible
+		to the occurrence planner so it can prove the crossing rather than
+		quietly classifying them as an existing Dynamic carrier.
+	**/
+	public static function isExactDynamic(type:Type):Bool {
+		return switch (type) {
+			case TDynamic(_): true;
+			case _: false;
+		}
+	}
+
+	/**
 		Returns whether Haxe wrapped the direct built-in `String` class in its
 		core `Null` abstract.
 
@@ -716,6 +732,37 @@ class OcamlRepresentationRegistry {
 			proof: {
 				id: "nullable-string-runtime-sentinel-carrier-v1",
 				claim: "Exact Haxe String uses OCaml string for non-null values and preserves the canonical Haxe null sentinel through the single runtime-owned HxString.hx_null_string value. Generated storage and expressions reference that value instead of creating occurrence-local Obj.magic casts. HxString.equals checks the sentinel before native string equality. This proof does not admit typedefs, abstracts, Dynamic, native ABI crossings, array elements, or arbitrary class carriers."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Registers the heterogeneous carrier for one internal Haxe Dynamic value.
+
+		This first slice admits immutable values and callable boundaries only.
+		Mutable cells, fields, arrays, extern ABI storage, and implicit defaults
+		need their own occurrence and ownership proofs.
+	**/
+	public function selectExactDynamic(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		if (domain != OcamlRepresentationDomain.InternalValue) {
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-dynamic-domain]: Dynamic is admitted only as an internal value, not $domain';
+		}
+		return register({
+			semanticTypeId: "Dynamic",
+			domain: domain,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.DynamicPayloadIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.DynamicPayloadAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.DynamicPayloadMutation,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DynamicCarrier,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "An internal Haxe Dynamic value uses Obj.t so one carrier can preserve the canonical null sentinel, primitive values, and existing reference-bearing payloads. Every concrete input crosses once through a separately sealed occurrence conversion; exact Bool uses the distinguishable runtime Bool box and other admitted concrete values use Obj.repr. Existing Dynamic carriers pass through unchanged.",
+			proof: {
+				id: "dynamic-obj-carrier-v1",
+				claim: "OCaml Obj.repr embeds an already-produced non-Bool target value in Obj.t without rebuilding it; the runtime's Bool box keeps exact Bool distinguishable from OCaml Int. Primitive values retain their value, reference-bearing values retain their existing identity and aliases, and HxRuntime.hx_null already uses the same carrier. This proof covers immutable internal values and callable boundaries only."
 			},
 			profileEligibility: ["metal", "portable"]
 		});

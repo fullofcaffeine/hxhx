@@ -1318,6 +1318,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				instanceMethods.push(f);
 			}
 		}
+		for (method in instanceMethods) {
+			if (method.field.name != "toString")
+				continue;
+			switch (TypeTools.follow(method.field.type)) {
+				case TFun(arguments, result) if (arguments.length == 0 && OcamlRepresentationRegistry.isExactString(result)):
+					ctx.dynamicStringifierByFullName.set(fullName, {
+						moduleId: classType.module,
+						sourceTypeName: classType.name,
+						targetMethodName: ctx.scopedValueName(classType.module, classType.name,
+							ctx.dispatchTypes.exists(fullName) ? method.field.name + "__impl" : method.field.name)
+					});
+				case _:
+			}
+		}
 
 		// Interface dispatch surface (M10 strict portable):
 		//
@@ -3003,6 +3017,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final stat = computeStaticFields(n);
 					lines.push("  HxType.register_class_instance_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(inst) + ";");
 					lines.push("  HxType.register_class_static_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(stat) + ";");
+				}
+				final dynamicStringifierNames = [for (name in ctx.dynamicStringifierByFullName.keys()) name];
+				dynamicStringifierNames.sort(Reflect.compare);
+				for (name in dynamicStringifierNames) {
+					final stringifier = ctx.dynamicStringifierByFullName.get(name);
+					if (stringifier == null)
+						continue;
+					final moduleName = moduleIdToOcamlModuleName(stringifier.moduleId);
+					lines.push("  HxDynamic.register_class_stringifier " + ocamlStringLiteral(name) + " (fun value -> " + moduleName + "."
+						+ stringifier.targetMethodName + " (Obj.obj value) ());");
+				}
+				if (dynamicStringifierNames.length > 0) {
+					ctx.markRuntimeModule("HxDynamic");
+					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_STRING);
 				}
 				// `Type.getSuperClass` registry.
 				for (n in classNames) {

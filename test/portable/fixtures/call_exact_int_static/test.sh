@@ -133,7 +133,7 @@ if grep -Eq 'ZeroArgCalls\.(exactCount|exactFlag|nullableCount|nullableFlag)([^ 
 	echo "A zero-argument source call must not lower to a bare OCaml function value" >&2
 	exit 1
 fi
-if ! grep -Eq '^let nullableFlag = fun \(\) -> \(Obj\.repr \(\(' "$zero_source"; then
+if ! grep -Eq '^let nullableFlag = fun \(\) -> \(Obj\.repr \(' "$zero_source"; then
 	echo "The raw Bool result must cross the sealed Null<Bool> callable carrier exactly once" >&2
 	exit 1
 fi
@@ -214,7 +214,7 @@ if grep -Eq 'checkedArgument \(HxRuntime\.nullable_int_unwrap|HxRuntime\.nullabl
 	exit 1
 fi
 dynamic_result_source="$(sed -n '/^let requiredDynamicInt =/,/^let allPathNullable =/p' "$main_source")"
-if [ "$(printf '%s\n' "$dynamic_result_source" | grep -c 'HxRuntime.nullable_int_unwrap parsed')" -ne 1 ]; then
+if [ "$(printf '%s\n' "$dynamic_result_source" | grep -c 'HxRuntime.nullable_int_unwrap')" -ne 1 ]; then
 	echo "A typed Int result outside the complete call matrix must check its refined Null<Int> carrier exactly once" >&2
 	exit 1
 fi
@@ -321,7 +321,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 40 || report.callModel !== 'typed-ocaml-directional-call-boundary-v16') {
+if (report.schemaVersion !== 41 || report.callModel !== 'typed-ocaml-directional-call-boundary-v17') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -460,7 +460,7 @@ if (!checkedResultBoundary
 	|| checkedResult.proofId !== 'nullable-int-call-checked-unbox-v1'
 	|| typeof checkedResultBoundary.bodyRevision !== 'string'
 	|| typeof checkedResultBoundary.programRevision !== 'string'
-	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v51') {
+	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v52') {
 	throw new Error('the callable boundary did not seal the checked Null<Int>-to-Int result crossing')
 }
 if (checkedResultCalls.length !== 2 || checkedResultCalls.some(call =>
@@ -522,7 +522,7 @@ if (!allPathBoundary
 	|| !isIdentity(allPathBoundary.arguments[0], 'String', 'string')
 	|| !isIdentity(allPathBoundary.result, 'Null<Int>', 'Obj.t')
 	|| !allPathBoundary.reason?.includes('Every path in its final typed body exits through sealed return control')
-	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v51'
+	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v52'
 	|| typeof allPathBoundary.bodyRevision !== 'string'
 	|| typeof allPathBoundary.programRevision !== 'string') {
 	throw new Error('the all-path nullable function did not retain one declared callable result boundary')

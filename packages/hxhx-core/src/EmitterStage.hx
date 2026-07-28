@@ -1021,7 +1021,7 @@ class EmitterStage {
 					// - Do not inline this as `emitStringExpr(arg)`:
 					//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
 					//   - and it would diverge from the target runtime’s own stringification behavior.
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+					"HxDynamic.toStdString (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee) + "))";
 				case ECall(EField(_obj, "join"), [_sep]):
 					// Bring-up: join returns a string; delegate to normal expression lowering when available.
@@ -1043,9 +1043,9 @@ class EmitterStage {
 					// Use the runtime `Std.string` path for identifiers so stale numeric hints
 					// do not turn string iterator variables (for example `field`) into
 					// `string_of_int field` in concatenations.
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Float"):
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Bool"):
 					// Keep stringification resilient when best-effort inference mislabels a non-bool
 					// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
@@ -1053,7 +1053,7 @@ class EmitterStage {
 					// `string_of_bool` would hard-fail OCaml typechecking in that case, while
 					// `Std.string`-style runtime stringification stays safe for both true bools and
 					// inference slips.
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "String"):
 					ocamlReadValueIdent(name);
 				case EIdent(name) if (StringTools.startsWith(tyForIdent(name), "Array<")):
@@ -1062,21 +1062,21 @@ class EmitterStage {
 					// which are equivalent to `join(",")`.
 					//
 					// Using `Std.string` on our array representation would currently degrade to
-					// "<object>" (because `dynamic_toStdString` can't reliably detect records).
+					// "<object>" (because the shared Dynamic conversion cannot reliably detect records).
 					final t = tyForIdent(name);
 					final compact = StringTools.replace(t, " ", "");
 					(compact.indexOf("Array<String>") == 0) ? ("HxBootArray.join (" + ocamlReadValueIdent(name) +
-						") (\",\") (fun (s : string) -> s)") : ("HxRuntime.dynamic_toStdString (Obj.repr ("
+						") (\",\") (fun (s : string) -> s)") : ("HxDynamic.toStdString (Obj.repr ("
 						+ ocamlReadValueIdent(name) + "))");
 				case EIdent(name) if (tyForIdent(name) == "Array"):
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case _:
 					// Bring-up default: prefer *some* stringification over `<unsupported>` so
 					// upstream harness logs remain readable (and don't change meaning).
 					//
 					// Note: this uses the backend's `Std.string` implementation (Haxe semantics),
 					// not OCaml's `Stdlib.string_of_*`.
-					"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+					"HxDynamic.toStdString (Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee) + "))";
 			}
 		};

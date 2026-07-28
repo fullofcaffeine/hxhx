@@ -74,7 +74,7 @@ try {
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
-	assert.strictEqual(report.lowering.unsafeOperationCompleteness, 'exact-null-int-and-null-bool-local-slices-only')
+	assert.strictEqual(report.lowering.unsafeOperationCompleteness, 'exact-null-int-null-bool-and-inline-dynamic-local-slices')
 	assert.match(report.lowering.localConversionRevision, sha256Revision)
 	assert.match(report.lowering.unsafeOperationRevision, sha256Revision)
 	assert(report.lowering.localConversions.length > 0)
@@ -119,7 +119,7 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'

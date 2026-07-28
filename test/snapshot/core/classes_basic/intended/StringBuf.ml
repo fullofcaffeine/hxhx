@@ -18,7 +18,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "StringBuf"; buf = Obj.magi
 
 let get_length = fun self () -> let b = (Obj.magic self : t).buf in let tempResult = Stdlib.Buffer.length b in tempResult
 
-let add = fun self (x : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxRuntime.dynamic_toStdString x : string) in Stdlib.Buffer.add_string b (s : string)))
+let add = fun self (x : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxDynamic.toStdString x : string) in Stdlib.Buffer.add_string b (s : string)))
 
 let addChar = fun self (c : int) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxString.fromCharCode c : string) in Stdlib.Buffer.add_string b (s : string)))
 

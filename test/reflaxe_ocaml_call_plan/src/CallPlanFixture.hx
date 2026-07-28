@@ -198,6 +198,22 @@ class CallPlanFixture {
 		};
 	}
 
+	static function dynamicValue(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Dynamic",
+			inputCarrierTypeId: "Obj.t",
+			inputRepresentationId: "representation:Dynamic:internal-value",
+			outputSemanticTypeId: "Dynamic",
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: "representation:Dynamic:internal-value",
+			conversion: conversion,
+			proofId: conversion == OcamlCallCarrierConversion.Identity ? "identity-call-carrier-v1" : "dynamic-call-carrier-preserve-v1",
+			proofClaim: "fixture Dynamic carrier"
+		};
+	}
+
 	static function optionalStringValue(index:Int, omitted:Bool = false):OcamlCallValuePlan {
 		final selected = stringValue(index);
 		return {
@@ -265,7 +281,7 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
 			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
-				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
+				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -319,7 +335,7 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString:
+				MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}
@@ -1269,6 +1285,18 @@ class CallPlanFixture {
 		final missingStringProof = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(missingStringProof, "proofId", "");
 		expectThrows("invalid index or empty conversion proof", () -> OcamlCallPlan.requireCallValue(missingStringProof, 0, "missing String proof fixture"));
+		final dynamicBoundaryValue = dynamicValue(0, OcamlCallCarrierConversion.Identity);
+		OcamlCallPlan.requireCallValue(dynamicBoundaryValue, 0, "Dynamic boundary fixture");
+		final dynamicCallValue = dynamicValue(0, OcamlCallCarrierConversion.PreserveDynamicCarrier);
+		OcamlCallPlan.requireCallValue(dynamicCallValue, 0, "Dynamic call fixture");
+		final wrongDynamicCarrier = OcamlCallPlan.copyValue(dynamicCallValue);
+		Reflect.setField(wrongDynamicCarrier, "outputCarrierTypeId", "string");
+		expectThrows("must preserve one exact Dynamic Obj.t carrier",
+			() -> OcamlCallPlan.requireCallValue(wrongDynamicCarrier, 0, "wrong Dynamic carrier fixture"));
+		final wrongDynamicProof = OcamlCallPlan.copyValue(dynamicCallValue);
+		Reflect.setField(wrongDynamicProof, "proofId", "identity-call-carrier-v1");
+		expectThrows("must preserve one exact Dynamic Obj.t carrier",
+			() -> OcamlCallPlan.requireCallValue(wrongDynamicProof, 0, "wrong Dynamic proof fixture"));
 		final checkedResult = checkedNullableIntValue(-1);
 		OcamlCallPlan.requireCallValue(checkedResult, -1, "checked nullable Int result fixture");
 		final checkedArgument = checkedNullableIntValue(0);

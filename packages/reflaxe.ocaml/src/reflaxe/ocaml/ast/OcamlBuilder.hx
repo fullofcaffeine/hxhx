@@ -279,7 +279,7 @@ class OcamlBuilder {
 	function buildPlannedCallArgument(value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
 		return switch (value.conversion) {
-			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier:
+			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				buildExpr(expression);
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
@@ -312,7 +312,7 @@ class OcamlBuilder {
 	function buildPlannedFunctionResult(value:OcamlCallValuePlan, body:OcamlExpr, position:Position):OcamlExpr {
 		requireCallValue(value, -1, "callable definition result", position);
 		return switch (value.conversion) {
-			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier:
+			case Identity, PreserveNullableIntCarrier, PreserveNullableBoolCarrier, PreserveDynamicCarrier:
 				body;
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
@@ -932,6 +932,92 @@ class OcamlBuilder {
 		}
 	}
 
+	/** Resolves the exact typed payload entering one sealed Dynamic local. */
+	function dynamicWriteInput(expression:TypedExpr):Null<{
+		semanticTypeId:String,
+		carrierTypeId:String,
+		payload:TypedExpr,
+		conversion:OcamlLocalCarrierConversion
+	}> {
+		final unwrapped = unwrap(expression);
+		return switch (unwrapped.expr) {
+			case TConst(TNull):
+				{
+					semanticTypeId: "Dynamic",
+					carrierTypeId: "Obj.t",
+					payload: unwrapped,
+					conversion: OcamlLocalCarrierConversion.PreserveDynamicCarrier
+				};
+			case TLocal(local) if (OcamlRepresentationRegistry.isExactDynamic(local.t)):
+				{
+					semanticTypeId: "Dynamic",
+					carrierTypeId: "Obj.t",
+					payload: unwrapped,
+					conversion: OcamlLocalCarrierConversion.PreserveDynamicCarrier
+				};
+			case TCast(child, null):
+				final payload = unwrap(child);
+				final semanticCarrier = if (OcamlRepresentationRegistry.isExactInt(payload.t)) {
+					{semanticTypeId: "Int", carrierTypeId: "int"};
+				} else if (OcamlRepresentationRegistry.isExactFloat(payload.t)) {
+					{semanticTypeId: "Float", carrierTypeId: "float"};
+				} else if (OcamlRepresentationRegistry.isExactString(payload.t)) {
+					{semanticTypeId: "String", carrierTypeId: "string"};
+				} else {
+					final layout = representationRegistry.monomorphicClassForType(payload.t);
+					if (layout != null) {
+						{semanticTypeId: layout.semanticTypeId, carrierTypeId: layout.targetTypeName};
+					} else {
+						switch (payload.t) {
+							case TAnonymous(_): {semanticTypeId: TypeTools.toString(payload.t), carrierTypeId: "Obj.t"};
+							case _: null;
+						}
+					}
+				}
+				if (OcamlRepresentationRegistry.isExactBool(payload.t)) {
+					{
+						semanticTypeId: "Bool",
+						carrierTypeId: "bool",
+						payload: payload,
+						conversion: OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+					};
+				} else {
+					semanticCarrier == null ? null : {
+						semanticTypeId: semanticCarrier.semanticTypeId,
+						carrierTypeId: semanticCarrier.carrierTypeId,
+						payload: payload,
+						conversion: OcamlLocalCarrierConversion.BoxConcreteToDynamic
+					};
+				}
+			case _:
+				null;
+		}
+	}
+
+	/** Materializes one occurrence-bound initializer into Dynamic's Obj.t carrier. */
+	function buildDynamicWrite(localId:Int, rhs:TypedExpr):OcamlExpr {
+		final input = dynamicWriteInput(rhs);
+		if (input == null)
+			return localStorageInvariant('local $localId has no admitted concrete-to-Dynamic input shape', rhs.pos);
+		final conversion = requireLocalConversion(localId, OcamlLocalConversionRole.Initializer, rhs, input.semanticTypeId, input.carrierTypeId, "Dynamic",
+			"Obj.t");
+		if (conversion.conversion != input.conversion)
+			return
+				localStorageInvariant('local $localId occurrence "${conversion.id}" selected ${conversion.conversion}, but the final typed input requires ${input.conversion}',
+				rhs.pos);
+		return switch (conversion.conversion) {
+			case PreserveDynamicCarrier:
+				buildExpr(input.payload);
+			case BoxConcreteToDynamic:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(input.payload)]);
+			case BoxExactBoolToDynamic:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(input.payload)]);
+			case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier,
+				BoxExactBoolToNullableBool, NullableBoolTruthiness:
+				localStorageInvariant('local $localId occurrence "${conversion.id}" selected invalid Dynamic conversion ${conversion.conversion}', rhs.pos);
+		}
+	}
+
 	/** Mechanically applies one sealed initializer/assignment conversion. */
 	function buildNullIntWrite(localId:Int, role:OcamlLocalConversionRole, rhs:TypedExpr):OcamlExpr {
 		final input = nullIntWriteInput(rhs);
@@ -947,7 +1033,8 @@ class OcamlBuilder {
 					case _: buildExpr(rhs);
 				}
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
-			case LegacyCoercion, Identity, CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness:
+			case LegacyCoercion, Identity, CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness,
+				PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				localStorageInvariant('local $localId occurrence "${conversion.id}" selected invalid write conversion ${conversion.conversion}', rhs.pos);
 		}
 	}
@@ -967,7 +1054,8 @@ class OcamlBuilder {
 					case _: buildExpr(rhs);
 				}
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
-			case LegacyCoercion, Identity, NullableBoolTruthiness, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt:
+			case LegacyCoercion, Identity, NullableBoolTruthiness, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt,
+				PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				localStorageInvariant('local $localId occurrence "${conversion.id}" selected invalid write conversion ${conversion.conversion}', rhs.pos);
 		}
 	}
@@ -990,7 +1078,8 @@ class OcamlBuilder {
 				base;
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [base]);
-			case LegacyCoercion, Identity, BoxExactIntToNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness:
+			case LegacyCoercion, Identity, BoxExactIntToNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness,
+				PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid read conversion ${conversion.conversion}',
 					expression.pos);
 		}
@@ -1007,7 +1096,7 @@ class OcamlBuilder {
 			case PreserveNullableBoolCarrier:
 				base;
 			case LegacyCoercion, Identity, NullableBoolTruthiness, BoxExactBoolToNullableBool, PreserveNullableIntCarrier, BoxExactIntToNullableInt,
-				CheckedUnboxNullableInt:
+				CheckedUnboxNullableInt, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid nullable-Bool read conversion ${conversion.conversion}',
 					expression.pos);
 		}
@@ -1033,7 +1122,7 @@ class OcamlBuilder {
 						case NullableBoolTruthiness:
 							safeUnboxNullableBool(buildLocal(local, expression.pos));
 						case LegacyCoercion, Identity, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, PreserveNullableIntCarrier,
-							BoxExactIntToNullableInt, CheckedUnboxNullableInt:
+							BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 							localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid truthiness conversion ${conversion.conversion}',
 								expression.pos);
 					}
@@ -1064,7 +1153,7 @@ class OcamlBuilder {
 						case CheckedUnboxNullableInt:
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildLocal(local, expression.pos)]);
 						case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt, PreserveNullableBoolCarrier,
-							BoxExactBoolToNullableBool, NullableBoolTruthiness:
+							BoxExactBoolToNullableBool, NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 							localStorageInvariant('local ${local.id} occurrence "${conversion.id}" selected invalid numeric-read conversion ${conversion.conversion}',
 								expression.pos);
 					}
@@ -1087,6 +1176,8 @@ class OcamlBuilder {
 			return buildNullIntWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
 		if (representation != null && representation.semanticTypeId == "Null<Bool>")
 			return buildNullBoolWrite(localId, OcamlLocalConversionRole.Initializer, rhs);
+		if (representation != null && representation.semanticTypeId == "Dynamic")
+			return buildDynamicWrite(localId, rhs);
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
@@ -1104,8 +1195,8 @@ class OcamlBuilder {
 			case OcamlLocalCarrierConversion.LegacyCoercion, null:
 				coerceForAssignment(lhsType, rhs);
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool,
-				NullableBoolTruthiness:
-				localStorageInvariant('local $localId leaked an occurrence-only nullable primitive conversion into its initializer summary', rhs.pos);
+				NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+				localStorageInvariant('local $localId leaked an occurrence-only carrier conversion into its initializer summary', rhs.pos);
 		}
 	}
 
@@ -1139,8 +1230,8 @@ class OcamlBuilder {
 			case OcamlLocalCarrierConversion.LegacyCoercion, null:
 				coerceForAssignment(lhsType, rhs);
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool,
-				NullableBoolTruthiness:
-				localStorageInvariant('local $localId leaked an occurrence-only nullable primitive conversion into its assignment summary', rhs.pos);
+				NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+				localStorageInvariant('local $localId leaked an occurrence-only carrier conversion into its assignment summary', rhs.pos);
 		}
 	}
 
@@ -2380,23 +2471,7 @@ class OcamlBuilder {
 											}
 										}
 
-										final isBuilderOwnedSysCall = cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && switch (cf.name) {
-											case "print", "println": true;
-											case _: false;
-										};
-										if (isBuilderOwnedSysCall) {
-											switch (cf.name) {
-												case "println" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [buildStdString(args[0])]);
-												case "print" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [buildStdString(args[0])]);
-												case _:
-													#if macro
-													guardrailError("reflaxe.ocaml (M6): unexpected builder-owned Sys." + cf.name + " call.", e.pos);
-													#end
-													OcamlExpr.EConst(OcamlConst.CUnit);
-											}
-										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
+										if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
 											final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 											switch (cf.name) {
 												case "getClass" if (args.length == 1):
@@ -4564,11 +4639,11 @@ class OcamlBuilder {
 		// Avoid applying this to typedef-backed anonymous structures that we represent as real OCaml records.
 		switch (followNoAbstracts(e.t)) {
 			case TDynamic(_):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
 			case TAbstract(_, _) if (isStdAnyAbstract(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
 			case TAnonymous(_) if (shouldAnonUseHxAnon(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [buildExpr(inner)]);
 			case _:
 		}
 
@@ -4659,7 +4734,7 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 						};
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [asObj]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [asObj]);
 					}
 				}
 			case _:
@@ -4691,7 +4766,7 @@ class OcamlBuilder {
 					case _:
 						isObjMappedType ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 				};
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [asObj]);
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"), [asObj]);
 		}
 	}
 
@@ -4757,8 +4832,8 @@ class OcamlBuilder {
 						case OcamlLocalCarrierConversion.LegacyCoercion, null:
 							legacyArrayReceiverCoercion(rawExpr);
 						case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier,
-							BoxExactBoolToNullableBool, NullableBoolTruthiness:
-							localStorageInvariant('array receiver local ${local.id} leaked an occurrence-only nullable primitive conversion into its read summary',
+							BoxExactBoolToNullableBool, NullableBoolTruthiness, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+							localStorageInvariant('array receiver local ${local.id} leaked an occurrence-only carrier conversion into its read summary',
 								receiver.pos);
 					}
 				}

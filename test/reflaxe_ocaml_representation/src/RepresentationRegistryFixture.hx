@@ -93,6 +93,10 @@ class RepresentationRegistryFixture {
 		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro("value" : StringAlias))),
 			"a String typedef should need its own proof instead of following the typedef implicitly");
 		assertTrue(!OcamlRepresentationRegistry.isExactString(Context.typeof(macro(0 : Int))), "Int should remain outside the exact String slice");
+		assertTrue(OcamlRepresentationRegistry.isExactDynamic(Context.typeof(macro(null : Dynamic))),
+			"the direct Dynamic type should be admitted by its dedicated predicate");
+		assertTrue(!OcamlRepresentationRegistry.isExactDynamic(Context.typeof(macro("value" : String))),
+			"a concrete value must remain visible to occurrence-bound Dynamic conversion planning");
 		assertTrue(OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Int>))), "the direct nominal Array<Int> should be admitted");
 		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Float>))),
 			"Array<Float> should remain outside the exact Array<Int> slice");
@@ -141,6 +145,7 @@ class RepresentationRegistryFixture {
 		final stringCaptured = registry.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		final stringInstanceField = registry.selectExactString(OcamlRepresentationDomain.InstanceField);
 		final stringStaticField = registry.selectExactString(OcamlRepresentationDomain.StaticField);
+		final dynamicInternal = registry.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 		final counterType = registerCounter(registry);
 		final counterInternal = registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.InternalValue);
 		final counterCaptured = registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.CapturedLocalStorage);
@@ -262,6 +267,18 @@ class RepresentationRegistryFixture {
 		assertTrue(stringInternal.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
 			&& stringInternal.proof.claim.indexOf("single runtime-owned HxString.hx_null_string") >= 0,
 			"the exact String proof should name and confine its runtime-null boundary");
+		assertTrue(dynamicInternal.semanticTypeId == "Dynamic"
+			&& dynamicInternal.carrierTypeId == "Obj.t"
+			&& dynamicInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
+			&& dynamicInternal.identityPolicy == OcamlRepresentationIdentityPolicy.DynamicPayloadIdentity
+			&& dynamicInternal.aliasingPolicy == OcamlRepresentationAliasingPolicy.DynamicPayloadAliases
+			&& dynamicInternal.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			&& dynamicInternal.valueMutationPolicy == OcamlRepresentationValueMutationPolicy.DynamicPayloadMutation
+			&& dynamicInternal.boxingPolicy == OcamlRepresentationBoxingPolicy.DynamicCarrier
+			&& dynamicInternal.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			"Dynamic should use one immutable Obj.t binding while retaining the payload's identity, aliases, and mutation");
+		assertTrue(dynamicInternal.proof.id == "dynamic-obj-carrier-v1" && dynamicInternal.proof.claim.indexOf("runtime's Bool box") >= 0,
+			"the Dynamic proof should distinguish exact Bool from OCaml Int and bound the admitted lifecycle");
 		assertTrue(counterInternal != null
 			&& counterCaptured != null
 			&& counterInternal.carrierTypeId == "representation_counter_t"
@@ -312,7 +329,7 @@ class RepresentationRegistryFixture {
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 30, "selecting the same answer twice should reuse one decision");
+			&& registry.decisions().length == 31, "selecting the same answer twice should reuse one decision");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -379,6 +396,8 @@ class RepresentationRegistryFixture {
 			() -> registry.selectExactNullBool(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported String array domain", "admitted only for internal, local, instance-field, or static-field storage",
 			() -> registry.selectExactString(OcamlRepresentationDomain.ArrayElement));
+		expectFailure("unsupported Dynamic mutable domain", "Dynamic is admitted only as an internal value",
+			() -> registry.selectExactDynamic(OcamlRepresentationDomain.MutableLocalStorage));
 		expectFailure("unsupported mutable nominal class domain", "admitted only for immutable internal bindings or captured local cells",
 			() -> registry.selectMonomorphicClassValue(counterType, OcamlRepresentationDomain.MutableLocalStorage));
 		expectFailure("conflicting carrier", "cannot also use Obj.t", () -> registry.register({
@@ -427,6 +446,7 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactString(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactString(OcamlRepresentationDomain.InstanceField);
 		registryAgain.selectExactString(OcamlRepresentationDomain.StaticField);
+		registryAgain.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
 		final counterTypeAgain = registerCounter(registryAgain);
 		registryAgain.selectMonomorphicClassValue(counterTypeAgain, OcamlRepresentationDomain.CapturedLocalStorage);
 		assertTrue(registryAgain.revision() == registry.revision(), "registration order should not change the registry revision");

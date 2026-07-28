@@ -197,7 +197,7 @@ let caught = fun value -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : 
     ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_42 = ("null" : string) in (
       tempString := __assign_42;
       __assign_42
-    ) else let __assign_43 = (HxRuntime.dynamic_toStdString value : string) in (
+    ) else let __assign_43 = (HxDynamic.toStdString value : string) in (
       tempString := __assign_43;
       __assign_43
     ));

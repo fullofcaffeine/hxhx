@@ -1,7 +1,10 @@
-(* Minimal Sys runtime helpers for reflaxe.ocaml (WIP).
+(* Sys runtime helpers for reflaxe.ocaml.
 
    This module exists to provide the core `Sys.*` surface that portable Haxe
    programs expect, implemented in terms of OCaml's standard library and `Unix`.
+   The Haxe `Sys` facade owns source-level branching and forwards its sealed
+   `Dynamic` output carrier here; `HxDynamic` owns Haxe-compatible text
+   conversion.
 
    NOTE: Some Haxe semantics (notably nullable strings) are still evolving in
    this backend.
@@ -18,6 +21,12 @@
 *)
 
 let hx_unset_sentinel = "\x1e__REFlAXE_OCAML_UNSET__\x1f"
+
+let printValue (value : Obj.t) : unit =
+  print_string (HxDynamic.toStdString value)
+
+let printlnValue (value : Obj.t) : unit =
+  print_endline (HxDynamic.toStdString value)
 
 let args () : string HxArray.t =
   let out = HxArray.create () in

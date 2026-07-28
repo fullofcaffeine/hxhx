@@ -47,11 +47,11 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 40
-	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13'
-	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v1'
+if (report.schemaVersion !== 41
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14'
+	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v2'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
-	|| report.unsafeOperationCompleteness !== 'exact-null-int-and-null-bool-local-slices-only') {
+	|| report.unsafeOperationCompleteness !== 'exact-null-int-null-bool-and-inline-dynamic-local-slices') {
 	fail('unexpected schema, representation scope, or proof-ledger model')
 }
 const nullIntDomains = new Set(report.representations

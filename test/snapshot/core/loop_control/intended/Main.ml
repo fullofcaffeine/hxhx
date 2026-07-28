@@ -48,6 +48,6 @@ let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
         | HxRuntime.Hx_break -> ()
     )) done);
     ignore (if !innerCount <> 6 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad innerCount") ["Dynamic"]) else ());
-    print_endline "OK loop_control"
+    let value = Obj.repr "OK loop_control" in HxSys.printlnValue value
   )
 ))

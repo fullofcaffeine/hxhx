@@ -33,6 +33,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
+	public static inline final TYPE_REGISTRY_DYNAMIC_STRING = "compiler-type-registry-dynamic-string";
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
@@ -383,6 +384,18 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-reflection-boolean-argument-unboxing-v1",
 					module: "HxRuntime",
 					explanation: "Reflection constructors use the checked runtime conversion when a dynamically supplied argument must become a Haxe Bool."
+				};
+			case TYPE_REGISTRY_DYNAMIC_STRING:
+				{
+					id: "compiler:generated:HxTypeRegistry:dynamic-string",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:register-dynamic-stringifiers",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-dynamic-class-string-v1",
+					module: "HxDynamic",
+					explanation: "Generated classes with an exact zero-argument String toString method register one typed adapter with the shared Dynamic runtime."
 				};
 			case _:
 				throw 'Unknown compiler runtime capability "$capability".';

@@ -18,7 +18,7 @@ import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageKind;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageReason;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
-private typedef PendingNullablePrimitiveConversion = {
+private typedef PendingLocalConversion = {
 	final localId:Int;
 	final sourceLocalId:Null<Int>;
 	final role:OcamlLocalConversionRole;
@@ -27,6 +27,13 @@ private typedef PendingNullablePrimitiveConversion = {
 	final inputCarrierTypeId:String;
 	final outputSemanticTypeId:String;
 	final outputCarrierTypeId:String;
+	final conversion:OcamlLocalCarrierConversion;
+}
+
+private typedef DynamicCarrierInput = {
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final sourceLocalId:Null<Int>;
 	final conversion:OcamlLocalCarrierConversion;
 }
 
@@ -60,8 +67,12 @@ private typedef ExactMonomorphicClassCarrierInput = {
 	Exact core `String` locals use the registry's nullable string carrier only
 	when omitted initialization or every explicit initializer/replacement already
 	produces that carrier. An explicit null expression remains unadmitted because
-	it needs its own occurrence-bound unsafe conversion. Unsupported or ambiguous
-	occurrences keep the entire local on the legacy path.
+	it needs its own occurrence-bound unsafe conversion. Immutable `Dynamic`
+	locals created by inline parameter expansion use one internal `Obj.t` carrier:
+	each final typed initializer either preserves an existing Dynamic/null carrier,
+	boxes exact Bool with its distinguishable runtime tag, or records one
+	`Obj.repr` conversion for an admitted concrete payload. Unsupported or
+	ambiguous occurrences keep the entire local on the legacy path.
 **/
 class OcamlLocalRepresentationPlanner {
 	/**
@@ -174,6 +185,80 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
+	/**
+		Classifies the exact payload entering an immutable Dynamic local.
+
+		Haxe exposes an inline concrete-to-Dynamic conversion as `TCast(child)`.
+		Keeping the concrete child visible lets the occurrence record name the
+		value being boxed. A Dynamic local or the null sentinel already uses the
+		selected Obj.t carrier and is preserved.
+	**/
+	static function dynamicCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>,
+			representations:OcamlRepresentationRegistry):Null<DynamicCarrierInput> {
+		final unwrapped = unwrapTransparent(expression);
+		return switch (unwrapped.expr) {
+			case TConst(TNull):
+				{
+					semanticTypeId: "Dynamic",
+					carrierTypeId: "Obj.t",
+					sourceLocalId: null,
+					conversion: OcamlLocalCarrierConversion.PreserveDynamicCarrier
+				};
+			case TLocal(local) if (OcamlRepresentationRegistry.isExactDynamic(local.t)):
+				{
+					semanticTypeId: "Dynamic",
+					carrierTypeId: "Obj.t",
+					sourceLocalId: local.id,
+					conversion: OcamlLocalCarrierConversion.PreserveDynamicCarrier
+				};
+			case TCast(child, null):
+				dynamicConcreteCarrierInput(child, declaredLocalIds, representations);
+			case _:
+				null;
+		}
+	}
+
+	/** Returns the closed concrete carrier matrix admitted into Dynamic. */
+	static function dynamicConcreteCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>,
+			representations:OcamlRepresentationRegistry):Null<DynamicCarrierInput> {
+		final unwrapped = unwrapTransparent(expression);
+		final sourceLocalId = switch (unwrapped.expr) {
+			case TLocal(local) if (declaredLocalIds.exists(local.id)): local.id;
+			case _: null;
+		}
+		if (OcamlRepresentationRegistry.isExactInt(unwrapped.t))
+			return dynamicBoxInput("Int", "int", sourceLocalId);
+		if (OcamlRepresentationRegistry.isExactFloat(unwrapped.t))
+			return dynamicBoxInput("Float", "float", sourceLocalId);
+		if (OcamlRepresentationRegistry.isExactBool(unwrapped.t))
+			return {
+				semanticTypeId: "Bool",
+				carrierTypeId: "bool",
+				sourceLocalId: sourceLocalId,
+				conversion: OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+			};
+		if (OcamlRepresentationRegistry.isExactString(unwrapped.t))
+			return dynamicBoxInput("String", "string", sourceLocalId);
+		final layout = representations.monomorphicClassForType(unwrapped.t);
+		if (layout != null)
+			return dynamicBoxInput(layout.semanticTypeId, layout.targetTypeName, sourceLocalId);
+		return switch (unwrapped.t) {
+			case TAnonymous(_):
+				dynamicBoxInput(TypeTools.toString(unwrapped.t), "Obj.t", sourceLocalId);
+			case _:
+				null;
+		}
+	}
+
+	static function dynamicBoxInput(semanticTypeId:String, carrierTypeId:String, sourceLocalId:Null<Int>):DynamicCarrierInput {
+		return {
+			semanticTypeId: semanticTypeId,
+			carrierTypeId: carrierTypeId,
+			sourceLocalId: sourceLocalId,
+			conversion: OcamlLocalCarrierConversion.BoxConcreteToDynamic
+		};
+	}
+
 	/** Plans registry references and initializer conversions from one final typed body. */
 	public static function planExpression(expression:TypedExpr, storage:OcamlLocalStoragePlan, representations:OcamlRepresentationRegistry,
 			?binding:OcamlFunctionPlanBinding, ?preservesNullableBoolArgument:(TypedExpr, Int) -> Bool, ?producesNullableBool:TypedExpr->Bool,
@@ -193,7 +278,9 @@ class OcamlLocalRepresentationPlanner {
 		final identityArrayInitializerByLocalId:Map<Int, Bool> = [];
 		final identityArrayAssignmentsByLocalId:Map<Int, Bool> = [];
 		final unsupportedNullableLocalIds:Map<Int, Bool> = [];
-		final pendingNullableConversions:Array<PendingNullablePrimitiveConversion> = [];
+		final pendingNullableConversions:Array<PendingLocalConversion> = [];
+		final pendingDynamicConversions:Array<PendingLocalConversion> = [];
+		final unsupportedDynamicLocalIds:Map<Int, Bool> = [];
 
 		function record(localId:Int, type:Type):Void {
 			final existing = typeByLocalId.get(localId);
@@ -315,6 +402,26 @@ class OcamlLocalRepresentationPlanner {
 			}
 		}
 
+		function addDynamicInitializer(localId:Int, value:TypedExpr):Bool {
+			final input = dynamicCarrierInput(value, declaredLocalIds, representations);
+			if (input == null) {
+				unsupportedDynamicLocalIds.set(localId, true);
+				return false;
+			}
+			pendingDynamicConversions.push({
+				localId: localId,
+				sourceLocalId: input.sourceLocalId,
+				role: OcamlLocalConversionRole.Initializer,
+				expression: value,
+				inputSemanticTypeId: input.semanticTypeId,
+				inputCarrierTypeId: input.carrierTypeId,
+				outputSemanticTypeId: "Dynamic",
+				outputCarrierTypeId: "Obj.t",
+				conversion: input.conversion
+			});
+			return true;
+		}
+
 		function rejectDirectNullBoolBoundary(current:TypedExpr):Void {
 			final unwrapped = unwrapTransparent(current);
 			switch (unwrapped.expr) {
@@ -390,6 +497,12 @@ class OcamlLocalRepresentationPlanner {
 						addNullIntWrite(local.id, OcamlLocalConversionRole.Initializer, initializer);
 					if (OcamlRepresentationRegistry.isExactNullBool(local.t) && initializer != null)
 						addNullBoolWrite(local.id, OcamlLocalConversionRole.Initializer, initializer);
+					if (OcamlRepresentationRegistry.isExactDynamic(local.t)) {
+						if (initializer == null)
+							unsupportedDynamicLocalIds.set(local.id, true);
+						else
+							addDynamicInitializer(local.id, initializer);
+					}
 					if (!OcamlRepresentationRegistry.isExactNullBool(local.t) && initializer != null)
 						rejectDirectNullBoolBoundary(initializer);
 				case TLocal(local):
@@ -414,6 +527,9 @@ class OcamlLocalRepresentationPlanner {
 							addNullBoolWrite(local.id, OcamlLocalConversionRole.Assignment, right);
 							visit(right);
 							visitChildren = false;
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactDynamic(local.t)):
+							record(local.id, local.t);
+							unsupportedDynamicLocalIds.set(local.id, true);
 						case TLocal(local) if (OcamlRepresentationRegistry.isExactBool(local.t)):
 							final input = exactBoolCarrierInput(right, declaredLocalIds);
 							final identityAssignment = input != null;
@@ -502,6 +618,8 @@ class OcamlLocalRepresentationPlanner {
 							unsupportedNullableLocalIds.set(local.id, true);
 						case TLocal(local) if (OcamlRepresentationRegistry.isExactNullBool(local.t)):
 							unsupportedNullableLocalIds.set(local.id, true);
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactDynamic(local.t)):
+							unsupportedDynamicLocalIds.set(local.id, true);
 						case _:
 					}
 					final isNumericOperation = switch (op) {
@@ -526,6 +644,8 @@ class OcamlLocalRepresentationPlanner {
 							unsupportedNullableLocalIds.set(local.id, true);
 						case TLocal(local) if (OcamlRepresentationRegistry.isExactNullBool(local.t)):
 							unsupportedNullableLocalIds.set(local.id, true);
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactDynamic(local.t)):
+							unsupportedDynamicLocalIds.set(local.id, true);
 						case _:
 					}
 				case _:
@@ -624,13 +744,18 @@ class OcamlLocalRepresentationPlanner {
 		}
 		if (binding != null) {
 			final occurrenceOwnerById:Map<String, Int> = [];
-			for (pending in pendingNullableConversions) {
+			for (pending in pendingNullableConversions.concat(pendingDynamicConversions)) {
 				final source = OcamlLoweredOrigin.sourceSpan(pending.expression.pos);
 				final occurrenceId = OcamlLocalRepresentationPlan.occurrenceId(binding, pending.localId, pending.role, source);
 				final existingLocalId = occurrenceOwnerById.get(occurrenceId);
 				if (existingLocalId != null) {
-					unsupportedNullableLocalIds.set(existingLocalId, true);
-					unsupportedNullableLocalIds.set(pending.localId, true);
+					if (pending.outputSemanticTypeId == "Dynamic") {
+						unsupportedDynamicLocalIds.set(existingLocalId, true);
+						unsupportedDynamicLocalIds.set(pending.localId, true);
+					} else {
+						unsupportedNullableLocalIds.set(existingLocalId, true);
+						unsupportedNullableLocalIds.set(pending.localId, true);
+					}
 				} else {
 					occurrenceOwnerById.set(occurrenceId, pending.localId);
 				}
@@ -826,6 +951,22 @@ class OcamlLocalRepresentationPlanner {
 				});
 				continue;
 			}
+			if (declaredLocalIds.exists(localId)
+				&& OcamlRepresentationRegistry.isExactDynamic(type)
+				&& !unsupportedDynamicLocalIds.exists(localId)) {
+				if (binding == null)
+					throw 'reflaxe.ocaml [ocaml-representation:missing-dynamic-binding]: local $localId needs a function/body binding for its concrete-to-Dynamic occurrence';
+				final representation = representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
+				decisions.push({
+					localId: localId,
+					choice: OcamlLocalRepresentationChoice.ProgramDecision(representation.id, representation.semanticTypeId,
+						OcamlRepresentationDomain.InternalValue),
+					initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+					assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+					readConversion: OcamlLocalCarrierConversion.Identity
+				});
+				continue;
+			}
 			if (!OcamlRepresentationRegistry.isExactArrayInt(type) || identityArrayInitializerByLocalId.get(localId) != true) {
 				continue;
 			}
@@ -840,10 +981,13 @@ class OcamlLocalRepresentationPlanner {
 			});
 		}
 		final admittedNullableLocalIds:Map<Int, Bool> = [];
+		final admittedDynamicLocalIds:Map<Int, Bool> = [];
 		for (decision in decisions) {
 			switch (decision.choice) {
 				case ProgramDecision(_, semanticTypeId, _) if (semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>"):
 					admittedNullableLocalIds.set(decision.localId, true);
+				case ProgramDecision(_, "Dynamic", _):
+					admittedDynamicLocalIds.set(decision.localId, true);
 				case _:
 			}
 		}
@@ -851,7 +995,11 @@ class OcamlLocalRepresentationPlanner {
 		if (binding != null) {
 			for (pending in pendingNullableConversions) {
 				if (admittedNullableLocalIds.exists(pending.localId))
-					conversions.push(sealNullablePrimitiveConversion(binding, pending));
+					conversions.push(sealLocalConversion(binding, pending));
+			}
+			for (pending in pendingDynamicConversions) {
+				if (admittedDynamicLocalIds.exists(pending.localId))
+					conversions.push(sealLocalConversion(binding, pending));
 			}
 		}
 		return new OcamlLocalRepresentationPlan(decisions, conversions);
@@ -968,7 +1116,7 @@ class OcamlLocalRepresentationPlanner {
 		}
 	}
 
-	static function sealNullablePrimitiveConversion(binding:OcamlFunctionPlanBinding, pending:PendingNullablePrimitiveConversion):OcamlLocalConversionDecision {
+	static function sealLocalConversion(binding:OcamlFunctionPlanBinding, pending:PendingLocalConversion):OcamlLocalConversionDecision {
 		final source = OcamlLoweredOrigin.sourceSpan(pending.expression.pos);
 		final id = OcamlLocalRepresentationPlan.occurrenceId(binding, pending.localId, pending.role, source);
 		final proof = switch (pending.conversion) {
@@ -996,8 +1144,20 @@ class OcamlLocalRepresentationPlanner {
 					id: "nullable-bool-truthiness-v1",
 					claim: "The typed parent consumes this exact Null<Bool> occurrence as a condition. The runtime null sentinel produces false, while an existing boxed bool produces its bool value without mutating the stored carrier."
 				};
+			case PreserveDynamicCarrier: {
+					id: "dynamic-carrier-preserve-v1",
+					claim: "The typed occurrence already produces Dynamic in Obj.t, including the canonical Haxe null sentinel, so copying that carrier preserves the stored value without another box."
+				};
+			case BoxConcreteToDynamic: {
+					id: "dynamic-box-concrete-value-v1",
+					claim: "The typed cast child produces one concrete target value. Obj.repr embeds that already-produced value in Dynamic's Obj.t carrier without rebuilding primitive payloads or reference-bearing objects."
+				};
+			case BoxExactBoolToDynamic: {
+					id: "dynamic-box-exact-bool-v1",
+					claim: "OCaml uses immediate values for both Bool and Int, so the runtime's tagged Bool box preserves the exact Haxe Bool identity when it enters Dynamic's Obj.t carrier."
+				};
 			case LegacyCoercion, Identity:
-				throw 'reflaxe.ocaml [ocaml-representation:invalid-nullable-primitive-conversion]: occurrence "$id" cannot seal ${pending.conversion}';
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: occurrence "$id" cannot seal ${pending.conversion}';
 		}
 		final reason = switch (pending.conversion) {
 			case PreserveNullableIntCarrier: "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.";
@@ -1006,6 +1166,9 @@ class OcamlLocalRepresentationPlanner {
 			case PreserveNullableBoolCarrier: "The source occurrence already produces the selected exact Null<Bool> Obj.t carrier.";
 			case BoxExactBoolToNullableBool: "The source occurrence produces exact Bool and must cross into the selected exact Null<Bool> carrier once.";
 			case NullableBoolTruthiness: "The typed parent consumes an exact Null<Bool> local as condition truthiness without changing its stored nullable value.";
+			case PreserveDynamicCarrier: "The source occurrence already produces the selected Dynamic Obj.t carrier.";
+			case BoxConcreteToDynamic: "The source occurrence produces one concrete typed value and must enter the selected Dynamic Obj.t carrier once.";
+			case BoxExactBoolToDynamic: "The source occurrence produces exact Bool and must enter Dynamic through the distinguishable runtime Bool box.";
 			case LegacyCoercion, Identity: "";
 		}
 		final unsafeOperation:Null<OcamlUnsafeOperationRecord> = switch (pending.conversion) {
@@ -1021,6 +1184,12 @@ class OcamlLocalRepresentationPlanner {
 				unsafeRecord(id, OcamlUnsafeOperationKind.ObjReprExactBool, source, pending, reason, proof.id, proof.claim, binding);
 			case NullableBoolTruthiness:
 				unsafeRecord(id, OcamlUnsafeOperationKind.NullableBoolTruthiness, source, pending, reason, proof.id, proof.claim, binding);
+			case PreserveDynamicCarrier:
+				null;
+			case BoxConcreteToDynamic:
+				unsafeRecord(id, OcamlUnsafeOperationKind.ObjReprConcreteToDynamic, source, pending, reason, proof.id, proof.claim, binding);
+			case BoxExactBoolToDynamic:
+				unsafeRecord(id, OcamlUnsafeOperationKind.BoxExactBoolToDynamic, source, pending, reason, proof.id, proof.claim, binding);
 			case LegacyCoercion, Identity:
 				null;
 		}
@@ -1047,7 +1216,7 @@ class OcamlLocalRepresentationPlanner {
 	}
 
 	static function unsafeRecord(conversionId:String, operation:OcamlUnsafeOperationKind,
-			source:reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan, pending:PendingNullablePrimitiveConversion, reason:String, proofId:String,
+			source:reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan, pending:PendingLocalConversion, reason:String, proofId:String,
 			proofClaim:String, binding:OcamlFunctionPlanBinding):OcamlUnsafeOperationRecord {
 		return {
 			id: conversionId + ":unsafe:" + (operation : String),

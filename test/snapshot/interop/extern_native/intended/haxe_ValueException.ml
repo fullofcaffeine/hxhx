@@ -10,7 +10,7 @@ let __ctor = fun (self : t) value2 previous native -> ignore (ignore (let tempSt
   ignore (if value2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("null" : string) in (
     tempString := __assign_1;
     __assign_1
-  ) else let __assign_2 = (HxRuntime.dynamic_toStdString value2 : string) in (
+  ) else let __assign_2 = (HxDynamic.toStdString value2 : string) in (
     tempString := __assign_2;
     __assign_2
   ));
@@ -32,7 +32,7 @@ let create = fun value2 previous native -> let self = ({ __hx_type = HxType.clas
     ignore (if value2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("null" : string) in (
       tempString := __assign_1;
       __assign_1
-    ) else let __assign_2 = (HxRuntime.dynamic_toStdString value2 : string) in (
+    ) else let __assign_2 = (HxDynamic.toStdString value2 : string) in (
       tempString := __assign_2;
       __assign_2
     ));

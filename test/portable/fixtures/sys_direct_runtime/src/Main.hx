@@ -11,7 +11,8 @@ class Main {
 		if (args.length == 2 && args[0] == "--sys-command-child")
 			Sys.exit(args[1] == "spaced value" ? 7 : 19);
 
-		Sys.println("args-array=" + (args != null && args.length >= 0));
+		Sys.print("args-array=");
+		Sys.println(args != null && args.length >= 0);
 
 		final environmentKey = "HXHX_SYS_DIRECT_RUNTIME_7D583F9A";
 		Sys.putEnv(environmentKey, "present");

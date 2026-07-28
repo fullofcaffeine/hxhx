@@ -326,6 +326,18 @@ class CompilationContext {
 	public final classModuleIdByFullName:Map<String, String> = [];
 
 	/**
+	 * Generated zero-argument class `toString` adapters available to Dynamic.
+	 *
+	 * The final type registry uses this exact emitted method identity to register
+	 * runtime dispatch. `HxDynamic` never guesses record layouts or method names.
+	 */
+	public final dynamicStringifierByFullName:Map<String, {
+		moduleId:String,
+		sourceTypeName:String,
+		targetMethodName:String
+	}> = [];
+
+	/**
 	 * For each compiled class full name, the full set of runtime "type tags" that should
 	 * be considered a match for typed catches.
 	 *

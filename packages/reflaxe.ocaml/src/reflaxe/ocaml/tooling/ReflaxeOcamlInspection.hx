@@ -350,8 +350,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 40) {
-						throw 'Unsupported lowering report schema $version; expected 40.';
+					if (version != 41) {
+						throw 'Unsupported lowering report schema $version; expected 41.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -939,7 +939,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v16")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v17")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -1428,7 +1428,8 @@ class ReflaxeOcamlInspection {
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Bool", "bool")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "String", "string")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Int>", "Obj.t")
-			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t");
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Dynamic", "Obj.t");
 	}
 
 	static function isAdmittedDirectResultSide(kind:String, semanticTypeId:String, carrierTypeId:String, representationId:String,
@@ -1576,7 +1577,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -1657,7 +1658,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectLocalConversions(value:Dynamic):Array<InspectionLocalConversion> {
-		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v1")
+		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v2")
 			throw "Unsupported local conversion report model.";
 		final raw = requiredArray(value, "localConversions");
 		if (raw.length != requiredInt(value, "localConversionCount"))
@@ -1703,7 +1704,7 @@ class ReflaxeOcamlInspection {
 	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
 		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
 			throw "Unsupported unsafe-operation report model.";
-		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-and-null-bool-local-slices-only")
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-and-inline-dynamic-local-slices")
 			throw "Unsupported unsafe-operation completeness claim.";
 		final raw = requiredArray(value, "unsafeOperations");
 		if (raw.length != requiredInt(value, "unsafeOperationCount"))
@@ -2288,7 +2289,7 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13",
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14",
 			message: message
 		};
 	}

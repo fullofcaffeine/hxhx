@@ -79,7 +79,7 @@ try {
 	assert.strictEqual(appInspection.buildTiming.duneCacheHitsMeasured, false)
 	assert.strictEqual(appInspection.lowering.status, 'present')
 	assert.strictEqual(appInspection.representation.status, 'present')
-	assert.strictEqual(appInspection.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13')
+	assert.strictEqual(appInspection.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14')
 	assert(appInspection.summary.representationDecisionCount > 0)
 	assert.strictEqual(appInspection.lowering.staticStorage.length, appInspection.summary.staticStorageCount)
 	assert(!appInspection.unavailable.some(capability => capability.id === 'program-representation'))

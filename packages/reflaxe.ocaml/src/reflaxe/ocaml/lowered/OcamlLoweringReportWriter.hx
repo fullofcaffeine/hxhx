@@ -38,8 +38,8 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 40;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-v13";
+	public static inline final SCHEMA_VERSION = 41;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
@@ -348,16 +348,16 @@ class OcamlLoweringReportWriter {
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
-			localConversionModel: "typed-ocaml-local-carrier-conversions-v1",
+			localConversionModel: "typed-ocaml-local-carrier-conversions-v2",
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
 			unsafeOperationModel: "proof-backed-admitted-unsafe-operations-v1",
-			unsafeOperationCompleteness: "exact-null-int-and-null-bool-local-slices-only",
+			unsafeOperationCompleteness: "exact-null-int-null-bool-and-inline-dynamic-local-slices",
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v16",
+			callModel: "typed-ocaml-directional-call-boundary-v17",
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,
