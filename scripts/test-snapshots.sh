@@ -4,7 +4,7 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SNAPSHOT_DIR="$ROOT/test/snapshot"
+SNAPSHOT_DIR="${HXHX_SNAPSHOT_DIR:-"$ROOT/test/snapshot"}"
 
 if [ ! -d "$SNAPSHOT_DIR" ]; then
   echo "No snapshot directory found at $SNAPSHOT_DIR" >&2
@@ -26,7 +26,10 @@ compile_one() {
   (
     cd "$test_dir"
     rm -rf out
-    "$HAXE_BIN" compile.hxml
+    # The outer loop reads its NUL-delimited fixture list from stdin. A compiler
+    # that inherits that stream can consume later fixture paths and make this
+    # runner report success after testing only a prefix.
+    "$HAXE_BIN" compile.hxml </dev/null
   )
 
   if [ ! -d "$test_dir/intended" ]; then
