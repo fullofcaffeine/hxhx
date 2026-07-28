@@ -73,6 +73,10 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.get", "get");
 		assertContains(content, "HxBytes.fastGet", "fastGet");
 		assertContains(content, "HxBytes.set", "set");
+		assertContains(content, "HxBytes.getUInt16", "getUInt16");
+		assertContains(content, "HxBytes.setUInt16", "setUInt16");
+		assertContains(content, "HxBytes.getInt32", "getInt32");
+		assertContains(content, "HxBytes.setInt32", "setInt32");
 		assertContains(content, "HxBytes.blit", "blit");
 		assertContains(content, "HxBytes.sub", "sub");
 		assertContains(content, "HxBytes.compare", "compare");
@@ -102,7 +106,10 @@ class M6BytesIntegrationTest {
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-access"', "Bytes access runtime capability");
-		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v1"', "Bytes access runtime explanation");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v2"', "Bytes access runtime explanation");
+		assertContains(requirementReport, "2-byte access", "UInt16 access width explanation");
+		assertContains(requirementReport, "4-byte access", "Int32 access width explanation");
+		assertContains(requirementReport, "little-endian ordering", "multi-byte ordering explanation");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {

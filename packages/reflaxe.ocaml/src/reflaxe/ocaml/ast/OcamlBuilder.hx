@@ -3477,11 +3477,9 @@ class OcamlBuilder {
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getFloat"),
 																[self, buildExpr(args[0])]);
 														case "getUInt16" if (args.length == 1):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getUInt16"),
-																[self, buildExpr(args[0])]);
+															bytesAccessInvariant("standard Bytes.getUInt16 bypassed its sealed access plan", e.pos);
 														case "getInt32" if (args.length == 1):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"),
-																[self, buildExpr(args[0])]);
+															bytesAccessInvariant("standard Bytes.getInt32 bypassed its sealed access plan", e.pos);
 														case "getInt64" if (args.length == 1):
 															final posName = freshTmp("pos");
 															OcamlExpr.ELet(posName, buildExpr(args[0]),
@@ -3503,11 +3501,9 @@ class OcamlBuilder {
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setFloat"),
 																[self, buildExpr(args[0]), buildExpr(args[1])]);
 														case "setUInt16" if (args.length == 2):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setUInt16"),
-																[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]);
+															bytesAccessInvariant("standard Bytes.setUInt16 bypassed its sealed access plan", e.pos);
 														case "setInt32" if (args.length == 2):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"),
-																[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]);
+															bytesAccessInvariant("standard Bytes.setInt32 bypassed its sealed access plan", e.pos);
 														case "setInt64" if (args.length == 2):
 															final posName = freshTmp("pos");
 															final vName = freshTmp("i64");

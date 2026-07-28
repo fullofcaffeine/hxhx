@@ -208,6 +208,15 @@ class OcamlBytesAccessPlan {
 				OcamlBytesAccessKind.Get;
 			case "set" if (matchesExactArguments(arguments, [isAdmittedIntInput, isAdmittedIntInput]) && isExactVoid(resultType)):
 				OcamlBytesAccessKind.Set;
+			case "getUInt16" if (matchesExactArguments(arguments, [isExactIntInput])
+				&& OcamlRepresentationRegistry.isExactInt(resultType)):
+				OcamlBytesAccessKind.GetUInt16;
+			case "setUInt16" if (matchesExactArguments(arguments, [isExactIntInput, isExactIntInput]) && isExactVoid(resultType)):
+				OcamlBytesAccessKind.SetUInt16;
+			case "getInt32" if (matchesExactArguments(arguments, [isExactIntInput]) && OcamlRepresentationRegistry.isExactInt(resultType)):
+				OcamlBytesAccessKind.GetInt32;
+			case "setInt32" if (matchesExactArguments(arguments, [isExactIntInput, isExactIntInput]) && isExactVoid(resultType)):
+				OcamlBytesAccessKind.SetInt32;
 			case "getData" if (arguments.length == 0 && OcamlRepresentationRegistry.isExactBytesData(resultType)):
 				OcamlBytesAccessKind.GetData;
 			case _:
@@ -217,6 +226,10 @@ class OcamlBytesAccessPlan {
 
 	static function isAdmittedIntInput(type:Type):Bool {
 		return OcamlRepresentationRegistry.isExactInt(type) || OcamlRepresentationRegistry.isExactNullInt(type);
+	}
+
+	static function isExactIntInput(type:Type):Bool {
+		return OcamlRepresentationRegistry.isExactInt(type);
 	}
 
 	static function matchesExactArguments(arguments:Array<TypedExpr>, predicates:Array<Type->Bool>):Bool {
@@ -277,6 +290,8 @@ class OcamlBytesAccessPlan {
 			decision.argumentRepresentationRevisions.join(","),
 			decision.argumentConversions.join(","),
 			(decision.boundsPolicy : String),
+			Std.string(decision.accessWidthBytes),
+			(decision.byteOrderPolicy : String),
 			(decision.valuePolicy : String),
 			(decision.mutationPolicy : String),
 			(decision.aliasPolicy : String),
@@ -323,6 +338,8 @@ class OcamlBytesAccessPlan {
 			argumentRepresentationRevisions: decision.argumentRepresentationRevisions.copy(),
 			argumentConversions: decision.argumentConversions.copy(),
 			boundsPolicy: decision.boundsPolicy,
+			accessWidthBytes: decision.accessWidthBytes,
+			byteOrderPolicy: decision.byteOrderPolicy,
 			valuePolicy: decision.valuePolicy,
 			mutationPolicy: decision.mutationPolicy,
 			aliasPolicy: decision.aliasPolicy,
@@ -378,7 +395,7 @@ class OcamlBytesAccessPlan {
 	}
 }
 
-/** Finds exact target-override byte access calls in one final typed root. */
+/** Finds exact target-override Bytes access calls in one final typed root. */
 class OcamlBytesAccessPlanner {
 	final binding:OcamlFunctionPlanBinding;
 	final representations:OcamlRepresentationRegistry;
@@ -456,6 +473,8 @@ class OcamlBytesAccessPlanner {
 			argumentConversions: argumentInputRepresentations.map(value ->
 				value.semanticTypeId == "Null<Int>" ? OcamlBytesAccessArgumentConversion.RequireNonNullInt : OcamlBytesAccessArgumentConversion.Identity),
 			boundsPolicy: OcamlBytesAccessContract.boundsPolicy(occurrence.kind),
+			accessWidthBytes: OcamlBytesAccessContract.accessWidthBytes(occurrence.kind),
+			byteOrderPolicy: OcamlBytesAccessContract.byteOrderPolicy(occurrence.kind),
 			valuePolicy: OcamlBytesAccessContract.valuePolicy(occurrence.kind),
 			mutationPolicy: OcamlBytesAccessContract.mutationPolicy(occurrence.kind),
 			aliasPolicy: OcamlBytesAccessContract.aliasPolicy(occurrence.kind),
@@ -523,6 +542,8 @@ class OcamlBytesAccessPlanner {
 			argumentRepresentationRevisions: decision.argumentRepresentationRevisions.copy(),
 			argumentConversions: decision.argumentConversions.copy(),
 			boundsPolicy: decision.boundsPolicy,
+			accessWidthBytes: decision.accessWidthBytes,
+			byteOrderPolicy: decision.byteOrderPolicy,
 			valuePolicy: decision.valuePolicy,
 			mutationPolicy: decision.mutationPolicy,
 			aliasPolicy: decision.aliasPolicy,

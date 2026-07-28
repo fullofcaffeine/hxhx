@@ -52,6 +52,17 @@ class BytesMain {
 		return [for (index in 0...value.length) value.get(index)].join(",");
 	}
 
+	static function expectOutsideBounds(operation:Void->Void):Void {
+		var failed = false;
+		try {
+			operation();
+		} catch (error:Dynamic) {
+			failed = Std.string(error) == "OutsideBounds";
+		}
+		if (!failed)
+			throw "expected OutsideBounds";
+	}
+
 	static function main() {
 		var b = Bytes.ofString("xxxxxx");
 		if (b.length != 6)
@@ -198,12 +209,34 @@ class BytesMain {
 		if (!outsideMutationRange)
 			throw "Bytes mutation ignored the declared length";
 
-		final numeric = Bytes.alloc(4);
-		numeric.set(0, 0x34);
-		numeric.set(1, 0x12);
-		numeric.set(2, 0x78);
-		numeric.set(3, 0x56);
-		if (numeric.getUInt16(0) != 0x1234 || numeric.getInt32(0) != 0x56781234 || numeric.toHex() != "34127856")
-			throw "Bytes numeric or hexadecimal read changed";
+		final numeric = Bytes.alloc(10);
+		numeric.setUInt16(0, 0x12345);
+		numeric.setInt32(2, -2);
+		numeric.setInt32(6, 0x12345678);
+		if (numeric.toHex() != "4523feffffff78563412"
+			|| numeric.getUInt16(0) != 0x2345
+			|| numeric.getInt32(2) != -2
+			|| numeric.getInt32(6) != 0x12345678) {
+			throw "Bytes numeric byte order, masking, signed result, or hexadecimal output changed";
+		}
+		final negativeUInt16 = Bytes.alloc(2);
+		negativeUInt16.setUInt16(0, -2);
+		if (negativeUInt16.toHex() != "feff" || negativeUInt16.getUInt16(0) != 65534)
+			throw "Bytes UInt16 negative write masking changed";
+
+		evaluationOrder.resize(0);
+		final orderedUInt16 = orderedBytesValue("uint16-receiver", numeric).getUInt16(orderedInt("uint16-position", 0));
+		if (orderedUInt16 != 0x2345 || evaluationOrder.join(",") != "uint16-receiver,uint16-position")
+			throw "Bytes UInt16 evaluation order changed";
+
+		evaluationOrder.resize(0);
+		orderedBytesValue("int32-receiver", numeric).setInt32(orderedInt("int32-position", 6), orderedInt("int32-value", -2));
+		if (numeric.getInt32(6) != -2 || evaluationOrder.join(",") != "int32-receiver,int32-position,int32-value")
+			throw "Bytes Int32 evaluation order changed";
+
+		expectOutsideBounds(() -> numeric.getUInt16(numeric.length - 1));
+		expectOutsideBounds(() -> numeric.setUInt16(numeric.length - 1, 1));
+		expectOutsideBounds(() -> numeric.getInt32(numeric.length - 3));
+		expectOutsideBounds(() -> numeric.setInt32(numeric.length - 3, 1));
 	}
 }

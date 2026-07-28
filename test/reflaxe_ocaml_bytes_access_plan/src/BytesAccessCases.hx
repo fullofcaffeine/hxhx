@@ -4,13 +4,14 @@ import haxe.io.Bytes;
 import haxe.io.BytesData;
 
 /**
-	Typed target inputs and Haxe 4.3.7 behavior cases for byte access.
+	Typed target inputs and Haxe 4.3.7 behavior cases for Bytes access.
 
 	The macro fixture observes the target-selected declarations. Running this
 	class directly exercises upstream Haxe's public behavior: evaluation order,
-	unsigned byte values, low-byte masking, shared data, and nullable-argument
-	conversion. The target runtime fixture separately proves reflaxe.ocaml's
-	deterministic checked-bounds policy.
+	unsigned byte and UInt16 values, signed Int32 values, little-endian ordering,
+	write masking, shared data, and single-byte nullable-argument conversion.
+	The target runtime fixture separately proves reflaxe.ocaml's deterministic
+	checked-bounds policy.
 **/
 class BytesAccessCases {
 	static function bytes(values:Array<Int>):Bytes {
@@ -18,6 +19,17 @@ class BytesAccessCases {
 		for (index in 0...values.length)
 			result.set(index, values[index]);
 		return result;
+	}
+
+	static function expectFailure(expected:String, operation:Void->Void):Void {
+		var actual:Null<String> = null;
+		try {
+			operation();
+		} catch (error:Dynamic) {
+			actual = Std.string(error);
+		}
+		if (actual != expected)
+			throw 'expected "$expected", received "${actual == null ? "no failure" : actual}"';
 	}
 
 	public static function get(bytes:Bytes, position:Int):Int {
@@ -36,6 +48,22 @@ class BytesAccessCases {
 		bytes.set(position, value);
 	}
 
+	public static function getUInt16(bytes:Bytes, position:Int):Int {
+		return bytes.getUInt16(position);
+	}
+
+	public static function setUInt16(bytes:Bytes, position:Int, value:Int):Void {
+		bytes.setUInt16(position, value);
+	}
+
+	public static function getInt32(bytes:Bytes, position:Int):Int {
+		return bytes.getInt32(position);
+	}
+
+	public static function setInt32(bytes:Bytes, position:Int, value:Int):Void {
+		bytes.setInt32(position, value);
+	}
+
 	public static function getData(bytes:Bytes):BytesData {
 		return bytes.getData();
 	}
@@ -50,6 +78,14 @@ class BytesAccessCases {
 
 	public static function setInSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Int):Void {
 		receiver().set(position(), value());
+	}
+
+	public static function getUInt16InSourceOrder(receiver:Void->Bytes, position:Void->Int):Int {
+		return receiver().getUInt16(position());
+	}
+
+	public static function setInt32InSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Int):Void {
+		receiver().setInt32(position(), value());
 	}
 
 	public static function getDataInSourceOrder(receiver:Void->Bytes):BytesData {
@@ -92,6 +128,44 @@ class BytesAccessCases {
 		if (value.get(1) != 4 || order.join(",") != "set-receiver,set-position,set-value")
 			throw "Haxe Bytes set evaluation or masking behavior changed";
 
+		final numeric = bytes([0, 0, 0, 0, 0, 0]);
+		numeric.setUInt16(0, 0x12345);
+		numeric.setInt32(2, -2);
+		if (numeric.toHex() != "4523feffffff" || numeric.getUInt16(0) != 0x2345 || numeric.getInt32(2) != -2)
+			throw "Haxe Bytes numeric byte order, masking, or signed result changed";
+		final negativeUInt16 = bytes([0, 0]);
+		negativeUInt16.setUInt16(0, -2);
+		if (negativeUInt16.toHex() != "feff" || negativeUInt16.getUInt16(0) != 65534)
+			throw "Haxe Bytes UInt16 negative write masking changed";
+		if (bytes([0, 0, 0, 0x80]).getInt32(0) != -2147483648)
+			throw "Haxe Bytes Int32 sign behavior changed";
+
+		order.resize(0);
+		final orderedUInt16 = getUInt16InSourceOrder(() -> {
+			order.push("uint16-receiver");
+			return bytes([0x12, 0x34]);
+		}, () -> {
+			order.push("uint16-position");
+			return 0;
+		});
+		if (orderedUInt16 != 0x3412 || order.join(",") != "uint16-receiver,uint16-position")
+			throw "Haxe Bytes UInt16 evaluation order changed";
+
+		order.resize(0);
+		final orderedInt32 = bytes([0, 0, 0, 0]);
+		setInt32InSourceOrder(() -> {
+			order.push("int32-receiver");
+			return orderedInt32;
+		}, () -> {
+			order.push("int32-position");
+			return 0;
+		}, () -> {
+			order.push("int32-value");
+			return 0x12345678;
+		});
+		if (orderedInt32.toHex() != "78563412" || order.join(",") != "int32-receiver,int32-position,int32-value")
+			throw "Haxe Bytes Int32 evaluation order changed";
+
 		order.resize(0);
 		final data = getDataInSourceOrder(() -> {
 			order.push("data-receiver");
@@ -113,20 +187,12 @@ class BytesAccessCases {
 		if (alias.get(0) != 9 || value.get(2) != 7)
 			throw "Haxe BytesData stopped sharing mutable storage";
 
-		try {
-			getNullablePosition(value, null);
-			throw "expected Null Access";
-		} catch (error:Dynamic) {
-			if (Std.string(error) != "Null Access")
-				throw error;
-		}
-		try {
-			setNullableValue(value, value.length, null);
-			throw "expected Null Access";
-		} catch (error:Dynamic) {
-			if (Std.string(error) != "Null Access")
-				throw error;
-		}
+		expectFailure("Null Access", () -> getNullablePosition(value, null));
+		expectFailure("Null Access", () -> setNullableValue(value, value.length, null));
+		expectFailure("OutsideBounds", () -> numeric.getUInt16(numeric.length - 1));
+		expectFailure("OutsideBounds", () -> numeric.setUInt16(numeric.length - 1, 1));
+		expectFailure("OutsideBounds", () -> numeric.getInt32(numeric.length - 3));
+		expectFailure("OutsideBounds", () -> numeric.setInt32(numeric.length - 3, 1));
 		Sys.println("HAXE_4_3_7_BYTES_ACCESS_ORACLE:PASS");
 	}
 }

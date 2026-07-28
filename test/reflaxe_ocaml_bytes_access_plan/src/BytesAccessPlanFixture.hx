@@ -7,6 +7,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessAliasPolicy;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessArgumentConversion;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessByteOrderPolicy;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessBoundsPolicy;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessContract;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
@@ -24,7 +25,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
-	Proves that the real target override leaves exact byte-access calls to seal.
+	Proves that the real target override leaves exact Bytes-access calls to seal.
 
 	The fixture checks deterministic occurrence plans and representation
 	decisions, then corrupts individual facts so stale or incomplete records
@@ -46,10 +47,16 @@ class BytesAccessPlanFixture {
 			"getNullablePosition" => OcamlBytesAccessKind.Get,
 			"set" => OcamlBytesAccessKind.Set,
 			"setNullableValue" => OcamlBytesAccessKind.Set,
+			"getUInt16" => OcamlBytesAccessKind.GetUInt16,
+			"setUInt16" => OcamlBytesAccessKind.SetUInt16,
+			"getInt32" => OcamlBytesAccessKind.GetInt32,
+			"setInt32" => OcamlBytesAccessKind.SetInt32,
 			"getData" => OcamlBytesAccessKind.GetData,
 			"fastGet" => OcamlBytesAccessKind.FastGet,
 			"getInSourceOrder" => OcamlBytesAccessKind.Get,
 			"setInSourceOrder" => OcamlBytesAccessKind.Set,
+			"getUInt16InSourceOrder" => OcamlBytesAccessKind.GetUInt16,
+			"setInt32InSourceOrder" => OcamlBytesAccessKind.SetInt32,
 			"getDataInSourceOrder" => OcamlBytesAccessKind.GetData,
 			"fastGetInSourceOrder" => OcamlBytesAccessKind.FastGet
 		];
@@ -74,6 +81,8 @@ class BytesAccessPlanFixture {
 				|| decision.invocationKind != invocation
 				|| decision.evaluationOrder.join(",") != expectedOrder.join(",")
 				|| decision.boundsPolicy != OcamlBytesAccessContract.boundsPolicy(kind)
+				|| decision.accessWidthBytes != OcamlBytesAccessContract.accessWidthBytes(kind)
+				|| decision.byteOrderPolicy != OcamlBytesAccessContract.byteOrderPolicy(kind)
 				|| decision.valuePolicy != OcamlBytesAccessContract.valuePolicy(kind)
 				|| decision.mutationPolicy != OcamlBytesAccessContract.mutationPolicy(kind)
 				|| decision.aliasPolicy != OcamlBytesAccessContract.aliasPolicy(kind)
@@ -93,6 +102,21 @@ class BytesAccessPlanFixture {
 				&& (decision.valuePolicy != OcamlBytesAccessValuePolicy.MaskLowEightBits
 					|| decision.resultKind != OcamlBytesAccessResultKind.EffectOnlyVoid)) {
 				Context.error('Bytes access case "$name" did not seal low-byte mutation and effect-only Void.', field.pos);
+			}
+			switch (kind) {
+				case GetUInt16:
+					requireNumericPolicy(decision, 2, OcamlBytesAccessValuePolicy.UnsignedSixteenBitRead, OcamlBytesAccessMutationPolicy.ReadOnly,
+						OcamlBytesAccessResultKind.ExactInt, field.pos);
+				case SetUInt16:
+					requireNumericPolicy(decision, 2, OcamlBytesAccessValuePolicy.MaskLowSixteenBits, OcamlBytesAccessMutationPolicy.MutateReceiverBytes,
+						OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+				case GetInt32:
+					requireNumericPolicy(decision, 4, OcamlBytesAccessValuePolicy.SignedThirtyTwoBitRead, OcamlBytesAccessMutationPolicy.ReadOnly,
+						OcamlBytesAccessResultKind.ExactInt, field.pos);
+				case SetInt32:
+					requireNumericPolicy(decision, 4, OcamlBytesAccessValuePolicy.PreserveLowThirtyTwoBits,
+						OcamlBytesAccessMutationPolicy.MutateReceiverBytes, OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+				case _:
 			}
 			if (kind == OcamlBytesAccessKind.FastGet
 				&& (decision.argumentSemanticTypeIds[0] != OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID
@@ -114,6 +138,12 @@ class BytesAccessPlanFixture {
 		final lookalike = requireBody(requireField(cases, "userLookalike"));
 		if (new OcamlBytesAccessPlanner(binding("userLookalike"), representations).plan(lookalike).decisions().length != 0)
 			Context.error("User-defined access lookalikes were admitted as haxe.io.Bytes calls.", Context.currentPos());
+		for (entry in unadmittedCases()) {
+			if (!containsExactTargetCall(entry.expression, entry.fieldName))
+				Context.error('Unsupported Bytes access case "${entry.name}" did not retain the exact target-selected declaration.', Context.currentPos());
+			if (new OcamlBytesAccessPlanner(binding(entry.name), representations).plan(entry.expression).decisions().length != 0)
+				Context.error('Unsupported Bytes access case "${entry.name}" was admitted by the exact UInt16/Int32 planner.', Context.currentPos());
+		}
 
 		final dataRepresentation = representations.selectExactBytesData(reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain.InternalValue);
 		if (dataRepresentation.semanticTypeId != OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID
@@ -149,6 +179,24 @@ class BytesAccessPlanFixture {
 		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(sample, {occurrenceId: "bytes-access-occurrence:not-a-digest"})]));
 		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
 			reseal(sample, {boundsPolicy: OcamlBytesAccessBoundsPolicy.DeclaredBytesChecked})
+		]));
+		final numericSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.GetUInt16 && decision.functionId == "BytesAccessCases.getUInt16");
+		if (numericSample == null)
+			Context.error("The Bytes access fixture has no getUInt16 decision.", Context.currentPos());
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(numericSample, {accessWidthBytes: 1})]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(numericSample, {byteOrderPolicy: OcamlBytesAccessByteOrderPolicy.NotApplicable})
+		]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(numericSample, {valuePolicy: OcamlBytesAccessValuePolicy.UnsignedByteRead})
+		]));
+		expectThrows("invalid-access-argument", () -> new OcamlBytesAccessPlan([
+			reseal(numericSample, {
+				argumentInputSemanticTypeIds: ["Null<Int>"],
+				argumentInputCarrierTypeIds: ["Obj.t"],
+				argumentConversions: [OcamlBytesAccessArgumentConversion.RequireNonNullInt]
+			})
 		]));
 		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
 		expectThrows("invalid-access", () -> ledger.recordBytesAccess(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
@@ -208,6 +256,19 @@ class BytesAccessPlanFixture {
 		return macro null;
 	}
 
+	static function requireNumericPolicy(decision:OcamlBytesAccessDecision, width:Int, valuePolicy:OcamlBytesAccessValuePolicy,
+			mutationPolicy:OcamlBytesAccessMutationPolicy, resultKind:OcamlBytesAccessResultKind, position:haxe.macro.Expr.Position):Void {
+		if (decision.boundsPolicy != OcamlBytesAccessBoundsPolicy.DeclaredBytesChecked
+			|| decision.accessWidthBytes != width
+			|| decision.byteOrderPolicy != OcamlBytesAccessByteOrderPolicy.LittleEndian
+			|| decision.valuePolicy != valuePolicy
+			|| decision.mutationPolicy != mutationPolicy
+			|| decision.aliasPolicy != OcamlBytesAccessAliasPolicy.NoNewAlias
+			|| decision.resultKind != resultKind) {
+			Context.error('Bytes numeric access "${decision.id}" did not seal its exact $width-byte policy.', position);
+		}
+	}
+
 	static function requireNullableIntConversion(decision:OcamlBytesAccessDecision, index:Int, position:haxe.macro.Expr.Position):Void {
 		if (decision.argumentInputSemanticTypeIds[index] != "Null<Int>"
 			|| decision.argumentSemanticTypeIds[index] != "Int"
@@ -223,6 +284,87 @@ class BytesAccessPlanFixture {
 			bodyRevision: BODY_REVISION + ":" + name,
 			pipelineRevision: PIPELINE_REVISION
 		};
+	}
+
+	static function unadmittedCases():Array<{name:String, fieldName:String, expression:TypedExpr}> {
+		return [
+			{
+				name: "getUInt16NullablePosition",
+				fieldName: "getUInt16",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Null<Int>):Int {
+					return bytes.getUInt16(position);
+				})
+			},
+			{
+				name: "setUInt16NullableValue",
+				fieldName: "setUInt16",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Int>):Void {
+					bytes.setUInt16(position, value);
+				})
+			},
+			{
+				name: "getInt32NullablePosition",
+				fieldName: "getInt32",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Null<Int>):Int {
+					return bytes.getInt32(position);
+				})
+			},
+			{
+				name: "setInt32NullableValue",
+				fieldName: "setInt32",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Int>):Void {
+					bytes.setInt32(position, value);
+				})
+			},
+			{
+				name: "getFloat",
+				fieldName: "getFloat",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int):Float {
+					return bytes.getFloat(position);
+				})
+			},
+			{
+				name: "setFloat",
+				fieldName: "setFloat",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Float):Void {
+					bytes.setFloat(position, value);
+				})
+			},
+			{
+				name: "getInt64",
+				fieldName: "getInt64",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int):haxe.Int64 {
+					return bytes.getInt64(position);
+				})
+			},
+			{
+				name: "setInt64",
+				fieldName: "setInt64",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:haxe.Int64):Void {
+					bytes.setInt64(position, value);
+				})
+			}
+		];
+	}
+
+	static function containsExactTargetCall(expression:TypedExpr, fieldName:String):Bool {
+		var found = false;
+		function visit(candidate:TypedExpr):Void {
+			if (found)
+				return;
+			switch (candidate.expr) {
+				case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, _):
+					final classType = classRef.get();
+					if (classType.module == "haxe.io.Bytes" && classType.name == "Bytes" && fieldRef.get().name == fieldName) {
+						found = true;
+						return;
+					}
+				case _:
+			}
+			TypedExprTools.iter(candidate, visit);
+		}
+		visit(expression);
+		return found;
 	}
 
 	static function caseFields():Map<String, ClassField> {

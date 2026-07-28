@@ -12,8 +12,9 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessKind;
 	Constructs OCaml syntax from one already-validated Bytes access decision.
 
 	The helper only materializes the sealed receiver/argument schedule and calls
-	the recorded `HxBytes` operation. It cannot choose bounds, byte values,
-	mutation, aliasing, declaration identity, or result shape.
+	the recorded `HxBytes` operation. It cannot choose bounds, access width,
+	byte order, represented values, mutation, aliasing, declaration identity,
+	or result shape.
 **/
 class OcamlBytesAccessSyntax {
 	public static function build(decision:OcamlBytesAccessDecision, receiver:Null<TypedExpr>, arguments:Array<TypedExpr>,
