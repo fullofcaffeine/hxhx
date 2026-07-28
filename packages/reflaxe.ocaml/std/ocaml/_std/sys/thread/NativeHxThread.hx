@@ -8,7 +8,12 @@ package sys.thread;
 	- generic deque payloads (`Deque<T>`)
 	- thread-local storage payloads (`Tls<T>`)
 	- event-loop attachment handles (`Thread.events`)
+
+	Each emitted operation declares the checked `haxe-thread` runtime
+	capability before packaging, so `HxThread` is selected from typed Haxe
+	behavior instead of inferred only from generated OCaml module names.
 **/
+@:ocamlRuntime("haxe-thread")
 @:native("HxThread")
 extern class NativeHxThread {
 	static function lock_create():Int;
