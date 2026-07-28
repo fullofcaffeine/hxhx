@@ -310,7 +310,7 @@ class M6RuntimeCopierIntegrationTest {
 		]);
 		assertTrue(portableIncompleteManualCompile.exitCode != 0, "manual runtime selection should reject omitted generated-code requirements");
 		final portableIncompleteManualOutput = portableIncompleteManualCompile.stderr + "\n" + portableIncompleteManualCompile.stdout;
-		assertContains(portableIncompleteManualOutput, "Runtime packaging omitted compiler-observed modules",
+		assertContains(portableIncompleteManualOutput, "Runtime packaging omitted compiler-observed module",
 			"manual runtime failure should explain what evidence was omitted");
 		assertContains(portableIncompleteManualOutput, "ocaml_runtime_modules",
 			"manual runtime failure should name the option that can supply the missing roots");
@@ -519,6 +519,7 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-type-registry",
 			"declared-static-native-runtime-boundary",
 			"exact-string-null-sentinel-representation",
+			"non-null-haxe-bytes-producers",
 			"typed-place-assignment-and-update"
 		], portableRequirementReport.coveredFamilies,
 			"portable requirement report covered families");
@@ -620,6 +621,8 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxFPHelper should overlap its declared typed extern requirement root");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxString\n",
 			"compiler-observed HxString should overlap the exact String sentinel representation requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxBytes\n",
+			"compiler-observed HxBytes should overlap the supported non-null producer requirement root");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
@@ -628,8 +631,8 @@ class M6RuntimeCopierIntegrationTest {
 			"selective packaging should retain HxBacktrace because of the declared native boundary");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxFPHelper").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxFPHelper because of the declared native boundary");
-		assertArrayEquals(["HxAnon", "HxBytes", "HxEnum"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
-			"partial coverage should keep the three compiler-observed modules with no recorded root visible");
+		assertArrayEquals(["HxAnon", "HxEnum"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
+			"partial coverage should keep compiler-observed modules with no recorded root visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 

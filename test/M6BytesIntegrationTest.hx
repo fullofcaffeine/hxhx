@@ -79,6 +79,18 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.toString", "toString");
 		assertContains(content, "HxBytes.fill", "fill");
 
+		final rejectedArgs = args.copy();
+		rejectedArgs[rejectedArgs.indexOf("BytesMain")] = "BytesConstructorUnadmittedMain";
+		rejectedArgs[rejectedArgs.indexOf("ocaml_output=" + outDir)] = "ocaml_output=" + outDir + "_constructor_rejected";
+		final rejected = new sys.io.Process("haxe", rejectedArgs);
+		final rejectedStdout = rejected.stdout.readAll().toString();
+		final rejectedStderr = rejected.stderr.readAll().toString();
+		final rejectedExit = rejected.exitCode();
+		rejected.close();
+		if (rejectedExit == 0)
+			throw "the internal Bytes constructor should fail before OCaml output";
+		assertContains(rejectedStdout + rejectedStderr, "ocaml-bytes:constructor-unadmitted", "internal constructor diagnostic");
+
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {
 			final exeName = exeNameFromOutDir(outDir);

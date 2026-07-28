@@ -8,6 +8,7 @@ import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -434,6 +435,11 @@ class CompilationContext {
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
 		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
+	}
+
+	/** Records runtime support selected by one sealed non-null Bytes producer. **/
+	public function recordBytesProducerRuntimeRequirements(decision:OcamlBytesProducerDecision):Void {
+		runtimeRequirements.recordBytesProducer(decision);
 	}
 
 	/** Records runtime support selected by one sealed program representation. **/

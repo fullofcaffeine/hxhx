@@ -170,6 +170,7 @@ try {
 		'compiler-type-registry',
 		'declared-static-native-runtime-boundary',
 		'exact-string-null-sentinel-representation',
+		'non-null-haxe-bytes-producers',
 		'typed-place-assignment-and-update'
 	])
 	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-recorded-requirement-audit-v2')
@@ -189,6 +190,7 @@ try {
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBacktrace'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxFPHelper'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxString'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBytes'))
 	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
 	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
 	assert.deepStrictEqual([
@@ -197,7 +199,7 @@ try {
 	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
 	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots,
-		['HxAnon', 'HxBytes', 'HxEnum'])
+		['HxAnon', 'HxEnum'])
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)
@@ -217,6 +219,11 @@ try {
 	assert(coreRequirement)
 	assert.strictEqual(coreRequirement.sourceKind, 'compiler-infrastructure')
 	assert.deepStrictEqual(coreRequirement.subject, {kind: 'compiler-policy', id: 'runtime-packaging'})
+	const bytesProducerRequirement = runtimeRequirements.requirements.find(requirement => requirement.semanticCapability === 'haxe-bytes-producer')
+	assert(bytesProducerRequirement)
+	assert.strictEqual(bytesProducerRequirement.sourceKind, 'haxe-expression')
+	assert.deepStrictEqual(bytesProducerRequirement.subject, {kind: 'haxe-type', id: 'haxe.io.Bytes'})
+	assert.deepStrictEqual(bytesProducerRequirement.rootModules, ['HxBytes'])
 	assert.deepStrictEqual(coreRequirement.rootModules, ['HxRuntime'])
 	const registryRequirement = runtimeRequirements.requirements.find(
 		requirement => requirement.id === 'compiler:generated:HxTypeRegistry:type-registry')

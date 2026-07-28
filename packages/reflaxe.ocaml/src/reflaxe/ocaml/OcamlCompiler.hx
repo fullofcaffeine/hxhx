@@ -51,10 +51,12 @@ import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -1088,6 +1090,30 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 	}
 
+	/** Returns one stable owner for a typed class-field initializer. */
+	static function fieldInitializerOwner(classType:ClassType, field:ClassField, kind:String):String {
+		return 'field-initializer:$kind:${classType.module}|${classType.name}::${field.name}';
+	}
+
+	/** Seals and reports Bytes producer facts for one non-function typed root. */
+	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
+		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression);
+		for (decision in plan.bytesProducers.decisions())
+			ctx.recordBytesProducerRuntimeRequirements(decision);
+		return plan;
+	}
+
+	/** Builds a non-function root after selecting its exact typed plans. */
+	function buildStandaloneExpression(builder:OcamlBuilder, ownerId:String, expression:TypedExpr):OcamlExpr {
+		return builder.buildStandaloneExpr(expression, OcamlLocalStoragePlanner.planExpression(expression), sealStandaloneExpression(ownerId, expression));
+	}
+
+	/** Builds a field initializer with its assignment and Bytes decisions sealed. */
+	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
+		return builder.buildStandaloneExprForAssignment(fieldType, expression, OcamlLocalStoragePlanner.planExpression(expression),
+			sealStandaloneExpression(ownerId, expression));
+	}
+
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
 		#if macro
 		final profClassStartS = profileEnabled ? profileNowS() : 0.0;
@@ -1756,8 +1782,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						switch (entry.kind) {
 							case "var":
 								final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
-								final value = init != null ? builder.buildStandaloneExpr(init,
-									OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(entry.field.type);
+								final value = init != null ? buildStandaloneExpression(builder, fieldInitializerOwner(classType, entry.field, "instance"),
+									init) : instanceFieldDefault(entry.field.type);
 								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case "method":
 								final info = dispatchMethodDecl.get(entry.name);
@@ -1773,8 +1799,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					for (v in instanceVarsLocal) {
 						final init = v.findDefaultExpr();
-						final value = init != null ? builder.buildStandaloneExpr(init,
-							OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(v.field.type);
+						final value = init != null ? buildStandaloneExpression(builder, fieldInitializerOwner(classType, v.field, "instance"),
+							init) : instanceFieldDefault(v.field.type);
 						fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 					}
 					if (isDispatchInstance) {
@@ -2060,7 +2086,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
 				representedStatic.implicitDefault;
 			} else if (init != null) {
-				builder.buildStandaloneExprForAssignment(v.field.type, init, OcamlLocalStoragePlanner.planExpression(init));
+				buildStandaloneAssignment(builder, fieldInitializerOwner(classType, v.field, "static"), v.field.type, init);
 			} else {
 				representedStatic == null ? defaultValueForType(v.field.type) : representedStatic.implicitDefault;
 			};
@@ -2182,7 +2208,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "recorded-runtime-requirements-partial-v4",
 				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records why the exact String null-sentinel representation, typed assignments and updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
+				message: "The compiler records why exact String null values, supported non-null Bytes producers, typed assignments and updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Bytes storage and consumer operations, plus other compiler paths, still rely on observed generated modules, so whole-program runtime ownership is incomplete."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",
@@ -3320,7 +3346,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final emitSourceMap = false;
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
-		final e = builder.buildStandaloneExpr(expr, OcamlLocalStoragePlanner.planExpression(expr));
+		final source = OcamlLoweredOrigin.sourceSpan(expr.pos);
+		final ownerId = 'compiler-expression:${source.file}:${source.min}:${source.max}';
+		final e = buildStandaloneExpression(builder, ownerId, expr);
 		return printer.printExpr(e);
 	}
 

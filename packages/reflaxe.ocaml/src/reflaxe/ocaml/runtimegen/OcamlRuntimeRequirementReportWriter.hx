@@ -121,6 +121,7 @@ class OcamlRuntimeRequirementReportWriter {
 				"compiler-type-registry",
 				"declared-static-native-runtime-boundary",
 				"exact-string-null-sentinel-representation",
+				"non-null-haxe-bytes-producers",
 				"typed-place-assignment-and-update"
 			],
 			selectionAuthority: selectionAuthority,
@@ -141,7 +142,7 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, the exact String null-sentinel representation, and typed assignment/update lowering. Compiler observations contain module names rather than individual use sites, so the HxString root proves only the selected sentinel carrier dependency—not that every HxString use is explained."
+			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, exact String null values, supported non-null Bytes producers, and typed assignment/update lowering. Each HxBytes producer requirement applies only to its recorded expression; Bytes storage, receivers, indexing, and mutation remain unexplained. Compiler observations still contain module names rather than individual use sites, so a recorded root does not prove that every use of that module is explained."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,

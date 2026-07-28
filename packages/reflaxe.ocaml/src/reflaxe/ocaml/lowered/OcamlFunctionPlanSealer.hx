@@ -9,6 +9,8 @@ import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan.OcamlBytesProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -89,8 +91,8 @@ class OcamlFunctionPlanSealer {
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		if (data.expr == null) {
 			final controls = OcamlControlPlan.notAdmitted(binding);
-			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlCallPlan([]),
-				controls, callableBoundary, constructionBoundary);
+			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlBytesProducerPlan([]),
+				new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary);
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
@@ -98,6 +100,7 @@ class OcamlFunctionPlanSealer {
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations).plan(data.expr);
+		final bytesProducers = new OcamlBytesProducerPlanner(binding).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding).plan(data.expr, callableBoundary);
 
 		final moduleId = data.classType.module;
@@ -142,7 +145,9 @@ class OcamlFunctionPlanSealer {
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
-		registry.sealFunction(binding, localStorage, localRepresentations, calls, controls, callableBoundary, constructionBoundary);
+		for (decision in bytesProducers.decisions())
+			context.recordBytesProducerRuntimeRequirements(decision);
+		registry.sealFunction(binding, localStorage, localRepresentations, bytesProducers, calls, controls, callableBoundary, constructionBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);

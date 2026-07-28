@@ -12,8 +12,11 @@ extern class Bytes {
 		Internal constructor used by some stdlib code (e.g. `haxe.io.BytesBuffer`)
 		inside `untyped` blocks.
 
-		We keep this declared so Haxe can type/resolve `new Bytes(len, data)`
-		even though the OCaml backend ultimately maps this to runtime helpers.
+		We keep this declared so Haxe can type-check upstream standard-library
+		sources. The OCaml backend currently rejects direct constructor
+		occurrences because `HxBytes.t` cannot yet preserve an explicit `length`
+		that differs from the supplied data. Public static producers remain the
+		supported construction surface.
 	**/
 	private function new(length:Int, b:BytesData);
 

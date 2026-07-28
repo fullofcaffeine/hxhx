@@ -3,7 +3,9 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
+import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -11,6 +13,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan.OcamlBytesProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
@@ -35,10 +39,23 @@ typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final bytesProducers:OcamlBytesProducerPlan;
 	final calls:OcamlCallPlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
 	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
+}
+
+/**
+	All target-owned decisions sealed for one exact non-function expression root.
+
+	`binding.functionId` contains a stable root identity even though the shared
+	binding schema predates standalone roots. This keeps the producer contract
+	revision-bound without pretending that a field initializer is a function.
+**/
+typedef OcamlSealedStandaloneExpressionPlan = {
+	final binding:OcamlFunctionPlanBinding;
+	final bytesProducers:OcamlBytesProducerPlan;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -56,7 +73,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v40";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v41";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -119,6 +136,59 @@ class OcamlFunctionPlanRegistry {
 			bodyRevision: data.bodyRevision.id,
 			pipelineRevision: PIPELINE_REVISION
 		};
+	}
+
+	/**
+		Plans one typed expression emitted outside a function body.
+
+		Class-field initializers and Reflaxe's standalone-expression callback do
+		not own `ClassFuncData`, but they still need the same exact program,
+		expression-body, and target-pipeline revisions before syntax is built.
+	**/
+	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
+		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
+		final bytesProducers = new OcamlBytesProducerPlanner(binding).plan(expression);
+		bytesProducers.requirePlanBinding(binding);
+		return {
+			binding: binding,
+			bytesProducers: bytesProducers
+		};
+	}
+
+	/**
+		Rechecks that syntax received the exact standalone expression that was planned.
+
+		The fresh typed-expression digest prevents an in-place mutation between
+		planning and syntax construction from reusing a believable stale decision.
+	**/
+	public function requireStandaloneExpressionPlan(expression:TypedExpr, plan:OcamlSealedStandaloneExpressionPlan):OcamlBytesProducerPlan {
+		if (plan == null)
+			throw "reflaxe.ocaml [ocaml-bytes:missing-standalone-plan]: a standalone typed expression reached syntax without its sealed plan";
+		final expected = standaloneBinding(plan.binding.functionId, expression);
+		if (!sameBinding(plan.binding, expected))
+			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		plan.bytesProducers.requirePlanBinding(expected);
+		return plan.bytesProducers;
+	}
+
+	function standaloneBinding(functionId:String, expression:TypedExpr):OcamlFunctionPlanBinding {
+		if (!StringTools.startsWith(functionId, "standalone:"))
+			throw 'reflaxe.ocaml [ocaml-lowering:invalid-standalone-owner]: standalone root "$functionId" has no standalone identity';
+		final programRevision = currentProgramRevision;
+		if (programRevision == null || programRevision.length == 0)
+			throw 'reflaxe.ocaml [ocaml-lowering:missing-program-revision]: standalone root "$functionId" has no program revision';
+		return {
+			functionId: functionId,
+			programRevision: programRevision,
+			bodyRevision: FunctionBodyRevision.initial(expression).id,
+			pipelineRevision: PIPELINE_REVISION
+		};
+	}
+
+	static function requiredStandaloneOwner(ownerId:String):String {
+		if (ownerId == null || ownerId.length == 0)
+			throw "reflaxe.ocaml [ocaml-lowering:missing-standalone-owner]: a standalone typed expression has no stable owner";
+		return ownerId;
 	}
 
 	/** Requires the function body reaching syntax construction to remain sealed. */
@@ -201,10 +271,11 @@ class OcamlFunctionPlanRegistry {
 
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
-			calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			bytesProducers:OcamlBytesProducerPlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
 			?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		bytesProducers.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -225,6 +296,7 @@ class OcamlFunctionPlanRegistry {
 				binding: binding,
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
+				bytesProducers: bytesProducers,
 				calls: calls,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),

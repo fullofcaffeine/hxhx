@@ -1,0 +1,126 @@
+package reflaxe.ocaml.lowered;
+
+#if (macro || reflaxe_runtime || eval)
+import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+
+/** The supported Haxe operation that produces one non-null `haxe.io.Bytes`. */
+enum abstract OcamlBytesProducerKind(String) from String to String {
+	final Alloc = "alloc";
+	final OfString = "of-string";
+	final OfData = "of-data";
+	final OfHex = "of-hex";
+}
+
+/** How a supported `Bytes.ofString` occurrence selected its encoding. */
+enum abstract OcamlBytesEncodingKind(String) from String to String {
+	final NotApplicable = "not-applicable";
+	final Omitted = "omitted";
+	final ExplicitNull = "explicit-null";
+	final UTF8 = "utf8";
+	final RawNative = "raw-native";
+}
+
+/**
+	One producer-local Bytes result fixed before OCaml syntax is constructed.
+
+	The record is a host-neutral immutable fact. Macro-time planning creates it,
+	syntax construction consumes it, and runtime reporting validates it without
+	depending on compiler-only Reflaxe classes.
+**/
+typedef OcamlBytesProducerDecision = {
+	final id:String;
+	final source:OcamlLoweredSourceSpan;
+	final kind:OcamlBytesProducerKind;
+	final calleeId:String;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final sourceFieldName:String;
+	final argumentCount:Int;
+	final argumentEvaluationOrder:Array<Int>;
+	final encoding:OcamlBytesEncodingKind;
+	final resultSemanticTypeId:String;
+	final resultCarrierTypeId:String;
+	final resultNullability:String;
+	final runtimeRequirementIds:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** Closed identities shared by planning, syntax, and runtime reporting. */
+class OcamlBytesProducerContract {
+	public static inline final SEMANTIC_TYPE_ID = "haxe.io.Bytes";
+	public static inline final CARRIER_TYPE_ID = "HxBytes.t";
+	public static inline final RESULT_NULLABILITY = "non-null";
+	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-producer";
+	public static inline final PROOF_ID = "non-null-haxe-bytes-producer-v1";
+	public static inline final PROOF_CLAIM = "This exact supported operation returns a non-null Haxe Bytes value carried by HxBytes.t; the claim ends at the producer result.";
+
+	/** Computes the deterministic identity shared by planning and validation. */
+	public static function idFor(functionId:String, programRevision:String, bodyRevision:String, pipelineRevision:String, source:OcamlLoweredSourceSpan,
+			kind:OcamlBytesProducerKind, calleeId:String, argumentCount:Int, encoding:OcamlBytesEncodingKind):String {
+		return "bytes-producer:" + Sha256.encode([
+			functionId,
+			programRevision,
+			bodyRevision,
+			pipelineRevision,
+			source.file,
+			Std.string(source.min),
+			Std.string(source.max),
+			(kind : String),
+			calleeId,
+			Std.string(argumentCount),
+			(encoding : String)
+		].join("\n")).substr(0, 24);
+	}
+
+	/** Rejects incomplete, stale, or internally conflicting producer facts. */
+	public static function requireDecision(decision:OcamlBytesProducerDecision):Void {
+		if (decision == null)
+			throw "reflaxe.ocaml [ocaml-bytes:invalid-producer]: Bytes producer decision is null";
+		final expectedOrder = [for (index in 0...decision.argumentCount) index];
+		final expectedField = switch (decision.kind) {
+			case Alloc: "alloc";
+			case OfString: "ofString";
+			case OfData: "ofData";
+			case OfHex: "ofHex";
+		}
+		final expectedArgumentCount = switch (decision.kind) {
+			case Alloc, OfData, OfHex: 1;
+			case OfString: decision.encoding == OcamlBytesEncodingKind.Omitted ? 1 : 2;
+		}
+		final expectedCalleeId = "haxe.io.Bytes|haxe.io.Bytes::" + expectedField;
+		final expectedId = idFor(decision.functionId, decision.programRevision, decision.bodyRevision, decision.pipelineRevision, decision.source,
+			decision.kind, decision.calleeId, decision.argumentCount, decision.encoding);
+		if (decision.id != expectedId
+			|| decision.source.file.length == 0
+			|| decision.source.min < 0
+			|| decision.source.max < decision.source.min
+			|| decision.resultSemanticTypeId != SEMANTIC_TYPE_ID
+			|| decision.resultCarrierTypeId != CARRIER_TYPE_ID
+			|| decision.resultNullability != RESULT_NULLABILITY
+			|| decision.proofId != PROOF_ID
+			|| decision.proofClaim != PROOF_CLAIM
+			|| decision.sourceModuleId != "haxe.io.Bytes"
+			|| decision.sourceTypeName != "Bytes"
+			|| decision.sourceFieldName != expectedField
+			|| decision.calleeId != expectedCalleeId
+			|| decision.argumentCount != expectedArgumentCount
+			|| decision.argumentEvaluationOrder.join(",") != expectedOrder.join(",")
+			|| decision.runtimeRequirementIds.length != 1
+			|| decision.runtimeRequirementIds[0] != decision.id + ":runtime:" + RUNTIME_CAPABILITY
+			|| decision.functionId.length == 0
+			|| decision.programRevision.length == 0
+			|| decision.bodyRevision.length == 0
+			|| decision.pipelineRevision.length == 0) {
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-producer]: producer "${decision.id}" does not match the sealed non-null Bytes producer contract';
+		}
+		if ((decision.kind == OcamlBytesProducerKind.OfString) != (decision.encoding != OcamlBytesEncodingKind.NotApplicable))
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-encoding]: producer "${decision.id}" has an invalid encoding decision';
+	}
+}
+#end

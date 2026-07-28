@@ -5,6 +5,8 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
@@ -28,6 +30,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
+	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
@@ -93,6 +96,37 @@ class OcamlRuntimeRequirementLedger {
 				explanation: implementation.explanation
 			});
 		}
+	}
+
+	/**
+		Records why one sealed non-null Bytes producer needs `HxBytes`.
+
+		The requirement is deliberately occurrence-local. It explains only the
+		supported producer result and does not authorize nullable storage,
+		receiver calls, indexing, or mutation.
+	**/
+	public function recordBytesProducer(decision:OcamlBytesProducerDecision):Void {
+		OcamlBytesProducerContract.requireDecision(decision);
+		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_PRODUCER;
+		if (decision.runtimeRequirementIds[0] != requirementId)
+			throw 'Bytes producer "${decision.id}" does not name its exact runtime requirement.';
+		record({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: HAXE_BYTES_PRODUCER,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: OcamlBytesProducerContract.SEMANTIC_TYPE_ID
+			},
+			implementationFeature: "haxe-bytes-producer-v1",
+			rootModules: ["HxBytes"],
+			profileEligibility: ["metal", "portable"],
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes; nullable storage, receivers, indexing, and mutation require separate decisions.'
+		});
 	}
 
 	/**
