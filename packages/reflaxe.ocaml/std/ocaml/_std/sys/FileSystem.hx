@@ -3,10 +3,13 @@ package sys;
 /**
 	OCaml target override for `sys.FileSystem`.
 
-	This is a signature-only surface: the OCaml backend lowers calls to a small
-	runtime shim (`HxFileSystem`) so portable Haxe code can use `sys.FileSystem`
-	without being aware of OCaml's APIs.
+	The extern keeps the portable Haxe API while its checked target metadata
+	maps every operation to the small `HxFileSystem` runtime module. Packaging
+	can therefore use the typed Haxe declaration instead of inferring the
+	dependency from generated OCaml syntax.
 **/
+@:ocamlRuntime("haxe-file-system")
+@:native("HxFileSystem")
 extern class FileSystem {
 	static function exists(path:String):Bool;
 	static function rename(path:String, newPath:String):Void;

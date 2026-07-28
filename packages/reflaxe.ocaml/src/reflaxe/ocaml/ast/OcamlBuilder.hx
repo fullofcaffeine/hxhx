@@ -3022,36 +3022,6 @@ class OcamlBuilder {
 													#end
 													anyNull;
 											}
-										} else if (cls.pack != null && cls.pack.length == 1 && cls.pack[0] == "sys" && cls.name == "FileSystem") {
-											final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-											switch (cf.name) {
-												case "exists" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "exists"), [buildExpr(args[0])]);
-												case "rename" if (args.length == 2):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "rename"),
-														[buildExpr(args[0]), buildExpr(args[1])]);
-												case "fullPath" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "fullPath"), [buildExpr(args[0])]);
-												case "absolutePath" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "absolutePath"), [buildExpr(args[0])]);
-												case "isDirectory" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "isDirectory"), [buildExpr(args[0])]);
-												case "createDirectory" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "createDirectory"), [buildExpr(args[0])]);
-												case "deleteFile" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "deleteFile"), [buildExpr(args[0])]);
-												case "deleteDirectory" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "deleteDirectory"), [buildExpr(args[0])]);
-												case "readDirectory" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "readDirectory"), [buildExpr(args[0])]);
-												case "stat" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "stat"), [buildExpr(args[0])]);
-												case _:
-													#if macro
-													guardrailError("reflaxe.ocaml (M6): sys.FileSystem." + cf.name + " is not implemented yet.", e.pos);
-													#end
-													anyNull;
-											}
 										} else if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
 											final a0 = args[0];
 											final coerced = nullablePrimitiveKind(a0.t) == "int" ? safeUnboxNullableInt(buildExpr(a0)) : buildExpr(a0);

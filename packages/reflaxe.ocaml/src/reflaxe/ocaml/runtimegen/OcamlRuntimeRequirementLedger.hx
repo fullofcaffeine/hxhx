@@ -40,6 +40,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_FILE = "haxe-file";
 	public static inline final HAXE_FILE_STREAM = "haxe-file-stream";
 	public static inline final HAXE_THREAD = "haxe-thread";
+	public static inline final HAXE_FILE_SYSTEM = "haxe-file-system";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -430,6 +431,12 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-thread-v1",
 					module: "HxThread",
 					explanation: "The typed Haxe thread facades use HxThread for synchronization, message passing, deques, thread-local storage, and event-loop attachment."
+				};
+			case HAXE_FILE_SYSTEM:
+				{
+					feature: "haxe-file-system-v1",
+					module: "HxFileSystem",
+					explanation: "The typed Haxe filesystem facade uses HxFileSystem for path inspection, directory operations, metadata, rename, and deletion."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';

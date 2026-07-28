@@ -97,24 +97,40 @@ const expectedBoundaries = [
 		'HxFileStream',
 		'haxe-file-stream-v1',
 	],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'absolutePath', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'createDirectory', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'deleteDirectory', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'deleteFile', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'exists', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'fullPath', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'isDirectory', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'readDirectory', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'rename', 'HxFileSystem', 'haxe-file-system-v1'],
+	['haxe-file-system', 'sys.FileSystem', 'sys.FileSystem', 'stat', 'HxFileSystem', 'haxe-file-system-v1'],
 ]
 const requirements = report.requirements
-	.filter((requirement) => requirement.semanticCapability === 'haxe-file' || requirement.semanticCapability === 'haxe-file-stream')
+	.filter(
+		(requirement) =>
+			requirement.semanticCapability === 'haxe-file' ||
+			requirement.semanticCapability === 'haxe-file-stream' ||
+			requirement.semanticCapability === 'haxe-file-system'
+	)
 	.sort((left, right) => left.id.localeCompare(right.id))
+const requirementsById = new Map(requirements.map((requirement) => [requirement.id, requirement]))
 
 assert(report.compilerObservedModulesWithRequirementRoots.includes('HxFile'), 'HxFile must overlap an explicit requirement root')
 assert(report.compilerObservedModulesWithRequirementRoots.includes('HxFileStream'), 'HxFileStream must overlap an explicit requirement root')
+assert(report.compilerObservedModulesWithRequirementRoots.includes('HxFileSystem'), 'HxFileSystem must overlap an explicit requirement root')
 assert(!report.compilerObservedModulesWithoutRequirementRoots.includes('HxFile'), 'HxFile must not remain in the unrooted module set')
 assert(!report.compilerObservedModulesWithoutRequirementRoots.includes('HxFileStream'), 'HxFileStream must not remain in the unrooted module set')
-assert(
-	report.compilerObservedModulesWithoutRequirementRoots.includes('HxFileSystem'),
-	'HxFileSystem must remain visible until its separate typed semantic boundary is sealed'
-)
-assert.equal(requirements.length, expectedBoundaries.length)
+assert(!report.compilerObservedModulesWithoutRequirementRoots.includes('HxFileSystem'), 'HxFileSystem must not remain in the unrooted module set')
+assert.equal(requirementsById.size, expectedBoundaries.length)
 
-for (const [index, requirement] of requirements.entries()) {
-	const [capability, owner, nativeType, field, rootModule, feature] = expectedBoundaries[index]
+for (const [capability, owner, nativeType, field, rootModule, feature] of expectedBoundaries) {
 	const boundary = `${owner}::${nativeType}.${field}`
+	const id = `native:${boundary}:runtime:${capability}`
+	const requirement = requirementsById.get(id)
+	assert(requirement, `Missing typed Haxe file runtime requirement ${id}`)
 	assert.equal(requirement.id, `native:${boundary}:runtime:${capability}`)
 	assert.equal(requirement.sourceKind, 'native-boundary')
 	assert.equal(requirement.cause, 'native-boundary')
