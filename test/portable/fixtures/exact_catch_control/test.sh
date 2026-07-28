@@ -70,7 +70,7 @@ for (const chain of catches) {
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
 		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v47'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v48'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)

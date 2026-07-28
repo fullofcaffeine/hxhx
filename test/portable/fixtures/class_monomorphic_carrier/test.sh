@@ -67,7 +67,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v47'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v48'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'
