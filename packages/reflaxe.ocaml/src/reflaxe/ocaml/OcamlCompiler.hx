@@ -1095,9 +1095,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return 'field-initializer:$kind:${classType.module}|${classType.name}::${field.name}';
 	}
 
-	/** Seals and reports exact Bytes producer and read facts for one non-function typed root. */
+	/** Seals and reports exact Bytes producer, read, and mutation facts for one non-function typed root. */
 	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
 		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
+		for (decision in plan.bytesMutations.decisions())
+			ctx.recordBytesMutationRuntimeRequirements(decision);
 		for (decision in plan.bytesProducers.decisions())
 			ctx.recordBytesProducerRuntimeRequirements(decision);
 		for (decision in plan.bytesReads.decisions())

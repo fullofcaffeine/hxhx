@@ -84,6 +84,9 @@ class M6BytesIntegrationTest {
 		assertContains(content, "let __bytes_receiver_", "planned Bytes receiver materialization");
 		assertContains(content, "let __bytes_arg_0_", "planned Bytes first argument materialization");
 		assertContains(content, "let __bytes_arg_1_", "planned Bytes second argument materialization");
+		assertContains(content, "let __bytes_destination_", "planned Bytes mutation receiver materialization");
+		assertContains(content, "let __bytes_mutation_arg_0_", "planned Bytes mutation first argument materialization");
+		assertContains(content, "HxRuntime.nullable_int_unwrap", "planned nullable Int mutation crossing");
 
 		final requirementReportPath = outDir + "/ocaml_runtime_requirement_report.json";
 		if (!sys.FileSystem.exists(requirementReportPath))
@@ -91,6 +94,8 @@ class M6BytesIntegrationTest {
 		final requirementReport = sys.io.File.getContent(requirementReportPath);
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-read"', "Bytes read runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-read-v1"', "Bytes read runtime explanation");
+		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {

@@ -14,6 +14,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
+import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
@@ -1136,8 +1137,8 @@ class CallPlanFixture {
 
 	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan, callable:Null<OcamlCallableBoundaryPlan>,
 			?construction:Null<OcamlCallableBoundaryPlan>):Void {
-		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlBytesProducerPlan([]),
-			new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable, construction);
+		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlBytesMutationPlan([]),
+			new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable, construction);
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {

@@ -163,6 +163,7 @@ class BytesReadPlanFixture {
 				bodyRevision: firstStandalone.binding.bodyRevision + ":changed",
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
+			bytesMutations: firstStandalone.bytesMutations,
 			bytesProducers: firstStandalone.bytesProducers,
 			bytesReads: firstStandalone.bytesReads
 		};

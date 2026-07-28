@@ -21,6 +21,7 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.ast.OcamlBytesMutationSyntax;
 import reflaxe.ocaml.ast.OcamlBytesProducerSyntax;
 import reflaxe.ocaml.ast.OcamlBytesReadSyntax;
 import reflaxe.ocaml.ast.OcamlMatchCase;
@@ -35,6 +36,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
@@ -97,6 +99,7 @@ class OcamlBuilder {
 	final representationRegistry:OcamlRepresentationRegistry;
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
+	var currentBytesMutationPlan:Null<OcamlBytesMutationPlan> = null;
 	var currentBytesProducerPlan:Null<OcamlBytesProducerPlan> = null;
 	var currentBytesReadPlan:Null<OcamlBytesReadPlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
@@ -190,6 +193,14 @@ class OcamlBuilder {
 
 	function bytesProducerInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-bytes:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	function bytesMutationInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-bytes:mutation-plan-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -1816,6 +1827,9 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
+		final bytesMutationOccurrence = OcamlBytesMutationPlan.admittedOccurrence(e);
+		final plannedBytesMutation = currentBytesMutationPlan == null
+			|| bytesMutationOccurrence == null ? null : currentBytesMutationPlan.requireFor(e, representationRegistry);
 		final plannedBytesProducer = currentBytesProducerPlan == null
 			|| OcamlBytesProducerPlan.admittedKind(e) == null ? null : currentBytesProducerPlan.requireFor(e, representationRegistry);
 		final bytesReadOccurrence = OcamlBytesReadPlan.admittedOccurrence(e);
@@ -1823,6 +1837,10 @@ class OcamlBuilder {
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case _ if (plannedBytesMutation != null && bytesMutationOccurrence != null):
+				OcamlBytesMutationSyntax.build(plannedBytesMutation, bytesMutationOccurrence.receiver, bytesMutationOccurrence.arguments, buildExpr, freshTmp);
+			case _ if (bytesMutationOccurrence != null):
+				bytesMutationInvariant("an admitted mutating Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, arguments) if (plannedBytesProducer != null):
 				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
 			case TCall(_, arguments) if (plannedBytesProducer != null):
@@ -3497,17 +3515,9 @@ class OcamlBuilder {
 																	]),
 																	OcamlExpr.EConst(OcamlConst.CUnit)
 																]), false), false);
-														case "blit" if (args.length == 4):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "blit"), [
-																self,
-																buildExpr(args[0]),
-																buildExpr(args[1]),
-																buildExpr(args[2]),
-																buildExpr(args[3])
-															]);
-														case "fill" if (args.length == 3):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "fill"),
-																[self, buildExpr(args[0]), buildExpr(args[1]), coerceNullableIntToInt(args[2])]);
+														case "blit", "fill":
+															bytesMutationInvariant('standard Bytes mutation "${cf.name}" bypassed its sealed mutation plan',
+																e.pos);
 														case "sub", "compare", "getString", "toString", "toHex":
 															bytesReadInvariant('standard Bytes read "${cf.name}" bypassed its sealed read plan', e.pos);
 														case "getData" if (args.length == 0):
@@ -7004,14 +7014,17 @@ class OcamlBuilder {
 	/** Builds one non-function root after rechecking its exact storage and Bytes plans. */
 	public function buildStandaloneExpr(expression:TypedExpr, storagePlan:OcamlLocalStoragePlan, expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
+		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
+		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		return result;
@@ -7021,14 +7034,17 @@ class OcamlBuilder {
 	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
+		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
+		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		return result;
@@ -7214,6 +7230,7 @@ class OcamlBuilder {
 		final storagePlan = functionPlan.localStorage;
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousCallPlan = currentCallPlan;
@@ -7221,8 +7238,10 @@ class OcamlBuilder {
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
+		functionPlan.bytesMutations.requireRepresentations(representationRegistry);
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
 		functionPlan.bytesReads.requireRepresentations(representationRegistry);
+		currentBytesMutationPlan = functionPlan.bytesMutations;
 		currentBytesProducerPlan = functionPlan.bytesProducers;
 		currentBytesReadPlan = functionPlan.bytesReads;
 		currentCallPlan = functionPlan.calls;
@@ -7370,6 +7389,7 @@ class OcamlBuilder {
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
 		currentCallPlan = previousCallPlan;

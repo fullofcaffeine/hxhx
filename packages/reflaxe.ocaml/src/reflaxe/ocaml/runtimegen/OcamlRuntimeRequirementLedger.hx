@@ -5,6 +5,8 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationContract;
+import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
@@ -33,6 +35,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
+	public static inline final HAXE_BYTES_MUTATION = OcamlBytesMutationContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
@@ -130,6 +133,37 @@ class OcamlRuntimeRequirementLedger {
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes using ${decision.constructionPolicy}; nullable storage, receivers, indexing, and mutation require separate decisions.'
+		});
+	}
+
+	/**
+		Records why one sealed mutating Bytes operation needs `HxBytes`.
+
+		The requirement explains only the exact destination mutation and its
+		closed range, overlap, and byte-value policies. It does not authorize
+		inline-expanded BytesData operations or other Bytes write families.
+	**/
+	public function recordBytesMutation(decision:OcamlBytesMutationDecision):Void {
+		OcamlBytesMutationContract.requireDecision(decision);
+		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_MUTATION;
+		if (decision.runtimeRequirementIds[0] != requirementId)
+			throw 'Bytes mutation "${decision.id}" does not name its exact runtime requirement.';
+		record({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: HAXE_BYTES_MUTATION,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+			},
+			implementationFeature: "haxe-bytes-mutation-v1",
+			rootModules: ["HxBytes"],
+			profileEligibility: ["metal", "portable"],
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation mutates one exact haxe.io.Bytes destination through HxBytes after fixing receiver and argument evaluation, range validation, ${decision.overlapPolicy} overlap, and ${decision.valuePolicy} byte behavior; the call returns effect-only Void and does not authorize other write families.'
 		});
 	}
 
