@@ -36,6 +36,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
+	public static inline final HAXE_PROCESS = "haxe-process";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -402,6 +403,12 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-float-bit-conversions-v1",
 					module: "HxFPHelper",
 					explanation: "The typed Haxe floating-point facade uses HxFPHelper to convert Float values to and from their exact 32-bit or 64-bit representations."
+				};
+			case HAXE_PROCESS:
+				{
+					feature: "haxe-process-v1",
+					module: "HxProcess",
+					explanation: "The typed Haxe process facade uses HxProcess to spawn and control child processes and to exchange bytes, lines, and strings through their standard streams."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';

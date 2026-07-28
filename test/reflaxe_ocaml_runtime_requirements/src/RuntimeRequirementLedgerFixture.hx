@@ -104,8 +104,10 @@ class RuntimeRequirementLedgerFixture {
 			source, "HxBacktrace.callstack_lines");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FLOAT_BIT_CONVERSIONS, "haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat",
 			source, "HxFPHelper.i32ToFloat");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_PROCESS, "sys.io.Process::sys.io._Process.NativeHxProcess.spawn", source,
+			"HxProcess.spawn");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 13,
+		assertTrue(requirements.length == 14,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
@@ -150,7 +152,10 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(floatBitsRequirement.subject.id.indexOf("HxFPHelper.i32ToFloat") >= 0,
 			"the floating-point bit-conversion boundary should name the checked target symbol");
 		assertTrue(floatBitsRequirement.rootModules[0] == "HxFPHelper", "Haxe floating-point bit conversions should select the HxFPHelper implementation root");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxFPHelper,HxInt,HxRuntime,HxStdio,HxString,HxType",
+		final processRequirement = requirementById(requirements, "native:sys.io.Process::sys.io._Process.NativeHxProcess.spawn:runtime:haxe-process");
+		assertTrue(processRequirement.subject.id.indexOf("HxProcess.spawn") >= 0, "the process boundary should name the checked target symbol");
+		assertTrue(processRequirement.rootModules[0] == "HxProcess", "Haxe process operations should select the HxProcess implementation root");
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxFPHelper,HxInt,HxProcess,HxRuntime,HxStdio,HxString,HxType",
 			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
@@ -166,6 +171,8 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordNativeBoundary("native-not-supported", "fixture.Native.call", source, "HxStdio.call"));
 		expectFailure("native module mismatch", "requires \"HxStdio\"",
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "fixture.Native.call", source, "OtherRuntime.call"));
+		expectFailure("process native module mismatch", "requires \"HxProcess\"",
+			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_PROCESS, "fixture.NativeProcess.spawn", source, "OtherRuntime.spawn"));
 		final invalidStringRepresentation:Dynamic = Reflect.copy(stringRepresentation);
 		invalidStringRepresentation.carrierTypeId = "Obj.t";
 		expectFailure("invalid String representation", "does not match the sealed exact String null-sentinel contract",
