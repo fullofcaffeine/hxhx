@@ -10,7 +10,10 @@ import haxe.io.BytesData;
 	class directly exercises upstream Haxe's public behavior: evaluation order,
 	unsigned byte and UInt16 values, signed Int32 and Int64 values, little-endian
 	ordering, write masking or bit preservation, shared data, and single-byte
-	nullable-argument conversion. The target runtime fixture separately proves
+	nullable-argument conversion. It also records the target-qualified Haxe
+	4.3.7 result for null multi-byte arguments: UInt16/Int32 and Int64 expose
+	different target errors, while Eval and Neko both evaluate every input once
+	before failing without mutation. The target runtime fixture separately proves
 	reflaxe.ocaml's deterministic checked-bounds policy.
 **/
 class BytesAccessCases {
@@ -30,6 +33,61 @@ class BytesAccessCases {
 		}
 		if (actual != expected)
 			throw 'expected "$expected", received "${actual == null ? "no failure" : actual}"';
+	}
+
+	static function expectFailureWithoutMutation(expected:String, bytes:Bytes, operation:Void->Void):Void {
+		final before = bytes.toHex();
+		expectFailure(expected, operation);
+		if (bytes.toHex() != before)
+			throw 'failed Bytes operation mutated "$before" into "${bytes.toHex()}"';
+	}
+
+	static function multiByteReadFailure():String {
+		#if neko
+		return "$sget";
+		#else
+		return "OutsideBounds";
+		#end
+	}
+
+	static function singleByteReadFailure():String {
+		#if neko
+		return "$sget";
+		#else
+		return "Null Access";
+		#end
+	}
+
+	static function singleByteWriteFailure():String {
+		#if neko
+		return "$sset";
+		#else
+		return "Null Access";
+		#end
+	}
+
+	static function multiByteWriteFailure():String {
+		#if neko
+		return "$sset";
+		#else
+		return "OutsideBounds";
+		#end
+	}
+
+	static function int64ReadFailure():String {
+		#if neko
+		return "Invalid operation (+)";
+		#else
+		return "Null Access";
+		#end
+	}
+
+	static function int64WriteFailure():String {
+		#if neko
+		return "$sset";
+		#else
+		return "Null Access";
+		#end
 	}
 
 	public static function get(bytes:Bytes, position:Int):Int {
@@ -52,7 +110,19 @@ class BytesAccessCases {
 		return bytes.getUInt16(position);
 	}
 
+	public static function getUInt16NullablePosition(bytes:Bytes, position:Null<Int>):Int {
+		return bytes.getUInt16(position);
+	}
+
 	public static function setUInt16(bytes:Bytes, position:Int, value:Int):Void {
+		bytes.setUInt16(position, value);
+	}
+
+	public static function setUInt16NullablePosition(bytes:Bytes, position:Null<Int>, value:Int):Void {
+		bytes.setUInt16(position, value);
+	}
+
+	public static function setUInt16NullableValue(bytes:Bytes, position:Int, value:Null<Int>):Void {
 		bytes.setUInt16(position, value);
 	}
 
@@ -60,7 +130,19 @@ class BytesAccessCases {
 		return bytes.getInt32(position);
 	}
 
+	public static function getInt32NullablePosition(bytes:Bytes, position:Null<Int>):Int {
+		return bytes.getInt32(position);
+	}
+
 	public static function setInt32(bytes:Bytes, position:Int, value:Int):Void {
+		bytes.setInt32(position, value);
+	}
+
+	public static function setInt32NullablePosition(bytes:Bytes, position:Null<Int>, value:Int):Void {
+		bytes.setInt32(position, value);
+	}
+
+	public static function setInt32NullableValue(bytes:Bytes, position:Int, value:Null<Int>):Void {
 		bytes.setInt32(position, value);
 	}
 
@@ -68,7 +150,15 @@ class BytesAccessCases {
 		return bytes.getInt64(position);
 	}
 
+	public static function getInt64NullablePosition(bytes:Bytes, position:Null<Int>):haxe.Int64 {
+		return bytes.getInt64(position);
+	}
+
 	public static function setInt64(bytes:Bytes, position:Int, value:haxe.Int64):Void {
+		bytes.setInt64(position, value);
+	}
+
+	public static function setInt64NullablePosition(bytes:Bytes, position:Null<Int>, value:haxe.Int64):Void {
 		bytes.setInt64(position, value);
 	}
 
@@ -88,6 +178,10 @@ class BytesAccessCases {
 		receiver().set(position(), value());
 	}
 
+	public static function setNullablePositionInSourceOrder(receiver:Void->Bytes, position:Void->Null<Int>, value:Void->Int):Void {
+		receiver().set(position(), value());
+	}
+
 	public static function getUInt16InSourceOrder(receiver:Void->Bytes, position:Void->Int):Int {
 		return receiver().getUInt16(position());
 	}
@@ -96,11 +190,23 @@ class BytesAccessCases {
 		receiver().setInt32(position(), value());
 	}
 
+	public static function setUInt16NullablePositionInSourceOrder(receiver:Void->Bytes, position:Void->Null<Int>, value:Void->Int):Void {
+		receiver().setUInt16(position(), value());
+	}
+
+	public static function setUInt16NullableValueInSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Null<Int>):Void {
+		receiver().setUInt16(position(), value());
+	}
+
 	public static function getInt64InSourceOrder(receiver:Void->Bytes, position:Void->Int):haxe.Int64 {
 		return receiver().getInt64(position());
 	}
 
 	public static function setInt64InSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->haxe.Int64):Void {
+		receiver().setInt64(position(), value());
+	}
+
+	public static function setInt64NullablePositionInSourceOrder(receiver:Void->Bytes, position:Void->Null<Int>, value:Void->haxe.Int64):Void {
 		receiver().setInt64(position(), value());
 	}
 
@@ -189,6 +295,26 @@ class BytesAccessCases {
 		if (int64Bytes.toHex() != "efcdab8978563412" || int64Read.high != 0x12345678 || int64Read.low != -1985229329)
 			throw "Haxe Bytes Int64 word order or bit preservation changed";
 
+		final presentPosition:Null<Int> = 0;
+		final presentUInt16Value:Null<Int> = 0x12345;
+		final presentInt32Value:Null<Int> = 0x12345678;
+		if (getUInt16NullablePosition(numeric, presentPosition) != 0x2345
+			|| getInt32NullablePosition(numeric, presentPosition) != -122043
+			|| getInt64NullablePosition(int64Bytes, presentPosition).high != int64Value.high
+			|| getInt64NullablePosition(int64Bytes, presentPosition).low != int64Value.low) {
+			throw "present nullable multi-byte positions changed their Int values";
+		}
+		final nullableWrites = Bytes.alloc(8);
+		setUInt16NullablePosition(nullableWrites, presentPosition, 0x2345);
+		setUInt16NullableValue(nullableWrites, 2, presentUInt16Value);
+		setInt32NullablePosition(nullableWrites, 4, 0x12345678);
+		if (nullableWrites.toHex() != "4523452378563412")
+			throw "present nullable UInt16/Int32 arguments changed their Int values";
+		setInt32NullableValue(nullableWrites, 0, presentInt32Value);
+		setInt64NullablePosition(nullableWrites, presentPosition, int64Value);
+		if (nullableWrites.toHex() != "efcdab8978563412")
+			throw "present nullable Int32/Int64 arguments changed their Int values";
+
 		order.resize(0);
 		final orderedInt64Read = getInt64InSourceOrder(() -> {
 			order.push("int64-get-receiver");
@@ -220,6 +346,75 @@ class BytesAccessCases {
 			throw "Haxe Bytes Int64 write evaluation order changed";
 		}
 
+		final absentPosition:Null<Int> = null;
+		expectFailure(multiByteReadFailure(), () -> getUInt16NullablePosition(numeric, absentPosition));
+		expectFailure(multiByteReadFailure(), () -> getInt32NullablePosition(numeric, absentPosition));
+		expectFailure(int64ReadFailure(), () -> getInt64NullablePosition(int64Bytes, absentPosition));
+
+		order.resize(0);
+		final nullUInt16Position = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectFailureWithoutMutation(multiByteWriteFailure(), nullUInt16Position, () -> setUInt16NullablePositionInSourceOrder(() -> {
+			order.push("uint16-null-position-receiver");
+			return nullUInt16Position;
+		}, () -> {
+			order.push("uint16-null-position");
+			return null;
+		}, () -> {
+			order.push("uint16-null-position-value");
+			return 0x1234;
+		}));
+		if (order.join(",") != "uint16-null-position-receiver,uint16-null-position,uint16-null-position-value")
+			throw "null UInt16 position did not evaluate every input once in source order";
+
+		order.resize(0);
+		final nullBytePosition = bytes([0xaa, 0xbb]);
+		expectFailureWithoutMutation(singleByteWriteFailure(), nullBytePosition, () -> setNullablePositionInSourceOrder(() -> {
+			order.push("byte-null-position-receiver");
+			return nullBytePosition;
+		}, () -> {
+			order.push("byte-null-position");
+			return null;
+		}, () -> {
+			order.push("byte-null-position-value");
+			return 0x12;
+		}));
+		if (order.join(",") != "byte-null-position-receiver,byte-null-position,byte-null-position-value")
+			throw "null byte position did not evaluate every input once in source order";
+
+		order.resize(0);
+		final nullUInt16Value = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectFailureWithoutMutation(multiByteWriteFailure(), nullUInt16Value, () -> setUInt16NullableValueInSourceOrder(() -> {
+			order.push("uint16-null-value-receiver");
+			return nullUInt16Value;
+		}, () -> {
+			order.push("uint16-null-value-position");
+			return 0;
+		}, () -> {
+			order.push("uint16-null-value");
+			return null;
+		}));
+		if (order.join(",") != "uint16-null-value-receiver,uint16-null-value-position,uint16-null-value")
+			throw "null UInt16 value did not evaluate every input once in source order";
+
+		final nullInt32 = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectFailureWithoutMutation(multiByteWriteFailure(), nullInt32, () -> setInt32NullablePosition(nullInt32, absentPosition, 0x12345678));
+		expectFailureWithoutMutation(multiByteWriteFailure(), nullInt32, () -> setInt32NullableValue(nullInt32, 0, null));
+
+		order.resize(0);
+		final nullInt64Position = bytes([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0, 0x11]);
+		expectFailureWithoutMutation(int64WriteFailure(), nullInt64Position, () -> setInt64NullablePositionInSourceOrder(() -> {
+			order.push("int64-null-position-receiver");
+			return nullInt64Position;
+		}, () -> {
+			order.push("int64-null-position");
+			return null;
+		}, () -> {
+			order.push("int64-null-position-value");
+			return int64Value;
+		}));
+		if (order.join(",") != "int64-null-position-receiver,int64-null-position,int64-null-position-value")
+			throw "null Int64 position did not evaluate every input once in source order";
+
 		order.resize(0);
 		final data = getDataInSourceOrder(() -> {
 			order.push("data-receiver");
@@ -241,14 +436,16 @@ class BytesAccessCases {
 		if (alias.get(0) != 9 || value.get(2) != 7)
 			throw "Haxe BytesData stopped sharing mutable storage";
 
-		expectFailure("Null Access", () -> getNullablePosition(value, null));
-		expectFailure("Null Access", () -> setNullableValue(value, value.length, null));
-		expectFailure("OutsideBounds", () -> numeric.getUInt16(numeric.length - 1));
-		expectFailure("OutsideBounds", () -> numeric.setUInt16(numeric.length - 1, 1));
-		expectFailure("OutsideBounds", () -> numeric.getInt32(numeric.length - 3));
-		expectFailure("OutsideBounds", () -> numeric.setInt32(numeric.length - 3, 1));
-		expectFailure("OutsideBounds", () -> int64Bytes.getInt64(1));
-		expectFailure("OutsideBounds", () -> int64Bytes.setInt64(1, int64Value));
+		expectFailure(singleByteReadFailure(), () -> getNullablePosition(value, null));
+		expectFailure(singleByteWriteFailure(), () -> setNullableValue(value, value.length, null));
+		#if !neko
+		expectFailure(multiByteReadFailure(), () -> numeric.getUInt16(numeric.length - 1));
+		expectFailure(multiByteWriteFailure(), () -> numeric.setUInt16(numeric.length - 1, 1));
+		expectFailure(multiByteReadFailure(), () -> numeric.getInt32(numeric.length - 3));
+		expectFailure(multiByteWriteFailure(), () -> numeric.setInt32(numeric.length - 3, 1));
+		expectFailure(multiByteReadFailure(), () -> int64Bytes.getInt64(1));
+		expectFailure(multiByteWriteFailure(), () -> int64Bytes.setInt64(1, int64Value));
+		#end
 		Sys.println("HAXE_4_3_7_BYTES_ACCESS_ORACLE:PASS");
 	}
 }

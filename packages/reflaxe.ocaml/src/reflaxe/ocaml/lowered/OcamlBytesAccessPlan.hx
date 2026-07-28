@@ -209,19 +209,20 @@ class OcamlBytesAccessPlan {
 				OcamlBytesAccessKind.Get;
 			case "set" if (matchesExactArguments(arguments, [isAdmittedIntInput, isAdmittedIntInput]) && isExactVoid(resultType)):
 				OcamlBytesAccessKind.Set;
-			case "getUInt16" if (matchesExactArguments(arguments, [isExactIntInput])
+			case "getUInt16" if (matchesExactArguments(arguments, [isAdmittedIntInput])
 				&& OcamlRepresentationRegistry.isExactInt(resultType)):
 				OcamlBytesAccessKind.GetUInt16;
-			case "setUInt16" if (matchesExactArguments(arguments, [isExactIntInput, isExactIntInput]) && isExactVoid(resultType)):
+			case "setUInt16" if (matchesExactArguments(arguments, [isAdmittedIntInput, isAdmittedIntInput]) && isExactVoid(resultType)):
 				OcamlBytesAccessKind.SetUInt16;
-			case "getInt32" if (matchesExactArguments(arguments, [isExactIntInput]) && OcamlRepresentationRegistry.isExactInt(resultType)):
+			case "getInt32" if (matchesExactArguments(arguments, [isAdmittedIntInput])
+				&& OcamlRepresentationRegistry.isExactInt(resultType)):
 				OcamlBytesAccessKind.GetInt32;
-			case "setInt32" if (matchesExactArguments(arguments, [isExactIntInput, isExactIntInput]) && isExactVoid(resultType)):
+			case "setInt32" if (matchesExactArguments(arguments, [isAdmittedIntInput, isAdmittedIntInput]) && isExactVoid(resultType)):
 				OcamlBytesAccessKind.SetInt32;
-			case "getInt64" if (matchesExactArguments(arguments, [isExactIntInput])
+			case "getInt64" if (matchesExactArguments(arguments, [isAdmittedIntInput])
 				&& OcamlRepresentationRegistry.isExactInt64(resultType)):
 				OcamlBytesAccessKind.GetInt64;
-			case "setInt64" if (matchesExactArguments(arguments, [isExactIntInput, OcamlRepresentationRegistry.isExactInt64])
+			case "setInt64" if (matchesExactArguments(arguments, [isAdmittedIntInput, OcamlRepresentationRegistry.isExactInt64])
 				&& isExactVoid(resultType)):
 				OcamlBytesAccessKind.SetInt64;
 			case "getData" if (arguments.length == 0 && OcamlRepresentationRegistry.isExactBytesData(resultType)):
@@ -233,10 +234,6 @@ class OcamlBytesAccessPlan {
 
 	static function isAdmittedIntInput(type:Type):Bool {
 		return OcamlRepresentationRegistry.isExactInt(type) || OcamlRepresentationRegistry.isExactNullInt(type);
-	}
-
-	static function isExactIntInput(type:Type):Bool {
-		return OcamlRepresentationRegistry.isExactInt(type);
 	}
 
 	static function matchesExactArguments(arguments:Array<TypedExpr>, predicates:Array<Type->Bool>):Bool {
@@ -480,8 +477,10 @@ class OcamlBytesAccessPlanner {
 			argumentCarrierTypeIds: argumentRepresentations.map(value -> value.carrierTypeId),
 			argumentRepresentationIds: argumentRepresentations.map(value -> value.id),
 			argumentRepresentationRevisions: argumentRepresentations.map(value -> value.revision),
-			argumentConversions: argumentInputRepresentations.map(value ->
-				value.semanticTypeId == "Null<Int>" ? OcamlBytesAccessArgumentConversion.RequireNonNullInt : OcamlBytesAccessArgumentConversion.Identity),
+			argumentConversions: [
+				for (index in 0...argumentInputRepresentations.length)
+					argumentConversion(occurrence.kind, index, argumentInputRepresentations[index])
+			],
 			boundsPolicy: OcamlBytesAccessContract.boundsPolicy(occurrence.kind),
 			accessWidthBytes: OcamlBytesAccessContract.accessWidthBytes(occurrence.kind),
 			byteOrderPolicy: OcamlBytesAccessContract.byteOrderPolicy(occurrence.kind),
@@ -528,6 +527,13 @@ class OcamlBytesAccessPlanner {
 		if (OcamlRepresentationRegistry.isExactInt64(type))
 			return representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
 		return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+	}
+
+	static function argumentConversion(kind:OcamlBytesAccessKind, index:Int, representation:OcamlRepresentationDecision):OcamlBytesAccessArgumentConversion {
+		if (representation.semanticTypeId != "Null<Int>")
+			return OcamlBytesAccessArgumentConversion.Identity;
+		return OcamlBytesAccessContract.isMultiByteIntArgument(kind,
+			index) ? OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds : OcamlBytesAccessArgumentConversion.RequireNonNullInt;
 	}
 
 	static function copyWithIdentity(decision:OcamlBytesAccessDecision, id:String):OcamlBytesAccessDecision {

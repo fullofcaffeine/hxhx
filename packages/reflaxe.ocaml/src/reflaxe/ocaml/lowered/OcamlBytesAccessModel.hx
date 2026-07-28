@@ -30,6 +30,7 @@ enum abstract OcamlBytesAccessInvocationKind(String) from String to String {
 enum abstract OcamlBytesAccessArgumentConversion(String) from String to String {
 	final Identity = "identity";
 	final RequireNonNullInt = "require-non-null-int";
+	final RequireMultiByteIntOrOutsideBounds = "require-multi-byte-int-or-outside-bounds";
 }
 
 /** Range semantics fixed before target syntax. */
@@ -139,8 +140,8 @@ class OcamlBytesAccessContract {
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-access";
 	public static inline final VOID_SEMANTIC_TYPE_ID = "Void";
 	public static inline final OCCURRENCE_ID_PREFIX = "bytes-access-occurrence:";
-	public static inline final PROOF_ID = "exact-haxe-bytes-access-v3";
-	public static inline final PROOF_CLAIM = "This exact call from the reflaxe.ocaml haxe.io.Bytes override evaluates its receiver, when present, and every argument once in Haxe source order. Before syntax, the decision fixes exact Bytes, BytesData, Int, and Int64 carriers; the OCaml target's deterministic checked declared-Bytes or native-data bounds policy; access width and little-endian ordering where applicable; unsigned byte or UInt16 reads; signed Int32 or Int64 reads; low-eight-, low-sixteen-, low-thirty-two-, or exact-sixty-four-bit writes; result shape; shared getData aliasing; and the selected HxBytes operation. For Int64, HxBytes owns bounds and word order while syntax only adapts the exact generated nominal record without making a semantic choice. Haxe 4.3.7 leaves invalid Int64 bounds behavior unspecified across targets. This proof does not reconstruct vanilla inline bodies, admit arbitrary BytesData indexing, promise unsafe invalid fastGet behavior, or cover Float, nullable Int arguments for multi-byte operations, nullable Bytes or BytesData materialization, or user-defined lookalikes.";
+	public static inline final PROOF_ID = "exact-haxe-bytes-access-v4";
+	public static inline final PROOF_CLAIM = "This exact call from the reflaxe.ocaml haxe.io.Bytes override evaluates its receiver, when present, and every raw argument once in Haxe source order before applying argument conversions in index order. Before syntax, the decision fixes exact Bytes, BytesData, Int, Null<Int>, and Int64 carriers; the OCaml target's deterministic checked declared-Bytes or native-data bounds policy; access width and little-endian ordering where applicable; unsigned byte or UInt16 reads; signed Int32 or Int64 reads; low-eight-, low-sixteen-, low-thirty-two-, or exact-sixty-four-bit writes; result shape; shared getData aliasing; and the selected HxBytes operation. A present nullable Int used by a multi-byte UInt16, Int32, or Int64 operation is unboxed exactly once. Null fails without mutation through the target-qualified OutsideBounds policy because Haxe 4.3.7 Eval and Neko agree that the invalid call fails before mutation but expose different target errors. Single-byte nullable Int conversion retains Null Access. For Int64, HxBytes owns bounds and word order while syntax only adapts the exact generated nominal record without making a semantic choice. Haxe 4.3.7 leaves invalid Int64 bounds behavior unspecified across targets. This proof does not reconstruct vanilla inline bodies, admit arbitrary BytesData indexing, promise unsafe invalid fastGet behavior, or cover Float, nullable Int64 values, nullable Bytes or BytesData materialization, or user-defined lookalikes.";
 
 	/** Computes the deterministic identity shared by planning and validation. */
 	public static function idFor(decision:OcamlBytesAccessDecision):String {
@@ -206,6 +207,22 @@ class OcamlBytesAccessContract {
 			case Get, GetUInt16, GetInt32, GetInt64: 1;
 			case Set, SetUInt16, SetInt32, SetInt64, FastGet: 2;
 			case GetData: 0;
+		}
+	}
+
+	/**
+		Reports whether an argument is one of the exact `Int` inputs consumed by
+		a multi-byte operation.
+
+		The `Int64` value of `setInt64` is deliberately excluded. Nullable
+		`Int64` values remain a separate, unsupported representation decision.
+	**/
+	public static function isMultiByteIntArgument(kind:OcamlBytesAccessKind, index:Int):Bool {
+		return switch (kind) {
+			case GetUInt16, GetInt32, GetInt64: index == 0;
+			case SetUInt16, SetInt32: index == 0 || index == 1;
+			case SetInt64: index == 0;
+			case Get, Set, GetData, FastGet: false;
 		}
 	}
 
@@ -358,10 +375,7 @@ class OcamlBytesAccessContract {
 		for (index in 0...decision.argumentCount) {
 			final expectsData = decision.kind == OcamlBytesAccessKind.FastGet && index == 0;
 			final expectsInt64 = decision.kind == OcamlBytesAccessKind.SetInt64 && index == 1;
-			final requiresExactInt = switch (decision.kind) {
-				case GetUInt16, SetUInt16, GetInt32, SetInt32, GetInt64, SetInt64: !expectsInt64;
-				case Get, Set, GetData, FastGet: false;
-			}
+			final expectsMultiByteInt = isMultiByteIntArgument(decision.kind, index);
 			final inputSemantic = decision.argumentInputSemanticTypeIds[index];
 			final inputCarrier = decision.argumentInputCarrierTypeIds[index];
 			final outputSemantic = decision.argumentSemanticTypeIds[index];
@@ -379,12 +393,13 @@ class OcamlBytesAccessContract {
 				&& outputSemantic == inputSemantic
 				&& outputCarrier == inputCarrier
 				&& conversion == OcamlBytesAccessArgumentConversion.Identity;
-			} else if (requiresExactInt) {
-				inputSemantic == "Int"
-				&& inputCarrier == "int"
-				&& outputSemantic == "Int"
+			} else if (expectsMultiByteInt) {
+				outputSemantic == "Int"
 				&& outputCarrier == "int"
-				&& conversion == OcamlBytesAccessArgumentConversion.Identity;
+				&& ((inputSemantic == "Int" && inputCarrier == "int" && conversion == OcamlBytesAccessArgumentConversion.Identity)
+					|| (inputSemantic == "Null<Int>"
+						&& inputCarrier == "Obj.t"
+						&& conversion == OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds));
 			} else {
 				outputSemantic == "Int" && outputCarrier == "int" && ((inputSemantic == "Int"
 					&& inputCarrier == "int"

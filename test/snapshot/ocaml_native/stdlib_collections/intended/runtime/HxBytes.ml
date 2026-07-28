@@ -21,6 +21,13 @@ type t = {
 let outside_bounds () : 'a =
   HxRuntime.hx_throw (Obj.repr "OutsideBounds")
 
+(* Haxe 4.3.7 accepts Null<Int> at these declared Int call sites. Eval and
+   Neko both reject null before mutating the Bytes value but expose different
+   target errors. The OCaml target therefore keeps its established,
+   deterministic OutsideBounds policy while preserving present Int values. *)
+let requireMultiByteInt (value : Obj.t) : int =
+  if HxRuntime.is_null value then outside_bounds () else Obj.obj value
+
 let check_range (len_total : int) (pos : int) (len : int) : unit =
   if pos < 0 || len < 0 || pos + len > len_total then outside_bounds () else ()
 

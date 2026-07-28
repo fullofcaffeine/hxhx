@@ -52,19 +52,31 @@ class BytesAccessPlanFixture {
 			"set" => OcamlBytesAccessKind.Set,
 			"setNullableValue" => OcamlBytesAccessKind.Set,
 			"getUInt16" => OcamlBytesAccessKind.GetUInt16,
+			"getUInt16NullablePosition" => OcamlBytesAccessKind.GetUInt16,
 			"setUInt16" => OcamlBytesAccessKind.SetUInt16,
+			"setUInt16NullablePosition" => OcamlBytesAccessKind.SetUInt16,
+			"setUInt16NullableValue" => OcamlBytesAccessKind.SetUInt16,
 			"getInt32" => OcamlBytesAccessKind.GetInt32,
+			"getInt32NullablePosition" => OcamlBytesAccessKind.GetInt32,
 			"setInt32" => OcamlBytesAccessKind.SetInt32,
+			"setInt32NullablePosition" => OcamlBytesAccessKind.SetInt32,
+			"setInt32NullableValue" => OcamlBytesAccessKind.SetInt32,
 			"getInt64" => OcamlBytesAccessKind.GetInt64,
+			"getInt64NullablePosition" => OcamlBytesAccessKind.GetInt64,
 			"setInt64" => OcamlBytesAccessKind.SetInt64,
+			"setInt64NullablePosition" => OcamlBytesAccessKind.SetInt64,
 			"getData" => OcamlBytesAccessKind.GetData,
 			"fastGet" => OcamlBytesAccessKind.FastGet,
 			"getInSourceOrder" => OcamlBytesAccessKind.Get,
 			"setInSourceOrder" => OcamlBytesAccessKind.Set,
+			"setNullablePositionInSourceOrder" => OcamlBytesAccessKind.Set,
 			"getUInt16InSourceOrder" => OcamlBytesAccessKind.GetUInt16,
 			"setInt32InSourceOrder" => OcamlBytesAccessKind.SetInt32,
+			"setUInt16NullablePositionInSourceOrder" => OcamlBytesAccessKind.SetUInt16,
+			"setUInt16NullableValueInSourceOrder" => OcamlBytesAccessKind.SetUInt16,
 			"getInt64InSourceOrder" => OcamlBytesAccessKind.GetInt64,
 			"setInt64InSourceOrder" => OcamlBytesAccessKind.SetInt64,
+			"setInt64NullablePositionInSourceOrder" => OcamlBytesAccessKind.SetInt64,
 			"getDataInSourceOrder" => OcamlBytesAccessKind.GetData,
 			"fastGetInSourceOrder" => OcamlBytesAccessKind.FastGet
 		];
@@ -148,10 +160,20 @@ class BytesAccessPlanFixture {
 					|| decision.receiverRepresentationId.length != 0)) {
 				Context.error('Bytes access case "$name" did not seal the exact checked BytesData read.', field.pos);
 			}
-			if (name == "getNullablePosition") {
-				requireNullableIntConversion(decision, 0, field.pos);
+			if (name == "getNullablePosition" || name == "setNullablePositionInSourceOrder") {
+				requireNullableIntConversion(decision, 0, OcamlBytesAccessArgumentConversion.RequireNonNullInt, field.pos);
 			} else if (name == "setNullableValue") {
-				requireNullableIntConversion(decision, 1, field.pos);
+				requireNullableIntConversion(decision, 1, OcamlBytesAccessArgumentConversion.RequireNonNullInt, field.pos);
+			} else {
+				switch (name) {
+					case "getUInt16NullablePosition", "setUInt16NullablePosition", "getInt32NullablePosition", "setInt32NullablePosition",
+						"getInt64NullablePosition", "setInt64NullablePosition", "setUInt16NullablePositionInSourceOrder",
+						"setInt64NullablePositionInSourceOrder":
+						requireNullableIntConversion(decision, 0, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
+					case "setUInt16NullableValue", "setInt32NullableValue", "setUInt16NullableValueInSourceOrder":
+						requireNullableIntConversion(decision, 1, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
+					case _:
+				}
 			}
 			final occurrence = accessOccurrence(body);
 			if (occurrence == null || first.requireFor(occurrence, representations).id != decision.id)
@@ -236,6 +258,14 @@ class BytesAccessPlanFixture {
 				argumentInputCarrierTypeIds: ["Obj.t"],
 				argumentConversions: [OcamlBytesAccessArgumentConversion.RequireNonNullInt]
 			})
+		]));
+		final nullableNumericSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.GetUInt16
+				&& decision.functionId == "BytesAccessCases.getUInt16NullablePosition");
+		if (nullableNumericSample == null)
+			Context.error("The Bytes access fixture has no nullable getUInt16 decision.", Context.currentPos());
+		expectThrows("invalid-access-argument", () -> new OcamlBytesAccessPlan([
+			reseal(nullableNumericSample, {argumentConversions: [OcamlBytesAccessArgumentConversion.RequireNonNullInt]})
 		]));
 		final int64ReadSample = Lambda.find(decisions,
 			decision -> decision.kind == OcamlBytesAccessKind.GetInt64 && decision.functionId == "BytesAccessCases.getInt64");
@@ -359,10 +389,11 @@ class BytesAccessPlanFixture {
 		}
 	}
 
-	static function requireNullableIntConversion(decision:OcamlBytesAccessDecision, index:Int, position:haxe.macro.Expr.Position):Void {
+	static function requireNullableIntConversion(decision:OcamlBytesAccessDecision, index:Int, expected:OcamlBytesAccessArgumentConversion,
+			position:haxe.macro.Expr.Position):Void {
 		if (decision.argumentInputSemanticTypeIds[index] != "Null<Int>"
 			|| decision.argumentSemanticTypeIds[index] != "Int"
-			|| decision.argumentConversions[index] != OcamlBytesAccessArgumentConversion.RequireNonNullInt) {
+			|| decision.argumentConversions[index] != expected) {
 			Context.error('Bytes access "${decision.id}" did not seal nullable Int argument $index.', position);
 		}
 	}
@@ -378,34 +409,6 @@ class BytesAccessPlanFixture {
 
 	static function unadmittedCases():Array<{name:String, fieldName:String, expression:TypedExpr}> {
 		return [
-			{
-				name: "getUInt16NullablePosition",
-				fieldName: "getUInt16",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Null<Int>):Int {
-					return bytes.getUInt16(position);
-				})
-			},
-			{
-				name: "setUInt16NullableValue",
-				fieldName: "setUInt16",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Int>):Void {
-					bytes.setUInt16(position, value);
-				})
-			},
-			{
-				name: "getInt32NullablePosition",
-				fieldName: "getInt32",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Null<Int>):Int {
-					return bytes.getInt32(position);
-				})
-			},
-			{
-				name: "setInt32NullableValue",
-				fieldName: "setInt32",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Int>):Void {
-					bytes.setInt32(position, value);
-				})
-			},
 			{
 				name: "getFloat",
 				fieldName: "getFloat",

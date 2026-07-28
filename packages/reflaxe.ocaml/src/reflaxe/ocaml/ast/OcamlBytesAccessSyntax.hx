@@ -24,7 +24,8 @@ class OcamlBytesAccessSyntax {
 		if (arguments.length != decision.argumentCount)
 			throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-arity-mismatch]: access "${decision.id}" expected ${decision.argumentCount} arguments but received ${arguments.length}';
 
-		final materialized:Array<{name:String, value:OcamlExpr}> = [];
+		final evaluated:Array<{name:String, value:OcamlExpr}> = [];
+		final converted:Array<{name:String, value:OcamlExpr}> = [];
 		var receiverValue:Null<OcamlExpr> = null;
 		final argumentValues:Array<Null<OcamlExpr>> = [for (_ in 0...decision.argumentCount) null];
 		for (slot in decision.evaluationOrder) {
@@ -32,20 +33,13 @@ class OcamlBytesAccessSyntax {
 				if (decision.invocationKind != OcamlBytesAccessInvocationKind.Instance || receiver == null || receiverValue != null)
 					throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-schedule-mismatch]: access "${decision.id}" has an invalid receiver step';
 				final name = freshName("bytes_access_receiver");
-				materialized.push({name: name, value: buildExpression(receiver)});
+				evaluated.push({name: name, value: buildExpression(receiver)});
 				receiverValue = OcamlExpr.EIdent(name);
 			} else {
 				if (slot < 0 || slot >= arguments.length || argumentValues[slot] != null)
 					throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-schedule-mismatch]: access "${decision.id}" has an invalid argument step $slot';
 				final name = freshName("bytes_access_arg_" + slot);
-				final input = buildExpression(arguments[slot]);
-				final converted = switch (decision.argumentConversions[slot]) {
-					case Identity:
-						input;
-					case RequireNonNullInt:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [input]);
-				}
-				materialized.push({name: name, value: converted});
+				evaluated.push({name: name, value: buildExpression(arguments[slot])});
 				argumentValues[slot] = OcamlExpr.EIdent(name);
 			}
 		}
@@ -56,6 +50,23 @@ class OcamlBytesAccessSyntax {
 		for (index in 0...argumentValues.length)
 			if (argumentValues[index] == null)
 				throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-schedule-mismatch]: access "${decision.id}" did not materialize argument $index';
+		for (index in 0...argumentValues.length) {
+			final input = required(decision, argumentValues[index], 'raw argument $index');
+			final conversion = decision.argumentConversions[index];
+			if (conversion == OcamlBytesAccessArgumentConversion.Identity)
+				continue;
+			final name = freshName("bytes_access_converted_arg_" + index);
+			final value = switch (conversion) {
+				case Identity:
+					throw 'reflaxe.ocaml [ocaml-bytes:access-syntax-conversion-mismatch]: access "${decision.id}" tried to materialize an identity conversion';
+				case RequireNonNullInt:
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [input]);
+				case RequireMultiByteIntOrOutsideBounds:
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "requireMultiByteInt"), [input]);
+			}
+			converted.push({name: name, value: value});
+			argumentValues[index] = OcamlExpr.EIdent(name);
+		}
 
 		final callArguments:Array<OcamlExpr> = [];
 		if (receiverValue != null)
@@ -82,8 +93,12 @@ class OcamlBytesAccessSyntax {
 				callArguments;
 		}
 		var out = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), decision.runtimeOperation), runtimeArguments);
-		for (offset in 0...materialized.length) {
-			final binding = materialized[materialized.length - 1 - offset];
+		for (offset in 0...converted.length) {
+			final binding = converted[converted.length - 1 - offset];
+			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
+		}
+		for (offset in 0...evaluated.length) {
+			final binding = evaluated[evaluated.length - 1 - offset];
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
 		return out;

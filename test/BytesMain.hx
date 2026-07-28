@@ -32,6 +32,11 @@ class BytesMain {
 		return value;
 	}
 
+	static function orderedNullableInt(label:String, value:Null<Int>):Null<Int> {
+		evaluationOrder.push(label);
+		return value;
+	}
+
 	static function orderedInt64(label:String, value:haxe.Int64):haxe.Int64 {
 		evaluationOrder.push(label);
 		return value;
@@ -66,6 +71,27 @@ class BytesMain {
 		}
 		if (!failed)
 			throw "expected OutsideBounds";
+	}
+
+	static function expectOutsideBoundsWithoutMutation(value:Bytes, operation:Void->Void):Void {
+		final before = value.toHex();
+		expectOutsideBounds(operation);
+		if (value.toHex() != before)
+			throw "failed multi-byte access mutated its Bytes receiver";
+	}
+
+	static function expectNullAccessWithoutMutation(value:Bytes, operation:Void->Void):Void {
+		final before = value.toHex();
+		var failed = false;
+		try {
+			operation();
+		} catch (error:Dynamic) {
+			failed = Std.string(error) == "Null Access";
+		}
+		if (!failed)
+			throw "expected Null Access";
+		if (value.toHex() != before)
+			throw "failed single-byte access mutated its Bytes receiver";
 	}
 
 	static function main() {
@@ -255,6 +281,56 @@ class BytesMain {
 			|| evaluationOrder.join(",") != "int64-get-receiver,int64-get-position") {
 			throw "Bytes Int64 read order, bits, or evaluation order changed";
 		}
+
+		final presentPosition:Null<Int> = 0;
+		final presentUInt16Value:Null<Int> = 0x12345;
+		final presentInt32Value:Null<Int> = 0x12345678;
+		final nullableNumeric = Bytes.alloc(8);
+		nullableNumeric.setUInt16(presentPosition, presentUInt16Value);
+		nullableNumeric.setInt32(2, presentInt32Value);
+		nullableNumeric.setInt64(presentPosition, int64Value);
+		final nullableInt64Read = nullableNumeric.getInt64(presentPosition);
+		if (nullableInt64Read.high != int64Value.high || nullableInt64Read.low != int64Value.low)
+			throw "present nullable multi-byte arguments changed their Int values";
+
+		evaluationOrder.resize(0);
+		final nullUInt16Position = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectOutsideBoundsWithoutMutation(nullUInt16Position,
+			() -> orderedBytesValue("uint16-null-position-receiver",
+				nullUInt16Position).setUInt16(orderedNullableInt("uint16-null-position", null), orderedInt("uint16-null-position-value", 0x1234)));
+		if (evaluationOrder.join(",") != "uint16-null-position-receiver,uint16-null-position,uint16-null-position-value")
+			throw "null UInt16 position did not evaluate every input once in source order";
+
+		evaluationOrder.resize(0);
+		final nullBytePosition = bytes([0xaa, 0xbb]);
+		expectNullAccessWithoutMutation(nullBytePosition,
+			() -> orderedBytesValue("byte-null-position-receiver",
+				nullBytePosition).set(orderedNullableInt("byte-null-position", null), orderedInt("byte-null-position-value", 0x12)));
+		if (evaluationOrder.join(",") != "byte-null-position-receiver,byte-null-position,byte-null-position-value")
+			throw "null byte position did not evaluate every input once in source order";
+
+		evaluationOrder.resize(0);
+		final nullUInt16Value = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectOutsideBoundsWithoutMutation(nullUInt16Value,
+			() -> orderedBytesValue("uint16-null-value-receiver",
+				nullUInt16Value).setUInt16(orderedInt("uint16-null-value-position", 0), orderedNullableInt("uint16-null-value", null)));
+		if (evaluationOrder.join(",") != "uint16-null-value-receiver,uint16-null-value-position,uint16-null-value")
+			throw "null UInt16 value did not evaluate every input once in source order";
+
+		final nullInt32 = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectOutsideBoundsWithoutMutation(nullInt32, () -> nullInt32.setInt32(nullInt(), 0x12345678));
+		expectOutsideBoundsWithoutMutation(nullInt32, () -> nullInt32.setInt32(0, nullInt()));
+
+		evaluationOrder.resize(0);
+		final nullInt64Position = bytes([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0, 0x11]);
+		expectOutsideBoundsWithoutMutation(nullInt64Position,
+			() -> orderedBytesValue("int64-null-position-receiver",
+				nullInt64Position).setInt64(orderedNullableInt("int64-null-position", null), orderedInt64("int64-null-position-value", int64Value)));
+		if (evaluationOrder.join(",") != "int64-null-position-receiver,int64-null-position,int64-null-position-value")
+			throw "null Int64 position did not evaluate every input once in source order";
+		expectOutsideBounds(() -> nullableNumeric.getUInt16(nullInt()));
+		expectOutsideBounds(() -> nullableNumeric.getInt32(nullInt()));
+		expectOutsideBounds(() -> nullableNumeric.getInt64(nullInt()));
 
 		expectOutsideBounds(() -> numeric.getUInt16(numeric.length - 1));
 		expectOutsideBounds(() -> numeric.setUInt16(numeric.length - 1, 1));

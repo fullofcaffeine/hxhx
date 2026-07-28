@@ -51,7 +51,7 @@
     {
       "module": "HxBytes",
       "scope": "application",
-      "files": [{ "path": "HxBytes.ml", "sha256": "dbd9f4404e8d0b586e4e380a250eed1f68c56974207377e05314fd500a3c61ce" }],
+      "files": [{ "path": "HxBytes.ml", "sha256": "404fe8a85d9d0bd660f253ada6729520f5424208c91729636903fdc3e0917713" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

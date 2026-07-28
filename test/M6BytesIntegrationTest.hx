@@ -9,6 +9,14 @@ class M6BytesIntegrationTest {
 		}
 	}
 
+	static function assertBeforeAfter(haystack:String, marker:String, first:String, second:String, label:String):Void {
+		final startIndex = haystack.indexOf(marker);
+		final firstIndex = startIndex < 0 ? -1 : haystack.indexOf(first, startIndex);
+		final secondIndex = startIndex < 0 ? -1 : haystack.indexOf(second, startIndex);
+		if (startIndex < 0 || firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex)
+			throw label + ": expected '" + first + "' before '" + second + "' after '" + marker + "'";
+	}
+
 	static function hasCommand(cmd:String):Bool {
 		try {
 			final p = new sys.io.Process(cmd, ["--version"]);
@@ -104,7 +112,13 @@ class M6BytesIntegrationTest {
 		assertContains(content, "let __bytes_mutation_arg_0_", "planned Bytes mutation first argument materialization");
 		assertContains(content, "let __bytes_access_receiver_", "planned Bytes access receiver materialization");
 		assertContains(content, "let __bytes_access_arg_0_", "planned Bytes access argument materialization");
+		assertContains(content, "let __bytes_access_converted_arg_0_", "planned converted Bytes access argument materialization");
 		assertContains(content, "HxRuntime.nullable_int_unwrap", "planned nullable Int mutation crossing");
+		assertContains(content, "HxBytes.requireMultiByteInt", "planned nullable multi-byte Int crossing");
+		assertBeforeAfter(content, '"uint16-null-position-receiver"', '"uint16-null-position-value"', "HxBytes.requireMultiByteInt",
+			"raw multi-byte inputs must run before conversion");
+		assertBeforeAfter(content, '"byte-null-position-receiver"', '"byte-null-position-value"', "HxRuntime.nullable_int_unwrap",
+			"raw single-byte inputs must run before conversion");
 
 		final requirementReportPath = outDir + "/ocaml_runtime_requirement_report.json";
 		if (!sys.FileSystem.exists(requirementReportPath))
@@ -115,11 +129,12 @@ class M6BytesIntegrationTest {
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-access"', "Bytes access runtime capability");
-		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v3"', "Bytes access runtime explanation");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v4"', "Bytes access runtime explanation");
 		assertContains(requirementReport, "2-byte access", "UInt16 access width explanation");
 		assertContains(requirementReport, "4-byte access", "Int32 access width explanation");
 		assertContains(requirementReport, "8-byte access", "Int64 access width explanation");
 		assertContains(requirementReport, "little-endian ordering", "multi-byte ordering explanation");
+		assertContains(requirementReport, "deterministic OutsideBounds policy", "nullable multi-byte failure explanation");
 
 		final loweringReportPath = outDir + "/ocaml_lowering_report.json";
 		if (!sys.FileSystem.exists(loweringReportPath))
