@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -447,6 +448,11 @@ class CompilationContext {
 	/** Records runtime support selected by one sealed Bytes mutation. **/
 	public function recordBytesMutationRuntimeRequirements(decision:OcamlBytesMutationDecision):Void {
 		runtimeRequirements.recordBytesMutation(decision);
+	}
+
+	/** Records runtime support selected by one sealed Bytes access. **/
+	public function recordBytesAccessRuntimeRequirements(decision:OcamlBytesAccessDecision):Void {
+		runtimeRequirements.recordBytesAccess(decision);
 	}
 
 	/** Records runtime support selected by one sealed read-only Bytes operation. **/

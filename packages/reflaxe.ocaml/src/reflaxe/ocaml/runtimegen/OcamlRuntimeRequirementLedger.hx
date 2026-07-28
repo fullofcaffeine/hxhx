@@ -7,6 +7,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationContract;
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessContract;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
@@ -36,6 +38,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final HAXE_BYTES_MUTATION = OcamlBytesMutationContract.RUNTIME_CAPABILITY;
+	public static inline final HAXE_BYTES_ACCESS = OcamlBytesAccessContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
 	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
@@ -164,6 +167,37 @@ class OcamlRuntimeRequirementLedger {
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation mutates one exact haxe.io.Bytes destination through HxBytes after fixing receiver and argument evaluation, range validation, ${decision.overlapPolicy} overlap, and ${decision.valuePolicy} byte behavior; the call returns effect-only Void and does not authorize other write families.'
+		});
+	}
+
+	/**
+		Records why one sealed byte access or data-alias operation needs `HxBytes`.
+
+		The requirement is occurrence-local and carries the already-selected
+		bounds, byte-value, mutation, alias, and result policies. It does not
+		authorize arbitrary `BytesData` indexing or any other Bytes method.
+	**/
+	public function recordBytesAccess(decision:OcamlBytesAccessDecision):Void {
+		OcamlBytesAccessContract.requireDecision(decision);
+		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_ACCESS;
+		if (decision.runtimeRequirementIds[0] != requirementId)
+			throw 'Bytes access "${decision.id}" does not name its exact runtime requirement.';
+		record({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: HAXE_BYTES_ACCESS,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+			},
+			implementationFeature: "haxe-bytes-access-v1",
+			rootModules: ["HxBytes"],
+			profileEligibility: ["metal", "portable"],
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation calls HxBytes after fixing ${decision.boundsPolicy} bounds, ${decision.valuePolicy} byte values, ${decision.mutationPolicy} mutation, ${decision.aliasPolicy} aliasing, and ${decision.resultKind} result behavior; other Bytes and BytesData operations require separate decisions.'
 		});
 	}
 

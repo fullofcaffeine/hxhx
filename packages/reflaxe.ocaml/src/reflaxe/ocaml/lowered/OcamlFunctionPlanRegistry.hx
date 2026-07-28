@@ -13,6 +13,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
+import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan.OcamlBytesMutationPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
@@ -43,6 +45,7 @@ typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
 	final bytesReads:OcamlBytesReadPlan;
@@ -61,6 +64,7 @@ typedef OcamlSealedFunctionPlan = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
 	final bytesReads:OcamlBytesReadPlan;
@@ -81,7 +85,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v45";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v46";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -156,9 +160,12 @@ class OcamlFunctionPlanRegistry {
 	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr,
 			representations:OcamlRepresentationRegistry):OcamlSealedStandaloneExpressionPlan {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
+		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(expression);
+		bytesAccesses.requirePlanBinding(binding);
+		bytesAccesses.requireRepresentations(representations);
 		bytesMutations.requirePlanBinding(binding);
 		bytesMutations.requireRepresentations(representations);
 		bytesProducers.requirePlanBinding(binding);
@@ -167,6 +174,7 @@ class OcamlFunctionPlanRegistry {
 		bytesReads.requireRepresentations(representations);
 		return {
 			binding: binding,
+			bytesAccesses: bytesAccesses,
 			bytesMutations: bytesMutations,
 			bytesProducers: bytesProducers,
 			bytesReads: bytesReads
@@ -186,6 +194,8 @@ class OcamlFunctionPlanRegistry {
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		plan.bytesAccesses.requirePlanBinding(expected);
+		plan.bytesAccesses.requireRepresentations(representations);
 		plan.bytesMutations.requirePlanBinding(expected);
 		plan.bytesMutations.requireRepresentations(representations);
 		plan.bytesProducers.requirePlanBinding(expected);
@@ -295,10 +305,12 @@ class OcamlFunctionPlanRegistry {
 
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
-			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan,
-			controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
+			bytesAccesses:OcamlBytesAccessPlan, bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan,
+			calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		bytesAccesses.requirePlanBinding(binding);
 		bytesMutations.requirePlanBinding(binding);
 		bytesProducers.requirePlanBinding(binding);
 		bytesReads.requirePlanBinding(binding);
@@ -322,6 +334,7 @@ class OcamlFunctionPlanRegistry {
 				binding: binding,
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
+				bytesAccesses: bytesAccesses,
 				bytesMutations: bytesMutations,
 				bytesProducers: bytesProducers,
 				bytesReads: bytesReads,

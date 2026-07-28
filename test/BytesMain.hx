@@ -1,4 +1,5 @@
 import haxe.io.Bytes;
+import haxe.io.BytesData;
 import haxe.io.Encoding;
 
 /**
@@ -22,6 +23,11 @@ class BytesMain {
 	}
 
 	static function orderedInt(label:String, value:Int):Int {
+		evaluationOrder.push(label);
+		return value;
+	}
+
+	static function orderedData(label:String, value:BytesData):BytesData {
 		evaluationOrder.push(label);
 		return value;
 	}
@@ -55,9 +61,15 @@ class BytesMain {
 		if (b.get(1) != a)
 			throw "unexpected";
 
-		b.set(0, "z".charCodeAt(0));
-		if (b.toString().charAt(0) != "z")
-			throw "unexpected";
+		evaluationOrder.resize(0);
+		final accessed = orderedBytesValue("get-receiver", b).get(orderedInt("get-position", 1));
+		if (accessed != a || evaluationOrder.join(",") != "get-receiver,get-position")
+			throw "Bytes get evaluation order changed";
+
+		evaluationOrder.resize(0);
+		orderedBytesValue("set-receiver", b).set(orderedInt("set-position", 0), orderedInt("set-value", 378));
+		if (b.get(0) != 122 || evaluationOrder.join(",") != "set-receiver,set-position,set-value")
+			throw "Bytes set evaluation or low-byte masking changed";
 
 		var sub = b.sub(1, 3);
 		if (sub.toString() != "abc")
@@ -70,6 +82,7 @@ class BytesMain {
 		if (b.getString(1, 3, Encoding.UTF8) != "abc" || b.getString(1, 3, Encoding.RawNative) != "abc")
 			throw "unexpected explicit encoding";
 
+		evaluationOrder.resize(0);
 		final ordered = orderedBytes().sub(orderedInt("position", 1), orderedInt("length", 2));
 		if (ordered.toString() != "bc" || evaluationOrder.join(",") != "receiver,position,length")
 			throw "Bytes read evaluation order changed";
@@ -113,6 +126,11 @@ class BytesMain {
 			throw "Bytes fill accepted a null Int";
 
 		final data = Bytes.ofString("abc").getData();
+		evaluationOrder.resize(0);
+		final orderedDataAlias = orderedBytesValue("data-receiver", Bytes.ofString("abc")).getData();
+		final orderedFast = Bytes.fastGet(orderedData("fast-data", orderedDataAlias), orderedInt("fast-position", 1));
+		if (orderedFast != "b".charCodeAt(0) || evaluationOrder.join(",") != "data-receiver,fast-data,fast-position")
+			throw "Bytes getData/fastGet evaluation order changed";
 		final declaredShort = new Bytes(1, data);
 		if (declaredShort.length != 1 || declaredShort.toString() != "a")
 			throw "explicit Bytes length was not preserved";
@@ -129,6 +147,24 @@ class BytesMain {
 		}
 		if (!outsideDeclaredLength)
 			throw "Bytes access ignored the declared length";
+
+		var nullableSetFailedBeforeBounds = false;
+		try {
+			declaredShort.set(declaredShort.length, nullInt());
+		} catch (error:Dynamic) {
+			nullableSetFailedBeforeBounds = Std.string(error) == "Null Access";
+		}
+		if (!nullableSetFailedBeforeBounds)
+			throw "Bytes set did not preserve nullable Int conversion before range validation";
+
+		var outsideNativeData = false;
+		try {
+			Bytes.fastGet(data, dataAlias.length);
+		} catch (error:Dynamic) {
+			outsideNativeData = Std.string(error) == "OutsideBounds";
+		}
+		if (!outsideNativeData)
+			throw "Bytes fastGet did not apply the declared OCaml target bounds policy";
 
 		var outsideMutationRange = false;
 		try {

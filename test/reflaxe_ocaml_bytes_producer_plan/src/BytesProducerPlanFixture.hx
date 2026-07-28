@@ -197,6 +197,7 @@ class BytesProducerPlanFixture {
 				bodyRevision: firstStandalone.binding.bodyRevision + ":changed",
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
+			bytesAccesses: firstStandalone.bytesAccesses,
 			bytesMutations: firstStandalone.bytesMutations,
 			bytesProducers: firstStandalone.bytesProducers,
 			bytesReads: firstStandalone.bytesReads

@@ -632,6 +632,36 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
+		Selects the target-native mutable carrier for exact `haxe.io.BytesData`.
+
+		The OCaml standard-library override keeps this type opaque to portable
+		Haxe while mapping it to the `bytes` value stored inside `HxBytes.t`.
+		The representation records shared aliasing only; an occurrence plan must
+		still authorize every producer, consumer, null crossing, or mutation.
+	**/
+	public function selectExactBytesData(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		requireBytesInternalDomain(domain, OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID);
+		return register({
+			semanticTypeId: OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: OcamlBytesRepresentationContract.DATA_CARRIER_TYPE_ID,
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "Exact haxe.io.BytesData uses the mutable native bytes value stored inside HxBytes.t. getData and ofData may share this carrier without copying, so mutations remain visible through every alias. This proof does not admit null materialization, arbitrary indexing, storage defaults, calls, or native boundaries without a separate occurrence decision.",
+			proof: {
+				id: OcamlBytesRepresentationContract.DATA_PROOF_ID,
+				claim: "The target-owned haxe.io.BytesData override denotes the mutable OCaml bytes value stored inside HxBytes.t. Reusing that exact carrier preserves reference identity and shared mutations; each operation still requires a revision-bound occurrence proof."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
 		Selects the internal carrier for exact core `Null<haxe.io.Bytes>`.
 
 		The explicit core wrapper receives its own semantic identity even though
@@ -689,6 +719,27 @@ class OcamlRepresentationRegistry {
 			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
 			|| decision.proof.id != OcamlBytesRepresentationContract.DIRECT_PROOF_ID) {
 			throw 'reflaxe.ocaml [ocaml-bytes:representation-mismatch]: producer expects the sealed direct Bytes internal carrier, but "$representationId" selects incompatible facts';
+		}
+		return decision;
+	}
+
+	/** Revalidates one exact target-owned `BytesData` representation reference. */
+	public function requireExactBytesDataInternal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
+		final decision = require(representationId, programRevision);
+		if (decision.id != OcamlBytesRepresentationContract.DATA_INTERNAL_REPRESENTATION_ID
+			|| decision.revision != representationRevision
+			|| decision.semanticTypeId != OcamlBytesRepresentationContract.DATA_SEMANTIC_TYPE_ID
+			|| decision.carrierTypeId != OcamlBytesRepresentationContract.DATA_CARRIER_TYPE_ID
+			|| decision.domain != OcamlRepresentationDomain.InternalValue
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+			|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+			|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			|| decision.proof.id != OcamlBytesRepresentationContract.DATA_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-bytes:data-representation-mismatch]: access planning expects the sealed BytesData internal carrier, but "$representationId" selects incompatible facts';
 		}
 		return decision;
 	}
