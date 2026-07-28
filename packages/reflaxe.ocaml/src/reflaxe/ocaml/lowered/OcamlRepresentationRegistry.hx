@@ -38,7 +38,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v13";
+	public static inline final MODEL_REVISION = "ocaml-representation-v14";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -403,6 +403,38 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
+		Returns whether a type is the exact `haxe.io.BytesData` declaration.
+
+		Upstream Haxe targets may expose that declaration as a typedef while the
+		OCaml target override keeps it as an opaque abstract. Recognizing either
+		raw declaration lets host-side planning and OCaml type mapping agree on
+		the semantic argument without following into either target's native
+		implementation.
+	**/
+	public static function isExactBytesData(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, parameters):
+				final abstractType = abstractRef.get();
+				parameters.length == 0
+				&& abstractType.pack != null
+				&& abstractType.pack.length == 2
+				&& abstractType.pack[0] == "haxe"
+				&& abstractType.pack[1] == "io"
+				&& abstractType.name == "BytesData";
+			case TType(typeRef, parameters):
+				final typedefType = typeRef.get();
+				parameters.length == 0
+				&& typedefType.pack != null
+				&& typedefType.pack.length == 2
+				&& typedefType.pack[0] == "haxe"
+				&& typedefType.pack[1] == "io"
+				&& typedefType.name == "BytesData";
+			case _:
+				false;
+		}
+	}
+
+	/**
 		Returns whether a type is exact core `Null<haxe.io.Bytes>`.
 
 		Haxe reference values are nullable even without this wrapper. Keeping the
@@ -596,7 +628,7 @@ class OcamlRepresentationRegistry {
 	public function selectExactBytes(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		requireBytesInternalDomain(domain, OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID);
 		return selectBytesReferenceCarrier(OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID, OcamlBytesRepresentationContract.DIRECT_PROOF_ID,
-			"Direct haxe.io.Bytes is a nullable Haxe reference type. Non-null values use the mutable HxBytes.t container directly, copies share that container, and aliases observe the same byte mutations. A separate occurrence proof must authorize every runtime-null crossing, storage location, receiver, operation, or native boundary.");
+			'Direct haxe.io.Bytes is a nullable Haxe reference type. Non-null values use one mutable ${OcamlBytesRepresentationContract.CARRIER_TYPE_ID} container with shape ${OcamlBytesRepresentationContract.CARRIER_SHAPE_ID}: the declared Haxe length is stored separately from one ${OcamlBytesRepresentationContract.DATA_CARRIER_TYPE_ID} value, range-oriented operations use ${OcamlBytesRepresentationContract.RANGE_BOUNDS_POLICY}, and getData/ofData preserve a ${OcamlBytesRepresentationContract.DATA_ALIASING_POLICY}. Copies share the container and observe the same byte mutations. A separate occurrence proof must authorize every construction policy, runtime-null crossing, storage location, receiver, operation, or native boundary.');
 	}
 
 	/**
@@ -610,7 +642,7 @@ class OcamlRepresentationRegistry {
 		requireBytesInternalDomain(domain, OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID);
 		return selectBytesReferenceCarrier(OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID,
 			OcamlBytesRepresentationContract.EXPLICIT_NULL_PROOF_ID,
-			"Exact core Null<haxe.io.Bytes> preserves its explicit typed wrapper while using the same nullable Haxe reference value set and mutable HxBytes.t carrier as direct Bytes. This decision records identity and alias behavior only; null materialization, storage, conversion, receivers, operations, and native boundaries remain unadmitted.");
+			'Exact core Null<haxe.io.Bytes> preserves its explicit typed wrapper while using the same nullable Haxe reference value set and ${OcamlBytesRepresentationContract.CARRIER_SHAPE_ID} mutable carrier as direct Bytes. This decision records carrier shape, identity, and alias behavior only; construction, null materialization, storage, conversion, receivers, operations, and native boundaries remain unadmitted.');
 	}
 
 	function selectBytesReferenceCarrier(semanticTypeId:String, proofId:String, proofClaim:String):OcamlRepresentationDecision {

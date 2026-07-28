@@ -1,5 +1,12 @@
 import haxe.io.Bytes;
 
+/**
+	Exercises the public Bytes API and the stdlib-only constructor contract.
+
+	The constructor checks prove that the OCaml carrier preserves an explicit
+	Haxe length separately from its aliased native data.
+**/
+@:access(haxe.io.Bytes)
 class BytesMain {
 	static function main() {
 		var b = Bytes.ofString("xxxxxx");
@@ -32,5 +39,23 @@ class BytesMain {
 		filled.fill(0, 4, "A".charCodeAt(0));
 		if (filled.toString() != "AAAA")
 			throw "unexpected";
+
+		final data = Bytes.ofString("abc").getData();
+		final declaredShort = new Bytes(1, data);
+		if (declaredShort.length != 1 || declaredShort.toString() != "a")
+			throw "explicit Bytes length was not preserved";
+		declaredShort.set(0, "z".charCodeAt(0));
+		final dataAlias = Bytes.ofData(data);
+		if (dataAlias.length != 3 || dataAlias.toString() != "zbc" || Bytes.fastGet(data, 0) != "z".charCodeAt(0))
+			throw "Bytes data alias was not preserved";
+
+		var outsideDeclaredLength = false;
+		try {
+			declaredShort.get(1);
+		} catch (_) {
+			outsideDeclaredLength = true;
+		}
+		if (!outsideDeclaredLength)
+			throw "Bytes access ignored the declared length";
 	}
 }

@@ -122,10 +122,10 @@ class OcamlRuntimeRequirementLedger {
 				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
 				id: OcamlBytesProducerContract.SEMANTIC_TYPE_ID
 			},
-			implementationFeature: "haxe-bytes-producer-v1",
+			implementationFeature: "haxe-bytes-producer-v2",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
-			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes; nullable storage, receivers, indexing, and mutation require separate decisions.'
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes using ${decision.constructionPolicy}; nullable storage, receivers, indexing, and mutation require separate decisions.'
 		});
 	}
 

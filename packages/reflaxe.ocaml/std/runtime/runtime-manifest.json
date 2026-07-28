@@ -51,7 +51,7 @@
     {
       "module": "HxBytes",
       "scope": "application",
-      "files": [{ "path": "HxBytes.ml", "sha256": "ed49bcd6de29db07cfab2f1867a799e2a8102b376b0b674af55e4f2e047b48c9" }],
+      "files": [{ "path": "HxBytes.ml", "sha256": "35e44a6711b66e8d4f4d7e12945ba9d3cad49c64bc057f0aee9324063d11c8a0" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -78,7 +78,7 @@
     {
       "module": "HxFile",
       "scope": "application",
-      "files": [{ "path": "HxFile.ml", "sha256": "08ffce8b27046461491d0d6d5267d6864db75d54e487ecf305d3d6e1d4616fd2" }],
+      "files": [{ "path": "HxFile.ml", "sha256": "9ebcd9c3944652ded8f256bdc7336b703a384d5210bc836892c13a51e47a0696" }],
       "dependencies": ["HxBytes"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

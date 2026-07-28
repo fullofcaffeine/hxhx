@@ -3436,6 +3436,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final a = aRef.get();
 				final aPack = a.pack ?? [];
 
+				if (OcamlRepresentationRegistry.isExactBytesData(t))
+					return OcamlTypeExpr.TIdent("bytes");
+
 				// OCaml-native surface: treat `ocaml.*` abstracts as concrete OCaml types so they can
 				// appear in generated type annotations (records, signatures, future .mli output)
 				// without degrading to `Obj.t`.

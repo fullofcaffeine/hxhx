@@ -9,7 +9,8 @@ package haxe.io;
 	  degrade to non-byte runtime helpers and crash in strict portable runs.
 
 	How this override works
-	- Reads are routed through `Bytes.fastGet`, which the backend maps to `HxBytes.get`.
+	- Reads are routed through `Bytes.fastGet`, which the backend maps to the
+	  native-data `HxBytes.fastGet` primitive.
 	- Buffer copies are routed through `buf.set(..., Bytes.fastGet(...))`, avoiding raw
 	  `BytesData` indexing while preserving observable behavior.
 **/

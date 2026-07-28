@@ -15,7 +15,7 @@ abstract BytesWrapper(Bytes) from Bytes to Bytes {}
 **/
 @:access(haxe.io.Bytes)
 class BytesProducerCases {
-	public static function unadmittedInternalConstructor(length:Int, data:haxe.io.BytesData):Bytes {
+	public static function internalConstructor(length:Int, data:haxe.io.BytesData):Bytes {
 		return new Bytes(length, data);
 	}
 

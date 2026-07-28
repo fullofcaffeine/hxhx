@@ -7,6 +7,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesConstructionPolicy;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerKind;
@@ -45,39 +46,52 @@ class BytesProducerPlanFixture {
 		verifyRepresentationOracleAndContract(representations);
 		final cases = caseFields();
 		final expected = [
+			"internalConstructor" => {
+				kind: OcamlBytesProducerKind.Constructor,
+				encoding: OcamlBytesEncodingKind.NotApplicable,
+				constructionPolicy: OcamlBytesConstructionPolicy.ExplicitLengthAliasedData,
+				argumentCount: 2
+			},
 			"alloc" => {
 				kind: OcamlBytesProducerKind.Alloc,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 1
 			},
 			"ofStringDefault" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.Omitted,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 1
 			},
 			"ofStringExplicitNull" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.ExplicitNull,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 2
 			},
 			"ofStringUtf8" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.UTF8,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 2
 			},
 			"ofStringRawNative" => {
 				kind: OcamlBytesProducerKind.OfString,
 				encoding: OcamlBytesEncodingKind.RawNative,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 2
 			},
 			"ofData" => {
 				kind: OcamlBytesProducerKind.OfData,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthAliasedData,
 				argumentCount: 1
 			},
 			"ofHex" => {
 				kind: OcamlBytesProducerKind.OfHex,
 				encoding: OcamlBytesEncodingKind.NotApplicable,
+				constructionPolicy: OcamlBytesConstructionPolicy.DerivedLengthOwnedData,
 				argumentCount: 1
 			}
 		];
@@ -101,6 +115,7 @@ class BytesProducerPlanFixture {
 			final decision = decisions[0];
 			if (decision.kind != contract.kind
 				|| decision.encoding != contract.encoding
+				|| decision.constructionPolicy != contract.constructionPolicy
 				|| decision.argumentCount != contract.argumentCount
 				|| decision.resultSemanticTypeId != OcamlBytesProducerContract.SEMANTIC_TYPE_ID
 				|| decision.resultCarrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
@@ -120,16 +135,6 @@ class BytesProducerPlanFixture {
 			if (first.requireFor(occurrence, representations).id != decision.id)
 				Context.error('Bytes producer case "$name" did not resolve its exact sealed occurrence.', field.pos);
 			allDecisions.push(decision);
-		}
-
-		final unadmittedBody = cases.get("unadmittedInternalConstructor").expr();
-		final constructorOccurrence = firstConstructor(unadmittedBody);
-		if (constructorOccurrence == null)
-			Context.error("The unadmitted constructor fixture has no typed constructor occurrence.", Context.currentPos());
-		if (OcamlBytesProducerPlan.admittedKind(constructorOccurrence) != null
-			|| new OcamlBytesProducerPlanner(binding("unadmittedInternalConstructor"), representations).plan(unadmittedBody).decisions().length != 0) {
-			Context.error("The internal Bytes constructor must remain outside the producer plan until both length and data are represented.",
-				constructorOccurrence.pos);
 		}
 
 		final ledger = new OcamlRuntimeRequirementLedger();
@@ -152,6 +157,7 @@ class BytesProducerPlanFixture {
 		expectThrows("duplicate-producer", () -> new OcamlBytesProducerPlan([sample, sample]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {kind: OcamlBytesProducerKind.Alloc})]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {argumentCount: 1})]));
+		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {constructionPolicy: cast "invalid-policy"})]));
 		expectThrows("invalid-producer", () -> ledger.recordBytesProducer(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-producer", () -> new OcamlBytesProducerPlan([sample]).requirePlanBinding({
 			functionId: sample.functionId,
@@ -223,6 +229,10 @@ class BytesProducerPlanFixture {
 		final explicitNull = representations.selectExactNullBytes(OcamlRepresentationDomain.InternalValue);
 		for (decision in [direct, explicitNull]) {
 			if (decision.carrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+				|| OcamlBytesRepresentationContract.DATA_CARRIER_TYPE_ID != "bytes"
+				|| OcamlBytesRepresentationContract.CARRIER_SHAPE_ID != "explicit-length+mutable-native-data-v1"
+				|| OcamlBytesRepresentationContract.DATA_ALIASING_POLICY != "shared-native-data-alias"
+				|| OcamlBytesRepresentationContract.RANGE_BOUNDS_POLICY != "declared-length"
 				|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
 				|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
 				|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
@@ -280,22 +290,6 @@ class BytesProducerPlanFixture {
 		return found;
 	}
 
-	static function firstConstructor(body:TypedExpr):Null<TypedExpr> {
-		var found:Null<TypedExpr> = null;
-		function visit(expression:TypedExpr):Void {
-			if (found != null)
-				return;
-			switch (expression.expr) {
-				case TNew(classRef, _, _) if (OcamlBytesProducerPlan.isBytesClass(classRef.get())):
-					found = expression;
-				case _:
-					TypedExprTools.iter(expression, visit);
-			}
-		}
-		visit(body);
-		return found;
-	}
-
 	static function copy(decision:OcamlBytesProducerDecision, changes:Dynamic):OcamlBytesProducerDecision {
 		final value:Dynamic = {
 			id: decision.id,
@@ -308,6 +302,7 @@ class BytesProducerPlanFixture {
 			argumentCount: decision.argumentCount,
 			argumentEvaluationOrder: decision.argumentEvaluationOrder.copy(),
 			encoding: decision.encoding,
+			constructionPolicy: decision.constructionPolicy,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultNullability: decision.resultNullability,

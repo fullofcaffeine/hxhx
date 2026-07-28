@@ -18,6 +18,8 @@ class OcamlBytesProducerSyntax {
 			throw 'reflaxe.ocaml [ocaml-bytes:syntax-arity-mismatch]: producer "${decision.id}" expected ${decision.argumentCount} arguments but received ${arguments.length}';
 		final built = [for (index in decision.argumentEvaluationOrder) buildArgument(arguments[index])];
 		return switch (decision.kind) {
+			case Constructor:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "create"), [built[0], built[1]]);
 			case Alloc:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "alloc"), [built[0]]);
 			case OfString:

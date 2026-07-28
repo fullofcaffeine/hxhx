@@ -1813,8 +1813,12 @@ class OcamlBuilder {
 			|| OcamlBytesProducerPlan.admittedKind(e) == null ? null : currentBytesProducerPlan.requireFor(e, representationRegistry);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case TNew(_, _, arguments) if (plannedBytesProducer != null):
+				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
 			case TCall(_, arguments) if (plannedBytesProducer != null):
 				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
+			case TNew(_, _, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
+				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes producer reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, arguments) if (plannedCall != null):
@@ -2062,11 +2066,7 @@ class OcamlBuilder {
 					}
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), ctor), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 				} else if (isStdBytesClass(cls)) {
-					#if macro
-					guardrailError("reflaxe.ocaml [ocaml-bytes:constructor-unadmitted]: the internal Bytes(length, data) constructor needs a representation that preserves both arguments; use a supported public Bytes producer.",
-						e.pos);
-					#end
-					OcamlExpr.EConst(OcamlConst.CUnit);
+					bytesProducerInvariant("the internal Bytes constructor reached legacy syntax without its sealed occurrence plan", e.pos);
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
 					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
@@ -3019,9 +3019,10 @@ class OcamlBuilder {
 													// Map to bounds-checked runtime read for now.
 													// BytesData is target-opaque in portable mode, so cast dynamic carriers
 													// back to runtime bytes before calling `HxBytes.get`.
-													final bytesArg = isDynamicLike(args[0].t) ? OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-														[buildExpr(args[0])]) : buildExpr(args[0]);
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [bytesArg, buildExpr(args[1])]);
+													final bytesArg = !OcamlRepresentationRegistry.isExactBytesData(args[0].t)
+														&& isDynamicLike(args[0].t) ? OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
+															[buildExpr(args[0])]) : buildExpr(args[0]);
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "fastGet"), [bytesArg, buildExpr(args[1])]);
 												case _:
 													#if macro
 													guardrailError("reflaxe.ocaml (M6): unsupported Bytes static method '" + cf.name

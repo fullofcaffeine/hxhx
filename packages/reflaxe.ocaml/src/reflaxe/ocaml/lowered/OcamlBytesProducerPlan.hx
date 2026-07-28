@@ -7,6 +7,7 @@ import haxe.macro.Type.ClassType;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesConstructionPolicy;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerKind;
@@ -39,7 +40,8 @@ class OcamlBytesProducerPlan {
 				existing -> existing.kind == decision.kind
 					&& existing.calleeId == decision.calleeId
 					&& existing.argumentCount == decision.argumentCount
-					&& existing.encoding == decision.encoding);
+					&& existing.encoding == decision.encoding
+					&& existing.constructionPolicy == decision.constructionPolicy);
 			if (duplicate != null) {
 				if (fingerprint(duplicate) != fingerprint(decision))
 					throw 'reflaxe.ocaml [ocaml-bytes:conflicting-producer]: Bytes producer identity "${decision.id}" selects different facts';
@@ -103,6 +105,12 @@ class OcamlBytesProducerPlan {
 		if (!isExactBytesType(expression.t))
 			return null;
 		return switch (expression.expr) {
+			case TNew(classRef, _, arguments)
+				if (isBytesClass(classRef.get())
+					&& arguments.length == 2
+					&& OcamlRepresentationRegistry.isExactInt(arguments[0].t)
+					&& OcamlRepresentationRegistry.isExactBytesData(arguments[1].t)):
+				OcamlBytesProducerKind.Constructor;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
@@ -166,6 +174,15 @@ class OcamlBytesProducerPlan {
 		if (!isExactBytesType(expression.t) || admittedKind(expression) != decision.kind)
 			return false;
 		return switch (expression.expr) {
+			case TNew(classRef, _, arguments):
+				final classType = classRef.get();
+				final constructor = classType.constructor == null ? null : classType.constructor.get();
+				constructor != null
+				&& arguments.length == decision.argumentCount
+				&& OcamlRepresentationRegistry.isExactInt(arguments[0].t)
+				&& OcamlRepresentationRegistry.isExactBytesData(arguments[1].t)
+				&& OcamlCallPlanner.calleeId(classType, constructor) == decision.calleeId
+				&& decision.encoding == OcamlBytesEncodingKind.NotApplicable;
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, arguments): arguments.length == decision.argumentCount && OcamlCallPlanner.calleeId(classRef.get(),
 					fieldRef.get()) == decision.calleeId && encodingForKind(decision.kind, arguments) == decision.encoding;
 			case _:
@@ -195,6 +212,7 @@ class OcamlBytesProducerPlan {
 			Std.string(decision.argumentCount),
 			decision.argumentEvaluationOrder.join(","),
 			(decision.encoding : String),
+			(decision.constructionPolicy : String),
 			decision.resultSemanticTypeId,
 			decision.resultCarrierTypeId,
 			decision.resultNullability,
@@ -222,6 +240,7 @@ class OcamlBytesProducerPlan {
 			argumentCount: decision.argumentCount,
 			argumentEvaluationOrder: decision.argumentEvaluationOrder.copy(),
 			encoding: decision.encoding,
+			constructionPolicy: decision.constructionPolicy,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultNullability: decision.resultNullability,
@@ -296,11 +315,17 @@ class OcamlBytesProducerPlanner {
 		if (resultRepresentation.programRevision != binding.programRevision)
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-representation]: producer ${operation.calleeId} belongs to ${binding.programRevision}, but its Bytes carrier belongs to ${resultRepresentation.programRevision}';
 		final argumentCount = switch (expression.expr) {
+			case TNew(_, _, arguments): arguments.length;
 			case TCall(_, arguments): arguments.length;
 			case _: 0;
 		}
+		final constructionPolicy = switch (kind) {
+			case Constructor: OcamlBytesConstructionPolicy.ExplicitLengthAliasedData;
+			case OfData: OcamlBytesConstructionPolicy.DerivedLengthAliasedData;
+			case Alloc, OfString, OfHex: OcamlBytesConstructionPolicy.DerivedLengthOwnedData;
+		}
 		final id = OcamlBytesProducerContract.idFor(binding.functionId, binding.programRevision, binding.bodyRevision, binding.pipelineRevision, source, kind,
-			operation.calleeId, argumentCount, encoding, resultRepresentation.id, resultRepresentation.revision);
+			operation.calleeId, argumentCount, encoding, resultRepresentation.id, resultRepresentation.revision, constructionPolicy);
 		return {
 			id: id,
 			source: source,
@@ -312,6 +337,7 @@ class OcamlBytesProducerPlanner {
 			argumentCount: argumentCount,
 			argumentEvaluationOrder: [for (index in 0...argumentCount) index],
 			encoding: encoding,
+			constructionPolicy: constructionPolicy,
 			resultSemanticTypeId: OcamlBytesProducerContract.SEMANTIC_TYPE_ID,
 			resultCarrierTypeId: resultRepresentation.carrierTypeId,
 			resultNullability: OcamlBytesProducerContract.RESULT_NULLABILITY,
@@ -334,6 +360,17 @@ class OcamlBytesProducerPlanner {
 		fieldName:String
 	} {
 		return switch (expression.expr) {
+			case TNew(classRef, _, _):
+				final classType = classRef.get();
+				final constructor = classType.constructor == null ? null : classType.constructor.get();
+				if (constructor == null)
+					throw 'reflaxe.ocaml [ocaml-bytes:invalid-producer]: admitted Bytes constructor has no typed declaration';
+				{
+					calleeId: OcamlCallPlanner.calleeId(classType, constructor),
+					moduleId: classType.module,
+					typeName: classType.name,
+					fieldName: constructor.name
+				};
 			case TCall({expr: TField(_, FStatic(classRef, fieldRef))}, _):
 				final classType = classRef.get();
 				final field = fieldRef.get();
