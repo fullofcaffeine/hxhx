@@ -42,6 +42,11 @@ class BytesMain {
 		return value;
 	}
 
+	static function orderedFloat(label:String, value:Float):Float {
+		evaluationOrder.push(label);
+		return value;
+	}
+
 	static function orderedData(label:String, value:BytesData):BytesData {
 		evaluationOrder.push(label);
 		return value;
@@ -338,5 +343,74 @@ class BytesMain {
 		expectOutsideBounds(() -> numeric.setInt32(numeric.length - 3, 1));
 		expectOutsideBounds(() -> int64Bytes.getInt64(1));
 		expectOutsideBounds(() -> int64Bytes.setInt64(1, int64Value));
+
+		final float32Bytes = Bytes.alloc(4);
+		evaluationOrder.resize(0);
+		orderedBytesValue("float32-set-receiver", float32Bytes).setFloat(orderedInt("float32-set-position", 0), orderedFloat("float32-set-value", 0.1));
+		if (float32Bytes.toHex() != "cdcccc3d"
+			|| evaluationOrder.join(",") != "float32-set-receiver,float32-set-position,float32-set-value") {
+			throw "Bytes Float32 rounding, byte order, or write evaluation order changed";
+		}
+		evaluationOrder.resize(0);
+		final float32Read = orderedBytesValue("float32-get-receiver", float32Bytes).getFloat(orderedInt("float32-get-position", 0));
+		if (float32Read <= 0.1 || float32Read >= 0.10000001 || evaluationOrder.join(",") != "float32-get-receiver,float32-get-position") {
+			throw "Bytes Float32 readback or read evaluation order changed";
+		}
+		float32Bytes.setFloat(0, -0.0);
+		final negativeFloat32Zero = float32Bytes.getFloat(0);
+		if (float32Bytes.toHex() != "00000080" || negativeFloat32Zero != 0.0 || 1.0 / negativeFloat32Zero != Math.NEGATIVE_INFINITY)
+			throw "Bytes Float32 negative zero changed";
+		float32Bytes.setFloat(0, Math.POSITIVE_INFINITY);
+		if (float32Bytes.toHex() != "0000807f" || float32Bytes.getFloat(0) != Math.POSITIVE_INFINITY)
+			throw "Bytes Float32 positive Infinity changed";
+		float32Bytes.setFloat(0, Math.NaN);
+		if (!Math.isNaN(float32Bytes.getFloat(0)))
+			throw "Bytes Float32 NaN classification changed";
+		final float32Subnormal = Bytes.ofHex("01000000").getFloat(0);
+		float32Bytes.setFloat(0, float32Subnormal);
+		if (float32Bytes.toHex() != "01000000")
+			throw "Bytes Float32 subnormal round trip changed";
+
+		final float64Bytes = Bytes.alloc(8);
+		evaluationOrder.resize(0);
+		orderedBytesValue("float64-set-receiver", float64Bytes).setDouble(orderedInt("float64-set-position", 0), orderedFloat("float64-set-value", 0.1));
+		if (float64Bytes.toHex() != "9a9999999999b93f"
+			|| evaluationOrder.join(",") != "float64-set-receiver,float64-set-position,float64-set-value") {
+			throw "Bytes Float64 value, byte order, or write evaluation order changed";
+		}
+		evaluationOrder.resize(0);
+		final float64Read = orderedBytesValue("float64-get-receiver", float64Bytes).getDouble(orderedInt("float64-get-position", 0));
+		if (float64Read != 0.1 || evaluationOrder.join(",") != "float64-get-receiver,float64-get-position")
+			throw "Bytes Float64 readback or read evaluation order changed";
+		float64Bytes.setDouble(0, -0.0);
+		final negativeFloat64Zero = float64Bytes.getDouble(0);
+		if (float64Bytes.toHex() != "0000000000000080"
+			|| negativeFloat64Zero != 0.0
+			|| 1.0 / negativeFloat64Zero != Math.NEGATIVE_INFINITY)
+			throw "Bytes Float64 negative zero changed";
+		float64Bytes.setDouble(0, Math.NEGATIVE_INFINITY);
+		if (float64Bytes.toHex() != "000000000000f0ff" || float64Bytes.getDouble(0) != Math.NEGATIVE_INFINITY)
+			throw "Bytes Float64 negative Infinity changed";
+		float64Bytes.setDouble(0, Math.NaN);
+		if (!Math.isNaN(float64Bytes.getDouble(0)))
+			throw "Bytes Float64 NaN classification changed";
+		final float64Subnormal = Bytes.ofHex("0100000000000000").getDouble(0);
+		float64Bytes.setDouble(0, float64Subnormal);
+		if (float64Bytes.toHex() != "0100000000000000")
+			throw "Bytes Float64 subnormal round trip changed";
+
+		evaluationOrder.resize(0);
+		final nullFloat32Position = bytes([0xaa, 0xbb, 0xcc, 0xdd]);
+		expectOutsideBoundsWithoutMutation(nullFloat32Position,
+			() -> orderedBytesValue("float32-null-position-receiver",
+				nullFloat32Position).setFloat(orderedNullableInt("float32-null-position", null), orderedFloat("float32-null-position-value", 1.25)));
+		if (evaluationOrder.join(",") != "float32-null-position-receiver,float32-null-position,float32-null-position-value")
+			throw "null Float32 position did not evaluate every input once in source order";
+		expectOutsideBounds(() -> Bytes.alloc(4).getFloat(1));
+		final float32Bounds = Bytes.ofHex("aabbccdd");
+		expectOutsideBoundsWithoutMutation(float32Bounds, () -> float32Bounds.setFloat(1, 1.25));
+		expectOutsideBounds(() -> Bytes.alloc(8).getDouble(1));
+		final float64Bounds = Bytes.ofHex("aabbccddeeff0011");
+		expectOutsideBoundsWithoutMutation(float64Bounds, () -> float64Bounds.setDouble(1, 1.25));
 	}
 }

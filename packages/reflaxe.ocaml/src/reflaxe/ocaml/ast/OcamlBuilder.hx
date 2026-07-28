@@ -3466,16 +3466,13 @@ class OcamlBuilder {
 															OcamlExpr.EConst(OcamlConst.CUnit);
 													}
 												} else if (isStdBytesClass(cls)) {
-													final self = buildExpr(objExpr);
 													switch (cf.name) {
 														case "get" if (args.length == 1):
 															bytesAccessInvariant("standard Bytes.get bypassed its sealed access plan", e.pos);
 														case "getDouble" if (args.length == 1):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getDouble"),
-																[self, buildExpr(args[0])]);
+															bytesAccessInvariant("standard Bytes.getDouble bypassed its sealed access plan", e.pos);
 														case "getFloat" if (args.length == 1):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getFloat"),
-																[self, buildExpr(args[0])]);
+															bytesAccessInvariant("standard Bytes.getFloat bypassed its sealed access plan", e.pos);
 														case "getUInt16" if (args.length == 1):
 															bytesAccessInvariant("standard Bytes.getUInt16 bypassed its sealed access plan", e.pos);
 														case "getInt32" if (args.length == 1):
@@ -3485,11 +3482,9 @@ class OcamlBuilder {
 														case "set" if (args.length == 2):
 															bytesAccessInvariant("standard Bytes.set bypassed its sealed access plan", e.pos);
 														case "setDouble" if (args.length == 2):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setDouble"),
-																[self, buildExpr(args[0]), buildExpr(args[1])]);
+															bytesAccessInvariant("standard Bytes.setDouble bypassed its sealed access plan", e.pos);
 														case "setFloat" if (args.length == 2):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setFloat"),
-																[self, buildExpr(args[0]), buildExpr(args[1])]);
+															bytesAccessInvariant("standard Bytes.setFloat bypassed its sealed access plan", e.pos);
 														case "setUInt16" if (args.length == 2):
 															bytesAccessInvariant("standard Bytes.setUInt16 bypassed its sealed access plan", e.pos);
 														case "setInt32" if (args.length == 2):

@@ -162,6 +162,38 @@ class BytesAccessCases {
 		bytes.setInt64(position, value);
 	}
 
+	public static function getFloat(bytes:Bytes, position:Int):Float {
+		return bytes.getFloat(position);
+	}
+
+	public static function getFloatNullablePosition(bytes:Bytes, position:Null<Int>):Float {
+		return bytes.getFloat(position);
+	}
+
+	public static function setFloat(bytes:Bytes, position:Int, value:Float):Void {
+		bytes.setFloat(position, value);
+	}
+
+	public static function setFloatNullablePosition(bytes:Bytes, position:Null<Int>, value:Float):Void {
+		bytes.setFloat(position, value);
+	}
+
+	public static function getDouble(bytes:Bytes, position:Int):Float {
+		return bytes.getDouble(position);
+	}
+
+	public static function getDoubleNullablePosition(bytes:Bytes, position:Null<Int>):Float {
+		return bytes.getDouble(position);
+	}
+
+	public static function setDouble(bytes:Bytes, position:Int, value:Float):Void {
+		bytes.setDouble(position, value);
+	}
+
+	public static function setDoubleNullablePosition(bytes:Bytes, position:Null<Int>, value:Float):Void {
+		bytes.setDouble(position, value);
+	}
+
 	public static function getData(bytes:Bytes):BytesData {
 		return bytes.getData();
 	}
@@ -208,6 +240,26 @@ class BytesAccessCases {
 
 	public static function setInt64NullablePositionInSourceOrder(receiver:Void->Bytes, position:Void->Null<Int>, value:Void->haxe.Int64):Void {
 		receiver().setInt64(position(), value());
+	}
+
+	public static function getFloatInSourceOrder(receiver:Void->Bytes, position:Void->Int):Float {
+		return receiver().getFloat(position());
+	}
+
+	public static function setFloatInSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Float):Void {
+		receiver().setFloat(position(), value());
+	}
+
+	public static function setFloatNullablePositionInSourceOrder(receiver:Void->Bytes, position:Void->Null<Int>, value:Void->Float):Void {
+		receiver().setFloat(position(), value());
+	}
+
+	public static function getDoubleInSourceOrder(receiver:Void->Bytes, position:Void->Int):Float {
+		return receiver().getDouble(position());
+	}
+
+	public static function setDoubleInSourceOrder(receiver:Void->Bytes, position:Void->Int, value:Void->Float):Void {
+		receiver().setDouble(position(), value());
 	}
 
 	public static function getDataInSourceOrder(receiver:Void->Bytes):BytesData {

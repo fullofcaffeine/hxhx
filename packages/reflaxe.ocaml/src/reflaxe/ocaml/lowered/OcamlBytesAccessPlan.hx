@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessInvocationKin
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessKind;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessResultKind;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -37,7 +38,8 @@ typedef OcamlBytesAccessDecisionOccurrence = {
 }
 
 /**
-	Immutable inventory of exact byte access and BytesData alias operations.
+	Immutable inventory of exact byte, integer, IEEE-754 Float, and BytesData
+	alias operations.
 
 	Each occurrence is tied to the target-selected `haxe.io.Bytes` declaration
 	and exact carrier decisions. Production plans also retain an exact typed-node
@@ -225,6 +227,18 @@ class OcamlBytesAccessPlan {
 			case "setInt64" if (matchesExactArguments(arguments, [isAdmittedIntInput, OcamlRepresentationRegistry.isExactInt64])
 				&& isExactVoid(resultType)):
 				OcamlBytesAccessKind.SetInt64;
+			case "getFloat" if (matchesExactArguments(arguments, [isAdmittedIntInput])
+				&& OcamlRepresentationRegistry.isExactFloat(resultType)):
+				OcamlBytesAccessKind.GetFloat32;
+			case "setFloat" if (matchesExactArguments(arguments, [isAdmittedIntInput, OcamlRepresentationRegistry.isExactFloat])
+				&& isExactVoid(resultType)):
+				OcamlBytesAccessKind.SetFloat32;
+			case "getDouble" if (matchesExactArguments(arguments, [isAdmittedIntInput])
+				&& OcamlRepresentationRegistry.isExactFloat(resultType)):
+				OcamlBytesAccessKind.GetFloat64;
+			case "setDouble" if (matchesExactArguments(arguments, [isAdmittedIntInput, OcamlRepresentationRegistry.isExactFloat])
+				&& isExactVoid(resultType)):
+				OcamlBytesAccessKind.SetFloat64;
 			case "getData" if (arguments.length == 0 && OcamlRepresentationRegistry.isExactBytesData(resultType)):
 				OcamlBytesAccessKind.GetData;
 			case _:
@@ -389,6 +403,8 @@ class OcamlBytesAccessPlan {
 			representations.requireExactBytesDataInternal(representationId, representationRevision, programRevision);
 		} else if (semanticTypeId == OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID) {
 			representations.requireExactInt64Internal(representationId, representationRevision, programRevision);
+		} else if (semanticTypeId == OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID) {
+			representations.requireExactFloatInternal(representationId, representationRevision, programRevision);
 		} else {
 			representations.require(representationId, programRevision);
 		}
@@ -446,6 +462,7 @@ class OcamlBytesAccessPlanner {
 		final resultRepresentation = switch (OcamlBytesAccessContract.resultKind(occurrence.kind)) {
 			case ExactInt: representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 			case ExactInt64: representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
+			case ExactFloat: representations.selectExactFloat(OcamlRepresentationDomain.InternalValue);
 			case ExactBytesData: representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue);
 			case EffectOnlyVoid: null;
 		}
@@ -518,6 +535,8 @@ class OcamlBytesAccessPlanner {
 			return representations.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 		if (OcamlRepresentationRegistry.isExactInt64(type))
 			return representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactFloat(type))
+			return representations.selectExactFloat(OcamlRepresentationDomain.InternalValue);
 		return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 	}
 
@@ -526,6 +545,8 @@ class OcamlBytesAccessPlanner {
 			return representations.selectExactBytesData(OcamlRepresentationDomain.InternalValue);
 		if (OcamlRepresentationRegistry.isExactInt64(type))
 			return representations.selectExactInt64(OcamlRepresentationDomain.InternalValue);
+		if (OcamlRepresentationRegistry.isExactFloat(type))
+			return representations.selectExactFloat(OcamlRepresentationDomain.InternalValue);
 		return representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 	}
 

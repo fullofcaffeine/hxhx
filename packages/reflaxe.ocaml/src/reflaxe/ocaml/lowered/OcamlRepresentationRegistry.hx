@@ -6,6 +6,7 @@ import haxe.ds.StringMap;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -30,7 +31,9 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	choose different carriers. The admitted scope covers exact `Int` and `Bool`
 	across internal values, local cells, and direct fields. Direct nominal
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>` remain
-	local-only decisions. Direct `haxe.io.Bytes` and exact core
+	local-only decisions. Exact non-null `Float` and `haxe.Int64` have narrowly
+	bounded internal-value decisions for sealed Bytes binary operations. Direct
+	`haxe.io.Bytes` and exact core
 	`Null<haxe.io.Bytes>` have internal-value decisions that preserve their
 	distinct typed forms while sharing one nullable reference carrier. Exact core
 	`String` uses the target's nullable string carrier across internal values,
@@ -39,7 +42,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v15";
+	public static inline final MODEL_REVISION = "ocaml-representation-v16";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -270,6 +273,21 @@ class OcamlRepresentationRegistry {
 			return false;
 		return switch (current) {
 			case TAbstract(abstractRef, _): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Int";
+			case _:
+				false;
+		}
+	}
+
+	/**
+		Returns whether a type is the exact, non-null built-in `Float`.
+
+		Typedefs, nullable wrappers, user abstracts, monomorphs, and Dynamic are
+		excluded because this predicate supports only the reviewed internal
+		Bytes-call carrier.
+	**/
+	public static function isExactFloat(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, parameters): final abstractType = abstractRef.get(); parameters.length == 0 && abstractType.pack.length == 0 && abstractType.name == OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID;
 			case _:
 				false;
 		}
@@ -531,6 +549,36 @@ class OcamlRepresentationRegistry {
 			nominalTargetModuleName: OcamlInt64RepresentationContract.TARGET_MODULE_NAME,
 			nominalTargetTypeName: OcamlInt64RepresentationContract.TARGET_TYPE_NAME,
 			nominalLayoutRevision: OcamlInt64RepresentationContract.LAYOUT_REVISION
+		});
+	}
+
+	/**
+		Registers the direct carrier for one exact internal Haxe `Float`.
+
+		The decision exists only for sealed Bytes binary I/O. General Float
+		storage and behavior require separate review and occurrence proofs.
+	**/
+	public function selectExactFloat(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		if (domain != OcamlRepresentationDomain.InternalValue) {
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-float-domain]: exact Float is admitted only as an internal value, not $domain';
+		}
+		return register({
+			semanticTypeId: OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID,
+			domain: domain,
+			carrierTypeId: OcamlFloatRepresentationContract.CARRIER_TYPE_ID,
+			nullPolicy: OcamlRepresentationNullPolicy.NonNull,
+			identityPolicy: OcamlRepresentationIdentityPolicy.PrimitiveValue,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.NoValueAlias,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.ImmutableValue,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectUnboxed,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: OcamlFloatRepresentationContract.PROOF_CLAIM,
+			proof: {
+				id: OcamlFloatRepresentationContract.PROOF_ID,
+				claim: OcamlFloatRepresentationContract.PROOF_CLAIM
+			},
+			profileEligibility: ["metal", "portable"]
 		});
 	}
 
@@ -845,6 +893,27 @@ class OcamlRepresentationRegistry {
 			|| decision.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
 			|| decision.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION) {
 			throw 'reflaxe.ocaml [ocaml-int64:representation-mismatch]: Bytes access expects the sealed exact Int64 internal carrier, but "$representationId" selects incompatible facts';
+		}
+		return decision;
+	}
+
+	/** Revalidates the exact internal Float carrier used by sealed Bytes I/O. */
+	public function requireExactFloatInternal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
+		final decision = require(representationId, programRevision);
+		if (decision.id != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID
+			|| decision.revision != representationRevision
+			|| decision.semanticTypeId != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.carrierTypeId != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+			|| decision.domain != OcamlRepresentationDomain.InternalValue
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.NonNull
+			|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.PrimitiveValue
+			|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.NoValueAlias
+			|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.ImmutableValue
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectUnboxed
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			|| decision.proof.id != OcamlFloatRepresentationContract.PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-float:representation-mismatch]: Bytes access expects the sealed exact Float internal carrier, but "$representationId" selects incompatible facts';
 		}
 		return decision;
 	}

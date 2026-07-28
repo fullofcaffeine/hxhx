@@ -1,4 +1,5 @@
 import haxe.Json;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.tooling.ReflaxeOcamlInspection;
 
@@ -93,6 +94,10 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.setInt32", "setInt32");
 		assertContains(content, "HxBytes.getInt64", "planned getInt64");
 		assertContains(content, "HxBytes.setInt64", "planned setInt64");
+		assertContains(content, "HxBytes.getFloat", "planned getFloat");
+		assertContains(content, "HxBytes.setFloat", "planned setFloat");
+		assertContains(content, "HxBytes.getDouble", "planned getDouble");
+		assertContains(content, "HxBytes.setDouble", "planned setDouble");
 		assertContains(content, "Haxe_Int64.___int64_create", "exact generated Int64 constructor");
 		assertContains(content, "HxBytes.blit", "blit");
 		assertContains(content, "HxBytes.sub", "sub");
@@ -119,6 +124,8 @@ class M6BytesIntegrationTest {
 			"raw multi-byte inputs must run before conversion");
 		assertBeforeAfter(content, '"byte-null-position-receiver"', '"byte-null-position-value"', "HxRuntime.nullable_int_unwrap",
 			"raw single-byte inputs must run before conversion");
+		assertBeforeAfter(content, '"float32-null-position-receiver"', '"float32-null-position-value"', "HxBytes.requireMultiByteInt",
+			"raw Float32 inputs must run before nullable position conversion");
 
 		final requirementReportPath = outDir + "/ocaml_runtime_requirement_report.json";
 		if (!sys.FileSystem.exists(requirementReportPath))
@@ -129,11 +136,13 @@ class M6BytesIntegrationTest {
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-mutation"', "Bytes mutation runtime capability");
 		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-mutation-v1"', "Bytes mutation runtime explanation");
 		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-access"', "Bytes access runtime capability");
-		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v4"', "Bytes access runtime explanation");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-access-v5"', "Bytes access runtime explanation");
 		assertContains(requirementReport, "2-byte access", "UInt16 access width explanation");
 		assertContains(requirementReport, "4-byte access", "Int32 access width explanation");
 		assertContains(requirementReport, "8-byte access", "Int64 access width explanation");
 		assertContains(requirementReport, "little-endian ordering", "multi-byte ordering explanation");
+		assertContains(requirementReport, "ieee-754-binary32", "Float32 value explanation");
+		assertContains(requirementReport, "ieee-754-binary64", "Float64 value explanation");
 		assertContains(requirementReport, "deterministic OutsideBounds policy", "nullable multi-byte failure explanation");
 
 		final loweringReportPath = outDir + "/ocaml_lowering_report.json";
@@ -151,9 +160,19 @@ class M6BytesIntegrationTest {
 			|| Reflect.field(int64Representation, "nominalLayoutRevision") != OcamlInt64RepresentationContract.LAYOUT_REVISION) {
 			throw "lowering report did not seal the exact Int64 nominal value carrier";
 		}
+		final floatRepresentation = Lambda.find(representations,
+			decision -> Reflect.field(decision, "id") == OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID);
+		if (floatRepresentation == null
+			|| Reflect.field(floatRepresentation, "semanticTypeId") != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| Reflect.field(floatRepresentation, "carrierTypeId") != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+			|| Reflect.field(floatRepresentation, "domain") != "internal-value"
+			|| Reflect.field(floatRepresentation, "boxingPolicy") != "direct-unboxed"
+			|| Reflect.field(Reflect.field(floatRepresentation, "proof"), "id") != OcamlFloatRepresentationContract.PROOF_ID) {
+			throw "lowering report did not seal the exact internal Float carrier";
+		}
 		final inspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
 		if (inspection.lowering.status != "present" || !inspection.summary.valid)
-			throw "public inspection rejected the valid exact Int64 representation";
+			throw "public inspection rejected valid exact Int64 or Float representations";
 		Reflect.setField(int64Representation, "nominalLayoutRevision", "sha256:" + StringTools.lpad("", "0", 64));
 		sys.io.File.saveContent(loweringReportPath, Json.stringify(loweringReport, null, "  ") + "\n");
 		final corruptedInspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
@@ -161,6 +180,16 @@ class M6BytesIntegrationTest {
 		if (corruptedInspection.lowering.status != "invalid"
 			|| corruptedInspection.lowering.message.indexOf("sealed exact Int64 nominal value carrier") < 0) {
 			throw "public inspection accepted a corrupted Int64 carrier layout";
+		}
+		Reflect.setField(int64Representation, "nominalLayoutRevision", OcamlInt64RepresentationContract.LAYOUT_REVISION);
+		final floatProof:Dynamic = Reflect.field(floatRepresentation, "proof");
+		Reflect.setField(floatProof, "id", "corrupted-float-proof");
+		sys.io.File.saveContent(loweringReportPath, Json.stringify(loweringReport, null, "  ") + "\n");
+		final corruptedFloatInspection = ReflaxeOcamlInspection.inspect(Sys.getCwd(), outDir, true);
+		sys.io.File.saveContent(loweringReportPath, loweringReportText);
+		if (corruptedFloatInspection.lowering.status != "invalid"
+			|| corruptedFloatInspection.lowering.message.indexOf("sealed exact Float internal value carrier") < 0) {
+			throw "public inspection accepted a corrupted Float carrier proof";
 		}
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.

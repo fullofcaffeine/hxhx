@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessValuePolicy;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
@@ -65,6 +66,14 @@ class BytesAccessPlanFixture {
 			"getInt64NullablePosition" => OcamlBytesAccessKind.GetInt64,
 			"setInt64" => OcamlBytesAccessKind.SetInt64,
 			"setInt64NullablePosition" => OcamlBytesAccessKind.SetInt64,
+			"getFloat" => OcamlBytesAccessKind.GetFloat32,
+			"getFloatNullablePosition" => OcamlBytesAccessKind.GetFloat32,
+			"setFloat" => OcamlBytesAccessKind.SetFloat32,
+			"setFloatNullablePosition" => OcamlBytesAccessKind.SetFloat32,
+			"getDouble" => OcamlBytesAccessKind.GetFloat64,
+			"getDoubleNullablePosition" => OcamlBytesAccessKind.GetFloat64,
+			"setDouble" => OcamlBytesAccessKind.SetFloat64,
+			"setDoubleNullablePosition" => OcamlBytesAccessKind.SetFloat64,
 			"getData" => OcamlBytesAccessKind.GetData,
 			"fastGet" => OcamlBytesAccessKind.FastGet,
 			"getInSourceOrder" => OcamlBytesAccessKind.Get,
@@ -77,6 +86,11 @@ class BytesAccessPlanFixture {
 			"getInt64InSourceOrder" => OcamlBytesAccessKind.GetInt64,
 			"setInt64InSourceOrder" => OcamlBytesAccessKind.SetInt64,
 			"setInt64NullablePositionInSourceOrder" => OcamlBytesAccessKind.SetInt64,
+			"getFloatInSourceOrder" => OcamlBytesAccessKind.GetFloat32,
+			"setFloatInSourceOrder" => OcamlBytesAccessKind.SetFloat32,
+			"setFloatNullablePositionInSourceOrder" => OcamlBytesAccessKind.SetFloat32,
+			"getDoubleInSourceOrder" => OcamlBytesAccessKind.GetFloat64,
+			"setDoubleInSourceOrder" => OcamlBytesAccessKind.SetFloat64,
 			"getDataInSourceOrder" => OcamlBytesAccessKind.GetData,
 			"fastGetInSourceOrder" => OcamlBytesAccessKind.FastGet
 		];
@@ -152,6 +166,22 @@ class BytesAccessPlanFixture {
 						|| decision.argumentRepresentationIds[1] != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID) {
 						Context.error('Bytes access case "$name" did not seal the exact Int64 value argument.', field.pos);
 					}
+				case GetFloat32:
+					requireNumericPolicy(decision, 4, OcamlBytesAccessValuePolicy.Ieee754Binary32, OcamlBytesAccessMutationPolicy.ReadOnly,
+						OcamlBytesAccessResultKind.ExactFloat, field.pos);
+					requireExactFloatResult(decision, name, field.pos);
+				case SetFloat32:
+					requireNumericPolicy(decision, 4, OcamlBytesAccessValuePolicy.Ieee754Binary32, OcamlBytesAccessMutationPolicy.MutateReceiverBytes,
+						OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+					requireExactFloatArgument(decision, name, field.pos);
+				case GetFloat64:
+					requireNumericPolicy(decision, 8, OcamlBytesAccessValuePolicy.Ieee754Binary64, OcamlBytesAccessMutationPolicy.ReadOnly,
+						OcamlBytesAccessResultKind.ExactFloat, field.pos);
+					requireExactFloatResult(decision, name, field.pos);
+				case SetFloat64:
+					requireNumericPolicy(decision, 8, OcamlBytesAccessValuePolicy.Ieee754Binary64, OcamlBytesAccessMutationPolicy.MutateReceiverBytes,
+						OcamlBytesAccessResultKind.EffectOnlyVoid, field.pos);
+					requireExactFloatArgument(decision, name, field.pos);
 				case _:
 			}
 			if (kind == OcamlBytesAccessKind.FastGet
@@ -168,7 +198,8 @@ class BytesAccessPlanFixture {
 				switch (name) {
 					case "getUInt16NullablePosition", "setUInt16NullablePosition", "getInt32NullablePosition", "setInt32NullablePosition",
 						"getInt64NullablePosition", "setInt64NullablePosition", "setUInt16NullablePositionInSourceOrder",
-						"setInt64NullablePositionInSourceOrder":
+						"setInt64NullablePositionInSourceOrder", "getFloatNullablePosition", "setFloatNullablePosition", "getDoubleNullablePosition",
+						"setDoubleNullablePosition", "setFloatNullablePositionInSourceOrder":
 						requireNullableIntConversion(decision, 0, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
 					case "setUInt16NullableValue", "setInt32NullableValue", "setUInt16NullableValueInSourceOrder":
 						requireNullableIntConversion(decision, 1, OcamlBytesAccessArgumentConversion.RequireMultiByteIntOrOutsideBounds, field.pos);
@@ -212,6 +243,26 @@ class BytesAccessPlanFixture {
 		representations.requireExactInt64Internal(int64Representation.id, int64Representation.revision, PROGRAM_REVISION);
 		expectThrows("representation-mismatch",
 			() -> representations.requireExactInt64Internal(int64Representation.id, "sha256:" + StringTools.lpad("", "0", 64), PROGRAM_REVISION));
+		final exactFloatType = Context.typeof(macro(0.0 : Float));
+		final nullableFloatType = Context.typeof(macro(null : Null<Float>));
+		if (!OcamlRepresentationRegistry.isExactFloat(exactFloatType) || OcamlRepresentationRegistry.isExactFloat(nullableFloatType)) {
+			Context.error("The exact Float predicate admitted a nullable or non-core representation.", Context.currentPos());
+		}
+		final floatRepresentation = representations.selectExactFloat(OcamlRepresentationDomain.InternalValue);
+		if (floatRepresentation.semanticTypeId != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| floatRepresentation.carrierTypeId != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+			|| floatRepresentation.id != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID
+			|| floatRepresentation.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectUnboxed
+			|| floatRepresentation.proof.id != OcamlFloatRepresentationContract.PROOF_ID
+			|| floatRepresentation.nominalTargetModuleName != null
+			|| floatRepresentation.nominalTargetTypeName != null
+			|| floatRepresentation.nominalLayoutRevision != null) {
+			Context.error("The exact Float representation exceeded its reviewed internal value carrier.", Context.currentPos());
+		}
+		representations.requireExactFloatInternal(floatRepresentation.id, floatRepresentation.revision, PROGRAM_REVISION);
+		expectThrows("representation-mismatch",
+			() -> representations.requireExactFloatInternal(floatRepresentation.id, "sha256:" + StringTools.lpad("", "0", 64), PROGRAM_REVISION));
+		expectThrows("unsupported-float-domain", () -> representations.selectExactFloat(OcamlRepresentationDomain.InstanceField));
 
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
@@ -317,6 +368,58 @@ class BytesAccessPlanFixture {
 				argumentCarrierTypeIds: wrongInt64Carriers
 			})
 		]));
+		final float32ReadSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.GetFloat32 && decision.functionId == "BytesAccessCases.getFloat");
+		if (float32ReadSample == null)
+			Context.error("The Bytes access fixture has no getFloat decision.", Context.currentPos());
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(float32ReadSample, {accessWidthBytes: 8})]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(float32ReadSample, {valuePolicy: OcamlBytesAccessValuePolicy.Ieee754Binary64})
+		]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(float32ReadSample, {runtimeOperation: "getDouble"})]));
+		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([
+			reseal(float32ReadSample, {
+				resultSemanticTypeId: "Int",
+				resultCarrierTypeId: "int",
+				resultRepresentationId: numericSample.resultRepresentationId,
+				resultRepresentationRevision: numericSample.resultRepresentationRevision
+			})
+		]));
+		final float32WriteSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.SetFloat32 && decision.functionId == "BytesAccessCases.setFloat");
+		if (float32WriteSample == null)
+			Context.error("The Bytes access fixture has no setFloat decision.", Context.currentPos());
+		final wrongFloatInputSemantics = float32WriteSample.argumentInputSemanticTypeIds.copy();
+		final wrongFloatInputCarriers = float32WriteSample.argumentInputCarrierTypeIds.copy();
+		final wrongFloatSemantics = float32WriteSample.argumentSemanticTypeIds.copy();
+		final wrongFloatCarriers = float32WriteSample.argumentCarrierTypeIds.copy();
+		wrongFloatInputSemantics[1] = "Int";
+		wrongFloatInputCarriers[1] = "int";
+		wrongFloatSemantics[1] = "Int";
+		wrongFloatCarriers[1] = "int";
+		expectThrows("invalid-access-argument", () -> new OcamlBytesAccessPlan([
+			reseal(float32WriteSample, {
+				argumentInputSemanticTypeIds: wrongFloatInputSemantics,
+				argumentInputCarrierTypeIds: wrongFloatInputCarriers,
+				argumentSemanticTypeIds: wrongFloatSemantics,
+				argumentCarrierTypeIds: wrongFloatCarriers
+			})
+		]));
+		final float64ReadSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.GetFloat64 && decision.functionId == "BytesAccessCases.getDouble");
+		if (float64ReadSample == null)
+			Context.error("The Bytes access fixture has no getDouble decision.", Context.currentPos());
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([reseal(float64ReadSample, {accessWidthBytes: 4})]));
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(float64ReadSample, {valuePolicy: OcamlBytesAccessValuePolicy.Ieee754Binary32})
+		]));
+		final float64WriteSample = Lambda.find(decisions,
+			decision -> decision.kind == OcamlBytesAccessKind.SetFloat64 && decision.functionId == "BytesAccessCases.setDouble");
+		if (float64WriteSample == null)
+			Context.error("The Bytes access fixture has no setDouble decision.", Context.currentPos());
+		expectThrows("invalid-access", () -> new OcamlBytesAccessPlan([
+			reseal(float64WriteSample, {byteOrderPolicy: OcamlBytesAccessByteOrderPolicy.NotApplicable})
+		]));
 		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
 		expectThrows("invalid-access",
 			() -> OcamlBytesRuntimeRequirementRecorder.recordAccess(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
@@ -389,6 +492,22 @@ class BytesAccessPlanFixture {
 		}
 	}
 
+	static function requireExactFloatResult(decision:OcamlBytesAccessDecision, name:String, position:haxe.macro.Expr.Position):Void {
+		if (decision.resultSemanticTypeId != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.resultCarrierTypeId != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+			|| decision.resultRepresentationId != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID) {
+			Context.error('Bytes access case "$name" did not seal the exact Float result carrier.', position);
+		}
+	}
+
+	static function requireExactFloatArgument(decision:OcamlBytesAccessDecision, name:String, position:haxe.macro.Expr.Position):Void {
+		if (decision.argumentSemanticTypeIds[1] != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.argumentCarrierTypeIds[1] != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+			|| decision.argumentRepresentationIds[1] != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID) {
+			Context.error('Bytes access case "$name" did not seal the exact Float value argument.', position);
+		}
+	}
+
 	static function requireNullableIntConversion(decision:OcamlBytesAccessDecision, index:Int, expected:OcamlBytesAccessArgumentConversion,
 			position:haxe.macro.Expr.Position):Void {
 		if (decision.argumentInputSemanticTypeIds[index] != "Null<Int>"
@@ -410,17 +529,17 @@ class BytesAccessPlanFixture {
 	static function unadmittedCases():Array<{name:String, fieldName:String, expression:TypedExpr}> {
 		return [
 			{
-				name: "getFloat",
-				fieldName: "getFloat",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int):Float {
-					return bytes.getFloat(position);
+				name: "setFloatNullableValue",
+				fieldName: "setFloat",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Float>):Void {
+					bytes.setFloat(position, value);
 				})
 			},
 			{
-				name: "setFloat",
-				fieldName: "setFloat",
-				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Float):Void {
-					bytes.setFloat(position, value);
+				name: "setDoubleNullableValue",
+				fieldName: "setDouble",
+				expression: Context.typeExpr(macro function(bytes:haxe.io.Bytes, position:Int, value:Null<Float>):Void {
+					bytes.setDouble(position, value);
 				})
 			},
 		];

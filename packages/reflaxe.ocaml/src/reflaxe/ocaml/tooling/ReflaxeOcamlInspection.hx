@@ -28,6 +28,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
 using StringTools;
@@ -1642,7 +1643,7 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, the exact nominal Int64 value, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. The Int64 decision fixes one value-semantic high/low record layout. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, the narrow exact Float internal value, the exact nominal Int64 value, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. The Float decision is limited to sealed Bytes binary I/O. The Int64 decision fixes one value-semantic high/low record layout. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
 		};
 	}
 
@@ -1785,6 +1786,24 @@ class ReflaxeOcamlInspection {
 				|| decision.nominalLayoutRevision == null
 				|| !StringTools.startsWith((cast decision.nominalLayoutRevision : String), "sha256:"))) {
 			throw 'Representation decision "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		if (decision.semanticTypeId == OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.id == OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID) {
+			if (decision.id != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID
+				|| decision.semanticTypeId != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+				|| decision.domain != "internal-value"
+				|| decision.carrierTypeId != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+				|| decision.nullPolicy != "non-null"
+				|| decision.identityPolicy != "primitive-value"
+				|| decision.aliasingPolicy != "no-value-alias"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "immutable-value"
+				|| decision.boxingPolicy != "direct-unboxed"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.proofId != OcamlFloatRepresentationContract.PROOF_ID
+				|| nominalCount != 0) {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact Float internal value carrier.';
+			}
 		}
 		if (decision.boxingPolicy == "direct-nominal-value-carrier") {
 			if (decision.id != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID

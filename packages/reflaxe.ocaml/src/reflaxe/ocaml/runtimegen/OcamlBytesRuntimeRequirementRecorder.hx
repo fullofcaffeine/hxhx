@@ -115,10 +115,10 @@ class OcamlBytesRuntimeRequirementRecorder {
 				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
 				id: OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
 			},
-			implementationFeature: "haxe-bytes-access-v4",
+			implementationFeature: "haxe-bytes-access-v5",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
-			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation calls HxBytes after evaluating raw inputs once in source order and then applying ${decision.argumentConversions.join(",")} conversions in argument order. It fixes ${decision.boundsPolicy} bounds, a ${decision.accessWidthBytes}-byte access, ${decision.byteOrderPolicy} ordering, ${decision.valuePolicy} value behavior, ${decision.mutationPolicy} mutation, ${decision.aliasPolicy} aliasing, and ${decision.resultKind} result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target\'s deterministic OutsideBounds policy; other Bytes and BytesData operations require separate decisions.'
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation calls HxBytes after evaluating raw inputs once in source order and then applying ${decision.argumentConversions.join(",")} conversions in argument order. It fixes ${decision.boundsPolicy} bounds, a ${decision.accessWidthBytes}-byte access, ${decision.byteOrderPolicy} ordering, ${decision.valuePolicy} value behavior, ${decision.mutationPolicy} mutation, ${decision.aliasPolicy} aliasing, and ${decision.resultKind} result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target\'s deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.'
 		});
 	}
 
