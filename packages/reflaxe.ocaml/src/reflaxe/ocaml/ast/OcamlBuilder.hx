@@ -2344,7 +2344,7 @@ class OcamlBuilder {
 										}
 
 										final isBuilderOwnedSysCall = cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && switch (cf.name) {
-											case "print", "println", "putEnv", "command", "stdin", "stdout", "stderr", "setTimeLocale": true;
+											case "print", "println", "putEnv", "command", "setTimeLocale": true;
 											case _: false;
 										};
 										if (isBuilderOwnedSysCall) {
@@ -2377,15 +2377,6 @@ class OcamlBuilder {
 														OcamlExpr.EIdent("None");
 													};
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "command"), [buildExpr(args[0]), opt]);
-												case "stdin" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stdin"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "stdout" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stdout"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "stderr" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stderr"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
 												case "setTimeLocale":
 													#if macro
 													guardrailError("reflaxe.ocaml (M6): Sys.setTimeLocale is not implemented yet.", e.pos);

@@ -4,9 +4,9 @@
 	This keeps the *Haxe* `Sys` API stable and portable while allowing direct
 	operations to name checked `HxSys` boundaries in their typed declarations.
 
-	Methods that still need Haxe-to-OCaml argument conversion or stream routing
-	remain explicit compiler-owned cases until a typed Haxe facade can preserve
-	their behavior.
+	Stream access names the generated Haxe `sys.io.Stdio` implementation directly.
+	Methods needing Haxe-to-OCaml conversion remain explicit compiler-owned cases
+	until a typed Haxe facade can preserve their behavior.
 **/
 @:require(sys)
 extern class Sys {
@@ -128,15 +128,15 @@ extern class Sys {
 	/**
 		Returns the standard input of the process.
 	**/
-	static function stdin():haxe.io.Input;
+	@:native("Sys_io_Stdio.stdin") static function stdin():haxe.io.Input;
 
 	/**
 		Returns the standard output of the process.
 	**/
-	static function stdout():haxe.io.Output;
+	@:native("Sys_io_Stdio.stdout") static function stdout():haxe.io.Output;
 
 	/**
 		Returns the standard error of the process.
 	**/
-	static function stderr():haxe.io.Output;
+	@:native("Sys_io_Stdio.stderr") static function stderr():haxe.io.Output;
 }
