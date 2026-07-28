@@ -1,5 +1,6 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -17,6 +18,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlFlowFacts;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -262,8 +264,8 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
-			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString:
+			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
+				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -316,9 +318,25 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
-			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
 				MaterializeOmittedString, MaterializeExplicitNullString:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
+		};
+	}
+
+	static function checkedNullableIntValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Null<Int>",
+			inputCarrierTypeId: "Obj.t",
+			inputRepresentationId: "representation:Null<Int>:internal-value",
+			outputSemanticTypeId: "Int",
+			outputCarrierTypeId: "int",
+			outputRepresentationId: "representation:Int:internal-value",
+			conversion: OcamlCallCarrierConversion.CheckedUnboxNullableInt,
+			proofId: "nullable-int-call-checked-unbox-v1",
+			proofClaim: "fixture checked nullable Int result"
 		};
 	}
 
@@ -1185,7 +1203,61 @@ class CallPlanFixture {
 			sys.FileSystem.deleteDirectory(outputDirectory);
 	}
 
+	/** Extracts one typed anonymous-function body for structural control tests. */
+	static function typedFunctionBody(expression:Expr):TypedExpr {
+		final typed = Context.typeExpr(expression);
+		return switch (typed.expr) {
+			case TFunction(func):
+				func.expr;
+			case _:
+				Context.error("Expected the control-flow fixture to type as an anonymous function.", expression.pos);
+		}
+	}
+
 	public static macro function run():Expr {
+		final directReturn = typedFunctionBody(macro function():Int {
+			return 1;
+		});
+		final bothIfBranchesReturn = typedFunctionBody(macro function(flag:Bool):Int {
+			if (flag)
+				return 1;
+			else
+				return 2;
+		});
+		final switchWithDefaultReturns = typedFunctionBody(macro function(value:Int):Int {
+			switch (value) {
+				case 0:
+					return 1;
+				default:
+					return 2;
+			}
+		});
+		final tryAndCatchReturn = typedFunctionBody(macro function():Int {
+			try {
+				return 1;
+			} catch (_:Dynamic) {
+				return 2;
+			}
+		});
+		final partialReturn = typedFunctionBody(macro function(flag:Bool):Void {
+			if (flag)
+				return;
+			final ignored = 0;
+		});
+		final loopReturn = typedFunctionBody(macro function():Void {
+			while (true)
+				return;
+		});
+		if (!OcamlControlFlowFacts.definitelyReturns(directReturn)
+			|| !OcamlControlFlowFacts.definitelyReturns(bothIfBranchesReturn)
+			|| !OcamlControlFlowFacts.definitelyReturns(switchWithDefaultReturns)
+			|| !OcamlControlFlowFacts.definitelyReturns(tryAndCatchReturn)) {
+			Context.error("A structurally complete explicit-return fixture was not recognized.", Context.currentPos());
+		}
+		if (OcamlControlFlowFacts.definitelyReturns(partialReturn) || OcamlControlFlowFacts.definitelyReturns(loopReturn)) {
+			Context.error("A fall-through or loop-only fixture was incorrectly treated as an all-path explicit return.", Context.currentPos());
+		}
+
 		final stringArgument = stringValue(0);
 		OcamlCallPlan.requireCallValue(stringArgument, 0, "exact String fixture");
 		final wrongStringCarrier = OcamlCallPlan.copyValue(stringArgument);
@@ -1197,6 +1269,29 @@ class CallPlanFixture {
 		final missingStringProof = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(missingStringProof, "proofId", "");
 		expectThrows("invalid index or empty conversion proof", () -> OcamlCallPlan.requireCallValue(missingStringProof, 0, "missing String proof fixture"));
+		final checkedResult = checkedNullableIntValue(-1);
+		OcamlCallPlan.requireCallValue(checkedResult, -1, "checked nullable Int result fixture");
+		final checkedArgument = checkedNullableIntValue(0);
+		OcamlCallPlan.requireCallValue(checkedArgument, 0, "checked nullable Int argument fixture");
+		final checkedResultWrongInputCarrier = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongInputCarrier, "inputCarrierTypeId", "int");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongInputCarrier, -1, "wrong checked result input carrier fixture"));
+		final checkedResultWrongOutputSemantic = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongOutputSemantic, "outputSemanticTypeId", "Null<Int>");
+		expectThrows("invalid-plan",
+			() -> OcamlCallPlan.requireCallValue(checkedResultWrongOutputSemantic, -1, "wrong checked result output semantic fixture"));
+		final checkedResultWrongOutputCarrier = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongOutputCarrier, "outputCarrierTypeId", "Obj.t");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongOutputCarrier, -1, "wrong checked result output carrier fixture"));
+		final checkedResultWrongProof = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongProof, "proofId", "nullable-int-call-box-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongProof, -1, "wrong checked result proof fixture"));
+		final checkedResultAsReceiver = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultAsReceiver, "index", -2);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultAsReceiver, -2, "checked result used as receiver fixture"));
+		final checkedResultAsOptional = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultAsOptional, "parameterOptional", true);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultAsOptional, -1, "checked optional result fixture"));
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");

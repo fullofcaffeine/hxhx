@@ -1231,6 +1231,15 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-int-call-box-v1")
 					throw '$owner has an invalid exact Int-to-Null<Int> boxing crossing.';
+			case "checked-unbox-nullable-int":
+				if (value.index < -1
+					|| value.parameterOptional
+					|| value.inputSemanticTypeId != "Null<Int>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.outputSemanticTypeId != "Int"
+					|| value.outputCarrierTypeId != "int"
+					|| value.proofId != "nullable-int-call-checked-unbox-v1")
+					throw '$owner has an invalid checked Null<Int>-to-Int result crossing.';
 			case "preserve-nullable-bool-carrier":
 				if (!sameSides
 					|| value.inputSemanticTypeId != "Null<Bool>"

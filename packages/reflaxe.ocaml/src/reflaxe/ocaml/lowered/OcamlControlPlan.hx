@@ -1931,7 +1931,7 @@ class OcamlControlPlanner {
 
 	static function catchBranchResultPolicy(tryResultType:Type, branch:TypedExpr):OcamlCatchBranchResultPolicy {
 		return isVoid(tryResultType)
-			&& !definitelyTransfers(branch) ? OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit : OcamlCatchBranchResultPolicy.PreserveTypedResult;
+			&& !OcamlControlFlowFacts.definitelyReturnsOrThrows(branch) ? OcamlCatchBranchResultPolicy.DiscardCompletedValueToUnit : OcamlCatchBranchResultPolicy.PreserveTypedResult;
 	}
 
 	static function isVoid(type:Type):Bool {
@@ -1939,34 +1939,6 @@ class OcamlControlPlanner {
 			case TAbstract(abstractRef, _):
 				final abstractType = abstractRef.get();
 				(abstractType.pack ?? []).length == 0 && abstractType.name == "Void";
-			case _:
-				false;
-		}
-	}
-
-	/**
-		Reports whether the generated branch remains target-polymorphic.
-
-		A block is decided by its final target-visible expression. An earlier
-		throw makes later Haxe source unreachable at runtime, but the OCaml
-		type-checker still assigns the sequence the type of its emitted suffix.
-		Unknown shapes return false so a completing `Void` branch becomes `unit`.
-	**/
-	static function definitelyTransfers(expression:TypedExpr):Bool {
-		return switch (expression.expr) {
-			case TReturn(_) | TThrow(_):
-				true;
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
-				definitelyTransfers(inner);
-			case TBlock(expressions): expressions.length > 0 && definitelyTransfers(expressions[expressions.length - 1]);
-			case TIf(_, thenExpression, elseExpression): elseExpression != null && definitelyTransfers(thenExpression) && definitelyTransfers(elseExpression);
-			case TSwitch(_, cases, defaultExpression):
-				defaultExpression != null
-				&& cases.length > 0
-				&& Lambda.foreach(cases, entry -> definitelyTransfers(entry.expr))
-				&& definitelyTransfers(defaultExpression);
-			case TTry(tryExpression, catches): definitelyTransfers(tryExpression) && catches.length > 0 && Lambda.foreach(catches,
-					entry -> definitelyTransfers(entry.expr));
 			case _:
 				false;
 		}
@@ -2298,6 +2270,28 @@ class OcamlControlPlanner {
 			&& result.conversion == OcamlCallCarrierConversion.Identity;
 		if (nominalIdentity)
 			return OcamlCallPlan.copyValue(result);
+		final checkedNullableIntResult = result.inputSemanticTypeId == "Null<Int>"
+			&& result.inputCarrierTypeId == "Obj.t"
+			&& result.inputRepresentationId == "representation:Null<Int>:internal-value"
+			&& result.outputSemanticTypeId == "Int"
+			&& result.outputCarrierTypeId == "int"
+			&& result.outputRepresentationId == "representation:Int:internal-value"
+			&& result.conversion == OcamlCallCarrierConversion.CheckedUnboxNullableInt;
+		if (checkedNullableIntResult) {
+			return {
+				index: -1,
+				parameterOptional: false,
+				inputSemanticTypeId: result.outputSemanticTypeId,
+				inputCarrierTypeId: result.outputCarrierTypeId,
+				inputRepresentationId: result.outputRepresentationId,
+				outputSemanticTypeId: result.outputSemanticTypeId,
+				outputCarrierTypeId: result.outputCarrierTypeId,
+				outputRepresentationId: result.outputRepresentationId,
+				conversion: OcamlCallCarrierConversion.Identity,
+				proofId: result.proofId,
+				proofClaim: result.proofClaim
+			};
+		}
 		final nullableOutput = OcamlControlPlan.isAdmittedNullableSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId);
 		final validDirectConversion = (result.inputSemanticTypeId == "Int"
 			&& result.outputSemanticTypeId == "Null<Int>"

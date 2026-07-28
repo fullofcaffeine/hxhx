@@ -7,3 +7,4 @@ return_null is_null=true events=
 return_loop value=50 events=ctor,ctor
 return_catch value=70 events=ctor,ctor
 factory_receiver result=7 events=factory,ctor,delta,method
+cross_module_result index=23

@@ -63,6 +63,11 @@ class Main {
 		return new Counter(5);
 	}
 
+	/** Returns a nominal value whose carrier belongs to another OCaml module. */
+	static function sourcePosAt(index:Int):SourcePos {
+		return new SourcePos(index);
+	}
+
 	/** Returns one constructor-produced local from a nested branch. */
 	static function chooseBranch(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
 		final early = new Counter(earlyValue);
@@ -135,6 +140,11 @@ class Main {
 		Counter.reset();
 		final result = makeCounter().bump(delta());
 		printLine("factory_receiver result=" + result + " events=" + Counter.renderEvents());
+	}
+
+	static function crossModuleResultCase():Void {
+		final pos = sourcePosAt(23);
+		printLine("cross_module_result index=" + pos.index);
 	}
 
 	static function capturedLocalCase():Void {
@@ -229,6 +239,7 @@ class Main {
 		#if class_carrier_factory_receiver
 		factoryReceiverCase();
 		#end
+		crossModuleResultCase();
 		#if class_carrier_negative_boundaries
 		excludedCarrierBoundaries();
 		#end

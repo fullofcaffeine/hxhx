@@ -2,8 +2,9 @@
 set -euo pipefail
 
 source_file="out/Main.ml"
+source_pos_file="out/SourcePos.ml"
 report_file="out/ocaml_lowering_report.json"
-if [ ! -f "$source_file" ] || [ ! -f "$report_file" ]; then
+if [ ! -f "$source_file" ] || [ ! -f "$source_pos_file" ] || [ ! -f "$report_file" ]; then
 	echo "Missing generated monomorphic-class source or lowering report" >&2
 	exit 1
 fi
@@ -27,6 +28,8 @@ const decision = report.representations?.find(item =>
 	item.id === 'representation:Counter:internal-value')
 const capturedDecision = report.representations?.find(item =>
 	item.id === 'representation:Counter:captured-local-storage')
+const sourcePosDecision = report.representations?.find(item =>
+	item.id === 'representation:SourcePos:internal-value')
 if (decision == null
 	|| decision.semanticTypeId !== 'Counter'
 	|| decision.carrierTypeId !== 'counter_t'
@@ -53,6 +56,13 @@ if (capturedDecision == null
 	|| capturedDecision.proof?.id !== decision.proof?.id) {
 	fail('the captured-and-reassigned Counter local does not reuse the exact nominal record inside one shared cell')
 }
+if (sourcePosDecision == null
+	|| sourcePosDecision.semanticTypeId !== 'SourcePos'
+	|| sourcePosDecision.carrierTypeId !== 't'
+	|| sourcePosDecision.nominalTargetModuleName !== 'SourcePos'
+	|| sourcePosDecision.nominalTargetTypeName !== 't') {
+	fail('the separate-module SourcePos carrier is not sealed with its owning target module')
+}
 
 const nominalReturns = (report.controls ?? []).filter(control =>
 	control.kind === 'return'
@@ -67,7 +77,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v49'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v51'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'
@@ -109,7 +119,8 @@ const constructorCalls = (report.calls ?? []).filter(call =>
 	&& call.sourceTypeName === 'Counter'
 	&& call.sourceFieldName === 'new')
 const constructorBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
-	boundary.kind === 'direct-haxe-constructor')
+	boundary.kind === 'direct-haxe-constructor'
+	&& boundary.sourceTypeName === 'Counter')
 const instanceBoundaries = (report.callableBoundaries ?? []).filter(boundary =>
 	boundary.kind === 'direct-instance-haxe-method')
 if (constructorBoundaries.length !== 1
@@ -149,6 +160,14 @@ if (instanceBoundaries.length !== 1
 	|| instanceBoundaries[0].sourceFieldName !== 'bump'
 	|| instanceBoundaries[0].receiver?.outputRepresentationId !== decision.id) {
 	fail('the report admitted an unexpected instance callable boundary')
+}
+const sourcePosBoundary = (report.callableBoundaries ?? []).find(boundary =>
+	boundary.kind === 'direct-static-haxe-method'
+	&& boundary.sourceTypeName === 'Main'
+	&& boundary.sourceFieldName === 'sourcePosAt')
+if (sourcePosBoundary?.result?.outputRepresentationId !== sourcePosDecision.id
+	|| sourcePosBoundary.result.outputCarrierTypeId !== 't') {
+	fail('the cross-module SourcePos result did not retain its sealed representation identity')
 }
 if (instanceCalls.length !== 2) {
 	fail(`expected constructor-local and factory-produced Counter.bump calls, got ${instanceCalls.length}`)
@@ -210,6 +229,10 @@ if (!/let ordinary = Obj\.magic \(let __call_arg_0_\d+ = 13 in counter_create __
 }
 if (!/let counter = let __call_arg_0_\d+ = sourceValue \(\) in counter_create __call_arg_0_\d+/.test(source)) {
 	fail('the constructor-local path did not materialize its argument before invoking Counter.create')
+}
+if (!/let sourcePosAt = fun \(index : int\) -> \(let __call_arg_0_\d+ = index in SourcePos\.create __call_arg_0_\d+ : SourcePos\.t\)/.test(source)
+	|| /let sourcePosAt = fun \(index : int\) -> \([\s\S]* : t\)/.test(source)) {
+	fail('the cross-module nominal callable result did not qualify SourcePos.t at syntax construction')
 }
 
 const requiredSource = [

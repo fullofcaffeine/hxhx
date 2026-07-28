@@ -37,6 +37,7 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final Identity = "identity";
 	final PreserveNullableIntCarrier = "preserve-nullable-int-carrier";
 	final BoxExactIntToNullableInt = "box-exact-int-to-nullable-int";
+	final CheckedUnboxNullableInt = "checked-unbox-nullable-int";
 	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
 	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
@@ -562,6 +563,14 @@ class OcamlCallPlan {
 					|| value.proofId != "nullable-int-call-box-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Int -> int once into exact Null<Int> -> Obj.t';
 				}
+			case CheckedUnboxNullableInt:
+				if (expectedIndex < -1
+					|| value.parameterOptional
+					|| !isExactNullIntSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| !isExactIntSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
+					|| value.proofId != "nullable-int-call-checked-unbox-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must check exact Null<Int> -> Obj.t once into exact Int -> int at a required argument or callable result';
+				}
 			case PreserveNullableBoolCarrier:
 				if (!sameRepresentationSides(value)
 					|| !isExactNullBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
@@ -1047,10 +1056,13 @@ class OcamlCallPlanner {
 			}
 			if (directionalReturnCount > 0 && (resultExpression == null || returnExpressions.length != 1)) {
 				final directResult = directRootResultExpression(data.expr);
-				if (!supportsNullableResultControl(directResult, returnExpressions, declaration.result, representations)) {
+				if (!supportsDirectionalResultControl(data.expr, directResult, returnExpressions, declaration.result, representations)) {
 					throw 'reflaxe.ocaml [ocaml-call:result-control-unsealed]: callable "${declaration.calleeId}" requires $directionalReturnCount result conversion${directionalReturnCount == 1 ? "" : "s"} across early or nested return control; haxe_ocaml-w32h3 must seal those transfers before OCaml syntax';
 				}
 				resultExpression = directResult;
+				if (directResult == null) {
+					resultReason = ' Every path in its final typed body exits through sealed return control, so the declared ${result.outputSemanticTypeId} carrier remains the only callable result boundary.';
+				}
 			}
 			if (resultExpression != null) {
 				final plannedResult = definitionResultValue(resultExpression, declaration.result, representations);
@@ -1220,21 +1232,58 @@ class OcamlCallPlanner {
 			return identityValue(-1, output);
 		if (input.semanticTypeId == "Int" && output.semanticTypeId == "Null<Int>")
 			return crossingValue(-1, input, output, OcamlCallCarrierConversion.BoxExactIntToNullableInt);
+		if (input.semanticTypeId == "Null<Int>" && output.semanticTypeId == "Int")
+			return crossingValue(-1, input, output, OcamlCallCarrierConversion.CheckedUnboxNullableInt);
 		if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>")
 			return crossingValue(-1, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool);
 		return null;
 	}
 
 	/**
-		Admits one directional direct result beside carrier-preserving nullable
-		early returns. The control plan must still seal those earlier occurrences;
-		this check merely keeps the callable boundary available for that planner.
+		Admits directional result conversions only when control owns every
+		non-direct crossing.
+
+		Nullable output retains the existing box-or-preserve family. Exact `Int`
+		output admits only one checked nullable direct result while every earlier
+		return already produces exact `Int`. A `Null<Int>` body with no direct
+		result is also admitted when the conservative control-flow facts prove that
+		every path returns and every return uses the existing identity-or-box
+		matrix. The control plan must still seal every occurrence; this check only
+		keeps the callable boundary available for that independent owner.
 	**/
-	static function supportsNullableResultControl(directResult:Null<TypedExpr>, returnExpressions:Array<TypedExpr>, boundaryValue:OcamlCallValuePlan,
-			representations:OcamlRepresentationRegistry):Bool {
-		if (directResult == null
-			|| (boundaryValue.outputSemanticTypeId != "Null<Int>" && boundaryValue.outputSemanticTypeId != "Null<Bool>")
-			|| boundaryValue.outputCarrierTypeId != "Obj.t") {
+	static function supportsDirectionalResultControl(body:TypedExpr, directResult:Null<TypedExpr>, returnExpressions:Array<TypedExpr>,
+			boundaryValue:OcamlCallValuePlan, representations:OcamlRepresentationRegistry):Bool {
+		if (directResult == null) {
+			if (!OcamlControlFlowFacts.definitelyReturns(body)
+				|| boundaryValue.outputSemanticTypeId != "Null<Int>"
+				|| boundaryValue.outputCarrierTypeId != "Obj.t"
+				|| returnExpressions.length == 0) {
+				return false;
+			}
+			for (returnExpression in returnExpressions) {
+				final crossing = definitionResultValue(returnExpression, boundaryValue, representations);
+				if (crossing == null
+					|| (crossing.conversion != OcamlCallCarrierConversion.Identity
+						&& crossing.conversion != OcamlCallCarrierConversion.BoxExactIntToNullableInt)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		final directCrossing = definitionResultValue(directResult, boundaryValue, representations);
+		if (directCrossing == null)
+			return false;
+		final nullableOutput = boundaryValue.outputCarrierTypeId == "Obj.t"
+			&& (boundaryValue.outputSemanticTypeId == "Null<Int>" || boundaryValue.outputSemanticTypeId == "Null<Bool>");
+		final checkedIntOutput = boundaryValue.outputSemanticTypeId == "Int"
+			&& boundaryValue.outputCarrierTypeId == "int"
+			&& directCrossing.conversion == OcamlCallCarrierConversion.CheckedUnboxNullableInt;
+		if (!nullableOutput && !checkedIntOutput)
+			return false;
+		final nullableConversion = boundaryValue.outputSemanticTypeId == "Null<Int>" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.BoxExactBoolToNullableBool;
+		if (nullableOutput
+			&& directCrossing.conversion != OcamlCallCarrierConversion.Identity
+			&& directCrossing.conversion != nullableConversion) {
 			return false;
 		}
 		var foundDirect = false;
@@ -1242,11 +1291,18 @@ class OcamlCallPlanner {
 			final crossing = definitionResultValue(returnExpression, boundaryValue, representations);
 			if (crossing == null)
 				return false;
-			if (returnExpression == directResult)
+			if (returnExpression == directResult) {
 				foundDirect = true;
-			final expected = boundaryValue.outputSemanticTypeId == "Null<Int>" ? OcamlCallCarrierConversion.BoxExactIntToNullableInt : OcamlCallCarrierConversion.BoxExactBoolToNullableBool;
-			if (crossing.conversion != OcamlCallCarrierConversion.Identity && crossing.conversion != expected)
+				if (checkedIntOutput && crossing.conversion != OcamlCallCarrierConversion.CheckedUnboxNullableInt)
+					return false;
+			} else if (checkedIntOutput && crossing.conversion != OcamlCallCarrierConversion.Identity) {
 				return false;
+			}
+			if (nullableOutput
+				&& crossing.conversion != OcamlCallCarrierConversion.Identity
+				&& crossing.conversion != nullableConversion) {
+				return false;
+			}
 		}
 		return foundDirect;
 	}
@@ -1507,6 +1563,7 @@ class OcamlCallPlanner {
 			final actualSemanticType = semanticTypeId(arguments[index].t);
 			if (actualSemanticType == expected.semanticTypeId
 				|| (actualSemanticType == "Int" && expected.semanticTypeId == "Null<Int>")
+				|| (actualSemanticType == "Null<Int>" && expected.semanticTypeId == "Int")
 				|| (actualSemanticType == "Bool" && expected.semanticTypeId == "Null<Bool>")
 				|| (expected.optional
 					&& expected.semanticTypeId == "String"
@@ -1612,6 +1669,8 @@ class OcamlCallPlanner {
 				}
 			} else if (input.semanticTypeId == "Int" && output.semanticTypeId == "Null<Int>") {
 				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactIntToNullableInt, boundary.parameterOptional));
+			} else if (input.semanticTypeId == "Null<Int>" && output.semanticTypeId == "Int" && !boundary.parameterOptional) {
+				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.CheckedUnboxNullableInt));
 			} else if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>") {
 				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool, boundary.parameterOptional));
 			} else {
@@ -1889,6 +1948,14 @@ class OcamlCallPlanner {
 		}
 	}
 
+	/**
+		Selects the representation identity used by the closed call matrix.
+
+		Haxe's direct `String` and core `Null<String>` types share the same
+		nullable string carrier. Keeping one semantic identity lets a value that
+		remains typed as `Null<String>` after a source-level null check cross an
+		ordinary Haxe String call boundary without target-side recovery.
+	**/
 	static function semanticTypeId(type:Type):Null<String> {
 		if (OcamlRepresentationRegistry.isExactInt(type))
 			return "Int";
@@ -1898,7 +1965,7 @@ class OcamlCallPlanner {
 			return "Null<Int>";
 		if (OcamlRepresentationRegistry.isExactNullBool(type))
 			return "Null<Bool>";
-		if (OcamlRepresentationRegistry.isExactString(type))
+		if (OcamlRepresentationRegistry.isExactString(type) || OcamlRepresentationRegistry.isExactNullString(type))
 			return "String";
 		return null;
 	}
@@ -1987,6 +2054,10 @@ class OcamlCallPlanner {
 			case BoxExactIntToNullableInt: {
 					id: "nullable-int-call-box-v1",
 					claim: "The source value produces exact Int in OCaml int; one Obj.repr operation stores that value in the selected exact Null<Int> Obj.t boundary carrier."
+				};
+			case CheckedUnboxNullableInt: {
+					id: "nullable-int-call-checked-unbox-v1",
+					claim: "The typed value produces exact Null<Int> in its Obj.t carrier after Haxe control flow excluded null; one checked runtime unwrap rejects a missing value and produces the required exact Int boundary value."
 				};
 			case PreserveNullableBoolCarrier: {
 					id: "nullable-bool-call-carrier-preserve-v1",

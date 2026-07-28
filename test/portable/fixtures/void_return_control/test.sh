@@ -39,10 +39,11 @@ const expectedByFunction = new Map([
 	['branch', 1],
 	['loop', 1],
 	['throughTry', 1],
-	['fromCatch', 1]
+	['fromCatch', 1],
+	['pushAfterGuard', 1]
 ])
-if (controls.length !== 4)
-	fail(`expected 4 effect-only Void return decisions, got ${controls.length}`)
+if (controls.length !== 5)
+	fail(`expected 5 effect-only Void return decisions, got ${controls.length}`)
 for (const [name, expectedCount] of expectedByFunction) {
 	const decisions = controls.filter(control =>
 		control.functionId.includes(`|function|${name}|`))
@@ -64,7 +65,7 @@ for (const control of controls) {
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-void-return-signal-v1'
 		|| control.proofId !== 'effect-only-void-early-return-control-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v49'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v51'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -77,36 +78,40 @@ for (const control of controls) {
 	ids.add(control.id)
 }
 
-function functionBody(name, nextName) {
+function functionBody(name) {
 	const start = source.indexOf(`let ${name} =`)
-	const end = source.indexOf(`\nlet ${nextName} =`, start)
+	const end = source.indexOf('\nlet ', start + 1)
 	if (start < 0 || end < 0)
-		fail(`generated source is missing ${name} or ${nextName}`)
+		fail(`generated source is missing ${name} or its following declaration`)
 	return source.slice(start, end)
 }
 
-for (const [name, next] of [
-	['branch', 'loop'],
-	['loop', 'throughTry'],
-	['throughTry', 'fromCatch'],
-	['fromCatch', 'nestedClosure']
+for (const name of [
+	'branch',
+	'loop',
+	'throughTry',
+	'fromCatch',
+	'pushAfterGuard'
 ]) {
-	const body = functionBody(name, next)
+	const body = functionBody(name)
 	if (!body.includes('raise (HxRuntime.Hx_return_void)')
 		|| !body.includes('| HxRuntime.Hx_return_void -> ()')
 		|| body.includes('Hx_return (Obj.repr ())')) {
 		fail(`${name} did not mechanically consume its payloadless return signal and boundary`)
 	}
 }
+const pushBody = functionBody('pushAfterGuard')
+if (!pushBody.includes('ignore (try ignore (')
+	|| !pushBody.includes('HxArray.push (!pushed) 7'))
+	fail('the normal Void path did not discard Array.push before joining the return handler')
 
 for (const name of ['throughTry', 'fromCatch']) {
-	const next = name === 'throughTry' ? 'fromCatch' : 'nestedClosure'
-	const body = functionBody(name, next)
+	const body = functionBody(name)
 	if (!body.includes('| HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)'))
 		fail(`a source catch can intercept ${name}'s private Void-return signal`)
 }
 
-const closureBody = functionBody('nestedClosure', 'main')
+const closureBody = functionBody('nestedClosure')
 if (!closureBody.includes('let local = fun')
 	|| !closureBody.includes('"outer"')) {
 	fail('the nested anonymous function did not keep an independent return boundary')
@@ -136,10 +141,10 @@ const controls = report.lowering.controls.filter(control =>
 if (report.schemaVersion !== 23
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
-	|| controls.length !== 4
+	|| controls.length !== 5
 	|| controls.some(control => control.payload !== null)
 	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 4 validated effect-only Void returns')
+	throw new Error('public inspection did not expose the 5 validated effect-only Void returns')
 }
 NODE
 
@@ -169,4 +174,4 @@ if ! grep -q "exact-value return capability or payload" "$TAMPER_INSPECTION"; th
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 
-echo "REFLAXE_OCAML_VOID_RETURN_CONTROL_FIXTURE:PASS controls=4"
+echo "REFLAXE_OCAML_VOID_RETURN_CONTROL_FIXTURE:PASS controls=5"

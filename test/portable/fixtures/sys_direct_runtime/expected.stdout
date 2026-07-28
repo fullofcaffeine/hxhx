@@ -1,5 +1,7 @@
 args-array=true
+set-env=true
 missing-env=true
+removed-env=true
 environment-map=true
 sleep-returned=true
 cwd-roundtrip=true
@@ -8,4 +10,8 @@ time-positive=true
 cpu-time-nonnegative=true
 program-path=true
 executable-alias=true
+command-shell=true
+command-null=true
+command-args=true
+time-locale-unsupported=true
 guarded-effects=true

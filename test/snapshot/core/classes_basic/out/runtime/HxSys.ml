@@ -37,10 +37,11 @@ let getEnv (s : string) : string =
   | Some v -> v
   | None -> null_string
 
-let putEnv (s : string) (v : string option) : unit =
-  match v with
-  | Some value -> Unix.putenv s value
-  | None -> Unix.putenv s hx_unset_sentinel
+let putEnvValue (name : string) (value : string) : unit =
+  Unix.putenv name value
+
+let removeEnv (name : string) : unit =
+  Unix.putenv name hx_unset_sentinel
 
 let env_array_filtered () : string array =
   let raw = Unix.environment () in
@@ -91,23 +92,23 @@ let systemName () : string =
       else
         "BSD"
 
-let command (cmd : string) (args_opt : string HxArray.t option) : int =
-  match args_opt with
-  | None -> Stdlib.Sys.command cmd
-  | Some args ->
-      let len = HxArray.length args in
-      let argv = Stdlib.Array.make (len + 1) "" in
-      Stdlib.Array.set argv 0 cmd;
-      for i = 0 to len - 1 do
-        Stdlib.Array.set argv (i + 1) (HxArray.get args i)
-      done;
-      let env = env_array_filtered () in
-      let pid = Unix.create_process_env cmd argv env Unix.stdin Unix.stdout Unix.stderr in
-      let _, status = Unix.waitpid [] pid in
-      (match status with
-      | Unix.WEXITED code -> code
-      | Unix.WSIGNALED _ -> 1
-      | Unix.WSTOPPED _ -> 1)
+let commandShell (command : string) : int =
+  Stdlib.Sys.command command
+
+let commandArgs (command : string) (args : string HxArray.t) : int =
+  let len = HxArray.length args in
+  let argv = Stdlib.Array.make (len + 1) "" in
+  Stdlib.Array.set argv 0 command;
+  for i = 0 to len - 1 do
+    Stdlib.Array.set argv (i + 1) (HxArray.get args i)
+  done;
+  let env = env_array_filtered () in
+  let pid = Unix.create_process_env command argv env Unix.stdin Unix.stdout Unix.stderr in
+  let _, status = Unix.waitpid [] pid in
+  match status with
+  | Unix.WEXITED code -> code
+  | Unix.WSIGNALED _ -> 1
+  | Unix.WSTOPPED _ -> 1
 
 let exit (code : int) : unit =
   Stdlib.exit code

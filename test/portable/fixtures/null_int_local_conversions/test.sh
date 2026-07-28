@@ -28,10 +28,19 @@ if grep -Eq '__nullable_int_[0-9]+ = refined.*then 0 else Obj\.obj' "$source_fil
 	echo "The flow-refined Null<Int> read still maps null to zero through the legacy fallback" >&2
 	exit 1
 fi
+if ! grep -Fq 'HxRuntime.nullable_int_unwrap compoundValue' "$source_file"; then
+	echo "The compound-assignment operand did not use its sealed checked Null<Int> conversion" >&2
+	exit 1
+fi
+if grep -Eq 'Obj\.magic .*compoundValue' "$source_file"; then
+	echo "The compound-assignment operand still uses an unproved Obj.magic fallback" >&2
+	exit 1
+fi
 
 node - "$report_file" <<'NODE'
 const fs = require('node:fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+const haxeSource = fs.readFileSync('src/Main.hx', 'utf8')
 
 function fail(message) {
 	console.error(`Null<Int> lowering report check failed: ${message}`)
@@ -80,6 +89,19 @@ if (!report.unsafeOperations.some(entry => entry.source.file === 'src/Main.hx'
 	&& entry.operation === 'checked-nullable-int-unwrap'
 	&& entry.proofId === 'nullable-int-checked-read-v1')) {
 	fail('missing proof-backed checked nullable read')
+}
+const compoundStatement = 'compoundTotal += compoundValue'
+const compoundStatementOffset = haxeSource.indexOf(compoundStatement)
+if (compoundStatementOffset < 0) {
+	fail('missing compound-assignment source marker')
+}
+const compoundOffset = compoundStatementOffset + compoundStatement.indexOf('compoundValue')
+const compoundConversions = conversions.filter(entry => entry.source.min === compoundOffset
+	&& entry.inputSemanticTypeId === 'Null<Int>'
+	&& entry.outputSemanticTypeId === 'Int'
+	&& entry.conversion === 'checked-unbox-nullable-int')
+if (compoundConversions.length !== 1) {
+	fail(`expected one checked nullable-Int conversion for the compound operand, found ${compoundConversions.length}`)
 }
 NODE
 

@@ -496,7 +496,31 @@ class OcamlLocalRepresentationPlanner {
 						visit(value);
 					}
 					visitChildren = false;
-				case TBinop(OpAssignOp(_), left, _), TUnop(OpIncrement | OpDecrement, _, left):
+				case TBinop(OpAssignOp(op), left, right):
+					switch (left.expr) {
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactNullInt(local.t)):
+							unsupportedNullableLocalIds.set(local.id, true);
+						case TLocal(local) if (OcamlRepresentationRegistry.isExactNullBool(local.t)):
+							unsupportedNullableLocalIds.set(local.id, true);
+						case _:
+					}
+					final isNumericOperation = switch (op) {
+						case OpAdd | OpSub | OpMult | OpDiv | OpMod | OpAnd | OpOr | OpXor | OpShl | OpShr | OpUShr:
+							true;
+						case _:
+							false;
+					}
+					final isStringConcat = op == OpAdd
+						&& (TypeTools.toString(left.t) == "String"
+							|| TypeTools.toString(right.t) == "String"
+							|| TypeTools.toString(current.t) == "String");
+					visit(left);
+					if (isNumericOperation && !isStringConcat)
+						visitCheckedInt(right);
+					else
+						visit(right);
+					visitChildren = false;
+				case TUnop(OpIncrement | OpDecrement, _, left):
 					switch (left.expr) {
 						case TLocal(local) if (OcamlRepresentationRegistry.isExactNullInt(local.t)):
 							unsupportedNullableLocalIds.set(local.id, true);

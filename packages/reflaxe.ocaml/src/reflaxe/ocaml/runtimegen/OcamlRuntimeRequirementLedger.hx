@@ -443,7 +443,7 @@ class OcamlRuntimeRequirementLedger {
 				{
 					feature: "haxe-system-v1",
 					module: "HxSys",
-					explanation: "Typed Haxe Sys declarations use HxSys for process arguments, environment reads, timing, working-directory operations, host identity, program paths, process exit, and character input."
+					explanation: "Typed Haxe Sys declarations use HxSys for process arguments, environment access, command execution, timing, working-directory operations, host identity, program paths, process exit, and character input."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';

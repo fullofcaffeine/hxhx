@@ -1,5 +1,6 @@
 class Main {
 	static var events:String = "";
+	static var pushed:Array<Int> = [];
 
 	static function printLine(value:String):Void {
 		#if js
@@ -65,6 +66,18 @@ class Main {
 		mark("done");
 	}
 
+	/**
+		Leaves a value-producing target operation at the end of a Void function.
+
+		Haxe discards Array.push's Int result. The early return forces the target
+		to join that normal path with its private payloadless return signal.
+	**/
+	static function pushAfterGuard(stop:Bool):Void {
+		if (stop)
+			return;
+		pushed.push(7);
+	}
+
 	static function nestedClosure():Void {
 		final local = function(stop:Bool):Void {
 			mark("inner");
@@ -84,6 +97,10 @@ class Main {
 		capture("tryRun", () -> throughTry(false));
 		capture("catchStop", () -> fromCatch(true));
 		capture("catchRun", () -> fromCatch(false));
+		pushed = [];
+		pushAfterGuard(false);
+		pushAfterGuard(true);
+		printLine("pushAfterGuard=" + pushed.length);
 		capture("closure", nestedClosure);
 		printLine("OK void_return_control");
 	}

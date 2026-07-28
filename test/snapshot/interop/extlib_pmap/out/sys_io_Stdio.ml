@@ -86,10 +86,10 @@ let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : H
 
 let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
-  ignore (try (
+  ignore (try ignore ((
     ignore (if s == HxString.hx_null_string || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
-  ) with
+  )) with
     | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
 ))
 

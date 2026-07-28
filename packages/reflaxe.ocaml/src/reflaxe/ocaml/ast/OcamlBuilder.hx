@@ -36,6 +36,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallEvaluationStepKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
@@ -130,6 +131,8 @@ class OcamlBuilder {
 	var currentLocalRepresentationPlan:Null<OcamlLocalRepresentationPlan> = null;
 	// Current function return type while lowering a function body.
 	var currentFunctionReturnType:Null<Type> = null;
+	// The sealed callable boundary, when the complete signature is admitted.
+	var currentCallableBoundary:Null<OcamlCallableBoundaryPlan> = null;
 
 	// Used for pruning unused `let` bindings inside blocks (keeps dune warn-error happy).
 	var currentUsedLocalIds:Null<Map<Int, Bool>> = null;
@@ -242,6 +245,36 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+		Resolves the target type selected for one callable-side represented value.
+
+		Most carriers are complete OCaml type names such as `int` or `Obj.t`.
+		A monomorphic class deliberately stores `t` plus its owning module as
+		separate representation facts, so this helper qualifies that carrier when
+		the callable is emitted from another module.
+	**/
+	function callableOutputType(value:OcamlCallValuePlan, position:Position):OcamlTypeExpr {
+		final binding = currentFunctionPlanBinding;
+		if (binding == null)
+			return callPlanInvariant("a callable carrier reached syntax without a sealed function binding", position);
+		final representation = try {
+			representationRegistry.require(value.outputRepresentationId, binding.programRevision);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), position);
+		}
+		if (representation.semanticTypeId != value.outputSemanticTypeId || representation.carrierTypeId != value.outputCarrierTypeId) {
+			return
+				callPlanInvariant('callable carrier ${value.outputSemanticTypeId}/${value.outputCarrierTypeId} does not match representation "${value.outputRepresentationId}"',
+				position);
+		}
+		if (OcamlMonomorphicClassMaterializer.isNominalClass(representation)) {
+			if (ctx.currentModuleId == null)
+				return callPlanInvariant("a nominal callable carrier reached syntax outside an OCaml module", position);
+			return OcamlMonomorphicClassMaterializer.typeExpr(representation, moduleIdToOcamlModuleName(ctx.currentModuleId));
+		}
+		return OcamlTypeExpr.TIdent(value.outputCarrierTypeId);
+	}
+
 	/** Mechanically applies one conversion already selected by the call plan. */
 	function buildPlannedCallArgument(value:OcamlCallValuePlan, expression:TypedExpr):OcamlExpr {
 		requireCallValue(value, value.index, 'call argument ${value.index}', expression.pos);
@@ -250,6 +283,8 @@ class OcamlBuilder {
 				buildExpr(expression);
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
+			case CheckedUnboxNullableInt:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(expression)]);
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString:
 				callPlanInvariant('call argument ${value.index} claims an omitted conversion but received a source expression', expression.pos);
 			case MaterializeExplicitNullString:
@@ -281,6 +316,8 @@ class OcamlBuilder {
 				body;
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
+			case CheckedUnboxNullableInt:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
 				callPlanInvariant("a callable result cannot use an omitted-argument conversion", position);
 		}
@@ -2344,49 +2381,20 @@ class OcamlBuilder {
 										}
 
 										final isBuilderOwnedSysCall = cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && switch (cf.name) {
-											case "print", "println", "putEnv", "command", "setTimeLocale": true;
+											case "print", "println": true;
 											case _: false;
 										};
 										if (isBuilderOwnedSysCall) {
-											final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 											switch (cf.name) {
 												case "println" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [buildStdString(args[0])]);
 												case "print" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [buildStdString(args[0])]);
-												case "putEnv" if (args.length == 2):
-													final v1 = unwrap(args[1]);
-													final opt = switch (v1.expr) {
-														case TConst(TNull): OcamlExpr.EIdent("None");
-														case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
-													};
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "putEnv"), [buildExpr(args[0]), opt]);
-												case "command":
-													final opt = if (args.length == 1) {
-														OcamlExpr.EIdent("None");
-													} else if (args.length == 2) {
-														final a1 = unwrap(args[1]);
-														switch (a1.expr) {
-															case TConst(TNull): OcamlExpr.EIdent("None");
-															case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
-														}
-													} else {
-														#if macro
-														guardrailError("reflaxe.ocaml (M6): Sys.command expects 1 or 2 args.", e.pos);
-														#end
-														OcamlExpr.EIdent("None");
-													};
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "command"), [buildExpr(args[0]), opt]);
-												case "setTimeLocale":
-													#if macro
-													guardrailError("reflaxe.ocaml (M6): Sys.setTimeLocale is not implemented yet.", e.pos);
-													#end
-													anyNull;
 												case _:
 													#if macro
 													guardrailError("reflaxe.ocaml (M6): unexpected builder-owned Sys." + cf.name + " call.", e.pos);
 													#end
-													anyNull;
+													OcamlExpr.EConst(OcamlConst.CUnit);
 											}
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
 											final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
@@ -6827,7 +6835,7 @@ class OcamlBuilder {
 				case TReturn(ret):
 					// `return` terminates the block: ignore any following expressions.
 					base = if (allowDirectReturn) {
-						ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+						ret != null ? buildDirectFunctionResult(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 					} else if (currentControlPlan != null && currentControlPlan.returnFamilyAdmitted) {
 						final decision = try {
 							currentControlPlan.decisionFor(e);
@@ -6912,6 +6920,28 @@ class OcamlBuilder {
 		#end
 		currentUsedLocalIds = prevUsed;
 		return result;
+	}
+
+	/**
+			Builds a direct source return against the function's declared Haxe result.
+			A fully admitted callable applies its sealed result conversion around the
+			complete body later. Functions whose argument families are still outside
+			that call matrix nevertheless retain an exact declared result. This
+			fallback changes only nullable-primitive values crossing into their exact
+			declared primitive; all other result families keep their prior lowering.
+		**/
+	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
+		final returnType = currentFunctionReturnType;
+		if (returnType == null || isVoidType(returnType) || currentCallableBoundary != null)
+			return buildExpr(value);
+		final valueNullableKind = nullablePrimitiveKind(value.t);
+		if (valueNullableKind == "int" && isIntType(returnType)) {
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(value)]);
+		}
+		if (valueNullableKind == "bool" && isBoolType(returnType)) {
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(value)]);
+		}
+		return buildExpr(value);
 	}
 
 	/** Builds one non-function root after rechecking its exact storage and Bytes plans. */
@@ -7167,6 +7197,8 @@ class OcamlBuilder {
 		#end
 
 		final callableBoundary = functionPlan.callableBoundary;
+		final previousCallableBoundary = currentCallableBoundary;
+		currentCallableBoundary = callableBoundary;
 		final params = if (callableBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
@@ -7181,7 +7213,7 @@ class OcamlBuilder {
 				requireCallValue(callableBoundary.result, -1, 'callable boundary "${callableBoundary.id}" result', bodyExpr.pos);
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...args.length)
-					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), OcamlTypeExpr.TIdent(callableBoundary.arguments[index].outputCarrierTypeId))
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(args[index].name)), callableOutputType(callableBoundary.arguments[index], bodyExpr.pos))
 			];
 		}
 
@@ -7214,7 +7246,7 @@ class OcamlBuilder {
 
 		var body:OcamlExpr = switch (unwrap(bodyExpr).expr) {
 			case TReturn(ret):
-				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				ret != null ? buildDirectFunctionResult(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 			case TBlock(exprs):
 				buildFunctionBodyBlock(exprs);
 			case _:
@@ -7248,7 +7280,9 @@ class OcamlBuilder {
 						resolvedReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, bodyExpr.pos)
 				};
 			}
-			final fallbackBody = if (functionPlan.controls.returnFamilyAdmitted) {
+			final fallbackBody = if (isVoidType(resolvedReturnType)) {
+				exprAsStatement(body);
+			} else if (functionPlan.controls.returnFamilyAdmitted) {
 				if (callableBoundary != null
 					&& callableBoundary.result != null
 					&& callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity) {
@@ -7257,8 +7291,6 @@ class OcamlBuilder {
 				} else {
 					body;
 				}
-			} else if (isVoidType(resolvedReturnType)) {
-				body;
 			} else {
 				final fallbackResultName = freshTmp("fallback_result");
 				OcamlExpr.ELet(fallbackResultName, body,
@@ -7285,7 +7317,7 @@ class OcamlBuilder {
 					bodyExpr.pos);
 			if (!resultConvertedInsideControl)
 				body = buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
-			body = OcamlExpr.EAnnot(body, OcamlTypeExpr.TIdent(callableBoundary.result.outputCarrierTypeId));
+			body = OcamlExpr.EAnnot(body, callableOutputType(callableBoundary.result, bodyExpr.pos));
 		}
 
 		for (a in args) {
@@ -7300,6 +7332,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentFunctionReturnType = prevFunctionReturnType;
+		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
@@ -7345,11 +7378,13 @@ class OcamlBuilder {
 			case _: tfunc.t;
 		};
 		final prevFunctionReturnType = currentFunctionReturnType;
+		final previousCallableBoundary = currentCallableBoundary;
 		currentFunctionReturnType = functionReturnType;
+		currentCallableBoundary = null;
 
 		var body:OcamlExpr = switch (unwrap(tfunc.expr).expr) {
 			case TReturn(ret):
-				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				ret != null ? buildDirectFunctionResult(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 			case TBlock(exprs):
 				buildFunctionBodyBlock(exprs);
 			case _:
@@ -7364,7 +7399,7 @@ class OcamlBuilder {
 				expr: returnPayloadToFunctionType(returnVar, functionReturnType)
 			};
 			final fallbackBody = if (isVoidType(functionReturnType)) {
-				body;
+				exprAsStatement(body);
 			} else {
 				final fallbackResultName = freshTmp("fallback_result");
 				OcamlExpr.ELet(fallbackResultName, body,
@@ -7387,6 +7422,7 @@ class OcamlBuilder {
 		body = ensureParamUsage(body, params);
 
 		currentFunctionReturnType = prevFunctionReturnType;
+		currentCallableBoundary = previousCallableBoundary;
 		currentControlPlan = previousControlPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;

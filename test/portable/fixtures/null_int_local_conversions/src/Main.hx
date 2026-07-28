@@ -70,6 +70,12 @@ class Main {
 		if (refined != null)
 			log("refined=" + (refined + 1));
 
+		var compoundTotal = 1;
+		var compoundValue:Null<Int> = 2;
+		if (compoundValue != null)
+			compoundTotal += compoundValue;
+		log("compound=" + compoundTotal);
+
 		var switchValue:Null<Int> = null;
 		log("switch-null=" + classify(switchValue));
 		switchValue = 3;

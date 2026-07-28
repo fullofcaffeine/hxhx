@@ -5,8 +5,10 @@
 	operations to name checked `HxSys` boundaries in their typed declarations.
 
 	Stream access names the generated Haxe `sys.io.Stdio` implementation directly.
-	Methods needing Haxe-to-OCaml conversion remain explicit compiler-owned cases
-	until a typed Haxe facade can preserve their behavior.
+	Methods needing nullable branching implement that choice in Haxe, then call
+	narrow checked `HxSys` operations. Dynamic output conversion remains an
+	explicit compiler case until inline `Dynamic` parameters have a sealed OCaml
+	carrier.
 **/
 @:require(sys)
 extern class Sys {
@@ -39,7 +41,12 @@ extern class Sys {
 		Sets the value of the given environment variable.
 		If `v` is `null`, the environment variable is removed.
 	**/
-	static function putEnv(s:String, v:Null<String>):Void;
+	static inline function putEnv(s:String, v:Null<String>):Void {
+		if (v == null)
+			NativeHxSys.removeEnv(s);
+		else
+			NativeHxSys.putEnvValue(s, v);
+	}
 
 	/**
 		Returns a map of the current environment variables and their values.
@@ -57,8 +64,13 @@ extern class Sys {
 
 	/**
 		Changes the current time locale.
+
+		The OCaml backend does not currently provide a checked locale-changing
+		primitive, so this reports that the requested locale was not applied.
 	**/
-	static function setTimeLocale(loc:String):Bool;
+	static inline function setTimeLocale(loc:String):Bool {
+		return false;
+	}
 
 	/**
 		Gets the current working directory.
@@ -84,7 +96,9 @@ extern class Sys {
 	/**
 		Runs the given command.
 	**/
-	static function command(cmd:String, ?args:Array<String>):Int;
+	static inline function command(cmd:String, ?args:Array<String>):Int {
+		return args == null ? NativeHxSys.commandShell(cmd) : NativeHxSys.commandArgs(cmd, args);
+	}
 
 	/**
 		Exits the current process with the given exit code.
@@ -139,4 +153,17 @@ extern class Sys {
 		Returns the standard error of the process.
 	**/
 	@:native("Sys_io_Stdio.stderr") static function stderr():haxe.io.Output;
+}
+
+/**
+	Checked OCaml operations used only after the public Haxe `Sys` facade has
+	selected the required nullable/optional branch.
+**/
+@:ocamlRuntime("haxe-system")
+@:native("HxSys")
+private extern class NativeHxSys {
+	static function putEnvValue(name:String, value:String):Void;
+	static function removeEnv(name:String):Void;
+	static function commandShell(command:String):Int;
+	static function commandArgs(command:String, arguments:Array<String>):Int;
 }
