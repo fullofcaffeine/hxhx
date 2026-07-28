@@ -25,6 +25,7 @@ import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64Representat
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
@@ -193,12 +194,12 @@ class BytesAccessPlanFixture {
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
 		for (decision in decisions)
-			ledger.recordBytesAccess(decision);
+			OcamlBytesRuntimeRequirementRecorder.recordAccess(ledger, decision);
 		final requirements = ledger.requirementsSorted();
 		if (requirements.length != decisions.length)
 			Context.error('Expected ${decisions.length} Bytes access requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlRuntimeRequirementLedger.HAXE_BYTES_ACCESS
+			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_ACCESS
 				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
 				|| requirement.rootModules.join(",") != "HxBytes") {
 				Context.error('Runtime requirement "${requirement.id}" does not select the exact HxBytes access contract.', Context.currentPos());
@@ -287,7 +288,8 @@ class BytesAccessPlanFixture {
 			})
 		]));
 		expectThrows("invalid-access-result", () -> new OcamlBytesAccessPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
-		expectThrows("invalid-access", () -> ledger.recordBytesAccess(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
+		expectThrows("invalid-access",
+			() -> OcamlBytesRuntimeRequirementRecorder.recordAccess(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-access", () -> new OcamlBytesAccessPlan([sample]).requirePlanBinding({
 			functionId: sample.functionId,
 			programRevision: sample.programRevision,

@@ -25,6 +25,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPol
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
@@ -140,12 +141,12 @@ class BytesProducerPlanFixture {
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
 		for (decision in allDecisions)
-			ledger.recordBytesProducer(decision);
+			OcamlBytesRuntimeRequirementRecorder.recordProducer(ledger, decision);
 		final requirements = ledger.requirementsSorted();
 		if (requirements.length != allDecisions.length)
 			Context.error('Expected ${allDecisions.length} Bytes requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlRuntimeRequirementLedger.HAXE_BYTES_PRODUCER
+			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_PRODUCER
 				|| requirement.subject.id != OcamlBytesProducerContract.SEMANTIC_TYPE_ID
 				|| requirement.rootModules.length != 1
 				|| requirement.rootModules[0] != "HxBytes") {
@@ -158,7 +159,8 @@ class BytesProducerPlanFixture {
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {kind: OcamlBytesProducerKind.Alloc})]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {argumentCount: 1})]));
 		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {constructionPolicy: cast "invalid-policy"})]));
-		expectThrows("invalid-producer", () -> ledger.recordBytesProducer(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
+		expectThrows("invalid-producer",
+			() -> OcamlBytesRuntimeRequirementRecorder.recordProducer(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-producer", () -> new OcamlBytesProducerPlan([sample]).requirePlanBinding({
 			functionId: sample.functionId,
 			programRevision: sample.programRevision,

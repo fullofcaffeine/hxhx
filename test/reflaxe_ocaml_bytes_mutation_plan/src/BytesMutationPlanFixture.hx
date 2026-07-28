@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentat
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
@@ -96,12 +97,12 @@ class BytesMutationPlanFixture {
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
 		for (decision in decisions)
-			ledger.recordBytesMutation(decision);
+			OcamlBytesRuntimeRequirementRecorder.recordMutation(ledger, decision);
 		final requirements = ledger.requirementsSorted();
 		if (requirements.length != decisions.length)
 			Context.error('Expected ${decisions.length} Bytes mutation requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlRuntimeRequirementLedger.HAXE_BYTES_MUTATION
+			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_MUTATION
 				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
 				|| requirement.rootModules.join(",") != "HxBytes") {
 				Context.error('Runtime requirement "${requirement.id}" does not select the exact HxBytes mutation contract.', Context.currentPos());
@@ -120,7 +121,8 @@ class BytesMutationPlanFixture {
 		expectThrows("invalid-mutation-conversion",
 			() -> new OcamlBytesMutationPlan([reseal(sample, {argumentInputSemanticTypeIds: ["Int", "Int", "Int", "Int"]})]));
 		expectThrows("invalid-mutation", () -> new OcamlBytesMutationPlan([reseal(sample, {overlapPolicy: OcamlBytesMutationOverlapPolicy.NotApplicable})]));
-		expectThrows("invalid-mutation", () -> ledger.recordBytesMutation(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
+		expectThrows("invalid-mutation",
+			() -> OcamlBytesRuntimeRequirementRecorder.recordMutation(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-mutation", () -> new OcamlBytesMutationPlan([sample]).requirePlanBinding({
 			functionId: sample.functionId,
 			programRevision: sample.programRevision,

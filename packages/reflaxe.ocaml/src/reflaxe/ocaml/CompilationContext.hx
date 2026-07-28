@@ -14,6 +14,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 #end
 
@@ -442,22 +443,22 @@ class CompilationContext {
 
 	/** Records runtime support selected by one sealed non-null Bytes producer. **/
 	public function recordBytesProducerRuntimeRequirements(decision:OcamlBytesProducerDecision):Void {
-		runtimeRequirements.recordBytesProducer(decision);
+		OcamlBytesRuntimeRequirementRecorder.recordProducer(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed Bytes mutation. **/
 	public function recordBytesMutationRuntimeRequirements(decision:OcamlBytesMutationDecision):Void {
-		runtimeRequirements.recordBytesMutation(decision);
+		OcamlBytesRuntimeRequirementRecorder.recordMutation(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed Bytes access. **/
 	public function recordBytesAccessRuntimeRequirements(decision:OcamlBytesAccessDecision):Void {
-		runtimeRequirements.recordBytesAccess(decision);
+		OcamlBytesRuntimeRequirementRecorder.recordAccess(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed read-only Bytes operation. **/
 	public function recordBytesReadRuntimeRequirements(decision:OcamlBytesReadDecision):Void {
-		runtimeRequirements.recordBytesRead(decision);
+		OcamlBytesRuntimeRequirementRecorder.recordRead(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed program representation. **/

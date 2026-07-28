@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
@@ -110,12 +111,12 @@ class BytesReadPlanFixture {
 		final ledger = new OcamlRuntimeRequirementLedger();
 		ledger.beginProgram(PROGRAM_REVISION);
 		for (decision in allDecisions)
-			ledger.recordBytesRead(decision);
+			OcamlBytesRuntimeRequirementRecorder.recordRead(ledger, decision);
 		final requirements = ledger.requirementsSorted();
 		if (requirements.length != allDecisions.length)
 			Context.error('Expected ${allDecisions.length} Bytes read requirements, received ${requirements.length}.', Context.currentPos());
 		for (requirement in requirements) {
-			if (requirement.semanticCapability != OcamlRuntimeRequirementLedger.HAXE_BYTES_READ
+			if (requirement.semanticCapability != OcamlBytesRuntimeRequirementRecorder.HAXE_BYTES_READ
 				|| requirement.subject.id != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
 				|| requirement.rootModules.length != 1
 				|| requirement.rootModules[0] != "HxBytes") {
@@ -157,7 +158,7 @@ class BytesReadPlanFixture {
 		]).requireFor(nullableOccurrence, representations));
 		expectThrows("invalid-read-result", () -> new OcamlBytesReadPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
 		expectThrows("invalid-read-encoding", () -> new OcamlBytesReadPlan([reseal(sample, {encoding: OcamlBytesEncodingKind.UTF8})]));
-		expectThrows("invalid-read", () -> ledger.recordBytesRead(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
+		expectThrows("invalid-read", () -> OcamlBytesRuntimeRequirementRecorder.recordRead(ledger, copy(sample, {calleeId: sample.calleeId + ":tampered"})));
 		expectThrows("stale-read", () -> new OcamlBytesReadPlan([sample]).requirePlanBinding({
 			functionId: sample.functionId,
 			programRevision: sample.programRevision,
