@@ -27,10 +27,32 @@ class BytesReadCases {
 		});
 		if (order.join(",") != "receiver,position,length" || value.toString() != "bc")
 			throw "Haxe Bytes read evaluation order changed";
+		order.resize(0);
+		var nullAccess = false;
+		try {
+			nullableReceiverAndArgumentsInSourceOrder(() -> {
+				order.push("nullable-receiver");
+				return null;
+			}, () -> {
+				order.push("nullable-position");
+				return 0;
+			}, () -> {
+				order.push("nullable-length");
+				return 0;
+			});
+		} catch (error:Dynamic) {
+			nullAccess = Std.string(error) == "Null Access";
+		}
+		if (!nullAccess || order.join(",") != "nullable-receiver")
+			throw "Haxe nullable Bytes receiver order changed";
 		Sys.println("HAXE_4_3_7_BYTES_READ_ORDER_ORACLE:PASS");
 	}
 
 	public static function length(bytes:Bytes):Int {
+		return bytes.length;
+	}
+
+	public static function nullableLength(bytes:Null<Bytes>):Int {
 		return bytes.length;
 	}
 
@@ -87,6 +109,10 @@ class BytesReadCases {
 	}
 
 	public static function receiverAndArgumentsInSourceOrder(receiver:Void->Bytes, position:Void->Int, length:Void->Int):Bytes {
+		return receiver().sub(position(), length());
+	}
+
+	public static function nullableReceiverAndArgumentsInSourceOrder(receiver:Void->Null<Bytes>, position:Void->Int, length:Void->Int):Bytes {
 		return receiver().sub(position(), length());
 	}
 

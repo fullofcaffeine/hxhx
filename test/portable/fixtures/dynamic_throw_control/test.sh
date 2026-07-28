@@ -42,7 +42,7 @@ if (controls.length !== 2) {
 }
 for (const control of controls) {
 	const payload = control.payload
-	if (control.pipelineRevision !== 'ocaml-function-plans-v46'
+	if (control.pipelineRevision !== 'ocaml-function-plans-v47'
 		|| control.proofId !== 'dynamic-carrier-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'

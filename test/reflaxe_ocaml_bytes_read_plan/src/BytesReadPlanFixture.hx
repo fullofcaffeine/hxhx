@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadKind;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadReceiverConversion;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadResultKind;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan.OcamlBytesReadPlanner;
@@ -16,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentat
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
@@ -38,6 +40,8 @@ class BytesReadPlanFixture {
 		final cases = caseFields();
 		final expected = [
 			"length" => contract(OcamlBytesReadKind.Length, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.IntValue, 0),
+			"nullableLength" => contract(OcamlBytesReadKind.Length, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.IntValue, 0,
+				OcamlBytesReadReceiverConversion.RequireNonNullBytes),
 			"sub" => contract(OcamlBytesReadKind.Sub, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.BytesValue, 2),
 			"compare" => contract(OcamlBytesReadKind.Compare, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.IntValue, 1),
 			"getStringDefault" => contract(OcamlBytesReadKind.GetString, OcamlBytesEncodingKind.Omitted, OcamlBytesReadResultKind.StringValue, 2),
@@ -47,7 +51,9 @@ class BytesReadPlanFixture {
 			"toString" => contract(OcamlBytesReadKind.ToString, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.StringValue, 0),
 			"toHex" => contract(OcamlBytesReadKind.ToHex, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.StringValue, 0),
 			"receiverAndArgumentsInSourceOrder" => contract(OcamlBytesReadKind.Sub, OcamlBytesEncodingKind.NotApplicable, OcamlBytesReadResultKind.BytesValue,
-				2)
+				2),
+			"nullableReceiverAndArgumentsInSourceOrder" => contract(OcamlBytesReadKind.Sub, OcamlBytesEncodingKind.NotApplicable,
+				OcamlBytesReadResultKind.BytesValue, 2, OcamlBytesReadReceiverConversion.RequireNonNullBytes)
 		];
 
 		final allDecisions:Array<OcamlBytesReadDecision> = [];
@@ -71,6 +77,7 @@ class BytesReadPlanFixture {
 				|| decision.encoding != expectedContract.encoding
 				|| decision.resultKind != expectedContract.resultKind
 				|| decision.argumentCount != expectedContract.argumentCount
+				|| decision.receiverConversion != expectedContract.receiverConversion
 				|| decision.evaluationOrder.join(",") != expectedOrder.join(",")
 				|| !decision.hasReceiver
 				|| decision.functionId != binding.functionId
@@ -116,7 +123,9 @@ class BytesReadPlanFixture {
 			}
 		}
 
-		final sample = Lambda.find(allDecisions, decision -> decision.kind == OcamlBytesReadKind.Length);
+		final sample = Lambda.find(allDecisions,
+			decision -> decision.kind == OcamlBytesReadKind.Length
+				&& decision.receiverConversion == OcamlBytesReadReceiverConversion.Identity);
 		if (sample == null)
 			Context.error("The Bytes read fixture has no length decision.", Context.currentPos());
 		expectThrows("duplicate-read", () -> new OcamlBytesReadPlan([sample, sample]));
@@ -126,6 +135,26 @@ class BytesReadPlanFixture {
 		expectThrows("invalid-read-receiver", () -> new OcamlBytesReadPlan([
 			reseal(sample, {receiverRepresentationId: "representation:Dynamic:internal-value"})
 		]));
+		expectThrows("invalid-read-receiver-conversion", () -> new OcamlBytesReadPlan([
+			reseal(sample, {receiverConversion: OcamlBytesReadReceiverConversion.RequireNonNullBytes})
+		]));
+		final nullableSample = Lambda.find(allDecisions,
+			decision -> decision.kind == OcamlBytesReadKind.Length
+				&& decision.receiverConversion == OcamlBytesReadReceiverConversion.RequireNonNullBytes);
+		if (nullableSample == null)
+			Context.error("The Bytes read fixture has no nullable receiver decision.", Context.currentPos());
+		expectThrows("invalid-read-receiver-conversion", () -> new OcamlBytesReadPlan([
+			reseal(nullableSample, {receiverInputRepresentationId: sample.receiverInputRepresentationId})
+		]));
+		final nullableBody = requireBody(requireField(cases, "nullableLength"));
+		final nullableOccurrence = readOccurrence(nullableBody);
+		final missingNullableRepresentations = new OcamlRepresentationRegistry();
+		missingNullableRepresentations.beginProgram(PROGRAM_REVISION);
+		missingNullableRepresentations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
+		expectThrows("missing-decision", () -> new OcamlBytesReadPlan([nullableSample]).requireFor(nullableOccurrence, missingNullableRepresentations));
+		expectThrows("null-representation-mismatch", () -> new OcamlBytesReadPlan([
+			reseal(nullableSample, {receiverInputRepresentationRevision: "sha256:stale-null-bytes"})
+		]).requireFor(nullableOccurrence, representations));
 		expectThrows("invalid-read-result", () -> new OcamlBytesReadPlan([reseal(sample, {resultCarrierTypeId: "Obj.t"})]));
 		expectThrows("invalid-read-encoding", () -> new OcamlBytesReadPlan([reseal(sample, {encoding: OcamlBytesEncodingKind.UTF8})]));
 		expectThrows("invalid-read", () -> ledger.recordBytesRead(copy(sample, {calleeId: sample.calleeId + ":tampered"})));
@@ -174,17 +203,20 @@ class BytesReadPlanFixture {
 		return macro null;
 	}
 
-	static function contract(kind:OcamlBytesReadKind, encoding:OcamlBytesEncodingKind, resultKind:OcamlBytesReadResultKind, argumentCount:Int):{
+	static function contract(kind:OcamlBytesReadKind, encoding:OcamlBytesEncodingKind, resultKind:OcamlBytesReadResultKind, argumentCount:Int,
+			receiverConversion:OcamlBytesReadReceiverConversion = OcamlBytesReadReceiverConversion.Identity):{
 		kind:OcamlBytesReadKind,
 		encoding:OcamlBytesEncodingKind,
 		resultKind:OcamlBytesReadResultKind,
-		argumentCount:Int
+		argumentCount:Int,
+		receiverConversion:OcamlBytesReadReceiverConversion
 	} {
 		return {
 			kind: kind,
 			encoding: encoding,
 			resultKind: resultKind,
-			argumentCount: argumentCount
+			argumentCount: argumentCount,
+			receiverConversion: receiverConversion
 		};
 	}
 

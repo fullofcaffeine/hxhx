@@ -5,13 +5,16 @@ import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadKind;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadReceiverConversion;
 
 /**
 	Constructs OCaml syntax from one already-validated Bytes read decision.
 
-	The helper materializes the receiver first and then each runtime argument in
-	Haxe source order. It does not classify declarations, choose carriers, or
-	invent runtime dependencies.
+	The helper materializes the receiver first, performs the sealed receiver
+	conversion, and then materializes each runtime argument in Haxe source order.
+	A checked nullable receiver therefore throws before argument side effects,
+	matching Haxe 4.3.7. This helper does not classify declarations, choose
+	carriers, or invent runtime dependencies.
 **/
 class OcamlBytesReadSyntax {
 	public static function build(decision:OcamlBytesReadDecision, receiver:TypedExpr, arguments:Array<TypedExpr>, buildExpression:TypedExpr->OcamlExpr,
@@ -29,9 +32,17 @@ class OcamlBytesReadSyntax {
 			if (slot == -1) {
 				if (receiverValue != null)
 					throw 'reflaxe.ocaml [ocaml-bytes:read-syntax-schedule-mismatch]: read "${decision.id}" has an invalid receiver step';
-				final name = freshName("bytes_receiver");
-				materialized.push({name: name, value: buildExpression(receiver)});
-				receiverValue = OcamlExpr.EIdent(name);
+				final inputName = freshName(decision.receiverConversion == OcamlBytesReadReceiverConversion.Identity ? "bytes_receiver" : "bytes_receiver_input");
+				materialized.push({name: inputName, value: buildExpression(receiver)});
+				final input = OcamlExpr.EIdent(inputName);
+				switch (decision.receiverConversion) {
+					case Identity:
+						receiverValue = input;
+					case RequireNonNullBytes:
+						final receiverName = freshName("bytes_receiver");
+						materialized.push({name: receiverName, value: requireNonNullBytes(input)});
+						receiverValue = OcamlExpr.EIdent(receiverName);
+				}
 			} else {
 				if (slot < 0 || slot >= arguments.length || argumentValues[slot] != null)
 					throw 'reflaxe.ocaml [ocaml-bytes:read-syntax-schedule-mismatch]: read "${decision.id}" has an invalid argument step $slot';
@@ -98,6 +109,19 @@ class OcamlBytesReadSyntax {
 
 	static function hxBytesCall(field:String, arguments:Array<OcamlExpr>):OcamlExpr {
 		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), field), arguments);
+	}
+
+	static function requireNonNullBytes(input:OcamlExpr):OcamlExpr {
+		final represented = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [input]);
+		final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [represented]);
+		final throwNullAccess = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [
+			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
+			OcamlExpr.EList([
+				OcamlExpr.EConst(OcamlConst.CString("String")),
+				OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
+			])
+		]);
+		return OcamlExpr.EIf(isNull, throwNullAccess, input);
 	}
 }
 #end

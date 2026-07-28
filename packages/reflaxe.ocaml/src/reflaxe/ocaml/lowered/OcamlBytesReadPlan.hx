@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadKind;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadReceiverConversion;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadResultKind;
 import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -132,7 +133,7 @@ class OcamlBytesReadPlan {
 				final classType = classRef.get();
 				final field = fieldRef.get();
 				if (!OcamlBytesProducerPlan.isBytesClass(classType)
-					|| !OcamlRepresentationRegistry.isExactBytes(receiver.t)
+					|| !isAdmittedReceiver(receiver)
 					|| field.name != "length"
 					|| !OcamlRepresentationRegistry.isExactInt(expression.t)) {
 					null;
@@ -149,7 +150,7 @@ class OcamlBytesReadPlan {
 			case TCall({expr: TField(receiver, FInstance(classRef, _, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
-				if (!OcamlBytesProducerPlan.isBytesClass(classType) || !OcamlRepresentationRegistry.isExactBytes(receiver.t)) {
+				if (!OcamlBytesProducerPlan.isBytesClass(classType) || !isAdmittedReceiver(receiver)) {
 					null;
 				} else {
 					final classified = instanceKind(field.name, arguments, expression.t);
@@ -165,6 +166,10 @@ class OcamlBytesReadPlan {
 			case _:
 				null;
 		}
+	}
+
+	static function isAdmittedReceiver(receiver:TypedExpr):Bool {
+		return OcamlRepresentationRegistry.isExactBytes(receiver.t) || OcamlRepresentationRegistry.isExactNullBytes(receiver.t);
 	}
 
 	static function instanceKind(fieldName:String, arguments:Array<TypedExpr>, resultType:Type):Null<{
@@ -218,7 +223,16 @@ class OcamlBytesReadPlan {
 			&& occurrence.kind == decision.kind
 			&& occurrence.arguments.length == decision.argumentCount
 			&& occurrence.encoding == decision.encoding
+			&& receiverInputSemanticTypeId(occurrence.receiver) == decision.receiverInputSemanticTypeId
 			&& OcamlCallPlanner.calleeId(occurrence.classType, occurrence.field) == decision.calleeId;
+	}
+
+	static function receiverInputSemanticTypeId(receiver:TypedExpr):String {
+		if (OcamlRepresentationRegistry.isExactBytes(receiver.t))
+			return OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID;
+		if (OcamlRepresentationRegistry.isExactNullBytes(receiver.t))
+			return OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID;
+		throw "reflaxe.ocaml [ocaml-bytes:unsupported-read-receiver]: admitted Bytes read has no exact receiver semantic identity";
 	}
 
 	static function sourceKey(source:OcamlLoweredSourceSpan):String {
@@ -237,6 +251,11 @@ class OcamlBytesReadPlan {
 			decision.sourceTypeName,
 			decision.sourceFieldName,
 			Std.string(decision.hasReceiver),
+			decision.receiverInputSemanticTypeId,
+			decision.receiverInputCarrierTypeId,
+			decision.receiverInputRepresentationId,
+			decision.receiverInputRepresentationRevision,
+			(decision.receiverConversion : String),
 			decision.receiverSemanticTypeId,
 			decision.receiverCarrierTypeId,
 			decision.receiverRepresentationId,
@@ -275,6 +294,11 @@ class OcamlBytesReadPlan {
 			sourceTypeName: decision.sourceTypeName,
 			sourceFieldName: decision.sourceFieldName,
 			hasReceiver: decision.hasReceiver,
+			receiverInputSemanticTypeId: decision.receiverInputSemanticTypeId,
+			receiverInputCarrierTypeId: decision.receiverInputCarrierTypeId,
+			receiverInputRepresentationId: decision.receiverInputRepresentationId,
+			receiverInputRepresentationRevision: decision.receiverInputRepresentationRevision,
+			receiverConversion: decision.receiverConversion,
 			receiverSemanticTypeId: decision.receiverSemanticTypeId,
 			receiverCarrierTypeId: decision.receiverCarrierTypeId,
 			receiverRepresentationId: decision.receiverRepresentationId,
@@ -304,8 +328,17 @@ class OcamlBytesReadPlan {
 	}
 
 	static function requireRepresentationsForDecision(decision:OcamlBytesReadDecision, representations:OcamlRepresentationRegistry):Void {
-		if (decision.hasReceiver)
+		if (decision.hasReceiver) {
+			switch (decision.receiverConversion) {
+				case Identity:
+					representations.requireExactBytesInternal(decision.receiverInputRepresentationId, decision.receiverInputRepresentationRevision,
+						decision.programRevision);
+				case RequireNonNullBytes:
+					representations.requireExactNullBytesInternal(decision.receiverInputRepresentationId, decision.receiverInputRepresentationRevision,
+						decision.programRevision);
+			}
 			representations.requireExactBytesInternal(decision.receiverRepresentationId, decision.receiverRepresentationRevision, decision.programRevision);
+		}
 		for (index in 0...decision.argumentCount) {
 			if (!decision.argumentRuntimeUse[index])
 				continue;
@@ -337,8 +370,9 @@ class OcamlBytesReadPlan {
 	Finds exact read-only Bytes operations in one final typed expression root.
 
 	The planner does not admit writes, inline-expanded storage reads, indexing,
-	Float or Int64 results, nullable materialization, or user-defined lookalikes.
-	Those families require separate representation or place-operation decisions.
+	Float or Int64 results, general nullable materialization, or user-defined
+	lookalikes. Its only nullable conversion is the exact checked
+	`Null<Bytes>` receiver crossing recorded in the read decision.
 **/
 class OcamlBytesReadPlanner {
 	final binding:OcamlFunctionPlanBinding;
@@ -367,6 +401,14 @@ class OcamlBytesReadPlanner {
 		if (occurrence == null)
 			return null;
 		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final receiverInputRepresentation = if (OcamlRepresentationRegistry.isExactBytes(occurrence.receiver.t)) {
+			representations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
+		} else if (OcamlRepresentationRegistry.isExactNullBytes(occurrence.receiver.t)) {
+			representations.selectExactNullBytes(OcamlRepresentationDomain.InternalValue);
+		} else {
+			throw "reflaxe.ocaml [ocaml-bytes:unsupported-read-receiver]: admitted Bytes read has no exact receiver representation";
+		}
+		final receiverConversion = receiverInputRepresentation.semanticTypeId == OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID ? OcamlBytesReadReceiverConversion.Identity : OcamlBytesReadReceiverConversion.RequireNonNullBytes;
 		final receiverRepresentation = representations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
 		final argumentRepresentations = [
 			for (index in 0...occurrence.arguments.length)
@@ -383,6 +425,11 @@ class OcamlBytesReadPlanner {
 			sourceTypeName: occurrence.classType.name,
 			sourceFieldName: occurrence.field.name,
 			hasReceiver: true,
+			receiverInputSemanticTypeId: receiverInputRepresentation.semanticTypeId,
+			receiverInputCarrierTypeId: receiverInputRepresentation.carrierTypeId,
+			receiverInputRepresentationId: receiverInputRepresentation.id,
+			receiverInputRepresentationRevision: receiverInputRepresentation.revision,
+			receiverConversion: receiverConversion,
 			receiverSemanticTypeId: receiverRepresentation.semanticTypeId,
 			receiverCarrierTypeId: receiverRepresentation.carrierTypeId,
 			receiverRepresentationId: receiverRepresentation.id,
@@ -465,6 +512,11 @@ class OcamlBytesReadPlanner {
 			sourceTypeName: decision.sourceTypeName,
 			sourceFieldName: decision.sourceFieldName,
 			hasReceiver: decision.hasReceiver,
+			receiverInputSemanticTypeId: decision.receiverInputSemanticTypeId,
+			receiverInputCarrierTypeId: decision.receiverInputCarrierTypeId,
+			receiverInputRepresentationId: decision.receiverInputRepresentationId,
+			receiverInputRepresentationRevision: decision.receiverInputRepresentationRevision,
+			receiverConversion: decision.receiverConversion,
 			receiverSemanticTypeId: decision.receiverSemanticTypeId,
 			receiverCarrierTypeId: decision.receiverCarrierTypeId,
 			receiverRepresentationId: decision.receiverRepresentationId,

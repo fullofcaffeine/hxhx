@@ -23,12 +23,21 @@ enum abstract OcamlBytesReadResultKind(String) from String to String {
 	final BytesValue = "bytes";
 }
 
+/** The exact conversion from the typed receiver into the direct Bytes carrier. */
+enum abstract OcamlBytesReadReceiverConversion(String) from String to String {
+	final Identity = "identity";
+	final RequireNonNullBytes = "require-non-null-bytes";
+}
+
 /**
 	One immutable Bytes read fixed before OCaml syntax is constructed.
 
-	The receiver and runtime arguments refer to request-owned representation
-	decisions. An optional encoding selector is still recorded in source order,
-	but it is a compile-time constant and therefore has no runtime carrier.
+	The receiver input preserves its exact typed representation. The receiver
+	output is always direct Bytes, reached either unchanged or through the one
+	Haxe-compatible checked `Null<Bytes>` conversion. Runtime arguments refer to
+	request-owned representation decisions. An optional encoding selector is
+	still recorded in source order, but it is a compile-time constant and
+	therefore has no runtime carrier.
 **/
 typedef OcamlBytesReadDecision = {
 	final id:String;
@@ -39,6 +48,11 @@ typedef OcamlBytesReadDecision = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final hasReceiver:Bool;
+	final receiverInputSemanticTypeId:String;
+	final receiverInputCarrierTypeId:String;
+	final receiverInputRepresentationId:String;
+	final receiverInputRepresentationRevision:String;
+	final receiverConversion:OcamlBytesReadReceiverConversion;
 	final receiverSemanticTypeId:String;
 	final receiverCarrierTypeId:String;
 	final receiverRepresentationId:String;
@@ -72,7 +86,7 @@ class OcamlBytesReadContract {
 	public static inline final RESULT_NULLABILITY = "non-null";
 	public static inline final COMPILE_TIME_ENCODING_CARRIER = "compile-time-encoding-selector";
 	public static inline final PROOF_ID = "exact-haxe-bytes-read-v1";
-	public static inline final PROOF_CLAIM = "This exact standard-library Bytes read fixes its receiver, source-ordered arguments, result representation, and HxBytes operation before target syntax. The proof does not admit writes, inline-expanded storage reads, indexed access, nullable materialization, Float or Int64 results, or non-Bytes calls.";
+	public static inline final PROOF_CLAIM = "This exact standard-library Bytes read fixes its typed receiver input, optional checked Null<Bytes>-to-Bytes receiver conversion, source-ordered arguments, result representation, and HxBytes operation before target syntax. The receiver is evaluated once and a null receiver throws Null Access before any argument expression. The proof does not admit writes, inline-expanded storage reads, indexed access, other nullable materialization, Float or Int64 results, or non-Bytes calls.";
 
 	/** Computes the deterministic identity shared by planning and validation. */
 	public static function idFor(decision:OcamlBytesReadDecision):String {
@@ -87,6 +101,11 @@ class OcamlBytesReadContract {
 			(decision.kind : String),
 			decision.calleeId,
 			Std.string(decision.hasReceiver),
+			decision.receiverInputSemanticTypeId,
+			decision.receiverInputCarrierTypeId,
+			decision.receiverInputRepresentationId,
+			decision.receiverInputRepresentationRevision,
+			(decision.receiverConversion : String),
 			decision.receiverRepresentationId,
 			decision.receiverRepresentationRevision,
 			Std.string(decision.argumentCount),
@@ -183,6 +202,20 @@ class OcamlBytesReadContract {
 			|| !StringTools.startsWith(decision.receiverRepresentationRevision, "sha256:")) {
 			throw 'reflaxe.ocaml [ocaml-bytes:invalid-read-receiver]: read "${decision.id}" has an incompatible Bytes receiver';
 		}
+		final validInput = switch (decision.receiverConversion) {
+			case Identity:
+				decision.receiverInputSemanticTypeId == OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+				&& decision.receiverInputCarrierTypeId == OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+				&& decision.receiverInputRepresentationId == OcamlBytesRepresentationContract.DIRECT_INTERNAL_REPRESENTATION_ID
+				&& decision.receiverInputRepresentationRevision == decision.receiverRepresentationRevision;
+			case RequireNonNullBytes:
+				decision.receiverInputSemanticTypeId == OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID
+				&& decision.receiverInputCarrierTypeId == OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+				&& decision.receiverInputRepresentationId == OcamlBytesRepresentationContract.EXPLICIT_NULL_INTERNAL_REPRESENTATION_ID
+				&& StringTools.startsWith(decision.receiverInputRepresentationRevision, "sha256:");
+		}
+		if (!validInput)
+			throw 'reflaxe.ocaml [ocaml-bytes:invalid-read-receiver-conversion]: read "${decision.id}" has an incompatible ${decision.receiverConversion} receiver conversion';
 	}
 
 	static function requireArguments(decision:OcamlBytesReadDecision):Void {

@@ -82,6 +82,9 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.fill", "fill");
 		assertContains(content, "HxBytes.create", "internal constructor");
 		assertContains(content, "let __bytes_receiver_", "planned Bytes receiver materialization");
+		assertContains(content, "let __bytes_receiver_input_", "planned typed Bytes receiver input");
+		assertContains(content, "HxRuntime.is_null (Obj.repr __bytes_receiver_input_", "planned nullable Bytes receiver check");
+		assertContains(content, 'HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"]', "planned nullable Bytes receiver failure");
 		assertContains(content, "let __bytes_arg_0_", "planned Bytes first argument materialization");
 		assertContains(content, "let __bytes_arg_1_", "planned Bytes second argument materialization");
 		assertContains(content, "let __bytes_destination_", "planned Bytes mutation receiver materialization");

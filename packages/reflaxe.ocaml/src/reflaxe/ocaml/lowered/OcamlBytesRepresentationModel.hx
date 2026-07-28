@@ -20,6 +20,7 @@ class OcamlBytesRepresentationContract {
 	public static inline final DATA_ALIASING_POLICY = "shared-native-data-alias";
 	public static inline final RANGE_BOUNDS_POLICY = "declared-length";
 	public static inline final DIRECT_INTERNAL_REPRESENTATION_ID = "representation:haxe.io.Bytes:internal-value";
+	public static inline final EXPLICIT_NULL_INTERNAL_REPRESENTATION_ID = "representation:Null<haxe.io.Bytes>:internal-value";
 	public static inline final DATA_INTERNAL_REPRESENTATION_ID = "representation:haxe.io.BytesData:internal-value";
 	public static inline final DIRECT_PROOF_ID = "direct-haxe-bytes-reference-carrier-v2";
 	public static inline final EXPLICIT_NULL_PROOF_ID = "explicit-null-haxe-bytes-reference-carrier-v2";

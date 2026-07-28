@@ -723,6 +723,32 @@ class OcamlRepresentationRegistry {
 		return decision;
 	}
 
+	/**
+		Revalidates one exact `Null<Bytes>` representation used as read input.
+
+		The nullable semantic identity is preserved until a separate occurrence
+		decision authorizes the Haxe-compatible non-null receiver check.
+	**/
+	public function requireExactNullBytesInternal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
+		final decision = require(representationId, programRevision);
+		if (decision.id != OcamlBytesRepresentationContract.EXPLICIT_NULL_INTERNAL_REPRESENTATION_ID
+			|| decision.revision != representationRevision
+			|| decision.semanticTypeId != OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID
+			|| decision.carrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+			|| decision.domain != OcamlRepresentationDomain.InternalValue
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+			|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+			|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			|| decision.proof.id != OcamlBytesRepresentationContract.EXPLICIT_NULL_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-bytes:null-representation-mismatch]: nullable receiver planning expects the sealed Null<Bytes> internal carrier, but "$representationId" selects incompatible facts';
+		}
+		return decision;
+	}
+
 	/** Revalidates one exact target-owned `BytesData` representation reference. */
 	public function requireExactBytesDataInternal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
 		final decision = require(representationId, programRevision);

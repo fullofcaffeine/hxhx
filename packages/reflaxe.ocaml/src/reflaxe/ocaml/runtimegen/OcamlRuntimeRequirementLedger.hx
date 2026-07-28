@@ -228,7 +228,7 @@ class OcamlRuntimeRequirementLedger {
 			implementationFeature: "haxe-bytes-read-v1",
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
-			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation reads an exact haxe.io.Bytes value through HxBytes after fixing receiver and argument evaluation order; writes, indexed access, nullable materialization, and Float or Int64 results require separate decisions.'
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its ${decision.receiverConversion} conversion, and argument evaluation order. Exact Null<haxe.io.Bytes> may cross one checked receiver conversion; writes, indexed access, other nullable materialization, and Float or Int64 results require separate decisions.'
 		});
 	}
 

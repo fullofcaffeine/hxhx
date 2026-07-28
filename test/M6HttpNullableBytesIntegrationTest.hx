@@ -80,6 +80,8 @@ class M6HttpNullableBytesIntegrationTest {
 		final hasBytesStringLowering = httpBaseContent.indexOf("HxBytes.getString") >= 0
 			|| httpBaseContent.indexOf("HxBytes.toString") >= 0;
 		assertTrue(hasBytesStringLowering, "responseData getter should lower via HxBytes string helpers");
+		assertContains(httpBaseContent, "HxRuntime.is_null (Obj.repr __bytes_receiver_input_", "nullable response body receiver check");
+		assertContains(httpBaseContent, 'HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"]', "nullable response body failure");
 
 		if (hasCommand("dune") && hasCommand("ocamlc")) {
 			final exeName = exeNameFromOutDir(outDir);

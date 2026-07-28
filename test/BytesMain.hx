@@ -22,6 +22,11 @@ class BytesMain {
 		return value;
 	}
 
+	static function orderedNullableBytesValue(label:String, value:Null<Bytes>):Null<Bytes> {
+		evaluationOrder.push(label);
+		return value;
+	}
+
 	static function orderedInt(label:String, value:Int):Int {
 		evaluationOrder.push(label);
 		return value;
@@ -86,6 +91,24 @@ class BytesMain {
 		final ordered = orderedBytes().sub(orderedInt("position", 1), orderedInt("length", 2));
 		if (ordered.toString() != "bc" || evaluationOrder.join(",") != "receiver,position,length")
 			throw "Bytes read evaluation order changed";
+
+		evaluationOrder.resize(0);
+		final nullableOrdered = orderedNullableBytesValue("nullable-receiver",
+			Bytes.ofString("abcd")).sub(orderedInt("nullable-position", 1), orderedInt("nullable-length", 2));
+		if (nullableOrdered.toString() != "bc" || evaluationOrder.join(",") != "nullable-receiver,nullable-position,nullable-length") {
+			throw "nullable Bytes read evaluation order changed";
+		}
+
+		evaluationOrder.resize(0);
+		var nullableReceiverFailedBeforeArguments = false;
+		try {
+			orderedNullableBytesValue("nullable-null-receiver",
+				null).getString(orderedInt("unexpected-position", 0), orderedInt("unexpected-length", 0), Encoding.UTF8);
+		} catch (error:Dynamic) {
+			nullableReceiverFailedBeforeArguments = Std.string(error) == "Null Access";
+		}
+		if (!nullableReceiverFailedBeforeArguments || evaluationOrder.join(",") != "nullable-null-receiver")
+			throw "nullable Bytes receiver did not fail before argument evaluation";
 
 		var filled = Bytes.alloc(4);
 		filled.fill(0, 4, "A".charCodeAt(0));
