@@ -2343,17 +2343,17 @@ class OcamlBuilder {
 											}
 										}
 
-										if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys") {
+										final isBuilderOwnedSysCall = cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && switch (cf.name) {
+											case "print", "println", "putEnv", "command", "stdin", "stdout", "stderr", "setTimeLocale": true;
+											case _: false;
+										};
+										if (isBuilderOwnedSysCall) {
 											final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 											switch (cf.name) {
 												case "println" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [buildStdString(args[0])]);
 												case "print" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [buildStdString(args[0])]);
-												case "args" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "args"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "getEnv" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getEnv"), [buildExpr(args[0])]);
 												case "putEnv" if (args.length == 2):
 													final v1 = unwrap(args[1]);
 													final opt = switch (v1.expr) {
@@ -2361,18 +2361,6 @@ class OcamlBuilder {
 														case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
 													};
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "putEnv"), [buildExpr(args[0]), opt]);
-												case "environment" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "environment"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "sleep" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "sleep"), [buildExpr(args[0])]);
-												case "getCwd" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getCwd"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "setCwd" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "setCwd"), [buildExpr(args[0])]);
-												case "systemName" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "systemName"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
 												case "command":
 													final opt = if (args.length == 1) {
 														OcamlExpr.EIdent("None");
@@ -2389,21 +2377,6 @@ class OcamlBuilder {
 														OcamlExpr.EIdent("None");
 													};
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "command"), [buildExpr(args[0]), opt]);
-												case "exit" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "exit"), [buildExpr(args[0])]);
-												case "time" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "time"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "cpuTime" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "cpuTime"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "programPath" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "executablePath" if (args.length == 0):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"),
-														[OcamlExpr.EConst(OcamlConst.CUnit)]);
-												case "getChar" if (args.length == 1):
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getChar"), [buildExpr(args[0])]);
 												case "stdin" if (args.length == 0):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stdin"),
 														[OcamlExpr.EConst(OcamlConst.CUnit)]);
@@ -2413,9 +2386,14 @@ class OcamlBuilder {
 												case "stderr" if (args.length == 0):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stderr"),
 														[OcamlExpr.EConst(OcamlConst.CUnit)]);
+												case "setTimeLocale":
+													#if macro
+													guardrailError("reflaxe.ocaml (M6): Sys.setTimeLocale is not implemented yet.", e.pos);
+													#end
+													anyNull;
 												case _:
 													#if macro
-													guardrailError("reflaxe.ocaml (M6): Sys." + cf.name + " is not implemented yet.", e.pos);
+													guardrailError("reflaxe.ocaml (M6): unexpected builder-owned Sys." + cf.name + " call.", e.pos);
 													#end
 													anyNull;
 											}

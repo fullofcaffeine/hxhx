@@ -4,9 +4,8 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 
 /**
- * Proves that typed Haxe file and stream operations explain HxFile and
- * HxFileStream, while the separately owned FileSystem bridge remains visible
- * as unrooted compiler output.
+ * Proves that typed Haxe file, stream, and filesystem operations explain
+ * HxFile, HxFileStream, and HxFileSystem from their exact declarations.
  */
 const report = JSON.parse(fs.readFileSync('out/ocaml_runtime_requirement_report.json', 'utf8'))
 const expectedBoundaries = [

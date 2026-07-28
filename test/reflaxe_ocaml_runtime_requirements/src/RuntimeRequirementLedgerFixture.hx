@@ -112,8 +112,9 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_THREAD, "sys.thread.NativeHxThread::sys.thread.NativeHxThread.thread_current", source,
 			"HxThread.thread_current");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FILE_SYSTEM, "sys.FileSystem::sys.FileSystem.stat", source, "HxFileSystem.stat");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_SYSTEM, "Sys::Sys.args", source, "HxSys.args");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 18,
+		assertTrue(requirements.length == 19,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
@@ -174,8 +175,11 @@ class RuntimeRequirementLedgerFixture {
 		final fileSystemRequirement = requirementById(requirements, "native:sys.FileSystem::sys.FileSystem.stat:runtime:haxe-file-system");
 		assertTrue(fileSystemRequirement.subject.id.indexOf("HxFileSystem.stat") >= 0, "the filesystem boundary should name the checked target symbol");
 		assertTrue(fileSystemRequirement.rootModules[0] == "HxFileSystem", "Haxe filesystem operations should select the HxFileSystem implementation root");
+		final systemRequirement = requirementById(requirements, "native:Sys::Sys.args:runtime:haxe-system");
+		assertTrue(systemRequirement.subject.id.indexOf("HxSys.args") >= 0, "the system boundary should name the checked target symbol");
+		assertTrue(systemRequirement.rootModules[0] == "HxSys", "Haxe system operations should select the HxSys implementation root");
 		assertTrue(ledger.rootModulesSorted()
-			.join(",") == "HxArray,HxBacktrace,HxFPHelper,HxFile,HxFileStream,HxFileSystem,HxInt,HxProcess,HxRuntime,HxStdio,HxString,HxThread,HxType",
+			.join(",") == "HxArray,HxBacktrace,HxFPHelper,HxFile,HxFileStream,HxFileSystem,HxInt,HxProcess,HxRuntime,HxStdio,HxString,HxSys,HxThread,HxType",
 			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
@@ -203,6 +207,8 @@ class RuntimeRequirementLedgerFixture {
 				"OtherRuntime.thread_current"));
 		expectFailure("filesystem native module mismatch", "requires \"HxFileSystem\"",
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FILE_SYSTEM, "fixture.NativeFileSystem.stat", source, "OtherRuntime.stat"));
+		expectFailure("system native module mismatch", "requires \"HxSys\"",
+			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_SYSTEM, "fixture.Sys.args", source, "OtherRuntime.args"));
 		final invalidStringRepresentation:Dynamic = Reflect.copy(stringRepresentation);
 		invalidStringRepresentation.carrierTypeId = "Obj.t";
 		expectFailure("invalid String representation", "does not match the sealed exact String null-sentinel contract",

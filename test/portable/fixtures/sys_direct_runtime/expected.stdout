@@ -1,0 +1,11 @@
+args-array=true
+missing-env=true
+environment-map=true
+sleep-returned=true
+cwd-roundtrip=true
+system-name=true
+time-positive=true
+cpu-time-nonnegative=true
+program-path=true
+executable-alias=true
+guarded-effects=true
