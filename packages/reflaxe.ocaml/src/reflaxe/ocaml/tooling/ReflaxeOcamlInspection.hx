@@ -2057,7 +2057,7 @@ class ReflaxeOcamlInspection {
 	static function unavailableCapabilities(lowering:InspectionLowering):Array<InspectionUnavailableCapability> {
 		return [
 			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
-				"A checked partial report now covers core packaging, the generated type registry, declared static native boundaries, exact String null values, supported non-null Bytes producers, and typed assignments/updates. Bytes storage and consumer operations, plus other compiler paths, still need explicit explanations."),
+				"The checked partial report derives its capability and source-kind inventory from this compilation's exact requirements. Some generated runtime uses still have only module-name observations, so they need occurrence-level explanations before whole-program authority is complete."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
 			{
 				id: "raw-unsafe",

@@ -2226,9 +2226,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		function sealArtifacts():Void {
 			artifacts.seal({
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "recorded-runtime-requirements-partial-v4",
+				model: "recorded-runtime-requirements-partial-v5",
 				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records why exact String null values, supported non-null Bytes producers, typed assignments and updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Bytes storage and consumer operations, plus other compiler paths, still rely on observed generated modules, so whole-program runtime ownership is incomplete."
+				message: "The compiler records exact semantic runtime requirements and checks them against packaged sources. Whole-program authority remains incomplete because some generated runtime uses still have only module-name observations rather than occurrence-level reasons."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",

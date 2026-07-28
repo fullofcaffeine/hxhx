@@ -58,7 +58,7 @@ try {
 	assert.match(report.artifactManifest.sourceBundleRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.match(report.artifactManifest.artifactSetRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.strictEqual(report.artifactManifest.semanticRuntime.status, 'incomplete')
-	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v4')
+	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v5')
 	assert.match(report.artifactManifest.semanticRuntime.revision, sha256Revision)
 	assert.strictEqual(report.artifactManifest.nativeDependencies.status, 'incomplete')
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'reflaxe-framework' && owner.count > 0))
@@ -162,17 +162,16 @@ try {
 
 	const runtimeRequirementPath = path.join(tempRoot, 'out/ocaml_runtime_requirement_report.json')
 	const runtimeRequirements = JSON.parse(fs.readFileSync(runtimeRequirementPath, 'utf8'))
-	assert.strictEqual(runtimeRequirements.schemaVersion, 4)
+	assert.strictEqual(runtimeRequirements.schemaVersion, 5)
 	assert.strictEqual(runtimeRequirements.model, 'recorded-ocaml-runtime-requirements')
 	assert.strictEqual(runtimeRequirements.authorityStatus, 'partial')
-	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, [
-		'compiler-core-runtime',
-		'compiler-type-registry',
-		'declared-static-native-runtime-boundary',
-		'exact-string-null-sentinel-representation',
-		'non-null-haxe-bytes-producers',
-		'typed-place-assignment-and-update'
-	])
+	assert.strictEqual(runtimeRequirements.coveredFamilies, undefined)
+	assert.deepStrictEqual(runtimeRequirements.recordedSemanticCapabilities, [
+		...new Set(runtimeRequirements.requirements.map(requirement => requirement.semanticCapability))
+	].sort())
+	assert.deepStrictEqual(runtimeRequirements.recordedRequirementSourceKinds, [
+		...new Set(runtimeRequirements.requirements.map(requirement => requirement.sourceKind))
+	].sort())
 	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-recorded-requirement-audit-v2')
 	assert.strictEqual(runtimeRequirements.runtimeMode, 'full')
 	assert.strictEqual(runtimeRequirements.selectionMode, 'full')

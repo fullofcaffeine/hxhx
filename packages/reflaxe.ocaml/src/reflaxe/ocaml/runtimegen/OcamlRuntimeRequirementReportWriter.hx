@@ -23,7 +23,8 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 	final schemaVersion:Int;
 	final model:String;
 	final authorityStatus:String;
-	final coveredFamilies:Array<String>;
+	final recordedSemanticCapabilities:Array<String>;
+	final recordedRequirementSourceKinds:Array<String>;
 	final selectionAuthority:String;
 	final profile:String;
 	final runtimeMode:String;
@@ -56,7 +57,7 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 class OcamlRuntimeRequirementReportWriter {
 	public static inline final FILE_NAME = "ocaml_runtime_requirement_report.json";
 	public static inline final MODEL = "recorded-ocaml-runtime-requirements";
-	public static inline final SCHEMA_VERSION = 4;
+	public static inline final SCHEMA_VERSION = 5;
 
 	/** Resolves, cross-checks, and writes the current partial requirement ledger. **/
 	public static function write(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, profile:String, allowTooling:Bool,
@@ -84,6 +85,8 @@ class OcamlRuntimeRequirementReportWriter {
 				requirementClosure.set(moduleName, true);
 			chains.push({requirementId: requirement.id, resolvedModules: resolvedModules});
 		}
+		final recordedSemanticCapabilities = uniqueValuesSorted([for (requirement in sortedRequirements) requirement.semanticCapability]);
+		final recordedRequirementSourceKinds = uniqueValuesSorted([for (requirement in sortedRequirements) Std.string(requirement.sourceKind)]);
 		final requirementRootModules = mapKeysSorted(requirementRoots);
 		final requirementClosureModules = mapKeysSorted(requirementClosure);
 		final observed = uniqueSorted(compilerObservedModules, "compiler-observed runtime modules");
@@ -116,14 +119,8 @@ class OcamlRuntimeRequirementReportWriter {
 			schemaVersion: SCHEMA_VERSION,
 			model: MODEL,
 			authorityStatus: "partial",
-			coveredFamilies: [
-				"compiler-core-runtime",
-				"compiler-type-registry",
-				"declared-static-native-runtime-boundary",
-				"exact-string-null-sentinel-representation",
-				"non-null-haxe-bytes-producers",
-				"typed-place-assignment-and-update"
-			],
+			recordedSemanticCapabilities: recordedSemanticCapabilities,
+			recordedRequirementSourceKinds: recordedRequirementSourceKinds,
 			selectionAuthority: selectionAuthority,
 			profile: profile,
 			runtimeMode: OcamlRuntimeMode.toDefineValue(runtimeMode),
@@ -142,14 +139,15 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, exact String null values, supported non-null Bytes producers, and typed assignment/update lowering. Each HxBytes producer requirement applies only to its recorded expression; Bytes storage, receivers, indexing, and mutation remain unexplained. Compiler observations still contain module names rather than individual use sites, so a recorded root does not prove that every use of that module is explained."
+			message: "The semantic capability and source-kind lists are derived from this compilation's sealed runtime requirements. Authority remains partial because compiler observations still contain module names rather than individual use sites, so a recorded root does not prove that every generated use of that module has its own explanation."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,
 			model: payload.model,
 			reportRevision: "sha256:" + Sha256.encode(Json.stringify(payload)),
 			authorityStatus: payload.authorityStatus,
-			coveredFamilies: payload.coveredFamilies,
+			recordedSemanticCapabilities: payload.recordedSemanticCapabilities,
+			recordedRequirementSourceKinds: payload.recordedRequirementSourceKinds,
 			selectionAuthority: payload.selectionAuthority,
 			profile: payload.profile,
 			runtimeMode: payload.runtimeMode,
@@ -192,6 +190,13 @@ class OcamlRuntimeRequirementReportWriter {
 				throw '$label repeats "$value".';
 			seen.set(value, true);
 		}
+		return mapKeysSorted(seen);
+	}
+
+	static function uniqueValuesSorted(values:Array<String>):Array<String> {
+		final seen:Map<String, Bool> = [];
+		for (value in values)
+			seen.set(value, true);
 		return mapKeysSorted(seen);
 	}
 

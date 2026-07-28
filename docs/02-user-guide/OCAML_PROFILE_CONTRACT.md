@@ -187,11 +187,14 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
 - `ocaml_runtime_requirement_report.json`
-  - `schemaVersion` (current: `3`)
-  - `authorityStatus` (currently `partial`, because core packaging, the
-    generated type registry, declared static native runtime boundaries, and
-    typed assignment/update operations are covered, while other compiler paths
-    still rely on observations)
+  - `schemaVersion` (current: `5`)
+  - `authorityStatus` (currently `partial`, because some generated runtime uses
+    still have only module-name observations rather than one exact source
+    operation or compiler decision)
+  - `recordedSemanticCapabilities` and
+    `recordedRequirementSourceKinds`; both lists are derived from this
+    compilation's sealed requirement records rather than a manually maintained
+    global coverage summary
   - `runtimeMode` and `selectionMode`
   - `requirementRevision` and `runtimeSourceRevision`
   - `requirements`, where each entry explains what needs compatibility

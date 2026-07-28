@@ -40,18 +40,19 @@ compiler decision and into the packaged OCaml files without searching generated
 source text. Native-boundary explanations additionally name the typed extern
 declaration that made the checked target-runtime call.
 
-Those explanations currently cover core packaging, the compiler-generated type
-registry, explicitly declared static native runtime boundaries, and the
-admitted assignment/update family. Other compiler paths still
-discover runtime names from generated OCaml structure or explicitly declare
-them while building string/template output. The requirement report lists those
-names under `compilerObservedModulesWithoutRequirementRoots`. It separately
-lists module-name overlap under `compilerObservedModulesWithRequirementRoots`;
-a requirement root is the first helper module directly selected by a recorded
-compiler reason. That overlap does not claim that every generated call to the
-module has its own explanation. Whole-program runtime authority and the
-generated artifact manifest therefore correctly remain incomplete under
-`haxe_ocaml-0uwin`.
+The report derives `recordedSemanticCapabilities` and
+`recordedRequirementSourceKinds` from the exact requirements emitted for that
+compilation. This means a new typed requirement appears automatically instead
+of waiting for somebody to update a separate prose inventory. Other compiler
+paths still discover runtime names from generated OCaml structure or explicitly
+declare them while building string/template output. The requirement report
+lists those names under `compilerObservedModulesWithoutRequirementRoots`. It
+separately lists module-name overlap under
+`compilerObservedModulesWithRequirementRoots`; a requirement root is the first
+helper module directly selected by a recorded compiler reason. That overlap
+does not claim that every generated call to the module has its own explanation.
+Whole-program runtime authority and the generated artifact manifest therefore
+correctly remain incomplete under `haxe_ocaml-0uwin`.
 
 Typed target-runtime externs declare their need by capability rather than by
 copying a module name into the packaging plan. For example,
