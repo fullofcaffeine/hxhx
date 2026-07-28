@@ -145,71 +145,71 @@ let _urlEncodeOcaml = fun (s : string) -> (let bytes = Obj.magic (HxBytes.ofStri
   ignore (while !_g < _g1 do ignore (let index = let __old_47 = !_g in let __new_48 = HxInt.add __old_47 1 in (
     ignore (_g := __new_48);
     __old_47
-  ) in let code = HxBytes.get bytes index in if code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 45 || code = 95 || code = 46 || code = 126 then ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) code) else ignore ((
+  ) in let code = let __bytes_access_receiver_49 = bytes in let __bytes_access_arg_0_50 = index in HxBytes.get __bytes_access_receiver_49 __bytes_access_arg_0_50 in if code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 45 || code = 95 || code = 46 || code = 126 then ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) code) else ignore ((
     ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) 37);
     let tempNumber = ref (0 : int) in let value = HxInt.logand (HxInt.shr code 4) 15 in (
-      ignore (if value < 10 then let __assign_49 = HxInt.add 48 value in (
-        tempNumber := __assign_49;
-        __assign_49
-      ) else let __assign_50 = HxInt.add 65 (HxInt.sub value 10) in (
-        tempNumber := __assign_50;
-        __assign_50
+      ignore (if value < 10 then let __assign_51 = HxInt.add 48 value in (
+        tempNumber := __assign_51;
+        __assign_51
+      ) else let __assign_52 = HxInt.add 65 (HxInt.sub value 10) in (
+        tempNumber := __assign_52;
+        __assign_52
       ));
       ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) (!tempNumber));
       let tempNumber1 = ref (0 : int) in let value = HxInt.logand code 15 in (
-        ignore (if value < 10 then let __assign_51 = HxInt.add 48 value in (
-          tempNumber1 := __assign_51;
-          __assign_51
-        ) else let __assign_52 = HxInt.add 65 (HxInt.sub value 10) in (
-          tempNumber1 := __assign_52;
-          __assign_52
+        ignore (if value < 10 then let __assign_53 = HxInt.add 48 value in (
+          tempNumber1 := __assign_53;
+          __assign_53
+        ) else let __assign_54 = HxInt.add 65 (HxInt.sub value 10) in (
+          tempNumber1 := __assign_54;
+          __assign_54
         ));
         HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) (!tempNumber1)
       )
     )
   ))) done);
-  let __bytes_receiver_53 = Haxe_io_BytesBuffer.getBytes (Obj.magic out) () in HxBytes.toString __bytes_receiver_53 ()
+  let __bytes_receiver_55 = Haxe_io_BytesBuffer.getBytes (Obj.magic out) () in HxBytes.toString __bytes_receiver_55 ()
 ) : string)
 
 let urlEncode = fun s -> let __call_arg_0_1 = s in _urlEncodeOcaml __call_arg_0_1
 
 let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (HxBytes.ofString s ()) in let out = Obj.magic (Haxe_io_BytesBuffer.create ()) in let index = ref 0 in (
-  ignore (try while !index < (let __bytes_receiver_54 = bytes in HxBytes.length __bytes_receiver_54) do try ignore (let code = HxBytes.get bytes (!index) in (
+  ignore (try while !index < (let __bytes_receiver_56 = bytes in HxBytes.length __bytes_receiver_56) do try ignore (let code = let __bytes_access_receiver_57 = bytes in let __bytes_access_arg_0_58 = !index in HxBytes.get __bytes_access_receiver_57 __bytes_access_arg_0_58 in (
     ignore (if code = 43 then ignore ((
       ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) 32);
-      ignore (let __old_55 = !index in let __new_56 = HxInt.add __old_55 1 in (
-        ignore (index := __new_56);
-        __old_55
+      ignore (let __old_59 = !index in let __new_60 = HxInt.add __old_59 1 in (
+        ignore (index := __new_60);
+        __old_59
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (if code = 37 && HxInt.add (!index) 2 < (let __bytes_receiver_57 = bytes in HxBytes.length __bytes_receiver_57) then ignore (let tempNumber = ref (0 : int) in let code2 = HxBytes.get bytes (HxInt.add (!index) 1) in (
-      ignore (if code2 >= 48 && code2 <= 57 then let __assign_58 = HxInt.sub code2 48 in (
-        tempNumber := __assign_58;
-        __assign_58
-      ) else if code2 >= 65 && code2 <= 70 then let __assign_59 = HxInt.add 10 (HxInt.sub code2 65) in (
-        tempNumber := __assign_59;
-        __assign_59
-      ) else if code2 >= 97 && code2 <= 102 then let __assign_60 = HxInt.add 10 (HxInt.sub code2 97) in (
-        tempNumber := __assign_60;
-        __assign_60
-      ) else let __assign_61 = -1 in (
-        tempNumber := __assign_61;
-        __assign_61
+    ignore (if code = 37 && HxInt.add (!index) 2 < (let __bytes_receiver_61 = bytes in HxBytes.length __bytes_receiver_61) then ignore (let tempNumber = ref (0 : int) in let code2 = let __bytes_access_receiver_62 = bytes in let __bytes_access_arg_0_63 = HxInt.add (!index) 1 in HxBytes.get __bytes_access_receiver_62 __bytes_access_arg_0_63 in (
+      ignore (if code2 >= 48 && code2 <= 57 then let __assign_64 = HxInt.sub code2 48 in (
+        tempNumber := __assign_64;
+        __assign_64
+      ) else if code2 >= 65 && code2 <= 70 then let __assign_65 = HxInt.add 10 (HxInt.sub code2 65) in (
+        tempNumber := __assign_65;
+        __assign_65
+      ) else if code2 >= 97 && code2 <= 102 then let __assign_66 = HxInt.add 10 (HxInt.sub code2 97) in (
+        tempNumber := __assign_66;
+        __assign_66
+      ) else let __assign_67 = -1 in (
+        tempNumber := __assign_67;
+        __assign_67
       ));
-      let hi = !tempNumber in let tempNumber1 = ref (0 : int) in let code2 = HxBytes.get bytes (HxInt.add (!index) 2) in (
-        ignore (if code2 >= 48 && code2 <= 57 then let __assign_62 = HxInt.sub code2 48 in (
-          tempNumber1 := __assign_62;
-          __assign_62
-        ) else if code2 >= 65 && code2 <= 70 then let __assign_63 = HxInt.add 10 (HxInt.sub code2 65) in (
-          tempNumber1 := __assign_63;
-          __assign_63
-        ) else if code2 >= 97 && code2 <= 102 then let __assign_64 = HxInt.add 10 (HxInt.sub code2 97) in (
-          tempNumber1 := __assign_64;
-          __assign_64
-        ) else let __assign_65 = -1 in (
-          tempNumber1 := __assign_65;
-          __assign_65
+      let hi = !tempNumber in let tempNumber1 = ref (0 : int) in let code2 = let __bytes_access_receiver_68 = bytes in let __bytes_access_arg_0_69 = HxInt.add (!index) 2 in HxBytes.get __bytes_access_receiver_68 __bytes_access_arg_0_69 in (
+        ignore (if code2 >= 48 && code2 <= 57 then let __assign_70 = HxInt.sub code2 48 in (
+          tempNumber1 := __assign_70;
+          __assign_70
+        ) else if code2 >= 65 && code2 <= 70 then let __assign_71 = HxInt.add 10 (HxInt.sub code2 65) in (
+          tempNumber1 := __assign_71;
+          __assign_71
+        ) else if code2 >= 97 && code2 <= 102 then let __assign_72 = HxInt.add 10 (HxInt.sub code2 97) in (
+          tempNumber1 := __assign_72;
+          __assign_72
+        ) else let __assign_73 = -1 in (
+          tempNumber1 := __assign_73;
+          __assign_73
         ));
         let lo = !tempNumber1 in if hi >= 0 && lo >= 0 then ignore ((
           ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) (HxInt.logor (HxInt.shl hi 4) lo));
@@ -219,14 +219,14 @@ let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (HxBytes.ofStri
       )
     )) else ());
     ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) code);
-    let __old_66 = !index in let __new_67 = HxInt.add __old_66 1 in (
-      ignore (index := __new_67);
-      __old_66
+    let __old_74 = !index in let __new_75 = HxInt.add __old_74 1 in (
+      ignore (index := __new_75);
+      __old_74
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let __bytes_receiver_68 = Haxe_io_BytesBuffer.getBytes (Obj.magic out) () in HxBytes.toString __bytes_receiver_68 ()
+  let __bytes_receiver_76 = Haxe_io_BytesBuffer.getBytes (Obj.magic out) () in HxBytes.toString __bytes_receiver_76 ()
 ) : string)
 
 let urlDecode = fun s -> let __call_arg_0_2 = s in _urlDecodeOcaml __call_arg_0_2
@@ -234,13 +234,13 @@ let urlDecode = fun s -> let __call_arg_0_2 = s in _urlDecodeOcaml __call_arg_0_
 let _quoteUnixArgOcaml = fun (argument : string) -> (try (
   ignore (if HxString.length argument = 0 then raise (HxRuntime.Hx_return (Obj.repr "''")) else ());
   let safe = ref true in let _g = ref 0 in let _g1 = HxString.length argument in (
-    ignore (try while !_g < _g1 do try ignore (let index = let __old_69 = !_g in let __new_70 = HxInt.add __old_69 1 in (
-      ignore (_g := __new_70);
-      __old_69
-    ) in let code = HxString.charCodeAt argument index in if not ((let __nullable_71 = code in let __nullable_72 = 65 in if __nullable_71 == HxRuntime.hx_null then false else Obj.obj __nullable_71 >= __nullable_72) && (let __nullable_73 = code in let __nullable_74 = 90 in if __nullable_73 == HxRuntime.hx_null then false else Obj.obj __nullable_73 <= __nullable_74) || (let __nullable_75 = code in let __nullable_76 = 97 in if __nullable_75 == HxRuntime.hx_null then false else Obj.obj __nullable_75 >= __nullable_76) && (let __nullable_77 = code in let __nullable_78 = 122 in if __nullable_77 == HxRuntime.hx_null then false else Obj.obj __nullable_77 <= __nullable_78) || (let __nullable_79 = code in let __nullable_80 = 48 in if __nullable_79 == HxRuntime.hx_null then false else Obj.obj __nullable_79 >= __nullable_80) && (let __nullable_81 = code in let __nullable_82 = 57 in if __nullable_81 == HxRuntime.hx_null then false else Obj.obj __nullable_81 <= __nullable_82) || (let __nullable_83 = code in if __nullable_83 == HxRuntime.hx_null then false else Obj.obj __nullable_83 = 95) || (let __nullable_84 = code in if __nullable_84 == HxRuntime.hx_null then false else Obj.obj __nullable_84 = 47) || (let __nullable_85 = code in if __nullable_85 == HxRuntime.hx_null then false else Obj.obj __nullable_85 = 46) || (let __nullable_86 = code in if __nullable_86 == HxRuntime.hx_null then false else Obj.obj __nullable_86 = 58) || (let __nullable_87 = code in if __nullable_87 == HxRuntime.hx_null then false else Obj.obj __nullable_87 = 45)) then ignore ((
-      ignore (let __assign_88 = false in (
-        safe := __assign_88;
-        __assign_88
+    ignore (try while !_g < _g1 do try ignore (let index = let __old_77 = !_g in let __new_78 = HxInt.add __old_77 1 in (
+      ignore (_g := __new_78);
+      __old_77
+    ) in let code = HxString.charCodeAt argument index in if not ((let __nullable_79 = code in let __nullable_80 = 65 in if __nullable_79 == HxRuntime.hx_null then false else Obj.obj __nullable_79 >= __nullable_80) && (let __nullable_81 = code in let __nullable_82 = 90 in if __nullable_81 == HxRuntime.hx_null then false else Obj.obj __nullable_81 <= __nullable_82) || (let __nullable_83 = code in let __nullable_84 = 97 in if __nullable_83 == HxRuntime.hx_null then false else Obj.obj __nullable_83 >= __nullable_84) && (let __nullable_85 = code in let __nullable_86 = 122 in if __nullable_85 == HxRuntime.hx_null then false else Obj.obj __nullable_85 <= __nullable_86) || (let __nullable_87 = code in let __nullable_88 = 48 in if __nullable_87 == HxRuntime.hx_null then false else Obj.obj __nullable_87 >= __nullable_88) && (let __nullable_89 = code in let __nullable_90 = 57 in if __nullable_89 == HxRuntime.hx_null then false else Obj.obj __nullable_89 <= __nullable_90) || (let __nullable_91 = code in if __nullable_91 == HxRuntime.hx_null then false else Obj.obj __nullable_91 = 95) || (let __nullable_92 = code in if __nullable_92 == HxRuntime.hx_null then false else Obj.obj __nullable_92 = 47) || (let __nullable_93 = code in if __nullable_93 == HxRuntime.hx_null then false else Obj.obj __nullable_93 = 46) || (let __nullable_94 = code in if __nullable_94 == HxRuntime.hx_null then false else Obj.obj __nullable_94 = 58) || (let __nullable_95 = code in if __nullable_95 == HxRuntime.hx_null then false else Obj.obj __nullable_95 = 45)) then ignore ((
+      ignore (let __assign_96 = false in (
+        safe := __assign_96;
+        __assign_96
       ));
       raise (HxRuntime.Hx_break)
     )) else ()) with
@@ -250,46 +250,46 @@ let _quoteUnixArgOcaml = fun (argument : string) -> (try (
     ("'" ^ HxString.toStdString (HxArray.join (HxString.split argument "'") "'\"'\"'" (fun x -> x))) ^ "'"
   )
 ) with
-  | HxRuntime.Hx_return __ret_89 -> (Obj.obj __ret_89 : string) : string)
+  | HxRuntime.Hx_return __ret_97 -> (Obj.obj __ret_97 : string) : string)
 
 let quoteUnixArg = fun (argument : string) -> (let __call_arg_0_39 = argument in _quoteUnixArgOcaml __call_arg_0_39 : string)
 
 let utf16CodePointAt = fun s index -> let c = ref (Obj.obj (HxAnon.get (Obj.repr s) "cca") index) in (
-  ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_93 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
-    c := __assign_93;
-    __assign_93
+  ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_101 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
+    c := __assign_101;
+    __assign_101
   )) else ());
   !c
 )
 
-let _winMetaCharactersOcaml = Obj.magic (let __arr_94 = HxArray.create () in (
-  ignore (HxArray.push __arr_94 32);
-  ignore (HxArray.push __arr_94 40);
-  ignore (HxArray.push __arr_94 41);
-  ignore (HxArray.push __arr_94 37);
-  ignore (HxArray.push __arr_94 33);
-  ignore (HxArray.push __arr_94 94);
-  ignore (HxArray.push __arr_94 34);
-  ignore (HxArray.push __arr_94 60);
-  ignore (HxArray.push __arr_94 62);
-  ignore (HxArray.push __arr_94 38);
-  ignore (HxArray.push __arr_94 124);
-  ignore (HxArray.push __arr_94 10);
-  ignore (HxArray.push __arr_94 13);
-  ignore (HxArray.push __arr_94 44);
-  ignore (HxArray.push __arr_94 59);
-  __arr_94
+let _winMetaCharactersOcaml = Obj.magic (let __arr_102 = HxArray.create () in (
+  ignore (HxArray.push __arr_102 32);
+  ignore (HxArray.push __arr_102 40);
+  ignore (HxArray.push __arr_102 41);
+  ignore (HxArray.push __arr_102 37);
+  ignore (HxArray.push __arr_102 33);
+  ignore (HxArray.push __arr_102 94);
+  ignore (HxArray.push __arr_102 34);
+  ignore (HxArray.push __arr_102 60);
+  ignore (HxArray.push __arr_102 62);
+  ignore (HxArray.push __arr_102 38);
+  ignore (HxArray.push __arr_102 124);
+  ignore (HxArray.push __arr_102 10);
+  ignore (HxArray.push __arr_102 13);
+  ignore (HxArray.push __arr_102 44);
+  ignore (HxArray.push __arr_102 59);
+  __arr_102
 ))
 
 let _quoteWinArgOcaml = fun (argument : string) (escapeMetaCharacters : bool) -> (let quoted = ref (("\"" ^ HxString.toStdString (HxArray.join (HxString.split argument "\"") "\\\"" (fun x -> x))) ^ "\"" : string) in (
   ignore (if escapeMetaCharacters then ignore (let _g = ref 0 in let _g1 = _winMetaCharactersOcaml in while !_g < HxArray.length _g1 do ignore (let charCode = HxArray.get _g1 (!_g) in (
-    ignore (let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
-      ignore (_g := __new_91);
-      __new_91
+    ignore (let __old_98 = !_g in let __new_99 = HxInt.add __old_98 1 in (
+      ignore (_g := __new_99);
+      __new_99
     ));
-    let token = (HxString.fromCharCode charCode : string) in let __assign_92 = (HxArray.join (HxString.split (!quoted) token) ("^" ^ HxString.toStdString token) (fun x -> x) : string) in (
-      quoted := __assign_92;
-      __assign_92
+    let token = (HxString.fromCharCode charCode : string) in let __assign_100 = (HxArray.join (HxString.split (!quoted) token) ("^" ^ HxString.toStdString token) (fun x -> x) : string) in (
+      quoted := __assign_100;
+      __assign_100
     )
   )) done) else ());
   !quoted
