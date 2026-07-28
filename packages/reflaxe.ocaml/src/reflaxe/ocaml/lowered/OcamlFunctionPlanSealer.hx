@@ -100,7 +100,7 @@ class OcamlFunctionPlanSealer {
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations).plan(data.expr);
-		final bytesProducers = new OcamlBytesProducerPlanner(binding).plan(data.expr);
+		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding).plan(data.expr, callableBoundary);
 
 		final moduleId = data.classType.module;
@@ -145,6 +145,7 @@ class OcamlFunctionPlanSealer {
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
+		bytesProducers.requireRepresentations(representations);
 		for (decision in bytesProducers.decisions())
 			context.recordBytesProducerRuntimeRequirements(decision);
 		registry.sealFunction(binding, localStorage, localRepresentations, bytesProducers, calls, controls, callableBoundary, constructionBoundary);

@@ -73,7 +73,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v41";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v42";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -145,10 +145,12 @@ class OcamlFunctionPlanRegistry {
 		not own `ClassFuncData`, but they still need the same exact program,
 		expression-body, and target-pipeline revisions before syntax is built.
 	**/
-	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
+	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr,
+			representations:OcamlRepresentationRegistry):OcamlSealedStandaloneExpressionPlan {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
-		final bytesProducers = new OcamlBytesProducerPlanner(binding).plan(expression);
+		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		bytesProducers.requirePlanBinding(binding);
+		bytesProducers.requireRepresentations(representations);
 		return {
 			binding: binding,
 			bytesProducers: bytesProducers
@@ -161,13 +163,15 @@ class OcamlFunctionPlanRegistry {
 		The fresh typed-expression digest prevents an in-place mutation between
 		planning and syntax construction from reusing a believable stale decision.
 	**/
-	public function requireStandaloneExpressionPlan(expression:TypedExpr, plan:OcamlSealedStandaloneExpressionPlan):OcamlBytesProducerPlan {
+	public function requireStandaloneExpressionPlan(expression:TypedExpr, plan:OcamlSealedStandaloneExpressionPlan,
+			representations:OcamlRepresentationRegistry):OcamlBytesProducerPlan {
 		if (plan == null)
 			throw "reflaxe.ocaml [ocaml-bytes:missing-standalone-plan]: a standalone typed expression reached syntax without its sealed plan";
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
 		plan.bytesProducers.requirePlanBinding(expected);
+		plan.bytesProducers.requireRepresentations(representations);
 		return plan.bytesProducers;
 	}
 

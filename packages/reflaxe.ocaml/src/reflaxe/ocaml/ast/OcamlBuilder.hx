@@ -1809,7 +1809,8 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
-		final plannedBytesProducer = currentBytesProducerPlan == null ? null : currentBytesProducerPlan.decisionFor(e);
+		final plannedBytesProducer = currentBytesProducerPlan == null
+			|| OcamlBytesProducerPlan.admittedKind(e) == null ? null : currentBytesProducerPlan.requireFor(e, representationRegistry);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TCall(_, arguments) if (plannedBytesProducer != null):
@@ -7012,7 +7013,7 @@ class OcamlBuilder {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		currentLocalStoragePlan = storagePlan;
-		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan);
+		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7025,7 +7026,7 @@ class OcamlBuilder {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		currentLocalStoragePlan = storagePlan;
-		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan);
+		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7218,6 +7219,7 @@ class OcamlBuilder {
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
+		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
 		currentBytesProducerPlan = functionPlan.bytesProducers;
 		currentCallPlan = functionPlan.calls;
 		currentControlPlan = functionPlan.controls;

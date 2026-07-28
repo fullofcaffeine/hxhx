@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 
 /** The supported Haxe operation that produces one non-null `haxe.io.Bytes`. */
@@ -42,6 +43,8 @@ typedef OcamlBytesProducerDecision = {
 	final resultSemanticTypeId:String;
 	final resultCarrierTypeId:String;
 	final resultNullability:String;
+	final resultRepresentationId:String;
+	final resultRepresentationRevision:String;
 	final runtimeRequirementIds:Array<String>;
 	final proofId:String;
 	final proofClaim:String;
@@ -53,8 +56,7 @@ typedef OcamlBytesProducerDecision = {
 
 /** Closed identities shared by planning, syntax, and runtime reporting. */
 class OcamlBytesProducerContract {
-	public static inline final SEMANTIC_TYPE_ID = "haxe.io.Bytes";
-	public static inline final CARRIER_TYPE_ID = "HxBytes.t";
+	public static inline final SEMANTIC_TYPE_ID = OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID;
 	public static inline final RESULT_NULLABILITY = "non-null";
 	public static inline final RUNTIME_CAPABILITY = "haxe-bytes-producer";
 	public static inline final PROOF_ID = "non-null-haxe-bytes-producer-v1";
@@ -62,7 +64,8 @@ class OcamlBytesProducerContract {
 
 	/** Computes the deterministic identity shared by planning and validation. */
 	public static function idFor(functionId:String, programRevision:String, bodyRevision:String, pipelineRevision:String, source:OcamlLoweredSourceSpan,
-			kind:OcamlBytesProducerKind, calleeId:String, argumentCount:Int, encoding:OcamlBytesEncodingKind):String {
+			kind:OcamlBytesProducerKind, calleeId:String, argumentCount:Int, encoding:OcamlBytesEncodingKind, resultRepresentationId:String,
+			resultRepresentationRevision:String):String {
 		return "bytes-producer:" + Sha256.encode([
 			functionId,
 			programRevision,
@@ -74,7 +77,9 @@ class OcamlBytesProducerContract {
 			(kind : String),
 			calleeId,
 			Std.string(argumentCount),
-			(encoding : String)
+			(encoding : String),
+			resultRepresentationId,
+			resultRepresentationRevision
 		].join("\n")).substr(0, 24);
 	}
 
@@ -95,14 +100,17 @@ class OcamlBytesProducerContract {
 		}
 		final expectedCalleeId = "haxe.io.Bytes|haxe.io.Bytes::" + expectedField;
 		final expectedId = idFor(decision.functionId, decision.programRevision, decision.bodyRevision, decision.pipelineRevision, decision.source,
-			decision.kind, decision.calleeId, decision.argumentCount, decision.encoding);
+			decision.kind, decision.calleeId, decision.argumentCount, decision.encoding, decision.resultRepresentationId,
+			decision.resultRepresentationRevision);
 		if (decision.id != expectedId
 			|| decision.source.file.length == 0
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
 			|| decision.resultSemanticTypeId != SEMANTIC_TYPE_ID
-			|| decision.resultCarrierTypeId != CARRIER_TYPE_ID
+			|| decision.resultCarrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
 			|| decision.resultNullability != RESULT_NULLABILITY
+			|| decision.resultRepresentationId != OcamlBytesRepresentationContract.DIRECT_INTERNAL_REPRESENTATION_ID
+			|| !StringTools.startsWith(decision.resultRepresentationRevision, "sha256:")
 			|| decision.proofId != PROOF_ID
 			|| decision.proofClaim != PROOF_CLAIM
 			|| decision.sourceModuleId != "haxe.io.Bytes"

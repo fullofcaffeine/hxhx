@@ -11,9 +11,19 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerKind;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan.OcamlBytesProducerPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
@@ -30,6 +40,9 @@ class BytesProducerPlanFixture {
 	static var expectedFailureIndex = 0;
 
 	public static macro function run():Expr {
+		final representations = new OcamlRepresentationRegistry();
+		representations.beginProgram(PROGRAM_REVISION);
+		verifyRepresentationOracleAndContract(representations);
 		final cases = caseFields();
 		final expected = [
 			"alloc" => {
@@ -78,8 +91,8 @@ class BytesProducerPlanFixture {
 			if (body == null)
 				Context.error('Bytes producer case "$name" has no typed body.', field.pos);
 			final binding = binding(name);
-			final first = new OcamlBytesProducerPlanner(binding).plan(body);
-			final second = new OcamlBytesProducerPlanner(binding).plan(body);
+			final first = new OcamlBytesProducerPlanner(binding, representations).plan(body);
+			final second = new OcamlBytesProducerPlanner(binding, representations).plan(body);
 			if (first.revision != second.revision)
 				Context.error('Bytes producer case "$name" has a non-deterministic plan revision.', field.pos);
 			final decisions = first.decisions();
@@ -90,9 +103,12 @@ class BytesProducerPlanFixture {
 				|| decision.encoding != contract.encoding
 				|| decision.argumentCount != contract.argumentCount
 				|| decision.resultSemanticTypeId != OcamlBytesProducerContract.SEMANTIC_TYPE_ID
-				|| decision.resultCarrierTypeId != OcamlBytesProducerContract.CARRIER_TYPE_ID
+				|| decision.resultCarrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
 				|| decision.resultNullability != OcamlBytesProducerContract.RESULT_NULLABILITY
-				|| decision.functionId != binding.functionId
+				|| decision.resultRepresentationId != OcamlBytesRepresentationContract.DIRECT_INTERNAL_REPRESENTATION_ID
+				|| decision.resultRepresentationRevision != representations.requireExactBytesInternal(decision.resultRepresentationId,
+					decision.resultRepresentationRevision, decision.programRevision)
+					.revision || decision.functionId != binding.functionId
 				|| decision.programRevision != binding.programRevision
 				|| decision.bodyRevision != binding.bodyRevision
 				|| decision.pipelineRevision != binding.pipelineRevision) {
@@ -101,7 +117,7 @@ class BytesProducerPlanFixture {
 			final occurrence = producerOccurrence(body);
 			if (occurrence == null)
 				Context.error('Bytes producer case "$name" has no admitted occurrence.', field.pos);
-			if (first.requireFor(occurrence).id != decision.id)
+			if (first.requireFor(occurrence, representations).id != decision.id)
 				Context.error('Bytes producer case "$name" did not resolve its exact sealed occurrence.', field.pos);
 			allDecisions.push(decision);
 		}
@@ -111,7 +127,7 @@ class BytesProducerPlanFixture {
 		if (constructorOccurrence == null)
 			Context.error("The unadmitted constructor fixture has no typed constructor occurrence.", Context.currentPos());
 		if (OcamlBytesProducerPlan.admittedKind(constructorOccurrence) != null
-			|| new OcamlBytesProducerPlanner(binding("unadmittedInternalConstructor")).plan(unadmittedBody).decisions().length != 0) {
+			|| new OcamlBytesProducerPlanner(binding("unadmittedInternalConstructor"), representations).plan(unadmittedBody).decisions().length != 0) {
 			Context.error("The internal Bytes constructor must remain outside the producer plan until both length and data are represented.",
 				constructorOccurrence.pos);
 		}
@@ -145,17 +161,27 @@ class BytesProducerPlanFixture {
 		}));
 		final sampleBody = cases.get("alloc").expr();
 		final sampleOccurrence = producerOccurrence(sampleBody);
-		expectThrows("missing-producer", () -> new OcamlBytesProducerPlan([]).requireFor(sampleOccurrence));
+		final allocDecision = Lambda.find(allDecisions, decision -> decision.kind == OcamlBytesProducerKind.Alloc);
+		if (allocDecision == null)
+			Context.error("The Bytes producer fixture has no alloc decision.", Context.currentPos());
+		expectThrows("missing-producer", () -> new OcamlBytesProducerPlan([]).requireFor(sampleOccurrence, representations));
+		final missingRepresentations = new OcamlRepresentationRegistry();
+		missingRepresentations.beginProgram(PROGRAM_REVISION);
+		expectThrows("missing-decision", () -> new OcamlBytesProducerPlan([allocDecision]).requireFor(sampleOccurrence, missingRepresentations));
+		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([
+			copy(sample, {resultRepresentationId: "representation:Null<haxe.io.Bytes>:internal-value"})
+		]));
+		expectThrows("invalid-producer", () -> new OcamlBytesProducerPlan([copy(sample, {resultCarrierTypeId: "Obj.t"})]));
 
 		final standaloneRegistry = new OcamlFunctionPlanRegistry();
 		standaloneRegistry.beginProgram(PROGRAM_REVISION);
 		final standaloneOwner = "field-initializer:static:BytesProducerCases::sample";
-		final firstStandalone = standaloneRegistry.sealStandaloneExpression(standaloneOwner, sampleBody);
-		final secondStandalone = standaloneRegistry.sealStandaloneExpression(standaloneOwner, sampleBody);
+		final firstStandalone = standaloneRegistry.sealStandaloneExpression(standaloneOwner, sampleBody, representations);
+		final secondStandalone = standaloneRegistry.sealStandaloneExpression(standaloneOwner, sampleBody, representations);
 		if (firstStandalone.binding.functionId != "standalone:" + standaloneOwner
 			|| firstStandalone.binding.bodyRevision != secondStandalone.binding.bodyRevision
 			|| firstStandalone.bytesProducers.revision != secondStandalone.bytesProducers.revision
-			|| standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, firstStandalone).decisions().length != 1) {
+			|| standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, firstStandalone, representations).decisions().length != 1) {
 			Context.error("Standalone Bytes planning did not preserve the exact deterministic expression binding.", Context.currentPos());
 		}
 		final staleStandalone:OcamlSealedStandaloneExpressionPlan = {
@@ -167,10 +193,58 @@ class BytesProducerPlanFixture {
 			},
 			bytesProducers: firstStandalone.bytesProducers
 		};
-		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone));
+		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 
 		Sys.println("REFLAXE_OCAML_BYTES_PRODUCER_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	static function verifyRepresentationOracleAndContract(representations:OcamlRepresentationRegistry):Void {
+		final directType = Context.typeof(macro(null : haxe.io.Bytes));
+		final explicitNullType = Context.typeof(macro(null : Null<haxe.io.Bytes>));
+		final producerType = Context.typeof(macro haxe.io.Bytes.alloc(1));
+		final aliasType = Context.typeof(macro(null : BytesProducerCases.BytesAlias));
+		final wrapperType = Context.typeof(macro(null : BytesProducerCases.BytesWrapper));
+		if (!OcamlRepresentationRegistry.isExactBytes(directType)
+			|| OcamlRepresentationRegistry.isExactNullBytes(directType)
+			|| !OcamlRepresentationRegistry.isExactNullBytes(explicitNullType)
+			|| OcamlRepresentationRegistry.isExactBytes(explicitNullType)
+			|| !OcamlRepresentationRegistry.isExactBytes(producerType)
+			|| OcamlRepresentationRegistry.isExactBytes(aliasType)
+			|| OcamlRepresentationRegistry.isExactNullBytes(aliasType)
+			|| OcamlRepresentationRegistry.isExactBytes(wrapperType)
+			|| OcamlRepresentationRegistry.isExactNullBytes(wrapperType)
+			|| OcamlRepresentationRegistry.isExactBytes(Context.typeof(macro(null : Dynamic)))
+			|| OcamlRepresentationRegistry.isExactBytes(Context.typeof(macro(null : String)))) {
+			Context.error("Haxe 4.3.7 Bytes and Null<Bytes> typed forms do not match the exact representation classifiers.", Context.currentPos());
+		}
+
+		final direct = representations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
+		final explicitNull = representations.selectExactNullBytes(OcamlRepresentationDomain.InternalValue);
+		for (decision in [direct, explicitNull]) {
+			if (decision.carrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+				|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+				|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+				|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+				|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+				|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer
+				|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted) {
+				Context.error('Bytes representation "${decision.id}" does not preserve the nullable shared-reference carrier contract.', Context.currentPos());
+			}
+		}
+		if (direct.semanticTypeId != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+			|| explicitNull.semanticTypeId != OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID
+			|| direct.id == explicitNull.id
+			|| direct.revision == explicitNull.revision) {
+			Context.error("Direct Bytes and explicit Null<Bytes> lost their distinct semantic representation identities.", Context.currentPos());
+		}
+		representations.requireExactBytesInternal(direct.id, direct.revision, PROGRAM_REVISION);
+		expectThrows("representation-mismatch",
+			() -> representations.requireExactBytesInternal(direct.id, "sha256:" + StringTools.lpad("", "0", 64), PROGRAM_REVISION));
+		expectThrows("representation-mismatch", () -> representations.requireExactBytesInternal(explicitNull.id, explicitNull.revision, PROGRAM_REVISION));
+		expectThrows("unsupported-bytes-domain", () -> representations.selectExactBytes(OcamlRepresentationDomain.MutableLocalStorage));
+		expectThrows("unsupported-bytes-domain", () -> representations.selectExactNullBytes(OcamlRepresentationDomain.StaticField));
 	}
 
 	static function binding(name:String):OcamlFunctionPlanBinding {
@@ -237,6 +311,8 @@ class BytesProducerPlanFixture {
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultNullability: decision.resultNullability,
+			resultRepresentationId: decision.resultRepresentationId,
+			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,

@@ -5,7 +5,6 @@ import haxe.crypto.Sha256;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.TypedExpr;
-import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesEncodingKind;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
@@ -13,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 /**
 	Immutable inventory of supported non-null Bytes producers in one typed root.
@@ -63,7 +63,7 @@ class OcamlBytesProducerPlan {
 	}
 
 	/** Requires syntax construction to consume exactly one sealed producer. */
-	public function requireFor(expression:TypedExpr):OcamlBytesProducerDecision {
+	public function requireFor(expression:TypedExpr, representations:OcamlRepresentationRegistry):OcamlBytesProducerDecision {
 		final expectedKind = admittedKind(expression);
 		if (expectedKind == null)
 			throw "reflaxe.ocaml [ocaml-bytes:unadmitted-producer]: syntax requested a Bytes producer outside the sealed producer family";
@@ -71,7 +71,14 @@ class OcamlBytesProducerPlan {
 		if (decision == null)
 			throw 'reflaxe.ocaml [ocaml-bytes:missing-producer]: admitted Bytes producer ${expectedKind} reached syntax without its sealed decision';
 		OcamlBytesProducerContract.requireDecision(decision);
+		requireResultRepresentation(decision, representations);
 		return decision;
+	}
+
+	/** Revalidates every producer result against the request-owned registry. */
+	public function requireRepresentations(representations:OcamlRepresentationRegistry):Void {
+		for (decision in ordered)
+			requireResultRepresentation(decision, representations);
 	}
 
 	/** Returns all producer decisions in deterministic identity order. */
@@ -116,13 +123,9 @@ class OcamlBytesProducerPlan {
 		return classType.pack != null && classType.pack.length == 2 && classType.pack[0] == "haxe" && classType.pack[1] == "io" && classType.name == "Bytes";
 	}
 
-	/** Whether a type is exact non-null `haxe.io.Bytes`. */
+	/** Whether a type is the direct typed `haxe.io.Bytes` form. */
 	public static function isExactBytesType(type:Type):Bool {
-		return switch (followNoAbstracts(type)) {
-			case TInst(classRef, parameters): parameters.length == 0 && isBytesClass(classRef.get());
-			case _:
-				false;
-		}
+		return OcamlRepresentationRegistry.isExactBytes(type);
 	}
 
 	/** Classifies the supported optional encoding argument shape. */
@@ -195,6 +198,8 @@ class OcamlBytesProducerPlan {
 			decision.resultSemanticTypeId,
 			decision.resultCarrierTypeId,
 			decision.resultNullability,
+			decision.resultRepresentationId,
+			decision.resultRepresentationRevision,
 			decision.runtimeRequirementIds.join(","),
 			decision.proofId,
 			decision.proofClaim,
@@ -220,6 +225,8 @@ class OcamlBytesProducerPlan {
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultNullability: decision.resultNullability,
+			resultRepresentationId: decision.resultRepresentationId,
+			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
@@ -230,25 +237,8 @@ class OcamlBytesProducerPlan {
 		};
 	}
 
-	static function followNoAbstracts(type:Type):Type {
-		var current = type;
-		while (true) {
-			final next = switch (current) {
-				case TLazy(resolve):
-					resolve();
-				case TMono(reference):
-					final resolved = reference.get();
-					resolved == null ? current : resolved;
-				case TType(typeRef, parameters):
-					final typeDefinition = typeRef.get();
-					TypeTools.applyTypeParameters(typeDefinition.type, typeDefinition.params, parameters);
-				case _:
-					return current;
-			}
-			if (next == current)
-				return current;
-			current = next;
-		}
+	static function requireResultRepresentation(decision:OcamlBytesProducerDecision, representations:OcamlRepresentationRegistry):Void {
+		representations.requireExactBytesInternal(decision.resultRepresentationId, decision.resultRepresentationRevision, decision.programRevision);
 	}
 
 	static function unwrapMeta(expression:TypedExpr):TypedExpr {
@@ -268,9 +258,11 @@ class OcamlBytesProducerPlan {
 **/
 class OcamlBytesProducerPlanner {
 	final binding:OcamlFunctionPlanBinding;
+	final representations:OcamlRepresentationRegistry;
 
-	public function new(binding:OcamlFunctionPlanBinding) {
+	public function new(binding:OcamlFunctionPlanBinding, representations:OcamlRepresentationRegistry) {
 		this.binding = binding;
+		this.representations = representations;
 	}
 
 	/** Builds the complete producer inventory for one final typed expression root. */
@@ -300,12 +292,15 @@ class OcamlBytesProducerPlanner {
 		}
 		if (encoding == null)
 			return null;
+		final resultRepresentation = representations.selectExactBytes(OcamlRepresentationDomain.InternalValue);
+		if (resultRepresentation.programRevision != binding.programRevision)
+			throw 'reflaxe.ocaml [ocaml-bytes:stale-representation]: producer ${operation.calleeId} belongs to ${binding.programRevision}, but its Bytes carrier belongs to ${resultRepresentation.programRevision}';
 		final argumentCount = switch (expression.expr) {
 			case TCall(_, arguments): arguments.length;
 			case _: 0;
 		}
 		final id = OcamlBytesProducerContract.idFor(binding.functionId, binding.programRevision, binding.bodyRevision, binding.pipelineRevision, source, kind,
-			operation.calleeId, argumentCount, encoding);
+			operation.calleeId, argumentCount, encoding, resultRepresentation.id, resultRepresentation.revision);
 		return {
 			id: id,
 			source: source,
@@ -318,8 +313,10 @@ class OcamlBytesProducerPlanner {
 			argumentEvaluationOrder: [for (index in 0...argumentCount) index],
 			encoding: encoding,
 			resultSemanticTypeId: OcamlBytesProducerContract.SEMANTIC_TYPE_ID,
-			resultCarrierTypeId: OcamlBytesProducerContract.CARRIER_TYPE_ID,
+			resultCarrierTypeId: resultRepresentation.carrierTypeId,
 			resultNullability: OcamlBytesProducerContract.RESULT_NULLABILITY,
+			resultRepresentationId: resultRepresentation.id,
+			resultRepresentationRevision: resultRepresentation.revision,
 			runtimeRequirementIds: [id + ":runtime:" + OcamlBytesProducerContract.RUNTIME_CAPABILITY],
 			proofId: OcamlBytesProducerContract.PROOF_ID,
 			proofClaim: OcamlBytesProducerContract.PROOF_CLAIM,

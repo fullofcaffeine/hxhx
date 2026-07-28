@@ -5,6 +5,7 @@ import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
+import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
@@ -28,13 +29,16 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	choose different carriers. The admitted scope covers exact `Int` and `Bool`
 	across internal values, local cells, and direct fields. Direct nominal
 	`Array<Int>`, exact core `Null<Int>`, and exact core `Null<Bool>` remain
-	local-only decisions. Exact core `String` uses the target's nullable string
-	carrier across internal values, local cells, and direct fields. A proven
-	monomorphic class may additionally occupy one captured local cell when every
-	whole-value replacement already produces that exact nominal carrier.
+	local-only decisions. Direct `haxe.io.Bytes` and exact core
+	`Null<haxe.io.Bytes>` have internal-value decisions that preserve their
+	distinct typed forms while sharing one nullable reference carrier. Exact core
+	`String` uses the target's nullable string carrier across internal values,
+	local cells, and direct fields. A proven monomorphic class may additionally
+	occupy one captured local cell when every whole-value replacement already
+	produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v12";
+	public static inline final MODEL_REVISION = "ocaml-representation-v13";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -377,6 +381,43 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
+	/**
+		Returns whether a type is the direct standard-library `haxe.io.Bytes`.
+
+		This deliberately preserves the raw typed form. It does not follow the
+		core `Null` abstract, typedefs, user abstracts, or monomorphs.
+	**/
+	public static function isExactBytes(type:Type):Bool {
+		return switch (type) {
+			case TInst(classRef, parameters):
+				final classType = classRef.get();
+				parameters.length == 0
+				&& classType.pack != null
+				&& classType.pack.length == 2
+				&& classType.pack[0] == "haxe"
+				&& classType.pack[1] == "io"
+				&& classType.name == "Bytes";
+			case _:
+				false;
+		}
+	}
+
+	/**
+		Returns whether a type is exact core `Null<haxe.io.Bytes>`.
+
+		Haxe reference values are nullable even without this wrapper. Keeping the
+		explicit wrapper visible gives diagnostics and later conversion planning
+		the source semantic identity without claiming a different runtime value
+		set.
+	**/
+	public static function isExactNullBytes(type:Type):Bool {
+		return switch (type) {
+			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" && isExactBytes(inner);
+			case _:
+				false;
+		}
+	}
+
 	/** Registers or reuses the canonical direct carrier for exact Haxe `Int`. */
 	public function selectExactInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
@@ -543,6 +584,81 @@ class OcamlRepresentationRegistry {
 			},
 			profileEligibility: ["metal", "portable"]
 		});
+	}
+
+	/**
+		Selects the internal carrier for direct `haxe.io.Bytes`.
+
+		The Haxe class type itself remains nullable. This decision fixes the
+		carrier, reference identity, shared aliases, and in-container mutation; it
+		does not authorize a null cast, storage default, receiver, or operation.
+	**/
+	public function selectExactBytes(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		requireBytesInternalDomain(domain, OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID);
+		return selectBytesReferenceCarrier(OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID, OcamlBytesRepresentationContract.DIRECT_PROOF_ID,
+			"Direct haxe.io.Bytes is a nullable Haxe reference type. Non-null values use the mutable HxBytes.t container directly, copies share that container, and aliases observe the same byte mutations. A separate occurrence proof must authorize every runtime-null crossing, storage location, receiver, operation, or native boundary.");
+	}
+
+	/**
+		Selects the internal carrier for exact core `Null<haxe.io.Bytes>`.
+
+		The explicit core wrapper receives its own semantic identity even though
+		Haxe gives it the same nullable reference value set and target carrier as
+		direct `Bytes`.
+	**/
+	public function selectExactNullBytes(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		requireBytesInternalDomain(domain, OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID);
+		return selectBytesReferenceCarrier(OcamlBytesRepresentationContract.EXPLICIT_NULL_SEMANTIC_TYPE_ID,
+			OcamlBytesRepresentationContract.EXPLICIT_NULL_PROOF_ID,
+			"Exact core Null<haxe.io.Bytes> preserves its explicit typed wrapper while using the same nullable Haxe reference value set and mutable HxBytes.t carrier as direct Bytes. This decision records identity and alias behavior only; null materialization, storage, conversion, receivers, operations, and native boundaries remain unadmitted.");
+	}
+
+	function selectBytesReferenceCarrier(semanticTypeId:String, proofId:String, proofClaim:String):OcamlRepresentationDecision {
+		return register({
+			semanticTypeId: semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: OcamlBytesRepresentationContract.CARRIER_TYPE_ID,
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: proofClaim,
+			proof: {
+				id: proofId,
+				claim: proofClaim
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Revalidates one producer-owned direct Bytes representation reference.
+
+		This lookup never creates a missing decision. Planning selects the
+		decision; final sealing and syntax consumption can only verify the exact
+		request-owned revision that was already registered.
+	**/
+	public function requireExactBytesInternal(representationId:String, representationRevision:String, programRevision:String):OcamlRepresentationDecision {
+		final decision = require(representationId, programRevision);
+		if (decision.id != OcamlBytesRepresentationContract.DIRECT_INTERNAL_REPRESENTATION_ID
+			|| decision.revision != representationRevision
+			|| decision.semanticTypeId != OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+			|| decision.carrierTypeId != OcamlBytesRepresentationContract.CARRIER_TYPE_ID
+			|| decision.domain != OcamlRepresentationDomain.InternalValue
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+			|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+			|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.DirectRuntimeContainer
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			|| decision.proof.id != OcamlBytesRepresentationContract.DIRECT_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-bytes:representation-mismatch]: producer expects the sealed direct Bytes internal carrier, but "$representationId" selects incompatible facts';
+		}
+		return decision;
 	}
 
 	function selectExactNullablePrimitive(domain:OcamlRepresentationDomain, semanticTypeId:String, reason:String,
@@ -749,6 +865,11 @@ class OcamlRepresentationRegistry {
 			case _:
 				false;
 		}
+	}
+
+	static function requireBytesInternalDomain(domain:OcamlRepresentationDomain, semanticTypeId:String):Void {
+		if (domain != OcamlRepresentationDomain.InternalValue)
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-bytes-domain]: exact $semanticTypeId is admitted only as an internal value, not $domain';
 	}
 
 	public static function monomorphicClassSemanticTypeId(type:Type):Null<String> {

@@ -4,6 +4,9 @@ import haxe.io.Bytes;
 import haxe.io.BytesData;
 import haxe.io.Encoding;
 
+typedef BytesAlias = Bytes;
+abstract BytesWrapper(Bytes) from Bytes to Bytes {}
+
 /**
 	Typed source forms used by the Bytes producer-plan invariant fixture.
 
