@@ -151,7 +151,7 @@ let nullable_bool_toStdString (v : Obj.t) : string =
 
 let nullable_int_unwrap (v : Obj.t) : int =
   if is_null v then
-    failwith "Null<Int> unwrap"
+    raise (Hx_exception (Obj.repr "Null Access", [ "String"; "Dynamic" ]))
   else
     Obj.obj v
 

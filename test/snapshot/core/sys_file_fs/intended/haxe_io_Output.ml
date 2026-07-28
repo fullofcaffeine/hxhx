@@ -34,17 +34,17 @@ let writeByte__impl = fun (self : t) (c : int) -> ignore ((
 ))
 
 let writeBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> let pos = ref pos in (
-  ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > HxBytes.length s then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
+  ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > (let __bytes_receiver_4 = s in HxBytes.length __bytes_receiver_4) then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
   let k = ref len in (
     ignore (while !k > 0 do ignore ((
       ignore ((Obj.magic self : t).writeByte (Obj.magic self) (HxBytes.get s (!pos)));
-      ignore (let __old_4 = !pos in let __new_5 = HxInt.add __old_4 1 in (
-        ignore (pos := __new_5);
-        __old_4
+      ignore (let __old_5 = !pos in let __new_6 = HxInt.add __old_5 1 in (
+        ignore (pos := __new_6);
+        __old_5
       ));
-      let __old_6 = !k in let __new_7 = HxInt.add __old_6 (-1) in (
-        ignore (k := __new_7);
-        __old_6
+      let __old_7 = !k in let __new_8 = HxInt.add __old_7 (-1) in (
+        ignore (k := __new_8);
+        __old_7
       )
     )) done);
     len
@@ -61,7 +61,7 @@ let close__impl = fun (self : t) () -> ignore ((
   ignore ()
 ))
 
-let write__impl = fun (self : t) (s : HxBytes.t) -> ignore (ignore (let l = ref (HxBytes.length s) in let p = ref 0 in while !l > 0 do ignore (let k = (Obj.magic self : t).writeBytes (Obj.magic self) (Obj.magic s) (!p) (!l) in (
+let write__impl = fun (self : t) (s : HxBytes.t) -> ignore (ignore (let l = ref (let __bytes_receiver_9 = s in HxBytes.length __bytes_receiver_9) in let p = ref 0 in while !l > 0 do ignore (let k = (Obj.magic self : t).writeBytes (Obj.magic self) (Obj.magic s) (!p) (!l) in (
   ignore (if k = 0 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Blocked))) ["Dynamic"; "haxe.io.Error"]) else ());
   ignore (p := HxInt.add (!p) k);
   l := HxInt.sub (!l) k
@@ -81,12 +81,12 @@ let prepare__impl = fun (self : t) (_nbytes : int) -> ignore ((
 ))
 
 let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) -> ignore (ignore (let tempNumber = ref (0 : int) in (
-  ignore (if bufsize == HxRuntime.hx_null then let __assign_8 = 4096 in (
-    tempNumber := __assign_8;
-    __assign_8
-  ) else let __assign_9 = let __nullable_int_10 = bufsize in if __nullable_int_10 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_10 in (
-    tempNumber := __assign_9;
-    __assign_9
+  ignore (if bufsize == HxRuntime.hx_null then let __assign_10 = 4096 in (
+    tempNumber := __assign_10;
+    __assign_10
+  ) else let __assign_11 = let __nullable_int_12 = bufsize in if __nullable_int_12 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_12 in (
+    tempNumber := __assign_11;
+    __assign_11
   ));
   let size = !tempNumber in let buf = Obj.magic (HxBytes.alloc size) in try while true do ignore (let len = (Obj.magic i : Haxe_io_Input.t).readBytes (Obj.magic i) (Obj.magic buf) 0 size in (
     ignore (if len = 0 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Blocked))) ["Dynamic"; "haxe.io.Error"]) else ());
@@ -94,21 +94,21 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
   )) done with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_11 -> raise (HxRuntime.Hx_return __ret_11)
+    | HxRuntime.Hx_return __ret_13 -> raise (HxRuntime.Hx_return __ret_13)
     | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-    | HxRuntime.Hx_exception (__exn_v_12, __exn_tags_13) -> if HxRuntime.tags_has __exn_tags_13 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_12 : Haxe_io_Eof.t) in (
+    | HxRuntime.Hx_exception (__exn_v_14, __exn_tags_15) -> if HxRuntime.tags_has __exn_tags_15 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_14 : Haxe_io_Eof.t) in (
       ignore _hx;
       ()
-    ) else HxRuntime.hx_throw_typed __exn_v_12 __exn_tags_13
-    | __exn_14 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_14) : Haxe_io_Eof.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_14 __exn_tags_15
+    | __exn_16 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_16) : Haxe_io_Eof.t) in (
       ignore _hx;
       ()
-    ) else raise (__exn_14)
+    ) else raise (__exn_16)
 )))
 
 let writeString__impl = fun (self : t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
-  ignore (let b = Obj.magic (HxBytes.ofString s ()) in (Obj.magic self : t).writeFullBytes (Obj.magic self) (Obj.magic b) 0 (HxBytes.length b))
+  ignore (let b = Obj.magic (HxBytes.ofString s ()) in (Obj.magic self : t).writeFullBytes (Obj.magic self) (Obj.magic b) 0 (let __bytes_receiver_17 = b in HxBytes.length __bytes_receiver_17))
 ))
 
 let writeFloat__impl = fun (self : t) (x : float) -> ignore (ignore ((Obj.magic self : t).writeInt32 (Obj.magic self) (Haxe_io_FPHelper.floatToI32 x)))
