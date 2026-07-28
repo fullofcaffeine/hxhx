@@ -78,8 +78,19 @@ class M6BytesIntegrationTest {
 		assertContains(content, "HxBytes.compare", "compare");
 		assertContains(content, "HxBytes.getString", "getString");
 		assertContains(content, "HxBytes.toString", "toString");
+		assertContains(content, "HxBytes.toHex", "toHex");
 		assertContains(content, "HxBytes.fill", "fill");
 		assertContains(content, "HxBytes.create", "internal constructor");
+		assertContains(content, "let __bytes_receiver_", "planned Bytes receiver materialization");
+		assertContains(content, "let __bytes_arg_0_", "planned Bytes first argument materialization");
+		assertContains(content, "let __bytes_arg_1_", "planned Bytes second argument materialization");
+
+		final requirementReportPath = outDir + "/ocaml_runtime_requirement_report.json";
+		if (!sys.FileSystem.exists(requirementReportPath))
+			throw "missing runtime requirement report: " + requirementReportPath;
+		final requirementReport = sys.io.File.getContent(requirementReportPath);
+		assertContains(requirementReport, '"semanticCapability": "haxe-bytes-read"', "Bytes read runtime capability");
+		assertContains(requirementReport, '"implementationFeature": "haxe-bytes-read-v1"', "Bytes read runtime explanation");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {

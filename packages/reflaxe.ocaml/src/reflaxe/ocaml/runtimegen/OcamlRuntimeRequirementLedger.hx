@@ -7,6 +7,9 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerContract;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadContract;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
+import reflaxe.ocaml.lowered.OcamlBytesRepresentationModel.OcamlBytesRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
@@ -31,6 +34,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
 	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final HAXE_BYTES_PRODUCER = OcamlBytesProducerContract.RUNTIME_CAPABILITY;
+	public static inline final HAXE_BYTES_READ = OcamlBytesReadContract.RUNTIME_CAPABILITY;
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
@@ -126,6 +130,37 @@ class OcamlRuntimeRequirementLedger {
 			rootModules: ["HxBytes"],
 			profileEligibility: ["metal", "portable"],
 			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation creates a non-null haxe.io.Bytes value through HxBytes using ${decision.constructionPolicy}; nullable storage, receivers, indexing, and mutation require separate decisions.'
+		});
+	}
+
+	/**
+		Records why one sealed read-only Bytes operation needs `HxBytes`.
+
+		The requirement names only the exact read decision. It does not authorize
+		indexed access, mutation, nullable materialization, or deferred Float and
+		Int64 result families.
+	**/
+	public function recordBytesRead(decision:OcamlBytesReadDecision):Void {
+		OcamlBytesReadContract.requireDecision(decision);
+		final requirementId = decision.id + ":runtime:" + HAXE_BYTES_READ;
+		if (decision.runtimeRequirementIds[0] != requirementId)
+			throw 'Bytes read "${decision.id}" does not name its exact runtime requirement.';
+		record({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: HAXE_BYTES_READ,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: OcamlBytesRepresentationContract.DIRECT_SEMANTIC_TYPE_ID
+			},
+			implementationFeature: "haxe-bytes-read-v1",
+			rootModules: ["HxBytes"],
+			profileEligibility: ["metal", "portable"],
+			explanation: 'The sealed ${decision.calleeId} ${decision.kind} operation reads an exact haxe.io.Bytes value through HxBytes after fixing receiver and argument evaluation order; writes, indexed access, nullable materialization, and Float or Int64 results require separate decisions.'
 		});
 	}
 

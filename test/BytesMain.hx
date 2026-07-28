@@ -1,4 +1,5 @@
 import haxe.io.Bytes;
+import haxe.io.Encoding;
 
 /**
 	Exercises the public Bytes API and the stdlib-only constructor contract.
@@ -8,6 +9,18 @@ import haxe.io.Bytes;
 **/
 @:access(haxe.io.Bytes)
 class BytesMain {
+	static final evaluationOrder:Array<String> = [];
+
+	static function orderedBytes():Bytes {
+		evaluationOrder.push("receiver");
+		return Bytes.ofString("abcd");
+	}
+
+	static function orderedInt(label:String, value:Int):Int {
+		evaluationOrder.push(label);
+		return value;
+	}
+
 	static function main() {
 		var b = Bytes.ofString("xxxxxx");
 		if (b.length != 6)
@@ -34,6 +47,12 @@ class BytesMain {
 
 		if (b.getString(1, 3) != "abc")
 			throw "unexpected";
+		if (b.getString(1, 3, Encoding.UTF8) != "abc" || b.getString(1, 3, Encoding.RawNative) != "abc")
+			throw "unexpected explicit encoding";
+
+		final ordered = orderedBytes().sub(orderedInt("position", 1), orderedInt("length", 2));
+		if (ordered.toString() != "bc" || evaluationOrder.join(",") != "receiver,position,length")
+			throw "Bytes read evaluation order changed";
 
 		var filled = Bytes.alloc(4);
 		filled.fill(0, 4, "A".charCodeAt(0));
@@ -57,5 +76,13 @@ class BytesMain {
 		}
 		if (!outsideDeclaredLength)
 			throw "Bytes access ignored the declared length";
+
+		final numeric = Bytes.alloc(4);
+		numeric.set(0, 0x34);
+		numeric.set(1, 0x12);
+		numeric.set(2, 0x78);
+		numeric.set(3, 0x56);
+		if (numeric.getUInt16(0) != 0x1234 || numeric.getInt32(0) != 0x56781234 || numeric.toHex() != "34127856")
+			throw "Bytes numeric or hexadecimal read changed";
 	}
 }

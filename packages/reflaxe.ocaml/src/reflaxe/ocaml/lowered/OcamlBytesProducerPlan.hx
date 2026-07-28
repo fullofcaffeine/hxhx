@@ -142,15 +142,16 @@ class OcamlBytesProducerPlan {
 			return OcamlBytesEncodingKind.Omitted;
 		if (arguments.length != 2)
 			return null;
-		return encodingExpression(arguments[1]);
+		return encodingKindForExpression(arguments[1]);
 	}
 
 	/** Whether one explicit expression is a supported Bytes encoding value. */
 	public static function isSupportedEncodingExpression(expression:TypedExpr):Bool {
-		return encodingExpression(expression) != null;
+		return encodingKindForExpression(expression) != null;
 	}
 
-	static function encodingExpression(expression:TypedExpr):Null<OcamlBytesEncodingKind> {
+	/** Classifies one exact supported Bytes encoding selector. */
+	public static function encodingKindForExpression(expression:TypedExpr):Null<OcamlBytesEncodingKind> {
 		return switch (unwrapMeta(expression).expr) {
 			case TConst(TNull):
 				OcamlBytesEncodingKind.ExplicitNull;

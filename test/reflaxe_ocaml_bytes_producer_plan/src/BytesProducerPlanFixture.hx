@@ -187,7 +187,7 @@ class BytesProducerPlanFixture {
 		if (firstStandalone.binding.functionId != "standalone:" + standaloneOwner
 			|| firstStandalone.binding.bodyRevision != secondStandalone.binding.bodyRevision
 			|| firstStandalone.bytesProducers.revision != secondStandalone.bytesProducers.revision
-			|| standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, firstStandalone, representations).decisions().length != 1) {
+			|| standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, firstStandalone, representations).bytesProducers.decisions().length != 1) {
 			Context.error("Standalone Bytes planning did not preserve the exact deterministic expression binding.", Context.currentPos());
 		}
 		final staleStandalone:OcamlSealedStandaloneExpressionPlan = {
@@ -197,7 +197,8 @@ class BytesProducerPlanFixture {
 				bodyRevision: firstStandalone.binding.bodyRevision + ":changed",
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
-			bytesProducers: firstStandalone.bytesProducers
+			bytesProducers: firstStandalone.bytesProducers,
+			bytesReads: firstStandalone.bytesReads
 		};
 		expectThrows("stale-standalone-plan", () -> standaloneRegistry.requireStandaloneExpressionPlan(sampleBody, staleStandalone, representations));
 

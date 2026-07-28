@@ -22,6 +22,7 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBytesProducerSyntax;
+import reflaxe.ocaml.ast.OcamlBytesReadSyntax;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
@@ -35,6 +36,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
@@ -96,6 +98,7 @@ class OcamlBuilder {
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 	var currentBytesProducerPlan:Null<OcamlBytesProducerPlan> = null;
+	var currentBytesReadPlan:Null<OcamlBytesReadPlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 
@@ -187,6 +190,14 @@ class OcamlBuilder {
 
 	function bytesProducerInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-bytes:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	function bytesReadInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-bytes:read-plan-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -1165,10 +1176,6 @@ class OcamlBuilder {
 		}
 	}
 
-	static inline function isSupportedBytesEncodingExpr(expr:TypedExpr):Bool {
-		return OcamlBytesProducerPlan.isSupportedEncodingExpression(expr);
-	}
-
 	static inline function isHaxeDsStringMapClass(cls:ClassType):Bool {
 		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "StringMap";
 	}
@@ -1811,12 +1818,19 @@ class OcamlBuilder {
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		final plannedBytesProducer = currentBytesProducerPlan == null
 			|| OcamlBytesProducerPlan.admittedKind(e) == null ? null : currentBytesProducerPlan.requireFor(e, representationRegistry);
+		final bytesReadOccurrence = OcamlBytesReadPlan.admittedOccurrence(e);
+		final plannedBytesRead = currentBytesReadPlan == null
+			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TNew(_, _, arguments) if (plannedBytesProducer != null):
 				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
 			case TCall(_, arguments) if (plannedBytesProducer != null):
 				OcamlBytesProducerSyntax.build(plannedBytesProducer, arguments, buildExpr);
+			case _ if (plannedBytesRead != null && bytesReadOccurrence != null):
+				OcamlBytesReadSyntax.build(plannedBytesRead, bytesReadOccurrence.receiver, bytesReadOccurrence.arguments, buildExpr, freshTmp);
+			case _ if (bytesReadOccurrence != null):
+				bytesReadInvariant("an admitted read-only Bytes operation reached syntax without its sealed occurrence plan", e.pos);
 			case TNew(_, _, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
@@ -3494,30 +3508,8 @@ class OcamlBuilder {
 														case "fill" if (args.length == 3):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "fill"),
 																[self, buildExpr(args[0]), buildExpr(args[1]), coerceNullableIntToInt(args[2])]);
-														case "sub" if (args.length == 2):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "sub"),
-																[self, buildExpr(args[0]), buildExpr(args[1])]);
-														case "compare" if (args.length == 1):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "compare"),
-																[self, buildExpr(args[0])]);
-														case "getString":
-															final hasSupportedEncoding = args.length == 3 && isSupportedBytesEncodingExpr(args[2]);
-															if (args.length == 2 || hasSupportedEncoding) {
-																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getString"),
-																	[self, buildExpr(args[0]), buildExpr(args[1]), OcamlExpr.EConst(OcamlConst.CUnit)]);
-															} else {
-																#if macro
-																guardrailError("reflaxe.ocaml (M6): Bytes.getString only supports UTF8/RawNative/default encoding for now. (bd: haxe.ocaml-28t.7.5)",
-																	e.pos);
-																#end
-																OcamlExpr.EConst(OcamlConst.CUnit);
-															}
-														case "toString" if (args.length == 0):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toString"),
-																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
-														case "toHex" if (args.length == 0):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toHex"),
-																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
+														case "sub", "compare", "getString", "toString", "toHex":
+															bytesReadInvariant('standard Bytes read "${cf.name}" bypassed its sealed read plan', e.pos);
 														case "getData" if (args.length == 0):
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getData"),
 																[self, OcamlExpr.EConst(OcamlConst.CUnit)]);
@@ -7013,11 +7005,15 @@ class OcamlBuilder {
 	public function buildStandaloneExpr(expression:TypedExpr, storagePlan:OcamlLocalStoragePlan, expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
+		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
-		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentBytesProducerPlan = validatedPlan.bytesProducers;
+		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
+		currentBytesReadPlan = previousBytesReadPlan;
 		return result;
 	}
 
@@ -7026,11 +7022,15 @@ class OcamlBuilder {
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
+		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
-		currentBytesProducerPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentBytesProducerPlan = validatedPlan.bytesProducers;
+		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
+		currentBytesReadPlan = previousBytesReadPlan;
 		return result;
 	}
 
@@ -7215,13 +7215,16 @@ class OcamlBuilder {
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
+		final previousBytesReadPlan = currentBytesReadPlan;
 		final previousCallPlan = currentCallPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
+		functionPlan.bytesReads.requireRepresentations(representationRegistry);
 		currentBytesProducerPlan = functionPlan.bytesProducers;
+		currentBytesReadPlan = functionPlan.bytesReads;
 		currentCallPlan = functionPlan.calls;
 		currentControlPlan = functionPlan.controls;
 		loopDepth = 0;
@@ -7368,6 +7371,7 @@ class OcamlBuilder {
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentBytesProducerPlan = previousBytesProducerPlan;
+		currentBytesReadPlan = previousBytesReadPlan;
 		currentCallPlan = previousCallPlan;
 		currentControlPlan = previousControlPlan;
 		loopDepth = previousLoopDepth;
@@ -8036,7 +8040,7 @@ class OcamlBuilder {
 						} else if (isStdStringClass(cls) && cf.name == "length") {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
 						} else if (isStdBytesClass(cls) && cf.name == "length") {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
+							bytesReadInvariant("standard Bytes length bypassed its sealed read plan", pos);
 						} else if (cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "_Int64" && cls.name == "___Int64"
 							&& (cf.name == "low" || cf.name == "high")) {
 							// OCaml record-label resolution gotcha:
