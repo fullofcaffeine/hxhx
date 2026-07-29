@@ -255,11 +255,14 @@ snapshot_output warm-a
 compare_snapshots clean-a warm-a
 run_published warm-a "$expected_a"
 
+build_digest_before_transaction_failure="$(tree_digest "$BUILD_DIR")"
 if compile_server_with_transaction_failure >"$WORK_DIR/expected-transaction-failure.log" 2>&1; then
 	fail "the injected pre-publication target failure unexpectedly succeeded"
 fi
 snapshot_output after-transaction-failure-a
 compare_snapshots warm-a after-transaction-failure-a
+[[ "$(tree_digest "$BUILD_DIR")" = "$build_digest_before_transaction_failure" ]] \
+	|| fail "pre-publication target failure changed external Dune state"
 
 replace_source_text "$MESSAGE_SOURCE" "version-a" "version-b"
 compile_and_verify_state implementation-edit "$expected_b"
@@ -327,21 +330,28 @@ cp "$WORK_DIR/BuildMacro.original.hx" "$MACRO_SOURCE"
 compile_and_verify_state build-macro-restored "$expected_b"
 
 prior_failure_digest="$(tree_digest "$PROJECT_DIR/out")"
+prior_failure_dune_digest="$(tree_digest "$BUILD_DIR")"
 replace_source_text "$MAIN_SOURCE" "Message.text()" "Message.text("
 if compile_server >"$WORK_DIR/expected-server-source-failure.log" 2>&1; then
 	fail "the deliberately malformed warm request unexpectedly succeeded"
 fi
 [[ "$(tree_digest "$PROJECT_DIR/out")" = "$prior_failure_digest" ]] \
 	|| fail "malformed warm request changed the prior public output"
+[[ "$(tree_digest "$BUILD_DIR")" = "$prior_failure_dune_digest" ]] \
+	|| fail "malformed warm request changed external Dune state"
 if compile_clean >"$WORK_DIR/expected-clean-source-failure.log" 2>&1; then
 	fail "the deliberately malformed clean request unexpectedly succeeded"
 fi
 [[ "$(tree_digest "$PROJECT_DIR/out")" = "$prior_failure_digest" ]] \
 	|| fail "malformed clean request changed the prior public output"
+[[ "$(tree_digest "$BUILD_DIR")" = "$prior_failure_dune_digest" ]] \
+	|| fail "malformed clean request changed external Dune state"
 grep -Fq "Main.hx" "$WORK_DIR/expected-server-source-failure.log" \
 	|| fail "warm failure omitted the source filename"
 grep -Fq "Main.hx" "$WORK_DIR/expected-clean-source-failure.log" \
 	|| fail "clean failure omitted the source filename"
+diff -u "$WORK_DIR/expected-clean-source-failure.log" "$WORK_DIR/expected-server-source-failure.log" \
+	|| fail "clean and warm diagnostics differ for malformed source"
 
 cp "$WORK_DIR/Main.original.hx" "$MAIN_SOURCE"
 cp "$WORK_DIR/Message.original.hx" "$MESSAGE_SOURCE"
@@ -393,8 +403,12 @@ compare_snapshots clean-a restart-cold-a
 run_published restart-cold-a "$expected_a"
 
 package_log="$WORK_DIR/package-server-build.log"
+tool_bin="$WORK_DIR/tool-bin"
+mkdir -p "$tool_bin"
+ln -s "$(command -v "$HAXE_BIN")" "$tool_bin/haxe"
 if ! (
 	cd "$ROOT"
+	PATH="$tool_bin:$PATH" \
 	REFLAXE_OCAML_SERVER_PROJECT="$PROJECT_DIR" \
 		REFLAXE_OCAML_SERVER_ENDPOINT="$SERVER_PORT" \
 		"$HAXE_BIN" \
