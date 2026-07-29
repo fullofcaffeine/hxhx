@@ -1,6 +1,9 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
+import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
@@ -30,6 +33,8 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+
+using reflaxe.helpers.ClassFieldHelper;
 
 /**
 	Checks typed-call registry invariants and the pre-write lifecycle boundary.
@@ -1263,6 +1268,60 @@ class CallPlanFixture {
 			OcamlControlPlan.notAdmitted(owner), callable, construction);
 	}
 
+	/** Returns one real typed method body for the syntax-handoff lifecycle test. */
+	static function syntaxInputData():ClassFuncData {
+		return switch (Context.getType("SyntaxInputFixture")) {
+			case TInst(classReference, _):
+				final classType = classReference.get();
+				final field = Lambda.find(classType.fields.get(), candidate -> candidate.name == "calculate");
+				if (field == null)
+					Context.error("The syntax-input fixture has no calculate method.", Context.currentPos());
+				final data = field.findFuncData(classType, false);
+				if (data == null || data.expr == null)
+					Context.error("The syntax-input fixture calculate method has no typed body.", Context.currentPos());
+				data;
+			case _:
+				Context.error("The syntax-input fixture did not type as a class.", Context.currentPos());
+		}
+	}
+
+	/**
+		Proves the syntax handoff observes one final body exactly once.
+
+		The same test then replaces the body after sealing and checks that the
+		remaining observation still rejects the stale plan. This guards the
+		performance cut without weakening the exact-body safety boundary.
+	**/
+	static function assertFunctionSyntaxInputUsesOneObservation():Void {
+		final data = syntaxInputData();
+		data.bindProgramRevision(PROGRAM_REVISION);
+		final registry = new OcamlFunctionPlanRegistry();
+		registry.beginProgram(PROGRAM_REVISION);
+		final binding = registry.planningBindingFor(data);
+		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
+		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
+		registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities),
+			new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
+			new OcamlBytesReadPlan([]), new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
+
+		FunctionBodyRevision.resetDigestCallCount();
+		final syntaxInput = registry.functionSyntaxInputFor(data);
+		if (FunctionBodyRevision.getDigestCallCount() != 1)
+			Context.error("One syntax handoff observed the final typed body more than once.", Context.currentPos());
+		if (syntaxInput.plan.binding.functionId != binding.functionId || syntaxInput.localIdentities.ownerId != binding.functionId)
+			Context.error("The syntax handoff returned facts for a different function.", Context.currentPos());
+		if (syntaxInput.constructionBoundary != null)
+			Context.error("An ordinary method received a constructor boundary.", Context.currentPos());
+
+		final sealedBody = data.expr;
+		data.setExpr({
+			expr: TBlock([sealedBody]),
+			pos: sealedBody.pos,
+			t: sealedBody.t
+		});
+		expectThrows("planned-body-revision-mismatch", () -> registry.functionSyntaxInputFor(data));
+	}
+
 	static function expectThrows(code:String, operation:Void->Void):Void {
 		expectedFailureIndex += 1;
 		var message:Null<String> = null;
@@ -1317,6 +1376,8 @@ class CallPlanFixture {
 	}
 
 	public static macro function run():Expr {
+		assertFunctionSyntaxInputUsesOneObservation();
+
 		final directReturn = typedFunctionBody(macro function():Int {
 			return 1;
 		});

@@ -1827,10 +1827,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				final sealedCtorPlan = functionPlanRegistry.sealedFunctionPlanFor(ctorFunc);
-				final ctorLocalIdentities = functionPlanRegistry.requestLocalIdentitiesFor(ctorFunc);
-				constructionBoundary = functionPlanRegistry.constructionBoundaryForDefinition(ctorFunc);
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, sealedCtorPlan, ctorLocalIdentities, ctorReturnType)) {
+				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
+				constructionBoundary = syntaxInput.constructionBoundary;
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -2018,8 +2017,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f),
-						functionPlanRegistry.requestLocalIdentitiesFor(f), methodReturnType)) {
+					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2113,8 +2112,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f),
-				functionPlanRegistry.requestLocalIdentitiesFor(f), staticReturnType);
+			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {

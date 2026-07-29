@@ -57,6 +57,20 @@ typedef OcamlSealedFunctionPlan = {
 }
 
 /**
+	One exact, request-local handoff from sealed planning to target syntax.
+
+	Creating this input freshly observes the final typed body once. Syntax must
+	consume the plan, host-local identities, and optional constructor boundary
+	together instead of requesting each through another body observation. The
+	input is request-local and must never be cached across compiler requests.
+**/
+typedef OcamlFunctionSyntaxInput = {
+	final plan:OcamlSealedFunctionPlan;
+	final localIdentities:LexicalLocalIdentityPlan;
+	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
+}
+
+/**
 	All target-owned decisions sealed for one exact non-function expression root.
 
 	`binding.functionId` contains a stable root identity even though the shared
@@ -233,15 +247,36 @@ class OcamlFunctionPlanRegistry {
 		return ownerId;
 	}
 
+	/**
+		Observes the final body once and returns every input syntax needs.
+
+		No target callback or typed-expression rewrite may run between this call and
+		syntax consumption. Keeping the handoff explicit avoids treating a body
+		observation as a reusable cache entry while removing duplicate observations
+		from adjacent plan and identity lookups.
+	**/
+	public function functionSyntaxInputFor(data:ClassFuncData):OcamlFunctionSyntaxInput {
+		final sealed = requiredSealedFunctionRecord(data);
+		return {
+			plan: sealed.plan,
+			localIdentities: sealed.localIdentities,
+			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan)
+		};
+	}
+
 	/** Requires the function body reaching syntax construction to remain sealed. */
 	public function sealedFunctionPlanFor(data:ClassFuncData):OcamlSealedFunctionPlan {
+		return requiredSealedFunctionRecord(data).plan;
+	}
+
+	function requiredSealedFunctionRecord(data:ClassFuncData):OcamlSealedFunctionRecord {
 		final expected = bindingFor(data);
 		final sealed = sealedFunctions.get(data.id);
 		if (sealed == null)
 			throw 'reflaxe.ocaml [ocaml-lowering:unsealed-function]: function "${data.id}" reached syntax construction without final function-plan validation';
 		if (!sameBinding(sealed.plan.binding, expected))
 			throw 'reflaxe.ocaml [reflaxe:planned-body-revision-mismatch]: function "${data.id}" was sealed for body ${sealed.plan.binding.bodyRevision}, but syntax construction received ${expected.bodyRevision}';
-		return sealed.plan;
+		return sealed;
 	}
 
 	/**
@@ -252,11 +287,7 @@ class OcamlFunctionPlanRegistry {
 		while the sealed plan remains host-neutral and reusable.
 	**/
 	public function requestLocalIdentitiesFor(data:ClassFuncData):LexicalLocalIdentityPlan {
-		sealedFunctionPlanFor(data);
-		final sealed = sealedFunctions.get(data.id);
-		if (sealed == null)
-			throw 'reflaxe.ocaml [ocaml-lowering:unsealed-function]: function "${data.id}" has no request-local identity lookup';
-		return sealed.localIdentities;
+		return requiredSealedFunctionRecord(data).localIdentities;
 	}
 
 	static function sameBinding(left:OcamlFunctionPlanBinding, right:OcamlFunctionPlanBinding):Bool {
@@ -427,7 +458,10 @@ class OcamlFunctionPlanRegistry {
 		an ordinary value-returning Haxe method or rereading its typed signature.
 	**/
 	public function constructionBoundaryForDefinition(data:ClassFuncData):Null<OcamlCallableBoundaryPlan> {
-		final sealed = sealedFunctionPlanFor(data);
+		return functionSyntaxInputFor(data).constructionBoundary;
+	}
+
+	function constructionBoundaryForPlan(data:ClassFuncData, sealed:OcamlSealedFunctionPlan):Null<OcamlCallableBoundaryPlan> {
 		final calleeId = OcamlCallPlanner.calleeId(data.classType, data.field);
 		final boundary = sealed.constructionBoundary;
 		if (boundary == null) {

@@ -33,6 +33,13 @@ if [ ! -f "$REFLAXE_SOURCE_ROOT/src/reflaxe/preprocessors/implementations/Remove
   exit 2
 fi
 
+pipeline_source="$ROOT/packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFunctionPlanRegistry.hx"
+pipeline_revision="$(sed -n 's/.*PIPELINE_REVISION = "\([^"]*\)";.*/\1/p' "$pipeline_source")"
+if [ -z "$pipeline_revision" ]; then
+  echo "Unable to read the current OCaml function-plan pipeline revision from $pipeline_source." >&2
+  exit 2
+fi
+
 macro_output="$($HAXE_BIN \
   -cp "$REFLAXE_SOURCE_ROOT/src" \
   -cp "$ROOT/test/reflaxe_ocaml_preprocessor_lifecycle/src" \
@@ -56,7 +63,7 @@ if [ ! -f "$trace_file" ]; then
   echo "Missing semantic lifecycle trace: $trace_file" >&2
   exit 1
 fi
-node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$trace_file" "$expected_function"
+node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$trace_file" "$expected_function" "$pipeline_revision"
 
 feature_fixture_dir="$ROOT/test/portable/fixtures/place_feature_gated_update_lifecycle"
 feature_trace="$feature_fixture_dir/out/ocaml_semantic_lifecycle_trace.json"
@@ -65,7 +72,7 @@ if [ ! -f "$feature_trace" ]; then
   echo "Missing feature-gated semantic lifecycle trace: $feature_trace" >&2
   exit 1
 fi
-node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$feature_trace" "$feature_function"
+node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$feature_trace" "$feature_function" "$pipeline_revision"
 if ! rg -Fq 'let featuregate_gatedUpdate =' "$feature_fixture_dir/out/Main.ml"; then
   echo "DCE did not retain the feature-gated update in generated OCaml." >&2
   exit 1
@@ -88,7 +95,7 @@ cp "$trace_file" "$first_trace"
     "$HAXE_BIN" build.hxml
   fi
 )
-node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$trace_file" "$expected_function"
+node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$trace_file" "$expected_function" "$pipeline_revision"
 if ! cmp -s "$first_trace" "$trace_file"; then
   echo "Semantic lifecycle trace changed across identical builds." >&2
   diff -u "$first_trace" "$trace_file" >&2 || true
