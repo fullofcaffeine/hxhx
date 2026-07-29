@@ -114,8 +114,8 @@ Notes:
     - the idle-handoff retry starts only when the client and the complete
       verified server tree are quiet while the compiler log is unchanged.
   - This is the **stage0 upstream-Haxe** server, not the future native hxhx
-    incremental server. The helper's lifecycle behavior is tested, but its warm
-    Reflaxe target output is not currently a supported build path.
+    incremental server. Its warm Reflaxe route is now an explicit opt-in;
+    fresh stage0 generation remains the default and comparison path.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
@@ -124,11 +124,11 @@ Notes:
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
 - For profiling-only display graph trimming, set `HXHX_STAGE0_NO_DISPLAY=1` or use `scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-no-display`; do not use this for release snapshots unless display parity is explicitly reviewed.
-- Stage0 source builds reject both explicit `HAXE_CONNECT=<port>` and
-  helper-backed `HXHX_STAGE0_USE_REPO_SERVER=1` until complete warm Reflaxe
-  target state is implemented. The maintainer-only
-  `HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1` override exists for focused
-  lifecycle tests; its output is not correctness or release evidence.
+- To reuse upstream Haxe's frontend during an intentional stage0 source build,
+  set `HAXE_CONNECT=<port>` for an already-running local server, or set
+  `HXHX_STAGE0_USE_REPO_SERVER=1` for the repository-owned helper. Add
+  `HXHX_STAGE0_KEEP_REPO_SERVER=1` only when later builds should reuse that
+  helper-owned process. Omit these settings for the fresh default.
 - For targeted cleanup when haxe servers pile up:
   - `--kill-repo-server` (safe: only repo-owned server)
   - `--kill-all-haxe-servers` (unsafe: kills all local haxe servers)

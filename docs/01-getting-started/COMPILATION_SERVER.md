@@ -528,37 +528,67 @@ automatic server discovery and stale-record cleanup.
 | What you are doing | Recommended workflow today | Server enabled by default? |
 | --- | --- | --- |
 | Build a normal app with upstream Haxe and a non-Reflaxe target | Follow upstream Haxe's `--wait`/`--connect` guidance if the target and macros support it. | No |
-| Build OCaml with upstream Haxe plus `reflaxe.ocaml` | Use `haxelib run reflaxe.ocaml build` or `watch`; each source-generation batch starts fresh. | No |
+| Build OCaml with upstream Haxe plus `reflaxe.ocaml` | Use `build` or `watch` for the fresh default. To reuse upstream Haxe's frontend, start a local Haxe 4.3.7 server and add `--connect <port>`. | No; reuse is explicit |
 | Rebuild `hxhx` from committed OCaml snapshots | Run `bash scripts/hxhx/build-hxhx.sh`; no stage0 Haxe server is needed. | No |
-| Force a fresh stage0 source rebuild of `hxhx` | Run with `HXHX_FORCE_STAGE0=1` and no `HAXE_CONNECT`/repo-server flag. | No |
-| Regenerate committed `hxhx` bootstrap sources | Use a clean or incremental output directory without server reuse; use `--skip-if-unchanged` where applicable. | No |
+| Rebuild `hxhx` from stage0 source | Run with `HXHX_FORCE_STAGE0=1`. Add `HAXE_CONNECT=<port>` or `HXHX_STAGE0_USE_REPO_SERVER=1` only when you deliberately want the supported warm route. | No; reuse is explicit |
+| Regenerate committed `hxhx` bootstrap sources | Use the fresh default, or add `--use-repo-server` for an explicitly warm generation sequence. `--skip-if-unchanged` remains useful in either mode. | No; reuse is explicit |
 | Measure native `hxhx` source/parser reuse locally | Use the experimental socket commands above, keep `--hxhx-no-run`, inspect `--hxhx-server-report`, and compare with a direct one-shot build. | No |
 | Use native `hxhx` for editor/display experiments | Use only the explicitly documented test lane; display recovery and typed-result caching are not implemented. | No |
 | Build an `hxhx` plugin or target | Use the current one-shot build/test commands. Plugin/target cache reuse is not a shipped contract. | No |
-| Reproduce the known Reflaxe warm-cache failure | Maintainers may use the diagnostic override described below in an isolated test. | Never automatically |
 
-## Safe `reflaxe.ocaml` application workflow
+## Supported `reflaxe.ocaml` application workflow
 
-For an installed project with `build.hxml`:
+For an installed project with `build.hxml`, the default remains a fresh Haxe
+process for each build:
 
 ```bash
 haxelib run reflaxe.ocaml build
 haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
-The watcher detects project changes, starts a fresh Haxe process for each
-stable batch, and runs the result only after source publication and the native
-build succeed. `out/` is the complete Reflaxe-owned generated tree;
+To reuse upstream Haxe's parsed and typed modules, start a local Haxe 4.3.7
+server in one terminal:
+
+```bash
+haxe --wait 6000
+```
+
+Then select it explicitly from another terminal:
+
+```bash
+haxelib run reflaxe.ocaml build --connect 6000
+haxelib run reflaxe.ocaml watch --connect 6000 \
+  --run .out.reflaxe-ocaml-dune-build/default/out.exe
+```
+
+The package accepts only an unqualified port, `localhost:<port>`, or
+`127.0.0.1:<port>`. The Haxe protocol is not an authenticated internet service,
+so the supported authoring command does not connect to remote hosts. The user
+owns the external server process: the package sends requests to it but does not
+start, reset, or stop it. Stop and restart that Haxe process when you need a
+cold server state; omit `--connect` for a fresh-process comparison.
+
+In both modes, the watcher detects project changes, waits for a stable batch,
+and runs the result only after source publication and the native build succeed.
+`out/` is the complete Reflaxe-owned generated tree;
 `.out.reflaxe-ocaml-dune-build/` is Dune-owned disposable build state. Identical
 publication reuses compiled modules. An implementation-only leaf edit rebuilds
 that module and relinks the executable without unnecessarily recompiling a
 dependent whose OCaml interface did not change.
 
+On a warm request, upstream Haxe may type only the affected modules. Reflaxe
+nevertheless reconstructs the complete current program before
+`reflaxe.ocaml` generates files. Here, **complete program** means every retained
+type and its final post-filter body, not merely the latest batch Haxe happened
+to retype. The target then validates and publishes one complete source tree, so
+a deleted, moved, shadowed, or configuration-dependent module cannot survive
+only because an older file remained on disk.
+
 See `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md` for project
 setup and `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md` for the current
 product boundary.
 
-## Safe `hxhx` development workflow
+## Supported `hxhx` development workflow
 
 The normal build uses committed generated OCaml sources and does not invoke an
 upstream Haxe server:
@@ -576,19 +606,34 @@ HXHX_STAGE0_PROGRESS=1 \
 bash scripts/hxhx/build-hxhx.sh
 ```
 
-For bootstrap regeneration, skipping unchanged inputs is safer and faster than
-an incomplete warm target rebuild:
+For repeated stage0 source builds, either supply an already-running local
+server or let the repository helper own one:
+
+```bash
+HAXE_CONNECT=6000 \
+HXHX_FORCE_STAGE0=1 \
+bash scripts/hxhx/build-hxhx.sh
+
+HXHX_STAGE0_USE_REPO_SERVER=1 \
+HXHX_STAGE0_KEEP_REPO_SERVER=1 \
+HXHX_FORCE_STAGE0=1 \
+bash scripts/hxhx/build-hxhx.sh
+```
+
+For bootstrap regeneration, the equivalent helper-owned route is:
 
 ```bash
 bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
-  --skip-if-unchanged --incremental --no-verify
+  --skip-if-unchanged --incremental --use-repo-server \
+  --keep-repo-server --no-verify
 ```
 
-Do not add `--use-repo-server`, `HXHX_STAGE0_USE_REPO_SERVER=1`, or
-`HAXE_CONNECT` to these Reflaxe-backed workflows today. The scripts reject that
-combination before deleting or generating target output.
+The repository helper owns only the server it started for this checkout and
+verifies the launcher and worker process tree before cleanup. An explicit
+`HAXE_CONNECT` endpoint remains user-owned. Fresh source generation remains the
+default and the comparison/recovery route.
 
-## Why warm Reflaxe output is blocked
+## What changed after the original warm failure
 
 An unchanged measured `hxhx` source build showed the opportunity and the bug:
 
@@ -603,10 +648,20 @@ information such as runtime selection, type registries, build files, reports,
 and the complete generated-file set. Guessing or keeping arbitrary old files
 could silently preserve deleted or configuration-dependent output.
 
-The failure is tracked by `haxe_ocaml-850ii.33`. Native `hxhx` incremental
-compilation is tracked separately by `haxe_ocaml-850ii.32`.
+The corrected lifecycle now uses Haxe's complete generation membership, copies
+the final retained bodies after Haxe's built-in filters, validates one complete
+target request, and publishes generated source transactionally. The real
+Haxe 4.3.7 regression matrix compares fresh and warm results after unchanged,
+implementation, public-signature, add/delete/move/shadow, define/profile, DCE,
+build-macro, failure, A-to-B-to-A, and server-restart sequences.
 
-## Maintainer-only server lifecycle diagnostics
+This makes the upstream-Haxe/Reflaxe route an explicit supported opt-in. It is
+not yet the default because compiler-scale latency and memory evidence still
+need to show that the full developer loop benefits on representative projects.
+The fix is tracked by `haxe_ocaml-850ii.33`. Native `hxhx` incremental
+compilation remains separate under `haxe_ocaml-850ii.32`.
+
+## Repository-owned server lifecycle
 
 The repository helper safely owns one upstream Haxe server process tree:
 
@@ -622,16 +677,8 @@ It chooses a deterministic repository-local port unless
 because a Lix/Node launcher may start a separate native Haxe process that does
 the real work.
 
-The following override exists only so focused lifecycle tests can reproduce and
-measure the incomplete path:
-
-```bash
-HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1
-```
-
-Output produced with that override is not correctness, release, bootstrap, or
-performance evidence. Do not put the override in project HXML files, shell
-profiles, CI secrets, or editor settings.
+Use `stop` followed by `start` to discard the upstream server's in-memory
+frontend cache. Do not delete its state directory while it is running.
 
 ## Editors and display clients
 
@@ -661,8 +708,9 @@ phase cannot hide a slow developer workflow.
 
 ## CI, containers, and remote development
 
-- Prefer fresh compiler processes in CI until warm equivalence is a required
-  gate. CI should value reproducibility over a process-local cache.
+- Prefer fresh compiler processes for one-shot CI jobs. A job that performs a
+  measured sequence of builds may use the explicit server route, but must own
+  startup, shutdown, and a fresh-process comparison.
 - Do not share a server port or cache directory between unrelated projects,
   Haxe versions, standard libraries, target profiles, or plugin versions.
 - Bind development servers to loopback unless remote access is deliberately
@@ -693,11 +741,14 @@ project, editor, user, or agent's compiler.
 
 ## Troubleshooting
 
-### A script says server reuse is disabled
+### A server request fails
 
-Remove `HAXE_CONNECT`, `HXHX_STAGE0_USE_REPO_SERVER`,
-`HXHX_STAGE0_KEEP_REPO_SERVER`, `--use-repo-server`, or
-`--keep-repo-server`. Run the direct source build or committed-snapshot build.
+First rerun without `--connect` (or without the repository-server option). If
+the fresh request also fails, diagnose the source/target error normally. If
+only the warm request fails, preserve the smallest edit sequence and compare
+its generated tree, diagnostics, and executable output with the fresh route.
+Stop and restart the owned server before retrying; do not retain or hand-edit
+old generated files to make the request pass.
 
 ### The server is still running
 

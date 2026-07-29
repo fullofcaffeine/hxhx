@@ -95,6 +95,21 @@ haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.
 haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
+Fresh Haxe processes remain the default. To reuse upstream Haxe 4.3.7 parsing
+and typing across builds, start a local server separately with
+`haxe --wait 6000`, then add `--connect 6000`:
+
+```bash
+haxelib run reflaxe.ocaml build --connect 6000
+haxelib run reflaxe.ocaml watch --connect 6000 \
+  --run .out.reflaxe-ocaml-dune-build/default/out.exe
+```
+
+The package accepts only a local port, `localhost:<port>`, or
+`127.0.0.1:<port>`. It does not start or stop that external server. Omit
+`--connect` for a fresh-process comparison, or restart the server to discard
+its in-memory frontend cache.
+
 `watch` discovers classpaths and included HXML files, waits for an edit batch to
 settle, then rebuilds and optionally runs the native artifact. Use repeated
 `--watch-path` options for inputs outside those discovered roots. Generated
@@ -109,10 +124,10 @@ Dune had already consumed that public tree. Fix the reported native-build
 error and rerun; use the separate Dune clean command below only when a cold
 native rebuild is actually required.
 
-Each batch starts a fresh Haxe process. Persistent Haxe-server reuse is not used
-because current Reflaxe evidence found an incomplete-output failure on that
-route. A successful batch atomically replaces the generated `out/` tree, then
-Dune builds that public tree with reusable state in the stable sibling
+Each fresh or server-backed request reconstructs the complete current target
+program before publication. A successful batch atomically replaces the
+generated `out/` tree, then Dune builds that public tree with reusable state in
+the stable sibling
 `.out.reflaxe-ocaml-dune-build/`. A failed source-generation batch leaves both
 the previous public source and Dune state available. `--max-builds` provides a
 deterministic stopping point for tests and automation; run
