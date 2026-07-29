@@ -232,7 +232,7 @@ The fork then added target-neutral lifecycle and scalability repairs:
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `1d99c7453d7b499b7d1f6d433cd9e9629fcb8249`, published for review in
+candidate fork commit `40a01d6f5a0ad0483e9bcd4d3134687ba67dc917`, published for review in
 [fork PR #16](https://github.com/fullofcaffeine/reflaxe/pull/16), with
 path-independent content digest
 `2a7b2f67e54ee5ff28aa7224f1cea6d23b06e9321d24ddbd0bf814b3541824e4`.
