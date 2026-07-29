@@ -178,6 +178,7 @@ performance claim must use measured medians from the relevant runner class.
         "scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh",
         "scripts/ci/compiler-scale-reflaxe-server-evidence.js",
         "scripts/test-hxhx-targets.sh",
+        "docs/benchmarks/REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md",
         "docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md",
         "docs/01-getting-started/COMPILATION_SERVER.md"
       ]
@@ -461,6 +462,15 @@ generated source disposable and Dune state external, then compares cold and
 warm target trees, binaries, behavior, memory, and cleanup. A quick `select`
 wiring check is not evidence that either full snapshot regeneration or a warm
 compiler-scale loop is fast.
+
+The first exact compiler-scale server checkpoint reproduced the cold generated
+tree, manifests, native binary, and version behavior on the warm request, but
+did not improve the complete loop: both source-generation requests took more
+than 37 minutes, and warm was approximately 25 seconds slower after Dune reuse.
+The practical result and timing-provenance limitation are recorded in
+`docs/benchmarks/REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md`.
+This negative result blocks default enablement and routes the next measurement
+to Reflaxe target generation rather than another identical server run.
 
 The stage0-free build benchmark answers a smaller everyday question: how long
 does it take to turn the already-committed OCaml bootstrap snapshot into a new

@@ -143,6 +143,15 @@ pid_state_count() {
 	printf '%s\n' "$count"
 }
 
+count_owned_pids_after_stop() {
+	local owned_pids=""
+	# The ownership helper returns 1 when the desired post-stop result is an
+	# empty list. Normalize that state before counting so pipefail does not
+	# abort the evidence report after a successful cleanup.
+	owned_pids="$(server_env bash "$SERVER_HELPER" owned-pids 2>/dev/null || true)"
+	printf '%s\n' "$owned_pids" | awk '/^[0-9]+$/ { count++ } END { print count + 0 }'
+}
+
 release_capacity_lease() {
 	if [[ "$CAPACITY_LEASE_PRIMARY_OWNER" = "1" && "$CAPACITY_LEASE_ACTIVE" = "1" ]]; then
 		node "$CAPACITY_HELPER" \
@@ -175,6 +184,7 @@ run_bounded() {
 	local progress_file="$REPORT_DIR/logs/$label.progress.log"
 	local timeout_kind="none"
 	local last_heartbeat=0
+	local completed_ms=0
 
 	started="$(milliseconds)"
 	set +e
@@ -211,7 +221,9 @@ run_bounded() {
 		sed -n '1,240p' "$log_file" >&2 || true
 		fail "$label failed with exit $code; log=$log_file"
 	fi
-	printf '%s\n' "$(( $(milliseconds) - started ))"
+	completed_ms="$(( $(milliseconds) - started ))"
+	printf '%s\n' "$completed_ms" >"$REPORT_DIR/logs/$label.elapsed-ms"
+	printf '%s\n' "$completed_ms"
 }
 
 run_generation() {
@@ -332,7 +344,7 @@ RSS_PEAK_KB="$(awk 'BEGIN { peak = 0 } /^[0-9]+$/ && $1 > peak { peak = $1 } END
 
 server_env bash "$SERVER_HELPER" stop
 SERVER_STARTED=0
-OWNED_PIDS_AFTER_STOP="$(server_env bash "$SERVER_HELPER" owned-pids | awk '/^[0-9]+$/ { count++ } END { print count + 0 }')"
+OWNED_PIDS_AFTER_STOP="$(count_owned_pids_after_stop)"
 PRIVATE_CANDIDATES_AFTER_STOP="$(private_candidate_count)"
 PID_STATE_AFTER_STOP="$(pid_state_count)"
 SOURCE_CLEAN_AT_END=false

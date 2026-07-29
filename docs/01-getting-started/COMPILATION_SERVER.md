@@ -692,6 +692,17 @@ Reflaxe macro interpreter/JIT spent roughly 250 seconds preparing before
 ordinary class rendering began. Override the ceiling only with a newer measured
 profile and record the reason with the evidence.
 
+The 2026-07-29 exact checkpoint proved complete cold/warm output equivalence,
+but it did not prove a compiler-scale latency benefit. Cold and warm generation
+both took more than 37 minutes; warm Dune compilation reused prior native build
+state, but the complete warm loop was still approximately 25 seconds slower.
+Do not repeat this expensive command merely to seek a luckier timing result.
+The next checkpoint must first reduce the measured Reflaxe target-generation
+bottleneck. See
+[`REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md`](../benchmarks/REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md)
+for the exact equivalence result, measurement limitation, memory evidence, and
+stop decision.
+
 ## Repository-owned server lifecycle
 
 The repository helper safely owns one upstream Haxe server process tree:

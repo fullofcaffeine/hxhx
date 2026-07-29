@@ -16,6 +16,7 @@ const packageJsonPath = 'package.json'
 const kpiWorkflowPath = '.github/workflows/hxhx-kpi-report.yml'
 const bootstrapWorkflowPath = '.github/workflows/bootstrap-regen-bench.yml'
 const artifactComparisonRunnerPath = 'scripts/hxhx/bench-kpi-artifact-comparison.sh'
+const compilerScaleServerRunnerPath = 'scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh'
 
 function fail(message) {
   console.error(`[native-iteration-latency-contract-check] ERROR: ${message}`)
@@ -73,6 +74,7 @@ function main() {
   const kpiWorkflow = readText(kpiWorkflowPath)
   const bootstrapWorkflow = readText(bootstrapWorkflowPath)
   const artifactComparisonRunner = readText(artifactComparisonRunnerPath)
+  const compilerScaleServerRunner = readText(compilerScaleServerRunnerPath)
 
   for (const snippet of [
     'NATIVE_ITERATION_LATENCY_POLICY:PASS',
@@ -128,6 +130,13 @@ function main() {
     'scripts/ci/hxhx-kpi-artifact-comparison.js'
   ]) {
     requireIncludes(artifactComparisonRunnerPath, artifactComparisonRunner, snippet)
+  }
+  for (const snippet of [
+    'count_owned_pids_after_stop',
+    'owned-pids 2>/dev/null || true',
+    '$REPORT_DIR/logs/$label.elapsed-ms'
+  ]) {
+    requireIncludes(compilerScaleServerRunnerPath, compilerScaleServerRunner, snippet)
   }
 
   const policy = extractPolicyJson(contract)
