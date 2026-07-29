@@ -6,6 +6,46 @@ private class ObjectKey {
 	}
 }
 
+#if map_invalid_source_identity
+@:realPath("haxe.ds.StringMap", "haxe.ds.IntMap")
+private class InvalidSourceIdentity {
+	public function new() {}
+}
+#end
+
+/**
+	Exercises standard Map declarations stored in typed class fields.
+
+	The OCaml target overrides share the native class name `HxMap`, so lowering
+	must use their retained Haxe source identities to keep the string-, integer-,
+	and object-keyed record carriers distinct.
+**/
+private class MapFieldRegistry {
+	final stringValues:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+	final intValues:haxe.ds.IntMap<String> = new haxe.ds.IntMap();
+	final objectValues:haxe.ds.ObjectMap<ObjectKey, Int> = new haxe.ds.ObjectMap();
+	#if map_invalid_source_identity
+	final invalidSourceIdentity:InvalidSourceIdentity = new InvalidSourceIdentity();
+	#end
+
+	public function new() {}
+
+	public function setAndReadString(key:String, value:Int):Int {
+		stringValues.set(key, value);
+		return stringValues.get(key);
+	}
+
+	public function setAndReadInt(key:Int, value:String):String {
+		intValues.set(key, value);
+		return intValues.get(key);
+	}
+
+	public function setAndReadObject(key:ObjectKey, value:Int):Int {
+		objectValues.set(key, value);
+		return objectValues.get(key);
+	}
+}
+
 class Main {
 	static function sortedStrings(iterator:Iterator<String>):String {
 		final values = [for (value in iterator) value];
@@ -42,6 +82,11 @@ class Main {
 	}
 
 	static function main() {
+		final fieldRegistry = new MapFieldRegistry();
+		emit("string.field=" + fieldRegistry.setAndReadString("field", 41));
+		emit("int.field=" + fieldRegistry.setAndReadInt(42, "forty-two"));
+		emit("object.field=" + fieldRegistry.setAndReadObject(new ObjectKey(43), 43));
+
 		final strings = new haxe.ds.StringMap<Int>();
 		strings.set("a", 1);
 		strings.set("b", 2);

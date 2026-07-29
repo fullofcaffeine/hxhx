@@ -1,3 +1,6 @@
+string.field=41
+int.field=forty-two
+object.field=43
 string.get=1
 string.missing=true
 string.exists=true

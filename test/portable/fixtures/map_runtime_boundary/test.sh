@@ -13,6 +13,8 @@ if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$BUILDER_FILE" 
 	exit 1
 fi
 
+rm -f out/oracle.interp out/oracle.js out/oracle.js.stdout out/oracle.n out/oracle.neko.stdout out/invalid-source-identity.log
+
 node - "$SOURCE_FILE" "$REPORT_FILE" "$BUILDER_FILE" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
@@ -58,6 +60,14 @@ const expectedMapOperations = [
 for (const operation of expectedMapOperations) {
 	if (!source.includes(`HxMap.${operation}`))
 		fail(`generated syntax does not consume typed HxMap operation ${operation}`)
+}
+for (const carrier of [
+	'mutable stringValues : int HxMap.string_map',
+	'mutable intValues : string HxMap.int_map',
+	'mutable objectValues : (objectkey_t, int) HxMap.obj_map'
+]) {
+	if (!source.includes(carrier))
+		fail(`standard Map field did not preserve its typed source carrier: ${carrier}`)
 }
 if (!source.includes('HxIterator.of_array'))
 	fail('generated Map iteration does not consume the typed HxIterator adapter')
@@ -119,5 +129,16 @@ neko out/oracle.n >out/oracle.neko.stdout
 diff -u expected.stdout out/oracle.interp
 diff -u expected.stdout out/oracle.js.stdout
 diff -u expected.stdout out/oracle.neko.stdout
+
+INVALID_IDENTITY_LOG="out/invalid-source-identity.log"
+if haxe build.hxml -D ocaml_no_build -D map_invalid_source_identity >"$INVALID_IDENTITY_LOG" 2>&1; then
+	echo "Malformed typed declaration identity unexpectedly compiled" >&2
+	exit 1
+fi
+if ! grep -Fq 'reflaxe.ocaml [typed-declaration-identity]: :realPath on a class requires exactly one constant source name.' "$INVALID_IDENTITY_LOG"; then
+	echo "Malformed typed declaration identity did not fail at the typed identity boundary" >&2
+	cat "$INVALID_IDENTITY_LOG" >&2
+	exit 1
+fi
 
 echo "REFLAXE_OCAML_TYPED_MAP_RUNTIME_BOUNDARY:PASS"
