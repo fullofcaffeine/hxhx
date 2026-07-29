@@ -222,18 +222,23 @@ The fork then added target-neutral lifecycle and scalability repairs:
   process-wide local-variable numbers; and
 - PR #13 made pure-expression cleanup use an explicit work list, so a generated
   function with tens of thousands of sequential expressions no longer exhausts
-  the host call stack.
+  the host call stack;
+- PR #14 gave locals deterministic lexical identities across clean and warm
+  Haxe requests;
+- PR #15 made every target callback receive the complete current program; and
+- PR #16 added opt-in, target-neutral publication of one validated generated
+  directory instead of exposing files while generation is still fallible.
 
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `bd7b8bf75ec2e78317b3c89316c6e3eff942e180`, published for review in
-[fork PR #15](https://github.com/fullofcaffeine/reflaxe/pull/15), with
+candidate fork commit `40434ad2dd77c8fbdc5aa1bec64d6abff2a0207a`, published for review in
+[fork PR #16](https://github.com/fullofcaffeine/reflaxe/pull/16), with
 path-independent content digest
-`cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`.
-The last repository-validated rollback pin remains PR #14 commit
-`f7487d5d30fdd309b66612d6e60c1276b24b9dab` with digest
-`b0f9fa3f9fafd44f35e19fba6639d292ca131801d709c94ef8cfd8077244fd09`;
+`22b7c6dc23e0928e8291d85723876b16f3ca3d373eeb1ab2158f5b81824602cc`.
+The last repository-validated rollback pin remains PR #15 commit
+`bd7b8bf75ec2e78317b3c89316c6e3eff942e180` with digest
+`cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`;
 restoring both values together is the bounded rollback.
 
 The previous pinned patch prevents Reflaxe's generic alias-removal pass from replacing a
@@ -280,6 +285,21 @@ process, a cold server request, an unchanged warm request, a body edit, and an
 A → B → A restoration. It is target-neutral and intentionally leaves
 add/delete/move/shadow cases, private output transactions, compiler-scale
 timing, and supported default enablement to `haxe_ocaml-850ii.33`.
+
+PR #16 closes the next failure boundary. A target that owns its complete output
+directory can generate into a private sibling, finish target-specific work, and
+publish only after Reflaxe validates the typed `_GeneratedFiles.json` receipt.
+An ordinary failure discards the candidate and keeps the previous public tree.
+Recognizable interruptions before and after each directory move are recovered;
+malformed, foreign, or ambiguous marker state fails closed.
+
+The standalone OCaml target enables this only for the focused server experiment
+with `-D reflaxe_output_transaction`. Its normal one-shot and watch routes keep
+the existing output behavior because `_build` currently shares the generated
+directory: replacing the whole directory would throw away Dune's incremental
+cache. Dune build state needs a separate owner before transactional generation
+can become the default. This is a performance boundary, not permission to
+publish partial source in a supported warm workflow.
 
 The earlier fork changes through PR #13 each landed through their own reviewed
 pull request. PR #13's six required checks passed, and that framework baseline

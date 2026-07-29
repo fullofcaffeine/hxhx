@@ -109,10 +109,16 @@ class CompilerInit {
 
 		final compiler = new OcamlCompiler();
 		final captureLifecycleTrace = #if macro haxe.macro.Context.defined("reflaxe_ocaml_semantic_lifecycle_trace") #else false #end;
+		// Replacing the complete generated tree also replaces a colocated Dune
+		// `_build` directory. Keep this explicit until Dune's reusable build
+		// state has a separately owned path; the supported one-shot/watch route
+		// must not silently turn every native build into a cold build.
+		final transactionalFileOutput = #if macro haxe.macro.Context.defined("reflaxe_output_transaction") #else false #end;
 		ReflectCompiler.AddCompiler(compiler, {
 			fileOutputExtension: ".ml",
 			outputDirDefineName: "ocaml_output",
 			fileOutputType: FilePerModule,
+			transactionalFileOutput: transactionalFileOutput,
 			ignoreTypes: [],
 			reservedVarNames: [
 				"and",

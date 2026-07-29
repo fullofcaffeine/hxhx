@@ -90,11 +90,19 @@ batch, rebuilds, and runs the artifact only after a successful build. Add
 `--watch-path <path>` for native adapters or other inputs outside the discovered
 roots.
 
-The watcher deliberately starts a fresh Haxe process for each batch. Current
-Reflaxe evidence found that persistent Haxe-server reuse could leave generated
-output incomplete. Fast native iteration instead comes from Reflaxe avoiding
-unchanged file rewrites and Dune reusing its incremental build cache. Generated
-output and normal cache/build directories do not trigger rebuild loops.
+The watcher deliberately starts a fresh Haxe process for each batch. Earlier
+Reflaxe behavior gave a warm Haxe-server request only the modules rebuilt during
+that request, so the target could produce an incomplete program. The pinned
+framework candidate now reconstructs the complete current program and can
+publish a no-build test tree through a private output transaction. The supported
+watch route still uses fresh Haxe processes until add/delete/move/shadow cases,
+compiler-scale timing, memory, and Dune-cache ownership pass their gates.
+
+Fast native iteration today comes from Reflaxe avoiding unchanged file rewrites
+and Dune reusing its incremental build cache. The experimental directory
+transaction replaces the complete generated directory, so it is not enabled by
+default while Dune's `_build` cache lives there too. Generated output and normal
+cache/build directories do not trigger rebuild loops.
 
 For the measured failure, current defaults, server/editor/CI scenarios, and the
 criteria for enabling a supported warm path, read

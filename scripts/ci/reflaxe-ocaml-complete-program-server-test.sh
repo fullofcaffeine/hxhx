@@ -68,6 +68,7 @@ compile_clean() {
 		cd "$PROJECT_DIR"
 		"$HAXE_BIN" build.hxml \
 			-D ocaml_no_build \
+			-D reflaxe_output_transaction \
 			-D reflaxe.dont_output_metadata_id
 	)
 }
@@ -77,7 +78,19 @@ compile_server() {
 		cd "$PROJECT_DIR"
 		"$HAXE_BIN" --connect "$SERVER_PORT" build.hxml \
 			-D ocaml_no_build \
+			-D reflaxe_output_transaction \
 			-D reflaxe.dont_output_metadata_id
+	)
+}
+
+compile_server_with_transaction_failure() {
+	(
+		cd "$PROJECT_DIR"
+		"$HAXE_BIN" --connect "$SERVER_PORT" build.hxml \
+			-D ocaml_no_build \
+			-D reflaxe_output_transaction \
+			-D reflaxe.dont_output_metadata_id \
+			-D reflaxe_output_transaction_test_fail_before_commit
 	)
 }
 
@@ -90,6 +103,12 @@ snapshot_output() {
 		|| fail "request '$name' did not publish the complete generated-file receipt"
 	mkdir -p "$destination"
 	cp -R "$PROJECT_DIR/out/." "$destination/"
+	if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-output-transaction' -print -quit | grep -q .; then
+		fail "request '$name' left private output transaction state"
+	fi
+	if grep -R -F '.reflaxe-output-transaction' "$PROJECT_DIR/out" >/dev/null; then
+		fail "request '$name' leaked a private transaction path into generated output"
+	fi
 }
 
 compare_snapshots() {
@@ -138,6 +157,12 @@ compare_snapshots clean_a cold_a
 compile_server
 snapshot_output warm_a
 compare_snapshots clean_a warm_a
+
+if compile_server_with_transaction_failure >"$WORK_DIR/expected-transaction-failure.log" 2>&1; then
+	fail "the injected pre-publication target failure unexpectedly succeeded"
+fi
+snapshot_output after_transaction_failure_a
+compare_snapshots warm_a after_transaction_failure_a
 
 replace_source_text "return value + 1;" "return value + 2;"
 compile_server
