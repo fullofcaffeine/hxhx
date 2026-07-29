@@ -4,6 +4,7 @@ package reflaxe.ocaml.tooling;
 typedef AuthoringBuildOptions = {
 	final hxmlPath:String;
 	final outputPath:String;
+	final serverEndpoint:Null<String>;
 	final watch:Bool;
 	final watchPaths:Array<String>;
 	final pollMilliseconds:Int;

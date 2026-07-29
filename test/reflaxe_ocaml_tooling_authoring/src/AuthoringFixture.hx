@@ -2,18 +2,49 @@ import haxe.io.Path;
 import reflaxe.ocaml.tooling.AuthoringBuildOptions;
 import reflaxe.ocaml.tooling.AuthoringFileStamp;
 import reflaxe.ocaml.tooling.AuthoringHost;
+import reflaxe.ocaml.tooling.AuthoringServerEndpoint;
 import reflaxe.ocaml.tooling.ReflaxeOcamlAuthoring;
 
 using StringTools;
 
-/** Proves fresh-process build, watch, run, and fail-closed authoring behavior. **/
+/** Proves fresh/server build, watch, run, and fail-closed authoring behavior. **/
 class AuthoringFixture {
 	static function main():Void {
 		testOneShotBuildAndRun();
+		testServerBuildUsesExplicitEndpoint();
+		testServerEndpointValidation();
 		testWatchRebuildsOneStableSourceChange();
 		testBuildFailureIsReturned();
 		testMissingHxmlFailsBeforeProcessStart();
 		Sys.println("REFLAXE_OCAML_AUTHORING_FIXTURE:PASS");
+	}
+
+	static function testServerBuildUsesExplicitEndpoint():Void {
+		final host = healthyHost();
+		final options = defaultOptions(false, null, null, [], "build.hxml", "127.0.0.1:6000");
+		final exitCode = ReflaxeOcamlAuthoring.run(host, "/project", options);
+		assert(exitCode == 0, "server build failed");
+		assert(host.commands.length == 1, "server build command count changed");
+		assert(host.commands[0].args.join("|") == "-D|reflaxe_output_transaction|-D|ocaml_build_timing_report|--connect|127.0.0.1:6000|/project/build.hxml",
+			"server endpoint and authoring defines must precede the HXML");
+		assert(host.stdout.contains("Haxe server 127.0.0.1:6000"), "server build mode was not reported");
+	}
+
+	static function testServerEndpointValidation():Void {
+		assert(AuthoringServerEndpoint.parse("6000") == "6000", "unqualified local port was rejected");
+		assert(AuthoringServerEndpoint.parse("localhost:6000") == "localhost:6000", "localhost endpoint was rejected");
+		assert(AuthoringServerEndpoint.parse("127.0.0.1:6000") == "127.0.0.1:6000", "IPv4 loopback endpoint was rejected");
+		for (invalid in [
+			"",
+			"0",
+			"65536",
+			"example.com:6000",
+			"localhost",
+			"localhost:not-a-port",
+			"127.0.0.1:"
+		]) {
+			assert(AuthoringServerEndpoint.parse(invalid) == null, 'unsafe or malformed endpoint was accepted: $invalid');
+		}
 	}
 
 	static function testOneShotBuildAndRun():Void {
@@ -42,7 +73,8 @@ class AuthoringFixture {
 		assert(exitCode == 0, "bounded watch failed");
 		assert(host.commands.length == 2, "generated output caused an extra watch rebuild");
 		assert(host.stdout.contains("1 input changed: src/Main.hx"), "changed source explanation missing");
-		assert(host.stdout.contains("fresh Haxe process; unchanged output preserves downstream build caches"), "safe watch policy missing");
+		assert(host.stdout.contains("Each edit uses a fresh Haxe process; complete output publication preserves downstream build caches"),
+			"safe watch policy missing");
 	}
 
 	static function testBuildFailureIsReturned():Void {
@@ -72,10 +104,11 @@ class AuthoringFixture {
 	}
 
 	static function defaultOptions(watch:Bool = false, maxBuilds:Null<Int> = null, runArtifact:Null<String> = null, ?runArguments:Array<String>,
-			hxmlPath:String = "build.hxml"):AuthoringBuildOptions {
+			hxmlPath:String = "build.hxml", serverEndpoint:Null<String> = null):AuthoringBuildOptions {
 		return {
 			hxmlPath: hxmlPath,
 			outputPath: "out",
+			serverEndpoint: serverEndpoint,
 			watch: watch,
 			watchPaths: [],
 			pollMilliseconds: 10,

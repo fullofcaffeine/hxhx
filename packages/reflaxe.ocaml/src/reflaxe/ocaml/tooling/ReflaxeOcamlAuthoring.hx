@@ -7,11 +7,12 @@ using StringTools;
 /**
 	Runs the safe reflaxe.ocaml edit/build/test loop.
 
-	Each rebuild starts a fresh Haxe process and publishes one complete generated
-	tree. Dune keeps its native build state in a stable sibling directory, so
-	transactional source replacement does not turn warm native builds cold. The
-	watcher deliberately avoids a persistent Haxe server because incomplete
-	Reflaxe output has been observed under server reuse in this repository.
+	Each request publishes one complete generated tree. By default, each rebuild
+	starts a fresh Haxe process. An explicit local server endpoint lets Haxe reuse
+	frontend work while Reflaxe still reconstructs and publishes the complete
+	current program. Dune keeps its native build state in a stable sibling
+	directory, so transactional source replacement does not turn warm native
+	builds cold.
 **/
 class ReflaxeOcamlAuthoring {
 	static final IGNORED_DIRECTORIES = [".artifacts", ".git", ".haxelib", ".lix", ".tmp", "_build", "node_modules"];
@@ -73,12 +74,19 @@ class ReflaxeOcamlAuthoring {
 
 	static function runBuild(host:AuthoringHost, projectRoot:String, hxmlPath:String, options:AuthoringBuildOptions, buildNumber:Int):Int {
 		final displayedHxml = displayPath(projectRoot, hxmlPath);
-		host.writeStdout('[reflaxe.ocaml] build #$buildNumber: haxe $displayedHxml\n');
+		final mode = options.serverEndpoint == null ? "fresh Haxe process" : 'Haxe server ${options.serverEndpoint}';
+		host.writeStdout('[reflaxe.ocaml] build #$buildNumber ($mode): haxe $displayedHxml\n');
 		final started = host.nowMilliseconds();
 		// Haxe expands `-lib` entries and their macro initialization while it
 		// reads the HXML. Transactional output changes compiler registration, so
 		// both authoring-owned defines must exist before the HXML is evaluated.
-		final haxeExitCode = host.run("haxe", ["-D", "reflaxe_output_transaction", "-D", "ocaml_build_timing_report", hxmlPath], projectRoot);
+		final haxeArguments = ["-D", "reflaxe_output_transaction", "-D", "ocaml_build_timing_report"];
+		if (options.serverEndpoint != null) {
+			haxeArguments.push("--connect");
+			haxeArguments.push(options.serverEndpoint);
+		}
+		haxeArguments.push(hxmlPath);
+		final haxeExitCode = host.run("haxe", haxeArguments, projectRoot);
 		final elapsed = elapsedMilliseconds(host, started);
 		if (haxeExitCode != 0) {
 			host.writeStderr('[reflaxe.ocaml] build #$buildNumber failed (exit $haxeExitCode, ${elapsed}ms). Waiting for the next edit is safe in watch mode.\n');
@@ -292,7 +300,8 @@ class ReflaxeOcamlAuthoring {
 		for (root in roots) {
 			host.writeStdout('  - ${displayPath(projectRoot, root)}\n');
 		}
-		host.writeStdout("[reflaxe.ocaml] press Ctrl-C to stop. Each edit uses a fresh Haxe process; unchanged output preserves downstream build caches.\n");
+		final haxeMode = options.serverEndpoint == null ? "Each edit uses a fresh Haxe process" : 'Each edit reuses the external Haxe server ${options.serverEndpoint}';
+		host.writeStdout('[reflaxe.ocaml] press Ctrl-C to stop. $haxeMode; complete output publication preserves downstream build caches.\n');
 	}
 
 	static function printChanged(host:AuthoringHost, projectRoot:String, changed:Array<String>):Void {
