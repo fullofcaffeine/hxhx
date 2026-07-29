@@ -232,14 +232,30 @@ The fork then added target-neutral lifecycle and scalability repairs:
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `40a01d6f5a0ad0483e9bcd4d3134687ba67dc917`, published for review in
+candidate fork commit `c63d2b1ad16cabaeb9cdfc02558f06523a2f224f`, published for review in
 [fork PR #16](https://github.com/fullofcaffeine/reflaxe/pull/16), with
 path-independent content digest
-`2a7b2f67e54ee5ff28aa7224f1cea6d23b06e9321d24ddbd0bf814b3541824e4`.
+`be01b11969325b1093f3d4d74b797c14e6adf67633794c7825d2e749bb7818bf`.
 The last repository-validated rollback pin remains PR #15 commit
 `bd7b8bf75ec2e78317b3c89316c6e3eff942e180` with digest
 `cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`;
 restoring both values together is the bounded rollback.
+
+The latest stacked patch preserves an earlier local declaration when the
+program reads that value before assigning the local again. This includes reads
+inside another variable's initializer and inside a nested block. Without that
+check, the target-neutral cleanup could turn this valid sequence:
+
+```haxe
+var value:Null<Int> = null;
+var rendered = Std.string(value);
+value = 1;
+```
+
+into a target program that still read `value` for `rendered` but no longer
+defined its initial `null` value. The fork regression covers both lexical
+shapes, and the `null_primitives` portable fixture proves the initial nullable
+values and later assignments compile, build, and run through OCaml.
 
 The previous pinned patch prevents Reflaxe's generic alias-removal pass from replacing a
 reference snapshot with a local that can later point at a different object. For
