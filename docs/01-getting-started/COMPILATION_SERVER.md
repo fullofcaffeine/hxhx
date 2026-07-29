@@ -724,8 +724,16 @@ approximately 410 seconds rendering about 12.5 million characters of generated
 OCaml. It also found approximately 1,054 seconds in the class-150-to-class-200
 interval that occurred before the old render-only timer began. These are
 diagnostic results, not permission to skip semantic validation or to assume a
-large source-file split is sufficient. Profile-only mode diagnoses where time
-is spent; it is not cold/warm performance evidence.
+large source-file split is sufficient.
+
+The preparation-aware follow-up measured `CppTargetCore` more precisely:
+826.964 seconds preparing typed function bodies and 392.307 seconds rendering
+them, or 1,219.271 seconds combined. Preparation includes expression rewrites,
+lifecycle validation, and target-plan sealing; it is not merely file reading.
+This makes duplicate whole-body work at exact validation boundaries the first
+review seam, while keeping one fresh validation immediately before syntax
+mandatory. Profile-only mode diagnoses where time is spent; it is not cold/warm
+performance evidence.
 
 ## Repository-owned server lifecycle
 

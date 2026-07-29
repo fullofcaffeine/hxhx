@@ -481,7 +481,11 @@ matters because the first compiler-scale profile found that approximately
 render-only timer began. Render time still identified
 `backend.cpp.CppTargetCore` as the largest measured owner at approximately 410
 seconds, but that fact alone does not authorize skipping lifecycle validation
-or splitting a 25,301-line source class.
+or splitting a 25,301-line source class. The follow-up preparation-aware run
+measured that class at 826.964 seconds of typed-field preparation plus 392.307
+seconds of rendering. The next admissible optimization must therefore preserve
+exact lifecycle checks while proving that a specific observation or traversal
+is duplicate; a printer-only change cannot address the dominant phase.
 
 The stage0-free build benchmark answers a smaller everyday question: how long
 does it take to turn the already-committed OCaml bootstrap snapshot into a new

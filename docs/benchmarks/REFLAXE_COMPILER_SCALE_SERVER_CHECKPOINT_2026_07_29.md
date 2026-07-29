@@ -129,6 +129,47 @@ preparation-plus-render pipeline while retaining the separate values. A focused
 fixture proves that a class with fast rendering but slow preparation ranks
 above a render-only hotspot when its complete pipeline is more expensive.
 
+## Preparation-aware profile result
+
+Candidate `7aec7f674534bae4b69b405c1ec1487cd9973d0f` then ran the same
+profile-only workload with the complete timer boundary. Generation completed in
+2,193.437 seconds and peaked at 5,271,088 KiB of owned server RSS. All 310
+rendered classes also produced preparation samples.
+
+The result is decisive:
+
+| Source class | Preparation | Rendering | Combined pipeline | Preparation share |
+| --- | ---: | ---: | ---: | ---: |
+| `backend.cpp.CppTargetCore` | 826.964 s | 392.307 s | 1,219.271 s | 67.8% |
+| `backend.source.SourceTargetCommon` | 134.989 s | 48.018 s | 183.007 s | 73.8% |
+| `EmitterStage` | 75.250 s | 26.436 s | 101.686 s | 74.0% |
+| `HxParser` | 37.077 s | 17.235 s | 54.312 s | 68.3% |
+| `backend.vm.NekoTargetCore` | 35.831 s | 12.967 s | 48.798 s | 73.4% |
+
+`CppTargetCore` alone consumed about 20.3 minutes, or 55.6% of the complete
+profile-only generation request. Its preparation phase was more than twice as
+expensive as rendering. The same preparation-heavy ratio appears in the next
+largest modules, so a printer-only optimization cannot solve the measured
+problem.
+
+Here, **preparation** includes Reflaxe extracting each function, applying the
+configured typed-expression preprocessors, validating the semantic lifecycle,
+and sealing target plans. It is not one operation and the aggregate does not
+yet prove which substep should be removed. Source inspection does identify a
+bounded first review seam: final typed bodies are rendered and hashed at
+multiple exact-revision boundaries, and target syntax currently asks for the
+same sealed function plan and request-local identities through two separately
+validating lookups. Combining those two syntax inputs could remove one duplicate
+observation without weakening the single validation immediately before syntax.
+That claim needs focused counters, mutation tests, and an `xhigh` second pass
+before implementation is accepted.
+
+The preparation profile also retained one native sample from inside
+`CppTargetCore`. It showed Haxe evaluator/JIT work on deeply nested functions
+while the process footprint reached approximately 5.2 GiB. The sample contains
+machine-local paths and remains outside version control; its sanitized finding
+supports the aggregate timing but does not by itself select an optimization.
+
 ## Memory and cleanup
 
 The owned server process tree peaked at 6,288,480 KiB (about 6.0 GiB). Samples
@@ -178,11 +219,14 @@ server is ineffective: it eliminated the measured typing work, but typing is
 only a tiny fraction of this particular full loop.
 
 The next engineering decision is deliberately narrower than a general cache or
-mega-file rewrite: use the complete preparation/render boundary to determine
-whether repeated typed-body revision work or source-class concentration owns
-the avoidable cost, then change only that owner. Any proposal to reuse or skip
-semantic body validation must pass the repository's higher reasoning and
-second-pass review threshold first.
+mega-file rewrite: measure and remove one demonstrably duplicate body
+observation at the sealed-plan/syntax boundary while preserving one exact
+validation immediately before syntax consumes the plan. Source-class
+concentration remains a measured architecture and performance concern, but the
+profile does not justify a 25,301-line extraction as the first performance fix.
+Any broader proposal to cache a body digest, reuse a semantic plan across
+requests, or skip lifecycle validation must pass the repository's higher
+reasoning and second-pass review threshold first.
 
 README Goals progress bars remain unchanged. The checkpoint proves correctness
 and exposes the next performance owner; it does not improve production
