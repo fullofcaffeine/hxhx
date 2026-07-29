@@ -9,6 +9,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingP
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -45,6 +47,9 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final HAXE_SYSTEM = "haxe-system";
 	public static inline final HAXE_MAP = "haxe-map";
 	public static inline final HAXE_ITERATOR = "haxe-iterator";
+	public static inline final HAXE_ARRAY = "haxe-array";
+	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
+	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -102,6 +107,51 @@ class OcamlRuntimeRequirementLedger {
 				explanation: implementation.explanation
 			});
 		}
+	}
+
+	/**
+		Returns the complete runtime explanations selected by one standard `IMap`
+		call before OCaml syntax.
+	**/
+	public static function requirementsForStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStandardIMapCallTarget):Array<OcamlRuntimeRequirement> {
+		OcamlStandardIMapCallContract.require(target);
+		final stableCallId = required(callId, "standard IMap call identity");
+		if (source.file.length == 0 || source.min < 0 || source.max < source.min)
+			throw 'Standard IMap call "$stableCallId" has an invalid source occurrence.';
+		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
+			throw 'Standard IMap call "$stableCallId" has an unsupported profile inventory.';
+		final requirementIds = OcamlStandardIMapCallContract.runtimeRequirementIds(stableCallId, target);
+		final out:Array<OcamlRuntimeRequirement> = [];
+		for (index in 0...target.runtimeCapabilities.length) {
+			final capability = target.runtimeCapabilities[index];
+			final implementation = standardIMapImplementation(capability);
+			out.push(normalize({
+				id: requirementIds[index],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: stableCallId,
+				source: source,
+				semanticCapability: capability,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: stableCallId,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: target.receiverSemanticTypeId
+				},
+				implementationFeature: implementation.feature,
+				rootModules: [implementation.module],
+				profileEligibility: profileEligibility,
+				explanation: implementation.explanation
+			}));
+		}
+		return out;
+	}
+
+	/** Records every runtime dependency selected by one sealed standard `IMap` call. **/
+	public function recordStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStandardIMapCallTarget):Void {
+		for (requirement in requirementsForStandardIMapCall(callId, source, profileEligibility, target))
+			record(requirement);
 	}
 
 	/**
@@ -262,6 +312,43 @@ class OcamlRuntimeRequirementLedger {
 				};
 			case _:
 				throw 'Unknown place runtime capability "$capability".';
+		}
+	}
+
+	static function standardIMapImplementation(capability:String):{feature:String, module:String, explanation:String} {
+		return switch (capability) {
+			case HAXE_MAP:
+				{
+					feature: "haxe-map-v1",
+					module: "HxMap",
+					explanation: "The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver."
+				};
+			case HAXE_ITERATOR:
+				{
+					feature: "haxe-iterator-v1",
+					module: "HxIterator",
+					explanation: "The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract."
+				};
+			case HAXE_ARRAY:
+				{
+					feature: "haxe-array-v1",
+					module: "HxArray",
+					explanation: "The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator."
+				};
+			case HAXE_STRING_TEXT:
+				{
+					feature: "haxe-string-text-v1",
+					module: "HxString",
+					explanation: "The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text."
+				};
+			case HAXE_DYNAMIC_TEXT:
+				{
+					feature: "haxe-dynamic-text-v1",
+					module: "HxDynamic",
+					explanation: "The sealed standard IMap text adapter uses HxDynamic for the typed fallback that formats a non-primitive key or value through registered Haxe runtime string behavior."
+				};
+			case _:
+				throw 'Unknown standard IMap runtime capability "$capability".';
 		}
 	}
 

@@ -23,6 +23,12 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
 
 /**
 	Checks typed-call registry invariants and the pre-write lifecycle boundary.
@@ -66,6 +72,8 @@ class CallPlanFixture {
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID = "call:optional-string-function-value-fixture";
 	static inline final CONSTRUCTOR_CALLEE_ID = "Counter|Counter::new";
 	static inline final CONSTRUCTOR_CALL_ID = "call:constructor-fixture";
+	static inline final STANDARD_IMAP_SET_CALL_ID = "call:standard-imap-set-fixture";
+	static inline final STANDARD_IMAP_TO_STRING_CALL_ID = "call:standard-imap-to-string-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -913,6 +921,63 @@ class CallPlanFixture {
 		};
 	}
 
+	static function standardIMapTarget(operation:OcamlStandardIMapOperation):OcamlStandardIMapCallTarget {
+		final formatted = operation == OcamlStandardIMapOperation.ToString;
+		return {
+			operation: operation,
+			keyKind: OcamlStandardIMapKeyKind.StringKey,
+			receiverSemanticTypeId: "haxe.IMap<String, Int>",
+			receiverCarrierId: "HxMap.string_map",
+			keySemanticTypeId: "String",
+			valueSemanticTypeId: "Int",
+			argumentSemanticTypeIds: operation == OcamlStandardIMapOperation.Set ? ["String", "Int"] : [],
+			resultSemanticTypeId: operation == OcamlStandardIMapOperation.Set ? "Void" : "String",
+			runtimeModule: "HxMap",
+			runtimeFunction: operation == OcamlStandardIMapOperation.Set ? "set_string" : "pairs_string",
+			resultForm: formatted ? OcamlStandardIMapResultForm.FormattedEntries : OcamlStandardIMapResultForm.Direct,
+			iteratorModule: formatted ? "HxIterator" : null,
+			iteratorFunction: formatted ? "of_array" : null,
+			keyStringifier: formatted ? OcamlStandardIMapStringifier.ExactString : null,
+			valueStringifier: formatted ? OcamlStandardIMapStringifier.ExactInt : null,
+			runtimeCapabilities: formatted ? ["haxe-map", "haxe-iterator", "haxe-array", "haxe-string-text"] : ["haxe-map"],
+			proofId: OcamlStandardIMapCallContract.PROOF_ID,
+			proofClaim: "fixture standard IMap typed target"
+		};
+	}
+
+	static function standardIMapCall(caller:OcamlFunctionPlanBinding, operation:OcamlStandardIMapOperation):OcamlCallDecision {
+		final target = standardIMapTarget(operation);
+		final id = operation == OcamlStandardIMapOperation.Set ? STANDARD_IMAP_SET_CALL_ID : STANDARD_IMAP_TO_STRING_CALL_ID;
+		final sourceFieldName = OcamlStandardIMapCallContract.sourceFieldName(operation);
+		return {
+			id: id,
+			source: {
+				file: "CallPlanFixture.hx",
+				min: operation == OcamlStandardIMapOperation.Set ? 52 : 54,
+				max: operation == OcamlStandardIMapOperation.Set ? 53 : 55
+			},
+			calleeId: 'haxe.Constraints|haxe.IMap::$sourceFieldName',
+			sourceModuleId: "haxe.Constraints",
+			sourceTypeName: "IMap",
+			sourceFieldName: sourceFieldName,
+			kind: OcamlCallKind.StandardIMapMethod,
+			receiver: null,
+			arguments: [],
+			resultKind: operation == OcamlStandardIMapOperation.Set ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, target.argumentSemanticTypeIds.length, [], false, true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture standard IMap typed target",
+			proofId: OcamlStandardIMapCallContract.PROOF_ID,
+			proofClaim: target.proofClaim,
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision,
+			standardIMapTarget: target
+		};
+	}
+
 	static function copyCall(source:OcamlCallDecision, ?calleeId:String, ?kind:OcamlCallKind, ?arguments:Array<OcamlCallValuePlan>,
 			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>,
 			?resultKind:OcamlCallResultKind):OcamlCallDecision {
@@ -936,7 +1001,8 @@ class CallPlanFixture {
 			functionId: source.functionId,
 			programRevision: source.programRevision,
 			bodyRevision: bodyRevision ?? source.bodyRevision,
-			pipelineRevision: source.pipelineRevision
+			pipelineRevision: source.pipelineRevision,
+			standardIMapTarget: source.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(source.standardIMapTarget)
 		};
 	}
 
@@ -1323,6 +1389,61 @@ class CallPlanFixture {
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final genericClassKey = Context.typeExpr(macro([] : Array<Int>)).t;
+		if (OcamlStandardIMapCallContract.keyKindForType(genericClassKey) != null)
+			Context.error("The standard IMap target admitted a generic class key as object identity.", Context.currentPos());
+		final exactObjectKey = Context.typeExpr(macro new StringBuf()).t;
+		if (OcamlStandardIMapCallContract.keyKindForType(exactObjectKey) != OcamlStandardIMapKeyKind.ObjectIdentityKey)
+			Context.error("The standard IMap target rejected a non-generic class key.", Context.currentPos());
+		final selectedStandardIMapSet = standardIMapCall(caller, OcamlStandardIMapOperation.Set);
+		final selectedStandardIMapToString = standardIMapCall(caller, OcamlStandardIMapOperation.ToString);
+		OcamlCallPlan.requireCall(selectedStandardIMapSet);
+		OcamlCallPlan.requireCall(selectedStandardIMapToString);
+		final standardIMapPlan = new OcamlCallPlan([selectedStandardIMapSet, selectedStandardIMapToString]);
+		final copiedStandardIMapSet = standardIMapPlan.decisions()[0];
+		if (copiedStandardIMapSet.standardIMapTarget == null)
+			Context.error("The sealed call plan dropped its standard IMap target.", Context.currentPos());
+		Reflect.setField(selectedStandardIMapSet.standardIMapTarget, "runtimeFunction", "get_string");
+		if (copiedStandardIMapSet.standardIMapTarget.runtimeFunction != "set_string")
+			Context.error("The sealed call plan retained a mutable standard IMap target.", Context.currentPos());
+		final standardIMapRegistry = new OcamlFunctionPlanRegistry();
+		standardIMapRegistry.beginProgram(PROGRAM_REVISION);
+		seal(standardIMapRegistry, caller, standardIMapPlan, null);
+		standardIMapRegistry.validateCallGraph();
+
+		final wrongStandardIMapRuntime = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapRuntime.standardIMapTarget, "runtimeFunction", "get_string");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapRuntime));
+		final wrongStandardIMapKeyType = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapKeyType.standardIMapTarget, "keySemanticTypeId", "Int");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapKeyType));
+		final wrongStandardIMapArguments = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapArguments.standardIMapTarget, "argumentSemanticTypeIds", ["Int", "String"]);
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapArguments));
+		final wrongStandardIMapResultType = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapResultType.standardIMapTarget, "resultSemanticTypeId", "Bool");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapResultType));
+		final wrongStandardIMapSourceField = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapSourceField, "sourceFieldName", "get");
+		expectThrows("incomplete or conflicting", () -> OcamlCallPlan.requireCall(wrongStandardIMapSourceField));
+		final missingStandardIMapReceiverStep = copyCall(copiedStandardIMapSet, null, null, null, null, null,
+			copiedStandardIMapSet.evaluationSchedule.slice(1));
+		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingStandardIMapReceiverStep));
+		final wrongStandardIMapReceiverSlot = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapReceiverSlot.evaluationSchedule[0], "slotId", "call-receiver-slot:wrong");
+		expectThrows("invalid receiver materialization", () -> OcamlCallPlan.requireCall(wrongStandardIMapReceiverSlot));
+		final wrongStandardIMapResult = copyCall(copiedStandardIMapSet, null, null, null, null, null, null, OcamlCallResultKind.Value);
+		expectThrows("disagrees with its typed result", () -> OcamlCallPlan.requireCall(wrongStandardIMapResult));
+		final wrongStandardIMapCapabilities = copyCall(selectedStandardIMapToString);
+		Reflect.setField(wrongStandardIMapCapabilities.standardIMapTarget, "runtimeCapabilities", ["haxe-map", "haxe-iterator", "haxe-array"]);
+		expectThrows("runtime-capability inventory", () -> OcamlCallPlan.requireCall(wrongStandardIMapCapabilities));
+		final wrongStandardIMapStringifier = copyCall(selectedStandardIMapToString);
+		Reflect.setField(wrongStandardIMapStringifier.standardIMapTarget, "keyStringifier", OcamlStandardIMapStringifier.DynamicObject);
+		expectThrows("stringifiers that disagree", () -> OcamlCallPlan.requireCall(wrongStandardIMapStringifier));
+		final ordinaryCallWithStandardIMapTarget = call(caller);
+		Reflect.setField(ordinaryCallWithStandardIMapTarget, "standardIMapTarget", standardIMapTarget(OcamlStandardIMapOperation.Set));
+		expectThrows("non-IMap call", () -> OcamlCallPlan.requireCall(ordinaryCallWithStandardIMapTarget));
+
 		final localBlock = Context.typeExpr(macro {
 			final localIdentityValue = 1;
 			localIdentityValue;

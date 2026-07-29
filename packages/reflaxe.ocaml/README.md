@@ -140,7 +140,26 @@ active OCaml profile, and the current runtime-selection report. When the HXML co
 `-D ocaml_lowering_report` (included in the starter templates), it also shows
 the source location, semantic and carrier types, representation reason, effect
 order, and runtime requirements for assignment/update operations already on the
-typed place-lowering path. The same report inventories mutable static fields
+typed place-lowering path. Calls through the standard generic Map interface are
+also explicit. For example:
+
+```haxe
+function lookup(values:haxe.Constraints.IMap<String, Int>, key:String)
+	return values.get(key);
+```
+
+The report records that this exact call uses the string-key `HxMap` carrier,
+the `get` operation, receiver-before-key evaluation, a `Null<Int>` result, and
+the `haxe-map` runtime capability before any OCaml syntax is produced. The
+syntax writer only renders that sealed decision; it no longer infers the key
+kind or method meaning from the source receiver. This boundary currently
+covers `String`, `Int`, and non-generic class keys using object identity. It
+applies to values originating from Haxe's standard Map specializations. It
+deliberately does not claim enum-key maps, structural or type-parameter keys,
+or arbitrary user implementations of `IMap`; those need a typed interface
+conversion and dispatch contract instead of the `HxMap` carrier.
+
+The same report inventories mutable static fields
 before code generation, including where each OCaml `ref` cell is declared and
 where its Haxe initializer runs. It also records direct dependencies between
 initializers. This makes cross-type and cross-module ordering reviewable
@@ -159,8 +178,9 @@ updates, the compiler-generated type registry, declared static native runtime
 boundaries such as `HxStdio`, `HxBacktrace`, and `HxFPHelper`, typed standard
 Map operations through `HxMap` and `HxIterator`, and the core packaging rule to
 the exact checked runtime files that were packaged. Standard `StringMap`,
-`IntMap`, and `ObjectMap` calls have declaration-level explanations; calls
-known only as the generic `IMap` interface do not yet have that typed boundary.
+`IntMap`, and `ObjectMap` calls have declaration-level explanations. Standard
+generic `IMap` calls in the admitted key families additionally have
+call-occurrence explanations tied to the sealed operation described above.
 The report labels itself `partial`, lists which observed module names are
 directly selected by at least one recorded compiler reason, and lists which are
 not. This name overlap does not mean every use site is explained. The existing

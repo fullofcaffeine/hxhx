@@ -224,7 +224,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `35`)
+  - `schemaVersion` (current: `42`)
   - the sealed assignment/update plans and their source locations
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
@@ -233,6 +233,19 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     `Null<Int>` parameter records one `box-exact-int-to-nullable-int`
     conversion; an existing `Null<Int>` records a carrier-preserving crossing.
     This makes the conversion inspectable before OCaml syntax is written.
+  - a call with `kind: standard-imap-method` includes
+    `standardIMapTarget`. This is the complete target decision for one call
+    whose receiver is the standard `haxe.Constraints.IMap<K, V>` interface:
+    the fixed `String`, `Int`, or non-generic class key family, selected
+    `HxMap` carrier and operation, receiver-and-argument schedule, result
+    adapter, text conversion policy when needed, and exact runtime
+    capabilities. For example, `values.get(key)` on
+    `IMap<String, Int>` records `HxMap.string_map`, `get_string`, and a
+    `Null<Int>` result before target syntax. The current record applies to
+    values originating from the standard Map specializations. Enum-key maps,
+    structural or type-parameter keys, and arbitrary user implementations are
+    not supported by this boundary; user implementations need a separate typed
+    interface conversion and dispatch contract.
   - `controlModel`, `controls`, and `controlTargets`, which show the exact
     function or loop affected by an admitted non-local transfer. Exact
     `Null<Int>` and `Null<Bool>` early returns record
@@ -284,11 +297,15 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     initialization order, and direct dependencies on other mutable static
     initializers
   - `runtimeRequirementRevision` and `runtimeRequirementCount`
-  - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need explains
-    the Haxe behavior, target decision, implementation feature, eligible
-    profiles, and checked runtime root that caused it
+  - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need and
+    every sealed standard-`IMap` call need explains the Haxe behavior, target
+    decision, implementation feature, eligible profiles, and checked runtime
+    root that caused it. Standard-`IMap` records name the exact source call and
+    may select `HxMap`, `HxIterator`, `HxArray`, `HxString`, or `HxDynamic`
+    according to the sealed operation and result adapter.
 
-The lowering report is complete for its stated assignment/update family. The
+The lowering report is complete for its stated assignment/update and admitted
+standard-`IMap` families. The
 runtime-requirement report additionally covers core packaging, the generated
 type registry, and declared static native runtime boundaries, but it is still
 not complete for the whole program. Runtime

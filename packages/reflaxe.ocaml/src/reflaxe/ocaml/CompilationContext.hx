@@ -8,6 +8,9 @@ import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+#if macro
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+#end
 import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
@@ -452,6 +455,15 @@ class CompilationContext {
 			requirementIds:Array<String>):Void {
 		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
 	}
+
+	#if macro
+	/** Records runtime support selected by one sealed standard `IMap` call. */
+	public function recordStandardIMapRuntimeRequirements(call:OcamlCallDecision):Void {
+		if (call.standardIMapTarget == null)
+			throw 'Standard IMap call "${call.id}" has no sealed runtime target.';
+		runtimeRequirements.recordStandardIMapCall(call.id, call.source, call.profileEligibility, call.standardIMapTarget);
+	}
+	#end
 
 	/** Records runtime support selected by one sealed non-null Bytes producer. **/
 	public function recordBytesProducerRuntimeRequirements(decision:OcamlBytesProducerDecision):Void {

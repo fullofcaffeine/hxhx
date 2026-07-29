@@ -12,6 +12,8 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 
 /** The source-language dispatch selected before OCaml syntax is constructed. */
 enum abstract OcamlCallKind(String) from String to String {
@@ -19,6 +21,7 @@ enum abstract OcamlCallKind(String) from String to String {
 	final DirectInstanceHaxeMethod = "direct-instance-haxe-method";
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
+	final StandardIMapMethod = "standard-imap-method";
 }
 
 /**
@@ -176,6 +179,7 @@ typedef OcamlCallDecision = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final ?standardIMapTarget:OcamlStandardIMapCallTarget;
 }
 
 /**
@@ -216,7 +220,7 @@ class OcamlCallPlan {
 			if (Lambda.exists(candidates,
 				existing -> existing.kind == decision.kind
 					&& existing.calleeId == decision.calleeId
-					&& suppliedArgumentCount(existing.arguments) == suppliedArgumentCount(decision.arguments))) {
+					&& suppliedArgumentCountForDecision(existing) == suppliedArgumentCountForDecision(decision))) {
 				throw 'reflaxe.ocaml [ocaml-call:duplicate-source-occurrence]: more than one admitted call can match ${decision.kind}/${decision.calleeId} at source occurrence "$key"';
 			}
 			candidates.push(copyDecision(decision));
@@ -248,6 +252,10 @@ class OcamlCallPlan {
 			case TCall({expr: TField(_, FInstance(classRef, _, fieldRef))}, arguments) if (decision.kind == OcamlCallKind.DirectInstanceHaxeMethod):
 				arguments.length == suppliedArgumentCount(decision.arguments)
 				&& OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
+			case TCall({expr: TField(receiver, FInstance(classRef, parameters, fieldRef))}, arguments)
+				if (decision.kind == OcamlCallKind.StandardIMapMethod && decision.standardIMapTarget != null): OcamlStandardIMapCallContract.matches(decision.standardIMapTarget,
+					classRef.get(), parameters, fieldRef.get(), receiver, arguments,
+					expression.t) && OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
 			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue): final binding:OcamlFunctionPlanBinding = {
 					functionId: decision.functionId,
 					programRevision: decision.programRevision,
@@ -268,6 +276,10 @@ class OcamlCallPlan {
 			}
 		}
 		return count;
+	}
+
+	static function suppliedArgumentCountForDecision(decision:OcamlCallDecision):Int {
+		return decision.standardIMapTarget == null ? suppliedArgumentCount(decision.arguments) : decision.standardIMapTarget.argumentSemanticTypeIds.length;
 	}
 
 	/** Returns whether a crossing materializes an omitted source argument. */
@@ -293,6 +305,8 @@ class OcamlCallPlan {
 	/** Returns whether one exact call produces the sealed `Null<Bool>` carrier. */
 	public function producesNullableBool(expression:TypedExpr):Bool {
 		final decision = decisionFor(expression);
+		if (decision != null && decision.standardIMapTarget != null)
+			return decision.standardIMapTarget.resultSemanticTypeId == "Null<Bool>";
 		return decision != null
 			&& decision.resultKind == OcamlCallResultKind.Value
 			&& decision.result != null
@@ -306,6 +320,8 @@ class OcamlCallPlan {
 	/** Returns whether one exact call produces the sealed core String carrier. */
 	public function producesExactString(expression:TypedExpr):Bool {
 		final decision = decisionFor(expression);
+		if (decision != null && decision.standardIMapTarget != null)
+			return decision.standardIMapTarget.resultSemanticTypeId == "String";
 		return decision != null
 			&& decision.resultKind == OcamlCallResultKind.Value
 			&& decision.result != null
@@ -336,6 +352,7 @@ class OcamlCallPlan {
 			decision.arguments.map(valueFingerprint).join(","),
 			resultFingerprint(decision.resultKind, decision.result),
 			decision.evaluationSchedule.map(evaluationStepFingerprint).join(","),
+			decision.standardIMapTarget == null ? "" : OcamlStandardIMapCallContract.fingerprint(decision.standardIMapTarget),
 			decision.functionId,
 			decision.programRevision,
 			decision.bodyRevision,
@@ -393,7 +410,8 @@ class OcamlCallPlan {
 			functionId: decision.functionId,
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
-			pipelineRevision: decision.pipelineRevision
+			pipelineRevision: decision.pipelineRevision,
+			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget)
 		};
 	}
 
@@ -647,6 +665,12 @@ class OcamlCallPlan {
 
 	/** Rejects a corrupted call occurrence before syntax can consume it. */
 	public static function requireCall(call:OcamlCallDecision):Void {
+		if (call.kind == OcamlCallKind.StandardIMapMethod) {
+			requireStandardIMapCall(call);
+			return;
+		}
+		if (call.standardIMapTarget != null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: non-IMap call "${call.id}" owns a standard IMap target';
 		requireCallCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
 			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision,
 			'call "${call.id}"', call.receiver);
@@ -711,6 +735,74 @@ class OcamlCallPlan {
 			|| invocation.sourceArgumentIndex != null
 			|| invocation.slotId != null)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: call "${call.id}" has an invalid invocation step';
+	}
+
+	/**
+		Rejects a corrupted standard `IMap` call before syntax can consume it.
+
+		This call kind owns its generic carrier and result facts inside the
+		specialized target plan, so it deliberately has no ordinary callable
+		declaration or closed primitive `OcamlCallValuePlan` records.
+	**/
+	static function requireStandardIMapCall(call:OcamlCallDecision):Void {
+		final target = call.standardIMapTarget;
+		if (target == null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has no typed target operation';
+		OcamlStandardIMapCallContract.require(target);
+		final expectedField = OcamlStandardIMapCallContract.sourceFieldName(target.operation);
+		if (call.calleeId != 'haxe.Constraints|haxe.IMap::$expectedField'
+			|| call.sourceModuleId != "haxe.Constraints"
+			|| call.sourceTypeName != "IMap"
+			|| call.sourceFieldName != expectedField
+			|| call.receiver != null
+			|| call.arguments.length != 0
+			|| call.result != null
+			|| call.proofId != OcamlStandardIMapCallContract.PROOF_ID
+			|| call.proofClaim != target.proofClaim
+			|| call.reason.length == 0
+			|| call.functionId.length == 0
+			|| call.programRevision.length == 0
+			|| call.bodyRevision.length == 0
+			|| call.pipelineRevision.length == 0
+			|| call.source.file.length == 0
+			|| call.source.min < 0
+			|| call.source.max < call.source.min
+			|| call.profileEligibility.length != 2
+			|| call.profileEligibility[0] != "metal"
+			|| call.profileEligibility[1] != "portable") {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has incomplete or conflicting source, proof, profile, or revision facts';
+		}
+		final effectOnly = target.resultSemanticTypeId == "Void";
+		if ((effectOnly && call.resultKind != OcamlCallResultKind.EffectOnlyVoid)
+			|| (!effectOnly && call.resultKind != OcamlCallResultKind.Value)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" disagrees with its typed result';
+		}
+		final argumentCount = target.argumentSemanticTypeIds.length;
+		if (call.evaluationSchedule.length != argumentCount + 2)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has an invalid evaluation schedule';
+		final receiver = call.evaluationSchedule[0];
+		if (receiver.kind != OcamlCallEvaluationStepKind.MaterializeReceiver
+			|| receiver.argumentIndex != null
+			|| receiver.sourceArgumentIndex != null
+			|| receiver.slotId != receiverSlotId(call.id)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has an invalid receiver materialization';
+		}
+		for (index in 0...argumentCount) {
+			final step = call.evaluationSchedule[index + 1];
+			if (step.kind != OcamlCallEvaluationStepKind.MaterializeArgument
+				|| step.argumentIndex != index
+				|| step.sourceArgumentIndex != index
+				|| step.slotId != argumentSlotId(call.id, index)) {
+				throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has an invalid argument materialization at index $index';
+			}
+		}
+		final invocation = call.evaluationSchedule[call.evaluationSchedule.length - 1];
+		if (invocation.kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| invocation.argumentIndex != null
+			|| invocation.sourceArgumentIndex != null
+			|| invocation.slotId != null) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has an invalid invocation step';
+		}
 	}
 
 	/** Rejects a corrupted final callable boundary before publication. */
@@ -1427,6 +1519,9 @@ class OcamlCallPlanner {
 			case TCall({expr: TField(receiverExpression, FInstance(classRef, parameters, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
+				final standardIMapTarget = OcamlStandardIMapCallContract.select(classType, parameters, field, receiverExpression, arguments, expression.t);
+				if (standardIMapTarget != null)
+					return standardIMapCallDecision(expression, classType, field, standardIMapTarget);
 				final declaration = parameters.length == 0 ? declarationFor(classType, field, false, representations, binding.programRevision,
 					binding.pipelineRevision) : null;
 				final receiver = declaration == null ? null : instanceReceiverValue(receiverExpression, declaration);
@@ -1517,6 +1612,44 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	function standardIMapCallDecision(expression:TypedExpr, classType:ClassType, field:ClassField, target:OcamlStandardIMapCallTarget):OcamlCallDecision {
+		OcamlStandardIMapCallContract.require(target);
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final selectedCalleeId = calleeId(classType, field);
+		final id = "call:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(source),
+			selectedCalleeId,
+			OcamlStandardIMapCallContract.fingerprint(target)
+		].join("|")).substr(0, 24);
+		return {
+			id: id,
+			source: source,
+			calleeId: selectedCalleeId,
+			sourceModuleId: classType.module,
+			sourceTypeName: classType.name,
+			sourceFieldName: field.name,
+			kind: OcamlCallKind.StandardIMapMethod,
+			receiver: null,
+			arguments: [],
+			resultKind: target.resultSemanticTypeId == "Void" ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, target.argumentSemanticTypeIds.length, [], false, true),
+			profileEligibility: ["metal", "portable"],
+			reason: 'The final typed Haxe expression calls standard ${target.receiverSemanticTypeId}.${field.name}. Its sealed target operation selects ${target.receiverCarrierId}, ${target.runtimeModule}.${target.runtimeFunction}, and ${target.resultForm} before syntax while preserving receiver-first and source-order argument evaluation.',
+			proofId: target.proofId,
+			proofClaim: target.proofClaim,
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision,
+			standardIMapTarget: OcamlStandardIMapCallContract.copy(target)
+		};
 	}
 
 	/**

@@ -154,6 +154,10 @@ class OcamlFunctionPlanSealer {
 		visit(data.expr);
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
+		for (call in calls.decisions()) {
+			if (call.standardIMapTarget != null)
+				context.recordStandardIMapRuntimeRequirements(call);
+		}
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
 		bytesAccesses.requireRepresentations(representations);
 		for (decision in bytesAccesses.decisions())

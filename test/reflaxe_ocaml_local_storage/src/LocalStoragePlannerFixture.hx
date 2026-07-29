@@ -590,7 +590,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v52"
+			pipelineRevision: "ocaml-function-plans-v53"
 		};
 		final dynamicCarrierPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicCarrierInput,
 			OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput), representations, dynamicCarrierBinding);
@@ -630,7 +630,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|uninitialized-dynamic",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:uninitialized-dynamic-v1",
-				pipelineRevision: "ocaml-function-plans-v52"
+				pipelineRevision: "ocaml-function-plans-v53"
 			});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -645,7 +645,7 @@ class LocalStoragePlannerFixture {
 				functionId: "fixture|reassigned-dynamic",
 				programRevision: "program:local-storage-fixture",
 				bodyRevision: "body:reassigned-dynamic-v1",
-				pipelineRevision: "ocaml-function-plans-v52"
+				pipelineRevision: "ocaml-function-plans-v53"
 			});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,

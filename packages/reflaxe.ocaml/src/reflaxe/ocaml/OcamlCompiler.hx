@@ -65,6 +65,8 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
@@ -3688,6 +3690,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final k = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
 					final v = params.length > 1 ? ocamlTypeExprFromHaxeType(params[1]) : OcamlTypeExpr.TIdent("Obj.t");
 					OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
+				} else if (OcamlStandardIMapCallContract.isIMapClass(c) && params.length == 2) {
+					final keyKind = OcamlStandardIMapCallContract.keyKindForType(params[0]);
+					final key = ocamlTypeExprFromHaxeType(params[0]);
+					final value = ocamlTypeExprFromHaxeType(params[1]);
+					switch (keyKind) {
+						case OcamlStandardIMapKeyKind.StringKey:
+							OcamlTypeExpr.TApp("HxMap.string_map", [value]);
+						case OcamlStandardIMapKeyKind.IntKey:
+							OcamlTypeExpr.TApp("HxMap.int_map", [value]);
+						case OcamlStandardIMapKeyKind.ObjectIdentityKey:
+							OcamlTypeExpr.TApp("HxMap.obj_map", [key, value]);
+						case _:
+							OcamlTypeExpr.TIdent("Obj.t");
+					}
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 					OcamlTypeExpr.TIdent("HxBytes.t");
 				} else if (c.pack != null && c.pack.length == 1 && c.pack[0] == "ocaml" && c.name == "Ref") {

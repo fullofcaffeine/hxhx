@@ -270,6 +270,34 @@ typedef InspectionCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
+/**
+	The standard Haxe `IMap` carrier and operation selected before OCaml syntax.
+
+	This is intentionally separate from a callable boundary: it describes the
+	closed standard-library interface slice, not arbitrary user interface
+	dispatch.
+**/
+typedef InspectionStandardIMapCallTarget = {
+	final operation:String;
+	final keyKind:String;
+	final receiverSemanticTypeId:String;
+	final receiverCarrierId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final runtimeModule:String;
+	final runtimeFunction:String;
+	final resultForm:String;
+	final iteratorModule:Null<String>;
+	final iteratorFunction:Null<String>;
+	final keyStringifier:Null<String>;
+	final valueStringifier:Null<String>;
+	final runtimeCapabilities:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -294,6 +322,7 @@ typedef InspectionCall = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 }
 
 /** One callable definition independently sealed against its final body. **/

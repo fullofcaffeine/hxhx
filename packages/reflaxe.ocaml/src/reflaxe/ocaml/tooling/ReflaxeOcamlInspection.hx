@@ -11,6 +11,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
@@ -85,7 +86,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 23,
+			schemaVersion: 24,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -350,8 +351,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 41) {
-						throw 'Unsupported lowering report schema $version; expected 41.';
+					if (version != 42) {
+						throw 'Unsupported lowering report schema $version; expected 42.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -372,7 +373,7 @@ class ReflaxeOcamlInspection {
 					final controls = inspectControls(value, representation, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation);
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, callInventory.calls);
 					{
 						status: "present",
 						required: required,
@@ -939,7 +940,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v17")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v18")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -979,6 +980,13 @@ class ReflaxeOcamlInspection {
 				throw 'Call report contains duplicate identity "${call.id}".';
 			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
 				throw 'Call "${call.id}" has an invalid source span.';
+			if (call.kind == "standard-imap-method") {
+				ReflaxeOcamlStandardIMapInspection.validate(call);
+				callIds.set(call.id, true);
+				continue;
+			}
+			if (call.standardIMapTarget != null)
+				throw 'Call "${call.id}" carries a standard IMap target for ordinary call kind "${call.kind}".';
 			if (call.receiver != null)
 				validateCallValue(call.receiver, representationById, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
@@ -1050,10 +1058,15 @@ class ReflaxeOcamlInspection {
 		return kind;
 	}
 
-	static function callResult(value:Dynamic, resultKind:String):Null<InspectionCallValue> {
+	static function callResult(value:Dynamic, resultKind:String, kind:String):Null<InspectionCallValue> {
 		if (!Reflect.hasField(value, "result"))
 			throw 'Expected typed-call field "result".';
 		final rawResult = Reflect.field(value, "result");
+		if (kind == "standard-imap-method") {
+			if (rawResult != null)
+				throw "Standard IMap calls describe their result in the sealed target instead of an ordinary call crossing.";
+			return null;
+		}
 		if (resultKind == "effect-only-void") {
 			if (rawResult != null)
 				throw "Effect-only Void call results cannot carry a value crossing.";
@@ -1087,7 +1100,8 @@ class ReflaxeOcamlInspection {
 		if (kind != "direct-static-haxe-method"
 			&& kind != "direct-instance-haxe-method"
 			&& kind != "direct-haxe-constructor"
-			&& kind != "typed-function-value")
+			&& kind != "typed-function-value"
+			&& kind != "standard-imap-method")
 			throw 'Unsupported typed-call kind "$kind".';
 		return kind;
 	}
@@ -1098,7 +1112,8 @@ class ReflaxeOcamlInspection {
 		final kind = requireCallKind(value);
 		final receiver = callReceiver(value, kind);
 		final arguments = callValues(value, "arguments");
-		final schedule = callEvaluationSchedule(value, id, kind, arguments);
+		final standardIMapTarget = standardIMapCallTarget(value, kind);
+		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardIMapTarget);
 		final resultKind = callResultKind(value);
 		return {
 			id: id,
@@ -1113,7 +1128,7 @@ class ReflaxeOcamlInspection {
 			receiver: receiver,
 			arguments: arguments,
 			resultKind: resultKind,
-			result: callResult(value, resultKind),
+			result: callResult(value, resultKind, kind),
 			evaluationSchedule: schedule,
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
@@ -1122,12 +1137,45 @@ class ReflaxeOcamlInspection {
 			functionId: requiredString(value, "functionId"),
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
-			pipelineRevision: requiredString(value, "pipelineRevision")
+			pipelineRevision: requiredString(value, "pipelineRevision"),
+			standardIMapTarget: standardIMapTarget
 		};
 	}
 
-	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String,
-			arguments:Array<InspectionCallValue>):Array<InspectionCallEvaluationStep> {
+	static function standardIMapCallTarget(value:Dynamic, kind:String):Null<InspectionStandardIMapCallTarget> {
+		if (!Reflect.hasField(value, "standardIMapTarget"))
+			throw 'Expected typed-call field "standardIMapTarget".';
+		final rawTarget = Reflect.field(value, "standardIMapTarget");
+		if (kind != "standard-imap-method") {
+			if (rawTarget != null)
+				throw 'Typed-call kind "$kind" cannot carry a standard IMap target.';
+			return null;
+		}
+		final target = requiredObject(value, "standardIMapTarget");
+		return {
+			operation: requiredString(target, "operation"),
+			keyKind: requiredString(target, "keyKind"),
+			receiverSemanticTypeId: requiredString(target, "receiverSemanticTypeId"),
+			receiverCarrierId: requiredString(target, "receiverCarrierId"),
+			keySemanticTypeId: requiredString(target, "keySemanticTypeId"),
+			valueSemanticTypeId: requiredString(target, "valueSemanticTypeId"),
+			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
+			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			runtimeModule: requiredString(target, "runtimeModule"),
+			runtimeFunction: requiredString(target, "runtimeFunction"),
+			resultForm: requiredString(target, "resultForm"),
+			iteratorModule: optionalString(target, "iteratorModule"),
+			iteratorFunction: optionalString(target, "iteratorFunction"),
+			keyStringifier: optionalString(target, "keyStringifier"),
+			valueStringifier: optionalString(target, "valueStringifier"),
+			runtimeCapabilities: requiredStringArray(target, "runtimeCapabilities"),
+			proofId: requiredString(target, "proofId"),
+			proofClaim: requiredString(target, "proofClaim")
+		};
+	}
+
+	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String, arguments:Array<InspectionCallValue>,
+			standardIMapTarget:Null<InspectionStandardIMapCallTarget>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
 				{
@@ -1138,9 +1186,10 @@ class ReflaxeOcamlInspection {
 				}
 		];
 		final materializesCallee = kind == "typed-function-value";
-		final materializesReceiver = kind == "direct-instance-haxe-method";
+		final materializesReceiver = kind == "direct-instance-haxe-method" || kind == "standard-imap-method";
+		final argumentCount = standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length;
 		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
-		if (schedule.length != arguments.length + scheduleOffset + 1)
+		if (schedule.length != argumentCount + scheduleOffset + 1)
 			throw 'Call "$callId" has an unsupported evaluation-schedule length.';
 		if (materializesCallee) {
 			final callee = schedule[0];
@@ -1159,9 +1208,9 @@ class ReflaxeOcamlInspection {
 				throw 'Call "$callId" has an invalid receiver materialization.';
 		}
 		var sourceArgumentIndex = 0;
-		for (index in 0...arguments.length) {
+		for (index in 0...argumentCount) {
 			final step = schedule[index + scheduleOffset];
-			final omitted = isOmittedConversion(arguments[index].conversion);
+			final omitted = standardIMapTarget == null && isOmittedConversion(arguments[index].conversion);
 			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
@@ -1196,7 +1245,7 @@ class ReflaxeOcamlInspection {
 			receiver: receiver,
 			arguments: callValues(value, "arguments"),
 			resultKind: resultKind,
-			result: callResult(value, resultKind),
+			result: callResult(value, resultKind, kind),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(value, "proofId"),
@@ -1882,7 +1931,8 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
-	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation):Int {
+	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
+			calls:Array<InspectionCall>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -1960,6 +2010,38 @@ class ReflaxeOcamlInspection {
 				throw 'Representation decision "${decision.id}" runtime requirement "$requirementId" does not match the sealed exact String dependency.';
 			}
 			referenced.set(requirementId, true);
+		}
+		for (call in calls) {
+			final target = call.standardIMapTarget;
+			if (target == null)
+				continue;
+			for (capability in target.runtimeCapabilities) {
+				final requirementId = call.id + ":runtime:" + capability;
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
+				final implementation = ReflaxeOcamlStandardIMapInspection.runtimeImplementation(capability);
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != call.id
+					|| requiredString(source, "file") != call.sourceFile
+					|| requiredInt(source, "min") != call.sourceMin
+					|| requiredInt(source, "max") != call.sourceMax
+					|| requiredString(requirement, "semanticCapability") != capability
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != call.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != target.receiverSemanticTypeId
+					|| requiredString(requirement, "implementationFeature") != implementation.feature
+					|| roots.length != 1
+					|| roots[0] != implementation.root
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+					throw 'Standard IMap call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+				}
+				referenced.set(requirementId, true);
+			}
 		}
 		for (requirementId in requirements.keys())
 			if (!referenced.exists(requirementId))

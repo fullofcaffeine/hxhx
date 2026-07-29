@@ -2,6 +2,12 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
@@ -66,6 +72,36 @@ class RuntimeRequirementLedgerFixture {
 		};
 	}
 
+	static function standardIMapToStringTarget():OcamlStandardIMapCallTarget {
+		final target:OcamlStandardIMapCallTarget = {
+			operation: OcamlStandardIMapOperation.ToString,
+			keyKind: OcamlStandardIMapKeyKind.StringKey,
+			receiverSemanticTypeId: "haxe.IMap<String, Int>",
+			receiverCarrierId: "HxMap.string_map",
+			keySemanticTypeId: "String",
+			valueSemanticTypeId: "Int",
+			argumentSemanticTypeIds: [],
+			resultSemanticTypeId: "String",
+			runtimeModule: "HxMap",
+			runtimeFunction: "pairs_string",
+			resultForm: OcamlStandardIMapResultForm.FormattedEntries,
+			iteratorModule: "HxIterator",
+			iteratorFunction: "of_array",
+			keyStringifier: OcamlStandardIMapStringifier.ExactString,
+			valueStringifier: OcamlStandardIMapStringifier.ExactInt,
+			runtimeCapabilities: [
+				OcamlStandardIMapCallContract.MAP_RUNTIME_CAPABILITY,
+				OcamlStandardIMapCallContract.ITERATOR_RUNTIME_CAPABILITY,
+				OcamlStandardIMapCallContract.ARRAY_RUNTIME_CAPABILITY,
+				OcamlStandardIMapCallContract.STRING_TEXT_RUNTIME_CAPABILITY
+			],
+			proofId: OcamlStandardIMapCallContract.PROOF_ID,
+			proofClaim: "Fixture proof for a sealed standard IMap String-to-Int text operation."
+		};
+		OcamlStandardIMapCallContract.require(target);
+		return target;
+	}
+
 	static function main():Void {
 		final macHaxePath = ["", "Users", "alice", "haxe", "versions", "4.3.7", "std", "haxe", "Exception.hx"].join("/");
 		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(macHaxePath) == "haxe-stdlib/haxe/Exception.hx",
@@ -116,10 +152,12 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_MAP, "haxe.ds.NativeHxMap::haxe.ds.NativeHxMap.set_string", source, "HxMap.set_string");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_ITERATOR, "haxe.ds.NativeHxMapIterator::haxe.ds.NativeHxMapIterator.of_array", source,
 			"HxIterator.of_array");
+		final standardIMapTarget = standardIMapToStringTarget();
+		ledger.recordStandardIMapCall("call:imap-to-string", source, ["metal", "portable"], standardIMapTarget);
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 21,
+		assertTrue(requirements.length == 25,
 			"each representation, lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
-		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
+		assertTrue(requirements[0].id == "call:imap-to-string:runtime:haxe-array", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
 		assertTrue(placeRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType && placeRequirement.subject.id == "Int",
@@ -188,6 +226,14 @@ class RuntimeRequirementLedgerFixture {
 			"native:haxe.ds.NativeHxMapIterator::haxe.ds.NativeHxMapIterator.of_array:runtime:haxe-iterator");
 		assertTrue(iteratorRequirement.subject.id.indexOf("HxIterator.of_array") >= 0, "the iterator boundary should name the checked target symbol");
 		assertTrue(iteratorRequirement.rootModules[0] == "HxIterator", "typed Haxe iterators should select the HxIterator implementation root");
+		final standardIMapRequirement = requirementById(requirements, "call:imap-to-string:runtime:haxe-map");
+		assertTrue(standardIMapRequirement.sourceKind == OcamlRuntimeRequirementSourceKind.HaxeExpression
+			&& standardIMapRequirement.sourceId == "call:imap-to-string",
+			"one standard IMap requirement should remain bound to the exact typed call occurrence");
+		assertTrue(standardIMapRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType
+			&& standardIMapRequirement.subject.id == "haxe.IMap<String, Int>",
+			"one standard IMap requirement should identify the sealed typed receiver");
+		assertTrue(standardIMapRequirement.rootModules[0] == "HxMap", "the typed standard IMap carrier selection should explain its HxMap runtime root");
 		assertTrue(ledger.rootModulesSorted()
 			.join(",") == "HxArray,HxBacktrace,HxFPHelper,HxFile,HxFileStream,HxFileSystem,HxInt,HxIterator,HxMap,HxProcess,HxRuntime,HxStdio,HxString,HxSys,HxThread,HxType",
 			"root modules should be deduplicated and sorted");
@@ -223,6 +269,10 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_MAP, "fixture.NativeMap.set_string", source, "OtherRuntime.set_string"));
 		expectFailure("iterator native module mismatch", "requires \"HxIterator\"",
 			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_ITERATOR, "fixture.NativeIterator.of_array", source, "OtherRuntime.of_array"));
+		final invalidStandardIMapTarget:Dynamic = OcamlStandardIMapCallContract.copy(standardIMapTarget);
+		invalidStandardIMapTarget.runtimeCapabilities = standardIMapTarget.runtimeCapabilities.concat(["not-supported"]);
+		expectFailure("invalid standard IMap runtime inventory", "invalid runtime-capability inventory",
+			() -> ledger.recordStandardIMapCall("call:invalid-imap", source, ["metal", "portable"], cast invalidStandardIMapTarget));
 		final invalidStringRepresentation:Dynamic = Reflect.copy(stringRepresentation);
 		invalidStringRepresentation.carrierTypeId = "Obj.t";
 		expectFailure("invalid String representation", "does not match the sealed exact String null-sentinel contract",
