@@ -12,13 +12,13 @@ haxelib run reflaxe.ocaml doctor --require native
 Build and run:
 
 ```bash
-haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
 Rebuild and run after each stable source edit:
 
 ```bash
-haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
 Inspect the active profile, runtime selection, and typed place operations:
@@ -27,9 +27,11 @@ Inspect the active profile, runtime selection, and typed place operations:
 haxelib run reflaxe.ocaml inspect --require-lowering
 ```
 
-The watcher starts a fresh Haxe process for each edit batch. Reflaxe leaves
-unchanged generated OCaml files untouched, so Dune can reuse its native build
-cache safely.
+The watcher starts a fresh Haxe process for each edit batch. Reflaxe publishes
+the complete generated `out/` tree only after source generation succeeds.
+Dune then builds that public tree and keeps reusable native state in
+`.out.reflaxe-ocaml-dune-build/`, so replacing generated source does not make
+every native build cold.
 
 Build output separates total Haxe-child time from the target-owned Dune phase.
 Dune typechecking, compilation, and linking are one measured phase; cache hits,

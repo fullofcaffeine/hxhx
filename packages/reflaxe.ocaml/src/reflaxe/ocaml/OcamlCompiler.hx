@@ -43,6 +43,7 @@ import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
+import reflaxe.ocaml.runtimegen.OcamlDuneBuildState;
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
@@ -79,6 +80,18 @@ import reflaxe.ocaml.OcamlNameTools;
 using StringTools;
 using reflaxe.helpers.BaseTypeHelper;
 
+private typedef PendingPublishedOutputBuild = {
+	final publicDirectory:String;
+	final buildDirectory:String;
+	final exeName:String;
+	final mode:String;
+	final duneLayout:Null<String>;
+	final run:Bool;
+	final strict:Bool;
+	final timingReport:Bool;
+	final artifacts:OcamlArtifactManifestBuilder;
+}
+
 /**
  * Minimal OCaml compiler scaffold.
  *
@@ -99,6 +112,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
 	var checkedOutputCollisions:Bool = false;
+	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 
 	#if macro
 	/**
@@ -2206,10 +2220,78 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.generateFiles();
 	}
 
+	/** Clears post-publication native work before each fresh compiler request. **/
+	public override function onCompileStart():Void {
+		pendingPublishedOutputBuild = null;
+	}
+
+	function sealArtifactManifest(artifacts:OcamlArtifactManifestBuilder):Void {
+		artifacts.seal({
+			status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
+			model: "recorded-runtime-requirements-partial-v5",
+			revision: ctx.runtimeRequirementRevision(),
+			message: "The compiler records exact semantic runtime requirements and checks them against packaged sources. Whole-program authority remains incomplete because some generated runtime uses still have only module-name observations rather than occurrence-level reasons."
+		}, {
+			status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
+			model: "free-form-dune-libraries-v1",
+			revision: null,
+			message: "Native libraries and source units are not yet backed by a locked, structured dependency manifest."
+		});
+	}
+
+	/**
+		Runs native work only after transactional source publication succeeds.
+
+		The public generated directory is Dune's workspace root. Reusable Dune
+		state lives in a stable sibling, so neither source replacement nor a failed
+		Reflaxe candidate can delete it or record a private transaction path.
+	**/
+	public function completePublishedOutput():Void {
+		#if eval
+		final pending = pendingPublishedOutputBuild;
+		pendingPublishedOutputBuild = null;
+		if (pending == null)
+			return;
+		if (output == null
+			|| output.outputDir == null
+			|| output.publicOutputDir == null
+			|| Path.normalize(output.outputDir) != Path.normalize(pending.publicDirectory)
+			|| Path.normalize(output.publicOutputDir) != Path.normalize(pending.publicDirectory)) {
+			throw "reflaxe.ocaml: Dune post-publication callback ran before the generated source transaction committed";
+		}
+
+		pending.artifacts.continueAtPublishedDirectory(pending.publicDirectory);
+		final result = OcamlBuildRunner.tryBuildAndMaybeRun({
+			outDir: pending.publicDirectory,
+			buildDir: pending.buildDirectory,
+			exeName: pending.exeName,
+			mode: pending.mode,
+			duneLayout: pending.duneLayout,
+			run: pending.run,
+			strict: pending.strict,
+			mli: null,
+			mliStrict: false,
+			timingReport: pending.timingReport,
+			artifacts: pending.artifacts
+		});
+		// A timing report is volatile evidence rather than source, but its digest
+		// still belongs in the target inventory that inspection validates.
+		sealArtifactManifest(pending.artifacts);
+		switch (result) {
+			case Ok(message):
+				if (message != null)
+					haxe.macro.Context.warning(message, haxe.macro.Context.currentPos());
+			case Err(message):
+				haxe.macro.Context.error(message, haxe.macro.Context.currentPos());
+		}
+		#end
+	}
+
 	public override function onOutputComplete() {
 		#if eval
 		if (output == null || output.outputDir == null)
 			return;
+		pendingPublishedOutputBuild = null;
 		#if macro
 		if (profileEnabled) {
 			profileInit();
@@ -2232,20 +2314,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
 		final artifacts = new OcamlArtifactManifestBuilder(outDir, revision.id, artifactConfigurationRevision, artifactProfile);
-
-		function sealArtifacts():Void {
-			artifacts.seal({
-				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "recorded-runtime-requirements-partial-v5",
-				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records exact semantic runtime requirements and checks them against packaged sources. Whole-program authority remains incomplete because some generated runtime uses still have only module-name observations rather than occurrence-level reasons."
-			}, {
-				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "free-form-dune-libraries-v1",
-				revision: null,
-				message: "Native libraries and source units are not yet backed by a locked, structured dependency manifest."
-			});
-		}
 
 		// A timing report is tied to one generated-file receipt. Clear the prior
 		// revision even when this build will not run Dune or request new timing.
@@ -3237,16 +3305,39 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final strictBuild = buildMode != null;
 		final strictAny = strictBuild || (wantsMli && mliStrict);
 
-		if (!shouldBuild && !shouldRun && buildMode == null && !wantsMli) {
-			sealArtifacts();
+		if (!shouldBuild && !shouldRun) {
+			sealArtifactManifest(artifacts);
 			return;
 		}
 
 		final exeName = DuneProjectEmitter.defaultExeName(outDir);
 		final mode = buildMode != null ? buildMode : "native";
+		final publicOutDir = output.publicOutputDir;
+		final transactionalOutput = publicOutDir != null && Path.normalize(publicOutDir) != Path.normalize(outDir);
+		if (transactionalOutput) {
+			if (wantsMli) {
+				haxe.macro.Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
+					haxe.macro.Context.currentPos());
+			}
+			final stablePublicOutDir:String = cast publicOutDir;
+			sealArtifactManifest(artifacts);
+			pendingPublishedOutputBuild = {
+				publicDirectory: stablePublicOutDir,
+				buildDirectory: OcamlDuneBuildState.forOutputDirectory(stablePublicOutDir),
+				exeName: DuneProjectEmitter.defaultExeName(stablePublicOutDir),
+				mode: mode,
+				duneLayout: duneLayoutValue,
+				run: shouldRun,
+				strict: strictAny,
+				timingReport: haxe.macro.Context.defined("ocaml_build_timing_report"),
+				artifacts: artifacts
+			};
+			return;
+		}
 
 		final result = OcamlBuildRunner.tryBuildAndMaybeRun({
 			outDir: outDir,
+			buildDir: null,
 			exeName: exeName,
 			mode: mode,
 			duneLayout: duneLayoutValue,
@@ -3266,7 +3357,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// Strict mode (ocaml_build=...) should stop compilation if build fails.
 				haxe.macro.Context.error(msg, haxe.macro.Context.currentPos());
 		}
-		sealArtifacts();
+		sealArtifactManifest(artifacts);
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();

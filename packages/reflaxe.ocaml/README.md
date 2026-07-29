@@ -91,8 +91,8 @@ package command:
 
 ```bash
 haxelib run reflaxe.ocaml build
-haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
-haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe
+haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
 `watch` discovers classpaths and included HXML files, waits for an edit batch to
@@ -103,10 +103,12 @@ input snapshot prevents compiler output from triggering another build.
 
 Each batch starts a fresh Haxe process. Persistent Haxe-server reuse is not used
 because current Reflaxe evidence found an incomplete-output failure on that
-route. Iteration still benefits from content-stable generated files and Dune's
-incremental native build cache. `--max-builds` provides a deterministic stopping
-point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
-all options.
+route. A successful batch atomically replaces the generated `out/` tree, then
+Dune builds that public tree with reusable state in the stable sibling
+`.out.reflaxe-ocaml-dune-build/`. A failed source-generation batch leaves both
+the previous public source and Dune state available. `--max-builds` provides a
+deterministic stopping point for tests and automation; run
+`haxelib run reflaxe.ocaml watch --help` for all options.
 
 For a plain-language explanation of compilation servers, upstream Haxe setup,
 the current `reflaxe.ocaml` and `hxhx` defaults, editor and CI scenarios, memory
@@ -119,6 +121,23 @@ build duration. Dune currently combines OCaml typechecking, compilation, and
 linking; the report does not guess cache hits or claim separate load, startup,
 or workload-runtime timing. Use `--output <directory>` when the project does not
 emit to `out/`.
+
+The two directories have different owners:
+
+- `out/` is complete generated source and reports published by Reflaxe.
+- `.out.reflaxe-ocaml-dune-build/` is disposable native build state owned by
+  Dune.
+
+To reset only native build state, use:
+
+```bash
+dune clean --root out --build-dir .out.reflaxe-ocaml-dune-build
+```
+
+Rerunning the package build replaces generated source but preserves valid Dune
+state. If a project intentionally removes `out/`, that does not remove the Dune
+directory; run the Dune clean command as a separate explicit action when both
+need a cold reset.
 
 ## Inspect a completed build
 
@@ -364,6 +383,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 
 - `-D ocaml_build=native|byte`: run dune build after emit.
 - `-D ocaml_build_timing_report`: write receipt-linked target-owned Dune phase timings (the package `build` and `watch` commands request this automatically).
+- `-D reflaxe_output_transaction`: publish the complete generated directory before Dune runs; reusable Dune state then lives in the stable sibling `.<output>.reflaxe-ocaml-dune-build`.
 - `-D ocaml_run`: run emitted executable via dune after emit.
 - `-D ocaml_no_dune`: disable dune scaffolding emission.
 - `-D ocaml_dune_layout=exe|lib|plugin`: choose dune layout.
@@ -378,6 +398,10 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`: generate `.mli` via `ocamlc -i`.
 - `-D ocaml_sourcemap=directives`: add line directives for error mapping.
 - `target.threaded` is auto-defined on OCaml target builds (`sys.thread.*` is runtime-backed via `HxThread`).
+
+Transactional output currently rejects inferred `ocaml_mli` generation because
+those interfaces would otherwise be created after source publication. Existing
+source-owned `.mli` files remain supported.
 
 ## Relationship to hxhx
 

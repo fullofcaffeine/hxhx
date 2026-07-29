@@ -25,6 +25,7 @@ class AuthoringFixture {
 		assert(exitCode == 0, "one-shot build/run failed");
 		assert(host.commands.length == 2, "one-shot build/run command count changed");
 		assert(host.commands[0].command == "haxe" && host.commands[0].args[0] == "/project/build.hxml", "Haxe build command changed");
+		assert(host.commands[0].args.contains("reflaxe_output_transaction"), "Haxe build did not request atomic generated-source publication");
 		assert(host.commands[0].args.contains("ocaml_build_timing_report"), "Haxe build did not request native timing evidence");
 		assert(host.commands[1].command == "/project/out/app.exe"
 			&& host.commands[1].args[0] == "--smoke", "artifact run command changed");

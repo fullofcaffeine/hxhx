@@ -23,12 +23,13 @@ import sys.io.File;
 	automatically assigned an owner.
 **/
 class OcamlArtifactManifestBuilder {
-	final outputDirectory:String;
+	var outputDirectory:String;
 	final programRevision:String;
 	final configurationRevision:String;
 	final profile:String;
 	final claims:Map<String, OcamlArtifactClaim> = [];
 	final previousEntries:Array<OcamlPreviousArtifactEntry>;
+	var sealedManifestDigest:Null<String>;
 
 	/**
 		Starts one output transaction and invalidates the previous manifest.
@@ -48,6 +49,34 @@ class OcamlArtifactManifestBuilder {
 		this.profile = OcamlArtifactManifestSchema.validatedProfile(profile);
 		previousEntries = OcamlArtifactManifestSchema.readPreviousEntries(absoluteOutputDirectory);
 		clearPriorManifest();
+	}
+
+	/**
+		Continues one sealed artifact inventory after its private directory is published.
+
+		Transactional output renames the complete candidate directory into its stable
+		public path. A later native-build callback may add volatile evidence, but it
+		must first prove that the public directory contains the exact manifest this
+		builder sealed and that the private candidate no longer exists.
+	**/
+	public function continueAtPublishedDirectory(publicDirectory:String):Void {
+		if (sealedManifestDigest == null)
+			throw "Cannot continue an OCaml artifact inventory before its candidate manifest is sealed.";
+		final previousDirectory = outputDirectory;
+		final absolutePublicDirectory = Path.normalize(FileSystem.absolutePath(publicDirectory));
+		if (absolutePublicDirectory == previousDirectory)
+			throw "Cannot continue an OCaml artifact inventory at the same directory.";
+		if (FileSystem.exists(previousDirectory))
+			throw 'Cannot continue an OCaml artifact inventory while private candidate "$previousDirectory" still exists.';
+		if (!FileSystem.exists(absolutePublicDirectory) || !FileSystem.isDirectory(absolutePublicDirectory))
+			throw 'Cannot continue an OCaml artifact inventory because published directory "$absolutePublicDirectory" is missing.';
+		final publishedManifest = Path.join([absolutePublicDirectory, OcamlArtifactManifestSchema.FILE_NAME]);
+		if (!FileSystem.exists(publishedManifest) || FileSystem.isDirectory(publishedManifest))
+			throw 'Cannot continue an OCaml artifact inventory because published manifest "$publishedManifest" is missing.';
+		final publishedDigest = OcamlArtifactManifestSchema.digestFile(publishedManifest).sha256;
+		if (publishedDigest != sealedManifestDigest)
+			throw 'Cannot continue an OCaml artifact inventory because the published manifest changed; expected $sealedManifestDigest, found $publishedDigest.';
+		outputDirectory = absolutePublicDirectory;
 	}
 
 	/** Records one file from the component that owns why it was emitted. **/
@@ -198,7 +227,9 @@ class OcamlArtifactManifestBuilder {
 				OcamlArtifactManifestSchema.FILE_NAME + " (this inventory root)"
 			]
 		};
-		OcamlArtifactManifestSchema.writeAtomically(absolutePath(OcamlArtifactManifestSchema.FILE_NAME), Json.stringify(report, null, "  ") + "\n");
+		final manifestPath = absolutePath(OcamlArtifactManifestSchema.FILE_NAME);
+		OcamlArtifactManifestSchema.writeAtomically(manifestPath, Json.stringify(report, null, "  ") + "\n");
+		sealedManifestDigest = OcamlArtifactManifestSchema.digestFile(manifestPath).sha256;
 		return report;
 	}
 

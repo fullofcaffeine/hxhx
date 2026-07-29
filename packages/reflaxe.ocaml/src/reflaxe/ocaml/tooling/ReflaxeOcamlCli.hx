@@ -353,11 +353,12 @@ class ReflaxeOcamlCli {
 			"",
 			"Examples:",
 			"  haxelib run reflaxe.ocaml build",
-			"  haxelib run reflaxe.ocaml build --run out/_build/default/out.exe",
-			"  haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe",
+			"  haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe",
+			"  haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe",
 			"",
-			"The command requests receipt-linked native timing. Dune typecheck, compile, and link",
-			"remain one measured phase; cache hits, loading, startup, and runtime are not inferred.",
+			"The command atomically publishes generated source before Dune runs. Dune keeps reusable",
+			"state in .<output>.reflaxe-ocaml-dune-build beside the output directory. Timing keeps",
+			"typecheck, compile, and link combined; cache hits, startup, and runtime are not inferred.",
 			""
 		].join("\n");
 	}

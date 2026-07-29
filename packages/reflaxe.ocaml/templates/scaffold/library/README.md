@@ -23,8 +23,9 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 ```
 
 The generated Dune project lives in `out/` and builds as a library, not an
-executable. `haxelib.json` describes the Haxe-facing package. Select and document
-your project license before publishing it.
+executable. Reusable Dune state lives separately in
+`.out.reflaxe-ocaml-dune-build/`. `haxelib.json` describes the Haxe-facing
+package. Select and document your project license before publishing it.
 
 Build output separates total Haxe-child time from the target-owned Dune phase.
 Dune typechecking, compilation, and linking are one measured phase; cache hits

@@ -314,13 +314,14 @@ initialization itself fails before the first marker is durable. Transactional
 write paths reject both slash and backslash parent traversal, so a target
 cannot escape the directory it asked Reflaxe to publish on either path style.
 
-The standalone OCaml target enables this only for the focused server experiment
-with `-D reflaxe_output_transaction`. Its normal one-shot and watch routes keep
-the existing output behavior because `_build` currently shares the generated
-directory: replacing the whole directory would throw away Dune's incremental
-cache. Dune build state needs a separate owner before transactional generation
-can become the default. This is a performance boundary, not permission to
-publish partial source in a supported warm workflow.
+The standalone OCaml target first enabled this only for the focused server
+experiment. The package one-shot and watch routes now use the same transaction:
+after Reflaxe publishes the complete generated directory, a later target
+callback runs Dune against that public path. Dune owns reusable state in the
+stable sibling `.<output>.reflaxe-ocaml-dune-build`, so source replacement does
+not discard native artifacts or leak a candidate path into Dune metadata.
+Transactional inferred-`.mli` generation remains rejected until interfaces can
+be produced without mutating source after publication.
 
 The earlier fork changes through PR #13 each landed through their own reviewed
 pull request. PR #13's six required checks passed, and that framework baseline

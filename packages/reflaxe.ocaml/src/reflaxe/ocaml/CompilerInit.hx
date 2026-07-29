@@ -109,10 +109,9 @@ class CompilerInit {
 
 		final compiler = new OcamlCompiler();
 		final captureLifecycleTrace = #if macro haxe.macro.Context.defined("reflaxe_ocaml_semantic_lifecycle_trace") #else false #end;
-		// Replacing the complete generated tree also replaces a colocated Dune
-		// `_build` directory. Keep this explicit until Dune's reusable build
-		// state has a separately owned path; the supported one-shot/watch route
-		// must not silently turn every native build into a cold build.
+		// Transactional publication replaces only generated source. Native Dune
+		// state has a separate stable owner and runs after this candidate becomes
+		// the public output tree.
 		final transactionalFileOutput = #if macro haxe.macro.Context.defined("reflaxe_output_transaction") #else false #end;
 		ReflectCompiler.AddCompiler(compiler, {
 			fileOutputExtension: ".ml",
@@ -185,6 +184,14 @@ class CompilerInit {
 			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.functionPlanRegistry)],
 				OcamlFunctionPlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
 		});
+		#if macro
+		if (transactionalFileOutput) {
+			// Reflaxe registered its publication callback before this target
+			// initializer ran. This callback therefore observes only committed
+			// public output and never sends a private candidate path to Dune.
+			haxe.macro.Context.onAfterGenerate(compiler.completePublishedOutput);
+		}
+		#end
 	}
 }
 #end

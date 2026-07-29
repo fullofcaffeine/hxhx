@@ -55,7 +55,7 @@ try {
 
 	const appBuild = runCli([
 		'build', '--project', appRoot,
-		'--run', 'out/_build/default/out.exe'
+		'--run', '.out.reflaxe-ocaml-dune-build/default/out.exe'
 	])
 	assert.strictEqual(appBuild.status, 0, appBuild.stderr || appBuild.stdout)
 	assert(appBuild.stdout.includes('Hello from Fixture App via reflaxe.ocaml!'))
@@ -105,7 +105,7 @@ try {
 	const dune = fs.readFileSync(path.join(libraryRoot, 'out/dune'), 'utf8')
 	assert(dune.includes('(library'))
 	assert(!dune.includes('(executable'))
-	assert(fs.existsSync(path.join(libraryRoot, 'out/_build/default/out.cmxa')))
+	assert(fs.existsSync(path.join(libraryRoot, '.out.reflaxe-ocaml-dune-build/default/out.cmxa')))
 
 	const bindingRoot = path.join(tempRoot, 'fixture-binding')
 	const refusedBinding = runCli(['new', 'binding', bindingRoot])

@@ -7,11 +7,11 @@ using StringTools;
 /**
 	Runs the safe reflaxe.ocaml edit/build/test loop.
 
-	Each rebuild starts a fresh Haxe process. Reflaxe keeps unchanged generated
-	files untouched, allowing Dune to reuse its native build cache when the project
-	invokes it. The watcher deliberately avoids a persistent Haxe server because
-	incomplete Reflaxe output has been observed under server reuse in this
-	repository.
+	Each rebuild starts a fresh Haxe process and publishes one complete generated
+	tree. Dune keeps its native build state in a stable sibling directory, so
+	transactional source replacement does not turn warm native builds cold. The
+	watcher deliberately avoids a persistent Haxe server because incomplete
+	Reflaxe output has been observed under server reuse in this repository.
 **/
 class ReflaxeOcamlAuthoring {
 	static final IGNORED_DIRECTORIES = [".artifacts", ".git", ".haxelib", ".lix", ".tmp", "_build", "node_modules"];
@@ -75,7 +75,7 @@ class ReflaxeOcamlAuthoring {
 		final displayedHxml = displayPath(projectRoot, hxmlPath);
 		host.writeStdout('[reflaxe.ocaml] build #$buildNumber: haxe $displayedHxml\n');
 		final started = host.nowMilliseconds();
-		final haxeExitCode = host.run("haxe", [hxmlPath, "-D", "ocaml_build_timing_report"], projectRoot);
+		final haxeExitCode = host.run("haxe", [hxmlPath, "-D", "reflaxe_output_transaction", "-D", "ocaml_build_timing_report"], projectRoot);
 		final elapsed = elapsedMilliseconds(host, started);
 		if (haxeExitCode != 0) {
 			host.writeStderr('[reflaxe.ocaml] build #$buildNumber failed (exit $haxeExitCode, ${elapsed}ms). Waiting for the next edit is safe in watch mode.\n');

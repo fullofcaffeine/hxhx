@@ -605,7 +605,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		haxelibBinary,
 		[
 			'run', 'reflaxe.ocaml', 'build', '--project', scaffoldRoot,
-			'--run', 'out/_build/default/out.exe'
+			'--run', '.out.reflaxe-ocaml-dune-build/default/out.exe'
 		],
 		{cwd: appRoot, env}
 	))
@@ -683,7 +683,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	if (!scaffoldLibraryBuild.stdout.includes('REFLAXE_OCAML_BUILD:PASS')
 		|| !scaffoldLibraryDune.includes('(library')
 		|| scaffoldLibraryDune.includes('(executable')
-		|| !fs.existsSync(path.join(scaffoldLibraryRoot, 'out/_build/default/out.cmxa'))) {
+		|| !fs.existsSync(path.join(scaffoldLibraryRoot, '.out.reflaxe-ocaml-dune-build/default/out.cmxa'))) {
 		fail('installed library scaffold did not produce a library-only native Dune build')
 	}
 	summary.tooling.scaffoldLibraryPassed = true
@@ -700,9 +700,9 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	summary.tooling.buildCommandPassed = true
 	summary.externalApplication.compilePassed = compile.status === 0
 	const emittedRoot = path.join(appRoot, 'out')
-	const executable = path.join(emittedRoot, '_build/default/out.exe')
+	const executable = path.join(appRoot, '.out.reflaxe-ocaml-dune-build/default/out.exe')
 	if (!fs.existsSync(executable)) {
-		fail('native build did not produce out/_build/default/out.exe')
+		fail('native build did not produce .out.reflaxe-ocaml-dune-build/default/out.exe')
 	}
 	summary.externalApplication.nativeBuildPassed = true
 	summary.externalApplication.emittedSourceSha256 = generatedSourceRevision(emittedRoot)
