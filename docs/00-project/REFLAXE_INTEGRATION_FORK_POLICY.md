@@ -226,11 +226,15 @@ The fork then added target-neutral lifecycle and scalability repairs:
 
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins candidate
-fork commit `f7487d5d30fdd309b66612d6e60c1276b24b9dab`, published for review in
-[fork PR #14](https://github.com/fullofcaffeine/reflaxe/pull/14), with
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
+candidate fork commit `bd7b8bf75ec2e78317b3c89316c6e3eff942e180`, published for review in
+[fork PR #15](https://github.com/fullofcaffeine/reflaxe/pull/15), with
 path-independent content digest
-`b0f9fa3f9fafd44f35e19fba6639d292ca131801d709c94ef8cfd8077244fd09`.
+`cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`.
+The last repository-validated rollback pin remains PR #14 commit
+`f7487d5d30fdd309b66612d6e60c1276b24b9dab` with digest
+`b0f9fa3f9fafd44f35e19fba6639d292ca131801d709c94ef8cfd8077244fd09`;
+restoring both values together is the bounded rollback.
 
 The previous pinned patch prevents Reflaxe's generic alias-removal pass from replacing a
 reference snapshot with a local that can later point at a different object. For
@@ -259,6 +263,23 @@ cross-request program-revision checks plus reflaxe.ocaml's focused storage,
 representation, call, and generated-program checks. Its remote review remains a
 separate prerequisite; this pin supplies exact integration evidence and does
 not claim that the fork change is merged upstream.
+
+PR #15 fixes the next warm-server correctness boundary. Haxe's compilation
+server may reuse most typed modules, but a target still needs the complete
+current program. Reflaxe now captures Haxe's complete declaration list, waits
+until Haxe has finished DCE and body rewrites, and then regenerates one complete
+target program. The older rebuilt-class filter and partial output manifest are
+gone. The capture also restores source declaration order within each Haxe
+module because the complete callback can otherwise present secondary types in
+a different order from the earlier typed-module callback. This preserves
+upstream Haxe's front-end reuse and the target's fail-closed storage checks
+without claiming target-level delta generation.
+
+The PR #15 framework regression compares complete target trees across a clean
+process, a cold server request, an unchanged warm request, a body edit, and an
+A → B → A restoration. It is target-neutral and intentionally leaves
+add/delete/move/shadow cases, private output transactions, compiler-scale
+timing, and supported default enablement to `haxe_ocaml-850ii.33`.
 
 The earlier fork changes through PR #13 each landed through their own reviewed
 pull request. PR #13's six required checks passed, and that framework baseline
