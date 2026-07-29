@@ -56,71 +56,82 @@ let create = fun classRefs2 instanceFields2 superClassRef2 -> let self = ({ __hx
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (HxRuntime.hx_null); instanceFields = Obj.magic (HxRuntime.hx_null); superClassRef = Obj.magic (HxRuntime.hx_null); tempCounter = 0 } : t)
 
-let reserve = fun self (name : string) -> try let __fallback_result_17 = let candidate = ref (let __call_arg_0_12 = name in Backend_js_JsNameMangler.identifier __call_arg_0_12) in (
+let reserve = fun self (name : string) -> try let __fallback_result_18 = let candidate = ref (let __call_arg_0_12 = name in Backend_js_JsNameMangler.identifier __call_arg_0_12) in (
   ignore (if HxString.length (!candidate) = 0 then ignore (let __assign_13 = "_" in (
     candidate := __assign_13;
     __assign_13
   )) else ());
-  ignore (if not (HxMap.exists_string ((Obj.magic self : t).used) (!candidate)) then ignore ((
-    ignore (HxMap.set_string ((Obj.magic self : t).used) (!candidate) true);
-    raise (HxRuntime.Hx_return (Obj.repr (!candidate)))
-  )) else ());
-  let suffix = ref 1 in (
-    ignore (while HxMap.exists_string ((Obj.magic self : t).used) ((HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix)) do ignore (let __old_14 = !suffix in let __new_15 = HxInt.add __old_14 1 in (
-      ignore (suffix := __new_15);
-      __old_14
-    )) done);
-    let unique = (HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix) in (
-      ignore (HxMap.set_string ((Obj.magic self : t).used) unique true);
-      unique
+  let _this = Obj.magic ((Obj.magic self : t).used) in let tempBool = HxMap.exists_string (Obj.magic _this) (!candidate : string) in (
+    ignore (if not (tempBool) then ignore (let _this = Obj.magic ((Obj.magic self : t).used) in (
+      ignore (HxMap.set_string (Obj.magic _this) (!candidate : string) true);
+      raise (HxRuntime.Hx_return (Obj.repr (!candidate)))
+    )) else ());
+    let suffix = ref 1 in (
+      ignore (try while true do try ignore (let tempBool1 = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).used) in (
+        ignore (let __assign_14 = HxMap.exists_string (Obj.magic _this) ((HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix) : string) in (
+          tempBool1 := __assign_14;
+          __assign_14
+        ));
+        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!tempBool1))) then raise (HxRuntime.Hx_break) else ());
+        let __old_15 = !suffix in let __new_16 = HxInt.add __old_15 1 in (
+          ignore (suffix := __new_16);
+          __old_15
+        )
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      let unique = (HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix) in let _this = Obj.magic ((Obj.magic self : t).used) in (
+        ignore (HxMap.set_string (Obj.magic _this) (unique : string) true);
+        unique
+      )
     )
   )
-) in Obj.magic __fallback_result_17 with
-  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
+) in Obj.magic __fallback_result_18 with
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let declareLocal = fun self (raw : string) -> try let __fallback_result_19 = let existing = (HxMap.get_string ((Obj.magic self : t).locals) raw : string) in (
+let declareLocal = fun self (raw : string) -> try let __fallback_result_20 = let _this = Obj.magic ((Obj.magic self : t).locals) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (raw : string) : string) in let existing = (tempMaybeString : string) in (
   ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (existing : string))) else ());
-  let safe = (reserve (Obj.magic self) (raw : string) : string) in (
-    ignore (HxMap.set_string ((Obj.magic self : t).locals) raw safe);
+  let safe = (reserve (Obj.magic self) (raw : string) : string) in let _this = Obj.magic ((Obj.magic self : t).locals) in (
+    ignore (HxMap.set_string (Obj.magic _this) (raw : string) safe);
     safe
   )
-) in Obj.magic __fallback_result_19 with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+) in Obj.magic __fallback_result_20 with
+  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
-let resolveLocal = fun self (raw : string) -> try let __fallback_result_21 = let local = (HxMap.get_string ((Obj.magic self : t).locals) raw : string) in (
+let resolveLocal = fun self (raw : string) -> try let __fallback_result_22 = let _this = Obj.magic ((Obj.magic self : t).locals) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (raw : string) : string) in let local = (tempMaybeString : string) in (
   ignore (if local != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (local : string))) else ());
-  HxMap.get_string ((Obj.magic self : t).instanceFields) raw
-) in Obj.magic __fallback_result_21 with
-  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
+  let _this = Obj.magic ((Obj.magic self : t).instanceFields) in let tempResult = (HxMap.get_string (Obj.magic _this) (raw : string) : string) in tempResult
+) in Obj.magic __fallback_result_22 with
+  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
 
-let resolveClassRef = fun self (raw : string) -> HxMap.get_string ((Obj.magic self : t).classRefs) raw
+let resolveClassRef = fun self (raw : string) -> let _this = Obj.magic ((Obj.magic self : t).classRefs) in let tempResult = (HxMap.get_string (Obj.magic _this) (raw : string) : string) in tempResult
 
 let resolveSuperClassRef = fun self () -> (Obj.magic self : t).superClassRef
 
-let freshTemp = fun self (prefix : string) -> try let __fallback_result_28 = let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if prefix == HxString.hx_null_string || HxString.length prefix = 0 then let __assign_22 = ("__tmp" : string) in (
-    tempString := __assign_22;
-    __assign_22
-  ) else let __assign_23 = (prefix : string) in (
+let freshTemp = fun self (prefix : string) -> try let __fallback_result_29 = let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if prefix == HxString.hx_null_string || HxString.length prefix = 0 then let __assign_23 = ("__tmp" : string) in (
     tempString := __assign_23;
     __assign_23
+  ) else let __assign_24 = (prefix : string) in (
+    tempString := __assign_24;
+    __assign_24
   ));
   let base = (!tempString : string) in (
     ignore (while true do ignore (let name = (reserve (Obj.magic self) ((HxString.toStdString base ^ "_") ^ string_of_int ((Obj.magic self : t).tempCounter) : string) : string) in (
-      ignore (let __place_receiver_24 = self in let __place_old_25 = (__place_receiver_24 : t).tempCounter in let __place_new_26 = HxInt.add __place_old_25 1 in (
-        (__place_receiver_24 : t).tempCounter <- __place_new_26;
-        __place_old_25
+      ignore (let __place_receiver_25 = self in let __place_old_26 = (__place_receiver_25 : t).tempCounter in let __place_new_27 = HxInt.add __place_old_26 1 in (
+        (__place_receiver_25 : t).tempCounter <- __place_new_27;
+        __place_old_26
       ));
       if name != HxString.hx_null_string && HxString.length name > 0 then raise (HxRuntime.Hx_return (Obj.repr (name : string))) else ()
     )) done);
     reserve (Obj.magic self) ("__tmp_fallback" : string)
   )
-) in Obj.magic __fallback_result_28 with
-  | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
+) in Obj.magic __fallback_result_29 with
+  | HxRuntime.Hx_return __ret_28 -> Obj.obj __ret_28
 
-let exprScope = fun self () -> let self = Obj.magic self in let __anon_29 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_29 "resolveLocal" (Obj.repr (fun name -> resolveLocal (Obj.magic self) (name : string))));
-  ignore (HxAnon.set __anon_29 "resolveClassRef" (Obj.repr (fun name -> resolveClassRef (Obj.magic self) (name : string))));
-  ignore (HxAnon.set __anon_29 "resolveSuperClassRef" (Obj.repr (fun () -> resolveSuperClassRef (Obj.magic self) ())));
-  __anon_29
+let exprScope = fun self () -> let self = Obj.magic self in let __anon_30 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_30 "resolveLocal" (Obj.repr (fun name -> resolveLocal (Obj.magic self) (name : string))));
+  ignore (HxAnon.set __anon_30 "resolveClassRef" (Obj.repr (fun name -> resolveClassRef (Obj.magic self) (name : string))));
+  ignore (HxAnon.set __anon_30 "resolveSuperClassRef" (Obj.repr (fun () -> resolveSuperClassRef (Obj.magic self) ())));
+  __anon_30
 )

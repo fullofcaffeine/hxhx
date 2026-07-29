@@ -22,8 +22,8 @@ let uniqStrings = fun xs -> try let __fallback_result_4 = (
         __new_2
       ));
       ignore (if x == HxString.hx_null_string then raise (HxRuntime.Hx_continue) else ());
-      ignore (if HxMap.exists_string seen x then raise (HxRuntime.Hx_continue) else ());
-      ignore (HxMap.set_string seen x true);
+      ignore (if HxMap.exists_string (Obj.magic seen) (x : string) then raise (HxRuntime.Hx_continue) else ());
+      ignore (HxMap.set_string (Obj.magic seen) (x : string) true);
       HxArray.push out x
     )) with
       | HxRuntime.Hx_continue -> () done with
@@ -196,11 +196,11 @@ let buildNativeExecutable = fun outAbs runtimePaths generatedPaths emittedModule
               __assign_42
             ));
             let key = (!tempString1 : string) in (
-              ignore (if HxMap.exists_string canonicalByLower key then ignore (let prev = (HxMap.get_string canonicalByLower key : string) in (
+              ignore (if HxMap.exists_string (Obj.magic canonicalByLower) (key : string) then ignore (let prev = (HxMap.get_string (Obj.magic canonicalByLower) (key : string) : string) in (
                 ignore (if not (HxString.equals prev relPath) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((("stage3 emitter: case-insensitive .ml collision: '" ^ HxString.toStdString prev) ^ "' vs '") ^ HxString.toStdString relPath) ^ "'")) ["Dynamic"; "String"]) else ());
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
-              HxMap.set_string canonicalByLower key relPath
+              HxMap.set_string (Obj.magic canonicalByLower) (key : string) relPath
             )
           )
         )) with
@@ -234,7 +234,7 @@ let buildNativeExecutable = fun outAbs runtimePaths generatedPaths emittedModule
             ignore (HxArray.push __arr_58 "runtime");
             __arr_58
           ))) in let __call_arg_1_59 = "runtime" in __call_callee_56 __call_arg_0_57 __call_arg_1_59);
-          let canonicalCount = ref 0 in let _hx = HxIterator.of_array (HxMap.keys_string canonicalByLower) in (
+          let canonicalCount = ref 0 in let _hx = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic canonicalByLower))) in (
             ignore (while (let __iter_60 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_60)) () do ignore ((
               ignore ((let __iter_61 = _hx in fun () -> HxIterator.next (Obj.magic __iter_61)) ());
               let __old_62 = !canonicalCount in let __new_63 = HxInt.add __old_62 1 in (
@@ -254,7 +254,7 @@ let buildNativeExecutable = fun outAbs runtimePaths generatedPaths emittedModule
                   __assign_66
                 ));
                 let key = (!tempString3 : string) in let tempResult = ref (HxString.hx_null_string : string) in (
-                  ignore (if HxMap.exists_string canonicalByLower key then let __assign_67 = (HxMap.get_string canonicalByLower key : string) in (
+                  ignore (if HxMap.exists_string (Obj.magic canonicalByLower) (key : string) then let __assign_67 = (HxMap.get_string (Obj.magic canonicalByLower) (key : string) : string) in (
                     tempResult := __assign_67;
                     __assign_67
                   ) else let __assign_68 = (relPath : string) in (
@@ -265,8 +265,8 @@ let buildNativeExecutable = fun outAbs runtimePaths generatedPaths emittedModule
                 )
               )
             ) in Obj.magic __fallback_result_70 with
-              | HxRuntime.Hx_return __ret_69 -> Obj.obj __ret_69 in let listExistingMlUnits = fun () -> let out = Obj.magic (HxArray.create ()) in let key = HxIterator.of_array (HxMap.keys_string canonicalByLower) in (
-              ignore (try while (let __iter_71 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_71)) () do try ignore (let key2 = ((let __iter_72 = key in fun () -> HxIterator.next (Obj.magic __iter_72)) () : string) in let rel = (HxMap.get_string canonicalByLower key2 : string) in (
+              | HxRuntime.Hx_return __ret_69 -> Obj.obj __ret_69 in let listExistingMlUnits = fun () -> let out = Obj.magic (HxArray.create ()) in let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic canonicalByLower))) in (
+              ignore (try while (let __iter_71 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_71)) () do try ignore (let key2 = ((let __iter_72 = key in fun () -> HxIterator.next (Obj.magic __iter_72)) () : string) in let rel = (HxMap.get_string (Obj.magic canonicalByLower) (key2 : string) : string) in (
                 ignore (if rel == Obj.magic (HxRuntime.hx_null) || HxString.length rel = 0 then raise (HxRuntime.Hx_continue) else ());
                 let base = let __call_arg_0_73 = rel in Haxe_io_Path.withoutDirectory __call_arg_0_73 in (
                   ignore (if base == HxString.hx_null_string || not (let __call_arg_0_74 = base in let __call_arg_1_75 = ".ml" in StringTools.endsWith __call_arg_0_74 __call_arg_1_75) then raise (HxRuntime.Hx_continue) else ());
@@ -308,8 +308,8 @@ let buildNativeExecutable = fun outAbs runtimePaths generatedPaths emittedModule
                       __assign_84
                     ));
                     let key = (!tempString4 : string) in (
-                      ignore (if HxMap.exists_string seen key then raise (HxRuntime.Hx_continue) else ());
-                      ignore (HxMap.set_string seen key true);
+                      ignore (if HxMap.exists_string (Obj.magic seen) (key : string) then raise (HxRuntime.Hx_continue) else ());
+                      ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
                       HxArray.push out (let __call_callee_85 = canonicalize in let __call_arg_0_86 = x in __call_callee_85 __call_arg_0_86)
                     )
                   )

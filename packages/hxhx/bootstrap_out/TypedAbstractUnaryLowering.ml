@@ -164,7 +164,7 @@ let rec substituteExpression = fun expression place renamedLocals -> let childre
       tempResult := __assign_32;
       __assign_32
     )
-    | TypedExpr.LocalRead -> let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let renamed = (HxMap.get_string renamedLocals (HxArray.get (Obj.magic texts) 0) : string) in if renamed == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic expression in (
+    | TypedExpr.LocalRead -> let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let renamed = (HxMap.get_string (Obj.magic renamedLocals) (HxArray.get (Obj.magic texts) 0 : string) : string) in if renamed == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic expression in (
       tempResult := __assign_33;
       __assign_33
     ) else let __assign_34 = Obj.magic (TypedExpr.localRead (renamed : string) (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()))) in (
@@ -323,7 +323,7 @@ let rec lowerInlineStatements = fun statements place renamedLocals state helpers
   let expressions = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in let _g2 = Obj.magic (TypedStmt.getTag (Obj.magic statement) ()) in match _g2 with
     | TypedStmt.Block -> ignore (lowerInlineStatements (Obj.magic (TypedStmt.getStatements (Obj.magic statement) ())) place (Obj.magic renamedLocals) state (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic counter) (Obj.magic declaration))
     | TypedStmt.Var -> ignore (let names = Obj.magic (TypedStmt.getNames (Obj.magic statement) ()) in let renamed = (freshName (HxArray.get (Obj.magic names) 0 : string) (Obj.magic counter) : string) in (
-      ignore (HxMap.set_string renamedLocals (HxArray.get (Obj.magic names) 0) renamed);
+      ignore (HxMap.set_string (Obj.magic renamedLocals) (HxArray.get (Obj.magic names) 0 : string) renamed);
       let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
         ignore (if HxArray.length expressions = 0 then let __assign_47 = Obj.magic (TypedExpr.nullValue (Obj.magic (TyType.unknown ())) (Obj.magic (TypedStmt.getPosition (Obj.magic statement) ()))) in (
           tempTypedExpr := __assign_47;
@@ -360,10 +360,10 @@ let rec lowerInlineStatements = fun statements place renamedLocals state helpers
       )
     ))
     | TypedStmt.Expression -> ignore (HxArray.push (Obj.obj (HxAnon.get state "expressions")) (lowerExpression (Obj.magic (substituteExpression (Obj.magic (HxArray.get (Obj.magic expressions) 0)) place (Obj.magic renamedLocals))) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic counter)))
-    | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ((("Inline abstract unary helper contains unsupported typed statement " ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr (TypedStmt.getTag (Obj.magic statement) ())))) ^ ": ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"])
+    | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ((("Inline abstract unary helper contains unsupported typed statement " ^ HxString.toStdString (HxDynamic.toStdString (Obj.repr (TypedStmt.getTag (Obj.magic statement) ())))) ^ ": ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"])
 )) done) with
   | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54)
-and inlineCall = fun binding operand helpers index filePath counter -> let declaration = Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic binding) ()) in let helper = Obj.magic (HxMap.get_string helpers (helperKey (Obj.magic declaration))) in (
+and inlineCall = fun binding operand helpers index filePath counter -> let declaration = Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic binding) ()) in let key = (helperKey (Obj.magic declaration) : string) in let tempMaybeTypedFunction = Obj.magic (HxMap.get_string (Obj.magic helpers) (key : string)) in let helper = Obj.magic tempMaybeTypedFunction in (
   ignore (if helper == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TypedExpr.getPosition (Obj.magic operand) ())) ("Inline abstract unary helper body is outside the typed program: " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"]) else ());
   let resultType = ref (Obj.magic (TyAbstractOperatorInfo.getResultType (Obj.magic binding) ())) in let helperEnvironment = Obj.magic (TypedFunction.getEnvironment (Obj.magic helper) ()) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
     ignore (if helperEnvironment == Obj.magic (HxRuntime.hx_null) then let __assign_71 = Obj.magic (TyType.unknown ()) in (
@@ -554,7 +554,7 @@ let collectHelpers = fun classes helpers -> ignore (try ignore ((
         ignore (_g2 := __new_114);
         __new_114
       ));
-      let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in if declaration != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string helpers (helperKey (Obj.magic declaration)) typedFunction) else ()
+      let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in if declaration != Obj.magic (HxRuntime.hx_null) then ignore (let key = (helperKey (Obj.magic declaration) : string) in HxMap.set_string (Obj.magic helpers) (key : string) typedFunction) else ()
     )) done
   )) done
 )) with

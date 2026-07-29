@@ -967,7 +967,7 @@ let classDeclaration = fun typedClass -> let source = Obj.magic (TypedClass.getS
           ignore (_g := __new_195);
           __new_195
         ));
-        let key = (TyFieldInfo.getName (Obj.magic (TypedFieldInitializer.getField (Obj.magic hx_initializer) ())) () : string) in let value = Obj.magic (TypedFieldInitializer.getExpression (Obj.magic hx_initializer) ()) in HxMap.set_string initializerByField key value
+        let key = (TyFieldInfo.getName (Obj.magic (TypedFieldInitializer.getField (Obj.magic hx_initializer) ())) () : string) in let value = Obj.magic (TypedFieldInitializer.getExpression (Obj.magic hx_initializer) ()) in HxMap.set_string (Obj.magic initializerByField) (key : string) value
       )) done);
       let _g = Obj.magic (let __arr_196 = HxArray.create () in __arr_196) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in (
         ignore (while !_g1 < HxArray.length _g2 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
@@ -984,7 +984,7 @@ let classDeclaration = fun typedClass -> let source = Obj.magic (TypedClass.getS
               __new_201
             ));
             let tempMaybeTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in let key = (HxFieldDecl.getName (Obj.magic field) : string) in (
-              ignore (let __assign_202 = Obj.magic (Obj.magic (HxMap.get_string initializerByField key)) in (
+              ignore (let __assign_202 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic initializerByField) (key : string))) in (
                 tempMaybeTypedExpr := __assign_202;
                 __assign_202
               ));

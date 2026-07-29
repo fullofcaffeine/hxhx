@@ -464,12 +464,12 @@ let parseStructFieldNames = fun structBody -> try let __fallback_result_117 = le
       ignore (if atTopLevel then ignore (let nameIndex = ref (!tokenIndex) in (
         ignore (if HxString.equals (Obj.obj (HxAnon.get token "text")) "?" then ignore (nameIndex := HxInt.add (!nameIndex) 1) else ());
         if !nameIndex < HxArray.length tokens && HxRuntime.unbox_bool_or_obj (HxAnon.get (HxArray.get (Obj.magic tokens) (!nameIndex)) "isIdent") then ignore (let nameToken = HxArray.get (Obj.magic tokens) (!nameIndex) in let colonIndex = HxInt.add (!nameIndex) 1 in let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get nameToken "text") : string) in (
-          ignore (let __assign_115 = HxMap.exists_string seen key in (
+          ignore (let __assign_115 = HxMap.exists_string (Obj.magic seen) (key : string) in (
             tempBool := __assign_115;
             __assign_115
           ));
           if colonIndex < HxArray.length tokens && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic tokens) colonIndex) "text")) ":" && not (!tempBool) then ignore (let key = (Obj.obj (HxAnon.get nameToken "text") : string) in (
-            ignore (HxMap.set_string seen key true);
+            ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
             HxArray.push fields (Obj.obj (HxAnon.get nameToken "text"))
           )) else ()
         )) else ()

@@ -14,20 +14,20 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Po
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.PortableMetalizationPlanner" } : t)
 
 let writeReport = fun outDir plan -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if outDir == HxString.hx_null_string then let __assign_12 = "" in (
-    tempString := __assign_12;
-    __assign_12
-  ) else let __assign_13 = let __call_arg_0_14 = outDir in Haxe_io_Path.normalize __call_arg_0_14 in (
+  ignore (if outDir == HxString.hx_null_string then let __assign_13 = "" in (
     tempString := __assign_13;
     __assign_13
+  ) else let __assign_14 = let __call_arg_0_15 = outDir in Haxe_io_Path.normalize __call_arg_0_15 in (
+    tempString := __assign_14;
+    __assign_14
   ));
   let normalizedDir = !tempString in (
     ignore (if HxString.length normalizedDir = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "portable metalization planner: missing output directory") ["Dynamic"]) else ());
     ignore (if not (HxFileSystem.exists (normalizedDir : string)) then ignore (HxFileSystem.createDirectory (normalizedDir : string)) else ());
-    let reportPath = (Haxe_io_Path.join (Obj.magic (let __arr_15 = HxArray.create () in (
-      ignore (HxArray.push __arr_15 normalizedDir);
-      ignore (HxArray.push __arr_15 "ocaml_portable_metalization_plan_report.json");
-      __arr_15
+    let reportPath = (Haxe_io_Path.join (Obj.magic (let __arr_16 = HxArray.create () in (
+      ignore (HxArray.push __arr_16 normalizedDir);
+      ignore (HxArray.push __arr_16 "ocaml_portable_metalization_plan_report.json");
+      __arr_16
     ))) : string) in let reportJson = (Haxe_format_JsonPrinter.print (Backend_ocaml_PortableMetalizationPlan.toReport (Obj.magic plan) ()) (Obj.magic (HxRuntime.hx_null)) ("  " : string) : string) in (
       ignore (HxFile.saveContent (reportPath : string) (HxString.toStdString reportJson ^ "\n" : string));
       reportPath
@@ -39,93 +39,93 @@ let isFunctionContext = fun context -> context != HxString.hx_null_string && HxS
 
 let normalizeContext = fun (context : string) -> (try (
   ignore (if context == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>.<unknown>")) else ());
-  let trimmed = let __call_arg_0_44 = context in StringTools.trim __call_arg_0_44 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if HxString.length trimmed = 0 then let __assign_45 = "<unknown>.<unknown>" in (
-      tempResult := __assign_45;
-      __assign_45
-    ) else let __assign_46 = trimmed in (
+  let trimmed = let __call_arg_0_45 = context in StringTools.trim __call_arg_0_45 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length trimmed = 0 then let __assign_46 = "<unknown>.<unknown>" in (
       tempResult := __assign_46;
       __assign_46
+    ) else let __assign_47 = trimmed in (
+      tempResult := __assign_47;
+      __assign_47
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_47 -> (Obj.obj __ret_47 : string) : string)
+  | HxRuntime.Hx_return __ret_48 -> (Obj.obj __ret_48 : string) : string)
 
 let normalizeFilePath = fun (filePath : string) -> (try (
   ignore (if filePath == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
-  let trimmed = let __call_arg_0_48 = filePath in StringTools.trim __call_arg_0_48 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if HxString.length trimmed = 0 then let __assign_49 = "<unknown>" in (
-      tempResult := __assign_49;
-      __assign_49
-    ) else let __assign_50 = trimmed in (
+  let trimmed = let __call_arg_0_49 = filePath in StringTools.trim __call_arg_0_49 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length trimmed = 0 then let __assign_50 = "<unknown>" in (
       tempResult := __assign_50;
       __assign_50
+    ) else let __assign_51 = trimmed in (
+      tempResult := __assign_51;
+      __assign_51
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : string) : string)
+  | HxRuntime.Hx_return __ret_52 -> (Obj.obj __ret_52 : string) : string)
 
-let regionKeyFromContext = fun (filePath : string) (context : string) -> ((HxString.toStdString (let __call_arg_0_40 = filePath in normalizeFilePath __call_arg_0_40) ^ "::") ^ HxString.toStdString (let __call_arg_0_41 = context in normalizeContext __call_arg_0_41) : string)
+let regionKeyFromContext = fun (filePath : string) (context : string) -> ((HxString.toStdString (let __call_arg_0_41 = filePath in normalizeFilePath __call_arg_0_41) ^ "::") ^ HxString.toStdString (let __call_arg_0_42 = context in normalizeContext __call_arg_0_42) : string)
 
 let normalizeClassName = fun (className : string) -> (try (
   ignore (if className == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
-  let trimmed = let __call_arg_0_52 = className in StringTools.trim __call_arg_0_52 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if HxString.length trimmed = 0 then let __assign_53 = "<unknown>" in (
-      tempResult := __assign_53;
-      __assign_53
-    ) else let __assign_54 = trimmed in (
+  let trimmed = let __call_arg_0_53 = className in StringTools.trim __call_arg_0_53 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length trimmed = 0 then let __assign_54 = "<unknown>" in (
       tempResult := __assign_54;
       __assign_54
+    ) else let __assign_55 = trimmed in (
+      tempResult := __assign_55;
+      __assign_55
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_55 -> (Obj.obj __ret_55 : string) : string)
+  | HxRuntime.Hx_return __ret_56 -> (Obj.obj __ret_56 : string) : string)
 
 let normalizeFunctionName = fun (functionName : string) -> (try (
   ignore (if functionName == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
-  let trimmed = let __call_arg_0_56 = functionName in StringTools.trim __call_arg_0_56 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if HxString.length trimmed = 0 then let __assign_57 = "<unknown>" in (
-      tempResult := __assign_57;
-      __assign_57
-    ) else let __assign_58 = trimmed in (
+  let trimmed = let __call_arg_0_57 = functionName in StringTools.trim __call_arg_0_57 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length trimmed = 0 then let __assign_58 = "<unknown>" in (
       tempResult := __assign_58;
       __assign_58
+    ) else let __assign_59 = trimmed in (
+      tempResult := __assign_59;
+      __assign_59
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_59 -> (Obj.obj __ret_59 : string) : string)
+  | HxRuntime.Hx_return __ret_60 -> (Obj.obj __ret_60 : string) : string)
 
-let contextName = fun (className : string) (functionName : string) -> ((HxString.toStdString (let __call_arg_0_42 = className in normalizeClassName __call_arg_0_42) ^ ".") ^ HxString.toStdString (let __call_arg_0_43 = functionName in normalizeFunctionName __call_arg_0_43) : string)
+let contextName = fun (className : string) (functionName : string) -> ((HxString.toStdString (let __call_arg_0_43 = className in normalizeClassName __call_arg_0_43) ^ ".") ^ HxString.toStdString (let __call_arg_0_44 = functionName in normalizeFunctionName __call_arg_0_44) : string)
 
-let functionRegionKey = fun (filePath : string) (className : string) (functionName : string) -> (let __call_arg_0_16 = filePath in let __call_arg_1_17 = let __call_arg_0_18 = className in let __call_arg_1_19 = functionName in contextName __call_arg_0_18 __call_arg_1_19 in regionKeyFromContext __call_arg_0_16 __call_arg_1_17 : string)
+let functionRegionKey = fun (filePath : string) (className : string) (functionName : string) -> (let __call_arg_0_17 = filePath in let __call_arg_1_18 = let __call_arg_0_19 = className in let __call_arg_1_20 = functionName in contextName __call_arg_0_19 __call_arg_1_20 in regionKeyFromContext __call_arg_0_17 __call_arg_1_18 : string)
 
 let collectFunctionRegions = fun program -> let regions = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let typedModule = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
-      ignore (_g := __new_21);
-      __new_21
+    ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
+      ignore (_g := __new_22);
+      __new_22
     ));
-    let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = let __call_arg_0_22 = ParsedModule.getFilePath (Obj.magic parsed) () in normalizeFilePath __call_arg_0_22 in let decl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let _g2 = ref 0 in let _g3 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in while !_g2 < HxArray.length _g3 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-      ignore (let __old_23 = !_g2 in let __new_24 = HxInt.add __old_23 1 in (
-        ignore (_g2 := __new_24);
-        __new_24
+    let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = let __call_arg_0_23 = ParsedModule.getFilePath (Obj.magic parsed) () in normalizeFilePath __call_arg_0_23 in let decl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let _g2 = ref 0 in let _g3 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in while !_g2 < HxArray.length _g3 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+      ignore (let __old_24 = !_g2 in let __new_25 = HxInt.add __old_24 1 in (
+        ignore (_g2 := __new_25);
+        __new_25
       ));
-      let className = let __call_arg_0_25 = HxClassDecl.getName (Obj.magic cls) in normalizeClassName __call_arg_0_25 in let _g4 = ref 0 in let _g5 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g4 < HxArray.length _g5 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
-        ignore (let __old_26 = !_g4 in let __new_27 = HxInt.add __old_26 1 in (
-          ignore (_g4 := __new_27);
-          __new_27
+      let className = let __call_arg_0_26 = HxClassDecl.getName (Obj.magic cls) in normalizeClassName __call_arg_0_26 in let _g4 = ref 0 in let _g5 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g4 < HxArray.length _g5 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
+        ignore (let __old_27 = !_g4 in let __new_28 = HxInt.add __old_27 1 in (
+          ignore (_g4 := __new_28);
+          __new_28
         ));
-        let functionName = let __call_arg_0_28 = HxFunctionDecl.getName (Obj.magic fn) in normalizeFunctionName __call_arg_0_28 in let context = let __call_arg_0_29 = className in let __call_arg_1_30 = functionName in contextName __call_arg_0_29 __call_arg_1_30 in HxArray.push regions (let __anon_31 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_31 "regionKey" (Obj.repr (let __call_arg_0_32 = filePath in let __call_arg_1_33 = context in regionKeyFromContext __call_arg_0_32 __call_arg_1_33)));
-          ignore (HxAnon.set __anon_31 "filePath" (Obj.repr filePath));
-          ignore (HxAnon.set __anon_31 "className" (Obj.repr className));
-          ignore (HxAnon.set __anon_31 "functionName" (Obj.repr functionName));
-          ignore (HxAnon.set __anon_31 "context" (Obj.repr context));
-          __anon_31
+        let functionName = let __call_arg_0_29 = HxFunctionDecl.getName (Obj.magic fn) in normalizeFunctionName __call_arg_0_29 in let context = let __call_arg_0_30 = className in let __call_arg_1_31 = functionName in contextName __call_arg_0_30 __call_arg_1_31 in HxArray.push regions (let __anon_32 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_32 "regionKey" (Obj.repr (let __call_arg_0_33 = filePath in let __call_arg_1_34 = context in regionKeyFromContext __call_arg_0_33 __call_arg_1_34)));
+          ignore (HxAnon.set __anon_32 "filePath" (Obj.repr filePath));
+          ignore (HxAnon.set __anon_32 "className" (Obj.repr className));
+          ignore (HxAnon.set __anon_32 "functionName" (Obj.repr functionName));
+          ignore (HxAnon.set __anon_32 "context" (Obj.repr context));
+          __anon_32
         ))
       )) done
     )) done
@@ -135,33 +135,33 @@ let collectFunctionRegions = fun program -> let regions = Obj.magic (HxArray.cre
 
 let normalizeToken = fun (raw : string) -> (try (
   ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let __call_arg_0_60 = raw in StringTools.trim __call_arg_0_60
+  let __call_arg_0_61 = raw in StringTools.trim __call_arg_0_61
 ) with
-  | HxRuntime.Hx_return __ret_61 -> (Obj.obj __ret_61 : string) : string)
+  | HxRuntime.Hx_return __ret_62 -> (Obj.obj __ret_62 : string) : string)
 
 let normalizeReason = fun (raw : string) -> (try (
   ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let __call_arg_0_62 = let __call_arg_0_63 = let __call_arg_0_64 = raw in let __call_arg_1_65 = "\r" in let __call_arg_2_66 = " " in StringTools.replace __call_arg_0_64 __call_arg_1_65 __call_arg_2_66 in let __call_arg_1_67 = "\n" in let __call_arg_2_68 = " " in StringTools.replace __call_arg_0_63 __call_arg_1_67 __call_arg_2_68 in StringTools.trim __call_arg_0_62
+  let __call_arg_0_63 = let __call_arg_0_64 = let __call_arg_0_65 = raw in let __call_arg_1_66 = "\r" in let __call_arg_2_67 = " " in StringTools.replace __call_arg_0_65 __call_arg_1_66 __call_arg_2_67 in let __call_arg_1_68 = "\n" in let __call_arg_2_69 = " " in StringTools.replace __call_arg_0_64 __call_arg_1_68 __call_arg_2_69 in StringTools.trim __call_arg_0_63
 ) with
-  | HxRuntime.Hx_return __ret_69 -> (Obj.obj __ret_69 : string) : string)
+  | HxRuntime.Hx_return __ret_70 -> (Obj.obj __ret_70 : string) : string)
 
-let appendExclusion = fun exclusions code reason -> ignore (try ignore (let normalizedCode = let __call_arg_0_34 = code in normalizeToken __call_arg_0_34 in let normalizedReason = let __call_arg_0_35 = reason in normalizeReason __call_arg_0_35 in let _g = ref 0 in (
+let appendExclusion = fun exclusions code reason -> ignore (try ignore (let normalizedCode = let __call_arg_0_35 = code in normalizeToken __call_arg_0_35 in let normalizedReason = let __call_arg_0_36 = reason in normalizeReason __call_arg_0_36 in let _g = ref 0 in (
   ignore (while !_g < HxArray.length exclusions do ignore (let existing = HxArray.get (Obj.magic exclusions) (!_g) in (
-    ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
-      ignore (_g := __new_37);
-      __new_37
+    ignore (let __old_37 = !_g in let __new_38 = HxInt.add __old_37 1 in (
+      ignore (_g := __new_38);
+      __new_38
     ));
     if HxString.equals (Obj.obj (HxAnon.get existing "code")) normalizedCode && HxString.equals (Obj.obj (HxAnon.get existing "reason")) normalizedReason then raise (HxRuntime.Hx_return (Obj.repr ())) else ()
   )) done);
-  HxArray.push exclusions (let __anon_38 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_38 "code" (Obj.repr normalizedCode));
-    ignore (HxAnon.set __anon_38 "reason" (Obj.repr normalizedReason));
-    __anon_38
+  HxArray.push exclusions (let __anon_39 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_39 "code" (Obj.repr normalizedCode));
+    ignore (HxAnon.set __anon_39 "reason" (Obj.repr normalizedReason));
+    __anon_39
   ))
 )) with
-  | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39)
+  | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40)
 
-let buildPlan = fun program profile -> try let __fallback_result_11 = let regionSeeds = Obj.magic (collectFunctionRegions (Obj.magic program)) in let plannerEnabled = HxString.equals profile "portable" in (
+let buildPlan = fun program profile -> try let __fallback_result_12 = let regionSeeds = Obj.magic (collectFunctionRegions (Obj.magic program)) in let plannerEnabled = HxString.equals profile "portable" in (
   ignore (if not (plannerEnabled) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Backend_ocaml_PortableMetalizationPlan.create (profile : string) false (Obj.magic regionSeeds) (Obj.magic (HxMap.create_string ())) (Obj.magic (HxMap.create_string ())))))) else ());
   let exclusionsByRegionKey = Obj.magic (HxMap.create_string ()) in let summaries = Obj.magic (Backend_ocaml_MetalProfileVerifier.collectViolationSummaries (Obj.magic program)) in let _g = ref 0 in (
     ignore (try while !_g < HxArray.length summaries do try ignore (let summary = HxArray.get (Obj.magic summaries) (!_g) in (
@@ -175,13 +175,13 @@ let buildPlan = fun program profile -> try let __fallback_result_11 = let region
           __assign_3
         ));
         ignore (if not (!tempBool) then raise (HxRuntime.Hx_continue) else ());
-        let regionKey = let __call_arg_0_4 = Obj.obj (HxAnon.get summary "filePath") in let __call_arg_1_5 = Obj.obj (HxAnon.get summary "context") in regionKeyFromContext __call_arg_0_4 __call_arg_1_5 in let exclusions = ref (Obj.magic (HxMap.get_string exclusionsByRegionKey regionKey)) in (
+        let regionKey = let __call_arg_0_4 = Obj.obj (HxAnon.get summary "filePath") in let __call_arg_1_5 = Obj.obj (HxAnon.get summary "context") in regionKeyFromContext __call_arg_0_4 __call_arg_1_5 in let exclusions = ref (Obj.magic (HxMap.get_string (Obj.magic exclusionsByRegionKey) (regionKey : string))) in (
           ignore (if !exclusions == Obj.magic (HxRuntime.hx_null) then ignore ((
             ignore (let __assign_6 = Obj.magic (Obj.magic (let __arr_7 = HxArray.create () in __arr_7)) in (
               exclusions := __assign_6;
               __assign_6
             ));
-            HxMap.set_string exclusionsByRegionKey regionKey (!exclusions)
+            HxMap.set_string (Obj.magic exclusionsByRegionKey) (regionKey : string) (!exclusions)
           )) else ());
           appendExclusion (Obj.magic (!exclusions)) (Obj.obj (HxAnon.get summary "code") : string) (Obj.obj (HxAnon.get summary "reason") : string)
         )
@@ -195,10 +195,16 @@ let buildPlan = fun program profile -> try let __fallback_result_11 = let region
           ignore (_g := __new_9);
           __new_9
         ));
-        if not (HxMap.exists_string exclusionsByRegionKey (Obj.obj (HxAnon.get seed "regionKey"))) then ignore (HxMap.set_string autoMetalizedRegionKeys (Obj.obj (HxAnon.get seed "regionKey")) true) else ()
+        let tempBool1 = ref (false : bool) in let key = (Obj.obj (HxAnon.get seed "regionKey") : string) in (
+          ignore (let __assign_10 = HxMap.exists_string (Obj.magic exclusionsByRegionKey) (key : string) in (
+            tempBool1 := __assign_10;
+            __assign_10
+          ));
+          if not (!tempBool1) then ignore (let key = (Obj.obj (HxAnon.get seed "regionKey") : string) in HxMap.set_string (Obj.magic autoMetalizedRegionKeys) (key : string) true) else ()
+        )
       )) done);
       Backend_ocaml_PortableMetalizationPlan.create (profile : string) true (Obj.magic regionSeeds) (Obj.magic autoMetalizedRegionKeys) (Obj.magic exclusionsByRegionKey)
     )
   )
-) in Obj.magic __fallback_result_11 with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
+) in Obj.magic __fallback_result_12 with
+  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11

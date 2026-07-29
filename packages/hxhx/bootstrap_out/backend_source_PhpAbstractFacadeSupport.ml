@@ -52,7 +52,7 @@ let classFunctionsWithFacadeMethods = fun cls className scanClasses normalizeTyp
       ignore (_g := __new_2);
       __new_2
     ));
-    let key = let __call_callee_3 = normalizeMemberName in let __call_arg_0_4 = HxFunctionDecl.getName (Obj.magic fn) in __call_callee_3 __call_arg_0_4 in HxMap.set_string seen key true
+    let key = let __call_callee_3 = normalizeMemberName in let __call_arg_0_4 = HxFunctionDecl.getName (Obj.magic fn) in __call_callee_3 __call_arg_0_4 in HxMap.set_string (Obj.magic seen) (key : string) true
   )) done);
   ignore (if scanClasses == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let _g = ref 0 in (
@@ -71,8 +71,8 @@ let classFunctionsWithFacadeMethods = fun cls className scanClasses normalizeTyp
           ));
           ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) || HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new" then raise (HxRuntime.Hx_continue) else ());
           let methodName = let __call_callee_11 = normalizeMemberName in let __call_arg_0_12 = HxFunctionDecl.getName (Obj.magic fn) in __call_callee_11 __call_arg_0_12 in (
-            ignore (if HxMap.exists_string seen methodName then raise (HxRuntime.Hx_continue) else ());
-            ignore (HxMap.set_string seen methodName true);
+            ignore (if HxMap.exists_string (Obj.magic seen) (methodName : string) then raise (HxRuntime.Hx_continue) else ());
+            ignore (HxMap.set_string (Obj.magic seen) (methodName : string) true);
             HxArray.push out fn
           )
         )) with

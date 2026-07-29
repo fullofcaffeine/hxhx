@@ -263,8 +263,8 @@ let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArr
         tempString := __assign_23;
         __assign_23
       ));
-      let normalized = !tempString in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-        ignore (HxMap.set_string seen normalized true);
+      let normalized = !tempString in if HxString.length normalized = 0 || HxMap.exists_string (Obj.magic seen) (normalized : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+        ignore (HxMap.set_string (Obj.magic seen) (normalized : string) true);
         HxArray.push out normalized
       ))
     ))
@@ -290,8 +290,8 @@ let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArr
             tempString1 := __assign_33;
             __assign_33
           ));
-          let normalized = !tempString1 in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-            ignore (HxMap.set_string seen normalized true);
+          let normalized = !tempString1 in if HxString.length normalized = 0 || HxMap.exists_string (Obj.magic seen) (normalized : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+            ignore (HxMap.set_string (Obj.magic seen) (normalized : string) true);
             HxArray.push out normalized
           ))
         ))

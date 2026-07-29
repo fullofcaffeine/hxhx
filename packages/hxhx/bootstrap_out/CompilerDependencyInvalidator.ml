@@ -13,99 +13,107 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependen
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidator" } : t)
 
-let mark = fun modulePath strength reason strengthByModule reasonByModule queue -> ignore (try ignore (let previousStrength = HxMap.get_string strengthByModule modulePath in (
-  ignore (if previousStrength != HxRuntime.hx_null && (let __nullable_41 = previousStrength in let __nullable_42 = strength in if __nullable_41 == HxRuntime.hx_null then false else Obj.obj __nullable_41 >= __nullable_42) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (HxMap.set_string strengthByModule modulePath strength);
-  ignore (HxMap.set_string reasonByModule modulePath (HxArray.copy reason));
-  HxArray.push queue modulePath
+let mark = fun modulePath strength reason strengthByModule reasonByModule queue -> ignore (try ignore (let previousStrength = HxMap.get_string (Obj.magic strengthByModule) (modulePath : string) in (
+  ignore (if previousStrength != HxRuntime.hx_null && (let __nullable_42 = previousStrength in let __nullable_43 = strength in if __nullable_42 == HxRuntime.hx_null then false else Obj.obj __nullable_42 >= __nullable_43) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (HxMap.set_string (Obj.magic strengthByModule) (modulePath : string) strength);
+  let value = Obj.magic (HxArray.copy reason) in (
+    ignore (HxMap.set_string (Obj.magic reasonByModule) (modulePath : string) value);
+    HxArray.push queue modulePath
+  )
 )) with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43)
+  | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44)
 
 let moduleMap = fun snapshot -> let out = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (CompilerDependencySnapshot.getModules (Obj.magic snapshot) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
-      ignore (_g := __new_45);
-      __new_45
+    ignore (let __old_45 = !_g in let __new_46 = HxInt.add __old_45 1 in (
+      ignore (_g := __new_46);
+      __new_46
     ));
-    HxMap.set_string out ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath) hx_module
+    let key = ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath : string) in HxMap.set_string (Obj.magic out) (key : string) hx_module
   )) done);
   out
 )
 
 let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_68 = -1 in (
-    tempResult := __assign_68;
-    __assign_68
-  ) else if left > right then let __assign_69 = 1 in (
-    tempResult := __assign_69;
-    __assign_69
-  ) else let __assign_70 = 0 in (
+  ignore (if left < right then let __assign_70 = -1 in (
     tempResult := __assign_70;
     __assign_70
+  ) else if left > right then let __assign_71 = 1 in (
+    tempResult := __assign_71;
+    __assign_71
+  ) else let __assign_72 = 0 in (
+    tempResult := __assign_72;
+    __assign_72
   ));
   !tempResult
 ) : int)
 
-let unionModuleNames = fun previous current -> let names = Obj.magic (HxMap.create_string ()) in let name = HxIterator.of_array (HxMap.keys_string previous) in (
-  ignore (while (let __iter_46 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_46)) () do ignore (let name2 = ((let __iter_47 = name in fun () -> HxIterator.next (Obj.magic __iter_47)) () : string) in HxMap.set_string names name2 true) done);
-  let name = HxIterator.of_array (HxMap.keys_string current) in (
-    ignore (while (let __iter_48 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_48)) () do ignore (let name2 = ((let __iter_49 = name in fun () -> HxIterator.next (Obj.magic __iter_49)) () : string) in HxMap.set_string names name2 true) done);
-    let out = Obj.magic (HxArray.create ()) in let name = HxIterator.of_array (HxMap.keys_string names) in (
-      ignore (while (let __iter_50 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_50)) () do ignore (let name2 = ((let __iter_51 = name in fun () -> HxIterator.next (Obj.magic __iter_51)) () : string) in HxArray.push out name2) done);
+let unionModuleNames = fun previous current -> let names = Obj.magic (HxMap.create_string ()) in let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic previous))) in (
+  ignore (while (let __iter_47 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_47)) () do ignore (let name2 = ((let __iter_48 = name in fun () -> HxIterator.next (Obj.magic __iter_48)) () : string) in HxMap.set_string (Obj.magic names) (name2 : string) true) done);
+  let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic current))) in (
+    ignore (while (let __iter_49 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_49)) () do ignore (let name2 = ((let __iter_50 = name in fun () -> HxIterator.next (Obj.magic __iter_50)) () : string) in HxMap.set_string (Obj.magic names) (name2 : string) true) done);
+    let out = Obj.magic (HxArray.create ()) in let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic names))) in (
+      ignore (while (let __iter_51 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_51)) () do ignore (let name2 = ((let __iter_52 = name in fun () -> HxIterator.next (Obj.magic __iter_52)) () : string) in HxArray.push out name2) done);
       ignore (HxArray.sort out compareText);
       out
     )
   )
 )
 
-let compareEdges = fun left right -> try let __fallback_result_67 = let tempNumber = ref (0 : int) in (
-  ignore (if CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic left : CompilerDependencyEdge.t).kind)) then let __assign_60 = 0 in (
-    tempNumber := __assign_60;
-    __assign_60
-  ) else let __assign_61 = 1 in (
-    tempNumber := __assign_61;
-    __assign_61
+let compareEdges = fun left right -> try let __fallback_result_69 = let tempNumber = ref (0 : int) in (
+  ignore (if CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic left : CompilerDependencyEdge.t).kind)) then let __assign_62 = 0 in (
+    tempNumber := __assign_62;
+    __assign_62
+  ) else let __assign_63 = 1 in (
+    tempNumber := __assign_63;
+    __assign_63
   ));
   let leftPriority = !tempNumber in let tempNumber1 = ref (0 : int) in (
-    ignore (if CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic right : CompilerDependencyEdge.t).kind)) then let __assign_62 = 0 in (
-      tempNumber1 := __assign_62;
-      __assign_62
-    ) else let __assign_63 = 1 in (
-      tempNumber1 := __assign_63;
-      __assign_63
+    ignore (if CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic right : CompilerDependencyEdge.t).kind)) then let __assign_64 = 0 in (
+      tempNumber1 := __assign_64;
+      __assign_64
+    ) else let __assign_65 = 1 in (
+      tempNumber1 := __assign_65;
+      __assign_65
     ));
     let rightPriority = !tempNumber1 in (
       ignore (if leftPriority < rightPriority then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
       ignore (if leftPriority > rightPriority then raise (HxRuntime.Hx_return (Obj.repr 1)) else ());
-      let __call_arg_0_64 = CompilerDependencyEdge.canonicalKey (Obj.magic left) () in let __call_arg_1_65 = CompilerDependencyEdge.canonicalKey (Obj.magic right) () in compareText __call_arg_0_64 __call_arg_1_65
+      let __call_arg_0_66 = CompilerDependencyEdge.canonicalKey (Obj.magic left) () in let __call_arg_1_67 = CompilerDependencyEdge.canonicalKey (Obj.magic right) () in compareText __call_arg_0_66 __call_arg_1_67
     )
   )
-) in Obj.magic __fallback_result_67 with
-  | HxRuntime.Hx_return __ret_66 -> Obj.obj __ret_66
+) in Obj.magic __fallback_result_69 with
+  | HxRuntime.Hx_return __ret_68 -> Obj.obj __ret_68
 
 let reverseEdgeMap = fun previous current -> let byKey = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (CompilerDependencySnapshot.getEdges (Obj.magic previous) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let edge = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_52 = !_g in let __new_53 = HxInt.add __old_52 1 in (
-      ignore (_g := __new_53);
-      __new_53
+    ignore (let __old_53 = !_g in let __new_54 = HxInt.add __old_53 1 in (
+      ignore (_g := __new_54);
+      __new_54
     ));
-    HxMap.set_string byKey (CompilerDependencyEdge.canonicalKey (Obj.magic edge) ()) edge
+    let key = (CompilerDependencyEdge.canonicalKey (Obj.magic edge) () : string) in HxMap.set_string (Obj.magic byKey) (key : string) edge
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (CompilerDependencySnapshot.getEdges (Obj.magic current) ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let edge = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_54 = !_g in let __new_55 = HxInt.add __old_54 1 in (
-        ignore (_g := __new_55);
-        __new_55
+      ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
+        ignore (_g := __new_56);
+        __new_56
       ));
-      HxMap.set_string byKey (CompilerDependencyEdge.canonicalKey (Obj.magic edge) ()) edge
+      let key = (CompilerDependencyEdge.canonicalKey (Obj.magic edge) () : string) in HxMap.set_string (Obj.magic byKey) (key : string) edge
     )) done);
-    let reverse = Obj.magic (HxMap.create_string ()) in let edge = HxIterator.of_array (HxMap.values_string byKey) in (
-      ignore (while (let __iter_56 = edge in fun () -> HxIterator.hasNext (Obj.magic __iter_56)) () do ignore (let edge2 = Obj.magic ((let __iter_57 = edge in fun () -> HxIterator.next (Obj.magic __iter_57)) ()) in let edges = Obj.magic (HxMap.get_string reverse ((Obj.magic edge2 : CompilerDependencyEdge.t).providerModule)) in if edges == Obj.magic (HxRuntime.hx_null) then ignore (let created = Obj.magic (HxArray.create ()) in (
-        ignore (HxArray.push created edge2);
-        HxMap.set_string reverse ((Obj.magic edge2 : CompilerDependencyEdge.t).providerModule) created
-      )) else ignore (HxArray.push edges edge2)) done);
-      let edges = HxIterator.of_array (HxMap.values_string reverse) in (
-        ignore (while (let __iter_58 = edges in fun () -> HxIterator.hasNext (Obj.magic __iter_58)) () do ignore (let edges2 = Obj.magic ((let __iter_59 = edges in fun () -> HxIterator.next (Obj.magic __iter_59)) ()) in HxArray.sort edges2 compareEdges) done);
+    let reverse = Obj.magic (HxMap.create_string ()) in let edge = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic byKey))) in (
+      ignore (while (let __iter_57 = edge in fun () -> HxIterator.hasNext (Obj.magic __iter_57)) () do ignore (let edge2 = Obj.magic ((let __iter_58 = edge in fun () -> HxIterator.next (Obj.magic __iter_58)) ()) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : CompilerDependencyEdge.t HxArray.t) in let key = ((Obj.magic edge2 : CompilerDependencyEdge.t).providerModule : string) in (
+        ignore (let __assign_59 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic reverse) (key : string))) in (
+          tempMaybeArray := __assign_59;
+          __assign_59
+        ));
+        let edges = Obj.magic (!tempMaybeArray) in if edges == Obj.magic (HxRuntime.hx_null) then ignore (let created = Obj.magic (HxArray.create ()) in (
+          ignore (HxArray.push created edge2);
+          let key = ((Obj.magic edge2 : CompilerDependencyEdge.t).providerModule : string) in HxMap.set_string (Obj.magic reverse) (key : string) created
+        )) else ignore (HxArray.push edges edge2)
+      )) done);
+      let edges = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic reverse))) in (
+        ignore (while (let __iter_60 = edges in fun () -> HxIterator.hasNext (Obj.magic __iter_60)) () do ignore (let edges2 = Obj.magic ((let __iter_61 = edges in fun () -> HxIterator.next (Obj.magic __iter_61)) ()) in HxArray.sort edges2 compareEdges) done);
         reverse
       )
     )
@@ -120,28 +128,28 @@ let compare = fun previous current -> (
         ignore (_g := __new_2);
         __new_2
       ));
-      let before = Obj.magic (HxMap.get_string previousModules modulePath) in let after = Obj.magic (HxMap.get_string currentModules modulePath) in (
+      let before = Obj.magic (HxMap.get_string (Obj.magic previousModules) (modulePath : string)) in let after = Obj.magic (HxMap.get_string (Obj.magic currentModules) (modulePath : string)) in (
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic before : CompilerTypedModuleRevision.t).sourceOriginRevision) ((Obj.magic after : CompilerTypedModuleRevision.t).sourceOriginRevision)) then ignore ((
           ignore (HxArray.push sourceOriginChanges modulePath);
-          HxMap.set_string sourceOriginChanged modulePath true
+          HxMap.set_string (Obj.magic sourceOriginChanged) (modulePath : string) true
         )) else ());
         ignore (if before != Obj.magic (HxRuntime.hx_null) && after != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic before : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic after : CompilerTypedModuleRevision.t).conditionalCompilation)) ())) then ignore ((
           ignore (HxArray.push conditionalCompilationChanges modulePath);
-          HxMap.set_string conditionalCompilationChanged modulePath true
+          HxMap.set_string (Obj.magic conditionalCompilationChanged) (modulePath : string) true
         )) else ());
         ignore (if before != Obj.magic (HxRuntime.hx_null) && after != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic before : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic after : CompilerTypedModuleRevision.t).generatedDeclarations)) ())) then ignore ((
           ignore (HxArray.push generatedDeclarationChanges modulePath);
-          HxMap.set_string generatedDeclarationsChanged modulePath true
+          HxMap.set_string (Obj.magic generatedDeclarationsChanged) (modulePath : string) true
         )) else ());
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic before : CompilerTypedModuleRevision.t).publicInterfaceRevision) ((Obj.magic after : CompilerTypedModuleRevision.t).publicInterfaceRevision)) then ignore ((
           ignore (HxArray.push publicChanges modulePath);
-          HxMap.set_string publicChanged modulePath true
+          HxMap.set_string (Obj.magic publicChanged) (modulePath : string) true
         )) else ());
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic before : CompilerTypedModuleRevision.t).implementationRevision) ((Obj.magic after : CompilerTypedModuleRevision.t).implementationRevision)) then ignore ((
           ignore (HxArray.push implementationChanges modulePath);
-          HxMap.set_string implementationChanged modulePath true
+          HxMap.set_string (Obj.magic implementationChanged) (modulePath : string) true
         )) else ());
-        if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic before : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic after : CompilerTypedModuleRevision.t).sourceRevision)) || HxMap.exists_string conditionalCompilationChanged modulePath || HxMap.exists_string generatedDeclarationsChanged modulePath then ignore (HxMap.set_string directSourceChanged modulePath true) else ()
+        if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic before : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic after : CompilerTypedModuleRevision.t).sourceRevision)) || HxMap.exists_string (Obj.magic conditionalCompilationChanged) (modulePath : string) || HxMap.exists_string (Obj.magic generatedDeclarationsChanged) (modulePath : string) then ignore (HxMap.set_string (Obj.magic directSourceChanged) (modulePath : string) true) else ()
       )
     )) done);
     let reverseEdges = Obj.magic (reverseEdgeMap (Obj.magic previous) (Obj.magic current)) in let strengthByModule = Obj.magic (HxMap.create_string ()) in let reasonByModule = Obj.magic (HxMap.create_string ()) in let queue = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
@@ -150,12 +158,12 @@ let compare = fun previous current -> (
           ignore (_g := __new_4);
           __new_4
         ));
-        ignore (if not (HxMap.exists_string directSourceChanged modulePath) then raise (HxRuntime.Hx_continue) else ());
-        if HxMap.exists_string sourceOriginChanged modulePath then ignore (let before = Obj.magic (HxMap.get_string previousModules modulePath) in let after = Obj.magic (HxMap.get_string currentModules modulePath) in let tempNumber = ref (0 : int) in (
-          ignore (if HxMap.exists_string publicChanged modulePath then let __assign_5 = 2 in (
+        ignore (if not (HxMap.exists_string (Obj.magic directSourceChanged) (modulePath : string)) then raise (HxRuntime.Hx_continue) else ());
+        if HxMap.exists_string (Obj.magic sourceOriginChanged) (modulePath : string) then ignore (let before = Obj.magic (HxMap.get_string (Obj.magic previousModules) (modulePath : string)) in let after = Obj.magic (HxMap.get_string (Obj.magic currentModules) (modulePath : string)) in let tempNumber = ref (0 : int) in (
+          ignore (if HxMap.exists_string (Obj.magic publicChanged) (modulePath : string) then let __assign_5 = 2 in (
             tempNumber := __assign_5;
             __assign_5
-          ) else if HxMap.exists_string implementationChanged modulePath then let __assign_6 = 1 in (
+          ) else if HxMap.exists_string (Obj.magic implementationChanged) (modulePath : string) then let __assign_6 = 1 in (
             tempNumber := __assign_6;
             __assign_6
           ) else let __assign_7 = 0 in (
@@ -184,11 +192,11 @@ let compare = fun previous current -> (
               ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
             )
           )
-        )) else ignore (if HxMap.exists_string conditionalCompilationChanged modulePath then ignore (let before = Obj.magic (HxMap.get_string previousModules modulePath) in let after = Obj.magic (HxMap.get_string currentModules modulePath) in let tempNumber1 = ref (0 : int) in (
-          ignore (if HxMap.exists_string publicChanged modulePath then let __assign_13 = 2 in (
+        )) else ignore (if HxMap.exists_string (Obj.magic conditionalCompilationChanged) (modulePath : string) then ignore (let before = Obj.magic (HxMap.get_string (Obj.magic previousModules) (modulePath : string)) in let after = Obj.magic (HxMap.get_string (Obj.magic currentModules) (modulePath : string)) in let tempNumber1 = ref (0 : int) in (
+          ignore (if HxMap.exists_string (Obj.magic publicChanged) (modulePath : string) then let __assign_13 = 2 in (
             tempNumber1 := __assign_13;
             __assign_13
-          ) else if HxMap.exists_string implementationChanged modulePath then let __assign_14 = 1 in (
+          ) else if HxMap.exists_string (Obj.magic implementationChanged) (modulePath : string) then let __assign_14 = 1 in (
             tempNumber1 := __assign_14;
             __assign_14
           ) else let __assign_15 = 0 in (
@@ -226,11 +234,11 @@ let compare = fun previous current -> (
               ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
             )
           )
-        )) else ignore (if HxMap.exists_string generatedDeclarationsChanged modulePath then ignore (let tempNumber2 = ref (0 : int) in (
-          ignore (if HxMap.exists_string publicChanged modulePath then let __assign_24 = 2 in (
+        )) else ignore (if HxMap.exists_string (Obj.magic generatedDeclarationsChanged) (modulePath : string) then ignore (let tempNumber2 = ref (0 : int) in (
+          ignore (if HxMap.exists_string (Obj.magic publicChanged) (modulePath : string) then let __assign_24 = 2 in (
             tempNumber2 := __assign_24;
             __assign_24
-          ) else if HxMap.exists_string implementationChanged modulePath then let __assign_25 = 1 in (
+          ) else if HxMap.exists_string (Obj.magic implementationChanged) (modulePath : string) then let __assign_25 = 1 in (
             tempNumber2 := __assign_25;
             __assign_25
           ) else let __assign_26 = 0 in (
@@ -241,10 +249,10 @@ let compare = fun previous current -> (
             ignore (HxArray.push __arr_27 ("generated-declarations-changed:" ^ HxString.toStdString modulePath));
             __arr_27
           ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
-        )) else ignore (if HxMap.exists_string publicChanged modulePath then ignore (mark (modulePath : string) 2 (Obj.magic (let __arr_28 = HxArray.create () in (
+        )) else ignore (if HxMap.exists_string (Obj.magic publicChanged) (modulePath : string) then ignore (mark (modulePath : string) 2 (Obj.magic (let __arr_28 = HxArray.create () in (
           ignore (HxArray.push __arr_28 ("public-interface-changed:" ^ HxString.toStdString modulePath));
           __arr_28
-        ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)) else ignore (if HxMap.exists_string implementationChanged modulePath then ignore (mark (modulePath : string) 1 (Obj.magic (let __arr_29 = HxArray.create () in (
+        ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)) else ignore (if HxMap.exists_string (Obj.magic implementationChanged) (modulePath : string) then ignore (mark (modulePath : string) 1 (Obj.magic (let __arr_29 = HxArray.create () in (
           ignore (HxArray.push __arr_29 ("implementation-changed:" ^ HxString.toStdString modulePath));
           __arr_29
         ))) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)) else ()))))
@@ -255,7 +263,7 @@ let compare = fun previous current -> (
         ignore (try while !cursor < HxArray.length queue do try ignore (let providerModule = (HxArray.get (Obj.magic queue) (let __old_30 = !cursor in let __new_31 = HxInt.add __old_30 1 in (
           ignore (cursor := __new_31);
           __old_30
-        )) : string) in let providerStrength = HxMap.get_string strengthByModule providerModule in let providerReason = Obj.magic (HxMap.get_string reasonByModule providerModule) in let edges = Obj.magic (HxMap.get_string reverseEdges providerModule) in (
+        )) : string) in let providerStrength = HxMap.get_string (Obj.magic strengthByModule) (providerModule : string) in let providerReason = Obj.magic (HxMap.get_string (Obj.magic reasonByModule) (providerModule : string)) in let edges = Obj.magic (HxMap.get_string (Obj.magic reverseEdges) (providerModule : string)) in (
           ignore (if providerStrength == HxRuntime.hx_null || providerReason == Obj.magic (HxRuntime.hx_null) || edges == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
           ignore (if let __nullable_32 = providerStrength in if __nullable_32 == HxRuntime.hx_null then false else Obj.obj __nullable_32 = 0 then raise (HxRuntime.Hx_continue) else ());
           let _g = ref 0 in try while !_g < HxArray.length edges do try ignore (let edge = Obj.magic (HxArray.get (Obj.magic edges) (!_g)) in (
@@ -264,17 +272,21 @@ let compare = fun previous current -> (
               __new_34
             ));
             ignore (if (let __nullable_35 = providerStrength in if __nullable_35 == HxRuntime.hx_null then false else Obj.obj __nullable_35 = 1) && not (CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) then raise (HxRuntime.Hx_continue) else ());
-            let tempNumber3 = ref (0 : int) in (
-              ignore (if HxMap.exists_string publicChanged ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule) then let __assign_36 = 2 in (
-                tempNumber3 := __assign_36;
+            let tempNumber3 = ref (0 : int) in let tempBool = ref (false : bool) in let key = ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule : string) in (
+              ignore (let __assign_36 = HxMap.exists_string (Obj.magic publicChanged) (key : string) in (
+                tempBool := __assign_36;
                 __assign_36
-              ) else let __assign_37 = 1 in (
+              ));
+              ignore (if !tempBool then let __assign_37 = 2 in (
                 tempNumber3 := __assign_37;
                 __assign_37
+              ) else let __assign_38 = 1 in (
+                tempNumber3 := __assign_38;
+                __assign_38
               ));
-              let consumerStrength = !tempNumber3 in let nextReason = Obj.magic (HxArray.concat providerReason (let __arr_38 = HxArray.create () in (
-                ignore (HxArray.push __arr_38 ((((((((HxString.toStdString (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) ^ ":") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule)) ^ "->") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).providerModule)) ^ ":") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).factIdentity)) ^ "@") ^ HxString.toStdString (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).phase)))));
-                __arr_38
+              let consumerStrength = !tempNumber3 in let nextReason = Obj.magic (HxArray.concat providerReason (let __arr_39 = HxArray.create () in (
+                ignore (HxArray.push __arr_39 ((((((((HxString.toStdString (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) ^ ":") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule)) ^ "->") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).providerModule)) ^ ":") ^ HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).factIdentity)) ^ "@") ^ HxString.toStdString (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).phase)))));
+                __arr_39
               ))) in mark ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule : string) consumerStrength (Obj.magic nextReason) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
             )
           )) with
@@ -283,8 +295,8 @@ let compare = fun previous current -> (
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        let invalidations = Obj.magic (HxArray.create ()) in let modulePath = HxIterator.of_array (HxMap.keys_string strengthByModule) in (
-          ignore (while (let __iter_39 = modulePath in fun () -> HxIterator.hasNext (Obj.magic __iter_39)) () do ignore (let modulePath2 = ((let __iter_40 = modulePath in fun () -> HxIterator.next (Obj.magic __iter_40)) () : string) in HxArray.push invalidations (CompilerDependencyInvalidation.create (modulePath2 : string) (Obj.magic (HxMap.get_string reasonByModule modulePath2)))) done);
+        let invalidations = Obj.magic (HxArray.create ()) in let modulePath = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic strengthByModule))) in (
+          ignore (while (let __iter_40 = modulePath in fun () -> HxIterator.hasNext (Obj.magic __iter_40)) () do ignore (let modulePath2 = ((let __iter_41 = modulePath in fun () -> HxIterator.next (Obj.magic __iter_41)) () : string) in HxArray.push invalidations (CompilerDependencyInvalidation.create (modulePath2 : string) (Obj.magic (HxMap.get_string (Obj.magic reasonByModule) (modulePath2 : string))))) done);
           CompilerDependencyComparison.create (Obj.magic sourceOriginChanges) (Obj.magic conditionalCompilationChanges) (Obj.magic generatedDeclarationChanges) (Obj.magic publicChanges) (Obj.magic implementationChanges) (Obj.magic invalidations)
         )
       )

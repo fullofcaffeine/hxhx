@@ -13,8 +13,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Main" } : t
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Main" } : t)
 
-let fatal = fun msg -> (
-  ignore (print_endline (HxString.toStdString msg));
+let fatal = fun msg -> let value = Obj.repr msg in (
+  ignore (HxSys.printlnValue value);
   ignore (HxSys.exit 1);
   Obj.magic (HxRuntime.hx_null)
 )
@@ -23,45 +23,117 @@ let isVersionQuery = fun args -> HxArray.length args = 1 && (HxString.equals (Hx
 
 let isHelpQuery = fun args -> HxArray.length args = 1 && (HxString.equals (HxArray.get (Obj.magic args) 0) "--help" || HxString.equals (HxArray.get (Obj.magic args) 0) "-help" || HxString.equals (HxArray.get (Obj.magic args) 0) "-h" || HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-help")
 
-let printHxhxHelp = fun () -> ignore ((
-  ignore (print_endline (("hxhx Compiler " ^ "4.3.7") ^ " (compatibility baseline)"));
-  ignore (print_endline "Usage: hxhx <target> [options] [hxml files and dot paths...]");
-  ignore (print_endline "");
-  ignore (print_endline "Target:");
-  ignore (print_endline "  --ocaml                              compile in native OCaml lane");
-  ignore (print_endline "  --ocaml-eval                         compile in delegated OCaml eval lane");
-  ignore (print_endline "  -js, --js <file>                     emit JavaScript in native lane");
-  ignore (print_endline "  --compat                             delegate to upstream stage0 haxe");
-  ignore (print_endline "");
-  ignore (print_endline "Core options:");
-  ignore (print_endline "  --version                            print compatibility version");
-  ignore (print_endline "  --help                               show hxhx supported-surface help");
-  ignore (print_endline "  --hxhx-help                          alias for --help");
-  ignore (print_endline "  --no-output                          skip target file emission");
-  ignore (print_endline "  --cwd <dir>                          run as if in the given directory");
-  ignore (print_endline "");
-  ignore (print_endline "hxhx options:");
-  ignore (print_endline "  --hxhx-list-targets                  list supported hxhx lane selectors");
-  ignore (print_endline "  --hxhx-strict-cli                    reject hxhx-only flags");
-  ignore (print_endline "  --hxhx-stage3 ...                    run native Stage3 driver directly");
-  ignore (print_endline "  --hxhx-customization <id>            enable explicit Stage3 customization");
-  ignore (print_endline "  --hxhx-no-emit                       typecheck only in Stage3 lane");
-  ignore (print_endline "  --hxhx-no-run                        emit/build without execution");
-  ignore (print_endline "  --hxhx-parse <File.hx>               parse a file via native parser seam");
-  ignore (print_endline "  --hxhx-selftest                      run internal selftest");
-  ignore (print_endline "");
-  ignore (print_endline "Plugin commands:");
-  ignore (print_endline "  plugin build <dir> [--out-dir <dir>] build a generated native plugin scaffold");
-  ignore (print_endline "  plugin test <dir> [--out-dir <dir>]  validate scaffold build/test markers");
-  ignore (print_endline "");
-  ignore (print_endline "Environment:");
-  ignore (print_endline "  HXHX_FORBID_STAGE0=1                 fail on any stage0 delegation path");
-  ignore (print_endline "  HAXE_BIN=<path>                      stage0 binary path for delegated flows");
-  ignore (print_endline "");
-  ignore (print_endline "Notes:");
-  ignore (print_endline "  - Removed flags: --target / --hxhx-target.");
-  ignore (print_endline "  - Legacy Flash/AS3 targets are intentionally unsupported.");
-  print_endline "  - Use --compat for explicit stage0 delegation."
+let printHxhxHelp = fun () -> ignore (let value = Obj.repr (("hxhx Compiler " ^ "4.3.7") ^ " (compatibility baseline)") in (
+  ignore (HxSys.printlnValue value);
+  let value = Obj.repr "Usage: hxhx <target> [options] [hxml files and dot paths...]" in (
+    ignore (HxSys.printlnValue value);
+    let value = Obj.repr "" in (
+      ignore (HxSys.printlnValue value);
+      let value = Obj.repr "Target:" in (
+        ignore (HxSys.printlnValue value);
+        let value = Obj.repr "  --ocaml                              compile in native OCaml lane" in (
+          ignore (HxSys.printlnValue value);
+          let value = Obj.repr "  --ocaml-eval                         compile in delegated OCaml eval lane" in (
+            ignore (HxSys.printlnValue value);
+            let value = Obj.repr "  -js, --js <file>                     emit JavaScript in native lane" in (
+              ignore (HxSys.printlnValue value);
+              let value = Obj.repr "  --compat                             delegate to upstream stage0 haxe" in (
+                ignore (HxSys.printlnValue value);
+                let value = Obj.repr "" in (
+                  ignore (HxSys.printlnValue value);
+                  let value = Obj.repr "Core options:" in (
+                    ignore (HxSys.printlnValue value);
+                    let value = Obj.repr "  --version                            print compatibility version" in (
+                      ignore (HxSys.printlnValue value);
+                      let value = Obj.repr "  --help                               show hxhx supported-surface help" in (
+                        ignore (HxSys.printlnValue value);
+                        let value = Obj.repr "  --hxhx-help                          alias for --help" in (
+                          ignore (HxSys.printlnValue value);
+                          let value = Obj.repr "  --no-output                          skip target file emission" in (
+                            ignore (HxSys.printlnValue value);
+                            let value = Obj.repr "  --cwd <dir>                          run as if in the given directory" in (
+                              ignore (HxSys.printlnValue value);
+                              let value = Obj.repr "" in (
+                                ignore (HxSys.printlnValue value);
+                                let value = Obj.repr "hxhx options:" in (
+                                  ignore (HxSys.printlnValue value);
+                                  let value = Obj.repr "  --hxhx-list-targets                  list supported hxhx lane selectors" in (
+                                    ignore (HxSys.printlnValue value);
+                                    let value = Obj.repr "  --hxhx-strict-cli                    reject hxhx-only flags" in (
+                                      ignore (HxSys.printlnValue value);
+                                      let value = Obj.repr "  --hxhx-stage3 ...                    run native Stage3 driver directly" in (
+                                        ignore (HxSys.printlnValue value);
+                                        let value = Obj.repr "  --hxhx-customization <id>            enable explicit Stage3 customization" in (
+                                          ignore (HxSys.printlnValue value);
+                                          let value = Obj.repr "  --hxhx-no-emit                       typecheck only in Stage3 lane" in (
+                                            ignore (HxSys.printlnValue value);
+                                            let value = Obj.repr "  --hxhx-no-run                        emit/build without execution" in (
+                                              ignore (HxSys.printlnValue value);
+                                              let value = Obj.repr "  --hxhx-parse <File.hx>               parse a file via native parser seam" in (
+                                                ignore (HxSys.printlnValue value);
+                                                let value = Obj.repr "  --hxhx-selftest                      run internal selftest" in (
+                                                  ignore (HxSys.printlnValue value);
+                                                  let value = Obj.repr "" in (
+                                                    ignore (HxSys.printlnValue value);
+                                                    let value = Obj.repr "Plugin commands:" in (
+                                                      ignore (HxSys.printlnValue value);
+                                                      let value = Obj.repr "  plugin build <dir> [--out-dir <dir>] build a generated native plugin scaffold" in (
+                                                        ignore (HxSys.printlnValue value);
+                                                        let value = Obj.repr "  plugin test <dir> [--out-dir <dir>]  validate scaffold build/test markers" in (
+                                                          ignore (HxSys.printlnValue value);
+                                                          let value = Obj.repr "" in (
+                                                            ignore (HxSys.printlnValue value);
+                                                            let value = Obj.repr "Environment:" in (
+                                                              ignore (HxSys.printlnValue value);
+                                                              let value = Obj.repr "  HXHX_FORBID_STAGE0=1                 fail on any stage0 delegation path" in (
+                                                                ignore (HxSys.printlnValue value);
+                                                                let value = Obj.repr "  HAXE_BIN=<path>                      stage0 binary path for delegated flows" in (
+                                                                  ignore (HxSys.printlnValue value);
+                                                                  let value = Obj.repr "" in (
+                                                                    ignore (HxSys.printlnValue value);
+                                                                    let value = Obj.repr "Notes:" in (
+                                                                      ignore (HxSys.printlnValue value);
+                                                                      let value = Obj.repr "  - Removed flags: --target / --hxhx-target." in (
+                                                                        ignore (HxSys.printlnValue value);
+                                                                        let value = Obj.repr "  - Legacy Flash/AS3 targets are intentionally unsupported." in (
+                                                                          ignore (HxSys.printlnValue value);
+                                                                          let value = Obj.repr "  - Use --compat for explicit stage0 delegation." in HxSys.printlnValue value
+                                                                        )
+                                                                      )
+                                                                    )
+                                                                  )
+                                                                )
+                                                              )
+                                                            )
+                                                          )
+                                                        )
+                                                      )
+                                                    )
+                                                  )
+                                                )
+                                              )
+                                            )
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
 ))
 
 let hxhxRootDir = fun () -> (try let envRoot = (HxSys.getEnv ("HXHX_ROOT" : string) : string) in (
@@ -79,15 +151,27 @@ let repoScriptPath = fun (relPath : string) -> (let scriptPath = (Haxe_io_Path.j
   scriptPath
 ) : string)
 
-let printPluginHelp = fun () -> ignore ((
-  ignore (print_endline "Usage:");
-  ignore (print_endline "  hxhx plugin build <dir> [--out-dir <dir>]");
-  ignore (print_endline "  hxhx plugin test <dir> [--out-dir <dir>]");
-  ignore (print_endline "");
-  ignore (print_endline "Notes:");
-  ignore (print_endline "  - These wrappers are repo-local developer workflows.");
-  ignore (print_endline "  - <dir> may be a plugin scaffold root or a direct plugin/hxhx source dir.");
-  print_endline "  - Set HXHX_ROOT when invoking from outside the repo root."
+let printPluginHelp = fun () -> ignore (let value = Obj.repr "Usage:" in (
+  ignore (HxSys.printlnValue value);
+  let value = Obj.repr "  hxhx plugin build <dir> [--out-dir <dir>]" in (
+    ignore (HxSys.printlnValue value);
+    let value = Obj.repr "  hxhx plugin test <dir> [--out-dir <dir>]" in (
+      ignore (HxSys.printlnValue value);
+      let value = Obj.repr "" in (
+        ignore (HxSys.printlnValue value);
+        let value = Obj.repr "Notes:" in (
+          ignore (HxSys.printlnValue value);
+          let value = Obj.repr "  - These wrappers are repo-local developer workflows." in (
+            ignore (HxSys.printlnValue value);
+            let value = Obj.repr "  - <dir> may be a plugin scaffold root or a direct plugin/hxhx source dir." in (
+              ignore (HxSys.printlnValue value);
+              let value = Obj.repr "  - Set HXHX_ROOT when invoking from outside the repo root." in HxSys.printlnValue value
+            )
+          )
+        )
+      )
+    )
+  )
 ))
 
 let runRepoScript = fun scriptRelPath scriptArgs -> ignore (let scriptPath = let __call_arg_0_3 = scriptRelPath in repoScriptPath __call_arg_0_3 in let tempNumber = ref (0 : int) in let args = Obj.magic (HxArray.concat (let __arr_4 = HxArray.create () in (
@@ -553,8 +637,8 @@ let runOcamlInterpLike = fun haxeBin forwarded outOverride -> ignore (let expand
 ))
 
 let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in (
-  ignore (if HxArray.length args = 0 then ignore ((
-    ignore (print_endline "OK hxhx");
+  ignore (if HxArray.length args = 0 then ignore (let value = Obj.repr "OK hxhx" in (
+    ignore (HxSys.printlnValue value);
     raise (HxRuntime.Hx_return_void)
   )) else ());
   let sep = HxArray.indexOf args "--" 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
@@ -587,9 +671,13 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
         )) else ());
         ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-selftest" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
-          ignore (print_endline (HxString.toStdString (Hxhx_macro_MacroHostClient.selftest ())));
-          ignore (print_endline "OK hxhx macro rpc");
-          raise (HxRuntime.Hx_return_void)
+          let v = Obj.repr (Hxhx_macro_MacroHostClient.selftest ()) in let value = v in (
+            ignore (HxSys.printlnValue value);
+            let value = Obj.repr "OK hxhx macro rpc" in (
+              ignore (HxSys.printlnValue value);
+              raise (HxRuntime.Hx_return_void)
+            )
+          )
         ) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -605,9 +693,13 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
           ) else raise (__exn_135)) else ());
         ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-run" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
-          ignore (print_endline ("macro_run=" ^ HxString.toStdString (let __call_arg_0_140 = HxArray.get (Obj.magic args) 1 in Hxhx_macro_MacroHostClient.run __call_arg_0_140)));
-          ignore (print_endline "OK hxhx macro run");
-          raise (HxRuntime.Hx_return_void)
+          let v = Obj.repr ("macro_run=" ^ HxString.toStdString (let __call_arg_0_140 = HxArray.get (Obj.magic args) 1 in Hxhx_macro_MacroHostClient.run __call_arg_0_140)) in let value = v in (
+            ignore (HxSys.printlnValue value);
+            let value = Obj.repr "OK hxhx macro run" in (
+              ignore (HxSys.printlnValue value);
+              raise (HxRuntime.Hx_return_void)
+            )
+          )
         ) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -623,9 +715,13 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
           ) else raise (__exn_139)) else ());
         ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-get-type" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
-          ignore (print_endline ("macro_getType=" ^ HxString.toStdString (let __call_arg_0_145 = HxArray.get (Obj.magic args) 1 in Hxhx_macro_MacroHostClient.getType __call_arg_0_145)));
-          ignore (print_endline "OK hxhx macro getType");
-          raise (HxRuntime.Hx_return_void)
+          let v = Obj.repr ("macro_getType=" ^ HxString.toStdString (let __call_arg_0_145 = HxArray.get (Obj.magic args) 1 in Hxhx_macro_MacroHostClient.getType __call_arg_0_145)) in let value = v in (
+            ignore (HxSys.printlnValue value);
+            let value = Obj.repr "OK hxhx macro getType" in (
+              ignore (HxSys.printlnValue value);
+              raise (HxRuntime.Hx_return_void)
+            )
+          )
         ) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -662,13 +758,13 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
             ))
             | _ -> ignore (i := HxInt.add (!i) 1)) done);
           ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-parse" then ignore ((
-            ignore (if HxArray.length args <> 2 then ignore ((
-              ignore (print_endline "Usage: hxhx --hxhx-parse <path/to/File.hx>");
+            ignore (if HxArray.length args <> 2 then ignore (let value = Obj.repr "Usage: hxhx --hxhx-parse <path/to/File.hx>" in (
+              ignore (HxSys.printlnValue value);
               HxSys.exit 1
             )) else ());
             let path = (HxArray.get (Obj.magic args) 1 : string) in (
-              ignore (if not (HxFileSystem.exists (path : string)) then ignore ((
-                ignore (print_endline ("Missing file: " ^ HxString.toStdString path));
+              ignore (if not (HxFileSystem.exists (path : string)) then ignore (let value = Obj.repr ("Missing file: " ^ HxString.toStdString path) in (
+                ignore (HxSys.printlnValue value);
                 HxSys.exit 1
               )) else ());
               let src = (HxFile.getContent (path : string) : string) in let parseDebug = (HxSys.getEnv ("HXHX_PARSE_DEBUG" : string) : string) in (
@@ -700,8 +796,8 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
                     ignore _hx;
                     ()
                   ) else raise (__exn_154)) else ());
-                let decl = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null)))) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let toplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in (
-                  ignore (print_endline "parse=ok");
+                let decl = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null)))) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let toplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in let value = Obj.repr "parse=ok" in (
+                  ignore (HxSys.printlnValue value);
                   let tempString1 = ref (HxString.hx_null_string : string) in (
                     ignore (if HxString.length pkg = 0 then let __assign_155 = ("<none>" : string) in (
                       tempString1 := __assign_155;
@@ -710,29 +806,41 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
                       tempString1 := __assign_156;
                       __assign_156
                     ));
-                    ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
-                    ignore (print_endline ("imports=" ^ string_of_int (HxArray.length (HxArray.filter directives (HxModuleDirective.isImport)))));
-                    ignore (print_endline ("usings=" ^ string_of_int (HxArray.length (HxArray.filter directives (fun directive -> not (HxModuleDirective.isImport (Obj.magic directive)))))));
-                    ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls))));
-                    let tempString2 = ref (HxString.hx_null_string : string) in (
-                      ignore (if HxClassDecl.getHasStaticMain (Obj.magic cls) then let __assign_157 = "yes" in (
-                        tempString2 := __assign_157;
-                        __assign_157
-                      ) else let __assign_158 = "no" in (
-                        tempString2 := __assign_158;
-                        __assign_158
-                      ));
-                      ignore (print_endline ("hasStaticMain=" ^ HxString.toStdString (!tempString2)));
-                      let tempString3 = ref (HxString.hx_null_string : string) in (
-                        ignore (if toplevelMain then let __assign_159 = "yes" in (
-                          tempString3 := __assign_159;
-                          __assign_159
-                        ) else let __assign_160 = "no" in (
-                          tempString3 := __assign_160;
-                          __assign_160
-                        ));
-                        ignore (print_endline ("hasToplevelMain=" ^ HxString.toStdString (!tempString3)));
-                        raise (HxRuntime.Hx_return_void)
+                    let v = Obj.repr ("package=" ^ HxString.toStdString (!tempString1)) in let value = v in (
+                      ignore (HxSys.printlnValue value);
+                      let v = Obj.repr ("imports=" ^ string_of_int (HxArray.length (HxArray.filter directives (HxModuleDirective.isImport)))) in let value = v in (
+                        ignore (HxSys.printlnValue value);
+                        let v = Obj.repr ("usings=" ^ string_of_int (HxArray.length (HxArray.filter directives (fun directive -> not (HxModuleDirective.isImport (Obj.magic directive)))))) in let value = v in (
+                          ignore (HxSys.printlnValue value);
+                          let v = Obj.repr ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls))) in let value = v in (
+                            ignore (HxSys.printlnValue value);
+                            let tempString2 = ref (HxString.hx_null_string : string) in (
+                              ignore (if HxClassDecl.getHasStaticMain (Obj.magic cls) then let __assign_157 = "yes" in (
+                                tempString2 := __assign_157;
+                                __assign_157
+                              ) else let __assign_158 = "no" in (
+                                tempString2 := __assign_158;
+                                __assign_158
+                              ));
+                              let v = Obj.repr ("hasStaticMain=" ^ HxString.toStdString (!tempString2)) in let value = v in (
+                                ignore (HxSys.printlnValue value);
+                                let tempString3 = ref (HxString.hx_null_string : string) in (
+                                  ignore (if toplevelMain then let __assign_159 = "yes" in (
+                                    tempString3 := __assign_159;
+                                    __assign_159
+                                  ) else let __assign_160 = "no" in (
+                                    tempString3 := __assign_160;
+                                    __assign_160
+                                  ));
+                                  let value = Obj.repr ("hasToplevelMain=" ^ HxString.toStdString (!tempString3)) in (
+                                    ignore (HxSys.printlnValue value);
+                                    raise (HxRuntime.Hx_return_void)
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
                       )
                     )
                   )
@@ -742,11 +850,13 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
           )) else ());
           ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-selftest" then ignore ((
             ignore (CompilerDriver.run ());
-            ignore (print_endline "OK hxhx selftest");
-            raise (HxRuntime.Hx_return_void)
+            let value = Obj.repr "OK hxhx selftest" in (
+              ignore (HxSys.printlnValue value);
+              raise (HxRuntime.Hx_return_void)
+            )
           )) else ());
-          ignore (if isVersionQuery (Obj.magic (!forwarded)) then ignore ((
-            ignore (print_endline "4.3.7");
+          ignore (if isVersionQuery (Obj.magic (!forwarded)) then ignore (let value = Obj.repr "4.3.7" in (
+            ignore (HxSys.printlnValue value);
             raise (HxRuntime.Hx_return_void)
           )) else ());
           ignore (if isHelpQuery (Obj.magic args) then ignore ((
@@ -759,7 +869,7 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
                 ignore (_g := __new_162);
                 __new_162
               ));
-              print_endline (HxString.toStdString lane)
+              let value = Obj.repr lane in HxSys.printlnValue value
             )) done);
             raise (HxRuntime.Hx_return_void)
           )) else ());
@@ -801,10 +911,10 @@ let main = fun () -> ignore (try ignore (let args = Obj.magic (HxSys.args ()) in
                     )
                   ) else raise (__exn_170));
                 let plan = Obj.magic (!tempCliRoutePlan) in (
-                  ignore (if let __call_arg_0_172 = "HXHX_TRACE_BACKEND_SELECTION" in isTrueEnv __call_arg_0_172 then ignore ((
-                    ignore (print_endline ("route_lane=" ^ HxString.toStdString (Obj.obj (HxAnon.get plan "lane"))));
-                    ignore (if Obj.obj (HxAnon.get plan "backendId") != Obj.magic (HxRuntime.hx_null) then ignore (print_endline ("route_backend_id=" ^ HxString.toStdString (Obj.obj (HxAnon.get plan "backendId")))) else ());
-                    if HxRuntime.unbox_bool_or_obj (HxAnon.get plan "stage0Required") then ignore (print_endline ("stage0_haxe_bin=" ^ HxString.toStdString haxeBin)) else ()
+                  ignore (if let __call_arg_0_172 = "HXHX_TRACE_BACKEND_SELECTION" in isTrueEnv __call_arg_0_172 then ignore (let v = Obj.repr ("route_lane=" ^ HxString.toStdString (Obj.obj (HxAnon.get plan "lane"))) in let value = v in (
+                    ignore (HxSys.printlnValue value);
+                    ignore (if Obj.obj (HxAnon.get plan "backendId") != Obj.magic (HxRuntime.hx_null) then ignore (let v = Obj.repr ("route_backend_id=" ^ HxString.toStdString (Obj.obj (HxAnon.get plan "backendId"))) in let value = v in HxSys.printlnValue value) else ());
+                    if HxRuntime.unbox_bool_or_obj (HxAnon.get plan "stage0Required") then ignore (let value = Obj.repr ("stage0_haxe_bin=" ^ HxString.toStdString haxeBin) in HxSys.printlnValue value) else ()
                   )) else ());
                   let _g = (Obj.obj (HxAnon.get plan "lane") : string) in match _g with
                     | "native-cpp" | "native-cs" | "native-hl" | "native-java" | "native-js" | "native-lua" | "native-neko" | "native-ocaml" | "native-php" | "native-python" -> ignore ((

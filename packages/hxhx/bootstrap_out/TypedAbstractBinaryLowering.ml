@@ -362,10 +362,10 @@ let rec substituteExpression = fun expression place parameters renamedLocals -> 
       tempResult := __assign_66;
       __assign_66
     )
-    | TypedExpr.LocalRead -> let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let renamed = (HxMap.get_string renamedLocals (HxArray.get (Obj.magic texts) 0) : string) in if renamed != Obj.magic (HxRuntime.hx_null) then let __assign_67 = Obj.magic (TypedExpr.localRead (renamed : string) (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()))) in (
+    | TypedExpr.LocalRead -> let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let renamed = (HxMap.get_string (Obj.magic renamedLocals) (HxArray.get (Obj.magic texts) 0 : string) : string) in if renamed != Obj.magic (HxRuntime.hx_null) then let __assign_67 = Obj.magic (TypedExpr.localRead (renamed : string) (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()))) in (
       tempResult := __assign_67;
       __assign_67
-    ) else let parameter = Obj.magic (HxMap.get_string parameters (HxArray.get (Obj.magic texts) 0)) in if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_68 = Obj.magic expression in (
+    ) else let parameter = Obj.magic (HxMap.get_string (Obj.magic parameters) (HxArray.get (Obj.magic texts) 0 : string)) in if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_68 = Obj.magic expression in (
       tempResult := __assign_68;
       __assign_68
     ) else let __assign_69 = Obj.magic parameter in (
@@ -437,7 +437,7 @@ let rec lowerInlineStatements = fun statements place parameters renamedLocals st
         __assign_83
       ));
       let hx_initializer = Obj.magic (!tempTypedExpr) in (
-        ignore (HxMap.set_string renamedLocals (HxArray.get (Obj.magic names) 0) renamed);
+        ignore (HxMap.set_string (Obj.magic renamedLocals) (HxArray.get (Obj.magic names) 0 : string) renamed);
         let tempString = ref (HxString.hx_null_string : string) in (
           ignore (if HxArray.length names > 1 then let __assign_84 = (HxArray.get (Obj.magic names) 1 : string) in (
             tempString := __assign_84;
@@ -466,10 +466,10 @@ let rec lowerInlineStatements = fun statements place parameters renamedLocals st
       )
     ))
     | TypedStmt.Expression -> ignore (HxArray.push (Obj.obj (HxAnon.get state "expressions")) (lowerExpression (Obj.magic (substituteExpression (Obj.magic (HxArray.get (Obj.magic expressions) 0)) place (Obj.magic parameters) (Obj.magic renamedLocals))) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic counter)))
-    | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ((("Inline abstract binary helper contains unsupported typed statement " ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr (TypedStmt.getTag (Obj.magic statement) ())))) ^ ": ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"])
+    | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ((("Inline abstract binary helper contains unsupported typed statement " ^ HxString.toStdString (HxDynamic.toStdString (Obj.repr (TypedStmt.getTag (Obj.magic statement) ())))) ^ ": ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"])
 )) done) with
   | HxRuntime.Hx_return __ret_89 -> Obj.obj __ret_89)
-and inlineCall = fun binding left right helpers index filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let helper = Obj.magic (HxMap.get_string helpers (helperKey (Obj.magic declaration))) in (
+and inlineCall = fun binding left right helpers index filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let key = (helperKey (Obj.magic declaration) : string) in let tempMaybeTypedFunction = Obj.magic (HxMap.get_string (Obj.magic helpers) (key : string)) in let helper = Obj.magic tempMaybeTypedFunction in (
   ignore (if helper == Obj.magic (HxRuntime.hx_null) then ignore (let tempHxPos = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
     ignore (if TypedExpr.getPosition (Obj.magic left) () == Obj.magic (HxRuntime.hx_null) then let __assign_90 = Obj.magic (HxPos.unknown ()) in (
       tempHxPos := __assign_90;
@@ -550,8 +550,8 @@ and inlineCall = fun binding left right helpers index filePath counter -> let in
                 )));
                 let parameterNames = Obj.magic (TyFunSig.getArgNames (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) ()) in (
                   ignore (if HxArray.length parameterNames <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ("Inline abstract binary helper lost its explicit parameter: " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"]) else ());
-                  let parameters = Obj.magic (HxMap.create_string ()) in (
-                    ignore (HxMap.set_string parameters (HxArray.get (Obj.magic parameterNames) 0) (TypedExpr.localRead (argumentName : string) (Obj.magic expectedArgumentType) (Obj.magic (TypedExpr.getPosition (Obj.magic argument) ()))));
+                  let parameters = Obj.magic (HxMap.create_string ()) in let value = Obj.magic (TypedExpr.localRead (argumentName : string) (Obj.magic expectedArgumentType) (Obj.magic (TypedExpr.getPosition (Obj.magic argument) ()))) in (
+                    ignore (HxMap.set_string (Obj.magic parameters) (HxArray.get (Obj.magic parameterNames) 0 : string) value);
                     let state = let __anon_107 = HxAnon.create () in (
                       ignore (HxAnon.set __anon_107 "expressions" (Obj.repr prefix));
                       ignore (HxAnon.set __anon_107 "returned" (HxRuntime.box_bool false));
@@ -720,7 +720,7 @@ let collectHelpers = fun classes helpers -> ignore (try ignore ((
         ignore (_g2 := __new_145);
         __new_145
       ));
-      let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in if declaration != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string helpers (helperKey (Obj.magic declaration)) typedFunction) else ()
+      let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in if declaration != Obj.magic (HxRuntime.hx_null) then ignore (let key = (helperKey (Obj.magic declaration) : string) in HxMap.set_string (Obj.magic helpers) (key : string) typedFunction) else ()
     )) done
   )) done
 )) with

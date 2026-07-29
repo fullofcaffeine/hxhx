@@ -43,6 +43,6 @@ let runWithEventLoop = fun job -> ignore (try ignore (let thread = Obj.magic (cu
 
 let createWithEventLoop = fun job -> spawn (fun () -> ignore (runWithEventLoop job))
 
-let readMessage = fun block -> HxThread.thread_read_message block
+let readMessage = fun (block : bool) -> (HxThread.thread_read_message block : Obj.t)
 
 let processEvents = fun () -> ignore (Sys_thread_EventLoop.loop (Obj.magic (get_events (Obj.magic (current ())) ())) ())

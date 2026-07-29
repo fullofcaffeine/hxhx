@@ -88,7 +88,7 @@ let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (ignore (t
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "String") then ignore ((
-    ignore (quote (Obj.magic self) (HxRuntime.dynamic_toStdString (Obj.magic (!resolved)) : string));
+    ignore (quote (Obj.magic self) (HxDynamic.toStdString (Obj.magic (!resolved)) : string));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   ignore (if let __isBool_16 = Obj.magic (!resolved) in if __isBool_16 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_16 then ignore (let tempString = ref (HxString.hx_null_string : string) in (
@@ -103,10 +103,10 @@ let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (ignore (t
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   ignore (if let __isInt_19 = Obj.magic (!resolved) in if __isInt_19 == HxRuntime.hx_null then false else Obj.is_int __isInt_19 && not (HxRuntime.is_boxed_bool __isInt_19) then ignore ((
-    ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (HxRuntime.dynamic_toStdString (Obj.magic (!resolved)))));
+    ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (HxDynamic.toStdString (Obj.magic (!resolved)))));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if let __isFloat_20 = Obj.magic (!resolved) in if __isFloat_20 == HxRuntime.hx_null then false else Obj.is_int __isFloat_20 && not (HxRuntime.is_boxed_bool __isFloat_20) || Obj.tag __isFloat_20 = Obj.double_tag then ignore (let floatValue = Std.parseFloat (HxRuntime.dynamic_toStdString (Obj.magic (!resolved)) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  ignore (if let __isFloat_20 = Obj.magic (!resolved) in if __isFloat_20 == HxRuntime.hx_null then false else Obj.is_int __isFloat_20 && not (HxRuntime.is_boxed_bool __isFloat_20) || Obj.tag __isFloat_20 = Obj.double_tag then ignore (let floatValue = Std.parseFloat (HxDynamic.toStdString (Obj.magic (!resolved)) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
     ignore (if Math.isFinite floatValue then let __assign_21 = (string_of_float floatValue : string) in (
       tempString1 := __assign_21;
       __assign_21
@@ -121,14 +121,14 @@ let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (ignore (t
     ignore (writeArray (Obj.magic self) (Obj.magic arrayValue));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "haxe.ds.StringMap") then ignore (let mapValue = Obj.magic (Obj.obj (Obj.magic (!resolved))) in let objectValue = let __anon_23 = HxAnon.create () in __anon_23 in let field = HxIterator.of_array (HxMap.keys_string mapValue) in (
-    ignore (while (let __iter_24 = field in fun () -> HxIterator.hasNext (Obj.magic __iter_24)) () do ignore (let field2 = ((let __iter_25 = field in fun () -> HxIterator.next (Obj.magic __iter_25)) () : string) in HxAnon.set objectValue (HxString.toStdString field2) (HxMap.get_string mapValue field2)) done);
+  ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "HxMap") then ignore (let mapValue = Obj.magic (Obj.obj (Obj.magic (!resolved))) in let objectValue = let __anon_23 = HxAnon.create () in __anon_23 in let field = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic mapValue))) in (
+    ignore (while (let __iter_24 = field in fun () -> HxIterator.hasNext (Obj.magic __iter_24)) () do ignore (let field2 = ((let __iter_25 = field in fun () -> HxIterator.next (Obj.magic __iter_25)) () : string) in HxAnon.set objectValue (HxString.toStdString field2) (HxMap.get_string (Obj.magic mapValue) (field2 : string))) done);
     ignore (writeObject (Obj.magic self) objectValue (Obj.magic (HxAnon.fields objectValue)));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   let className = (HxType.getClassName (HxType.getClass (Obj.magic (!resolved))) : string) in (
     ignore (if HxString.equals className "Date" then ignore ((
-      ignore (quote (Obj.magic self) (HxRuntime.dynamic_toStdString (Obj.magic (!resolved)) : string));
+      ignore (quote (Obj.magic self) (HxDynamic.toStdString (Obj.magic (!resolved)) : string));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
     ignore (if HxReflect.isEnumValue (Obj.magic (!resolved)) then ignore ((

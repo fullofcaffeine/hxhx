@@ -185,7 +185,7 @@ let encodeParsedModule = fun pm -> let decl = Obj.magic (ParsedModule.getDecl (O
         tempArray := __assign_7;
         __assign_7
       ));
-      let args = Obj.magic (!tempArray) in HxArray.push items (buildfieldpayloaditem_create (HxFunctionDecl.getName (Obj.magic fn) : string) ("fun" : string) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (HxRuntime.dynamic_toStdString (Obj.repr (HxFunctionDecl.getVisibility (Obj.magic fn))) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) ()) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) ()) false ("" : string) ("" : string) ("" : string) ("" : string) (Obj.magic args) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
+      let args = Obj.magic (!tempArray) in HxArray.push items (buildfieldpayloaditem_create (HxFunctionDecl.getName (Obj.magic fn) : string) ("fun" : string) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (HxDynamic.toStdString (Obj.repr (HxFunctionDecl.getVisibility (Obj.magic fn))) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) ()) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) ()) false ("" : string) ("" : string) ("" : string) ("" : string) (Obj.magic args) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
     )
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
@@ -202,7 +202,7 @@ let encodeParsedModule = fun pm -> let decl = Obj.magic (ParsedModule.getDecl (O
           tempString := __assign_11;
           __assign_11
         ));
-        let kind = !tempString in HxArray.push items (buildfieldpayloaditem_create (HxFieldDecl.getName (Obj.magic f) : string) (kind : string) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxRuntime.dynamic_toStdString (Obj.repr (HxFieldDecl.getVisibility (Obj.magic f))) : string) (Obj.magic (HxFieldDecl.getMetadata (Obj.magic f))) (HxPos.getIndex (Obj.magic (HxFieldDecl.getPos (Obj.magic f))) ()) (HxPos.getIndex (Obj.magic (HxFieldDecl.getEndPos (Obj.magic f))) ()) (HxFieldDecl.getIsFinal (Obj.magic f)) (HxFieldDecl.getPropertyGet (Obj.magic f) : string) (HxFieldDecl.getPropertySet (Obj.magic f) : string) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (HxFieldDecl.getInitText (Obj.magic f) : string) (Obj.magic (let __arr_12 = HxArray.create () in __arr_12)) ("" : string) ("" : string))
+        let kind = !tempString in HxArray.push items (buildfieldpayloaditem_create (HxFieldDecl.getName (Obj.magic f) : string) (kind : string) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxDynamic.toStdString (Obj.repr (HxFieldDecl.getVisibility (Obj.magic f))) : string) (Obj.magic (HxFieldDecl.getMetadata (Obj.magic f))) (HxPos.getIndex (Obj.magic (HxFieldDecl.getPos (Obj.magic f))) ()) (HxPos.getIndex (Obj.magic (HxFieldDecl.getEndPos (Obj.magic f))) ()) (HxFieldDecl.getIsFinal (Obj.magic f)) (HxFieldDecl.getPropertyGet (Obj.magic f) : string) (HxFieldDecl.getPropertySet (Obj.magic f) : string) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (HxFieldDecl.getInitText (Obj.magic f) : string) (Obj.magic (let __arr_12 = HxArray.create () in __arr_12)) ("" : string) ("" : string))
       )
     )) done);
     let parts = Obj.magic (HxArray.create ()) in let tempString1 = ref (HxString.hx_null_string : string) in (

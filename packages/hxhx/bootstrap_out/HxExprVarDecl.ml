@@ -42,7 +42,7 @@ let make = fun name typeHint hx_initializer position isFinal isStatic -> let isF
   )
 )
 
-let invalidMessage = fun declaration -> "HxExpr.EVars contains a child that is not EVariableDeclaration: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr declaration))
+let invalidMessage = fun declaration -> "HxExpr.EVars contains a child that is not EVariableDeclaration: " ^ HxString.toStdString (HxDynamic.toStdString (Obj.repr declaration))
 
 let getName = fun declaration -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if (match declaration with

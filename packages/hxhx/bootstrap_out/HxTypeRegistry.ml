@@ -3551,6 +3551,18 @@ let init () : unit =
   HxType.register_class_static_fields "sys.thread.RegularEvent" [];
   HxType.register_class_instance_fields "sys.thread.Thread" [ "get_events"; "handle"; "sendMessage" ];
   HxType.register_class_static_fields "sys.thread.Thread" [ "createWithEventLoop"; "current"; "processEvents"; "readMessage"; "runWithEventLoop"; "spawn" ];
+  HxDynamic.register_class_stringifier "HxParseError" (fun value -> HxParseError.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "HxPos" (fun value -> HxPos.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "StringBuf" (fun value -> StringBuf.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "TyDeclarationId" (fun value -> TyDeclarationId.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "TyNominalTypeId" (fun value -> TyNominalTypeId.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "TyType" (fun value -> TyType.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "TyperError" (fun value -> TyperError.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "backend.js.JsWriter" (fun value -> Backend_js_JsWriter.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.Exception" (fun value -> Haxe_Exception.toString__impl (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.exceptions.PosException" (fun value -> Haxe_exceptions_PosException.toString__impl (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.io.Eof" (fun value -> Haxe_io_Eof.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.io.Path" (fun value -> Haxe_io_Path.toString (Obj.obj value) ());
   HxType.register_class_super "ModuleLoader" (HxType.class_ "LazyTypeLoader");
   HxType.register_class_super "TyAbstractInfo" (HxType.class_ "TyNominalInfo");
   HxType.register_class_super "TyClassInfo" (HxType.class_ "TyNominalInfo");

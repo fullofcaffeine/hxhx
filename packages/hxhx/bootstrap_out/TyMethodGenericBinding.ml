@@ -36,7 +36,7 @@ let inferableTypeParameters = fun declaration -> try let __fallback_result_10 = 
         ignore (_g1 := __new_8);
         __new_8
       ));
-      if not (HxMap.exists_string constraints name) then ignore (HxArray.push _g name) else ()
+      if not (HxMap.exists_string (Obj.magic constraints) (name : string)) then ignore (HxArray.push _g name) else ()
     )) done);
     _g
   )
@@ -59,14 +59,14 @@ let rec collect = fun expected actual methodTypeParameters bindings__local -> tr
   let parameter = (parameterName (Obj.magic expected) (Obj.magic methodTypeParameters) : string) in (
     ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (if TyType.isUnknown (Obj.magic actual) () || TyType.isDynamic (Obj.magic actual) () then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-      let previous = Obj.magic (HxMap.get_string bindings__local parameter) in (
+      let previous = Obj.magic (HxMap.get_string (Obj.magic bindings__local) (parameter : string)) in (
         ignore (if previous == Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (HxMap.set_string bindings__local parameter actual);
+          ignore (HxMap.set_string (Obj.magic bindings__local) (parameter : string) actual);
           raise (HxRuntime.Hx_return (Obj.repr true))
         )) else ());
         let unified = Obj.magic (TyType.unify (Obj.magic previous) (Obj.magic actual)) in (
           ignore (if unified == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-          ignore (HxMap.set_string bindings__local parameter unified);
+          ignore (HxMap.set_string (Obj.magic bindings__local) (parameter : string) unified);
           raise (HxRuntime.Hx_return (Obj.repr true))
         )
       )
@@ -118,7 +118,7 @@ let argumentsAreConsistent = fun hx_sig argTypes suppliedArity methodTypeParamet
 let rec hasUnbound = fun hx_type methodTypeParameters inferred -> try let __fallback_result_28 = (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let parameter = (parameterName (Obj.magic hx_type) (Obj.magic methodTypeParameters) : string) in (
-    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (not (HxMap.exists_string inferred parameter)))) else ());
+    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (not (HxMap.exists_string (Obj.magic inferred) (parameter : string))))) else ());
     ignore (if TyType.isNullable (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (hasUnbound (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (Obj.magic methodTypeParameters) (Obj.magic inferred)))) else ());
     ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore (let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -173,7 +173,7 @@ let substitutedGenericDisplay = fun source arguments -> let base = ref (let __ca
 let rec substitute = fun hx_type methodTypeParameters inferred -> try let __fallback_result_48 = (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.unknown ())))) else ());
   let parameter = (parameterName (Obj.magic hx_type) (Obj.magic methodTypeParameters) : string) in (
-    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore (let bound = Obj.magic (HxMap.get_string inferred parameter) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore (let bound = Obj.magic (HxMap.get_string (Obj.magic inferred) (parameter : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
       ignore (if bound == Obj.magic (HxRuntime.hx_null) then let __assign_37 = Obj.magic (TyType.unknown ()) in (
         tempResult := __assign_37;
         __assign_37

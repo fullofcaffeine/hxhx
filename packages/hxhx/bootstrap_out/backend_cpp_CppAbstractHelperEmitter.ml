@@ -18,10 +18,16 @@ let configureReceiver = fun scope representation ownerHaxeName -> ignore ((
     HxAnon.set scope "erasedAbstractThisName" (Obj.repr __assign_1);
     __assign_1
   ));
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) "__hxhx_abstract_this" (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) ()));
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypeHints")) "__hxhx_abstract_this" ownerHaxeName);
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNames")) "__hxhx_abstract_this" "__hxhx_abstract_this");
-  HxMap.set_string (Obj.obj (HxAnon.get scope "localNameCounts")) "__hxhx_abstract_this" 1
+  let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in let value = (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) in (
+    ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) value);
+    let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypeHints")) in (
+      ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) ownerHaxeName);
+      let _this = Obj.magic (Obj.obj (HxAnon.get scope "localNames")) in (
+        ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) "__hxhx_abstract_this");
+        let _this = Obj.magic (Obj.obj (HxAnon.get scope "localNameCounts")) in HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) 1
+      )
+    )
+  )
 ))
 
 let renderInstanceHelper = fun representation returnType helperName sourceParameters bodyLines -> let parameters = Obj.magic (let __arr_2 = HxArray.create () in (

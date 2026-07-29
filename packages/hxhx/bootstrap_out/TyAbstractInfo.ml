@@ -69,8 +69,8 @@ let getImplicitFromTypes__impl = fun (self : t) () -> HxArray.copy ((Obj.magic s
 
 let getImplicitToTypes__impl = fun (self : t) () -> HxArray.copy ((Obj.magic self : t).implicitToTypes)
 
-let getAllUnaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let candidates = HxIterator.of_array (HxMap.values_string ((Obj.magic self : t).unaryOperators)) in (
-  ignore (while (let __iter_22 = candidates in fun () -> HxIterator.hasNext (Obj.magic __iter_22)) () do ignore (let candidates2 = Obj.magic ((let __iter_23 = candidates in fun () -> HxIterator.next (Obj.magic __iter_23)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
+let getAllUnaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
+  ignore (while (let __iter_22 = tempIterator in fun () -> HxIterator.hasNext (Obj.magic __iter_22)) () do ignore (let candidates2 = Obj.magic ((let __iter_23 = tempIterator in fun () -> HxIterator.next (Obj.magic __iter_23)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
     ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
       ignore (_g := __new_25);
       __new_25
@@ -80,8 +80,8 @@ let getAllUnaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArr
   out
 )
 
-let addBinaryOperator__impl = fun (self : t) (info : TyAbstractBinaryOperatorInfo.t) -> ignore (ignore (let key = (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).binaryOperators) key then let __assign_26 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).binaryOperators) key)) in (
+let addBinaryOperator__impl = fun (self : t) (info : TyAbstractBinaryOperatorInfo.t) -> ignore (ignore (let key = (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in let tempBool = HxMap.exists_string (Obj.magic _this) (key : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in let __assign_26 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
     tempMaybeArray := __assign_26;
     __assign_26
   ) else let __assign_27 = Obj.magic (Obj.magic (let __arr_28 = HxArray.create () in __arr_28)) in (
@@ -90,12 +90,12 @@ let addBinaryOperator__impl = fun (self : t) (info : TyAbstractBinaryOperatorInf
   ));
   let candidates = Obj.magic (!tempMaybeArray) in (
     ignore (HxArray.push candidates info);
-    HxMap.set_string ((Obj.magic self : t).binaryOperators) key candidates
+    let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in HxMap.set_string (Obj.magic _this) (key : string) candidates
   )
 )))
 
-let getBinaryOperators__impl = fun (self : t) (op : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).binaryOperators) op then let __assign_29 = Obj.magic (HxMap.get_string ((Obj.magic self : t).binaryOperators) op) in (
+let getBinaryOperators__impl = fun (self : t) (op : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in let tempBool = HxMap.exists_string (Obj.magic _this) (op : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in let __assign_29 = Obj.magic (HxMap.get_string (Obj.magic _this) (op : string)) in (
     tempResult := __assign_29;
     __assign_29
   ) else let __assign_30 = Obj.magic (let __arr_31 = HxArray.create () in __arr_31) in (
@@ -105,8 +105,8 @@ let getBinaryOperators__impl = fun (self : t) (op : string) -> let tempResult = 
   !tempResult
 )
 
-let getAllBinaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let candidates = HxIterator.of_array (HxMap.values_string ((Obj.magic self : t).binaryOperators)) in (
-  ignore (while (let __iter_32 = candidates in fun () -> HxIterator.hasNext (Obj.magic __iter_32)) () do ignore (let candidates2 = Obj.magic ((let __iter_33 = candidates in fun () -> HxIterator.next (Obj.magic __iter_33)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
+let getAllBinaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).binaryOperators) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
+  ignore (while (let __iter_32 = tempIterator in fun () -> HxIterator.hasNext (Obj.magic __iter_32)) () do ignore (let candidates2 = Obj.magic ((let __iter_33 = tempIterator in fun () -> HxIterator.next (Obj.magic __iter_33)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
     ignore (let __old_34 = !_g in let __new_35 = HxInt.add __old_34 1 in (
       ignore (_g := __new_35);
       __new_35
@@ -127,8 +127,8 @@ let unaryKey = fun op fixity -> let tempString = ref (HxString.hx_null_string : 
   (HxString.toStdString (HxUnaryOperatorTools.sourceToken (Obj.magic op)) ^ "|") ^ HxString.toStdString (!tempString)
 )
 
-let addUnaryOperator__impl = fun (self : t) (info : TyAbstractOperatorInfo.t) -> ignore (ignore (let key = (unaryKey (Obj.magic (TyAbstractOperatorInfo.getOperator (Obj.magic info) ())) (Obj.magic (TyAbstractOperatorInfo.getFixity (Obj.magic info) ())) : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_16 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key)) in (
+let addUnaryOperator__impl = fun (self : t) (info : TyAbstractOperatorInfo.t) -> ignore (ignore (let key = (unaryKey (Obj.magic (TyAbstractOperatorInfo.getOperator (Obj.magic info) ())) (Obj.magic (TyAbstractOperatorInfo.getFixity (Obj.magic info) ())) : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in let tempBool = HxMap.exists_string (Obj.magic _this) (key : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in let __assign_16 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
     tempMaybeArray := __assign_16;
     __assign_16
   ) else let __assign_17 = Obj.magic (Obj.magic (let __arr_18 = HxArray.create () in __arr_18)) in (
@@ -137,12 +137,12 @@ let addUnaryOperator__impl = fun (self : t) (info : TyAbstractOperatorInfo.t) ->
   ));
   let candidates = Obj.magic (!tempMaybeArray) in (
     ignore (HxArray.push candidates info);
-    HxMap.set_string ((Obj.magic self : t).unaryOperators) key candidates
+    let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in HxMap.set_string (Obj.magic _this) (key : string) candidates
   )
 )))
 
-let getUnaryOperators__impl = fun (self : t) (op : HxUnaryOperator.hxunaryoperator) (fixity : HxUnaryFixity.hxunaryfixity) -> let key = (unaryKey (Obj.magic op) (Obj.magic fixity) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_19 = Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key) in (
+let getUnaryOperators__impl = fun (self : t) (op : HxUnaryOperator.hxunaryoperator) (fixity : HxUnaryFixity.hxunaryfixity) -> let key = (unaryKey (Obj.magic op) (Obj.magic fixity) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in let tempBool = HxMap.exists_string (Obj.magic _this) (key : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).unaryOperators) in let __assign_19 = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in (
     tempResult := __assign_19;
     __assign_19
   ) else let __assign_20 = Obj.magic (let __arr_21 = HxArray.create () in __arr_21) in (

@@ -36,7 +36,7 @@ let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_2
         ignore (_g := __new_8);
         __new_8
       ));
-      let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in HxMap.set_string generatedFunctionNames key true
+      let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in HxMap.set_string (Obj.magic generatedFunctionNames) (key : string) true
     )) done);
     let generatedFieldNames = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "fields")) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -44,7 +44,7 @@ let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_2
           ignore (_g := __new_10);
           __new_10
         ));
-        let key = (HxFieldDecl.getName (Obj.magic field) : string) in HxMap.set_string generatedFieldNames key true
+        let key = (HxFieldDecl.getName (Obj.magic field) : string) in HxMap.set_string (Obj.magic generatedFieldNames) (key : string) true
       )) done);
       let mergedFunctions = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic oldClass)) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -53,7 +53,7 @@ let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_2
             __new_12
           ));
           let tempBool = ref (false : bool) in let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
-            ignore (let __assign_13 = HxMap.exists_string generatedFunctionNames key in (
+            ignore (let __assign_13 = HxMap.exists_string (Obj.magic generatedFunctionNames) (key : string) in (
               tempBool := __assign_13;
               __assign_13
             ));
@@ -75,7 +75,7 @@ let applyGeneratedMembers = fun hx_module members -> try let __fallback_result_2
                 __new_17
               ));
               let tempBool1 = ref (false : bool) in let key = (HxFieldDecl.getName (Obj.magic field) : string) in (
-                ignore (let __assign_18 = HxMap.exists_string generatedFieldNames key in (
+                ignore (let __assign_18 = HxMap.exists_string (Obj.magic generatedFieldNames) (key : string) in (
                   tempBool1 := __assign_18;
                   __assign_18
                 ));

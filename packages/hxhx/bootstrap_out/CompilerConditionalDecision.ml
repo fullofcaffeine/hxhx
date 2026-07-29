@@ -33,12 +33,12 @@ let normalizeInputs = fun values -> let byAccess = Obj.magic (HxMap.create_strin
       __new_14
     ));
     ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation decision contains a null definition input") ["Dynamic"]) else ());
-    let accessKey = (CompilerConditionalDefineInput.accessKey (Obj.magic value) () : string) in let previous = Obj.magic (HxMap.get_string byAccess accessKey) in (
+    let accessKey = (CompilerConditionalDefineInput.accessKey (Obj.magic value) () : string) in let previous = Obj.magic (HxMap.get_string (Obj.magic byAccess) (accessKey : string)) in (
       ignore (if previous != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic previous) ()) (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic value) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conditional-compilation decision contains conflicting observations for definition: " ^ HxString.toStdString ((Obj.magic value : CompilerConditionalDefineInput.t).name))) ["Dynamic"]) else ());
-      HxMap.set_string byAccess accessKey value
+      HxMap.set_string (Obj.magic byAccess) (accessKey : string) value
     )
   )) done) else ());
-  let _g = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in let key = HxIterator.of_array (HxMap.keys_string byAccess) in (
+  let _g = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic byAccess))) in (
     ignore (while (let __iter_16 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_16)) () do ignore (let key2 = ((let __iter_17 = key in fun () -> HxIterator.next (Obj.magic __iter_17)) () : string) in HxArray.push _g key2) done);
     let tempArray = Obj.magic _g in let keys = Obj.magic tempArray in (
       ignore (HxArray.sort keys compareText);
@@ -48,7 +48,7 @@ let normalizeInputs = fun values -> let byAccess = Obj.magic (HxMap.create_strin
             ignore (_g1 := __new_20);
             __new_20
           ));
-          HxArray.push _g (HxMap.get_string byAccess key)
+          HxArray.push _g (HxMap.get_string (Obj.magic byAccess) (key : string))
         )) done);
         let tempResult = Obj.magic _g in tempResult
       )

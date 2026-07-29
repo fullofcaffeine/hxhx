@@ -215,18 +215,18 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (sel
         let token = (HxString.substr ((self : t).input) start (HxInt.sub ((self : t).index) start) : string) in (
           ignore (if !isFloat then ignore (let parsedFloat = Std.parseFloat (token : string) in (
             ignore (if Math.isNaN parsedFloat then ignore (fail (Obj.magic self) ("invalid float literal" : string)) else ());
-            raise (HxRuntime.Hx_return (Obj.repr parsedFloat))
+            raise (HxRuntime.Hx_return (Obj.repr (compilerjsonvaluebox_create (Obj.repr parsedFloat))))
           )) else ());
           let parsedInt = Std.parseInt (token : string) in (
             ignore (if parsedInt == HxRuntime.hx_null then ignore (fail (Obj.magic self) ("invalid int literal" : string)) else ());
-            parsedInt
+            compilerjsonvaluebox_create parsedInt
           )
         )
       )
     )
   )
 ) in Obj.magic __fallback_result_56 with
-  | HxRuntime.Hx_return __ret_55 -> Obj.magic __ret_55
+  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
 
 let expectKeyword = fun self (keyword : string) -> ignore (ignore (let _g = ref 0 in let _g1 = HxString.length keyword in while !_g < _g1 do ignore (let i = let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
   ignore (_g := __new_65);
@@ -345,14 +345,14 @@ let rec parseValue = fun self () -> (
         value := __assign_11;
         __assign_11
       )
-    )) else ignore (if code = 45 || code >= 48 && code <= 57 then ignore (let __assign_12 = Obj.magic (compilerjsonvaluebox_create (parseNumber (Obj.magic self) ())) in (
+    )) else ignore (if code = 45 || code >= 48 && code <= 57 then ignore (let __assign_12 = Obj.magic (parseNumber (Obj.magic self) ()) in (
       value := __assign_12;
       __assign_12
     )) else ignore (fail (Obj.magic self) ("invalid token" : string)))))))));
     !value
   )
 )
-and parseObject = fun self () -> try let __fallback_result_15 = (
+and parseObject = fun self () -> (try let __fallback_result_15 = (
   ignore (expectCode (Obj.magic self) 123);
   ignore (skipWhitespace (Obj.magic self) ());
   let hx_object = let __anon_13 = HxAnon.create () in __anon_13 in (
@@ -372,7 +372,7 @@ and parseObject = fun self () -> try let __fallback_result_15 = (
     hx_object
   )
 ) in Obj.magic __fallback_result_15 with
-  | HxRuntime.Hx_return __ret_14 -> Obj.magic __ret_14
+  | HxRuntime.Hx_return __ret_14 -> Obj.magic __ret_14 : Obj.t)
 and parseArray = fun self () -> try let __fallback_result_18 = (
   ignore (expectCode (Obj.magic self) 91);
   ignore (skipWhitespace (Obj.magic self) ());
@@ -392,13 +392,13 @@ and parseArray = fun self () -> try let __fallback_result_18 = (
 ) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let parseDocument = fun self () -> (
+let parseDocument = fun self () -> ((
   ignore (skipWhitespace (Obj.magic self) ());
   let value = Obj.magic (parseValue (Obj.magic self) ()) in (
     ignore (skipWhitespace (Obj.magic self) ());
     ignore (if (self : t).index < (self : t).length then ignore (fail (Obj.magic self) ("unexpected trailing token" : string)) else ());
     (Obj.magic value : compilerjsonvaluebox_t).value
   )
-)
+) : Obj.t)
 
-let parse = fun content -> parseDocument (Obj.magic (create (content : string))) ()
+let parse = fun (content : string) -> (let __call_receiver_87 = create (content : string) in parseDocument __call_receiver_87 () : Obj.t)

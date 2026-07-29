@@ -176,11 +176,19 @@ let providerTypesForPluginInternal = fun snapshot pluginId sourceLabel allowEmpt
       __new_60
     ));
     ignore (if not (HxString.equals (Obj.obj (HxAnon.get row "pluginId")) expectedPluginId) then ignore (let __call_arg_0_61 = sourceLabel in let __call_arg_1_62 = ((((("registration pluginId mismatch: expected `" ^ HxString.toStdString expectedPluginId) ^ "`, got `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "pluginId"))) ^ "` (providerType `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "`)" in fail __call_arg_0_61 __call_arg_1_62) else ());
-    ignore (if HxMap.exists_string seenProviderTypes (Obj.obj (HxAnon.get row "providerType")) then ignore (let __call_arg_0_63 = sourceLabel in let __call_arg_1_64 = ((("duplicate providerType registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" in fail __call_arg_0_63 __call_arg_1_64) else ());
-    ignore (HxMap.set_string seenProviderTypes (Obj.obj (HxAnon.get row "providerType")) true);
-    HxArray.push out (Obj.obj (HxAnon.get row "providerType"))
+    let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get row "providerType") : string) in (
+      ignore (let __assign_63 = HxMap.exists_string (Obj.magic seenProviderTypes) (key : string) in (
+        tempBool := __assign_63;
+        __assign_63
+      ));
+      ignore (if !tempBool then ignore (let __call_arg_0_64 = sourceLabel in let __call_arg_1_65 = ((("duplicate providerType registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "providerType"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" in fail __call_arg_0_64 __call_arg_1_65) else ());
+      let key = (Obj.obj (HxAnon.get row "providerType") : string) in (
+        ignore (HxMap.set_string (Obj.magic seenProviderTypes) (key : string) true);
+        HxArray.push out (Obj.obj (HxAnon.get row "providerType"))
+      )
+    )
   )) done);
-  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (let __call_arg_0_65 = sourceLabel in let __call_arg_1_66 = ("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any provider types" in fail __call_arg_0_65 __call_arg_1_66) else ());
+  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (let __call_arg_0_66 = sourceLabel in let __call_arg_1_67 = ("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any provider types" in fail __call_arg_0_66 __call_arg_1_67) else ());
   out
 )
 
@@ -192,18 +200,18 @@ let captureProviderTypesForPlugin = fun pluginId sourceLabel -> let snapshot = (
 
 let beginCapture = fun () -> ignore (HxHxBackendPluginHost.clear ())
 
-let assertNoDescriptorConflicts = fun pluginId specs sourceLabel -> ignore (let normalizedPluginId = let __call_arg_0_67 = pluginId in let __call_arg_1_68 = "pluginId" in let __call_arg_2_69 = sourceLabel in requireToken __call_arg_0_67 __call_arg_1_68 __call_arg_2_69 in (
-  ignore (if specs == Obj.magic (HxRuntime.hx_null) || HxArray.length specs = 0 then ignore (let __call_arg_0_70 = sourceLabel in let __call_arg_1_71 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` did not provide backend registration specs" in fail __call_arg_0_70 __call_arg_1_71) else ());
+let assertNoDescriptorConflicts = fun pluginId specs sourceLabel -> ignore (let normalizedPluginId = let __call_arg_0_68 = pluginId in let __call_arg_1_69 = "pluginId" in let __call_arg_2_70 = sourceLabel in requireToken __call_arg_0_68 __call_arg_1_69 __call_arg_2_70 in (
+  ignore (if specs == Obj.magic (HxRuntime.hx_null) || HxArray.length specs = 0 then ignore (let __call_arg_0_71 = sourceLabel in let __call_arg_1_72 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` did not provide backend registration specs" in fail __call_arg_0_71 __call_arg_1_72) else ());
   let seenImplIds = Obj.magic (HxMap.create_string ()) in let targetToImpl = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in while !_g < HxArray.length specs do ignore (let spec = HxArray.get (Obj.magic specs) (!_g) in (
-    ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
-      ignore (_g := __new_73);
-      __new_73
+    ignore (let __old_73 = !_g in let __new_74 = HxInt.add __old_73 1 in (
+      ignore (_g := __new_74);
+      __new_74
     ));
-    ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_74 = sourceLabel in let __call_arg_1_75 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` produced invalid backend registration spec (descriptor/create required)" in fail __call_arg_0_74 __call_arg_1_75) else ());
-    let descriptor = Obj.obj (HxAnon.get spec "descriptor") in let implId = let __call_arg_0_76 = Obj.obj (HxAnon.get descriptor "implId") in let __call_arg_1_77 = "descriptor.implId" in let __call_arg_2_78 = sourceLabel in requireToken __call_arg_0_76 __call_arg_1_77 __call_arg_2_78 in let targetId = let __call_arg_0_79 = Obj.obj (HxAnon.get descriptor "id") in let __call_arg_1_80 = "descriptor.id" in let __call_arg_2_81 = sourceLabel in requireToken __call_arg_0_79 __call_arg_1_80 __call_arg_2_81 in (
-      ignore (if HxMap.exists_string seenImplIds implId then ignore (let __call_arg_0_82 = sourceLabel in let __call_arg_1_83 = ((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate implId `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_82 __call_arg_1_83) else ());
-      ignore (HxMap.set_string seenImplIds implId true);
-      let existingTargetImpl = (HxMap.get_string targetToImpl targetId : string) in if existingTargetImpl == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string targetToImpl targetId implId) else ignore (if not (HxString.equals existingTargetImpl implId) then ignore (let __call_arg_0_84 = sourceLabel in let __call_arg_1_85 = ((((((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate target id `") ^ HxString.toStdString targetId) ^ "` mapped to implIds `") ^ HxString.toStdString existingTargetImpl) ^ "` and `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_84 __call_arg_1_85) else ())
+    ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_75 = sourceLabel in let __call_arg_1_76 = ("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` produced invalid backend registration spec (descriptor/create required)" in fail __call_arg_0_75 __call_arg_1_76) else ());
+    let descriptor = Obj.obj (HxAnon.get spec "descriptor") in let implId = let __call_arg_0_77 = Obj.obj (HxAnon.get descriptor "implId") in let __call_arg_1_78 = "descriptor.implId" in let __call_arg_2_79 = sourceLabel in requireToken __call_arg_0_77 __call_arg_1_78 __call_arg_2_79 in let targetId = let __call_arg_0_80 = Obj.obj (HxAnon.get descriptor "id") in let __call_arg_1_81 = "descriptor.id" in let __call_arg_2_82 = sourceLabel in requireToken __call_arg_0_80 __call_arg_1_81 __call_arg_2_82 in (
+      ignore (if HxMap.exists_string (Obj.magic seenImplIds) (implId : string) then ignore (let __call_arg_0_83 = sourceLabel in let __call_arg_1_84 = ((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate implId `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_83 __call_arg_1_84) else ());
+      ignore (HxMap.set_string (Obj.magic seenImplIds) (implId : string) true);
+      let existingTargetImpl = (HxMap.get_string (Obj.magic targetToImpl) (targetId : string) : string) in if existingTargetImpl == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic targetToImpl) (targetId : string) implId) else ignore (if not (HxString.equals existingTargetImpl implId) then ignore (let __call_arg_0_85 = sourceLabel in let __call_arg_1_86 = ((((((("plugin `" ^ HxString.toStdString normalizedPluginId) ^ "` has duplicate target id `") ^ HxString.toStdString targetId) ^ "` mapped to implIds `") ^ HxString.toStdString existingTargetImpl) ^ "` and `") ^ HxString.toStdString implId) ^ "`" in fail __call_arg_0_85 __call_arg_1_86) else ())
     )
   )) done
 ))

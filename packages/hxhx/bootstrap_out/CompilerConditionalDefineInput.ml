@@ -88,8 +88,8 @@ let fromDefines = fun name2 access2 defines -> let tempString = ref (HxString.hx
     tempString := __assign_16;
     __assign_16
   ));
-  let normalized = !tempString in let present = HxString.length normalized > 0 && defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string defines normalized in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if present then let __assign_18 = Obj.magic (HxMap.get_string defines normalized : string) in (
+  let normalized = !tempString in let present = HxString.length normalized > 0 && defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic defines) (normalized : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if present then let __assign_18 = Obj.magic (HxMap.get_string (Obj.magic defines) (normalized : string) : string) in (
       tempMaybeString := __assign_18;
       __assign_18
     ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

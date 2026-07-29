@@ -344,36 +344,6 @@ patch_bootstrap_native_parser_expr_spacing() {
   run_bootstrap_patch_helper patch-native-parser-expr-spacing "$parser_path"
 }
 
-patch_bootstrap_emitter_typed_param_fallback() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: typed param fallback for emitted fn args' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-emitter-typed-param-fallback "$emitter_path"
-}
-
-patch_bootstrap_emitter_parsed_arg_type_overlay() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: parsed arg type overlay for tyByIdent' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-emitter-parsed-arg-type-overlay "$emitter_path"
-}
-
 patch_bootstrap_emitter_preapplied_sig_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -897,8 +867,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_hxparser_generic_function_decl "$build_dir"
   patch_bootstrap_native_parser_generic_arrow_constraints "$build_dir"
   patch_bootstrap_native_parser_expr_spacing "$build_dir"
-  patch_bootstrap_emitter_typed_param_fallback "$build_dir"
-  patch_bootstrap_emitter_parsed_arg_type_overlay "$build_dir"
   patch_bootstrap_emitter_allowed_ident_fallback "$build_dir"
   patch_bootstrap_emitter_typed_ty_map_copying "$build_dir"
   patch_bootstrap_emitter_typed_map_helper_obj_repr "$build_dir"

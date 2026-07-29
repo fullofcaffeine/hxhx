@@ -20,7 +20,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
     tempBool := __assign_7;
     __assign_7
   ));
-  ignore (if !tempBool then ignore (print_endline "stage3_driver=ocaml_backend_before_delegate_emit") else ());
+  ignore (if !tempBool then ignore (let value = Obj.repr "stage3_driver=ocaml_backend_before_delegate_emit" in HxSys.printlnValue value) else ());
   let __obj_8 = (Obj.magic self : t).delegate in (Obj.magic __obj_8 : Backend_TargetCoreBackend.t).emit (Obj.magic __obj_8) (Obj.magic program) (Obj.magic context)
 )
 
@@ -86,6 +86,6 @@ let emitBridge = fun backend program context -> let tempBool = ref (false : bool
     tempBool := __assign_18;
     __assign_18
   ));
-  ignore (if !tempBool then ignore (print_endline "stage3_driver=ocaml_emitBridge_before_emit") else ());
+  ignore (if !tempBool then ignore (let value = Obj.repr "stage3_driver=ocaml_emitBridge_before_emit" in HxSys.printlnValue value) else ());
   (Obj.magic backend : t).emit (Obj.magic backend) (Obj.magic program) (Obj.magic context)
 )

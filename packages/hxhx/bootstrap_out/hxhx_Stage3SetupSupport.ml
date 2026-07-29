@@ -597,17 +597,17 @@ let projectClassPaths = fun parsedClassPaths libsResolved cwd -> let base = Obj.
 )
 
 let buildDefinesMap = fun allDefines backendTargetDefine backendId -> let definesMap = Obj.magic (HxDefineMap.fromRawDefines (Obj.magic allDefines)) in (
-  ignore (HxMap.set_string definesMap "sys" "1");
-  ignore (HxMap.set_string definesMap backendTargetDefine "1");
+  ignore (HxMap.set_string (Obj.magic definesMap) ("sys" : string) "1");
+  ignore (HxMap.set_string (Obj.magic definesMap) (backendTargetDefine : string) "1");
   let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let n = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
       ignore (let __old_194 = !_g in let __new_195 = HxInt.add __old_194 1 in (
         ignore (_g := __new_195);
         __new_195
       ));
-      HxMap.set_string definesMap n (let __call_arg_0_196 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_196)
+      let value = let __call_arg_0_196 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_196 in HxMap.set_string (Obj.magic definesMap) (n : string) value
     )) done);
-    ignore (if HxString.equals backendId "ocaml-stage3" then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string definesMap "ocaml_profile" : string) : string) in HxMap.set_string definesMap "ocaml_profile" profile) else ());
+    ignore (if HxString.equals backendId "ocaml-stage3" then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string (Obj.magic definesMap) ("ocaml_profile" : string) : string) : string) in HxMap.set_string (Obj.magic definesMap) ("ocaml_profile" : string) profile) else ());
     definesMap
   )
 )

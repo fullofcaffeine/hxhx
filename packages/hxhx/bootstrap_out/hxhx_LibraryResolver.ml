@@ -240,8 +240,8 @@ let resolveViaProcess = fun lib -> try let __fallback_result_40 = let lixSpec = 
 
 let rec resolve = fun lib cwd seen depth -> try let __fallback_result_19 = (
   ignore (if depth > 25 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("library resolution depth exceeded while resolving: " ^ HxString.toStdString lib)) ["Dynamic"]) else ());
-  ignore (if HxMap.exists_string seen lib then raise (HxRuntime.Hx_return (Obj.repr (emptySpec ()))) else ());
-  ignore (HxMap.set_string seen lib true);
+  ignore (if HxMap.exists_string (Obj.magic seen) (lib : string) then raise (HxRuntime.Hx_return (Obj.repr (emptySpec ()))) else ());
+  ignore (HxMap.set_string (Obj.magic seen) (lib : string) true);
   let hxmlPath = let __call_arg_0_16 = lib in let __call_arg_1_17 = cwd in findScopedHxml __call_arg_0_16 __call_arg_1_17 in (
     ignore (if HxString.length hxmlPath > 0 then raise (HxRuntime.Hx_return (Obj.repr (resolveFromHxml (hxmlPath : string) (cwd : string) seen depth))) else ());
     resolveViaProcess (lib : string)

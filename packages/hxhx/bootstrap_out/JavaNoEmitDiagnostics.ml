@@ -379,7 +379,7 @@ let overloadCollisionDiagnosticForParsed = fun parsed -> try let __fallback_resu
             ignore (if not (hasOverloadMetadata (Obj.magic meta)) then raise (HxRuntime.Hx_continue) else ());
             let info = javaNoEmitOverloadInfo (Obj.magic fn) (Obj.magic sourceLines) in (
               ignore (if isExternFunctionLine (Obj.magic sourceLines) (Obj.obj (HxAnon.get info "line")) then raise (HxRuntime.Hx_continue) else ());
-              let key = (HxString.toStdString (Obj.obj (HxAnon.get info "name")) ^ "#") ^ HxString.toStdString (Obj.obj (HxAnon.get info "erasedSig")) in let previous = HxMap.get_string seen key in (
+              let key = (HxString.toStdString (Obj.obj (HxAnon.get info "name")) ^ "#") ^ HxString.toStdString (Obj.obj (HxAnon.get info "erasedSig")) in let previous = HxMap.get_string (Obj.magic seen) (key : string) in (
                 ignore (if previous != Obj.magic (HxRuntime.hx_null) then ignore (let tempString = ref (HxString.hx_null_string : string) in (
                   ignore (if HxString.equals (Obj.obj (HxAnon.get previous "rawSig")) (Obj.obj (HxAnon.get info "rawSig")) then let __assign_38 = "same" in (
                     tempString := __assign_38;
@@ -389,7 +389,7 @@ let overloadCollisionDiagnosticForParsed = fun parsed -> try let __fallback_resu
                     __assign_39
                   ));
                   let relation = !tempString in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in let key2 = (Obj.obj (HxAnon.get info "name") : string) in (
-                    ignore (let __assign_40 = Obj.magic (Obj.magic (HxMap.get_string byName key2)) in (
+                    ignore (let __assign_40 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic byName) (key2 : string))) in (
                       tempMaybeArray := __assign_40;
                       __assign_40
                     ));
@@ -405,13 +405,13 @@ let overloadCollisionDiagnosticForParsed = fun parsed -> try let __fallback_resu
                       __anon_42
                     )))
                   )
-                )) else ignore (HxMap.set_string seen key info));
+                )) else ignore (HxMap.set_string (Obj.magic seen) (key : string) info));
                 let tempMaybeArray1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in let key2 = (Obj.obj (HxAnon.get info "name") : string) in (
-                  ignore (let __assign_43 = Obj.magic (Obj.magic (HxMap.get_string byName key2)) in (
+                  ignore (let __assign_43 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic byName) (key2 : string))) in (
                     tempMaybeArray1 := __assign_43;
                     __assign_43
                   ));
-                  let named = Obj.magic (!tempMaybeArray1) in if named == Obj.magic (HxRuntime.hx_null) then ignore (let key2 = (Obj.obj (HxAnon.get info "name") : string) in HxMap.set_string byName key2 (let __arr_44 = HxArray.create () in (
+                  let named = Obj.magic (!tempMaybeArray1) in if named == Obj.magic (HxRuntime.hx_null) then ignore (let key2 = (Obj.obj (HxAnon.get info "name") : string) in HxMap.set_string (Obj.magic byName) (key2 : string) (let __arr_44 = HxArray.create () in (
                     ignore (HxArray.push __arr_44 info);
                     __arr_44
                   ))) else ignore (HxArray.push named info)
@@ -553,7 +553,7 @@ let isAbstractClassChain = fun cls byName -> try let __fallback_result_171 = let
       ignore (if HxString.length (Obj.obj (HxAnon.get (Obj.magic (!current)) "extendsName")) = 0 then let __assign_167 = Obj.magic (HxRuntime.hx_null) in (
         tempRight := __assign_167;
         __assign_167
-      ) else let key = (Obj.obj (HxAnon.get (Obj.magic (!current)) "extendsName") : string) in let __assign_168 = Obj.magic (HxMap.get_string byName key) in (
+      ) else let key = (Obj.obj (HxAnon.get (Obj.magic (!current)) "extendsName") : string) in let __assign_168 = Obj.magic (HxMap.get_string (Obj.magic byName) (key : string)) in (
         tempRight := __assign_168;
         __assign_168
       ));
@@ -593,8 +593,8 @@ let appendUniqueRequirements = fun out requirements -> ignore (let _g = ref 0 in
 )) done)
 
 let rec appendInheritedRequirements = fun out cls byName -> ignore ((
-  ignore (if HxString.length (Obj.obj (HxAnon.get cls "extendsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "extendsName") : string) in let tempMaybeJavaNoEmitClassInfo = HxMap.get_string byName key in let parent = tempMaybeJavaNoEmitClassInfo in if parent != Obj.magic (HxRuntime.hx_null) then ignore (appendInheritedRequirements (Obj.magic out) parent byName) else ()) else ());
-  ignore (if HxString.length (Obj.obj (HxAnon.get cls "implementsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "implementsName") : string) in let tempMaybeJavaNoEmitClassInfo1 = HxMap.get_string byName key in let iface = tempMaybeJavaNoEmitClassInfo1 in if iface != Obj.magic (HxRuntime.hx_null) then ignore (appendUniqueRequirements (Obj.magic out) (Obj.magic (Obj.obj (HxAnon.get iface "requirements")))) else ()) else ());
+  ignore (if HxString.length (Obj.obj (HxAnon.get cls "extendsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "extendsName") : string) in let tempMaybeJavaNoEmitClassInfo = HxMap.get_string (Obj.magic byName) (key : string) in let parent = tempMaybeJavaNoEmitClassInfo in if parent != Obj.magic (HxRuntime.hx_null) then ignore (appendInheritedRequirements (Obj.magic out) parent byName) else ()) else ());
+  ignore (if HxString.length (Obj.obj (HxAnon.get cls "implementsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "implementsName") : string) in let tempMaybeJavaNoEmitClassInfo1 = HxMap.get_string (Obj.magic byName) (key : string) in let iface = tempMaybeJavaNoEmitClassInfo1 in if iface != Obj.magic (HxRuntime.hx_null) then ignore (appendUniqueRequirements (Obj.magic out) (Obj.magic (Obj.obj (HxAnon.get iface "requirements")))) else ()) else ());
   appendUniqueRequirements (Obj.magic out) (Obj.magic (Obj.obj (HxAnon.get cls "requirements")))
 ))
 
@@ -604,13 +604,13 @@ let inheritedRequirements = fun cls byName -> let out = Obj.magic (HxArray.creat
 )
 
 let rec appendInheritedImplementations = fun out cls byName -> ignore ((
-  ignore (if HxString.length (Obj.obj (HxAnon.get cls "extendsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "extendsName") : string) in let tempMaybeJavaNoEmitClassInfo = HxMap.get_string byName key in let parent = tempMaybeJavaNoEmitClassInfo in if parent != Obj.magic (HxRuntime.hx_null) then ignore (appendInheritedImplementations out parent byName) else ()) else ());
+  ignore (if HxString.length (Obj.obj (HxAnon.get cls "extendsName")) > 0 then ignore (let key = (Obj.obj (HxAnon.get cls "extendsName") : string) in let tempMaybeJavaNoEmitClassInfo = HxMap.get_string (Obj.magic byName) (key : string) in let parent = tempMaybeJavaNoEmitClassInfo in if parent != Obj.magic (HxRuntime.hx_null) then ignore (appendInheritedImplementations out parent byName) else ()) else ());
   let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get cls "implementations")) in while !_g < HxArray.length _g1 do ignore (let signature = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_177 = !_g in let __new_178 = HxInt.add __old_177 1 in (
       ignore (_g := __new_178);
       __new_178
     ));
-    HxMap.set_string out signature true
+    HxMap.set_string (Obj.magic out) (signature : string) true
   )) done
 ))
 
@@ -664,7 +664,7 @@ let abstractOverloadImplementationDiagnosticForParsed = fun parsed -> try let __
             ignore (_g := __new_25);
             __new_25
           ));
-          let key = (Obj.obj (HxAnon.get cls "name") : string) in HxMap.set_string byName key cls
+          let key = (Obj.obj (HxAnon.get cls "name") : string) in HxMap.set_string (Obj.magic byName) (key : string) cls
         )) done);
         let _g = ref 0 in (
           ignore (try while !_g < HxArray.length classes do try ignore (let cls = HxArray.get (Obj.magic classes) (!_g) in (
@@ -674,7 +674,7 @@ let abstractOverloadImplementationDiagnosticForParsed = fun parsed -> try let __
             ));
             ignore (if not (HxString.equals (Obj.obj (HxAnon.get cls "kind")) "class") || HxRuntime.unbox_bool_or_obj (HxAnon.get cls "isAbstract") || HxString.length (Obj.obj (HxAnon.get cls "extendsName")) = 0 then raise (HxRuntime.Hx_continue) else ());
             let tempMaybeJavaNoEmitClassInfo = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let key = (Obj.obj (HxAnon.get cls "extendsName") : string) in (
-              ignore (let __assign_28 = Obj.magic (HxMap.get_string byName key) in (
+              ignore (let __assign_28 = Obj.magic (HxMap.get_string (Obj.magic byName) (key : string)) in (
                 tempMaybeJavaNoEmitClassInfo := __assign_28;
                 __assign_28
               ));
@@ -689,7 +689,7 @@ let abstractOverloadImplementationDiagnosticForParsed = fun parsed -> try let __
                         __new_30
                       ));
                       let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get req "signature") : string) in (
-                        ignore (let __assign_31 = HxMap.exists_string implemented key in (
+                        ignore (let __assign_31 = HxMap.exists_string (Obj.magic implemented) (key : string) in (
                           tempBool := __assign_31;
                           __assign_31
                         ));

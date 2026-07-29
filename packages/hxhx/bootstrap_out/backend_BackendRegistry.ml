@@ -80,8 +80,8 @@ let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ())
       __new_11
     ));
     let id = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id") : string) in (
-      ignore (if HxMap.exists_string seen id then raise (HxRuntime.Hx_continue) else ());
-      ignore (HxMap.set_string seen id true);
+      ignore (if HxMap.exists_string (Obj.magic seen) (id : string) then raise (HxRuntime.Hx_continue) else ());
+      ignore (HxMap.set_string (Obj.magic seen) (id : string) true);
       HxArray.push ids id
     )
   )) with

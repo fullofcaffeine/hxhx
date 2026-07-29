@@ -95,10 +95,10 @@ let declarationForSource__impl = fun (self : t) (source : HxFunctionDecl.t) -> t
 ) in Obj.magic __fallback_result_19 with
   | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let hasField__impl = fun (self : t) (name : string) -> HxMap.exists_string ((Obj.magic self : t).fields) name
+let hasField__impl = fun (self : t) (name : string) -> let _this = Obj.magic ((Obj.magic self : t).fields) in let tempResult = HxMap.exists_string (Obj.magic _this) (name : string) in tempResult
 
-let fieldType__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_20 = Obj.magic (Obj.magic (TyFieldInfo.getType (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) ())) in (
+let fieldType__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in let _this = Obj.magic ((Obj.magic self : t).fields) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).fields) in let tempMaybeTyFieldInfo = Obj.magic (HxMap.get_string (Obj.magic _this) (name : string)) in let __assign_20 = Obj.magic (Obj.magic (TyFieldInfo.getType (Obj.magic tempMaybeTyFieldInfo) ())) in (
     tempResult := __assign_20;
     __assign_20
   ) else let __assign_21 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -108,8 +108,8 @@ let fieldType__impl = fun (self : t) (name : string) -> let tempResult = ref (Ob
   !tempResult
 )
 
-let fieldInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_22 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) in (
+let fieldInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in let _this = Obj.magic ((Obj.magic self : t).fields) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).fields) in let __assign_22 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (name : string))) in (
     tempResult := __assign_22;
     __assign_22
   ) else let __assign_23 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -119,8 +119,8 @@ let fieldInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Ob
   !tempResult
 )
 
-let propertyInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyPropertyInfo.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).properties) name then let __assign_24 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).properties) name)) in (
+let propertyInfo__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyPropertyInfo.t) in let _this = Obj.magic ((Obj.magic self : t).properties) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).properties) in let __assign_24 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (name : string))) in (
     tempResult := __assign_24;
     __assign_24
   ) else let __assign_25 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -130,8 +130,8 @@ let propertyInfo__impl = fun (self : t) (name : string) -> let tempResult = ref 
   !tempResult
 )
 
-let staticMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethods) name then let __assign_26 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethods) name)) in (
+let staticMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in let _this = Obj.magic ((Obj.magic self : t).staticMethods) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).staticMethods) in let __assign_26 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (name : string))) in (
     tempResult := __assign_26;
     __assign_26
   ) else let __assign_27 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -141,8 +141,8 @@ let staticMethod__impl = fun (self : t) (name : string) -> let tempResult = ref 
   !tempResult
 )
 
-let instanceMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethods) name then let __assign_28 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethods) name)) in (
+let instanceMethod__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in let _this = Obj.magic ((Obj.magic self : t).instanceMethods) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).instanceMethods) in let __assign_28 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (name : string))) in (
     tempResult := __assign_28;
     __assign_28
   ) else let __assign_29 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
@@ -152,8 +152,8 @@ let instanceMethod__impl = fun (self : t) (name : string) -> let tempResult = re
   !tempResult
 )
 
-let staticMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethodLists) name then let __assign_30 = Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethodLists) name) in (
+let staticMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).staticMethodLists) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).staticMethodLists) in let __assign_30 = Obj.magic (HxMap.get_string (Obj.magic _this) (name : string)) in (
     tempResult := __assign_30;
     __assign_30
   ) else let __assign_31 = Obj.magic (let __arr_32 = HxArray.create () in __arr_32) in (
@@ -163,8 +163,8 @@ let staticMethodCandidates__impl = fun (self : t) (name : string) -> let tempRes
   !tempResult
 )
 
-let instanceMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethodLists) name then let __assign_33 = Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethodLists) name) in (
+let instanceMethodCandidates__impl = fun (self : t) (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).instanceMethodLists) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+  ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : t).instanceMethodLists) in let __assign_33 = Obj.magic (HxMap.get_string (Obj.magic _this) (name : string)) in (
     tempResult := __assign_33;
     __assign_33
   ) else let __assign_34 = Obj.magic (let __arr_35 = HxArray.create () in __arr_35) in (

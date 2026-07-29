@@ -244,7 +244,7 @@ let registrationsForRequests = fun requests -> try let __fallback_result_60 = (
                 ignore (HxAnon.set __anon_49 "source" (Obj.repr (Obj.obj (HxAnon.get normalizedRequest "source"))));
                 ignore (HxAnon.set __anon_49 "origin" (Obj.repr (Obj.obj (HxAnon.get normalizedRequest "origin"))));
                 __anon_49
-              ) in let existing = HxMap.get_string winnersByImplId implId in if existing == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string winnersByImplId implId incoming) else ignore (HxMap.set_string winnersByImplId implId (selectWinning existing incoming))
+              ) in let existing = HxMap.get_string (Obj.magic winnersByImplId) (implId : string) in if existing == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic winnersByImplId) (implId : string) incoming) else ignore (let value = selectWinning existing incoming in HxMap.set_string (Obj.magic winnersByImplId) (implId : string) value)
             )
           )
         )) done);
@@ -254,7 +254,7 @@ let registrationsForRequests = fun requests -> try let __fallback_result_60 = (
         )
       )
     )) done);
-    let out = Obj.magic (HxArray.create ()) in let winner = HxIterator.of_array (HxMap.values_string winnersByImplId) in (
+    let out = Obj.magic (HxArray.create ()) in let winner = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic winnersByImplId))) in (
       ignore (while (let __iter_52 = winner in fun () -> HxIterator.hasNext (Obj.magic __iter_52)) () do ignore (let winner2 = (let __iter_53 = winner in fun () -> HxIterator.next (Obj.magic __iter_53)) () in HxArray.push out (Obj.obj (HxAnon.get winner2 "spec"))) done);
       ignore (HxArray.sort out (fun a b -> try let __fallback_result_58 = (
         ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());

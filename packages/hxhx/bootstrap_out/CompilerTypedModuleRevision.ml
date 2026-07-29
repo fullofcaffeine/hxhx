@@ -844,10 +844,10 @@ let uniqueSorted = fun values -> let seen = Obj.magic (HxMap.create_string ()) i
         tempString := __assign_214;
         __assign_214
       ));
-      HxMap.set_string seen (!tempString) true
+      HxMap.set_string (Obj.magic seen) (!tempString : string) true
     )
   )) done);
-  let _g = Obj.magic (let __arr_215 = HxArray.create () in __arr_215) in let value = HxIterator.of_array (HxMap.keys_string seen) in (
+  let _g = Obj.magic (let __arr_215 = HxArray.create () in __arr_215) in let value = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic seen))) in (
     ignore (while (let __iter_216 = value in fun () -> HxIterator.hasNext (Obj.magic __iter_216)) () do ignore (let value2 = ((let __iter_217 = value in fun () -> HxIterator.next (Obj.magic __iter_217)) () : string) in HxArray.push _g value2) done);
     let tempArray = Obj.magic _g in let out = Obj.magic tempArray in (
       ignore (HxArray.sort out compareText);

@@ -78,8 +78,8 @@ let collect = fun index leftType rightType op -> let out = Obj.magic (HxArray.cr
               ignore (_g2 := __new_15);
               __new_15
             ));
-            let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in if not (HxMap.exists_string seen key) then ignore ((
-              ignore (HxMap.set_string seen key true);
+            let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in if not (HxMap.exists_string (Obj.magic seen) (key : string)) then ignore ((
+              ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
               HxArray.push out candidate
             )) else ()
           )) done

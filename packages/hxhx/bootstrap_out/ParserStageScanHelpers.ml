@@ -1650,7 +1650,7 @@ let scanTypedefShape = fun source start -> try let __fallback_result_168 = let i
 let scanModuleLocalHelperTypedefs = fun source mainTypeName -> try let __fallback_result_149 = let out = Obj.magic (HxArray.create ()) in (
   ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let seen = HxMap.create_string () in (
-    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string seen mainTypeName true) else ());
+    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string (Obj.magic seen) (mainTypeName : string) true) else ());
     let braceDepth = ref 0 in let i = ref 0 in let pendingTypeVisibility = ref (Obj.magic (HxVisibility.Public)) in (
       ignore (try while true do try ignore (let t = scanNextToken (source : string) (!i) in (
         ignore (let __assign_130 = Obj.obj (HxAnon.get t "nextPos") in (
@@ -1713,8 +1713,8 @@ let scanModuleLocalHelperTypedefs = fun source mainTypeName -> try let __fallbac
                 __assign_139
               ));
               ignore (if typeName == HxString.hx_null_string || HxString.length typeName = 0 then raise (HxRuntime.Hx_continue) else ());
-              ignore (if HxMap.exists_string seen typeName then raise (HxRuntime.Hx_continue) else ());
-              ignore (HxMap.set_string seen typeName true);
+              ignore (if HxMap.exists_string (Obj.magic seen) (typeName : string) then raise (HxRuntime.Hx_continue) else ());
+              ignore (HxMap.set_string (Obj.magic seen) (typeName : string) true);
               let typeParams = scanTypeParameterNames (source : string) (!i) in (
                 ignore (let __assign_140 = Obj.obj (HxAnon.get typeParams "nextPos") in (
                   i := __assign_140;
@@ -2385,7 +2385,7 @@ let scanModuleLocalHelperEnums = fun source mainTypeName -> try let __fallback_r
     )
   ) in Obj.magic __fallback_result_78 with
     | HxRuntime.Hx_return __ret_77 -> Obj.magic __ret_77 in let seen = HxMap.create_string () in (
-    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string seen mainTypeName true) else ());
+    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string (Obj.magic seen) (mainTypeName : string) true) else ());
     let braceDepth = ref 0 in let i = ref 0 in let pendingTypeMetadata = ref (Obj.magic (HxArray.create ())) in let pendingTypeVisibility = ref (Obj.magic (HxVisibility.Public)) in (
       ignore (try while true do try ignore (let t = scanNextToken (source : string) (!i) in (
         ignore (let __assign_79 = Obj.obj (HxAnon.get t "nextPos") in (
@@ -2479,7 +2479,7 @@ let scanModuleLocalHelperEnums = fun source mainTypeName -> try let __fallback_r
                   __assign_96
                 ));
                 ignore (if enumName == HxString.hx_null_string || HxString.length enumName = 0 then raise (HxRuntime.Hx_continue) else ());
-                ignore (if HxMap.exists_string seen enumName then ignore (let headerTok = ref (scanNextToken (source : string) (!i)) in (
+                ignore (if HxMap.exists_string (Obj.magic seen) (enumName : string) then ignore (let headerTok = ref (scanNextToken (source : string) (!i)) in (
                   ignore (while HxString.length (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) > 0 && not (HxString.equals (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) "{") do ignore (let __assign_97 = Obj.magic (scanNextToken (source : string) (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "nextPos"))) in (
                     headerTok := __assign_97;
                     __assign_97
@@ -2494,7 +2494,7 @@ let scanModuleLocalHelperEnums = fun source mainTypeName -> try let __fallback_r
                   )));
                   raise (HxRuntime.Hx_continue)
                 )) else ());
-                ignore (HxMap.set_string seen enumName true);
+                ignore (HxMap.set_string (Obj.magic seen) (enumName : string) true);
                 let headerTok = ref (scanNextToken (source : string) (!i)) in (
                   ignore (while HxString.length (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) > 0 && not (HxString.equals (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) "{") do ignore (let __assign_100 = Obj.magic (scanNextToken (source : string) (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "nextPos"))) in (
                     headerTok := __assign_100;
@@ -3579,7 +3579,7 @@ let scanClassBodyForStatics = fun source start -> let fields = Obj.magic (HxArra
 let scanModuleLocalHelperClasses = fun source mainClassName -> try let __fallback_result_30 = let out = Obj.magic (HxArray.create ()) in (
   ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let seen = HxMap.create_string () in (
-    ignore (if mainClassName != Obj.magic (HxRuntime.hx_null) && HxString.length mainClassName > 0 then ignore (HxMap.set_string seen mainClassName true) else ());
+    ignore (if mainClassName != Obj.magic (HxRuntime.hx_null) && HxString.length mainClassName > 0 then ignore (HxMap.set_string (Obj.magic seen) (mainClassName : string) true) else ());
     let braceDepth = ref 0 in let i = ref 0 in let pendingTypeMetadata = ref (Obj.magic (HxArray.create ())) in let pendingTypeVisibility = ref (Obj.magic (HxVisibility.Public)) in let scanTopLevelMetadataText = fun startPos -> try let __fallback_result_12 = let j = ref startPos in let colon = scanNextToken (source : string) (!j) in (
       ignore (if HxString.equals (Obj.obj (HxAnon.get colon "text")) ":" then ignore (let __assign_1 = Obj.obj (HxAnon.get colon "nextPos") in (
         j := __assign_1;
@@ -3725,8 +3725,8 @@ let scanModuleLocalHelperClasses = fun source mainClassName -> try let __fallbac
                   i := __assign_27;
                   __assign_27
                 ));
-                let isMain = mainClassName != Obj.magic (HxRuntime.hx_null) && HxString.equals className mainClassName in let alreadySeen = HxMap.exists_string seen className in let shouldRecord = not (isMain) && not (alreadySeen) in (
-                  ignore (if not (alreadySeen) then ignore (HxMap.set_string seen className true) else ());
+                let isMain = mainClassName != Obj.magic (HxRuntime.hx_null) && HxString.equals className mainClassName in let alreadySeen = HxMap.exists_string (Obj.magic seen) (className : string) in let shouldRecord = not (isMain) && not (alreadySeen) in (
+                  ignore (if not (alreadySeen) then ignore (HxMap.set_string (Obj.magic seen) (className : string) true) else ());
                   let header = scanClassHeader (source : string) (!i) in (
                     ignore (if Obj.obj (HxAnon.get header "bodyStart") < 0 then raise (HxRuntime.Hx_continue) else ());
                     let scanned = scanClassBodyForStatics (source : string) (Obj.obj (HxAnon.get header "bodyStart")) in (
@@ -3754,7 +3754,7 @@ let scanModuleLocalHelperClasses = fun source mainClassName -> try let __fallbac
 let scanModuleLocalHelperAbstracts = fun source mainTypeName -> try let __fallback_result_249 = let out = Obj.magic (HxArray.create ()) in (
   ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let seen = HxMap.create_string () in (
-    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string seen mainTypeName true) else ());
+    ignore (if mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.length mainTypeName > 0 then ignore (HxMap.set_string (Obj.magic seen) (mainTypeName : string) true) else ());
     let braceDepth = ref 0 in let i = ref 0 in let pendingTypeVisibility = ref (Obj.magic (HxVisibility.Public)) in (
       ignore (try while true do try ignore (let t = scanNextToken (source : string) (!i) in (
         ignore (let __assign_215 = Obj.obj (HxAnon.get t "nextPos") in (
@@ -3868,8 +3868,8 @@ let scanModuleLocalHelperAbstracts = fun source mainTypeName -> try let __fallba
                 i := __assign_234;
                 __assign_234
               ));
-              let typeParams = scanTypeParameterNames (source : string) (!i) in let abstractUnderlying = let __call_arg_0_235 = source in let __call_arg_1_236 = !i in scanAbstractUnderlyingType __call_arg_0_235 __call_arg_1_236 in let abstractConversions = scanAbstractHeaderConversions (source : string) (!i) in let isMain = mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.equals abstractName mainTypeName in let alreadySeen = HxMap.exists_string seen abstractName in let shouldRecord = not (isMain) && not (alreadySeen) in (
-                ignore (if not (alreadySeen) then ignore (HxMap.set_string seen abstractName true) else ());
+              let typeParams = scanTypeParameterNames (source : string) (!i) in let abstractUnderlying = let __call_arg_0_235 = source in let __call_arg_1_236 = !i in scanAbstractUnderlyingType __call_arg_0_235 __call_arg_1_236 in let abstractConversions = scanAbstractHeaderConversions (source : string) (!i) in let isMain = mainTypeName != Obj.magic (HxRuntime.hx_null) && HxString.equals abstractName mainTypeName in let alreadySeen = HxMap.exists_string (Obj.magic seen) (abstractName : string) in let shouldRecord = not (isMain) && not (alreadySeen) in (
+                ignore (if not (alreadySeen) then ignore (HxMap.set_string (Obj.magic seen) (abstractName : string) true) else ());
                 let fields = ref (Obj.magic (HxArray.create ())) in let functions = ref (Obj.magic (HxArray.create ())) in let headerTok = ref (scanNextToken (source : string) (!i)) in (
                   ignore (while HxString.length (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) > 0 && not (HxString.equals (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) "{") && not (HxString.equals (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "text")) ";") do ignore (let __assign_237 = Obj.magic (scanNextToken (source : string) (Obj.obj (HxAnon.get (Obj.magic (!headerTok)) "nextPos"))) in (
                     headerTok := __assign_237;

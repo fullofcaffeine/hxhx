@@ -30,9 +30,9 @@ let rec ensureDirectory = fun (path : string) -> ignore (try ignore ((
 
 let resolveStaticInitTypePath = fun typePath byFullName bySimpleFullName -> try let __fallback_result_58 = (
   ignore (if typePath == HxString.hx_null_string || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if HxMap.exists_string byFullName typePath then raise (HxRuntime.Hx_return (Obj.repr (typePath : string))) else ());
+  ignore (if HxMap.exists_string (Obj.magic byFullName) (typePath : string) then raise (HxRuntime.Hx_return (Obj.repr (typePath : string))) else ());
   ignore (if HxString.indexOf typePath "." 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let fullName = (HxMap.get_string bySimpleFullName typePath : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  let fullName = (HxMap.get_string (Obj.magic bySimpleFullName) (typePath : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if fullName == Obj.magic (HxRuntime.hx_null) || HxString.length fullName = 0 then let __assign_55 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_55;
       __assign_55
@@ -73,7 +73,7 @@ let resolveStaticInitPath = fun rawPath byFullName bySimpleFullName -> try let _
   ignore (if rawPath == Obj.magic (HxRuntime.hx_null) || HxString.length rawPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let candidate = ref (rawPath : string) in (
     ignore (try while HxString.length (!candidate) > 0 do try ignore ((
-      ignore (if HxMap.exists_string byFullName (!candidate) then raise (HxRuntime.Hx_return (Obj.repr (!candidate : string))) else ());
+      ignore (if HxMap.exists_string (Obj.magic byFullName) (!candidate : string) then raise (HxRuntime.Hx_return (Obj.repr (!candidate : string))) else ());
       let dot = HxString.lastIndexOf (!candidate) "." (HxString.length (!candidate)) in (
         ignore (if dot < 0 then raise (HxRuntime.Hx_break) else ());
         let __assign_64 = Obj.magic (HxString.substr (!candidate) 0 dot : string) in (
@@ -289,8 +289,8 @@ let staticInitDepsReady = fun unit emitted byFullName bySimpleFullName -> try le
         __new_38
       ));
       ignore (if HxString.equals dep (Obj.obj (HxAnon.get unit "fullName")) then raise (HxRuntime.Hx_continue) else ());
-      ignore (if not (HxMap.exists_string byFullName dep) then raise (HxRuntime.Hx_continue) else ());
-      if not (HxMap.exists_string emitted dep) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
+      ignore (if not (HxMap.exists_string (Obj.magic byFullName) (dep : string)) then raise (HxRuntime.Hx_continue) else ());
+      if not (HxMap.exists_string (Obj.magic emitted) (dep : string)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
@@ -325,17 +325,19 @@ let orderClassUnitsByStaticInitDeps = fun units byFullName -> let bySimpleFullNa
       ignore (_g := __new_30);
       __new_30
     ));
-    let simple = let __call_arg_0_31 = Obj.obj (HxAnon.get unit "fullName") in simpleName __call_arg_0_31 in if not (HxMap.exists_string bySimpleFullName simple) then ignore (HxMap.set_string bySimpleFullName simple (Obj.obj (HxAnon.get unit "fullName"))) else ignore (HxMap.set_string bySimpleFullName simple "")
+    let simple = let __call_arg_0_31 = Obj.obj (HxAnon.get unit "fullName") in simpleName __call_arg_0_31 in if not (HxMap.exists_string (Obj.magic bySimpleFullName) (simple : string)) then ignore (let value = (Obj.obj (HxAnon.get unit "fullName") : string) in HxMap.set_string (Obj.magic bySimpleFullName) (simple : string) value) else ignore (HxMap.set_string (Obj.magic bySimpleFullName) (simple : string) "")
   )) done);
   let remaining = Obj.magic (HxArray.copy units) in let ordered = Obj.magic (HxArray.create ()) in let emitted = Obj.magic (HxMap.create_string ()) in (
     ignore (try while HxArray.length remaining > 0 do try ignore (let progressed = ref false in let index = ref 0 in (
       ignore (while !index < HxArray.length remaining do ignore (let unit = HxArray.get (Obj.magic remaining) (!index) in if staticInitDepsReady unit (Obj.magic emitted) (Obj.magic byFullName) (Obj.magic bySimpleFullName) then ignore ((
         ignore (HxArray.push ordered unit);
-        ignore (HxMap.set_string emitted (Obj.obj (HxAnon.get unit "fullName")) true);
-        ignore (HxArray.splice remaining (!index) 1);
-        let __assign_32 = true in (
-          progressed := __assign_32;
-          __assign_32
+        let key = (Obj.obj (HxAnon.get unit "fullName") : string) in (
+          ignore (HxMap.set_string (Obj.magic emitted) (key : string) true);
+          ignore (HxArray.splice remaining (!index) 1);
+          let __assign_32 = true in (
+            progressed := __assign_32;
+            __assign_32
+          )
         )
       )) else ignore (let __old_33 = !index in let __new_34 = HxInt.add __old_33 1 in (
         ignore (index := __new_34);
@@ -378,10 +380,10 @@ let collectClassUnits = fun program -> let bySimpleName = Obj.magic (HxMap.creat
           __assign_25
         ));
         let fullName = (!tempString : string) in (
-          ignore (if HxMap.exists_string byFullName fullName then raise (HxRuntime.Hx_continue) else ());
+          ignore (if HxMap.exists_string (Obj.magic byFullName) (fullName : string) then raise (HxRuntime.Hx_continue) else ());
           let jsRef = let __call_arg_0_26 = fullName in Backend_js_JsNameMangler.classVarName __call_arg_0_26 in (
-            ignore (HxMap.set_string byFullName fullName jsRef);
-            ignore (if not (HxMap.exists_string bySimpleName className) then ignore (HxMap.set_string bySimpleName className jsRef) else ());
+            ignore (HxMap.set_string (Obj.magic byFullName) (fullName : string) jsRef);
+            ignore (if not (HxMap.exists_string (Obj.magic bySimpleName) (className : string)) then ignore (HxMap.set_string (Obj.magic bySimpleName) (className : string) jsRef) else ());
             HxArray.push units (let __anon_27 = HxAnon.create () in (
               ignore (HxAnon.set __anon_27 "fullName" (Obj.repr fullName));
               ignore (HxAnon.set __anon_27 "jsRef" (Obj.repr jsRef));
@@ -646,9 +648,9 @@ let shouldSkipStaticFieldEmission = fun (fullName : string) (fieldName : string)
 
 let resolveSuperClassRef = fun unit classRefs -> try let __fallback_result_191 = let path = (HxClassDecl.getExtendsPath (Obj.magic (Obj.obj (HxAnon.get unit "decl"))) : string) in (
   ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let direct = (HxMap.get_string classRefs path : string) in (
+  let direct = (HxMap.get_string (Obj.magic classRefs) (path : string) : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
-    let parts = Obj.magic (HxString.split path ".") in HxMap.get_string classRefs (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
+    let parts = Obj.magic (HxString.split path ".") in let key = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in let tempResult = (HxMap.get_string (Obj.magic classRefs) (key : string) : string) in tempResult
   )
 ) in Obj.magic __fallback_result_191 with
   | HxRuntime.Hx_return __ret_190 -> Obj.obj __ret_190
@@ -1065,7 +1067,7 @@ let instanceFieldRefs = fun decl -> let fields = Obj.magic (HxMap.create_string 
       ignore (_g := __new_260);
       __new_260
     ));
-    if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore (HxMap.set_string fields (HxFieldDecl.getName (Obj.magic field)) ("this" ^ HxString.toStdString (let __call_arg_0_261 = HxFieldDecl.getName (Obj.magic field) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_261))) else ()
+    if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore (let key = (HxFieldDecl.getName (Obj.magic field) : string) in let value = "this" ^ HxString.toStdString (let __call_arg_0_261 = HxFieldDecl.getName (Obj.magic field) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_261) in HxMap.set_string (Obj.magic fields) (key : string) value) else ()
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic decl)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -1073,7 +1075,7 @@ let instanceFieldRefs = fun decl -> let fields = Obj.magic (HxMap.create_string 
         ignore (_g := __new_263);
         __new_263
       ));
-      if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") then ignore (HxMap.set_string fields (HxFunctionDecl.getName (Obj.magic fn)) (("this" ^ HxString.toStdString (let __call_arg_0_264 = HxFunctionDecl.getName (Obj.magic fn) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_264)) ^ ".bind(this)")) else ()
+      if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") then ignore (let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in let value = ("this" ^ HxString.toStdString (let __call_arg_0_264 = HxFunctionDecl.getName (Obj.magic fn) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_264)) ^ ".bind(this)" in HxMap.set_string (Obj.magic fields) (key : string) value) else ()
     )) done);
     fields
   )
@@ -1085,7 +1087,7 @@ let staticMemberRefs = fun unit -> let fields = Obj.magic (HxMap.create_string (
       ignore (_g := __new_266);
       __new_266
     ));
-    if HxFieldDecl.getIsStatic (Obj.magic field) then ignore (HxMap.set_string fields (HxFieldDecl.getName (Obj.magic field)) (HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString (let __call_arg_0_267 = HxFieldDecl.getName (Obj.magic field) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_267))) else ()
+    if HxFieldDecl.getIsStatic (Obj.magic field) then ignore (let key = (HxFieldDecl.getName (Obj.magic field) : string) in let value = HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString (let __call_arg_0_267 = HxFieldDecl.getName (Obj.magic field) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_267) in HxMap.set_string (Obj.magic fields) (key : string) value) else ()
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -1093,7 +1095,7 @@ let staticMemberRefs = fun unit -> let fields = Obj.magic (HxMap.create_string (
         ignore (_g := __new_269);
         __new_269
       ));
-      if HxFunctionDecl.getIsStatic (Obj.magic fn) then ignore (HxMap.set_string fields (HxFunctionDecl.getName (Obj.magic fn)) (HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString (let __call_arg_0_270 = HxFunctionDecl.getName (Obj.magic fn) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_270))) else ()
+      if HxFunctionDecl.getIsStatic (Obj.magic fn) then ignore (let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in let value = HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString (let __call_arg_0_270 = HxFunctionDecl.getName (Obj.magic fn) in Backend_js_JsNameMangler.propertySuffix __call_arg_0_270) in HxMap.set_string (Obj.magic fields) (key : string) value) else ()
     )) done);
     fields
   )
@@ -3286,10 +3288,10 @@ let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let _
 ) in Obj.magic __fallback_result_288 with
   | HxRuntime.Hx_return __ret_287 -> Obj.obj __ret_287
 
-let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMap.create_string ()) in let _g = HxIterator.of_array (HxMap.pairs_string byFullName) in (
-  ignore (while (let __iter_368 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_368)) () do ignore (let _g2 = (let __iter_369 = _g in fun () -> HxIterator.next (Obj.magic __iter_369)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string merged fullName jsRef) done);
-  let _g = HxIterator.of_array (HxMap.pairs_string bySimpleName) in (
-    ignore (while (let __iter_370 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_370)) () do ignore (let _g2 = (let __iter_371 = _g in fun () -> HxIterator.next (Obj.magic __iter_371)) () in let simpleName__local = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string merged simpleName__local) then ignore (HxMap.set_string merged simpleName__local jsRef) else ()) done);
+let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMap.create_string ()) in let _g = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic byFullName))) in (
+  ignore (while (let __iter_368 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_368)) () do ignore (let _g2 = (let __iter_369 = _g in fun () -> HxIterator.next (Obj.magic __iter_369)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string (Obj.magic merged) (fullName : string) jsRef) done);
+  let _g = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic bySimpleName))) in (
+    ignore (while (let __iter_370 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_370)) () do ignore (let _g2 = (let __iter_371 = _g in fun () -> HxIterator.next (Obj.magic __iter_371)) () in let simpleName__local = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string (Obj.magic merged) (simpleName__local : string)) then ignore (HxMap.set_string (Obj.magic merged) (simpleName__local : string) jsRef) else ()) done);
     merged
   )
 )
@@ -3622,7 +3624,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try ignore (
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ ".__hx_name = ") ^ HxString.toStdString (let __call_arg_0_141 = Obj.obj (HxAnon.get unit "fullName") in Backend_js_JsNameMangler.quoteString __call_arg_0_141)) ^ ";" : string));
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("__hx_classes[" ^ HxString.toStdString (let __call_arg_0_142 = Obj.obj (HxAnon.get unit "fullName") in Backend_js_JsNameMangler.quoteString __call_arg_0_142)) ^ "] = ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ ";" : string));
   let simple = let __call_arg_0_143 = Obj.obj (HxAnon.get unit "fullName") in simpleName __call_arg_0_143 in (
-    ignore (if HxString.equals (HxMap.get_string simpleNameRefs simple) (Obj.obj (HxAnon.get unit "jsRef")) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("__hx_classes[" ^ HxString.toStdString (let __call_arg_0_144 = simple in Backend_js_JsNameMangler.quoteString __call_arg_0_144)) ^ "] = ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ ";" : string)) else ());
+    ignore (if HxString.equals (HxMap.get_string (Obj.magic simpleNameRefs) (simple : string)) (Obj.obj (HxAnon.get unit "jsRef")) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("__hx_classes[" ^ HxString.toStdString (let __call_arg_0_144 = simple in Backend_js_JsNameMangler.quoteString __call_arg_0_144)) ^ "] = ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ ";" : string)) else ());
     let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let tempRight = fullName != HxString.hx_null_string && (let __call_arg_0_145 = fullName in let __call_arg_1_146 = "js.lib." in StringTools.startsWith __call_arg_0_145 __call_arg_1_146) || fullName != HxString.hx_null_string && (let __call_arg_0_147 = fullName in let __call_arg_1_148 = "js.html." in StringTools.startsWith __call_arg_0_147 __call_arg_1_148) in (
       ignore (if nodeRequireRef != Obj.magic (HxRuntime.hx_null) || browserRef != Obj.magic (HxRuntime.hx_null) || tempRight then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
       ignore (emitPrototypeInheritance (Obj.magic writer) unit (Obj.magic classRefs));
@@ -3640,11 +3642,11 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try ignore (
 
 let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_434 = (
   ignore (if main == HxString.hx_null_string || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let direct = (HxMap.get_string byFullName main : string) in (
+  let direct = (HxMap.get_string (Obj.magic byFullName) (main : string) : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
     let parts = Obj.magic (HxString.split main ".") in (
       ignore (if HxArray.length parts = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      HxMap.get_string bySimpleName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
+      let key = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in let tempResult = (HxMap.get_string (Obj.magic bySimpleName) (key : string) : string) in tempResult
     )
   )
 ) in Obj.magic __fallback_result_434 with

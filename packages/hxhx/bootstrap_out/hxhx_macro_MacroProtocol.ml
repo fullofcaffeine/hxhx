@@ -154,7 +154,7 @@ let kvParse = fun tail -> try let __fallback_result_50 = let out = HxMap.create_
               ignore (if len == HxRuntime.hx_null || (let __nullable_45 = len in let __nullable_46 = 0 in if __nullable_45 == HxRuntime.hx_null then false else Obj.obj __nullable_45 < __nullable_46) || HxInt.add (!i) (HxRuntime.nullable_int_unwrap len) > HxString.length tail then raise (HxRuntime.Hx_break) else ());
               let enc = (HxString.substr tail (!i) (let __nullable_int_47 = len in if __nullable_int_47 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_47) : string) in (
                 ignore (i := HxInt.add (!i) (HxRuntime.nullable_int_unwrap len));
-                let value = let __call_arg_0_48 = enc in unescapePayload __call_arg_0_48 in HxMap.set_string out key value
+                let value = let __call_arg_0_48 = enc in unescapePayload __call_arg_0_48 in HxMap.set_string (Obj.magic out) (key : string) value
               )
             )
           )
@@ -206,7 +206,7 @@ let splitN = fun s n -> let head = Obj.magic (HxArray.create ()) in let i = ref 
 )
 
 let kvGet = fun (tail : string) (key : string) -> (let m = kvParse (tail : string) in let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if HxMap.exists_string m key then let __assign_60 = (HxMap.get_string m key : string) in (
+  ignore (if HxMap.exists_string (Obj.magic m) (key : string) then let __assign_60 = (HxMap.get_string (Obj.magic m) (key : string) : string) in (
     tempResult := __assign_60;
     __assign_60
   ) else let __assign_61 = ("" : string) in (

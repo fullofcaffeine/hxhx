@@ -1083,8 +1083,8 @@ let formatException = fun e -> let pos = Obj.magic (TyperError.getPos (Obj.magic
 
 let rawTyperDiagnostic = fun e -> let __call_arg_0_328 = TyperError.getMessage (Obj.magic e) () in TyperStage.extractRawDiagnostic __call_arg_0_328
 
-let formatDynamicException = fun error -> try let __fallback_result_336 = (
-  ignore (if HxType.isOfType error (HxType.class_ "haxe.Exception") then ignore (let ex = Obj.magic (Obj.obj error) in if (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () != HxString.hx_null_string && HxString.length ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) ()) > 0 then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () : string))) else ()) else ());
+let formatDynamicException = fun (error : Obj.t) -> (try (
+  ignore (if HxType.isOfType error (HxType.class_ "haxe.Exception") then ignore (let ex = Obj.magic (Obj.obj error) in if (Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) () != HxString.hx_null_string && HxString.length ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) ()) > 0 then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic ex : Haxe_Exception.t).get_message (Obj.magic ex) ()))) else ()) else ());
   let tempMaybeVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
     ignore (try let __assign_334 = Obj.magic (Obj.obj (HxAnon.get error "message")) in (
       tempMaybeVar := __assign_334;
@@ -1109,9 +1109,9 @@ let formatDynamicException = fun error -> try let __fallback_result_336 = (
         )
       ) else raise (__exn_333));
     let reflectedMessage = Obj.repr (Obj.magic (!tempMaybeVar)) in (
-      ignore (if reflectedMessage != Obj.magic (HxRuntime.hx_null) then ignore (let message = ("<unsupported>" : string) in if HxString.length message > 0 then raise (HxRuntime.Hx_return (Obj.repr (message : string))) else ()) else ());
-      HxRuntime.dynamic_toStdString error
+      ignore (if reflectedMessage != Obj.magic (HxRuntime.hx_null) then ignore (let message = ("<unsupported>" : string) in if HxString.length message > 0 then raise (HxRuntime.Hx_return (Obj.repr message)) else ()) else ());
+      HxDynamic.toStdString error
     )
   )
-) in Obj.magic __fallback_result_336 with
-  | HxRuntime.Hx_return __ret_335 -> Obj.obj __ret_335
+) with
+  | HxRuntime.Hx_return __ret_335 -> (Obj.obj __ret_335 : string) : string)

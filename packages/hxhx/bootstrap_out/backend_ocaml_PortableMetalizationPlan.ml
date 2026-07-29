@@ -65,27 +65,27 @@ let create = fun profile2 plannerEnabled2 orderedSeeds2 autoMetalizedRegionKeys2
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.PortableMetalizationPlan"; profile = Obj.magic (HxRuntime.hx_null); plannerEnabled = false; orderedSeeds = Obj.magic (HxRuntime.hx_null); autoMetalizedRegionKeys = Obj.magic (HxRuntime.hx_null); exclusionsByRegionKey = Obj.magic (HxRuntime.hx_null); usedLoweringsByRegionKey = Obj.magic (HxRuntime.hx_null) } : t)
 
-let isAutoMetalized = fun self (regionKey : string) -> (Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && HxMap.exists_string ((Obj.magic self : t).autoMetalizedRegionKeys) regionKey
+let isAutoMetalized = fun self (regionKey : string) -> let _this = Obj.magic ((Obj.magic self : t).autoMetalizedRegionKeys) in let tempRight = HxMap.exists_string (Obj.magic _this) (regionKey : string) in (Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && tempRight
 
 let normalizeToken = fun (raw : string) -> (try (
   ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let __call_arg_0_42 = raw in StringTools.trim __call_arg_0_42
+  let __call_arg_0_45 = raw in StringTools.trim __call_arg_0_45
 ) with
-  | HxRuntime.Hx_return __ret_43 -> (Obj.obj __ret_43 : string) : string)
+  | HxRuntime.Hx_return __ret_46 -> (Obj.obj __ret_46 : string) : string)
 
-let markLoweringUsed = fun self (regionKey : string) (lowering : string) -> ignore (ignore (try ignore ((
-  ignore (if not ((Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && HxMap.exists_string ((Obj.magic self : t).autoMetalizedRegionKeys) regionKey) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+let markLoweringUsed = fun self (regionKey : string) (lowering : string) -> ignore (ignore (try ignore (let _this = Obj.magic ((Obj.magic self : t).autoMetalizedRegionKeys) in let tempRight = HxMap.exists_string (Obj.magic _this) (regionKey : string) in (
+  ignore (if not ((Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && tempRight) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let normalizedLowering = let __call_arg_0_15 = lowering in normalizeToken __call_arg_0_15 in (
     ignore (if HxString.length normalizedLowering = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    let used = ref (Obj.magic (HxMap.get_string ((Obj.magic self : t).usedLoweringsByRegionKey) regionKey)) in (
+    let _this = Obj.magic ((Obj.magic self : t).usedLoweringsByRegionKey) in let tempMaybeHxMap = Obj.magic (HxMap.get_string (Obj.magic _this) (regionKey : string)) in let used = ref (Obj.magic tempMaybeHxMap) in (
       ignore (if !used == Obj.magic (HxRuntime.hx_null) then ignore ((
         ignore (let __assign_16 = Obj.magic (Obj.magic (HxMap.create_string ())) in (
           used := __assign_16;
           __assign_16
         ));
-        HxMap.set_string ((Obj.magic self : t).usedLoweringsByRegionKey) regionKey (!used)
+        let _this = Obj.magic ((Obj.magic self : t).usedLoweringsByRegionKey) in HxMap.set_string (Obj.magic _this) (regionKey : string) (!used)
       )) else ());
-      HxMap.set_string (!used) normalizedLowering true
+      HxMap.set_string (Obj.magic (!used)) (normalizedLowering : string) true
     )
   )
 )) with
@@ -93,43 +93,43 @@ let markLoweringUsed = fun self (regionKey : string) (lowering : string) -> igno
 
 let normalizeReason = fun (raw : string) -> (try (
   ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let __call_arg_0_44 = let __call_arg_0_45 = let __call_arg_0_46 = raw in let __call_arg_1_47 = "\r" in let __call_arg_2_48 = " " in StringTools.replace __call_arg_0_46 __call_arg_1_47 __call_arg_2_48 in let __call_arg_1_49 = "\n" in let __call_arg_2_50 = " " in StringTools.replace __call_arg_0_45 __call_arg_1_49 __call_arg_2_50 in StringTools.trim __call_arg_0_44
+  let __call_arg_0_47 = let __call_arg_0_48 = let __call_arg_0_49 = raw in let __call_arg_1_50 = "\r" in let __call_arg_2_51 = " " in StringTools.replace __call_arg_0_49 __call_arg_1_50 __call_arg_2_51 in let __call_arg_1_52 = "\n" in let __call_arg_2_53 = " " in StringTools.replace __call_arg_0_48 __call_arg_1_52 __call_arg_2_53 in StringTools.trim __call_arg_0_47
 ) with
-  | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : string) : string)
+  | HxRuntime.Hx_return __ret_54 -> (Obj.obj __ret_54 : string) : string)
 
 let compareStrings = fun (a : string) (b : string) -> (let tempResult = ref (0 : int) in (
-  ignore (if a < b then let __assign_60 = -1 in (
-    tempResult := __assign_60;
-    __assign_60
-  ) else if a > b then let __assign_61 = 1 in (
-    tempResult := __assign_61;
-    __assign_61
-  ) else let __assign_62 = 0 in (
-    tempResult := __assign_62;
-    __assign_62
+  ignore (if a < b then let __assign_63 = -1 in (
+    tempResult := __assign_63;
+    __assign_63
+  ) else if a > b then let __assign_64 = 1 in (
+    tempResult := __assign_64;
+    __assign_64
+  ) else let __assign_65 = 0 in (
+    tempResult := __assign_65;
+    __assign_65
   ));
   !tempResult
 ) : int)
 
-let sortedKeys = fun map -> try let __fallback_result_55 = let keys = Obj.magic (HxArray.create ()) in (
+let sortedKeys = fun map -> try let __fallback_result_58 = let keys = Obj.magic (HxArray.create ()) in (
   ignore (if map == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic keys))) else ());
-  let key = HxIterator.of_array (HxMap.keys_string map) in (
-    ignore (while (let __iter_52 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_52)) () do ignore (let key2 = ((let __iter_53 = key in fun () -> HxIterator.next (Obj.magic __iter_53)) () : string) in HxArray.push keys key2) done);
+  let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic map))) in (
+    ignore (while (let __iter_55 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_55)) () do ignore (let key2 = ((let __iter_56 = key in fun () -> HxIterator.next (Obj.magic __iter_56)) () : string) in HxArray.push keys key2) done);
     ignore (HxArray.sort keys compareStrings);
     keys
   )
-) in Obj.magic __fallback_result_55 with
-  | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54
+) in Obj.magic __fallback_result_58 with
+  | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
 
-let sortedCountKeys = fun map -> try let __fallback_result_59 = let keys = Obj.magic (HxArray.create ()) in (
+let sortedCountKeys = fun map -> try let __fallback_result_62 = let keys = Obj.magic (HxArray.create ()) in (
   ignore (if map == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic keys))) else ());
-  let key = HxIterator.of_array (HxMap.keys_string map) in (
-    ignore (while (let __iter_56 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_56)) () do ignore (let key2 = ((let __iter_57 = key in fun () -> HxIterator.next (Obj.magic __iter_57)) () : string) in HxArray.push keys key2) done);
+  let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic map))) in (
+    ignore (while (let __iter_59 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_59)) () do ignore (let key2 = ((let __iter_60 = key in fun () -> HxIterator.next (Obj.magic __iter_60)) () : string) in HxArray.push keys key2) done);
     ignore (HxArray.sort keys compareStrings);
     keys
   )
-) in Obj.magic __fallback_result_59 with
-  | HxRuntime.Hx_return __ret_58 -> Obj.obj __ret_58
+) in Obj.magic __fallback_result_62 with
+  | HxRuntime.Hx_return __ret_61 -> Obj.obj __ret_61
 
 let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let excludedCodeCounts = Obj.magic (HxMap.create_string ()) in let autoMetalizedCount = ref 0 in let excludedCount = ref 0 in let usedMetalStyleCount = ref 0 in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).orderedSeeds) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let seed = HxArray.get (Obj.magic _g1) (!_g) in (
@@ -137,65 +137,81 @@ let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let
       ignore (_g := __new_19);
       __new_19
     ));
-    let tempBool = ref (false : bool) in let regionKey = (Obj.obj (HxAnon.get seed "regionKey") : string) in (
-      ignore (let __assign_20 = (Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && HxMap.exists_string ((Obj.magic self : t).autoMetalizedRegionKeys) regionKey in (
-        tempBool := __assign_20;
+    let tempBool = ref (false : bool) in let regionKey = (Obj.obj (HxAnon.get seed "regionKey") : string) in let tempRight = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).autoMetalizedRegionKeys) in (
+      ignore (let __assign_20 = HxMap.exists_string (Obj.magic _this) (regionKey : string) in (
+        tempRight := __assign_20;
         __assign_20
+      ));
+      ignore (let __assign_21 = (Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string && !tempRight in (
+        tempBool := __assign_21;
+        __assign_21
       ));
       let autoMetalized = !tempBool in (
         ignore (if autoMetalized then ignore (autoMetalizedCount := HxInt.add (!autoMetalizedCount) 1) else ());
-        let exclusions = Obj.magic (HxMap.get_string ((Obj.magic self : t).exclusionsByRegionKey) (Obj.obj (HxAnon.get seed "regionKey"))) in let reasonCodes = Obj.magic (HxArray.create ()) in let exclusionReasons = Obj.magic (HxArray.create ()) in (
-          ignore (if exclusions != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length exclusions do ignore (let entry = HxArray.get (Obj.magic exclusions) (!_g2) in (
-            ignore (let __old_21 = !_g2 in let __new_22 = HxInt.add __old_21 1 in (
-              ignore (_g2 := __new_22);
-              __new_22
-            ));
-            let code = let __call_arg_0_23 = Obj.obj (HxAnon.get entry "code") in normalizeToken __call_arg_0_23 in (
-              ignore (if HxString.length code > 0 && HxArray.indexOf reasonCodes code 0 < 0 then ignore (HxArray.push reasonCodes code) else ());
-              let reasonText = let __call_arg_0_24 = Obj.obj (HxAnon.get entry "reason") in normalizeReason __call_arg_0_24 in if HxString.length reasonText > 0 && HxArray.indexOf exclusionReasons reasonText 0 < 0 then ignore (HxArray.push exclusionReasons reasonText) else ()
-            )
-          )) done) else ());
-          ignore (if not (autoMetalized) then ignore ((
-            ignore (excludedCount := HxInt.add (!excludedCount) 1);
-            let _g2 = ref 0 in while !_g2 < HxArray.length reasonCodes do ignore (let code = (HxArray.get (Obj.magic reasonCodes) (!_g2) : string) in (
-              ignore (let __old_25 = !_g2 in let __new_26 = HxInt.add __old_25 1 in (
-                ignore (_g2 := __new_26);
-                __new_26
+        let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in let _this = Obj.magic ((Obj.magic self : t).exclusionsByRegionKey) in let key = (Obj.obj (HxAnon.get seed "regionKey") : string) in (
+          ignore (let __assign_22 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
+            tempMaybeArray := __assign_22;
+            __assign_22
+          ));
+          let exclusions = Obj.magic (!tempMaybeArray) in let reasonCodes = Obj.magic (HxArray.create ()) in let exclusionReasons = Obj.magic (HxArray.create ()) in (
+            ignore (if exclusions != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length exclusions do ignore (let entry = HxArray.get (Obj.magic exclusions) (!_g2) in (
+              ignore (let __old_23 = !_g2 in let __new_24 = HxInt.add __old_23 1 in (
+                ignore (_g2 := __new_24);
+                __new_24
               ));
-              let previous = HxMap.get_string excludedCodeCounts code in let tempNumber = ref (0 : int) in (
-                ignore (if previous == HxRuntime.hx_null then let __assign_27 = 1 in (
-                  tempNumber := __assign_27;
-                  __assign_27
-                ) else let __assign_28 = HxInt.add (HxRuntime.nullable_int_unwrap previous) 1 in (
-                  tempNumber := __assign_28;
-                  __assign_28
-                ));
-                HxMap.set_string excludedCodeCounts code (!tempNumber)
+              let code = let __call_arg_0_25 = Obj.obj (HxAnon.get entry "code") in normalizeToken __call_arg_0_25 in (
+                ignore (if HxString.length code > 0 && HxArray.indexOf reasonCodes code 0 < 0 then ignore (HxArray.push reasonCodes code) else ());
+                let reasonText = let __call_arg_0_26 = Obj.obj (HxAnon.get entry "reason") in normalizeReason __call_arg_0_26 in if HxString.length reasonText > 0 && HxArray.indexOf exclusionReasons reasonText 0 < 0 then ignore (HxArray.push exclusionReasons reasonText) else ()
               )
-            )) done
-          )) else ());
-          let usedLowerings = Obj.magic (sortedKeys (Obj.magic (HxMap.get_string ((Obj.magic self : t).usedLoweringsByRegionKey) (Obj.obj (HxAnon.get seed "regionKey"))))) in (
-            ignore (if HxArray.length usedLowerings > 0 then ignore (usedMetalStyleCount := HxInt.add (!usedMetalStyleCount) 1) else ());
-            let tempString = ref (HxString.hx_null_string : string) in (
-              ignore (if autoMetalized then let __assign_29 = "auto_metalized" in (
-                tempString := __assign_29;
-                __assign_29
-              ) else let __assign_30 = "excluded" in (
-                tempString := __assign_30;
-                __assign_30
+            )) done) else ());
+            ignore (if not (autoMetalized) then ignore ((
+              ignore (excludedCount := HxInt.add (!excludedCount) 1);
+              let _g2 = ref 0 in while !_g2 < HxArray.length reasonCodes do ignore (let code = (HxArray.get (Obj.magic reasonCodes) (!_g2) : string) in (
+                ignore (let __old_27 = !_g2 in let __new_28 = HxInt.add __old_27 1 in (
+                  ignore (_g2 := __new_28);
+                  __new_28
+                ));
+                let previous = HxMap.get_string (Obj.magic excludedCodeCounts) (code : string) in let tempNumber = ref (0 : int) in (
+                  ignore (if previous == HxRuntime.hx_null then let __assign_29 = 1 in (
+                    tempNumber := __assign_29;
+                    __assign_29
+                  ) else let __assign_30 = HxInt.add (HxRuntime.nullable_int_unwrap previous) 1 in (
+                    tempNumber := __assign_30;
+                    __assign_30
+                  ));
+                  HxMap.set_string (Obj.magic excludedCodeCounts) (code : string) (!tempNumber)
+                )
+              )) done
+            )) else ());
+            let tempMaybeHxMap = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map) in let _this = Obj.magic ((Obj.magic self : t).usedLoweringsByRegionKey) in let key = (Obj.obj (HxAnon.get seed "regionKey") : string) in (
+              ignore (let __assign_31 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
+                tempMaybeHxMap := __assign_31;
+                __assign_31
               ));
-              HxArray.push regions (let __anon_31 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_31 "regionKey" (Obj.repr (Obj.obj (HxAnon.get seed "regionKey"))));
-                ignore (HxAnon.set __anon_31 "filePath" (Obj.repr (Obj.obj (HxAnon.get seed "filePath"))));
-                ignore (HxAnon.set __anon_31 "className" (Obj.repr (Obj.obj (HxAnon.get seed "className"))));
-                ignore (HxAnon.set __anon_31 "functionName" (Obj.repr (Obj.obj (HxAnon.get seed "functionName"))));
-                ignore (HxAnon.set __anon_31 "context" (Obj.repr (Obj.obj (HxAnon.get seed "context"))));
-                ignore (HxAnon.set __anon_31 "status" (Obj.repr (!tempString)));
-                ignore (HxAnon.set __anon_31 "reasonCodes" (Obj.repr reasonCodes));
-                ignore (HxAnon.set __anon_31 "exclusionReasons" (Obj.repr exclusionReasons));
-                ignore (HxAnon.set __anon_31 "usedMetalStyleLowerings" (Obj.repr usedLowerings));
-                __anon_31
-              ))
+              let usedLowerings = Obj.magic (sortedKeys (Obj.magic (!tempMaybeHxMap))) in (
+                ignore (if HxArray.length usedLowerings > 0 then ignore (usedMetalStyleCount := HxInt.add (!usedMetalStyleCount) 1) else ());
+                let tempString = ref (HxString.hx_null_string : string) in (
+                  ignore (if autoMetalized then let __assign_32 = "auto_metalized" in (
+                    tempString := __assign_32;
+                    __assign_32
+                  ) else let __assign_33 = "excluded" in (
+                    tempString := __assign_33;
+                    __assign_33
+                  ));
+                  HxArray.push regions (let __anon_34 = HxAnon.create () in (
+                    ignore (HxAnon.set __anon_34 "regionKey" (Obj.repr (Obj.obj (HxAnon.get seed "regionKey"))));
+                    ignore (HxAnon.set __anon_34 "filePath" (Obj.repr (Obj.obj (HxAnon.get seed "filePath"))));
+                    ignore (HxAnon.set __anon_34 "className" (Obj.repr (Obj.obj (HxAnon.get seed "className"))));
+                    ignore (HxAnon.set __anon_34 "functionName" (Obj.repr (Obj.obj (HxAnon.get seed "functionName"))));
+                    ignore (HxAnon.set __anon_34 "context" (Obj.repr (Obj.obj (HxAnon.get seed "context"))));
+                    ignore (HxAnon.set __anon_34 "status" (Obj.repr (!tempString)));
+                    ignore (HxAnon.set __anon_34 "reasonCodes" (Obj.repr reasonCodes));
+                    ignore (HxAnon.set __anon_34 "exclusionReasons" (Obj.repr exclusionReasons));
+                    ignore (HxAnon.set __anon_34 "usedMetalStyleLowerings" (Obj.repr usedLowerings));
+                    __anon_34
+                  ))
+                )
+              )
             )
           )
         )
@@ -204,47 +220,47 @@ let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let
   )) done);
   let excludedByCode = Obj.magic (HxArray.create ()) in let sortedCodes = Obj.magic (sortedCountKeys (Obj.magic excludedCodeCounts)) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length sortedCodes do ignore (let code = (HxArray.get (Obj.magic sortedCodes) (!_g) : string) in (
-      ignore (let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
-        ignore (_g := __new_33);
-        __new_33
+      ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
+        ignore (_g := __new_36);
+        __new_36
       ));
-      let count = HxMap.get_string excludedCodeCounts code in let tempNumber1 = ref (0 : int) in (
-        ignore (if count == HxRuntime.hx_null then let __assign_34 = 0 in (
-          tempNumber1 := __assign_34;
-          __assign_34
-        ) else let __assign_35 = let __nullable_int_36 = count in if __nullable_int_36 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_36 in (
-          tempNumber1 := __assign_35;
-          __assign_35
+      let count = HxMap.get_string (Obj.magic excludedCodeCounts) (code : string) in let tempNumber1 = ref (0 : int) in (
+        ignore (if count == HxRuntime.hx_null then let __assign_37 = 0 in (
+          tempNumber1 := __assign_37;
+          __assign_37
+        ) else let __assign_38 = let __nullable_int_39 = count in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39 in (
+          tempNumber1 := __assign_38;
+          __assign_38
         ));
-        HxArray.push excludedByCode (let __anon_37 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_37 "code" (Obj.repr code));
-          ignore (HxAnon.set __anon_37 "count" (Obj.repr (!tempNumber1)));
-          __anon_37
+        HxArray.push excludedByCode (let __anon_40 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_40 "code" (Obj.repr code));
+          ignore (HxAnon.set __anon_40 "count" (Obj.repr (!tempNumber1)));
+          __anon_40
         ))
       )
     )) done);
     let tempString1 = ref (HxString.hx_null_string : string) in (
-      ignore (if (Obj.magic self : t).plannerEnabled then let __assign_38 = "portable_auto_metalization" in (
-        tempString1 := __assign_38;
-        __assign_38
-      ) else let __assign_39 = "disabled_non_portable_profile" in (
-        tempString1 := __assign_39;
-        __assign_39
+      ignore (if (Obj.magic self : t).plannerEnabled then let __assign_41 = "portable_auto_metalization" in (
+        tempString1 := __assign_41;
+        __assign_41
+      ) else let __assign_42 = "disabled_non_portable_profile" in (
+        tempString1 := __assign_42;
+        __assign_42
       ));
-      let __anon_40 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_40 "schemaVersion" (Obj.repr 1));
-        ignore (HxAnon.set __anon_40 "profile" (Obj.repr ((Obj.magic self : t).profile)));
-        ignore (HxAnon.set __anon_40 "plannerMode" (Obj.repr (!tempString1)));
-        ignore (HxAnon.set __anon_40 "summary" (let __anon_41 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_41 "totalRegions" (Obj.repr (HxArray.length ((Obj.magic self : t).orderedSeeds))));
-          ignore (HxAnon.set __anon_41 "autoMetalizedRegions" (Obj.repr (!autoMetalizedCount)));
-          ignore (HxAnon.set __anon_41 "excludedRegions" (Obj.repr (!excludedCount)));
-          ignore (HxAnon.set __anon_41 "usedMetalStyleRegions" (Obj.repr (!usedMetalStyleCount)));
-          __anon_41
+      let __anon_43 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_43 "schemaVersion" (Obj.repr 1));
+        ignore (HxAnon.set __anon_43 "profile" (Obj.repr ((Obj.magic self : t).profile)));
+        ignore (HxAnon.set __anon_43 "plannerMode" (Obj.repr (!tempString1)));
+        ignore (HxAnon.set __anon_43 "summary" (let __anon_44 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_44 "totalRegions" (Obj.repr (HxArray.length ((Obj.magic self : t).orderedSeeds))));
+          ignore (HxAnon.set __anon_44 "autoMetalizedRegions" (Obj.repr (!autoMetalizedCount)));
+          ignore (HxAnon.set __anon_44 "excludedRegions" (Obj.repr (!excludedCount)));
+          ignore (HxAnon.set __anon_44 "usedMetalStyleRegions" (Obj.repr (!usedMetalStyleCount)));
+          __anon_44
         )));
-        ignore (HxAnon.set __anon_40 "excludedByCode" (Obj.repr excludedByCode));
-        ignore (HxAnon.set __anon_40 "regions" (Obj.repr regions));
-        __anon_40
+        ignore (HxAnon.set __anon_43 "excludedByCode" (Obj.repr excludedByCode));
+        ignore (HxAnon.set __anon_43 "regions" (Obj.repr regions));
+        __anon_43
       )
     )
   )

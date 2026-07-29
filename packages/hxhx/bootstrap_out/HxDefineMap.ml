@@ -19,12 +19,12 @@ let addRawDefine = fun dst raw -> ignore (try ignore ((
     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let eq = HxString.indexOf s "=" 0 in (
       ignore (if eq = -1 then ignore ((
-        ignore (HxMap.set_string dst s "1");
+        ignore (HxMap.set_string (Obj.magic dst) (s : string) "1");
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       let name = let __call_arg_0_2 = HxString.substr s 0 eq in StringTools.trim __call_arg_0_2 in (
         ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-        let value = (HxString.substr s (HxInt.add eq 1) (-1) : string) in HxMap.set_string dst name value
+        let value = (HxString.substr s (HxInt.add eq 1) (-1) : string) in HxMap.set_string (Obj.magic dst) (name : string) value
       )
     )
   )
@@ -48,6 +48,6 @@ let fromRawDefines = fun rawDefines -> try let __fallback_result_7 = let out = O
 
 let mergeInto = fun dst src -> ignore (try ignore ((
   ignore (if dst == Obj.magic (HxRuntime.hx_null) || src == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let k = HxIterator.of_array (HxMap.keys_string src) in while (let __iter_8 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_8)) () do ignore (let k2 = ((let __iter_9 = k in fun () -> HxIterator.next (Obj.magic __iter_9)) () : string) in HxMap.set_string dst k2 (HxMap.get_string src k2)) done
+  let k = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic src))) in while (let __iter_8 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_8)) () do ignore (let k2 = ((let __iter_9 = k in fun () -> HxIterator.next (Obj.magic __iter_9)) () : string) in let value = (HxMap.get_string (Obj.magic src) (k2 : string) : string) in HxMap.set_string (Obj.magic dst) (k2 : string) value) done
 )) with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10)

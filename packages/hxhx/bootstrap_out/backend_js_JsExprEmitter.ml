@@ -25,7 +25,7 @@ let unsupported = fun (kind : string) (detail : string) -> (let hasDetail = deta
 ) : string)
 
 let nestedScope = fun parent locals -> let __anon_3 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_3 "resolveLocal" (Obj.repr (fun name -> try let __fallback_result_7 = let v = (HxMap.get_string locals name : string) in (
+  ignore (HxAnon.set __anon_3 "resolveLocal" (Obj.repr (fun name -> try let __fallback_result_7 = let v = (HxMap.get_string (Obj.magic locals) (name : string) : string) in (
     ignore (if v != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (v : string))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (if parent == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -3919,7 +3919,7 @@ and emitLambda = fun args body scope -> let lambdaLocals = Obj.magic (HxMap.crea
       __new_1321
     ));
     let safe = let __call_arg_0_1322 = a in Backend_js_JsNameMangler.identifier __call_arg_0_1322 in (
-      ignore (HxMap.set_string lambdaLocals a safe);
+      ignore (HxMap.set_string (Obj.magic lambdaLocals) (a : string) safe);
       HxArray.push params safe
     )
   )) done);
@@ -3938,7 +3938,7 @@ and emitRangeExpr = fun startExpr endExpr scope -> let out = Obj.magic (HxArray.
   HxArray.join out " " (fun x -> x)
 )
 and emitArrayComprehension = fun name iterable guardExpr yieldExpr scope -> let out = Obj.magic (HxArray.create ()) in let iterName = "__arr_comp_" ^ HxString.toStdString (let __call_arg_0_1323 = name in Backend_js_JsNameMangler.identifier __call_arg_0_1323) in let iterLocals = Obj.magic (HxMap.create_string ()) in (
-  ignore (HxMap.set_string iterLocals name iterName);
+  ignore (HxMap.set_string (Obj.magic iterLocals) (name : string) iterName);
   let iterScope = nestedScope scope (Obj.magic iterLocals) in (
     ignore (HxArray.push out "(function () {");
     ignore (HxArray.push out "var __arr_comp_out = [];");
@@ -4009,7 +4009,7 @@ and emitArrayComprehension = fun name iterable guardExpr yieldExpr scope -> let 
   )
 )
 and emitMapComprehension = fun name iterable keyExpr valueExpr scope -> let out = Obj.magic (HxArray.create ()) in let iterName = "__hxhx_map_" ^ HxString.toStdString (let __call_arg_0_1326 = name in Backend_js_JsNameMangler.identifier __call_arg_0_1326) in let iterLocals = Obj.magic (HxMap.create_string ()) in (
-  ignore (HxMap.set_string iterLocals name iterName);
+  ignore (HxMap.set_string (Obj.magic iterLocals) (name : string) iterName);
   let iterScope = nestedScope scope (Obj.magic iterLocals) in (
     ignore (HxArray.push out "(function () {");
     ignore (HxArray.push out "var __hxhx_map_out = {};");
@@ -4105,8 +4105,8 @@ and emitSwitchExpr = fun scrutinee patterns exprs scope -> let out = Obj.magic (
                 ignore (_g2 := __new_1336);
                 __new_1336
               ));
-              let bindSafe = "__sw_bind_" ^ HxString.toStdString (let __call_arg_0_1337 = Obj.obj (HxAnon.get binding "name") in Backend_js_JsNameMangler.identifier __call_arg_0_1337) in (
-                ignore (HxMap.set_string locals (Obj.obj (HxAnon.get binding "name")) bindSafe);
+              let bindSafe = "__sw_bind_" ^ HxString.toStdString (let __call_arg_0_1337 = Obj.obj (HxAnon.get binding "name") in Backend_js_JsNameMangler.identifier __call_arg_0_1337) in let key = (Obj.obj (HxAnon.get binding "name") : string) in (
+                ignore (HxMap.set_string (Obj.magic locals) (key : string) bindSafe);
                 HxArray.push bindParts (((("var " ^ HxString.toStdString bindSafe) ^ " = ") ^ HxString.toStdString (Obj.obj (HxAnon.get binding "expr"))) ^ ";")
               )
             )) done);

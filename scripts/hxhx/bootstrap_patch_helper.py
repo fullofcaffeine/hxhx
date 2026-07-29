@@ -434,85 +434,6 @@ let append_token_text (b : Buffer.t) (text : string) : unit =
     write_text(path_str, src)
 
 
-def cmd_patch_emitter_typed_param_fallback(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-emitter-typed-param-fallback <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    old = """let args = Obj.magic (TyFunctionEnv.getParams (Obj.magic tf) ()) in let parsedFn = Obj.magic (HxMap.get_string parsedByName nameRaw) in """
-    new = """let args = Obj.magic (TyFunctionEnv.getParams (Obj.magic tf) ()) in let parsedFn = Obj.magic (HxMap.get_string parsedByName nameRaw) in let args = if HxArray.length args = 0 && parsedFn != Obj.magic (HxRuntime.hx_null) then let parsedArgs = Obj.magic (HxFunctionDecl.getArgs (Obj.magic parsedFn)) in if HxArray.length parsedArgs = 0 then Obj.magic args else Obj.magic (let __arr_bootstrap_fn_args = HxArray.create () in (
-                                                                    ignore (let _g_bootstrap_fn_arg = ref 0 in while !_g_bootstrap_fn_arg < HxArray.length parsedArgs do ignore (let parsedArg = Obj.magic (HxArray.get (Obj.magic parsedArgs) (!_g_bootstrap_fn_arg)) in (
-                                                                      ignore (let __old_bootstrap_fn_arg = !_g_bootstrap_fn_arg in let __new_bootstrap_fn_arg = HxInt.add __old_bootstrap_fn_arg 1 in (
-                                                                        ignore (_g_bootstrap_fn_arg := __new_bootstrap_fn_arg);
-                                                                        __new_bootstrap_fn_arg
-                                                                      ));
-                                                                      let parsedName = (HxFunctionArg.getName (Obj.magic parsedArg) : string) in let parsedTy = Obj.magic (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic parsedArg) : string)) in (
-                                                                        ignore (HxArray.push __arr_bootstrap_fn_args (Obj.magic (TySymbol.create (parsedName : string) (Obj.magic parsedTy))))
-                                                                      )
-                                                                    )) done);
-                                                                    __arr_bootstrap_fn_args
-                                                                  )) else Obj.magic args in (* hxhx(stage3) bootstrap shim: typed param fallback for emitted fn args *) """
-
-    src, count = src.replace(old, new), src.count(old)
-    if count == 0:
-        fail("build-hxhx: failed to locate bootstrap typed-param fallback anchor in EmitterStage.ml\n")
-    write_text(path_str, src)
-
-
-def cmd_patch_emitter_parsed_arg_type_overlay(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-emitter-parsed-arg-type-overlay <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    if "bootstrap shim: typed param fallback for emitted fn args" in src:
-        return
-
-    old = """                                                                    ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-                                                                      ignore (let __old_46869 = !_g2 in let __new_46870 = HxInt.add __old_46869 1 in (
-                                                                        ignore (_g2 := __new_46870);
-                                                                        __new_46870
-                                                                      ));
-                                                                      let key = (TySymbol.getName (Obj.magic a) () : string) in let value = Obj.magic (TySymbol.getType (Obj.magic a) ()) in HxMap.set_string tyByIdent key value
-                                                                    )) done);
-"""
-    new = """                                                                    ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-                                                                      ignore (let __old_46869 = !_g2 in let __new_46870 = HxInt.add __old_46869 1 in (
-                                                                        ignore (_g2 := __new_46870);
-                                                                        __new_46870
-                                                                      ));
-                                                                      let key = (TySymbol.getName (Obj.magic a) () : string) in let value = Obj.magic (TySymbol.getType (Obj.magic a) ()) in HxMap.set_string tyByIdent key value
-                                                                    )) done);
-                                                                    ignore (if parsedFn != Obj.magic (HxRuntime.hx_null) then ignore (let parsedArgs = Obj.magic (HxFunctionDecl.getArgs (Obj.magic parsedFn)) in let _g_bootstrap_arg_hint = ref 0 in while !_g_bootstrap_arg_hint < HxArray.length parsedArgs do ignore (let parsedArg = Obj.magic (HxArray.get (Obj.magic parsedArgs) (!_g_bootstrap_arg_hint)) in (
-                                                                      let idx = !_g_bootstrap_arg_hint in (
-                                                                        ignore (let __old_bootstrap_arg_hint = !_g_bootstrap_arg_hint in let __new_bootstrap_arg_hint = HxInt.add __old_bootstrap_arg_hint 1 in (
-                                                                          ignore (_g_bootstrap_arg_hint := __new_bootstrap_arg_hint);
-                                                                          __new_bootstrap_arg_hint
-                                                                        ));
-                                                                        let typedArg = if idx < HxArray.length args then Obj.magic (HxArray.get (Obj.magic args) idx) else Obj.magic (HxRuntime.hx_null) in let typedName = if typedArg == Obj.magic (HxRuntime.hx_null) then ("" : string) else (TySymbol.getName (Obj.magic typedArg) () : string) in let parsedName = (HxFunctionArg.getName (Obj.magic parsedArg) : string) in let hinted = Obj.magic (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic parsedArg) : string)) in (
-                                                                          ignore (if typedName != Obj.magic (HxRuntime.hx_null) && HxString.length typedName > 0 then ignore (let existing = Obj.magic (HxMap.get_string tyByIdent typedName) in let existingNeedsRepair = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" || not (HxString.equals (TyType.toString (Obj.magic existing) ()) (TyType.toString (Obj.magic hinted) ())) in let hintedUseful = hinted != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic hinted) ()) && not (HxString.equals (TyType.toString (Obj.magic hinted) ()) "Dynamic") in if existingNeedsRepair && hintedUseful then ignore (HxMap.set_string tyByIdent typedName hinted) else ()) else ());
-                                                                          ignore (if parsedName != Obj.magic (HxRuntime.hx_null) && HxString.length parsedName > 0 && not (HxString.equals parsedName typedName) then ignore (let existing = Obj.magic (HxMap.get_string tyByIdent parsedName) in let existingNeedsRepair = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" || not (HxString.equals (TyType.toString (Obj.magic existing) ()) (TyType.toString (Obj.magic hinted) ())) in let hintedUseful = hinted != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic hinted) ()) && not (HxString.equals (TyType.toString (Obj.magic hinted) ()) "Dynamic") in if existingNeedsRepair && hintedUseful then ignore (HxMap.set_string tyByIdent parsedName hinted) else ()) else ())
-                                                                        )
-                                                                      )
-                                                                    )) done) else ());
-                                                                    (* hxhx(stage3) bootstrap shim: parsed arg type overlay for tyByIdent *)
-"""
-
-    if old in src:
-        write_text(path_str, src.replace(old, new, 1))
-        return
-
-    legacy_rx = re.compile(
-        r'''ignore \(let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore \(let a = Obj\.magic \(HxArray\.get \(Obj\.magic args\) \(!_g2\)\) in \(.*?HxMap\.set_string tyByIdent key value\s*\)\) done\);\n''',
-        re.S,
-    )
-    replaced, count = legacy_rx.subn(new, src, count=1)
-    if count != 1:
-        fail("build-hxhx: failed to locate bootstrap parsed-arg type overlay anchor in EmitterStage.ml\n")
-    write_text(path_str, replaced)
-
-
 def cmd_patch_emitter_preapplied_sig_fallback(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-emitter-preapplied-sig-fallback <path>\n")
@@ -3841,8 +3762,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-hxparser-generic-function-decl": cmd_patch_hxparser_generic_function_decl,
     "patch-native-parser-generic-arrow-constraints": cmd_patch_native_parser_generic_arrow_constraints,
     "patch-native-parser-expr-spacing": cmd_patch_native_parser_expr_spacing,
-    "patch-emitter-typed-param-fallback": cmd_patch_emitter_typed_param_fallback,
-    "patch-emitter-parsed-arg-type-overlay": cmd_patch_emitter_parsed_arg_type_overlay,
     "patch-emitter-preapplied-sig-fallback": cmd_patch_emitter_preapplied_sig_fallback,
     "patch-allowed-ident-fallback": cmd_patch_allowed_ident_fallback,
     "patch-typed-ty-map-copying": cmd_patch_typed_ty_map_copying,

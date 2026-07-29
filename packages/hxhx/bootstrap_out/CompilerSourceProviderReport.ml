@@ -135,7 +135,7 @@ let totalHits = fun self () -> HxInt.add (HxInt.add ((Obj.magic self : t).source
 
 let totalMisses = fun self () -> HxInt.add (HxInt.add ((Obj.magic self : t).sourceMisses) ((Obj.magic self : t).resolutionMisses)) ((Obj.magic self : t).parserMisses)
 
-let missReasonCount = fun self (reason : string) -> let count = HxMap.get_string ((Obj.magic self : t).missReasons) reason in let tempResult = ref (0 : int) in (
+let missReasonCount = fun self (reason : string) -> let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber = HxMap.get_string (Obj.magic _this) (reason : string) in let count = tempMaybeNumber in let tempResult = ref (0 : int) in (
   ignore (if count == HxRuntime.hx_null then let __assign_68 = 0 in (
     tempResult := __assign_68;
     __assign_68
@@ -154,15 +154,15 @@ let recordMissReason = fun self (reason : string) -> ignore (ignore (let tempStr
     tempString := __assign_73;
     __assign_73
   ));
-  let normalized = !tempString in let previous = HxMap.get_string ((Obj.magic self : t).missReasons) normalized in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
+  let normalized = !tempString in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber = HxMap.get_string (Obj.magic _this) (normalized : string) in let previous = tempMaybeNumber in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber1 = ref (HxRuntime.hx_null : Obj.t) in (
     ignore (if previous == HxRuntime.hx_null then let __assign_75 = Obj.repr 0 in (
-      tempMaybeNumber := __assign_75;
+      tempMaybeNumber1 := __assign_75;
       __assign_75
     ) else let __assign_76 = previous in (
-      tempMaybeNumber := __assign_76;
+      tempMaybeNumber1 := __assign_76;
       __assign_76
     ));
-    HxMap.set_string ((Obj.magic self : t).missReasons) normalized (HxInt.add (HxRuntime.nullable_int_unwrap (!tempMaybeNumber)) 1)
+    HxMap.set_string (Obj.magic _this) (normalized : string) (HxInt.add (HxRuntime.nullable_int_unwrap (!tempMaybeNumber1)) 1)
   )
 )))
 
@@ -204,8 +204,8 @@ let compareStrings = fun (left : string) (right : string) -> (let tempResult = r
   !tempResult
 ) : int)
 
-let sortedMissReasons = fun self () -> let reasons = Obj.magic (HxArray.create ()) in let reason = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).missReasons)) in (
-  ignore (while (let __iter_66 = reason in fun () -> HxIterator.hasNext (Obj.magic __iter_66)) () do ignore (let reason2 = ((let __iter_67 = reason in fun () -> HxIterator.next (Obj.magic __iter_67)) () : string) in HxArray.push reasons reason2) done);
+let sortedMissReasons = fun self () -> let reasons = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in (
+  ignore (while (let __iter_66 = tempIterator in fun () -> HxIterator.hasNext (Obj.magic __iter_66)) () do ignore (let reason2 = ((let __iter_67 = tempIterator in fun () -> HxIterator.next (Obj.magic __iter_67)) () : string) in HxArray.push reasons reason2) done);
   ignore (HxArray.sort reasons compareStrings);
   reasons
 )

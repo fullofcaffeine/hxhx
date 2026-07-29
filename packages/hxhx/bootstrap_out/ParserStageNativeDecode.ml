@@ -194,7 +194,7 @@ let scanClassFieldTypeHints = fun source classOpen out -> ignore (let depth = re
         pos := __assign_73;
         __assign_73
       )) else ());
-      ignore (if HxString.length (Obj.obj (HxAnon.get scanned "name")) > 0 && HxString.length (Obj.obj (HxAnon.get scanned "typeHint")) > 0 then ignore (let key = let __call_arg_0_74 = Obj.obj (HxAnon.get scanned "name") in let __call_arg_1_75 = !pendingStatic in fieldHintKey __call_arg_0_74 __call_arg_1_75 in let value = (Obj.obj (HxAnon.get scanned "typeHint") : string) in HxMap.set_string out key value) else ());
+      ignore (if HxString.length (Obj.obj (HxAnon.get scanned "name")) > 0 && HxString.length (Obj.obj (HxAnon.get scanned "typeHint")) > 0 then ignore (let key = let __call_arg_0_74 = Obj.obj (HxAnon.get scanned "name") in let __call_arg_1_75 = !pendingStatic in fieldHintKey __call_arg_0_74 __call_arg_1_75 in let value = (Obj.obj (HxAnon.get scanned "typeHint") : string) in HxMap.set_string (Obj.magic out) (key : string) value) else ());
       let __assign_76 = false in (
         pendingStatic := __assign_76;
         __assign_76
@@ -270,7 +270,7 @@ let sourceFieldTypeHints = fun source expectedClass -> try let __fallback_result
 let sourceFieldTypeHintByName = fun hints name isStatic -> try let __fallback_result_117 = (
   ignore (if hints == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let key = let __call_arg_0_112 = name in let __call_arg_1_113 = isStatic in fieldHintKey __call_arg_0_112 __call_arg_1_113 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if HxMap.exists_string hints key then let __assign_114 = (HxMap.get_string hints key : string) in (
+    ignore (if HxMap.exists_string (Obj.magic hints) (key : string) then let __assign_114 = (HxMap.get_string (Obj.magic hints) (key : string) : string) in (
       tempResult := __assign_114;
       __assign_114
     ) else let __assign_115 = ("" : string) in (
@@ -1206,16 +1206,16 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                 argName := __assign_349;
                 __assign_349
               ));
-              HxMap.set_string restArgsByName (!argName) true
+              HxMap.set_string (Obj.magic restArgsByName) (!argName : string) true
             )) else ());
             ignore (if let __call_arg_0_350 = !argName in let __call_arg_1_351 = "?" in StringTools.startsWith __call_arg_0_350 __call_arg_1_351 then ignore ((
               ignore (let __assign_352 = (HxString.substr (!argName) 1 (-1) : string) in (
                 argName := __assign_352;
                 __assign_352
               ));
-              HxMap.set_string optionalArgsByName (!argName) true
+              HxMap.set_string (Obj.magic optionalArgsByName) (!argName : string) true
             )) else ());
-            let ty = (HxString.substr entry (HxInt.add idx 1) (-1) : string) in HxMap.set_string argTypes (!argName) ty
+            let ty = (HxString.substr entry (HxInt.add idx 1) (-1) : string) in HxMap.set_string (Obj.magic argTypes) (!argName : string) ty
           )
         )
       )) with
@@ -1250,12 +1250,12 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   __assign_362
                 )
               )) else ());
-              ignore (if not (!isRest) && HxMap.exists_string restArgsByName (!rawName) then ignore (let __assign_363 = true in (
+              ignore (if not (!isRest) && HxMap.exists_string (Obj.magic restArgsByName) (!rawName : string) then ignore (let __assign_363 = true in (
                 isRest := __assign_363;
                 __assign_363
               )) else ());
               let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                ignore (if HxMap.exists_string argTypes (!rawName) then let __assign_364 = Obj.magic (HxMap.get_string argTypes (!rawName) : string) in (
+                ignore (if HxMap.exists_string (Obj.magic argTypes) (!rawName : string) then let __assign_364 = Obj.magic (HxMap.get_string (Obj.magic argTypes) (!rawName : string) : string) in (
                   tempMaybeString := __assign_364;
                   __assign_364
                 ) else let __assign_365 = Obj.magic ("" : string) in (
@@ -1263,7 +1263,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   __assign_365
                 ));
                 let ty = ref (!tempMaybeString : string) in (
-                  ignore (if not (!isOptional) && HxMap.exists_string optionalArgsByName (!rawName) then ignore (let __assign_366 = true in (
+                  ignore (if not (!isOptional) && HxMap.exists_string (Obj.magic optionalArgsByName) (!rawName : string) then ignore (let __assign_366 = true in (
                     isOptional := __assign_366;
                     __assign_366
                   )) else ());
@@ -1329,7 +1329,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
             ignore (if HxString.length retExpr > 0 then ignore (HxArray.push body (HxStmt.SReturn (Obj.magic (parseReturnExprText (retExpr : string)), Obj.magic pos))) else ignore (if HxString.length retStr > 0 then ignore (HxArray.push body (HxStmt.SReturn (Obj.magic (HxExpr.EString (retStr : string)), Obj.magic pos))) else ignore (if HxString.length retId > 0 then ignore (HxArray.push body (HxStmt.SReturn (Obj.magic (HxExpr.EIdent (retId : string)), Obj.magic pos))) else ())));
             let outBody = ref (Obj.magic body) in (
               ignore (if methodBodySrc != Obj.magic (HxRuntime.hx_null) && HxString.length methodBodySrc > 0 then ignore ((
-                ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_HAVE" : string)) "1" then ignore (try print_endline ((("body_parse_have=" ^ HxString.toStdString name) ^ " len=") ^ string_of_int (HxString.length methodBodySrc)) with
+                ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_HAVE" : string)) "1" then ignore (try let v = Obj.repr ((("body_parse_have=" ^ HxString.toStdString name) ^ " len=") ^ string_of_int (HxString.length methodBodySrc)) in let value = v in HxSys.printlnValue value with
                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                   | HxRuntime.Hx_return __ret_384 -> raise (HxRuntime.Hx_return __ret_384)
@@ -1356,7 +1356,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                     tempString := __assign_389;
                     __assign_389
                   ));
-                  let shown = (!tempString : string) in print_endline ((("body_parse_src=" ^ HxString.toStdString name) ^ " ") ^ HxString.toStdString shown)
+                  let shown = (!tempString : string) in let value = Obj.repr ((("body_parse_src=" ^ HxString.toStdString name) ^ " ") ^ HxString.toStdString shown) in HxSys.printlnValue value
                 ) with
                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -1391,7 +1391,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   | HxRuntime.Hx_exception (__exn_v_397, __exn_tags_398) -> if HxRuntime.tags_has __exn_tags_398 "HxParseError" then let e = (Obj.obj __exn_v_397 : HxParseError.t) in (
                     ignore e;
                     (
-                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try print_endline ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString ((Obj.magic e : HxParseError.t).message)) with
+                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try let v = Obj.repr ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString ((Obj.magic e : HxParseError.t).message)) in let value = v in HxSys.printlnValue value with
                         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                         | HxRuntime.Hx_return __ret_404 -> raise (HxRuntime.Hx_return __ret_404)
@@ -1418,7 +1418,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   ) else if HxRuntime.tags_has __exn_tags_398 "String" then let e = (Obj.obj __exn_v_397 : string) in (
                     ignore e;
                     (
-                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try print_endline ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString e) with
+                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try let value = Obj.repr ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString e) in HxSys.printlnValue value with
                         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                         | HxRuntime.Hx_return __ret_399 -> raise (HxRuntime.Hx_return __ret_399)
@@ -1446,7 +1446,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   | __exn_409 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let e = (Obj.obj (Obj.repr __exn_409) : HxParseError.t) in (
                     ignore e;
                     (
-                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try print_endline ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString ((Obj.magic e : HxParseError.t).message)) with
+                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try let v = Obj.repr ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString ((Obj.magic e : HxParseError.t).message)) in let value = v in HxSys.printlnValue value with
                         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                         | HxRuntime.Hx_return __ret_415 -> raise (HxRuntime.Hx_return __ret_415)
@@ -1473,7 +1473,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                   ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_409) : string) in (
                     ignore e;
                     (
-                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try print_endline ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString e) with
+                      ignore (if HxString.equals (HxSys.getEnv ("HXHX_TRACE_BODY_PARSE_FAIL" : string)) "1" then ignore (try let value = Obj.repr ((("body_parse_fail=" ^ HxString.toStdString name) ^ " err=") ^ HxString.toStdString e) in HxSys.printlnValue value with
                         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                         | HxRuntime.Hx_return __ret_410 -> raise (HxRuntime.Hx_return __ret_410)
@@ -1816,22 +1816,22 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_49 = 
                   __assign_14
                 ))
                 | "method" -> ignore (HxArray.push methodPayloads payload)
-                | "method_body" -> ignore (let nl = HxString.indexOf payload "\n" 0 in if nl > 0 then ignore (let name = (HxString.substr payload 0 nl : string) in let bodySource = (HxString.substr payload (HxInt.add nl 1) (-1) : string) in let bodies = ref (Obj.magic (HxMap.get_string methodBodies name)) in (
+                | "method_body" -> ignore (let nl = HxString.indexOf payload "\n" 0 in if nl > 0 then ignore (let name = (HxString.substr payload 0 nl : string) in let bodySource = (HxString.substr payload (HxInt.add nl 1) (-1) : string) in let bodies = ref (Obj.magic (HxMap.get_string (Obj.magic methodBodies) (name : string))) in (
                   ignore (if !bodies == Obj.magic (HxRuntime.hx_null) then ignore ((
                     ignore (let __assign_15 = Obj.magic (Obj.magic (let __arr_16 = HxArray.create () in __arr_16)) in (
                       bodies := __assign_15;
                       __assign_15
                     ));
-                    HxMap.set_string methodBodies name (!bodies)
+                    HxMap.set_string (Obj.magic methodBodies) (name : string) (!bodies)
                   )) else ());
                   ignore (HxArray.push (!bodies) bodySource);
-                  let starts = ref (Obj.magic (HxMap.get_string methodBodyStarts name)) in (
+                  let starts = ref (Obj.magic (HxMap.get_string (Obj.magic methodBodyStarts) (name : string))) in (
                     ignore (if !starts == Obj.magic (HxRuntime.hx_null) then ignore ((
                       ignore (let __assign_17 = Obj.magic (Obj.magic (let __arr_18 = HxArray.create () in __arr_18)) in (
                         starts := __assign_17;
                         __assign_17
                       ));
-                      HxMap.set_string methodBodyStarts name (!starts)
+                      HxMap.set_string (Obj.magic methodBodyStarts) (name : string) (!starts)
                     )) else ());
                     let start = ref (-1) in (
                       ignore (if source != Obj.magic (HxRuntime.hx_null) && HxString.length source > 0 && HxString.length bodySource > 0 then ignore (let bodyStart = HxString.indexOf source bodySource 0 in let fallbackStart = let __call_arg_0_19 = source in let __call_arg_1_20 = name in findFunctionBodyStart __call_arg_0_19 __call_arg_1_20 in let tempRight = ref (0 : int) in (
@@ -1869,7 +1869,7 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_49 = 
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
       ignore (if not (!sawOk) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Native frontend: missing terminal 'ok'") ["Dynamic"]) else ());
-      let sourceFieldHints = sourceFieldTypeHints (source : string) (!className : string) in let methodBodyUseCounts = HxMap.create_string () in let methodBodyUseCount = fun name -> try let __fallback_result_28 = let resolved = HxMap.get_string methodBodyUseCounts name in (
+      let sourceFieldHints = sourceFieldTypeHints (source : string) (!className : string) in let methodBodyUseCounts = HxMap.create_string () in let methodBodyUseCount = fun name -> try let __fallback_result_28 = let resolved = HxMap.get_string (Obj.magic methodBodyUseCounts) (name : string) in (
         ignore (if resolved == HxRuntime.hx_null then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
         let count = let __nullable_int_26 = resolved in if __nullable_int_26 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_26 in count
       ) in Obj.magic __fallback_result_28 with
@@ -1888,8 +1888,8 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_49 = 
               __assign_32
             ));
             let name = (!tempString : string) in let bodyIndex = let __call_callee_33 = methodBodyUseCount in let __call_arg_0_34 = name in __call_callee_33 __call_arg_0_34 in (
-              ignore (HxMap.set_string methodBodyUseCounts name (HxInt.add bodyIndex 1));
-              let bodies = Obj.magic (HxMap.get_string methodBodies name) in let starts = Obj.magic (HxMap.get_string methodBodyStarts name) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+              ignore (HxMap.set_string (Obj.magic methodBodyUseCounts) (name : string) (HxInt.add bodyIndex 1));
+              let bodies = Obj.magic (HxMap.get_string (Obj.magic methodBodies) (name : string)) in let starts = Obj.magic (HxMap.get_string (Obj.magic methodBodyStarts) (name : string)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
                 ignore (if bodies != Obj.magic (HxRuntime.hx_null) && bodyIndex < HxArray.length bodies then let __assign_35 = Obj.magic (HxArray.get (Obj.magic bodies) bodyIndex : string) in (
                   tempMaybeString := __assign_35;
                   __assign_35
@@ -1925,8 +1925,8 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_49 = 
                 tempString1 := __assign_42;
                 __assign_42
               ));
-              let key = (HxString.toStdString (HxFieldDecl.getName (Obj.magic f)) ^ "|") ^ HxString.toStdString (!tempString1) in if HxMap.exists_string seenFields key then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-                ignore (HxMap.set_string seenFields key true);
+              let key = (HxString.toStdString (HxFieldDecl.getName (Obj.magic f)) ^ "|") ^ HxString.toStdString (!tempString1) in if HxMap.exists_string (Obj.magic seenFields) (key : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+                ignore (HxMap.set_string (Obj.magic seenFields) (key : string) true);
                 HxArray.push fields f
               ))
             ))
@@ -1945,8 +1945,8 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_49 = 
                   tempString2 := __assign_46;
                   __assign_46
                 ));
-                let key = (HxString.toStdString (HxFieldDecl.getName (Obj.magic f)) ^ "|") ^ HxString.toStdString (!tempString2) in if HxMap.exists_string seenFields key then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-                  ignore (HxMap.set_string seenFields key true);
+                let key = (HxString.toStdString (HxFieldDecl.getName (Obj.magic f)) ^ "|") ^ HxString.toStdString (!tempString2) in if HxMap.exists_string (Obj.magic seenFields) (key : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+                  ignore (HxMap.set_string (Obj.magic seenFields) (key : string) true);
                   HxArray.push fields f
                 ))
               ))

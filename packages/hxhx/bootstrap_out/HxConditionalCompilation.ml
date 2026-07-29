@@ -447,9 +447,9 @@ let exprparser_parseStringLit = fun self () -> let tempResult = ref (HxString.hx
 let exprparser_definedValue = fun self (name : string) -> try let __fallback_result_53 = (
   ignore (if name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let access = Obj.magic (CompilerConditionalDefineAccess.Value) in (
-    ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string ((Obj.magic self : exprparser_t).observedAccessByName) name)) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (HxMap.set_string ((Obj.magic self : exprparser_t).observedAccessByName) name access) else ()));
-    let tempResult = ref (HxString.hx_null_string : string) in (
-      ignore (if HxMap.exists_string ((Obj.magic self : exprparser_t).defines) name then let __assign_50 = (HxMap.get_string ((Obj.magic self : exprparser_t).defines) name : string) in (
+    ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
+    let tempResult = ref (HxString.hx_null_string : string) in let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let tempBool = HxMap.exists_string (Obj.magic _this) (name : string) in (
+      ignore (if tempBool then let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_50 = (HxMap.get_string (Obj.magic _this) (name : string) : string) in (
         tempResult := __assign_50;
         __assign_50
       ) else let __assign_51 = ("" : string) in (
@@ -531,8 +531,8 @@ let exprparser_parseIdentTail = fun self (name : string) -> try let __fallback_r
           __assign_37
         )) else ());
         let access = Obj.magic (CompilerConditionalDefineAccess.Presence) in (
-          ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || !key == HxString.hx_null_string || HxString.length (!key) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string ((Obj.magic self : exprparser_t).observedAccessByName) (!key))) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (HxMap.set_string ((Obj.magic self : exprparser_t).observedAccessByName) (!key) access) else ()));
-          raise (HxRuntime.Hx_return (Obj.repr (HxString.length (!key) > 0 && HxMap.exists_string ((Obj.magic self : exprparser_t).defines) (!key))))
+          ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || !key == HxString.hx_null_string || HxString.length (!key) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (!key : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (!key : string) access) else ()));
+          let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let tempRight1 = HxMap.exists_string (Obj.magic _this) (!key : string) in raise (HxRuntime.Hx_return (Obj.repr (HxString.length (!key) > 0 && tempRight1)))
         )
       )
     )
@@ -560,8 +560,8 @@ let exprparser_parseIdentTail = fun self (name : string) -> try let __fallback_r
         )
       )
       | _ -> let access = Obj.magic (CompilerConditionalDefineAccess.Presence) in (
-        ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string ((Obj.magic self : exprparser_t).observedAccessByName) name)) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (HxMap.set_string ((Obj.magic self : exprparser_t).observedAccessByName) name access) else ()));
-        let __assign_38 = HxMap.exists_string ((Obj.magic self : exprparser_t).defines) name in (
+        ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess1 = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess1) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()));
+        let _this = Obj.magic ((Obj.magic self : exprparser_t).defines) in let __assign_38 = HxMap.exists_string (Obj.magic _this) (name : string) in (
           tempResult := __assign_38;
           __assign_38
         )
@@ -701,7 +701,7 @@ let exprparser_parse = fun self () -> let v = exprparser_parseOr (Obj.magic self
 
 let exprparser_observe = fun self (name : string) (access : CompilerConditionalDefineAccess.compilerconditionaldefineaccess) -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : exprparser_t).observedAccessByName == Obj.magic (HxRuntime.hx_null) || name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string ((Obj.magic self : exprparser_t).observedAccessByName) name)) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (HxMap.set_string ((Obj.magic self : exprparser_t).observedAccessByName) name access) else ()
+  let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in let tempMaybeCompilerConditionalDefineAccess = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic _this) (name : string))) in let previous = Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" tempMaybeCompilerConditionalDefineAccess) in if previous == Obj.magic (HxRuntime.hx_null) || access = CompilerConditionalDefineAccess.Value then ignore (let _this = Obj.magic ((Obj.magic self : exprparser_t).observedAccessByName) in HxMap.set_string (Obj.magic _this) (name : string) access) else ()
 )) with
   | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54))
 
@@ -759,8 +759,8 @@ let isActiveNativeLibraryExternPath = fun typePath defines -> try let __fallback
     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (if defines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let dot = HxString.indexOf s "." 0 in (
-      ignore (if dot > 0 && HxMap.exists_string defines "java" && HxMap.exists_string defines "hxhx_java_lib" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-      ignore (if HxMap.exists_string defines "cs" && HxMap.exists_string defines "hxhx_net_lib" then ignore ((
+      ignore (if dot > 0 && HxMap.exists_string (Obj.magic defines) ("java" : string) && HxMap.exists_string (Obj.magic defines) ("hxhx_java_lib" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      ignore (if HxMap.exists_string (Obj.magic defines) ("cs" : string) && HxMap.exists_string (Obj.magic defines) ("hxhx_net_lib" : string) then ignore ((
         ignore (if dot > 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         let first = HxString.charCodeAt s 0 in raise (HxRuntime.Hx_return (Obj.repr ((let __nullable_50 = first in let __nullable_51 = 65 in if __nullable_50 == HxRuntime.hx_null then false else Obj.obj __nullable_50 >= __nullable_51) && (let __nullable_52 = first in let __nullable_53 = 90 in if __nullable_52 == HxRuntime.hx_null then false else Obj.obj __nullable_52 <= __nullable_53))))
       )) else ());
@@ -787,7 +787,7 @@ let isActiveTargetNativeExternPath = fun typePath defines -> try let __fallback_
   ignore (if typePath == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let dot = HxString.indexOf typePath "." 0 in (
     ignore (if dot <= 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    let root = (HxString.substr typePath 0 dot : string) in (let __call_arg_0_46 = root in isKnownTargetPackageRoot __call_arg_0_46) && defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string defines root
+    let root = (HxString.substr typePath 0 dot : string) in (let __call_arg_0_46 = root in isKnownTargetPackageRoot __call_arg_0_46) && defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic defines) (root : string)
   )
 ) in Obj.magic __fallback_result_48 with
   | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
@@ -795,25 +795,25 @@ let isActiveTargetNativeExternPath = fun typePath defines -> try let __fallback_
 let hasAnyKnownTargetDefine = fun defines -> try let __fallback_result_59 = (
   ignore (if defines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let root = "php" in (
-    ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+    ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
     let root = "java" in (
-      ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
       let root = "cs" in (
-        ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+        ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         let root = "python" in (
-          ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+          ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
           let root = "neko" in (
-            ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+            ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
             let root = "lua" in (
-              ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+              ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
               let root = "cpp" in (
-                ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
                 let root = "hl" in (
-                  ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                  ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
                   let root = "flash" in (
-                    ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                    ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
                     let root = "js" in (
-                      ignore (if HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                      ignore (if HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
                       false
                     )
                   )
@@ -834,7 +834,7 @@ let isInactiveTargetQualifiedTypePath = fun typePath defines -> try let __fallba
     ignore (if dot <= 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let root = (HxString.substr typePath 0 dot : string) in (
       ignore (if not (let __call_arg_0_43 = root in isKnownTargetPackageRoot __call_arg_0_43) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-      ignore (if defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string defines root then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+      ignore (if defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic defines) (root : string) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
       hasAnyKnownTargetDefine (Obj.magic defines)
     )
   )
@@ -1320,8 +1320,8 @@ let evalExpr = fun expr defines observedAccessByName -> let tempString = ref (Hx
 
 let filterSourceInternal = fun source defines observeInputs -> try let __fallback_result_42 = let decisions = Obj.magic (HxArray.create ()) in let evaluate = fun expression -> try let __fallback_result_17 = (
   ignore (if not (observeInputs) then raise (HxRuntime.Hx_return (Obj.repr (evalExpr (expression : string) (Obj.magic defines) (Obj.magic (HxRuntime.hx_null))))) else ());
-  let accessByName = Obj.magic (HxMap.create_string ()) in let result = evalExpr (expression : string) (Obj.magic defines) (Obj.magic accessByName) in let _g = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let name = HxIterator.of_array (HxMap.keys_string accessByName) in (
-    ignore (while (let __iter_14 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_14)) () do ignore (let name2 = ((let __iter_15 = name in fun () -> HxIterator.next (Obj.magic __iter_15)) () : string) in HxArray.push _g (CompilerConditionalDefineInput.fromDefines (name2 : string) (Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string accessByName name2))) (Obj.magic defines))) done);
+  let accessByName = Obj.magic (HxMap.create_string ()) in let result = evalExpr (expression : string) (Obj.magic defines) (Obj.magic accessByName) in let _g = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic accessByName))) in (
+    ignore (while (let __iter_14 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_14)) () do ignore (let name2 = ((let __iter_15 = name in fun () -> HxIterator.next (Obj.magic __iter_15)) () : string) in HxArray.push _g (CompilerConditionalDefineInput.fromDefines (name2 : string) (Obj.obj (HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (HxMap.get_string (Obj.magic accessByName) (name2 : string)))) (Obj.magic defines))) done);
     let tempArray = Obj.magic _g in let inputs = Obj.magic tempArray in (
       ignore (HxArray.push decisions (CompilerConditionalDecision.fromEvaluation (expression : string) result (Obj.magic inputs)));
       result

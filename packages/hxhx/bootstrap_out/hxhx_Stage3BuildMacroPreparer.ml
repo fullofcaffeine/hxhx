@@ -132,11 +132,11 @@ let ensureRequestMayRunMacros = fun self () -> ignore (ignore (if not (Hxhx_Comp
 
 let nonBuiltinEntrypoints = fun expressions -> let result = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length expressions do ignore (let expression = (HxArray.get (Obj.magic expressions) (!_g) : string) in (
-    ignore (let __old_83 = !_g in let __new_84 = HxInt.add __old_83 1 in (
-      ignore (_g := __new_84);
-      __new_84
+    ignore (let __old_84 = !_g in let __new_85 = HxInt.add __old_84 1 in (
+      ignore (_g := __new_85);
+      __new_85
     ));
-    if not (let __call_arg_0_85 = expression in Hxhx_Stage3MacroHostSupport.isBuiltinMacroExpr __call_arg_0_85) && HxArray.indexOf result expression 0 = -1 then ignore (HxArray.push result expression) else ()
+    if not (let __call_arg_0_86 = expression in Hxhx_Stage3MacroHostSupport.isBuiltinMacroExpr __call_arg_0_86) && HxArray.indexOf result expression 0 = -1 then ignore (HxArray.push result expression) else ()
   )) done);
   result
 )
@@ -148,10 +148,16 @@ let validateAutoBuiltEntrypoints = fun self (expressions : string HxArray.t) -> 
       ignore (_g := __new_81);
       __new_81
     ));
-    if not (HxMap.exists_string ((Obj.magic self : t).autoBuiltEntrypoints) entrypoint) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Hxhx_Stage3BuildMacroPreparationError.create (("a lazily discovered @:build entrypoint was not compiled into the active macro host: " ^ HxString.toStdString entrypoint) ^ "; configure a macro host containing all project entrypoints or rerun without macro-host auto-build" : string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "hxhx.Stage3BuildMacroPreparationError"; "haxe.Exception"]) else ()
+    let tempBool = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).autoBuiltEntrypoints) in (
+      ignore (let __assign_82 = HxMap.exists_string (Obj.magic _this) (entrypoint : string) in (
+        tempBool := __assign_82;
+        __assign_82
+      ));
+      if not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Hxhx_Stage3BuildMacroPreparationError.create (("a lazily discovered @:build entrypoint was not compiled into the active macro host: " ^ HxString.toStdString entrypoint) ^ "; configure a macro host containing all project entrypoints or rerun without macro-host auto-build" : string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "hxhx.Stage3BuildMacroPreparationError"; "haxe.Exception"]) else ()
+    )
   )) done
 )) with
-  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82))
+  | HxRuntime.Hx_return __ret_83 -> Obj.obj __ret_83))
 
 let ensureSession = fun self (expressions : string HxArray.t) -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).session != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -171,7 +177,7 @@ let ensureSession = fun self (expressions : string HxArray.t) -> ignore (ignore 
           ignore (_g := __new_73);
           __new_73
         ));
-        HxMap.set_string ((Obj.magic self : t).autoBuiltEntrypoints) entrypoint true
+        let _this = Obj.magic ((Obj.magic self : t).autoBuiltEntrypoints) in HxMap.set_string (Obj.magic _this) (entrypoint : string) true
       )) done
     )) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
@@ -209,11 +215,11 @@ let ensureSession = fun self (expressions : string HxArray.t) -> ignore (ignore 
 let prepare = fun self (hx_module : ResolvedModule.t) -> try let __fallback_result_55 = (
   ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Hxhx_Stage3BuildMacroPreparationError.create ("build-macro preparation is already closed" : string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "hxhx.Stage3BuildMacroPreparationError"; "haxe.Exception"]) else ());
   ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Hxhx_Stage3BuildMacroPreparationError.create ("build-macro preparation requires a resolved module" : string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "hxhx.Stage3BuildMacroPreparationError"; "haxe.Exception"]) else ());
-  let modulePath = (ResolvedModule.getModulePath (Obj.magic hx_module) : string) in let existing = Obj.magic (HxMap.get_string ((Obj.magic self : t).prepared) modulePath) in (
+  let modulePath = (ResolvedModule.getModulePath (Obj.magic hx_module) : string) in let _this = Obj.magic ((Obj.magic self : t).prepared) in let tempMaybeResolvedModule = Obj.magic (HxMap.get_string (Obj.magic _this) (modulePath : string)) in let existing = Obj.magic tempMaybeResolvedModule in (
     ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic existing))) else ());
     let expressions = Obj.magic (expressionsFor (Obj.magic self) (Obj.magic hx_module)) in (
-      ignore (if HxArray.length expressions = 0 then ignore ((
-        ignore (HxMap.set_string ((Obj.magic self : t).prepared) modulePath hx_module);
+      ignore (if HxArray.length expressions = 0 then ignore (let _this = Obj.magic ((Obj.magic self : t).prepared) in (
+        ignore (HxMap.set_string (Obj.magic _this) (modulePath : string) hx_module);
         raise (HxRuntime.Hx_return (Obj.repr hx_module))
       )) else ());
       ignore (if (Obj.magic self : t).typeOnly then ignore (let _g = ref 0 in (
@@ -228,8 +234,10 @@ let prepare = fun self (hx_module : ResolvedModule.t) -> try let __fallback_resu
             __place_new_35
           )
         )) done);
-        ignore (HxMap.set_string ((Obj.magic self : t).prepared) modulePath hx_module);
-        raise (HxRuntime.Hx_return (Obj.repr hx_module))
+        let _this = Obj.magic ((Obj.magic self : t).prepared) in (
+          ignore (HxMap.set_string (Obj.magic _this) (modulePath : string) hx_module);
+          raise (HxRuntime.Hx_return (Obj.repr hx_module))
+        )
       )) else ());
       ignore (ensureRequestMayRunMacros (Obj.magic self) ());
       ignore (ensureSession (Obj.magic self) (Obj.magic expressions));
@@ -294,8 +302,8 @@ let prepare = fun self (hx_module : ResolvedModule.t) -> try let __fallback_resu
                 ignore error;
                 HxType.hx_throw_typed_rtti (Obj.repr (Hxhx_Stage3BuildMacroPreparationError.create ((("build fields parse failed: " ^ HxString.toStdString modulePath) ^ ": ") ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string) (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"; "hxhx.Stage3BuildMacroPreparationError"; "haxe.Exception"]
               ) else raise (__exn_52));
-            let result = Obj.magic (!tempResolvedModule) in (
-              ignore (HxMap.set_string ((Obj.magic self : t).prepared) modulePath result);
+            let result = Obj.magic (!tempResolvedModule) in let _this = Obj.magic ((Obj.magic self : t).prepared) in (
+              ignore (HxMap.set_string (Obj.magic _this) (modulePath : string) result);
               result
             )
           )

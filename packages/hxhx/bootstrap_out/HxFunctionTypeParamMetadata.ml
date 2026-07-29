@@ -48,7 +48,7 @@ let constraints = fun metadata -> try let __fallback_result_36 = let out = Obj.m
       ignore (if not (let __call_arg_0_31 = entry in let __call_arg_1_32 = "__hxhx_fn_type_constraint=" in StringTools.startsWith __call_arg_0_31 __call_arg_1_32) then raise (HxRuntime.Hx_continue) else ());
       let payload = (HxString.substr entry (HxString.length "__hxhx_fn_type_constraint=") (-1) : string) in let colon = HxString.indexOf payload ":" 0 in (
         ignore (if colon <= 0 then raise (HxRuntime.Hx_continue) else ());
-        let name = let __call_arg_0_33 = HxString.substr payload 0 colon in StringTools.trim __call_arg_0_33 in let typeHint = let __call_arg_0_34 = HxString.substr payload (HxInt.add colon 1) (-1) in StringTools.trim __call_arg_0_34 in if HxString.length name > 0 && HxString.length typeHint > 0 then ignore (HxMap.set_string out name typeHint) else ()
+        let name = let __call_arg_0_33 = HxString.substr payload 0 colon in StringTools.trim __call_arg_0_33 in let typeHint = let __call_arg_0_34 = HxString.substr payload (HxInt.add colon 1) (-1) in StringTools.trim __call_arg_0_34 in if HxString.length name > 0 && HxString.length typeHint > 0 then ignore (HxMap.set_string (Obj.magic out) (name : string) typeHint) else ()
       )
     )) with
       | HxRuntime.Hx_continue -> () done with

@@ -452,8 +452,8 @@ let scanResolvedTypeStaticFields = fun path typeName kind -> try let __fallback_
             __assign_112
           ));
           let trimmed = let __call_arg_0_113 = !tempString1 in StringTools.trim __call_arg_0_113 in (
-            ignore (if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-            ignore (HxMap.set_string seen trimmed true);
+            ignore (if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+            ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
             let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
               ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_114 = Obj.magic (let __arr_115 = HxArray.create () in __arr_115) in (
                 tempArray := __assign_114;
@@ -982,7 +982,7 @@ let scanResolvedTypeSemantics = fun path -> try let __fallback_result_303 = let 
           ignore (HxAnon.set __anon_291 "underlyingTypeText" (Obj.repr (Obj.obj (HxAnon.get parsed "underlyingTypeText"))));
           __anon_291
         ) in (
-          ignore (HxMap.set_string out key value);
+          ignore (HxMap.set_string (Obj.magic out) (key : string) value);
           ignore (let __assign_292 = Obj.obj (HxAnon.get parsed "nextIndex") in (
             i := __assign_292;
             __assign_292
@@ -994,7 +994,7 @@ let scanResolvedTypeSemantics = fun path -> try let __fallback_result_303 = let 
           ignore (HxAnon.set __anon_298 "underlyingTypeText" (Obj.repr (Obj.obj (HxAnon.get parsed "underlyingTypeText"))));
           __anon_298
         ) in (
-          ignore (HxMap.set_string out key value);
+          ignore (HxMap.set_string (Obj.magic out) (key : string) value);
           ignore (let __assign_299 = Obj.obj (HxAnon.get parsed "nextIndex") in (
             i := __assign_299;
             __assign_299
@@ -1071,13 +1071,13 @@ let scanResolvedModuleTypeSpans = fun path -> try let __fallback_result_570 = le
       __assign_536
     ));
     let trimmed = !tempString in (
-      ignore (if HxString.length trimmed = 0 || HxMap.exists_string out trimmed then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      ignore (if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic out) (trimmed : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
       let value = let __anon_538 = HxAnon.create () in (
         ignore (HxAnon.set __anon_538 "file" (Obj.repr path));
         ignore (HxAnon.set __anon_538 "min" (Obj.repr (Obj.obj (HxAnon.get span "min"))));
         ignore (HxAnon.set __anon_538 "max" (Obj.repr (Obj.obj (HxAnon.get span "max"))));
         __anon_538
-      ) in HxMap.set_string out trimmed value
+      ) in HxMap.set_string (Obj.magic out) (trimmed : string) value
     )
   )) with
     | HxRuntime.Hx_return __ret_539 -> Obj.obj __ret_539) in let _g = ref 0 in (
@@ -1217,10 +1217,10 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
               tempString := __assign_194;
               __assign_194
             ));
-            let trimmed = !tempString in if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-              ignore (HxMap.set_string seen trimmed true);
+            let trimmed = !tempString in if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+              ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
               let tempMaybeStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                ignore (if HxMap.exists_string typeSpans trimmed then let __assign_196 = Obj.magic (HxMap.get_string typeSpans trimmed) in (
+                ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_196 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                   tempMaybeStruct := __assign_196;
                   __assign_196
                 ) else let __assign_197 = Obj.magic (let __anon_198 = HxAnon.create () in (
@@ -1233,7 +1233,7 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                   __assign_197
                 ));
                 let span = Obj.magic (!tempMaybeStruct) in let tempRuntimeResolvedTypeSemantics = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                  ignore (if HxMap.exists_string typeSemantics trimmed then let __assign_199 = Obj.magic (HxMap.get_string typeSemantics trimmed) in (
+                  ignore (if HxMap.exists_string (Obj.magic typeSemantics) (trimmed : string) then let __assign_199 = Obj.magic (HxMap.get_string (Obj.magic typeSemantics) (trimmed : string)) in (
                     tempRuntimeResolvedTypeSemantics := __assign_199;
                     __assign_199
                   ) else let __assign_200 = Obj.magic (let __anon_201 = HxAnon.create () in (
@@ -1284,10 +1284,10 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                 tempString2 := __assign_209;
                 __assign_209
               ));
-              let trimmed = !tempString2 in if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-                ignore (HxMap.set_string seen trimmed true);
+              let trimmed = !tempString2 in if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+                ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
                 let tempMaybeStruct1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                  ignore (if HxMap.exists_string typeSpans trimmed then let __assign_211 = Obj.magic (HxMap.get_string typeSpans trimmed) in (
+                  ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_211 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                     tempMaybeStruct1 := __assign_211;
                     __assign_211
                   ) else let __assign_212 = Obj.magic (let __anon_213 = HxAnon.create () in (
@@ -1300,7 +1300,7 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                     __assign_212
                   ));
                   let span = Obj.magic (!tempMaybeStruct1) in let tempRuntimeResolvedTypeSemantics1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                    ignore (if HxMap.exists_string typeSemantics trimmed then let __assign_214 = Obj.magic (HxMap.get_string typeSemantics trimmed) in (
+                    ignore (if HxMap.exists_string (Obj.magic typeSemantics) (trimmed : string) then let __assign_214 = Obj.magic (HxMap.get_string (Obj.magic typeSemantics) (trimmed : string)) in (
                       tempRuntimeResolvedTypeSemantics1 := __assign_214;
                       __assign_214
                     ) else let __assign_215 = Obj.magic (let __anon_216 = HxAnon.create () in (
@@ -1351,10 +1351,10 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                   tempString4 := __assign_224;
                   __assign_224
                 ));
-                let trimmed = !tempString4 in if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-                  ignore (HxMap.set_string seen trimmed true);
+                let trimmed = !tempString4 in if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+                  ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
                   let tempMaybeStruct2 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                    ignore (if HxMap.exists_string typeSpans trimmed then let __assign_226 = Obj.magic (HxMap.get_string typeSpans trimmed) in (
+                    ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_226 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                       tempMaybeStruct2 := __assign_226;
                       __assign_226
                     ) else let __assign_227 = Obj.magic (let __anon_228 = HxAnon.create () in (
@@ -1367,7 +1367,7 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                       __assign_227
                     ));
                     let span = Obj.magic (!tempMaybeStruct2) in let tempRuntimeResolvedTypeSemantics2 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                      ignore (if HxMap.exists_string typeSemantics trimmed then let __assign_229 = Obj.magic (HxMap.get_string typeSemantics trimmed) in (
+                      ignore (if HxMap.exists_string (Obj.magic typeSemantics) (trimmed : string) then let __assign_229 = Obj.magic (HxMap.get_string (Obj.magic typeSemantics) (trimmed : string)) in (
                         tempRuntimeResolvedTypeSemantics2 := __assign_229;
                         __assign_229
                       ) else let __assign_230 = Obj.magic (let __anon_231 = HxAnon.create () in (
@@ -1417,10 +1417,10 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                   tempString6 := __assign_239;
                   __assign_239
                 ));
-                let trimmed = !tempString6 in if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-                  ignore (HxMap.set_string seen trimmed true);
+                let trimmed = !tempString6 in if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+                  ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
                   let tempMaybeStruct3 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                    ignore (if HxMap.exists_string typeSpans trimmed then let __assign_241 = Obj.magic (HxMap.get_string typeSpans trimmed) in (
+                    ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_241 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                       tempMaybeStruct3 := __assign_241;
                       __assign_241
                     ) else let __assign_242 = Obj.magic (let __anon_243 = HxAnon.create () in (
@@ -1433,7 +1433,7 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                       __assign_242
                     ));
                     let span = Obj.magic (!tempMaybeStruct3) in let tempRuntimeResolvedTypeSemantics3 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-                      ignore (if HxMap.exists_string typeSemantics trimmed then let __assign_244 = Obj.magic (HxMap.get_string typeSemantics trimmed) in (
+                      ignore (if HxMap.exists_string (Obj.magic typeSemantics) (trimmed : string) then let __assign_244 = Obj.magic (HxMap.get_string (Obj.magic typeSemantics) (trimmed : string)) in (
                         tempRuntimeResolvedTypeSemantics3 := __assign_244;
                         __assign_244
                       ) else let __assign_245 = Obj.magic (let __anon_246 = HxAnon.create () in (
@@ -1776,8 +1776,8 @@ let scanResolvedModuleFields = fun path -> try let __fallback_result_706 = let o
       __assign_640
     ));
     let trimmed = let __call_arg_0_641 = !tempString in StringTools.trim __call_arg_0_641 in (
-      ignore (if HxString.length trimmed = 0 || HxMap.exists_string seen trimmed then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-      ignore (HxMap.set_string seen trimmed true);
+      ignore (if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic seen) (trimmed : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      ignore (HxMap.set_string (Obj.magic seen) (trimmed : string) true);
       let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
         ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_642 = Obj.magic (let __arr_643 = HxArray.create () in __arr_643) in (
           tempArray := __assign_642;
@@ -1941,8 +1941,8 @@ let scanResolvedModuleImports = fun path -> try let __fallback_result_774 = let 
             __assign_723
           ));
           let localName = (!tempString1 : string) in let key = (HxString.toStdString trimmedPath ^ "=>") ^ HxString.toStdString localName in (
-            ignore (if HxMap.exists_string seen key then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-            ignore (HxMap.set_string seen key true);
+            ignore (if HxMap.exists_string (Obj.magic seen) (key : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+            ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
             HxArray.push out (let __anon_724 = HxAnon.create () in (
               ignore (HxAnon.set __anon_724 "path" (Obj.repr trimmedPath));
               ignore (HxAnon.set __anon_724 "localName" (Obj.repr localName));

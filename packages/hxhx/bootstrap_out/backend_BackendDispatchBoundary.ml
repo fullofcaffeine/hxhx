@@ -46,7 +46,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
       tempBool := __assign_7;
       __assign_7
     ));
-    ignore (if !tempBool then ignore (print_endline "stage3_driver=dispatch_before_asDispatchValue") else ());
+    ignore (if !tempBool then ignore (let value = Obj.repr "stage3_driver=dispatch_before_asDispatchValue" in HxSys.printlnValue value) else ());
     let dispatchValue = backend in let tempBool1 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
       ignore (if raw == HxString.hx_null_string then let __assign_8 = false in (
         tempBool1 := __assign_8;
@@ -55,7 +55,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
         tempBool1 := __assign_10;
         __assign_10
       ));
-      ignore (if !tempBool1 then ignore (print_endline "stage3_driver=dispatch_after_asDispatchValue") else ());
+      ignore (if !tempBool1 then ignore (let value = Obj.repr "stage3_driver=dispatch_after_asDispatchValue" in HxSys.printlnValue value) else ());
       ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.js.JsBackend") then ignore (let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
         ignore (if raw == HxString.hx_null_string then let __assign_11 = false in (
           tempBool2 := __assign_11;
@@ -64,7 +64,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
           tempBool2 := __assign_13;
           __assign_13
         ));
-        ignore (if !tempBool2 then ignore (print_endline "stage3_driver=dispatch_branch_js") else ());
+        ignore (if !tempBool2 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_js" in HxSys.printlnValue value) else ());
         let jsBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsBackend.emitBridge (Obj.magic jsBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
       ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.ocaml.OcamlStage3Backend") then ignore (let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
@@ -75,7 +75,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
           tempBool3 := __assign_16;
           __assign_16
         ));
-        ignore (if !tempBool3 then ignore (print_endline "stage3_driver=dispatch_branch_ocaml") else ());
+        ignore (if !tempBool3 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_ocaml" in HxSys.printlnValue value) else ());
         let ocamlBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_OcamlStage3Backend.emitBridge (Obj.magic ocamlBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
       ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.TargetCoreBackend") then ignore (let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
@@ -86,7 +86,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
           tempBool4 := __assign_19;
           __assign_19
         ));
-        ignore (if !tempBool4 then ignore (print_endline "stage3_driver=dispatch_branch_target_core") else ());
+        ignore (if !tempBool4 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_target_core" in HxSys.printlnValue value) else ());
         let targetCoreBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_TargetCoreBackend.emitBridge (Obj.magic targetCoreBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
       let tempBool5 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
@@ -97,7 +97,7 @@ let emit = fun backend program context -> try let __fallback_result_24 = (
           tempBool5 := __assign_22;
           __assign_22
         ));
-        ignore (if !tempBool5 then ignore (print_endline "stage3_driver=dispatch_branch_reflective") else ());
+        ignore (if !tempBool5 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_reflective" in HxSys.printlnValue value) else ());
         emitReflective (Obj.repr dispatchValue) (Obj.magic program) (Obj.magic context)
       )
     )

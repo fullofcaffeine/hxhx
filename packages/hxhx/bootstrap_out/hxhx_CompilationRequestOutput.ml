@@ -59,7 +59,7 @@ let write = fun self (text : string) (isErrorStream : bool) (newline : bool) -> 
         ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (value : string) (Obj.magic (HxRuntime.hx_null)));
         ignore (if newline then ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) ("\n" : string) (Obj.magic (HxRuntime.hx_null))) else ());
         (Obj.magic stream : Haxe_io_Output.t).flush (Obj.magic stream) ()
-      )) else ignore (if newline then ignore (print_endline (HxString.toStdString value)) else ignore (print_string (HxString.toStdString value)))
+      )) else ignore (if newline then ignore (let value2 = Obj.repr value in HxSys.printlnValue value2) else ignore (let value2 = Obj.repr value in HxSys.printValue value2))
     )
   )
 )) with
@@ -69,7 +69,7 @@ let stdoutLine = fun self (text : string) -> ignore (ignore (write (Obj.magic se
 
 let stderrLine = fun self (text : string) -> ignore (ignore (write (Obj.magic self) (text : string) true true))
 
-let writeStdoutLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (print_endline (HxString.toStdString text)) else ignore (stdoutLine (Obj.magic output) (text : string)))
+let writeStdoutLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (let value = Obj.repr text in HxSys.printlnValue value) else ignore (stdoutLine (Obj.magic output) (text : string)))
 
 let writeStderrLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (let stream = Obj.magic (Sys_io_Stdio.stderr ()) in (
   ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (HxString.toStdString text ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)));

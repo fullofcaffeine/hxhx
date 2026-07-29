@@ -142,8 +142,8 @@ let tokenizeLine = fun line -> try let __fallback_result_154 = (
             __old_106
           )) done);
           let rest = let __call_arg_0_108 = HxString.substr line (!k) (-1) in StringTools.rtrim __call_arg_0_108 in (
-            ignore (if HxString.length rest = 0 then ignore ((
-              ignore (print_endline ("hxhx(stage1): missing value after " ^ HxString.toStdString prefix));
+            ignore (if HxString.length rest = 0 then ignore (let value = Obj.repr ("hxhx(stage1): missing value after " ^ HxString.toStdString prefix) in (
+              ignore (HxSys.printlnValue value);
               raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
             )) else ());
             let __arr_109 = HxArray.create () in (
@@ -173,8 +173,8 @@ let tokenizeLine = fun line -> try let __fallback_result_154 = (
                 __old_118
               )) done);
               let rest = let __call_arg_0_120 = HxString.substr line (!k) (-1) in StringTools.rtrim __call_arg_0_120 in (
-                ignore (if HxString.length rest = 0 then ignore ((
-                  ignore (print_endline ("hxhx(stage1): missing value after " ^ HxString.toStdString prefix));
+                ignore (if HxString.length rest = 0 then ignore (let value = Obj.repr ("hxhx(stage1): missing value after " ^ HxString.toStdString prefix) in (
+                  ignore (HxSys.printlnValue value);
                   raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                 )) else ());
                 ignore (HxArray.push tokens prefix);
@@ -257,8 +257,8 @@ let tokenizeLine = fun line -> try let __fallback_result_154 = (
             )) with
               | HxRuntime.Hx_continue -> () done with
               | HxRuntime.Hx_break -> ());
-            ignore (if !quote <> 0 then ignore ((
-              ignore (print_endline ("hxhx(stage1): unterminated quote in hxml line: " ^ HxString.toStdString line));
+            ignore (if !quote <> 0 then ignore (let value = Obj.repr ("hxhx(stage1): unterminated quote in hxml line: " ^ HxString.toStdString line) in (
+              ignore (HxSys.printlnValue value);
               raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
             )) else ());
             ignore (if StringBuf.get_length (Obj.magic (!cur)) () > 0 then ignore ((
@@ -278,16 +278,16 @@ let tokenizeLine = fun line -> try let __fallback_result_154 = (
   | HxRuntime.Hx_return __ret_153 -> Obj.obj __ret_153
 
 let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_result_96 = (
-  ignore (if depth > 25 then ignore ((
-    ignore (print_endline ("hxhx(stage1): hxml include depth exceeded: " ^ HxString.toStdString path));
+  ignore (if depth > 25 then ignore (let value = Obj.repr ("hxhx(stage1): hxml include depth exceeded: " ^ HxString.toStdString path) in (
+    ignore (HxSys.printlnValue value);
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
   )) else ());
   let norm = let __call_arg_0_52 = path in normalizeFsPath __call_arg_0_52 in (
-    ignore (if HxMap.exists_string seen norm then ignore ((
-      ignore (print_endline ("hxhx(stage1): hxml include cycle: " ^ HxString.toStdString norm));
+    ignore (if HxMap.exists_string (Obj.magic seen) (norm : string) then ignore (let value = Obj.repr ("hxhx(stage1): hxml include cycle: " ^ HxString.toStdString norm) in (
+      ignore (HxSys.printlnValue value);
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ());
-    ignore (HxMap.set_string seen norm true);
+    ignore (HxMap.set_string (Obj.magic seen) (norm : string) true);
     let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (try let __assign_53 = Obj.magic (HxFile.getContent (norm : string) : string) in (
         tempMaybeString := __assign_53;
@@ -324,9 +324,9 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
           )
         ) else raise (__exn_59));
       let content = (!tempMaybeString : string) in (
-        ignore (if content == Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (print_endline ("hxhx(stage1): failed to read hxml: " ^ HxString.toStdString norm));
-          ignore (HxMap.remove_string seen norm);
+        ignore (if content == Obj.magic (HxRuntime.hx_null) then ignore (let value = Obj.repr ("hxhx(stage1): failed to read hxml: " ^ HxString.toStdString norm) in (
+          ignore (HxSys.printlnValue value);
+          ignore (HxMap.remove_string (Obj.magic seen) (norm : string));
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
         let fileDir0 = let __call_arg_0_62 = norm in Haxe_io_Path.directory __call_arg_0_62 in let tempString = ref (HxString.hx_null_string : string) in (
@@ -345,7 +345,7 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
               ));
               let lineTokens = Obj.magic (tokenizeLine (ln : string)) in (
                 ignore (if lineTokens == Obj.magic (HxRuntime.hx_null) then ignore ((
-                  ignore (HxMap.remove_string seen norm);
+                  ignore (HxMap.remove_string (Obj.magic seen) (norm : string));
                   raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                 )) else ());
                 let _g2 = ref 0 in while !_g2 < HxArray.length lineTokens do ignore (let t = (HxArray.get (Obj.magic lineTokens) (!_g2) : string) in (
@@ -382,9 +382,9 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
                     ignore (_g := __new_78);
                     __new_78
                   ));
-                  ignore (if not (allowNext) && (HxString.equals t "--next" || HxString.equals t "--each") then ignore ((
-                    ignore (print_endline ("hxhx(stage1): unsupported hxml directive: " ^ HxString.toStdString t));
-                    ignore (HxMap.remove_string seen norm);
+                  ignore (if not (allowNext) && (HxString.equals t "--next" || HxString.equals t "--each") then ignore (let value = Obj.repr ("hxhx(stage1): unsupported hxml directive: " ^ HxString.toStdString t) in (
+                    ignore (HxSys.printlnValue value);
+                    ignore (HxMap.remove_string (Obj.magic seen) (norm : string));
                     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                   )) else ());
                   ignore (if not (let __call_arg_0_79 = t in let __call_arg_1_80 = "-" in StringTools.startsWith __call_arg_0_79 __call_arg_1_80) && (let __call_arg_0_81 = t in let __call_arg_1_82 = ".hxml" in StringTools.endsWith __call_arg_0_81 __call_arg_1_82) then ignore (let tempString2 = ref (HxString.hx_null_string : string) in (
@@ -409,7 +409,7 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
                     ));
                     let included = !tempString2 in let expanded = Obj.magic (parseFileRec (included : string) seen (HxInt.add depth 1) allowNext) in (
                       ignore (if expanded == Obj.magic (HxRuntime.hx_null) then ignore ((
-                        ignore (HxMap.remove_string seen norm);
+                        ignore (HxMap.remove_string (Obj.magic seen) (norm : string));
                         raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                       )) else ());
                       let _g2 = ref 0 in (
@@ -428,7 +428,7 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
                 )) with
                   | HxRuntime.Hx_continue -> () done with
                   | HxRuntime.Hx_break -> ());
-                ignore (HxMap.remove_string seen norm);
+                ignore (HxMap.remove_string (Obj.magic seen) (norm : string));
                 out
               )
             )

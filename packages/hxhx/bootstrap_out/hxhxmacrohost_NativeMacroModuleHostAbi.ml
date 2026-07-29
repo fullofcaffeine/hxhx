@@ -211,11 +211,19 @@ let exprsForPluginInternal = fun snapshot pluginId sourceLabel allowEmpty -> let
       __new_90
     ));
     ignore (if not (HxString.equals (Obj.obj (HxAnon.get row "pluginId")) expectedPluginId) then ignore (let __call_arg_0_91 = sourceLabel in let __call_arg_1_92 = ((((("registration pluginId mismatch: expected `" ^ HxString.toStdString expectedPluginId) ^ "`, got `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "pluginId"))) ^ "` (expr `") ^ HxString.toStdString (Obj.obj (HxAnon.get row "expr"))) ^ "`)" in fail __call_arg_0_91 __call_arg_1_92) else ());
-    ignore (if HxMap.exists_string seenExprs (Obj.obj (HxAnon.get row "expr")) then ignore (let __call_arg_0_93 = sourceLabel in let __call_arg_1_94 = ((("duplicate expr registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "expr"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" in fail __call_arg_0_93 __call_arg_1_94) else ());
-    ignore (HxMap.set_string seenExprs (Obj.obj (HxAnon.get row "expr")) true);
-    HxArray.push out (Obj.obj (HxAnon.get row "expr"))
+    let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get row "expr") : string) in (
+      ignore (let __assign_93 = HxMap.exists_string (Obj.magic seenExprs) (key : string) in (
+        tempBool := __assign_93;
+        __assign_93
+      ));
+      ignore (if !tempBool then ignore (let __call_arg_0_94 = sourceLabel in let __call_arg_1_95 = ((("duplicate expr registration `" ^ HxString.toStdString (Obj.obj (HxAnon.get row "expr"))) ^ "` for plugin `") ^ HxString.toStdString expectedPluginId) ^ "`" in fail __call_arg_0_94 __call_arg_1_95) else ());
+      let key = (Obj.obj (HxAnon.get row "expr") : string) in (
+        ignore (HxMap.set_string (Obj.magic seenExprs) (key : string) true);
+        HxArray.push out (Obj.obj (HxAnon.get row "expr"))
+      )
+    )
   )) done);
-  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (let __call_arg_0_95 = sourceLabel in let __call_arg_1_96 = ("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any macro expressions" in fail __call_arg_0_95 __call_arg_1_96) else ());
+  ignore (if not (allowEmpty) && HxArray.length out = 0 then ignore (let __call_arg_0_96 = sourceLabel in let __call_arg_1_97 = ("plugin `" ^ HxString.toStdString expectedPluginId) ^ "` did not register any macro expressions" in fail __call_arg_0_96 __call_arg_1_97) else ());
   out
 )
 
