@@ -2,10 +2,18 @@
 
 ## Outcome
 
-The upstream Haxe 4.3.7 compilation server now gives `reflaxe.ocaml` the
-complete `hxhx` program on a warm request, and that warm request reproduces the
-cold program exactly. It does **not** make this compiler-scale generation loop
-faster yet.
+The upstream Haxe 4.3.7 compilation server gives `reflaxe.ocaml` the complete
+`hxhx` program on a warm request, and that warm request reproduces the cold
+program exactly. Removing one duplicate typed-body observation made both cold
+and warm target generation about four minutes faster than the preparation-aware
+profile, but it did **not** make warm generation materially faster than cold.
+
+The practical result is therefore split:
+
+- ordinary `reflaxe.ocaml` generation is measurably faster without weakening
+  exact-body validation; and
+- compiler-scale incremental target generation remains unfinished because the
+  warm request still reconstructs and renders the complete target.
 
 On candidate `35aec28992e9a9b3afd9642e0302360f3222d96b`, the cold and warm
 requests produced the same:
@@ -16,9 +24,10 @@ requests produced the same:
 - native executable digest; and
 - `--version` exit status, stdout, and stderr.
 
-The warm full loop was approximately 25 seconds slower than cold. This reaches
-the stop condition in `haxe_ocaml-850ii.33.6`: do not repeat the same expensive
-proof or enable this route by default until target-generation work is reduced.
+The first full proof's warm loop was approximately 25 seconds slower than cold.
+After the bounded optimization, warm saved 54.164 seconds, but the required
+material threshold was 120 seconds or a warm/cold ratio of at most `0.80`.
+The optimized ratio was `0.9725`, so the route remains explicit and optional.
 
 ## Small mental model
 
@@ -170,12 +179,82 @@ while the process footprint reached approximately 5.2 GiB. The sample contains
 machine-local paths and remains outside version control; its sanitized finding
 supports the aggregate timing but does not by itself select an optimization.
 
+## One-observation cut and optimized full proof
+
+Candidate `097803880838ff640b3753196a26977d0ac78eac` implemented the
+bounded seam identified above. Immediately before constructing OCaml syntax,
+the target now observes the final typed body once and receives these three
+facts together:
+
+1. the sealed target plan;
+2. the request-local map from Haxe variables to stable lexical identities; and
+3. the optional constructor boundary.
+
+Previously, ordinary methods requested the first two facts separately and
+constructors requested all three separately. Each request re-rendered and
+hashed the same typed body. The new handoff is not a cache: it is created and
+consumed inside one request, and a body replacement after sealing still fails
+with `[reflaxe:planned-body-revision-mismatch]` before syntax is built.
+
+A focused lifecycle counter proves that one syntax handoff performs exactly one
+body digest. The same test replaces the body after sealing and proves that the
+remaining observation rejects the old plan. The complete clean/warm application
+matrix and the late-mutation lifecycle fixture also remain green.
+
+The exact profile-only comparison shows a material general speedup:
+
+| Measurement | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Complete generation | 2,193.437 s | 1,947.640 s | **245.797 s faster (11.2%)** |
+| `CppTargetCore` combined | 1,219.271 s | 1,041.214 s | **178.057 s faster (14.6%)** |
+| `CppTargetCore` preparation | 826.964 s | 807.756 s | 19.208 s faster |
+| `CppTargetCore` rendering/syntax | 392.307 s | 233.458 s | 158.849 s faster |
+| `SourceTargetCommon` combined | 183.007 s | 162.386 s | 20.621 s faster |
+| `EmitterStage` combined | 101.686 s | 84.599 s | 17.087 s faster |
+| Peak owned RSS | 5,271,088 KiB | 5,193,744 KiB | 77,344 KiB lower |
+
+The exact cold/warm proof then passed every output and behavior comparison:
+
+- generated tree:
+  `sha256:f6856d7d1b3da4e4e3eaea64912b29877cc4613521bfa98ec7d50d3bb7a7d3a2`;
+- program revision:
+  `sha256:4c305e2918b107d4a8d62e4090173fd197dee875f57ef8d186d3e80628c7c9f3`;
+- source-bundle revision:
+  `sha256:a5583a581585f5868fdeed63996f1fd4534c9e54b8c7ef904fc69f624de8f254`;
+- artifact-manifest and generated-file receipt digests;
+- native executable:
+  `sha256:3b39627e4d44beaa57ee6ee2aa41f85228af88f69a60d3a2183bb00099aba875`;
+  and
+- `--version` exit status, stdout, and stderr.
+
+Its performance result did not pass:
+
+| Phase | Cold | Warm | Warm saving |
+| --- | ---: | ---: | ---: |
+| Haxe + Reflaxe generation | 1,936.617 s | 1,915.754 s | 20.863 s |
+| Dune/native build | 34.336 s | 1.035 s | 33.301 s |
+| Complete loop | 1,970.953 s | 1,916.789 s | **54.164 s** |
+
+The warm/cold full-loop ratio was `0.9725`. Haxe frontend reuse is visible—the
+warm request reported effectively zero typing time—but complete target
+reconstruction still dominates both requests. The optimization therefore
+improves all generation; it does not create incremental target generation.
+
+This result crosses the task's stop threshold for the next change. A material
+warm-only gain now requires deciding which immutable, revision-keyed target
+facts may survive a request and how deletions, configuration changes, failed
+requests, and final output ownership invalidate them. That is an architecture
+decision and needs a focused review before implementation. It must not be
+approximated by retaining mutable Haxe compiler objects or skipping complete
+program reconstruction.
+
 ## Memory and cleanup
 
-The owned server process tree peaked at 6,288,480 KiB (about 6.0 GiB). Samples
-immediately after cold and warm generation were approximately 1.54 GiB and
-1.52 GiB respectively. The run stayed inside the capacity-qualified host
-budget.
+The original full proof's owned server process tree peaked at 6,288,480 KiB
+(about 6.0 GiB). The optimized full proof recorded 196 samples, peaked at
+6,538,464 KiB, and ended at 1,163,168 KiB. The optimized profile-only run peaked
+at 5,193,744 KiB and ended at 1,144,160 KiB. All runs stayed inside their
+capacity-qualified host budget.
 
 Shutdown left:
 
@@ -183,8 +262,8 @@ Shutdown left:
 - zero PID-state files; and
 - zero private output transactions or candidates.
 
-This proves scoped cleanup for this sequence. It does not establish a
-long-running memory plateau.
+This proves scoped cleanup for these sequences. It does not establish a
+long-running memory plateau or make target artifacts cacheable.
 
 ## Evidence precision
 
@@ -213,21 +292,27 @@ if a later report or cleanup assertion fails.
 ## Decision
 
 Keep the upstream-Haxe/Reflaxe server route explicit and optional. Do not
-repeat the full cold/warm proof until a bounded change reduces the measured
-target-generation bottleneck. Do not infer that upstream Haxe's compilation
-server is ineffective: it eliminated the measured typing work, but typing is
 only a tiny fraction of this particular full loop.
 
-The next engineering decision is deliberately narrower than a general cache or
-mega-file rewrite: measure and remove one demonstrably duplicate body
-observation at the sealed-plan/syntax boundary while preserving one exact
-validation immediately before syntax consumes the plan. Source-class
-concentration remains a measured architecture and performance concern, but the
-profile does not justify a 25,301-line extraction as the first performance fix.
-Any broader proposal to cache a body digest, reuse a semantic plan across
-requests, or skip lifecycle validation must pass the repository's higher
-reasoning and second-pass review threshold first.
+Retain the one-observation handoff: it is a measured four-minute general
+generation improvement, keeps one exact validation immediately before syntax,
+and passed the clean/warm correctness matrix. It does not close
+`haxe_ocaml-850ii.33.7`, because the same candidate's warm loop saved only
+54.164 seconds.
+
+The next engineering step is a focused architecture review of incremental
+target work—not a broad cache or mega-file rewrite. The review must decide the
+smallest immutable artifact boundary that can avoid reprocessing unchanged
+functions or modules while still reconstructing complete program membership
+and atomically replacing the generated source tree. Source-class concentration
+remains a measured architecture and performance concern, but the evidence still
+does not justify splitting a 25,301-line file merely for appearance.
+
+Do not retain mutable `ClassFuncData`, typed-expression graphs, macro state, or
+target builders across requests. Do not treat a body digest as a complete cache
+identity. Do not skip lifecycle validation, generated-file deletion, runtime
+requirements, manifests, or failure rollback to manufacture a warm speedup.
 
 README Goals progress bars remain unchanged. The checkpoint proves correctness
-and exposes the next performance owner; it does not improve production
-readiness.
+and improves general generation time, but it does not make the compiler-scale
+warm workflow materially incremental or improve production readiness.
