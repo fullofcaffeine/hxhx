@@ -75,7 +75,10 @@ class ReflaxeOcamlAuthoring {
 		final displayedHxml = displayPath(projectRoot, hxmlPath);
 		host.writeStdout('[reflaxe.ocaml] build #$buildNumber: haxe $displayedHxml\n');
 		final started = host.nowMilliseconds();
-		final haxeExitCode = host.run("haxe", [hxmlPath, "-D", "reflaxe_output_transaction", "-D", "ocaml_build_timing_report"], projectRoot);
+		// Haxe expands `-lib` entries and their macro initialization while it
+		// reads the HXML. Transactional output changes compiler registration, so
+		// both authoring-owned defines must exist before the HXML is evaluated.
+		final haxeExitCode = host.run("haxe", ["-D", "reflaxe_output_transaction", "-D", "ocaml_build_timing_report", hxmlPath], projectRoot);
 		final elapsed = elapsedMilliseconds(host, started);
 		if (haxeExitCode != 0) {
 			host.writeStderr('[reflaxe.ocaml] build #$buildNumber failed (exit $haxeExitCode, ${elapsed}ms). Waiting for the next edit is safe in watch mode.\n');
