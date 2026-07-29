@@ -13,6 +13,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.Type.TConstant;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
@@ -133,6 +134,9 @@ class OcamlBuilder {
 	// shared-cell versus immutable-rebinding decision.
 	var currentLocalStoragePlan:Null<OcamlLocalStoragePlan> = null;
 	var currentLocalRepresentationPlan:Null<OcamlLocalRepresentationPlan> = null;
+	// The current request's host-ID adapter is deliberately separate from the
+	// sealed plans, which retain only reusable lexical identities.
+	var currentLocalIdentities:Null<LexicalLocalIdentityPlan> = null;
 	// Current function return type while lowering a function body.
 	var currentFunctionReturnType:Null<Type> = null;
 	// The sealed callable boundary, when the complete signature is admitted.
@@ -191,6 +195,30 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/** Resolves one request-local Haxe binding to the identity used by sealed plans. */
+	function stableLocalId(hostLocalId:Int, position:Position):String {
+		final identities = currentLocalIdentities;
+		if (identities == null)
+			return localStorageInvariant("syntax construction has no request-local lexical identity lookup", position);
+		return try {
+			identities.requireHostId(hostLocalId).id;
+		} catch (error:Dynamic) {
+			localStorageInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Returns the sealed storage decision for one active request-local binding. */
+	function localStorageDecision(hostLocalId:Int, position:Position):Null<reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageDecision> {
+		final plan = currentLocalStoragePlan;
+		return plan == null ? null : plan.decisionFor(stableLocalId(hostLocalId, position));
+	}
+
+	/** Returns whether one active request-local binding uses a shared `ref`. */
+	function localRequiresRef(hostLocalId:Int, position:Position):Bool {
+		final plan = currentLocalStoragePlan;
+		return plan != null && plan.requiresRef(stableLocalId(hostLocalId, position));
 	}
 
 	function callPlanInvariant(message:String, position:Position):Dynamic {
@@ -970,11 +998,12 @@ class OcamlBuilder {
 		final localRepresentations = activeLocalRepresentationPlan(position);
 		if (localRepresentations == null)
 			return localStorageInvariant('local $localId reached syntax construction without a sealed representation plan', position);
-		final choice = localRepresentations.choiceFor(localId);
+		final stableId = stableLocalId(localId, position);
+		final choice = localRepresentations.choiceFor(stableId);
 		if (choice == null) {
-			final storageDecision = currentLocalStoragePlan == null ? null : currentLocalStoragePlan.decisionFor(localId);
+			final storageDecision = currentLocalStoragePlan == null ? null : currentLocalStoragePlan.decisionFor(stableId);
 			if (storageDecision != null)
-				return localStorageInvariant('local $localId has storage decision ${storageDecision.storage}, but no sealed representation choice', position);
+				return localStorageInvariant('local $stableId has storage decision ${storageDecision.storage}, but no sealed representation choice', position);
 			return null;
 		}
 		return switch (choice) {
@@ -988,7 +1017,7 @@ class OcamlBuilder {
 				}
 				if (decision.semanticTypeId != semanticTypeId || decision.domain != domain) {
 					return
-						localStorageInvariant('local $localId expects $semanticTypeId in representation domain $domain, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
+						localStorageInvariant('local $stableId expects $semanticTypeId in representation domain $domain, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
 						position);
 				}
 				decision;
@@ -1011,17 +1040,18 @@ class OcamlBuilder {
 		if (plan == null)
 			return localStorageInvariant('local $localId requires an occurrence conversion without a sealed representation plan', expression.pos);
 		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
-		final conversion = plan.conversionFor(binding, localId, role, source);
+		final stableId = stableLocalId(localId, expression.pos);
+		final conversion = plan.conversionFor(binding, stableId, role, source);
 		if (conversion == null) {
-			final occurrenceId = OcamlLocalRepresentationPlan.occurrenceId(binding, localId, role, source);
-			return localStorageInvariant('local $localId has no sealed $role conversion for occurrence "$occurrenceId"', expression.pos);
+			final occurrenceId = OcamlLocalRepresentationPlan.occurrenceId(binding, stableId, role, source);
+			return localStorageInvariant('local $stableId has no sealed $role conversion for occurrence "$occurrenceId"', expression.pos);
 		}
 		if (conversion.inputSemanticTypeId != inputSemanticTypeId
 			|| conversion.inputCarrierTypeId != inputCarrierTypeId
 			|| conversion.outputSemanticTypeId != outputSemanticTypeId
 			|| conversion.outputCarrierTypeId != outputCarrierTypeId) {
 			return
-				localStorageInvariant('local $localId occurrence "${conversion.id}" expects ${conversion.inputSemanticTypeId}/${conversion.inputCarrierTypeId} -> ${conversion.outputSemanticTypeId}/${conversion.outputCarrierTypeId}, but the final typed occurrence is $inputSemanticTypeId/$inputCarrierTypeId -> $outputSemanticTypeId/$outputCarrierTypeId',
+				localStorageInvariant('local $stableId occurrence "${conversion.id}" expects ${conversion.inputSemanticTypeId}/${conversion.inputCarrierTypeId} -> ${conversion.outputSemanticTypeId}/${conversion.outputCarrierTypeId}, but the final typed occurrence is $inputSemanticTypeId/$inputCarrierTypeId -> $outputSemanticTypeId/$outputCarrierTypeId',
 				expression.pos);
 		}
 		return conversion;
@@ -1328,7 +1358,7 @@ class OcamlBuilder {
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
-		return switch (localRepresentations.initializerConversionFor(localId)) {
+		return switch (localRepresentations.initializerConversionFor(stableLocalId(localId, rhs.pos))) {
 			case OcamlLocalCarrierConversion.Identity:
 				final decision = plannedLocalRepresentation(localId, rhs.pos);
 				if (decision == null)
@@ -1363,7 +1393,7 @@ class OcamlBuilder {
 		final localRepresentations = activeLocalRepresentationPlan(rhs.pos);
 		if (localRepresentations == null)
 			return coerceForAssignment(lhsType, rhs);
-		return switch (localRepresentations.assignmentConversionFor(localId)) {
+		return switch (localRepresentations.assignmentConversionFor(stableLocalId(localId, rhs.pos))) {
 			case OcamlLocalCarrierConversion.Identity:
 				final decision = plannedLocalRepresentation(localId, rhs.pos);
 				if (decision == null)
@@ -4880,7 +4910,7 @@ class OcamlBuilder {
 				if (localRepresentations == null) {
 					legacyArrayReceiverCoercion(rawExpr);
 				} else {
-					switch (localRepresentations.readConversionFor(local.id)) {
+					switch (localRepresentations.readConversionFor(stableLocalId(local.id, receiver.pos))) {
 						case OcamlLocalCarrierConversion.Identity:
 							final decision = plannedLocalRepresentation(local.id, receiver.pos);
 							if (decision == null)
@@ -4939,7 +4969,8 @@ class OcamlBuilder {
 						initExprRaw;
 				}
 		};
-		final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
+		final declarationPosition:Position = init == null ? cast {file: "(unknown)", min: 0, max: 0} : init.pos;
+		final isMutable = localRequiresRef(v.id, declarationPosition);
 		if (isMutable) {
 			refLocals.set(v.id, true);
 			final hasNullInit = switch (init) {
@@ -6899,7 +6930,7 @@ class OcamlBuilder {
 						final initExprRaw = init != null ? coerceLocalInitializer(v.id, v.t, init) : defaultValueForLocal(v.id, v.t, e.pos);
 						final localType = localCarrierType(v.id, v.t, e.pos);
 						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
-						final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
+						final isMutable = localRequiresRef(v.id, e.pos);
 
 						if (!isMutable) {
 							final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
@@ -7077,13 +7108,16 @@ class OcamlBuilder {
 	}
 
 	/** Builds one non-function root after rechecking its exact storage and Bytes plans. */
-	public function buildStandaloneExpr(expression:TypedExpr, storagePlan:OcamlLocalStoragePlan, expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
+	public function buildStandaloneExpr(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
+			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
+		final previousLocalIdentities = currentLocalIdentities;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
+		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
@@ -7091,6 +7125,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
+		currentLocalIdentities = previousLocalIdentities;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7099,14 +7134,16 @@ class OcamlBuilder {
 	}
 
 	/** Applies assignment coercion to a fully planned non-function root. */
-	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, storagePlan:OcamlLocalStoragePlan,
+	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
+		final previousLocalIdentities = currentLocalIdentities;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
 		currentLocalStoragePlan = storagePlan;
+		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
@@ -7114,6 +7151,7 @@ class OcamlBuilder {
 		currentBytesReadPlan = validatedPlan.bytesReads;
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
+		currentLocalIdentities = previousLocalIdentities;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7286,8 +7324,8 @@ class OcamlBuilder {
 		name:String,
 		t:Type,
 		value:Null<TypedExpr>
-	}>, bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan,
-			?expectedReturnType:Null<Type>):OcamlExpr {
+	}>,
+			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -7351,12 +7389,15 @@ class OcamlBuilder {
 
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalRepresentationPlan = currentLocalRepresentationPlan;
+		final previousLocalIdentities = currentLocalIdentities;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalRepresentationPlan = localRepresentationPlan;
+		currentLocalIdentities = localIdentities;
 		for (a in args) {
-			if (storagePlan.decisionFor(a.id) != null)
+			final stableId = stableLocalId(a.id, bodyExpr.pos);
+			if (storagePlan.decisionFor(stableId) != null)
 				localCarrierType(a.id, a.t, bodyExpr.pos);
-			if (storagePlan.requiresRef(a.id)) {
+			if (storagePlan.requiresRef(stableId)) {
 				refLocals.set(a.id, true);
 			}
 		}
@@ -7453,7 +7494,7 @@ class OcamlBuilder {
 		}
 
 		for (a in args) {
-			if (storagePlan.requiresRef(a.id)) {
+			if (storagePlan.requiresRef(stableLocalId(a.id, bodyExpr.pos))) {
 				final n = renameVar(a.name);
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
@@ -7463,6 +7504,7 @@ class OcamlBuilder {
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
+		currentLocalIdentities = previousLocalIdentities;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
@@ -7491,9 +7533,10 @@ class OcamlBuilder {
 		final params = tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
 
 		for (a in tfunc.args) {
-			if (storagePlan.decisionFor(a.v.id) != null)
+			final stableId = stableLocalId(a.v.id, tfunc.expr.pos);
+			if (storagePlan.decisionFor(stableId) != null)
 				localCarrierType(a.v.id, a.v.t, tfunc.expr.pos);
-			if (storagePlan.requiresRef(a.v.id)) {
+			if (storagePlan.requiresRef(stableId)) {
 				refLocals.set(a.v.id, true);
 			}
 		}
@@ -7545,7 +7588,7 @@ class OcamlBuilder {
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).
 		for (a in tfunc.args) {
-			if (storagePlan.requiresRef(a.v.id)) {
+			if (storagePlan.requiresRef(stableLocalId(a.v.id, tfunc.expr.pos))) {
 				final n = renameVar(a.v.name);
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}

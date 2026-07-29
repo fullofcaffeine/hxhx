@@ -6,6 +6,7 @@ import haxe.ds.ObjectMap;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
@@ -1560,12 +1561,15 @@ class OcamlControlPlanner {
 	final representations:OcamlRepresentationRegistry;
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final binding:OcamlFunctionPlanBinding;
+	final localIdentities:LexicalLocalIdentityPlan;
 	final nominalCatchRepresentations:Map<Int, OcamlRepresentationDecision> = [];
 
-	public function new(representations:OcamlRepresentationRegistry, localRepresentations:OcamlLocalRepresentationPlan, binding:OcamlFunctionPlanBinding) {
+	public function new(representations:OcamlRepresentationRegistry, localRepresentations:OcamlLocalRepresentationPlan, binding:OcamlFunctionPlanBinding,
+			localIdentities:LexicalLocalIdentityPlan) {
 		this.representations = representations;
 		this.localRepresentations = localRepresentations;
 		this.binding = binding;
+		this.localIdentities = localIdentities;
 	}
 
 	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlCallableBoundaryPlan>):OcamlControlPlan {
@@ -2060,7 +2064,7 @@ class OcamlControlPlanner {
 					&& nominalCatchRepresentation.semanticTypeId == OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(unwrapped.t)) {
 					return nominalCatchRepresentation;
 				}
-				final reference = localRepresentations.referenceFor(local.id);
+				final reference = localRepresentations.referenceFor(localIdentities.requireHostId(local.id).id);
 				if (reference == null
 					|| reference.domain != OcamlRepresentationDomain.InternalValue
 					|| reference.semanticTypeId != OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(unwrapped.t)) {

@@ -17,6 +17,7 @@ import reflaxe.DirectToStringCompiler;
 import reflaxe.data.ClassFuncData;
 import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
@@ -1113,13 +1114,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	/** Builds a non-function root after selecting its exact typed plans. */
 	function buildStandaloneExpression(builder:OcamlBuilder, ownerId:String, expression:TypedExpr):OcamlExpr {
-		return builder.buildStandaloneExpr(expression, OcamlLocalStoragePlanner.planExpression(expression), sealStandaloneExpression(ownerId, expression));
+		final localIdentities = LexicalLocalIdentityPlan.build("standalone:" + ownerId, expression);
+		return builder.buildStandaloneExpr(expression, localIdentities, OcamlLocalStoragePlanner.planExpression(expression, localIdentities),
+			sealStandaloneExpression(ownerId, expression));
 	}
 
 	/** Builds a field initializer with its assignment and Bytes decisions sealed. */
 	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
-		return builder.buildStandaloneExprForAssignment(fieldType, expression, OcamlLocalStoragePlanner.planExpression(expression),
-			sealStandaloneExpression(ownerId, expression));
+		final localIdentities = LexicalLocalIdentityPlan.build("standalone:" + ownerId, expression);
+		return builder.buildStandaloneExprForAssignment(fieldType, expression, localIdentities,
+			OcamlLocalStoragePlanner.planExpression(expression, localIdentities), sealStandaloneExpression(ownerId, expression));
 	}
 
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
@@ -1749,8 +1753,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case _: ctorFunc.expr.t;
 				};
 				final sealedCtorPlan = functionPlanRegistry.sealedFunctionPlanFor(ctorFunc);
+				final ctorLocalIdentities = functionPlanRegistry.requestLocalIdentitiesFor(ctorFunc);
 				constructionBoundary = functionPlanRegistry.constructionBoundaryForDefinition(ctorFunc);
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, sealedCtorPlan, ctorReturnType)) {
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, sealedCtorPlan, ctorLocalIdentities, ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -1938,7 +1943,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), methodReturnType)) {
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f),
+						functionPlanRegistry.requestLocalIdentitiesFor(f), methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2032,7 +2038,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), staticReturnType);
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f),
+				functionPlanRegistry.requestLocalIdentitiesFor(f), staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {

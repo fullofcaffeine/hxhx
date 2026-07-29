@@ -6,6 +6,7 @@ import haxe.macro.Expr.Unop;
 import haxe.macro.Type.TFunc;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageDecision;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageKind;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageReason;
@@ -24,7 +25,7 @@ import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageReason;
 **/
 class OcamlLocalStoragePlanner {
 	/** Plans storage for a block whose expressions are top-level statements. */
-	public static function planExpressions(expressions:Array<TypedExpr>):OcamlLocalStoragePlan {
+	public static function planExpressions(expressions:Array<TypedExpr>, localIdentities:LexicalLocalIdentityPlan):OcamlLocalStoragePlan {
 		final mutatedAny:Map<Int, Bool> = [];
 		final needsRef:Map<Int, Bool> = [];
 		final captured:Map<Int, Bool> = [];
@@ -204,22 +205,22 @@ class OcamlLocalStoragePlanner {
 				return leftId < rightId ? -1 : (leftId > rightId ? 1 : 0);
 			});
 			decisions.push({
-				localId: localId,
+				localId: localIdentities.requireHostId(localId).id,
 				storage: needsRef.exists(localId)
 				&& needsRef.get(localId) == true ? OcamlLocalStorageKind.RefCell : OcamlLocalStorageKind.ImmutableRebinding,
 				reasons: reasons
 			});
 		}
-		final capturedLocalIds = [for (localId in captured.keys()) localId];
-		capturedLocalIds.sort((left, right) -> left - right);
+		final capturedLocalIds = [for (localId in captured.keys()) localIdentities.requireHostId(localId).id];
+		capturedLocalIds.sort(Reflect.compare);
 		return new OcamlLocalStoragePlan(decisions, capturedLocalIds);
 	}
 
 	/** Plans storage for one expression, treating a root block as statements. */
-	public static function planExpression(expression:TypedExpr):OcamlLocalStoragePlan {
+	public static function planExpression(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan):OcamlLocalStoragePlan {
 		return switch (expression.expr) {
-			case TBlock(expressions): planExpressions(expressions);
-			case _: planExpressions([expression]);
+			case TBlock(expressions): planExpressions(expressions, localIdentities);
+			case _: planExpressions([expression], localIdentities);
 		}
 	}
 }

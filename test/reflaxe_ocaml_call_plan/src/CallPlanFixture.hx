@@ -1,6 +1,7 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type.TypedExpr;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -1238,9 +1239,10 @@ class CallPlanFixture {
 
 	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan, callable:Null<OcamlCallableBoundaryPlan>,
 			?construction:Null<OcamlCallableBoundaryPlan>):Void {
-		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]),
-			new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable,
-			construction);
+		final localIdentities = LexicalLocalIdentityPlan.build(owner.functionId, null);
+		registry.sealFunction(owner, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities), new OcamlLocalRepresentationPlan([]),
+			new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), calls,
+			OcamlControlPlan.notAdmitted(owner), callable, construction);
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {

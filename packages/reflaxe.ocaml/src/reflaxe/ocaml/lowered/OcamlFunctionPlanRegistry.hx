@@ -6,6 +6,7 @@ import haxe.ds.StringMap;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -72,6 +73,13 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 
 private typedef OcamlSealedFunctionRecord = {
 	final plan:OcamlSealedFunctionPlan;
+
+	/**
+		Request-local adapter from the active host's `TVar.id` values to the stable
+		identities retained by `plan`.
+	**/
+	final localIdentities:LexicalLocalIdentityPlan;
+
 	final originIds:Array<String>;
 }
 
@@ -85,7 +93,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v53";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v54";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -236,6 +244,21 @@ class OcamlFunctionPlanRegistry {
 		return sealed.plan;
 	}
 
+	/**
+		Returns the request-local lookup that lets syntax consume a stable plan.
+
+		This adapter is intentionally outside `OcamlSealedFunctionPlan`: it may
+		retain host compiler variables and allocation IDs for the current request,
+		while the sealed plan remains host-neutral and reusable.
+	**/
+	public function requestLocalIdentitiesFor(data:ClassFuncData):LexicalLocalIdentityPlan {
+		sealedFunctionPlanFor(data);
+		final sealed = sealedFunctions.get(data.id);
+		if (sealed == null)
+			throw 'reflaxe.ocaml [ocaml-lowering:unsealed-function]: function "${data.id}" has no request-local identity lookup';
+		return sealed.localIdentities;
+	}
+
 	static function sameBinding(left:OcamlFunctionPlanBinding, right:OcamlFunctionPlanBinding):Bool {
 		return left.functionId == right.functionId
 			&& left.programRevision == right.programRevision
@@ -304,10 +327,10 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/** Prevents later planning from silently changing one function's inventory. */
-	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan,
-			bytesAccesses:OcamlBytesAccessPlan, bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan,
-			calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
-			?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
+	public function sealFunction(binding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan, localStorage:OcamlLocalStoragePlan,
+			localRepresentations:OcamlLocalRepresentationPlan, bytesAccesses:OcamlBytesAccessPlan, bytesMutations:OcamlBytesMutationPlan,
+			bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan, controls:OcamlControlPlan,
+			callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		bytesAccesses.requirePlanBinding(binding);
@@ -343,6 +366,7 @@ class OcamlFunctionPlanRegistry {
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
 				constructionBoundary: constructionBoundary == null ? null : OcamlCallPlan.copyBoundary(constructionBoundary)
 			},
+			localIdentities: localIdentities,
 			originIds: originIds
 		});
 	}

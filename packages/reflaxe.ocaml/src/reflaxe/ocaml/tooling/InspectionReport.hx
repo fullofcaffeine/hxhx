@@ -204,7 +204,7 @@ typedef InspectionRepresentation = {
 /** One occurrence-bound carrier conversion selected before OCaml syntax. **/
 typedef InspectionLocalConversion = {
 	final id:String;
-	final localId:Int;
+	final localId:String;
 	final role:String;
 	final sourceFile:String;
 	final sourceMin:Int;

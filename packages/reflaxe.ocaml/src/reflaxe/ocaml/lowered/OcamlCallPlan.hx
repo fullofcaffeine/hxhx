@@ -9,6 +9,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -1134,11 +1135,14 @@ class OcamlCallPlanner {
 	final representations:OcamlRepresentationRegistry;
 	final binding:OcamlFunctionPlanBinding;
 	final localRepresentations:Null<OcamlLocalRepresentationPlan>;
+	final localIdentities:Null<LexicalLocalIdentityPlan>;
 
-	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan) {
+	public function new(representations:OcamlRepresentationRegistry, binding:OcamlFunctionPlanBinding, ?localRepresentations:OcamlLocalRepresentationPlan,
+			?localIdentities:LexicalLocalIdentityPlan) {
 		this.representations = representations;
 		this.binding = binding;
 		this.localRepresentations = localRepresentations;
+		this.localIdentities = localIdentities;
 	}
 
 	/** Selects the callable boundary exported by this function, if admitted. */
@@ -1883,7 +1887,8 @@ class OcamlCallPlanner {
 				&& arguments.length == producer.arguments.filter(argument -> !OcamlCallPlan.isOmittedConversion(argument.conversion)).length
 				&& producer.result.outputRepresentationId == boundary.inputRepresentationId;
 			case TLocal(local):
-				final reference = localRepresentations == null ? null : localRepresentations.referenceFor(local.id);
+				final reference = localRepresentations == null
+					|| localIdentities == null ? null : localRepresentations.referenceFor(localIdentities.requireHostId(local.id).id);
 				reference != null
 				&& reference.domain == OcamlRepresentationDomain.InternalValue
 				&& reference.representationId == boundary.inputRepresentationId

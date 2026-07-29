@@ -5,6 +5,7 @@ import haxe.macro.Expr.Position;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -92,30 +93,32 @@ class OcamlFunctionPlanSealer {
 	/** Plans, validates, and seals one exact function-body revision. */
 	public function seal(data:ClassFuncData):Void {
 		final binding = registry.planningBindingFor(data);
+		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
+		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		if (data.expr == null) {
 			final controls = OcamlControlPlan.notAdmitted(binding);
-			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]),
-				new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary,
-				constructionBoundary);
+			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
+				new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
+				new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary);
 			return;
 		}
-		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
+		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
 		final preliminaryCalls = callPlanner.plan(data.expr);
-		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
+		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
-		final calls = new OcamlCallPlanner(representations, binding, localRepresentations).plan(data.expr);
+		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
-		final controls = new OcamlControlPlanner(representations, localRepresentations, binding).plan(data.expr, callableBoundary);
+		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities).plan(data.expr, callableBoundary);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, staticStorage);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, localIdentities, staticStorage);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 
@@ -171,8 +174,8 @@ class OcamlFunctionPlanSealer {
 		bytesReads.requireRepresentations(representations);
 		for (decision in bytesReads.decisions())
 			context.recordBytesReadRuntimeRequirements(decision);
-		registry.sealFunction(binding, localStorage, localRepresentations, bytesAccesses, bytesMutations, bytesProducers, bytesReads, calls, controls,
-			callableBoundary, constructionBoundary);
+		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, bytesAccesses, bytesMutations, bytesProducers, bytesReads, calls,
+			controls, callableBoundary, constructionBoundary);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);

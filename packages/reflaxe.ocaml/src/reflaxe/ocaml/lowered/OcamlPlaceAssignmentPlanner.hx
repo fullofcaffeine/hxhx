@@ -7,6 +7,7 @@ import haxe.macro.Expr.Unop;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
@@ -42,15 +43,17 @@ class OcamlPlaceAssignmentPlanner {
 	final currentTypeName:String;
 	final representations:OcamlRepresentationRegistry;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final localIdentities:LexicalLocalIdentityPlan;
 	final staticStorage:OcamlStaticStoragePlan;
 
 	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry,
-			localRepresentations:OcamlLocalRepresentationPlan, staticStorage:OcamlStaticStoragePlan) {
+			localRepresentations:OcamlLocalRepresentationPlan, localIdentities:LexicalLocalIdentityPlan, staticStorage:OcamlStaticStoragePlan) {
 		this.context = context;
 		this.currentModuleId = currentModuleId;
 		this.currentTypeName = currentTypeName;
 		this.representations = representations;
 		this.localRepresentations = localRepresentations;
+		this.localIdentities = localIdentities;
 		this.staticStorage = staticStorage;
 	}
 
@@ -132,7 +135,7 @@ class OcamlPlaceAssignmentPlanner {
 					switch (receiver.expr) {
 						case TConst(TThis): currentModuleId == receiverLayout.sourceModuleId && currentTypeName == receiverLayout.sourceTypeName;
 						case TLocal(local):
-							switch (localRepresentations.choiceFor(local.id)) {
+							switch (localRepresentations.choiceFor(localIdentities.requireHostId(local.id).id)) {
 								case ProgramDecision(representationId, semanticTypeId, OcamlRepresentationDomain.InternalValue): representationId == receiverRepresentation.id && semanticTypeId == receiverLayout.semanticTypeId;
 								case _:
 									false;

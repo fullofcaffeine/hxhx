@@ -224,26 +224,41 @@ The fork then added target-neutral lifecycle and scalability repairs:
   function with tens of thousands of sequential expressions no longer exhausts
   the host call stack.
 
-As of 2026-07-26, upstream `SomeRanDev/reflaxe` remains at
+As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins reviewed
-fork commit `3454b8e2a2758d379fa37c5f0767917ccbc3c876`, published on
-`agent/haxe-ocaml-9bome-4-reference-alias`, with path-independent content digest
-`66167ad5a4c5a2fa993d39766148a41dac7f65bbc6eca33b2cef6b917a516d53`.
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins candidate
+fork commit `f7487d5d30fdd309b66612d6e60c1276b24b9dab`, published for review in
+[fork PR #14](https://github.com/fullofcaffeine/reflaxe/pull/14), with
+path-independent content digest
+`b0f9fa3f9fafd44f35e19fba6639d292ca131801d709c94ef8cfd8077244fd09`.
 
-That patch prevents Reflaxe's generic alias-removal pass from replacing a
+The previous pinned patch prevents Reflaxe's generic alias-removal pass from replacing a
 reference snapshot with a local that can later point at a different object. For
 example, `var alias = values; values = replacement;` keeps `alias` bound to the
 original array. Direct-write analysis uses typed local identities across the
 whole function; element and field mutation still permit the existing
 optimization because they do not redirect a local binding.
 
-The patch has a repository-owned review record in `haxe_ocaml-9bome.4`, passes
+That patch has a repository-owned review record in `haxe_ocaml-9bome.4`, passes
 the fork's macro, program-revision, server-revision, and runtime-build checks,
 and passes the complete 76-fixture `reflaxe.ocaml` portable corpus. It is pinned
 by immutable commit and digest while the fork pull-request lifecycle remains
 separate; the branch name is only a discovery aid and does not participate in
 dependency identity.
+
+PR #14 makes local-variable evidence stable across clean Haxe processes. Haxe's
+macro API gives each typed local a temporary numeric ID; unrelated compiler
+work can change that number without changing the user's program. Reflaxe now
+replaces the number with a function-owned lexical identity before computing
+function revisions or publishing target plans. It also validates the complete
+versioned identity shape, so a target cannot accidentally publish a numeric host
+ID converted to text.
+
+The pinned PR #14 candidate passes the fork's semantic lifecycle and
+cross-request program-revision checks plus reflaxe.ocaml's focused storage,
+representation, call, and generated-program checks. Its remote review remains a
+separate prerequisite; this pin supplies exact integration evidence and does
+not claim that the fork change is merged upstream.
 
 The earlier fork changes through PR #13 each landed through their own reviewed
 pull request. PR #13's six required checks passed, and that framework baseline

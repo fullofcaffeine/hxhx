@@ -351,8 +351,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 42) {
-						throw 'Unsupported lowering report schema $version; expected 42.';
+					if (version != 43) {
+						throw 'Unsupported lowering report schema $version; expected 43.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1719,7 +1719,7 @@ class ReflaxeOcamlInspection {
 				final unsafe = Reflect.field(entry, "unsafeOperation");
 				final result:InspectionLocalConversion = {
 					id: requiredString(entry, "id"),
-					localId: requiredInt(entry, "localId"),
+					localId: requiredString(entry, "localId"),
 					role: requiredString(entry, "role"),
 					sourceFile: requiredString(source, "file"),
 					sourceMin: requiredInt(source, "min"),

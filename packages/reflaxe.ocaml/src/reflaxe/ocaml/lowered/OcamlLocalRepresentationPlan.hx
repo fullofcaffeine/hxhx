@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -91,7 +92,7 @@ typedef OcamlUnsafeOperationRecord = {
 /** One immutable answer for one initializer, assignment, or read occurrence. */
 typedef OcamlLocalConversionDecision = {
 	final id:String;
-	final localId:Int;
+	final localId:String;
 	final role:OcamlLocalConversionRole;
 	final source:OcamlLoweredSourceSpan;
 	final inputSemanticTypeId:String;
@@ -112,7 +113,7 @@ typedef OcamlLocalConversionDecision = {
 
 /** One function-local reference to a program-owned representation decision. */
 typedef OcamlLocalRepresentationReference = {
-	final localId:Int;
+	final localId:String;
 	final representationId:String;
 	final semanticTypeId:String;
 	final domain:OcamlRepresentationDomain;
@@ -129,7 +130,7 @@ enum OcamlLocalRepresentationChoice {
 
 /** One explicit representation and local-carrier conversion choice for a local. */
 typedef OcamlLocalRepresentationDecision = {
-	final localId:Int;
+	final localId:String;
 	final choice:OcamlLocalRepresentationChoice;
 	final initializerConversion:OcamlLocalCarrierConversion;
 	final assignmentConversion:OcamlLocalCarrierConversion;
@@ -147,7 +148,7 @@ typedef OcamlLocalRepresentationDecision = {
 **/
 class OcamlLocalRepresentationPlan {
 	final orderedDecisions:Array<OcamlLocalRepresentationDecision>;
-	final decisionsByLocalId:Map<Int, OcamlLocalRepresentationDecision> = [];
+	final decisionsByLocalId:Map<String, OcamlLocalRepresentationDecision> = [];
 	final orderedConversions:Array<OcamlLocalConversionDecision>;
 	final conversionsById:Map<String, OcamlLocalConversionDecision> = [];
 
@@ -159,9 +160,10 @@ class OcamlLocalRepresentationPlan {
 
 	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>) {
 		orderedDecisions = decisions.map(copyDecision);
-		orderedDecisions.sort((left, right) -> left.localId - right.localId);
+		orderedDecisions.sort((left, right) -> Reflect.compare(left.localId, right.localId));
 		var admitted = 0;
 		for (decision in orderedDecisions) {
+			requireReusableLocalId(decision.localId);
 			if (decisionsByLocalId.exists(decision.localId))
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-choice]: local ${decision.localId} has more than one representation choice';
 			decisionsByLocalId.set(decision.localId, decision);
@@ -182,6 +184,7 @@ class OcamlLocalRepresentationPlan {
 		orderedConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		var unsafeCount = 0;
 		for (conversion in orderedConversions) {
+			requireReusableLocalId(conversion.localId);
 			if (conversionsById.exists(conversion.id)) {
 				final existing = conversionsById.get(conversion.id);
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: occurrence "${conversion.id}" identifies both local ${existing.localId} ${existing.role} at ${existing.source.file}:${existing.source.min}-${existing.source.max} and local ${conversion.localId} ${conversion.role} at ${conversion.source.file}:${conversion.source.min}-${conversion.source.max}';
@@ -215,13 +218,13 @@ class OcamlLocalRepresentationPlan {
 		source role, and normalized source span. It never depends on a traversal
 		counter, local name, or rendered expression text.
 	**/
-	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:Int, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
+	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
 		return "local-conversion:" + Sha256.encode([
 			binding.functionId,
 			binding.programRevision,
 			binding.bodyRevision,
 			binding.pipelineRevision,
-			Std.string(localId),
+			localId,
 			(role : String),
 			source.file,
 			Std.string(source.min),
@@ -229,8 +232,8 @@ class OcamlLocalRepresentationPlan {
 		].join("\n")).substr(0, 32);
 	}
 
-	/** Resolves one occurrence without reclassifying the conversion it needs. */
-	public function conversionFor(binding:OcamlFunctionPlanBinding, localId:Int, role:OcamlLocalConversionRole,
+	/** Resolves one occurrence by its reusable lexical identity. */
+	public function conversionFor(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole,
 			source:OcamlLoweredSourceSpan):Null<OcamlLocalConversionDecision> {
 		final decision = conversionsById.get(occurrenceId(binding, localId, role, source));
 		return decision == null ? null : copyConversion(decision);
@@ -250,31 +253,31 @@ class OcamlLocalRepresentationPlan {
 	}
 
 	/** Returns the sealed program-decision or explicit-unmigrated choice. */
-	public function choiceFor(localId:Int):Null<OcamlLocalRepresentationChoice> {
+	public function choiceFor(localId:String):Null<OcamlLocalRepresentationChoice> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : copyChoice(decision.choice);
 	}
 
 	/** Returns the sealed initializer conversion for one planned local. */
-	public function initializerConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function initializerConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.initializerConversion;
 	}
 
 	/** Returns the sealed whole-value assignment conversion for one planned local. */
-	public function assignmentConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function assignmentConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.assignmentConversion;
 	}
 
 	/** Returns the sealed conversion applied when syntax reads one planned local. */
-	public function readConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function readConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.readConversion;
 	}
 
 	/** Returns a defensive copy of one local's registry reference. */
-	public function referenceFor(localId:Int):Null<OcamlLocalRepresentationReference> {
+	public function referenceFor(localId:String):Null<OcamlLocalRepresentationReference> {
 		final choice = choiceFor(localId);
 		return switch (choice) {
 			case ProgramDecision(representationId, semanticTypeId, domain): {
@@ -313,6 +316,12 @@ class OcamlLocalRepresentationPlan {
 			assignmentConversion: decision.assignmentConversion,
 			readConversion: decision.readConversion
 		};
+	}
+
+	static function requireReusableLocalId(localId:String):Void {
+		if (!LexicalLocalIdentityPlan.isReusableId(localId)) {
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-lexical-local-identity]: "$localId" is not one complete reusable lexical-local identity';
+		}
 	}
 
 	static function copyChoice(choice:OcamlLocalRepresentationChoice):OcamlLocalRepresentationChoice {
