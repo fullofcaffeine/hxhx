@@ -712,10 +712,20 @@ HAXE_BIN=/path/to/native/haxe-4.3.7 \
   bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh --profile-only
 ```
 
-This runs one cold generation request with detailed per-class target telemetry,
+This runs one cold generation request with detailed per-class telemetry,
 writes a top-20 summary, verifies cleanup, and stops before Dune and the warm
-request. It diagnoses where time is spent; it is not cold/warm performance
-evidence.
+request. For each class, it now reports two costs separately: preparing typed
+field bodies for the target, and rendering those prepared fields as OCaml. The
+combined ranking prevents a slow preparation step from disappearing merely
+because the later rendering step is fast.
+
+The first bounded profile found that `backend.cpp.CppTargetCore` alone spent
+approximately 410 seconds rendering about 12.5 million characters of generated
+OCaml. It also found approximately 1,054 seconds in the class-150-to-class-200
+interval that occurred before the old render-only timer began. These are
+diagnostic results, not permission to skip semantic validation or to assume a
+large source-file split is sufficient. Profile-only mode diagnoses where time
+is spent; it is not cold/warm performance evidence.
 
 ## Repository-owned server lifecycle
 

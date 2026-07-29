@@ -142,6 +142,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var profileClassFilter:Null<String> = null;
 	var profileFieldFilter:Null<String> = null;
 	var profileDetail:Bool = false;
+	var profileModulePrepareStartS:Float = 0.0;
+	var profileModulePrepareName:Null<String> = null;
 	var pendingStaticStorageModuleOrder:Array<String> = [];
 	var pendingStaticStorageClassesByModule:Map<String, Array<ClassType>> = [];
 
@@ -299,6 +301,54 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (profileEnabled)
 			profileInit();
 		ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;
+		#end
+	}
+
+	#if macro
+	/** Returns the source-level type name used by module-preparation telemetry. */
+	static function profileModuleTypeName(moduleType:ModuleType):String {
+		return switch (moduleType) {
+			case TClassDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TEnumDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TTypeDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TAbstract(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+		};
+	}
+	#end
+
+	/**
+		Starts target telemetry before Reflaxe extracts and preprocesses fields.
+
+		`compileClassImpl` begins only after the framework has materialized every
+		field body for the class. Compiler-scale profiles therefore need this
+		earlier boundary to distinguish target rendering from typed-body transfer
+		and preprocessing.
+	**/
+	override public function setupModule(moduleType:Null<ModuleType>):Void {
+		#if macro
+		if (profileVerbose && moduleType != null) {
+			profileModulePrepareStartS = profileNowS();
+			profileModulePrepareName = profileModuleTypeName(moduleType);
+			profileLogLine("reflaxe.ocaml: module_prepare_begin name=" + profileModulePrepareName);
+		} else {
+			profileModulePrepareStartS = 0.0;
+			profileModulePrepareName = null;
+		}
+		#end
+		super.setupModule(moduleType);
+		#if macro
+		if (profileVerbose && moduleType != null) {
+			final dtMs = Std.int((profileNowS() - profileModulePrepareStartS) * 1000);
+			profileLogLine("reflaxe.ocaml: module_setup_end name=" + profileModulePrepareName + " dt_ms=" + Std.string(dtMs));
+		}
 		#end
 	}
 
@@ -1144,8 +1194,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
 		#if macro
 		final profClassStartS = profileEnabled ? profileNowS() : 0.0;
-		profClassCount++;
 		final profClassName = (classType.pack ?? []).concat([classType.name]).join(".");
+		final profClassOrdinal = profClassCount + 1;
+		if (profileVerbose && profileModulePrepareStartS > 0.0 && profileModulePrepareName == profClassName) {
+			final dtMs = Std.int((profClassStartS - profileModulePrepareStartS) * 1000);
+			profileLogLine("reflaxe.ocaml: class_prepare_end count="
+				+ Std.string(profClassOrdinal)
+				+ " name="
+				+ profClassName
+				+ " dt_ms="
+				+ Std.string(dtMs));
+		}
+		profClassCount = profClassOrdinal;
 		final profClassMatch = profileClassFilter != null && profileClassFilter.length > 0 && profClassName == profileClassFilter;
 		profileWarnEvery("class", profClassCount, profClassName, classType.pos, 50);
 		if (profileVerbose)

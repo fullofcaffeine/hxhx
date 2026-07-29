@@ -72,9 +72,62 @@ HAXE_BIN=/path/to/native/haxe-4.3.7 \
 ```
 
 Profile-only mode runs one cold generation request with detailed per-class
-telemetry, summarizes the 20 most expensive classes, verifies scoped server and
-output cleanup, and stops before Dune or a warm request. It cannot satisfy the
-cold/warm performance report.
+telemetry, separates preparation from target rendering, summarizes the 20 most
+expensive class pipelines, verifies scoped server and output cleanup, and stops
+before Dune or a warm request. It cannot satisfy the cold/warm performance
+report.
+
+## Bounded profile result
+
+The next bounded profile completed on candidate
+`819022e55e76ddb055363387f23b75a33247d693`. One cold source-generation request
+took 2,238.382 seconds and peaked at 5,638,624 KiB of owned server RSS.
+It confirmed that the long class-150-to-class-200 interval is concentrated in
+the largest compiler source modules, but it also exposed a blind spot in the
+original telemetry.
+
+There are two relevant costs for each class:
+
+1. **Preparation** transfers and preprocesses the class's typed field bodies
+   before the target compiler receives them.
+2. **Rendering** lowers those prepared fields and produces OCaml source text.
+
+The original timer began only at step 2. Between the class-150 and class-200
+checkpoints, approximately 1,538 seconds elapsed. The measured render calls in
+that interval accounted for 483.941 seconds, leaving 1,054.059 seconds—about
+68.5% of the interval—outside the old timer.
+
+The render measurements still identify important concrete owners:
+
+| Source class | Render time | Generated OCaml text | Practical reading |
+| --- | ---: | ---: | --- |
+| `backend.cpp.CppTargetCore` | 409.975 s | 12,513,111 characters | One 25,301-line Haxe class generated about 45% of the complete target tree and dominated measured rendering. |
+| `backend.source.SourceTargetCommon` | 49.318 s | 2,655,813 characters | The second large shared target module was the next substantial render cost. |
+| `EmitterStage` | 26.159 s | not separately used for this decision | The legacy OCaml bring-up emitter remains expensive, but it was not the main cost in this profile. |
+| `HxParser` | 17.096 s | not separately used for this decision | Parser source size also creates meaningful target-generation work. |
+
+Three bounded native samples support the same diagnosis. During the unmeasured
+preparation interval, the Haxe evaluator spent substantial time concatenating
+large strings, growing buffers, allocating strings, and performing garbage
+collection. During `CppTargetCore` rendering, samples showed both evaluator/JIT
+work and the same large-string/garbage-collection pressure. The raw native
+samples contain machine-local paths, so they remain local; this checkpoint
+records only their sanitized mechanism-level finding.
+
+This result does **not** prove that splitting `CppTargetCore` alone will fix the
+loop, or that body-revision hashing may be skipped. It proves two narrower
+claims:
+
+- compiler source concentration has a measured target-generation cost, not
+  merely a readability cost; and
+- the next profile must attribute framework-side field/body preparation as
+  well as target rendering before selecting an optimization.
+
+The profiling implementation now starts the per-module timer before Reflaxe
+extracts and preprocesses class fields. Its report ranks the combined
+preparation-plus-render pipeline while retaining the separate values. A focused
+fixture proves that a class with fast rendering but slow preparation ranks
+above a render-only hotspot when its complete pipeline is more expensive.
 
 ## Memory and cleanup
 
@@ -119,10 +172,17 @@ if a later report or cleanup assertion fails.
 ## Decision
 
 Keep the upstream-Haxe/Reflaxe server route explicit and optional. Do not
-repeat this compiler-scale proof until a bounded profile identifies and reduces
-the target-generation bottleneck. Do not infer that upstream Haxe's compilation
+repeat the full cold/warm proof until a bounded change reduces the measured
+target-generation bottleneck. Do not infer that upstream Haxe's compilation
 server is ineffective: it eliminated the measured typing work, but typing is
 only a tiny fraction of this particular full loop.
+
+The next engineering decision is deliberately narrower than a general cache or
+mega-file rewrite: use the complete preparation/render boundary to determine
+whether repeated typed-body revision work or source-class concentration owns
+the avoidable cost, then change only that owner. Any proposal to reuse or skip
+semantic body validation must pass the repository's higher reasoning and
+second-pass review threshold first.
 
 README Goals progress bars remain unchanged. The checkpoint proves correctness
 and exposes the next performance owner; it does not improve production

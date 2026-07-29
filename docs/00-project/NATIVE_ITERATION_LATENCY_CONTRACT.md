@@ -474,6 +474,14 @@ to Reflaxe target generation rather than another identical server run.
 The runner's `--profile-only` mode is the bounded diagnostic route: it records
 one cold request with per-class Reflaxe telemetry and stops before Dune or a
 warm request, so it cannot be mistaken for performance admission evidence.
+For each class, the telemetry separates framework-side typed-field preparation
+from target rendering and ranks their combined pipeline. This distinction
+matters because the first compiler-scale profile found that approximately
+1,054 seconds in the class-150-to-class-200 interval occurred before the old
+render-only timer began. Render time still identified
+`backend.cpp.CppTargetCore` as the largest measured owner at approximately 410
+seconds, but that fact alone does not authorize skipping lifecycle validation
+or splitting a 25,301-line source class.
 
 The stage0-free build benchmark answers a smaller everyday question: how long
 does it take to turn the already-committed OCaml bootstrap snapshot into a new
