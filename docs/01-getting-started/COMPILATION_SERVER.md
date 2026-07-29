@@ -114,6 +114,14 @@ in the stable sibling `.out.reflaxe-ocaml-dune-build/`. Replacing generated
 source therefore does not delete native cache state, and Dune metadata never
 records the private candidate or backup path.
 
+Publication is the source-generation commit point. If Dune later rejects the
+published source, the package command fails and does not run an executable, but
+the new public source remains. Rolling it back at that point would pretend that
+Dune had not already observed it and could make the source tree disagree with
+the diagnostic. The next build may reuse the stable Dune directory after the
+native error is fixed; an explicit Dune clean is needed only for a deliberately
+cold native rebuild.
+
 The focused server fixture above still uses `ocaml_no_build` because it isolates
 whole-program source correctness from native-build timing. This does not mean
 normal package builds are non-transactional. It means source/server evidence

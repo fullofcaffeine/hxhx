@@ -163,6 +163,14 @@ failure therefore leaves the previous public tree and native cache usable.
 Output and common cache/build directories are excluded, and a post-build input
 snapshot prevents generated files from causing a feedback loop.
 
+The source transaction ends when the complete generated tree is published.
+When a subsequent Dune build fails, the command returns that failure and does
+not run the program, while the published source remains available for
+inspection and retry. This is intentionally not presented as a rollback:
+Dune has already observed the public tree. Fix the native-build error and
+rerun; clear the separate Dune state only when diagnosing with a cold native
+build.
+
 The authoring command requests a receipt-linked timing report and prints total
 Haxe-child time, measured target subprocess time, and the native Dune duration.
 Dune typechecking, compilation, and linking are currently one combined phase.

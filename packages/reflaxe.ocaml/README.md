@@ -101,6 +101,14 @@ settle, then rebuilds and optionally runs the native artifact. Use repeated
 output and common build/cache directories are excluded, and the post-build
 input snapshot prevents compiler output from triggering another build.
 
+Source publication is the commit point. If source generation succeeds but the
+later Dune build fails, the command fails and `--run` does not start the
+program, but the newly published `out/` tree remains available for inspection
+and the next build. Reflaxe does not claim that it rolled source back after
+Dune had already consumed that public tree. Fix the reported native-build
+error and rerun; use the separate Dune clean command below only when a cold
+native rebuild is actually required.
+
 Each batch starts a fresh Haxe process. Persistent Haxe-server reuse is not used
 because current Reflaxe evidence found an incomplete-output failure on that
 route. A successful batch atomically replaces the generated `out/` tree, then
