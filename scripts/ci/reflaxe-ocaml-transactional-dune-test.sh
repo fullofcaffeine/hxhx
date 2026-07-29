@@ -142,6 +142,19 @@ compile
 [[ "$(mtime_milliseconds "$message_cmx")" = "$message_b" ]] || fail "restored input could not reuse Message's prior Dune artifact"
 [[ "$(mtime_milliseconds "$executable")" = "$executable_b" ]] || fail "restored input could not reuse the prior native executable"
 
+if (
+	cd "$PROJECT_DIR"
+	haxe build.hxml -D reflaxe.dont_output_metadata_id -D ocaml_mli=infer
+) >"$WORK_DIR/expected-transactional-mli-failure.log" 2>&1; then
+	fail "transactional ocaml_mli unexpectedly mutated source after publication"
+fi
+grep -Fq "ocaml_mli cannot run after transactional source publication yet" "$WORK_DIR/expected-transactional-mli-failure.log" \
+	|| fail "transactional ocaml_mli did not report its source-ownership boundary"
+[[ "$(source_bundle_revision)" = "$revision_b" ]] || fail "rejected transactional ocaml_mli replaced the prior public source tree"
+[[ "$(mtime_milliseconds "$main_cmx")" = "$main_b" ]] || fail "rejected transactional ocaml_mli changed Main's Dune artifact"
+[[ "$(mtime_milliseconds "$message_cmx")" = "$message_b" ]] || fail "rejected transactional ocaml_mli changed Message's Dune artifact"
+[[ "$(mtime_milliseconds "$executable")" = "$executable_b" ]] || fail "rejected transactional ocaml_mli changed the native executable"
+
 if grep -R -a -F ".reflaxe-output-transaction" "$PROJECT_DIR/out" "$BUILD_DIR" >/dev/null; then
 	fail "a private candidate or backup path entered generated output or Dune metadata"
 fi

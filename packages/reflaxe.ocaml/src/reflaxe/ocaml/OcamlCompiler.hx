@@ -2220,9 +2220,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.generateFiles();
 	}
 
-	/** Clears post-publication native work before each fresh compiler request. **/
+	/**
+		Clears post-publication native work and rejects incompatible output modes
+		before a fresh compiler request starts writing its private source tree.
+
+		`Context.error` terminates macro generation instead of behaving like an
+		ordinary target exception. Configuration errors that can be known here
+		must therefore fail before Reflaxe opens an output transaction; otherwise
+		the framework cannot run its normal candidate-abort path.
+	**/
 	public override function onCompileStart():Void {
 		pendingPublishedOutputBuild = null;
+		#if macro
+		if (Context.defined("reflaxe_output_transaction") && Context.defined("ocaml_mli")) {
+			Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
+				Context.currentPos());
+		}
+		#end
 	}
 
 	function sealArtifactManifest(artifacts:OcamlArtifactManifestBuilder):Void {
@@ -3316,8 +3330,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final transactionalOutput = publicOutDir != null && Path.normalize(publicOutDir) != Path.normalize(outDir);
 		if (transactionalOutput) {
 			if (wantsMli) {
-				haxe.macro.Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
-					haxe.macro.Context.currentPos());
+				throw "reflaxe.ocaml: transactional ocaml_mli passed the pre-generation configuration boundary";
 			}
 			final stablePublicOutDir:String = cast publicOutDir;
 			sealArtifactManifest(artifacts);
