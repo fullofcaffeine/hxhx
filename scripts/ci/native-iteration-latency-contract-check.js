@@ -132,8 +132,10 @@ function main() {
     requireIncludes(artifactComparisonRunnerPath, artifactComparisonRunner, snippet)
   }
   for (const snippet of [
+    '--profile-only',
     'count_owned_pids_after_stop',
     'owned-pids 2>/dev/null || true',
+    'REFLAXE_OCAML_PROGRESS_FILE="$SERVER_PROGRESS_FILE"',
     '$REPORT_DIR/logs/$label.elapsed-ms'
   ]) {
     requireIncludes(compilerScaleServerRunnerPath, compilerScaleServerRunner, snippet)

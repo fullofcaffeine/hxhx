@@ -63,6 +63,19 @@ The large interval between classes 150 and 200 occurs in both runs. The next
 performance task should identify the exact class or target operation inside
 that interval before changing architecture or adding a cache.
 
+The safe diagnostic route for that next measurement is:
+
+```bash
+HAXE_BIN=/path/to/native/haxe-4.3.7 \
+  HXHX_COMPILER_SCALE_SERVER_REPORT_DIR=/new/disposable/report-directory \
+  bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh --profile-only
+```
+
+Profile-only mode runs one cold generation request with detailed per-class
+telemetry, summarizes the 20 most expensive classes, verifies scoped server and
+output cleanup, and stops before Dune or a warm request. It cannot satisfy the
+cold/warm performance report.
+
 ## Memory and cleanup
 
 The owned server process tree peaked at 6,288,480 KiB (about 6.0 GiB). Samples

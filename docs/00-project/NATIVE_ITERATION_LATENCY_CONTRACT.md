@@ -471,6 +471,9 @@ The practical result and timing-provenance limitation are recorded in
 `docs/benchmarks/REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md`.
 This negative result blocks default enablement and routes the next measurement
 to Reflaxe target generation rather than another identical server run.
+The runner's `--profile-only` mode is the bounded diagnostic route: it records
+one cold request with per-class Reflaxe telemetry and stops before Dune or a
+warm request, so it cannot be mistaken for performance admission evidence.
 
 The stage0-free build benchmark answers a smaller everyday question: how long
 does it take to turn the already-committed OCaml bootstrap snapshot into a new

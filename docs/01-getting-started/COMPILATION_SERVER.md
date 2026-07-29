@@ -703,6 +703,20 @@ bottleneck. See
 for the exact equivalence result, measurement limitation, memory evidence, and
 stop decision.
 
+Maintainers should use profile-only mode before attempting another complete
+proof:
+
+```bash
+HAXE_BIN=/path/to/native/haxe-4.3.7 \
+  HXHX_COMPILER_SCALE_SERVER_REPORT_DIR=/new/disposable/report-directory \
+  bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh --profile-only
+```
+
+This runs one cold generation request with detailed per-class target telemetry,
+writes a top-20 summary, verifies cleanup, and stops before Dune and the warm
+request. It diagnoses where time is spent; it is not cold/warm performance
+evidence.
+
 ## Repository-owned server lifecycle
 
 The repository helper safely owns one upstream Haxe server process tree:

@@ -12,6 +12,7 @@ SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
 CAPACITY_HELPER="$ROOT/scripts/hxhx/check-local-capacity.js"
 EVIDENCE_HELPER="$ROOT/scripts/ci/compiler-scale-reflaxe-server-evidence.js"
 WATCHDOG_HELPER="$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
+PROGRESS_SUMMARY_HELPER="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 RUN_ID="${HXHX_COMPILER_SCALE_SERVER_RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
@@ -21,6 +22,7 @@ BUILD_DIR="$REPORT_DIR/dune-build"
 SERVER_STATE_DIR="$REPORT_DIR/server-state"
 SERVER_PORT="${HXHX_COMPILER_SCALE_SERVER_PORT:-$((26000 + ($$ % 8000)))}"
 RSS_SAMPLES_FILE="$REPORT_DIR/server-rss-kb.samples"
+SERVER_PROGRESS_FILE="$REPORT_DIR/logs/reflaxe-server-progress.log"
 GENERATION_CEILING_SECS="${HXHX_COMPILER_SCALE_GENERATION_CEILING_SECS:-3000}"
 DUNE_CEILING_SECS="${HXHX_COMPILER_SCALE_DUNE_CEILING_SECS:-1800}"
 HEARTBEAT_SECS="${HXHX_COMPILER_SCALE_HEARTBEAT_SECS:-20}"
@@ -36,6 +38,7 @@ CAPACITY_LEASE_PRIMARY_OWNER=0
 CAPACITY_LEASE_ACTIVE=0
 SERVER_STARTED=0
 SOURCE_CLEAN_AT_START=false
+PROFILE_ONLY=0
 
 if [[ -z "${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-}" ]]; then
 	CAPACITY_LEASE_PRIMARY_OWNER=1
@@ -49,11 +52,16 @@ fail() {
 
 usage() {
 	cat <<'USAGE'
-Usage: bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh
+Usage: bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh [--profile-only]
 
 This checkpoint proof runs one compiler-scale cold request and one unchanged
 warm request against the same upstream Haxe 4.3.7 server. It writes only under
 its report directory; it never replaces the tracked bootstrap snapshot.
+
+`--profile-only` runs one cold source-generation request with per-class Reflaxe
+telemetry, then stops before Dune or the warm request. Use it to identify a
+measured target-generation bottleneck before changing implementation. It does
+not produce or satisfy the cold/warm performance report.
 
 Important environment knobs:
   HAXE_BIN                                      Native Haxe 4.3.7 executable
@@ -96,6 +104,7 @@ server_env() {
 	HXHX_STATE_DIR="$SERVER_STATE_DIR" \
 		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
 		HAXE_BIN="$HAXE_BIN" \
+		REFLAXE_OCAML_PROGRESS_FILE="$SERVER_PROGRESS_FILE" \
 		"$@"
 }
 
@@ -181,7 +190,7 @@ run_bounded() {
 	local pid=""
 	local code=0
 	local rss=0
-	local progress_file="$REPORT_DIR/logs/$label.progress.log"
+	local progress_file="$SERVER_PROGRESS_FILE"
 	local timeout_kind="none"
 	local last_heartbeat=0
 	local completed_ms=0
@@ -229,6 +238,10 @@ run_bounded() {
 run_generation() {
 	local label="$1"
 	local log_file="$REPORT_DIR/logs/$label.haxe.log"
+	local telemetry_define="reflaxe_ocaml_progress"
+	if [[ "$PROFILE_ONLY" = "1" ]]; then
+		telemetry_define="reflaxe_ocaml_telemetry"
+	fi
 	(
 		cd "$HAXE_PACKAGE"
 		run_bounded "$label" "$GENERATION_CEILING_SECS" "$log_file" \
@@ -237,7 +250,7 @@ run_generation() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
-			-D reflaxe_ocaml_progress \
+			-D "$telemetry_define" \
 			-D "ocaml_output=$OUTPUT_DIR" \
 			--connect "$SERVER_PORT"
 	)
@@ -277,11 +290,21 @@ capture_state() {
 	cp "$executable" "$REPORT_DIR/$label.out.exe"
 }
 
-if [[ "${1:-}" = "-h" || "${1:-}" = "--help" ]]; then
-	usage
-	exit 0
-fi
-[[ "$#" -eq 0 ]] || fail "unexpected arguments; use --help"
+while [[ "$#" -gt 0 ]]; do
+	case "$1" in
+		--profile-only)
+			PROFILE_ONLY=1
+			shift
+			;;
+		-h|--help)
+			usage
+			exit 0
+			;;
+		*)
+			fail "unexpected argument '$1'; use --help"
+			;;
+	esac
+done
 
 source "$WATCHDOG_HELPER"
 for command in git node dune ocamlopt ps find; do
@@ -291,6 +314,7 @@ command -v "$HAXE_BIN" >/dev/null 2>&1 || fail "missing Haxe executable: $HAXE_B
 [[ -x "$SERVER_HELPER" ]] || fail "missing Haxe server helper: $SERVER_HELPER"
 [[ -f "$CAPACITY_HELPER" ]] || fail "missing capacity helper: $CAPACITY_HELPER"
 [[ -f "$EVIDENCE_HELPER" ]] || fail "missing evidence helper: $EVIDENCE_HELPER"
+[[ -f "$PROGRESS_SUMMARY_HELPER" ]] || fail "missing progress summary helper: $PROGRESS_SUMMARY_HELPER"
 positive_integer "$GENERATION_CEILING_SECS" || fail "generation ceiling must be a positive integer"
 positive_integer "$DUNE_CEILING_SECS" || fail "Dune ceiling must be a positive integer"
 positive_integer "$HEARTBEAT_SECS" || fail "heartbeat must be a positive integer"
@@ -332,6 +356,38 @@ echo "Ceilings: generation=${GENERATION_CEILING_SECS}s dune=${DUNE_CEILING_SECS}
 
 COLD_GENERATION_MS="$(run_generation cold-generation)"
 RSS_AFTER_COLD_KB="$(sample_server_rss)"
+
+if [[ "$PROFILE_ONLY" = "1" ]]; then
+	RSS_PEAK_KB="$(awk 'BEGIN { peak = 0 } /^[0-9]+$/ && $1 > peak { peak = $1 } END { print peak }' "$RSS_SAMPLES_FILE")"
+	server_env bash "$SERVER_HELPER" stop
+	SERVER_STARTED=0
+	OWNED_PIDS_AFTER_STOP="$(count_owned_pids_after_stop)"
+	PRIVATE_CANDIDATES_AFTER_STOP="$(private_candidate_count)"
+	PID_STATE_AFTER_STOP="$(pid_state_count)"
+	[[ "$OWNED_PIDS_AFTER_STOP" = "0" ]] || fail "profile cleanup left $OWNED_PIDS_AFTER_STOP owned server process(es)"
+	[[ "$PRIVATE_CANDIDATES_AFTER_STOP" = "0" ]] || fail "profile cleanup left $PRIVATE_CANDIDATES_AFTER_STOP private output candidate(s)"
+	[[ "$PID_STATE_AFTER_STOP" = "0" ]] || fail "profile cleanup left $PID_STATE_AFTER_STOP server PID-state file(s)"
+	tracked_source_clean || fail "profile changed tracked source"
+	node "$PROGRESS_SUMMARY_HELPER" \
+		--input "$SERVER_PROGRESS_FILE" \
+		--top 20 \
+		--json-out "$REPORT_DIR/progress-summary.json" \
+		--text-out "$REPORT_DIR/progress-summary.txt"
+	node -e '
+const fs = require("fs")
+const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
+if (!Number.isInteger(report.class_end_total_samples) || report.class_end_total_samples <= 0) {
+  console.error("compiler-scale Reflaxe profile: detailed class telemetry is missing")
+  process.exit(1)
+}
+' "$REPORT_DIR/progress-summary.json"
+	release_capacity_lease
+	CAPACITY_LEASE_ACTIVE=0
+	echo "Compiler-scale Reflaxe profile: generation_ms=$COLD_GENERATION_MS peak_rss_kb=$RSS_PEAK_KB"
+	echo "Profile summary: $REPORT_DIR/progress-summary.json"
+	exit 0
+fi
+
 COLD_DUNE_MS="$(run_dune cold-dune)"
 capture_state cold
 
