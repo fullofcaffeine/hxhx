@@ -155,6 +155,29 @@ grep -Fq "ocaml_mli cannot run after transactional source publication yet" "$WOR
 [[ "$(mtime_milliseconds "$message_cmx")" = "$message_b" ]] || fail "rejected transactional ocaml_mli changed Message's Dune artifact"
 [[ "$(mtime_milliseconds "$executable")" = "$executable_b" ]] || fail "rejected transactional ocaml_mli changed the native executable"
 
+replace_source "version-b" "version-c"
+if (
+	cd "$PROJECT_DIR"
+	haxe build.hxml -D reflaxe.dont_output_metadata_id -D ocaml_dune_libraries=hxhx_intentionally_missing_dune_library
+) >"$WORK_DIR/expected-native-build-failure.log" 2>&1; then
+	fail "the injected post-publication Dune failure unexpectedly succeeded"
+fi
+grep -Fq "hxhx_intentionally_missing_dune_library" "$WORK_DIR/expected-native-build-failure.log" \
+	|| fail "the post-publication Dune failure did not preserve its actionable diagnostic"
+revision_c="$(source_bundle_revision)"
+[[ "$revision_c" != "$revision_b" ]] || fail "the post-publication Dune failure rolled source back to the prior public revision"
+grep -R -a -Fq "version-c" "$PROJECT_DIR/out" \
+	|| fail "the post-publication Dune failure did not leave the newly published source available"
+if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-output-transaction' -print -quit | grep -q .; then
+	fail "private output transaction state survived a post-publication Dune failure"
+fi
+
+sleep 1
+compile
+[[ "$(source_bundle_revision)" != "$revision_b" ]] || fail "retrying the published source restored the prior source revision"
+grep -R -a -Fq "version-c" "$PROJECT_DIR/out" \
+	|| fail "retrying the published source did not preserve the version-c program"
+
 if grep -R -a -F ".reflaxe-output-transaction" "$PROJECT_DIR/out" "$BUILD_DIR" >/dev/null; then
 	fail "a private candidate or backup path entered generated output or Dune metadata"
 fi
@@ -163,6 +186,6 @@ if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-output-transaction'
 fi
 
 "$executable" >"$WORK_DIR/runtime.stdout"
-grep -Fxq "version-b" "$WORK_DIR/runtime.stdout" || fail "the final native artifact did not run the published program"
+grep -Fxq "version-c" "$WORK_DIR/runtime.stdout" || fail "the final native artifact did not run the retried published program"
 
 echo "REFLAXE_OCAML_TRANSACTIONAL_DUNE:PASS cold_dune_ms=$cold_dune_ms warm_dune_ms=$warm_dune_ms edit_dune_ms=$edit_dune_ms"
