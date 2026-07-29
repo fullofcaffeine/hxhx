@@ -315,6 +315,10 @@ class OcamlBuilder {
 				buildExpr(expression);
 			case BoxExactIntToNullableInt, BoxExactBoolToNullableBool:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
+			case BoxConcreteToDynamic:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expression)]);
+			case BoxExactBoolToDynamic:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(expression)]);
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(expression)]);
 			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString:
@@ -350,8 +354,9 @@ class OcamlBuilder {
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [body]);
 			case CheckedUnboxNullableInt:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [body]);
-			case MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString:
-				callPlanInvariant("a callable result cannot use an omitted-argument conversion", position);
+			case BoxConcreteToDynamic, BoxExactBoolToDynamic, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool, MaterializeOmittedString,
+				MaterializeExplicitNullString:
+				callPlanInvariant("a callable result cannot use a call-argument-only conversion", position);
 		}
 	}
 

@@ -223,6 +223,23 @@ class CallPlanFixture {
 		};
 	}
 
+	/** Creates one closed concrete-to-Dynamic call-argument crossing. */
+	static function dynamicBoxValue(index:Int, semanticTypeId:String, carrierTypeId:String, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: semanticTypeId,
+			inputCarrierTypeId: carrierTypeId,
+			inputRepresentationId: 'representation:$semanticTypeId:internal-value',
+			outputSemanticTypeId: "Dynamic",
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: "representation:Dynamic:internal-value",
+			conversion: conversion,
+			proofId: conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic ? "dynamic-call-box-bool-v1" : "dynamic-call-box-concrete-v1",
+			proofClaim: "fixture concrete-to-Dynamic call crossing"
+		};
+	}
+
 	static function optionalStringValue(index:Int, omitted:Bool = false):OcamlCallValuePlan {
 		final selected = stringValue(index);
 		return {
@@ -290,7 +307,8 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
 			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
-				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier:
+				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic,
+				BoxExactBoolToDynamic:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -344,7 +362,7 @@ class CallPlanFixture {
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier:
+				MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
 		};
 	}
@@ -1365,6 +1383,20 @@ class CallPlanFixture {
 		Reflect.setField(wrongDynamicProof, "proofId", "identity-call-carrier-v1");
 		expectThrows("must preserve one exact Dynamic Obj.t carrier",
 			() -> OcamlCallPlan.requireCallValue(wrongDynamicProof, 0, "wrong Dynamic proof fixture"));
+		final boxedDynamicInt = dynamicBoxValue(0, "Int", "int", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicString = dynamicBoxValue(0, "String", "string", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicNominal = dynamicBoxValue(0, "Box", "box_t", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicBool = dynamicBoxValue(0, "Bool", "bool", OcamlCallCarrierConversion.BoxExactBoolToDynamic);
+		for (value in [boxedDynamicInt, boxedDynamicString, boxedDynamicNominal, boxedDynamicBool])
+			OcamlCallPlan.requireCallValue(value, 0, "concrete-to-Dynamic fixture");
+		final dynamicBoxAsResult = OcamlCallPlan.copyValue(boxedDynamicInt);
+		Reflect.setField(dynamicBoxAsResult, "index", -1);
+		expectThrows("must box one admitted non-Bool value",
+			() -> OcamlCallPlan.requireCallValue(dynamicBoxAsResult, -1, "Dynamic box used as result fixture"));
+		final dynamicBoolWrongProof = OcamlCallPlan.copyValue(boxedDynamicBool);
+		Reflect.setField(dynamicBoolWrongProof, "proofId", "dynamic-call-box-concrete-v1");
+		expectThrows("distinguishable runtime Bool carrier",
+			() -> OcamlCallPlan.requireCallValue(dynamicBoolWrongProof, 0, "wrong Dynamic Bool proof fixture"));
 		final checkedResult = checkedNullableIntValue(-1);
 		OcamlCallPlan.requireCallValue(checkedResult, -1, "checked nullable Int result fixture");
 		final checkedArgument = checkedNullableIntValue(0);

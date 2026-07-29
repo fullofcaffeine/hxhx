@@ -1302,6 +1302,27 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-bool-call-box-v1")
 					throw '$owner has an invalid exact Bool-to-Null<Bool> boxing crossing.';
+			case "preserve-dynamic-carrier":
+				if (!sameSides
+					|| value.inputSemanticTypeId != "Dynamic"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "dynamic-call-carrier-preserve-v1")
+					throw '$owner has an invalid Dynamic carrier-preserving crossing.';
+			case "box-concrete-to-dynamic":
+				final concreteInput = isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Int", "int")
+					|| isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "String", "string")
+					|| isAdmittedNominalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, representations);
+				if (value.index < 0
+					|| !concreteInput
+					|| !isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Dynamic", "Obj.t")
+					|| value.proofId != "dynamic-call-box-concrete-v1")
+					throw '$owner has an invalid admitted concrete-to-Dynamic boxing crossing.';
+			case "box-exact-bool-to-dynamic":
+				if (value.index < 0
+					|| !isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Bool", "bool")
+					|| !isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Dynamic", "Obj.t")
+					|| value.proofId != "dynamic-call-box-bool-v1")
+					throw '$owner has an invalid exact Bool-to-Dynamic boxing crossing.';
 			case "materialize-omitted-nullable-int":
 				if (!value.parameterOptional
 					|| !sameSides
@@ -1413,7 +1434,11 @@ class ReflaxeOcamlInspection {
 		var optionalCount = 0;
 		for (index in 0...arguments.length) {
 			final argument = arguments[index];
-			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+			final admittedDynamicNominalInput = !isCallableBoundary
+				&& argument.conversion == "box-concrete-to-dynamic"
+				&& isAdmittedNominalSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId, representations);
+			if ((!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+				&& !admittedDynamicNominalInput)
 				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
 				throw '$owner contains an argument outside the closed typed-call representation matrix.';
 			}

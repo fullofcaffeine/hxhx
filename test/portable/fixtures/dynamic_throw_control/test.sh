@@ -42,7 +42,7 @@ if (controls.length !== 2) {
 }
 for (const control of controls) {
 	const payload = control.payload
-	if (control.pipelineRevision !== 'ocaml-function-plans-v54'
+	if (control.pipelineRevision !== 'ocaml-function-plans-v55'
 		|| control.proofId !== 'dynamic-carrier-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -70,7 +70,32 @@ if (dynamicCatches.length < 6
 	fail('the fixture did not preserve every final Dynamic catch carrier')
 }
 
-if (!source.includes('let throwDynamic = fun value -> ignore (HxType.hx_throw_typed_rtti value ["Dynamic"])')
+const dynamicCalls = report.calls.filter(call => call.calleeId === 'Main|Main::throwDynamic')
+const expectedCrossings = [
+	['Int', 'box-concrete-to-dynamic', 'dynamic-call-box-concrete-v1'],
+	['Int', 'box-concrete-to-dynamic', 'dynamic-call-box-concrete-v1'],
+	['Bool', 'box-exact-bool-to-dynamic', 'dynamic-call-box-bool-v1'],
+	['String', 'box-concrete-to-dynamic', 'dynamic-call-box-concrete-v1'],
+	['Dynamic', 'preserve-dynamic-carrier', 'dynamic-call-carrier-preserve-v1'],
+	['Box', 'box-concrete-to-dynamic', 'dynamic-call-box-concrete-v1']
+]
+const actualCrossings = dynamicCalls.map(call => {
+	const argument = call.arguments?.[0]
+	return [argument?.inputSemanticTypeId, argument?.conversion, argument?.proofId]
+}).sort((left, right) => left.join('|').localeCompare(right.join('|')))
+expectedCrossings.sort((left, right) => left.join('|').localeCompare(right.join('|')))
+if (JSON.stringify(actualCrossings) !== JSON.stringify(expectedCrossings)
+	|| dynamicCalls.some(call =>
+		call.pipelineRevision !== 'ocaml-function-plans-v55'
+		|| call.arguments?.[0]?.outputSemanticTypeId !== 'Dynamic'
+		|| call.arguments?.[0]?.outputCarrierTypeId !== 'Obj.t'
+		|| call.arguments?.[0]?.outputRepresentationId !== 'representation:Dynamic:internal-value')) {
+	fail(`typed call plans did not seal the complete concrete/Dynamic crossing matrix: ${JSON.stringify(actualCrossings)}`)
+}
+
+if (!/let throwDynamic = fun \(value : Obj\.t\) -> ignore \(HxType\.hx_throw_typed_rtti value \["Dynamic"\]\)/.test(source)
+	|| !/let (__call_arg_0_\d+) = Obj\.repr 41 in throwDynamic \1/.test(source)
+	|| !/let (__call_arg_0_\d+) = HxRuntime\.box_bool true in throwDynamic \1/.test(source)
 	|| !/HxType\.hx_throw_typed_rtti caught \["Dynamic"\]/.test(source)
 	|| source.includes('hx_throw_typed_rtti (Obj.repr value) ["Dynamic"]')
 	|| source.includes('hx_throw_typed_rtti (Obj.repr caught) ["Dynamic"]')) {

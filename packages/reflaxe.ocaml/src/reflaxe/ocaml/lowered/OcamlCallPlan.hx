@@ -45,6 +45,8 @@ enum abstract OcamlCallCarrierConversion(String) from String to String {
 	final PreserveNullableBoolCarrier = "preserve-nullable-bool-carrier";
 	final BoxExactBoolToNullableBool = "box-exact-bool-to-nullable-bool";
 	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
+	final BoxConcreteToDynamic = "box-concrete-to-dynamic";
+	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
 	final MaterializeOmittedNullableInt = "materialize-omitted-nullable-int";
 	final MaterializeOmittedNullableBool = "materialize-omitted-nullable-bool";
 	final MaterializeOmittedString = "materialize-omitted-string";
@@ -606,6 +608,20 @@ class OcamlCallPlan {
 					|| value.proofId != "dynamic-call-carrier-preserve-v1") {
 					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must preserve one exact Dynamic Obj.t carrier';
 				}
+			case BoxConcreteToDynamic:
+				if (expectedIndex < 0
+					|| !isConcreteDynamicInputSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| !isExactDynamicSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
+					|| value.proofId != "dynamic-call-box-concrete-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box one admitted non-Bool value into the exact Dynamic Obj.t carrier';
+				}
+			case BoxExactBoolToDynamic:
+				if (expectedIndex < 0
+					|| !isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
+					|| !isExactDynamicSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
+					|| value.proofId != "dynamic-call-box-bool-v1") {
+					throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner must box exact Bool through the distinguishable runtime Bool carrier before Dynamic';
+				}
 			case BoxExactBoolToNullableBool:
 				if (!isExactBoolSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId)
 					|| !isExactNullBoolSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId)
@@ -988,6 +1004,13 @@ class OcamlCallPlan {
 
 	static function isExactDynamicSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return semanticTypeId == "Dynamic" && carrierTypeId == "Obj.t" && representationId == "representation:Dynamic:internal-value";
+	}
+
+	/** Reports whether one closed non-Bool carrier can enter Dynamic via `Obj.repr`. */
+	public static function isConcreteDynamicInputSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return isExactIntSide(semanticTypeId, carrierTypeId, representationId)
+			|| isExactStringSide(semanticTypeId, carrierTypeId, representationId)
+			|| isNominalInternalSide(semanticTypeId, carrierTypeId, representationId);
 	}
 
 	static function isAdmittedInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
@@ -1828,6 +1851,11 @@ class OcamlCallPlanner {
 				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.CheckedUnboxNullableInt));
 			} else if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Null<Bool>") {
 				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactBoolToNullableBool, boundary.parameterOptional));
+			} else if (input.semanticTypeId == "Bool" && output.semanticTypeId == "Dynamic") {
+				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxExactBoolToDynamic, boundary.parameterOptional));
+			} else if (output.semanticTypeId == "Dynamic"
+				&& OcamlCallPlan.isConcreteDynamicInputSide(input.semanticTypeId, input.carrierTypeId, input.id)) {
+				planned.push(crossingValue(index, input, output, OcamlCallCarrierConversion.BoxConcreteToDynamic, boundary.parameterOptional));
 			} else {
 				return null;
 			}
@@ -2225,6 +2253,14 @@ class OcamlCallPlanner {
 			case PreserveDynamicCarrier: {
 					id: "dynamic-call-carrier-preserve-v1",
 					claim: "The source value already produces the selected Dynamic Obj.t carrier, so the call boundary preserves its null, primitive, or reference-bearing payload without another box."
+				};
+			case BoxConcreteToDynamic: {
+					id: "dynamic-call-box-concrete-v1",
+					claim: "The source value produces one admitted non-Bool concrete carrier; one Obj.repr operation preserves that value or reference identity in the selected Dynamic Obj.t boundary carrier."
+				};
+			case BoxExactBoolToDynamic: {
+					id: "dynamic-call-box-bool-v1",
+					claim: "The source value produces exact Bool in OCaml bool; the runtime's distinguishable Bool box preserves true and false without colliding with immediate Int values in Dynamic."
 				};
 			case BoxExactBoolToNullableBool: {
 					id: "nullable-bool-call-box-v1",
