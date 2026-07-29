@@ -357,7 +357,9 @@ stable_digest="$(tree_digest "$PROJECT_DIR/out")"
 rss_baseline_kb="$(server_rss_kb)"
 rss_peak_kb="$rss_baseline_kb"
 repeated_total_ms=0
-for request in 1 2 3 4 5 6 7 8 9 10; do
+rss_after_10_kb=0
+rss_after_20_kb=0
+for request in {1..30}; do
 	started="$(milliseconds)"
 	compile_server
 	elapsed="$(( $(milliseconds) - started ))"
@@ -368,10 +370,18 @@ for request in 1 2 3 4 5 6 7 8 9 10; do
 	if (( current_rss_kb > rss_peak_kb )); then
 		rss_peak_kb="$current_rss_kb"
 	fi
+	if (( request == 10 )); then
+		rss_after_10_kb="$current_rss_kb"
+	elif (( request == 20 )); then
+		rss_after_20_kb="$current_rss_kb"
+	fi
 done
 rss_final_kb="$(server_rss_kb)"
 if (( rss_final_kb > rss_baseline_kb + 131072 )); then
-	fail "ten unchanged requests grew owned server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB final=${rss_final_kb}KB)"
+	fail "thirty unchanged requests grew owned server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB final=${rss_final_kb}KB)"
+fi
+if (( rss_final_kb > rss_after_20_kb + 32768 )); then
+	fail "owned server RSS did not approach a plateau in the final ten requests (after20=${rss_after_20_kb}KB final=${rss_final_kb}KB)"
 fi
 
 stop_server
@@ -410,4 +420,4 @@ assert_no_private_state
 
 stop_server
 
-echo "REFLAXE_OCAML_COMPLETE_PROGRAM_SERVER:PASS clean_a_ms=$clean_a_ms cold_a_ms=$cold_a_ms warm_a_ms=$warm_a_ms repeated_10_total_ms=$repeated_total_ms rss_baseline_kb=$rss_baseline_kb rss_peak_kb=$rss_peak_kb rss_final_kb=$rss_final_kb"
+echo "REFLAXE_OCAML_COMPLETE_PROGRAM_SERVER:PASS clean_a_ms=$clean_a_ms cold_a_ms=$cold_a_ms warm_a_ms=$warm_a_ms repeated_30_total_ms=$repeated_total_ms rss_baseline_kb=$rss_baseline_kb rss_after_10_kb=$rss_after_10_kb rss_after_20_kb=$rss_after_20_kb rss_peak_kb=$rss_peak_kb rss_final_kb=$rss_final_kb"
