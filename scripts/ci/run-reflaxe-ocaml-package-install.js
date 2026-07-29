@@ -21,8 +21,8 @@ const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_a
 const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
 const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const expectedHaxeVersion = '4.3.7'
-const expectedReflaxeCommit = '40434ad2dd77c8fbdc5aa1bec64d6abff2a0207a'
-const expectedReflaxeContentSha256 = '22b7c6dc23e0928e8291d85723876b16f3ca3d373eeb1ab2158f5b81824602cc'
+const expectedReflaxeCommit = '1d99c7453d7b499b7d1f6d433cd9e9629fcb8249'
+const expectedReflaxeContentSha256 = '2a7b2f67e54ee5ff28aa7224f1cea6d23b06e9321d24ddbd0bf814b3541824e4'
 const summary = {
 	schemaVersion: 1,
 	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',

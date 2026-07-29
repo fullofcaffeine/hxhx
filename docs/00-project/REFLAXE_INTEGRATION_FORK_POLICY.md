@@ -232,10 +232,10 @@ The fork then added target-neutral lifecycle and scalability repairs:
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `40434ad2dd77c8fbdc5aa1bec64d6abff2a0207a`, published for review in
+candidate fork commit `1d99c7453d7b499b7d1f6d433cd9e9629fcb8249`, published for review in
 [fork PR #16](https://github.com/fullofcaffeine/reflaxe/pull/16), with
 path-independent content digest
-`22b7c6dc23e0928e8291d85723876b16f3ca3d373eeb1ab2158f5b81824602cc`.
+`2a7b2f67e54ee5ff28aa7224f1cea6d23b06e9321d24ddbd0bf814b3541824e4`.
 The last repository-validated rollback pin remains PR #15 commit
 `bd7b8bf75ec2e78317b3c89316c6e3eff942e180` with digest
 `cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`;
@@ -292,6 +292,11 @@ publish only after Reflaxe validates the typed `_GeneratedFiles.json` receipt.
 An ordinary failure discards the candidate and keeps the previous public tree.
 Recognizable interruptions before and after each directory move are recovered;
 malformed, foreign, or ambiguous marker state fails closed.
+
+The final PR #16 candidate also cleans up private state when transaction
+initialization itself fails before the first marker is durable. Transactional
+write paths reject both slash and backslash parent traversal, so a target
+cannot escape the directory it asked Reflaxe to publish on either path style.
 
 The standalone OCaml target enables this only for the focused server experiment
 with `-D reflaxe_output_transaction`. Its normal one-shot and watch routes keep
