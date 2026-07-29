@@ -2260,7 +2260,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		state lives in a stable sibling, so neither source replacement nor a failed
 		Reflaxe candidate can delete it or record a private transaction path.
 	**/
-	public function completePublishedOutput():Void {
+	public override function onOutputPublished():Void {
 		#if eval
 		final pending = pendingPublishedOutputBuild;
 		pendingPublishedOutputBuild = null;
@@ -2271,7 +2271,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			|| output.publicOutputDir == null
 			|| Path.normalize(output.outputDir) != Path.normalize(pending.publicDirectory)
 			|| Path.normalize(output.publicOutputDir) != Path.normalize(pending.publicDirectory)) {
-			throw "reflaxe.ocaml: Dune post-publication callback ran before the generated source transaction committed";
+			throw "reflaxe.ocaml: Dune post-publication hook ran before the generated source transaction committed";
 		}
 
 		pending.artifacts.continueAtPublishedDirectory(pending.publicDirectory);

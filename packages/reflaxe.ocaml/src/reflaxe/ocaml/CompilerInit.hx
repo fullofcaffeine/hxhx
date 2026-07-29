@@ -184,14 +184,6 @@ class CompilerInit {
 			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.functionPlanRegistry)],
 				OcamlFunctionPlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
 		});
-		#if macro
-		if (transactionalFileOutput) {
-			// Reflaxe registered its publication callback before this target
-			// initializer ran. This callback therefore observes only committed
-			// public output and never sends a private candidate path to Dune.
-			haxe.macro.Context.onAfterGenerate(compiler.completePublishedOutput);
-		}
-		#end
 	}
 }
 #end

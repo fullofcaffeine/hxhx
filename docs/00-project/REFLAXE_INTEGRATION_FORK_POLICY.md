@@ -227,21 +227,34 @@ The fork then added target-neutral lifecycle and scalability repairs:
   Haxe requests;
 - PR #15 made every target callback receive the complete current program; and
 - PR #16 added opt-in, target-neutral publication of one validated generated
-  directory instead of exposing files while generation is still fallible.
+  directory instead of exposing files while generation is still fallible; and
+- PR #17 added an explicit target hook after that directory becomes public, so
+  external builders never have to infer lifecycle order from global Haxe
+  callback registration.
 
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `c63d2b1ad16cabaeb9cdfc02558f06523a2f224f`, published for review in
-[fork PR #16](https://github.com/fullofcaffeine/reflaxe/pull/16), with
+candidate fork commit `1433334fdf22582fa129725982d8d7fa5547da18`, published for review in
+[fork PR #17](https://github.com/fullofcaffeine/reflaxe/pull/17), with
 path-independent content digest
-`be01b11969325b1093f3d4d74b797c14e6adf67633794c7825d2e749bb7818bf`.
-The last repository-validated rollback pin remains PR #15 commit
-`bd7b8bf75ec2e78317b3c89316c6e3eff942e180` with digest
-`cfc5bea9f0189b3202fb96b7fc2c48c9f88f9353c1ba0503ebe35096ef6b1d3a`;
+`ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`.
+The last repository-validated rollback pin remains PR #16 commit
+`c63d2b1ad16cabaeb9cdfc02558f06523a2f224f` with digest
+`be01b11969325b1093f3d4d74b797c14e6adf67633794c7825d2e749bb7818bf`;
 restoring both values together is the bounded rollback.
 
-The latest stacked patch preserves an earlier local declaration when the
+PR #17 removes a package-only lifecycle race. Repository-local builds loaded
+the Reflaxe framework before the OCaml target, but installed Haxelib builds
+could register those callbacks in the opposite order. The target's extra
+`onAfterGenerate` callback could therefore run before source publication and
+observe no pending native build. `BaseCompiler.onOutputPublished()` now runs
+directly after the framework commits the complete tree. `reflaxe.ocaml`
+overrides that hook to start Dune from the stable public root; it no longer
+depends on process-global callback order. The fork regression proves the hook
+sees the public path and leaves generated files unchanged.
+
+The pinned stack also preserves an earlier local declaration when the
 program reads that value before assigning the local again. This includes reads
 inside another variable's initializer and inside a nested block. Without that
 check, the target-neutral cleanup could turn this valid sequence:
