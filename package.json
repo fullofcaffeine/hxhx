@@ -44,6 +44,7 @@
     "test:hxhx:bootstrap-regen-report": "node scripts/ci/bootstrap-regen-benchmark-report-fixture-test.js",
     "test:hxhx:stage0-profile-output-path": "bash -n scripts/hxhx/profile-stage0-regen.sh scripts/ci/stage0-profile-output-path-fixture-test.sh && bash scripts/ci/stage0-profile-output-path-fixture-test.sh",
     "test:hxhx:stage0-profile-evidence": "node --check scripts/ci/stage0-profile-evidence-check.js && node --check scripts/ci/stage0-profile-evidence-fixture-test.js && node scripts/ci/stage0-profile-evidence-fixture-test.js",
+    "test:hxhx:compiler-scale-reflaxe-server-evidence": "bash -n scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh && node --check scripts/ci/compiler-scale-reflaxe-server-evidence.js && node --check scripts/ci/compiler-scale-reflaxe-server-evidence-fixture-test.js && node scripts/ci/compiler-scale-reflaxe-server-evidence-fixture-test.js",
     "test:hxhx:stage0-free-build-report": "node scripts/ci/stage0-free-build-benchmark-report-fixture-test.js",
     "test:hxhx:native-plugin-loop-report": "node scripts/ci/native-plugin-loop-benchmark-report-fixture-test.js",
     "test:hxhx:haxe-server-identity": "bash scripts/ci/haxe-server-identity-fixture-test.sh && bash scripts/ci/haxe-server-process-classifier-fixture-test.sh",

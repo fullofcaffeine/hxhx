@@ -64,9 +64,10 @@ Outputs:
   <scenario>.<policy>.*.json          Low-level regeneration reports
   report.json                         Self-describing report with medians and provenance
 
-The former warm scenario is temporarily unavailable. Haxe can reuse its typed
-modules, but Reflaxe does not yet reconstruct every unchanged target module and
-runtime dependency. See haxe_ocaml-850ii.33 and the compilation-server guide.
+This snapshot-maintenance benchmark deliberately has no warm scenario because
+it replaces tracked bootstrap output and does not own a stable external Dune
+build tree. Use run-compiler-scale-reflaxe-server-proof.sh for the isolated
+cold/warm source, native-build, behavior, memory, and cleanup proof.
 
 Examples:
   # Measure the unchanged-input fingerprint and compiler selection only
@@ -220,8 +221,8 @@ for scenario in "${scenarios[@]}"; do
 		cold|skip|select|'')
 			;;
 		warm)
-			echo "The warm bootstrap benchmark is temporarily disabled because cached Reflaxe requests can omit unchanged target modules and runtime dependencies." >&2
-			echo "Use cold, skip, or select until haxe_ocaml-850ii.33 is resolved; see docs/01-getting-started/COMPILATION_SERVER.md." >&2
+			echo "The bootstrap snapshot benchmark does not own a safe warm scenario because it replaces tracked output." >&2
+			echo "Use scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh for isolated cold/warm evidence." >&2
 			exit 2
 			;;
 		*)

@@ -36,8 +36,10 @@ Options:
   --kill-repo-server         Stop only the repo-owned haxe --wait server before emit.
   --kill-all-haxe-servers    Stop all local haxe --wait/--server-connect processes before emit (unsafe).
   --kill-stale-haxe-servers  Deprecated alias for --kill-all-haxe-servers.
-  --use-repo-server          Diagnostic only: blocked until warm Reflaxe target state is complete.
-  --keep-repo-server         Diagnostic only: keep server alive (implies --use-repo-server).
+  --use-repo-server          Reuse the repository-owned upstream Haxe server.
+                             Complete warm target reconstruction is supported;
+                             compiler-scale benefit is measured separately.
+  --keep-repo-server         Keep the owned server alive (implies --use-repo-server).
   --skip-if-unchanged        Skip stage0 emit when fingerprint matches previous successful regen.
   --force                    Ignore fingerprint match and force stage0 emit.
   --profile                  Enable stage0 `--times` and per-filter timing (`-D filter-times`).

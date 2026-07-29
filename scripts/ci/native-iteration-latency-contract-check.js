@@ -88,6 +88,8 @@ function main() {
     'scripts/hxhx/bench-stage0-free-build.sh',
     'scripts/ci/native-plugin-loop-benchmark-report.js',
     'scripts/hxhx/bench-native-plugin-loop.sh',
+    'scripts/ci/compiler-scale-reflaxe-server-evidence.js',
+    'scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
     'README `Goals status` table'
@@ -102,6 +104,7 @@ function main() {
   requireIncludes(packageJsonPath, packageJson, 'hxhx-kpi-artifact-comparison-fixture-test.js')
   requireIncludes(packageJsonPath, packageJson, 'native-plugin-loop-benchmark-report-fixture-test.js')
   requireIncludes(packageJsonPath, packageJson, 'stage0-free-build-benchmark-report-fixture-test.js')
+  requireIncludes(packageJsonPath, packageJson, 'compiler-scale-reflaxe-server-evidence-fixture-test.js')
   for (const snippet of [
     'compare_native:',
     'scripts/hxhx/bench-kpi-artifact-comparison.sh',
@@ -175,6 +178,13 @@ function main() {
     if (policy.activeEvidenceLoop.stage0FreeBuildReportSchema !== 'hxhx.stage0-free-build.v1') {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
+    if (policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema
+        !== 'hxhx.compiler-scale-reflaxe-server.v1') {
+      fail(
+        'policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema ' +
+        'must be hxhx.compiler-scale-reflaxe-server.v1'
+      )
+    }
     if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v2') {
       fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v2')
     }
@@ -200,6 +210,9 @@ function main() {
       'stage0FreeBuildReportRunner',
       'nativePluginLoopReportValidator',
       'nativePluginLoopReportRunner',
+      'compilerScaleReflaxeServerEvidence',
+      'compilerScaleReflaxeServerFixture',
+      'compilerScaleReflaxeServerRunner',
       'localCapacityPreflight',
       'localCapacityPreflightFixture',
       'localCapacityQueue',

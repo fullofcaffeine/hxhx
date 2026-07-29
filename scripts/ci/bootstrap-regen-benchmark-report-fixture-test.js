@@ -208,7 +208,7 @@ function assertWorktreeChangeCollection(tmpDir) {
 function main() {
   const runnerSource = fs.readFileSync(runner, 'utf8')
   if (runnerSource.includes('--use-repo-server') || runnerSource.includes('--keep-repo-server')) {
-    fail('the benchmark runner must not enable incomplete Reflaxe server reuse')
+    fail('the tracked-snapshot benchmark must not acquire compiler-server ownership')
   }
   if (!runnerSource.includes("SCENARIOS_RAW=\"${HXHX_BOOTSTRAP_BENCH_SCENARIOS:-cold,skip,select}\"")) {
     fail('the benchmark default must contain only supported scenarios')
@@ -223,7 +223,9 @@ function main() {
       HXHX_BOOTSTRAP_BENCH_REPORT_DIR: path.join(os.tmpdir(), 'hxhx-blocked-warm-report')
     }
   })
-  if (blockedWarm.status !== 2 || !blockedWarm.stderr.includes('warm bootstrap benchmark is temporarily disabled')) {
+  if (blockedWarm.status !== 2
+      || !blockedWarm.stderr.includes('bootstrap snapshot benchmark does not own a safe warm scenario')
+      || !blockedWarm.stderr.includes('run-compiler-scale-reflaxe-server-proof.sh')) {
     fail(`warm scenario must fail before measurement with an actionable diagnostic\nstdout:\n${blockedWarm.stdout}\nstderr:\n${blockedWarm.stderr}`)
   }
 

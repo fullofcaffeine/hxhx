@@ -102,6 +102,10 @@ performance claim must use measured medians from the relevant runner class.
     "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
     "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
     "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh",
+    "compilerScaleReflaxeServerReportSchema": "hxhx.compiler-scale-reflaxe-server.v1",
+    "compilerScaleReflaxeServerEvidence": "scripts/ci/compiler-scale-reflaxe-server-evidence.js",
+    "compilerScaleReflaxeServerFixture": "scripts/ci/compiler-scale-reflaxe-server-evidence-fixture-test.js",
+    "compilerScaleReflaxeServerRunner": "scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh",
     "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v2",
     "localCapacityPreflight": "scripts/hxhx/check-local-capacity.js",
     "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js",
@@ -171,8 +175,11 @@ performance claim must use measured medians from the relevant runner class.
       "evidence": [
         "packages/hxhx/src/hxhx/Stage3WaitServer.hx",
         "packages/hxhx/src/hxhx/NativeCompilerServer.hx",
+        "scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh",
+        "scripts/ci/compiler-scale-reflaxe-server-evidence.js",
         "scripts/test-hxhx-targets.sh",
-        "docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md"
+        "docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md",
+        "docs/01-getting-started/COMPILATION_SERVER.md"
       ]
     },
     {
@@ -447,9 +454,13 @@ separate threshold decision.
 The bootstrap-regeneration benchmark also writes one self-describing,
 report-only summary. In plain language, that summary tells a reader which
 commit and machine ran, which tool versions and benchmark settings were used,
-what `cold`, `warm`, `skip`, and `select` mean, and which raw run reports back
-each median. It does not turn a quick `select` wiring check into evidence that
-full snapshot regeneration is fast.
+what `cold`, `skip`, and `select` mean, and which raw run reports back each
+median. It deliberately does not own a warm scenario because it replaces the
+tracked bootstrap snapshot. The separate compiler-scale server runner keeps
+generated source disposable and Dune state external, then compares cold and
+warm target trees, binaries, behavior, memory, and cleanup. A quick `select`
+wiring check is not evidence that either full snapshot regeneration or a warm
+compiler-scale loop is fast.
 
 The stage0-free build benchmark answers a smaller everyday question: how long
 does it take to turn the already-committed OCaml bootstrap snapshot into a new

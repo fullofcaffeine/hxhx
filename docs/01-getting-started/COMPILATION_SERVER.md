@@ -661,6 +661,37 @@ need to show that the full developer loop benefits on representative projects.
 The fix is tracked by `haxe_ocaml-850ii.33`. Native `hxhx` incremental
 compilation remains separate under `haxe_ocaml-850ii.32`.
 
+### Run the compiler-scale checkpoint
+
+Use the following expensive checkpoint only on a clean checkout with native
+upstream Haxe 4.3.7 available:
+
+```bash
+HAXE_BIN=/path/to/native/haxe-4.3.7 \
+  bash scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh
+```
+
+The runner waits for local CPU and memory capacity, holds the cooperative
+Haxe-family heavy-run lease, and starts one repository-owned Haxe server. It
+then generates `hxhx` twice. The first request establishes the server's
+frontend and macro/JIT state; the unchanged second request may reuse that
+state. Generated OCaml source lives under a disposable evidence directory,
+while Dune keeps compiled state in a stable sibling build directory.
+
+The resulting `report.json` passes only when both requests publish the same
+complete generated tree and ownership manifest, build the same native binary,
+return the same `--version` behavior, clean up the owned server and private
+publication state, and save at least two minutes or twenty percent across
+generation plus Dune. Generation and native-build time remain separate in the
+report so a fast frontend cannot hide slow target generation or linking.
+
+This command is checkpoint evidence, not an ordinary edit-loop command. Its
+default 3,000-second per-generation ceiling comes from a bounded profile: Haxe
+finished typing the compiler-scale input in about two seconds, while the
+Reflaxe macro interpreter/JIT spent roughly 250 seconds preparing before
+ordinary class rendering began. Override the ceiling only with a newer measured
+profile and record the reason with the evidence.
+
 ## Repository-owned server lifecycle
 
 The repository helper safely owns one upstream Haxe server process tree:
