@@ -58,7 +58,7 @@ class CompilerJsonParser {
 			expectKeyword("null");
 			value = new CompilerJsonValueBox(null);
 		} else if (code == "-".code || (code >= "0".code && code <= "9".code)) {
-			value = new CompilerJsonValueBox(parseNumber());
+			value = parseNumber();
 		} else {
 			fail("invalid token");
 		}
@@ -166,7 +166,15 @@ class CompilerJsonParser {
 		return value;
 	}
 
-	function parseNumber():Dynamic {
+	/**
+		Parses one JSON number and returns it through the parser's heterogeneous-value box.
+
+		The concrete payload remains an `Int` when the token has no fraction or exponent
+		and a `Float` otherwise. Returning the box instead of `Dynamic` keeps that union
+		inside the JSON value boundary rather than exporting an unsealed dynamic function
+		result to native targets.
+	**/
+	function parseNumber():CompilerJsonValueBox {
 		final start = index;
 		if (consumeIf("-".code)) {}
 		parseDigits(false);
@@ -190,12 +198,12 @@ class CompilerJsonParser {
 			final parsedFloat = Std.parseFloat(token);
 			if (Math.isNaN(parsedFloat))
 				fail("invalid float literal");
-			return parsedFloat;
+			return new CompilerJsonValueBox(parsedFloat);
 		}
 		final parsedInt = Std.parseInt(token);
 		if (parsedInt == null)
 			fail("invalid int literal");
-		return parsedInt;
+		return new CompilerJsonValueBox(parsedInt);
 	}
 
 	function parseDigits(requireAtLeastOne:Bool):Void {
