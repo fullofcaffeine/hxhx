@@ -99,9 +99,10 @@ class OcamlSourceBundleCandidate {
 	/**
 		Packs and then decodes the stable source snapshot.
 
-		The self-decode is intentional: the shadow path must consume the same opaque
-		bytes that a future catalog would retain, not an easier request-local object
-		graph used only while building the payload.
+		The cache stores an opaque byte payload rather than the request-local object
+		graph used to build it. Decoding immediately proves that the exact bytes can
+		pass every path, ownership, offset, digest, and authority check before the
+		candidate becomes visible to a later compiler request.
 	**/
 	public static function pack(outputDirectory:String, targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot, diagnosticsEligible:Bool,
 			maximumPayloadBytes:Int = TargetReuseCatalog.DEFAULT_MAXIMUM_ENTRY_BYTES):OcamlSourceBundleCandidate {

@@ -2,7 +2,10 @@
 set -euo pipefail
 
 # Proves the physical lifetime of Reflaxe's bounded in-memory catalog owner.
-# Every request still runs the ordinary OCaml target and remains reuse-ineligible.
+# The fixture deliberately keeps reuse disabled, so each external phase receipt
+# must show a normal target compilation and an empty cache. What changes across
+# requests is the macro realm: the long-lived Haxe process may preserve it,
+# reset it, or replace it after configuration and failure boundaries.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$ROOT/test/reflaxe_ocaml_target_reuse_realm"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
@@ -11,6 +14,7 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 WORK_DIR="$(mktemp -d "$ROOT/.reflaxe-ocaml-target-reuse-realm.XXXXXX")"
 PROJECT_DIR="$WORK_DIR/project"
 SNAPSHOT_DIR="$WORK_DIR/snapshots"
+PHASE_REPORT_DIR="$WORK_DIR/target-reuse-phases"
 SERVER_STATE_DIR="$WORK_DIR/server-state"
 SERVER_PORT="${REFLAXE_OCAML_REALM_TEST_PORT:-$((26000 + ($$ % 10000)))}"
 SERVER_STARTED=0
@@ -42,6 +46,7 @@ start_server() {
 	HXHX_STATE_DIR="$SERVER_STATE_DIR" \
 		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
 		HAXE_BIN="$HAXE_BIN" \
+		REFLAXE_OCAML_TARGET_REUSE_PHASE_REPORT_DIR="$PHASE_REPORT_DIR" \
 		bash "$SERVER_HELPER" start >/dev/null
 	SERVER_STARTED=1
 }
@@ -63,13 +68,14 @@ compile_server() {
 
 snapshot_report() {
 	local label="$1"
-	local report="$PROJECT_DIR/out/ocaml_target_reuse_observation.json"
-	[[ -f "$report" ]] || fail "request '$label' did not publish the observation report"
+	local report
+	report="$(ls -1t "$PHASE_REPORT_DIR"/request-*.json 2>/dev/null | head -n 1 || true)"
+	[[ -n "$report" && -f "$report" ]] || fail "request '$label' did not write an external phase receipt"
 	cp "$report" "$SNAPSHOT_DIR/$label.json"
 	echo "REFLAXE_OCAML_TARGET_REUSE_REALM_STATE:PASS state=$label"
 }
 
-mkdir -p "$PROJECT_DIR" "$SNAPSHOT_DIR" "$PROJECT_DIR/alternate"
+mkdir -p "$PROJECT_DIR" "$SNAPSHOT_DIR" "$PHASE_REPORT_DIR" "$PROJECT_DIR/alternate"
 cp "$FIXTURE/build.hxml" "$PROJECT_DIR/build.hxml"
 cp -R "$FIXTURE/src" "$PROJECT_DIR/src"
 cp "$FIXTURE/variants/RealmBuildMacro.one.hx" "$PROJECT_DIR/src/RealmBuildMacro.hx"

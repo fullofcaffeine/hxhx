@@ -6,11 +6,12 @@ import haxe.crypto.Sha256;
 import reflaxe.lifecycle.TargetReuseRevisionComponent;
 
 /**
-	Plain request facts used to build the first OCaml target-reuse observation.
+	Plain request facts used to decide whether exact OCaml source reuse is safe.
 
 	The values contain revisions and feature flags only. They deliberately exclude
 	typed Haxe nodes, compiler contexts, output writers, target plans, and source
-	bytes so the observation can never become an accidental cache payload.
+	bytes. Keeping those request-owned objects out of this contract prevents the
+	long-lived cache from retaining stale compiler state.
 **/
 typedef OcamlTargetReuseObservation = {
 	final packageVersion:String;
@@ -22,7 +23,6 @@ typedef OcamlTargetReuseObservation = {
 	final targetImplementationRevision:Null<String>;
 	final reuseEnabled:Bool;
 	final transactionalOutputEnabled:Bool;
-	final observationReportEnabled:Bool;
 	final mliEnabled:Bool;
 	final outputConfigured:Bool;
 	final progressOrTelemetryEnabled:Bool;
@@ -31,9 +31,9 @@ typedef OcamlTargetReuseObservation = {
 }
 
 /**
-	Defines the fail-closed identity currently offered by `reflaxe.ocaml`.
+	Defines the fail-closed source-reuse identity offered by `reflaxe.ocaml`.
 
-	This contract makes the target's known request inputs observable before
+	This contract makes the target's known request inputs available before
 	whole-program OCaml preparation. Replay additionally requires an explicit
 	opt-in, transactional output, and exact implementation, runtime, and native
 	source identities. The blockers prevent a partial or diagnostic request from
@@ -66,8 +66,8 @@ class OcamlTargetReuseContract {
 	/**
 		Returns stable reasons that exact source replay is not yet allowed.
 
-		Report and telemetry modes are request-specific blockers because a replay
-		would otherwise skip the target work that produces their evidence.
+		Diagnostic and telemetry modes are request-specific blockers because a
+		replay would otherwise skip the target work that produces their evidence.
 	**/
 	public static function blockers(observation:OcamlTargetReuseObservation):Array<String> {
 		final values = new Array<String>();
@@ -77,8 +77,6 @@ class OcamlTargetReuseContract {
 			values.push("reflaxe.ocaml:target-implementation-authority-incomplete");
 		if (!observation.transactionalOutputEnabled)
 			values.push("reflaxe.ocaml:transactional-output-disabled");
-		if (observation.observationReportEnabled)
-			values.push("reflaxe.ocaml:observation-report-enabled");
 		if (observation.mliEnabled)
 			values.push("reflaxe.ocaml:mli-generation-enabled");
 		if (!observation.outputConfigured)

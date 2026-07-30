@@ -64,12 +64,10 @@ import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
-import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate.OcamlSourceBundlePackResult;
 import reflaxe.ocaml.reuse.OcamlSourceBundleReplay;
 import reflaxe.ocaml.reuse.OcamlSourceBundleReplay.OcamlSourceBundleReplayCorruption;
-import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -678,7 +676,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 			targetImplementationRevision: OcamlTargetImplementationRevision.current(),
 			reuseEnabled: Context.defined("reflaxe_ocaml_target_reuse"),
 			transactionalOutputEnabled: Context.defined("reflaxe_output_transaction"),
-			observationReportEnabled: Context.defined("reflaxe_ocaml_target_reuse_report"),
 			mliEnabled: Context.defined("ocaml_mli"),
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: profileEnabled,
@@ -697,7 +694,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 			targetImplementationRevision: null,
 			reuseEnabled: false,
 			transactionalOutputEnabled: false,
-			observationReportEnabled: false,
 			mliEnabled: false,
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: false,
@@ -3663,8 +3659,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		final snapshot = finalProgramFingerprint;
 		final probe = targetReuseProbe;
-		final reportTargetReuse = Context.defined("reflaxe_ocaml_target_reuse_report");
-		if (reportTargetReuse || (probe != null && probe.eligible)) {
+		if (probe != null && probe.eligible) {
 			final runtimeAuthority = semanticRuntimeAuthority;
 			final nativeAuthority = nativeSourceDeclarationAuthority;
 			if (snapshot == null || probe == null || probe.requestRevision == null)
@@ -3674,12 +3669,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final sourceSnapshot = artifacts.snapshotSourceBundle(runtimeAuthority, nativeAuthority);
 			final diagnosticsEligible = probe.eligible && skippedTargetGenerationWarnings == 0;
 			var candidate:Null<OcamlSourceBundleCandidate> = null;
-			var rejectedPayloadBytes:Null<Int> = null;
 			switch (OcamlSourceBundleCandidate.tryPack(outDir, probe.requestRevision, sourceSnapshot, diagnosticsEligible)) {
 				case Packed(packed):
 					candidate = packed;
-				case EntryBudgetExceeded(payloadBytes, _):
-					rejectedPayloadBytes = payloadBytes;
+				case EntryBudgetExceeded(_, _):
 					TargetReuseCatalog.shared().recordMiss("entry-budget-exceeded");
 			}
 			if (probe.eligible && candidate != null)
@@ -3688,16 +3681,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				else
 					TargetReuseCatalog.shared().recordMiss("target-generation-diagnostics");
 			OcamlTargetReuseTestHooks.failAfterStage();
-			if (reportTargetReuse) {
-				final realm = targetReuseCatalogRealm;
-				final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
-				if (realm == null || fingerprintAndKeyMilliseconds == null)
-					throw "reflaxe.ocaml: target reuse report was requested without complete lifecycle observations";
-				final shadow = candidate == null ? null : OcamlSourceBundleShadowReplay.run(candidate, outDir);
-				OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
-					targetRevisionObservationMilliseconds, fingerprintAndKeyMilliseconds, targetMissPreparationMilliseconds, realm,
-					TargetReuseCatalog.sharedStats(), candidate, shadow, rejectedPayloadBytes, artifacts);
-			}
 		}
 		#end
 

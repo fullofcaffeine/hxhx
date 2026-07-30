@@ -13,28 +13,36 @@ function load(directory, label) {
 	const reportPath = path.join(directory, `${label}.json`)
 	if (!fs.existsSync(reportPath)) fail(`missing report snapshot ${label}`)
 	const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-	if (report?.model !== 'reflaxe-ocaml-target-reuse-observation' || report?.mode !== 'observation-only') {
-		fail(`${label} uses an unsupported observation schema`)
+	if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 2) {
+		fail(`${label} uses an unsupported phase-receipt schema`)
 	}
 	const realm = report.macroRealm
 	const catalog = report.catalog
 	const target = report.targetRequest
-	if (realm?.status !== 'observed' || !/^sha256:[0-9a-f]{64}$/.test(String(realm.identityRevision || ''))) {
-		fail(`${label} does not identify an observed macro realm`)
+	if (!/^sha256:[0-9a-f]{64}$/.test(String(realm?.identityRevision || ''))) {
+		fail(`${label} does not identify the macro realm that owned the request`)
 	}
 	if (!Number.isInteger(realm.requestSequence) || realm.requestSequence < 1) {
 		fail(`${label} has an invalid realm request sequence`)
 	}
-	if (catalog?.status !== 'observation-only'
-		|| catalog.totalBudgetBytes !== 128 * 1024 * 1024
+	if (catalog?.totalBudgetBytes !== 128 * 1024 * 1024
 		|| catalog.maximumEntryBytes !== 64 * 1024 * 1024
 		|| catalog.entryCount !== 0
 		|| catalog.payloadBytes !== 0
 		|| catalog.activeLeases !== 0) {
-		fail(`${label} does not report the empty bounded observation catalog`)
+		fail(`${label} does not report the empty bounded catalog expected while reuse is disabled`)
 	}
-	if (!/^sha256:[0-9a-f]{64}$/.test(String(target?.revision || '')) || target.eligible !== false) {
+	if (!/^sha256:[0-9a-f]{64}$/.test(String(target?.revision || ''))
+		|| target.eligible !== false
+		|| !Array.isArray(target.blockers)
+		|| target.blockers.length === 0) {
 		fail(`${label} does not contain one fail-closed exact target request`)
+	}
+	if (report.outcome !== 'compiled-miss'
+		|| report?.work?.semanticCompilerRan !== true
+		|| report.work.missPreparationRan !== true
+		|| report.work.replaySucceeded !== false) {
+		fail(`${label} did not record the ordinary target compiler required while reuse is disabled`)
 	}
 	return report
 }

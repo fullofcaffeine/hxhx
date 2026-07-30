@@ -6,7 +6,7 @@ import reflaxe.ocaml.OcamlCompiler;
 #end
 
 /**
-	Checks the real Reflaxe-to-OCaml observation boundary during target startup.
+	Checks the real Reflaxe-to-OCaml reuse boundary during target startup.
 
 	Registering this callback intentionally adds Reflaxe's unrevisioned-callback
 	blocker. The fixture verifies that both framework and target blockers are
@@ -30,7 +30,6 @@ class TargetReuseProbeFixture {
 			for (required in [
 				"reflaxe:unrevisioned-compile-begin-callback",
 				"reflaxe.ocaml:lowering-report-enabled",
-				"reflaxe.ocaml:observation-report-enabled",
 				"reflaxe.ocaml:target-reuse-disabled"
 			])
 				if (!blockers.contains(required))

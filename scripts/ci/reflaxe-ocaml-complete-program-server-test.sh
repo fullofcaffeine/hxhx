@@ -20,6 +20,7 @@ WORK_DIR="$(mktemp -d "$ROOT/.reflaxe-ocaml-complete-program-server.XXXXXX")"
 PROJECT_DIR="$WORK_DIR/project"
 SNAPSHOT_DIR="$WORK_DIR/snapshots"
 SERVER_STATE_DIR="$WORK_DIR/server-state"
+MEMORY_SENTINEL_DIR="$WORK_DIR/memory-sentinels"
 SERVER_PORT="${REFLAXE_OCAML_TEST_SERVER_PORT:-$((24000 + ($$ % 10000)))}"
 BUILD_DIR="$PROJECT_DIR/.out.reflaxe-ocaml-dune-build"
 MAIN_SOURCE="$PROJECT_DIR/src/Main.hx"
@@ -80,7 +81,6 @@ compile_clean() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
-			-D reflaxe_ocaml_target_reuse_report \
 			"$@" \
 			build.hxml
 	)
@@ -93,11 +93,14 @@ compile_server() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
-			-D reflaxe_ocaml_target_reuse_report \
 			--connect "$SERVER_PORT" \
 			"$@" \
 			build.hxml
 	)
+}
+
+compile_server_with_compacted_gc() {
+	compile_server -D reflaxe_ocaml_target_reuse_test_force_gc "$@"
 }
 
 compile_server_with_transaction_failure() {
@@ -111,6 +114,7 @@ start_server() {
 	HXHX_STATE_DIR="$SERVER_STATE_DIR" \
 		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
 		HAXE_BIN="$HAXE_BIN" \
+		REFLAXE_OCAML_REUSE_TEST_SENTINEL_DIR="$MEMORY_SENTINEL_DIR" \
 		bash "$SERVER_HELPER" start
 	SERVER_STARTED=1
 }
@@ -133,9 +137,6 @@ assert_no_private_state() {
 	if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-output-*' -print -quit | grep -q .; then
 		fail "a completed request left private output transaction state"
 	fi
-	if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-ocaml-shadow-*' -print -quit | grep -q .; then
-		fail "a completed request left private source-bundle shadow state"
-	fi
 	if grep -R -a -F '.reflaxe-output-transaction' "$PROJECT_DIR/out" "$BUILD_DIR" >/dev/null 2>&1; then
 		fail "a private transaction path entered generated output or Dune metadata"
 	fi
@@ -149,10 +150,8 @@ snapshot_output() {
 	[[ -f "$PROJECT_DIR/out/_GeneratedFiles.json" ]] \
 		|| fail "request '$name' did not publish the complete generated-file receipt"
 	assert_no_private_state
-	node "$MATRIX_HELPER" verify-reuse-report "$PROJECT_DIR/out"
 	mkdir -p "$destination"
 	cp -R "$PROJECT_DIR/out/." "$destination/"
-	node "$MATRIX_HELPER" normalize-reuse-snapshot "$destination"
 }
 
 compare_snapshots() {
@@ -227,7 +226,7 @@ server_rss_kb() {
 	printf '%s\n' "$total"
 }
 
-mkdir -p "$PROJECT_DIR" "$SNAPSHOT_DIR"
+mkdir -p "$PROJECT_DIR" "$SNAPSHOT_DIR" "$MEMORY_SENTINEL_DIR"
 cp "$FIXTURE/build.hxml" "$PROJECT_DIR/build.hxml"
 cp -R "$FIXTURE/src" "$PROJECT_DIR/src"
 cp -R "$FIXTURE/shadow-primary" "$PROJECT_DIR/shadow-primary"
@@ -373,7 +372,11 @@ run_published restored-a "$expected_a"
 [[ "$(program_revision "$SNAPSHOT_DIR/restored-a")" = "$revision_a" ]] \
 	|| fail "A-to-B-to-A did not restore the exact original program revision"
 
-compile_server
+# OCaml can reserve a much larger heap than the objects still reachable after a
+# request, so unforced process RSS cannot distinguish a leak from reusable heap
+# capacity. This test-only request compacts the evaluator before each sample.
+# Production compilation keeps the runtime's normal garbage-collection policy.
+compile_server_with_compacted_gc
 stable_digest="$(source_bundle_revision "$PROJECT_DIR/out")"
 rss_baseline_kb="$(server_rss_kb)"
 rss_peak_kb="$rss_baseline_kb"
@@ -382,7 +385,7 @@ rss_after_10_kb=0
 rss_after_20_kb=0
 for request in {1..30}; do
 	started="$(milliseconds)"
-	compile_server
+	compile_server_with_compacted_gc
 	elapsed="$(( $(milliseconds) - started ))"
 	repeated_total_ms="$((repeated_total_ms + elapsed))"
 	[[ "$(source_bundle_revision "$PROJECT_DIR/out")" = "$stable_digest" ]] \
@@ -398,6 +401,10 @@ for request in {1..30}; do
 	fi
 done
 rss_final_kb="$(server_rss_kb)"
+gc_sample_count="$(wc -l <"$MEMORY_SENTINEL_DIR/gc-events.tsv" | tr -d ' ')"
+if (( gc_sample_count < 31 )); then
+	fail "the memory plateau check did not record one compacted evaluator sample for its baseline and thirty repeated requests"
+fi
 if (( rss_final_kb > rss_baseline_kb + 131072 )); then
 	fail "thirty unchanged requests grew owned server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB final=${rss_final_kb}KB)"
 fi

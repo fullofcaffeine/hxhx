@@ -2,7 +2,7 @@ import haxe.crypto.Sha256;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 
-/** Focused executable checks for the fail-closed OCaml reuse observation. **/
+/** Focused executable checks for the fail-closed OCaml source-reuse contract. **/
 class TargetReuseContractFixture {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -10,7 +10,7 @@ class TargetReuseContractFixture {
 	}
 
 	static function observation(?configurationRevision:String, ?progress:Bool = false, ?loweringReport:Bool = false, ?lifecycleTrace:Bool = false,
-			?targetImplementationRevision:String, ?reuseEnabled:Bool = false, ?transactionalOutputEnabled:Bool = true, ?observationReportEnabled:Bool = false,
+			?targetImplementationRevision:String, ?reuseEnabled:Bool = false, ?transactionalOutputEnabled:Bool = true,
 			?mliEnabled:Bool = false):OcamlTargetReuseObservation {
 		return {
 			packageVersion: "0.33.4",
@@ -22,7 +22,6 @@ class TargetReuseContractFixture {
 			targetImplementationRevision: targetImplementationRevision,
 			reuseEnabled: reuseEnabled,
 			transactionalOutputEnabled: transactionalOutputEnabled,
-			observationReportEnabled: observationReportEnabled,
 			mliEnabled: mliEnabled,
 			outputConfigured: true,
 			progressOrTelemetryEnabled: progress,
@@ -61,14 +60,13 @@ class TargetReuseContractFixture {
 			.length == 0,
 			"complete source inputs and an exact implementation identity should clear target-owned blockers");
 
-		final evidence = OcamlTargetReuseContract.blockers(observation(null, true, true, true, null, false, false, true));
+		final evidence = OcamlTargetReuseContract.blockers(observation(null, true, true, true, null, false, false));
 		assertTrue(evidence.contains("reflaxe.ocaml:progress-or-telemetry-enabled"), "progress or telemetry should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:lowering-report-enabled"), "lowering reports should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:lifecycle-trace-enabled"), "lifecycle traces should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:transactional-output-disabled"), "non-transactional output should block replay");
-		assertTrue(evidence.contains("reflaxe.ocaml:observation-report-enabled"), "observation reports should block replay");
 		final mli = OcamlTargetReuseContract.blockers(observation(null, false, false, false, "sha256:" + Sha256.encode("target implementation"), true, true,
-			false, true));
+			true));
 		assertTrue(mli.contains("reflaxe.ocaml:mli-generation-enabled"), "interface generation should block first-rung replay");
 	}
 
