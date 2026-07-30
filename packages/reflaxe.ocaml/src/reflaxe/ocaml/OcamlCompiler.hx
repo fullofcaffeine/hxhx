@@ -60,6 +60,8 @@ import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
+import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -3409,18 +3411,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
 		}
 
-		#if macro
-		if (Context.defined("reflaxe_ocaml_target_reuse_report")) {
-			final snapshot = finalProgramFingerprint;
-			final probe = targetReuseProbe;
-			final realm = targetReuseCatalogRealm;
-			if (snapshot == null || probe == null || realm == null)
-				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
-			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
-				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, realm, TargetReuseCatalog.sharedStats(), artifacts);
-		}
-		#end
-
 		artifacts.recordFrameworkModules(excludedFrameworkPaths);
 
 		if (emitExcludePathPrefixes.length > 0) {
@@ -3443,6 +3433,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 			pruneEmptyDirectoriesRecursive(outDir);
 		}
+
+		#if macro
+		if (Context.defined("reflaxe_ocaml_target_reuse_report")) {
+			final snapshot = finalProgramFingerprint;
+			final probe = targetReuseProbe;
+			final realm = targetReuseCatalogRealm;
+			final runtimeAuthority = semanticRuntimeAuthority;
+			final nativeAuthority = nativeSourceDeclarationAuthority;
+			if (snapshot == null || probe == null || probe.requestRevision == null || realm == null)
+				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
+			if (runtimeAuthority == null || nativeAuthority == null)
+				throw "reflaxe.ocaml: target reuse report was requested before source authority was complete";
+			final sourceSnapshot = artifacts.snapshotSourceBundle(runtimeAuthority, nativeAuthority);
+			final candidate = OcamlSourceBundleCandidate.pack(outDir, probe.requestRevision, sourceSnapshot, false);
+			final shadow = OcamlSourceBundleShadowReplay.run(candidate, outDir);
+			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
+				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, realm, TargetReuseCatalog.sharedStats(), candidate, shadow,
+				artifacts);
+		}
+		#end
 
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
 		final shouldRun = haxe.macro.Context.defined("ocaml_run");

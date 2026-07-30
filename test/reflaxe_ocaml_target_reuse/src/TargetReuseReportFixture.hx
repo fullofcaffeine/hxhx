@@ -48,15 +48,30 @@ class TargetReuseReportFixture {
 			&& report.catalog.entryCount == 0
 			&& report.catalog.ineligibleRequests >= 1,
 			"catalog report should expose bounded real counters without admitting a payload");
-		assertTrue(report.sourceBundleCandidate.status == "not-observed"
-			&& report.shadowReplay.status == "not-implemented"
-			&& report.memory.status == "not-observed",
-			"unfinished evidence must remain explicit instead of reporting false zeroes");
+		assertTrue(report.sourceBundleCandidate.status == "packed-observation"
+			&& report.sourceBundleCandidate.entryCount > 0
+			&& report.sourceBundleCandidate.packedBytes > 0
+			&& report.sourceBundleCandidate.indexBytes > 0
+			&& report.sourceBundleCandidate.payloadBytes > report.sourceBundleCandidate.packedBytes
+			&& Std.string(report.sourceBundleCandidate.sourceBundleRevision).startsWith("sha256:")
+			&& report.sourceBundleCandidate.diagnosticsEligible == false,
+			"report should describe the detached packed candidate without claiming production eligibility");
+		assertTrue(report.shadowReplay.status == "stable-source-equal"
+			&& report.shadowReplay.equal == true
+			&& report.shadowReplay.mismatchReason == null
+			&& report.shadowReplay.receiptSemanticsEqual == true
+			&& report.shadowReplay.artifactManifestEqual == true
+			&& report.timing.replayAndValidationMilliseconds >= 0,
+			"report should prove private stable-source, receipt, and manifest equality");
+		assertTrue(report.memory.status == "not-observed", "unfinished memory evidence must remain explicit instead of reporting a false zero");
 
 		final serialized = File.getContent(reportPath);
 		assertTrue(!serialized.contains(Path.normalize(Sys.getCwd())), "report must not leak the current machine path");
 
 		final manifest:Dynamic = Json.parse(File.getContent(manifestPath));
+		assertTrue(manifest.summary.completeForSourceBundle == true
+			&& manifest.summary.sourceBundleRevision == report.sourceBundleCandidate.sourceBundleRevision,
+			"final manifest should preserve the source revision proven by shadow replay");
 		final entries:Array<Dynamic> = cast manifest.entries;
 		final owned = entries.filter(entry -> entry.path == "ocaml_target_reuse_observation.json");
 		assertTrue(owned.length == 1, "artifact manifest should own the reuse observation exactly once");

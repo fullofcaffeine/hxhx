@@ -13,6 +13,7 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
+import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay.OcamlSourceBundleShadowReplayResult;
 import sys.io.File;
 
 /**
@@ -32,7 +33,8 @@ class OcamlTargetReuseReportWriter {
 	/** Writes one request-scoped report and registers its artifact ownership. **/
 	public static function write(outputDirectory:String, snapshot:FinalProgramFingerprintSnapshot, probe:TargetReuseProbe,
 			components:Array<TargetReuseRevisionComponent>, targetRevisionObservationMilliseconds:Int, missPreparationMilliseconds:Int,
-			realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, artifacts:OcamlArtifactManifestBuilder):Void {
+			realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, candidate:OcamlSourceBundleCandidate,
+			shadow:OcamlSourceBundleShadowReplayResult, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sortedComponents = components.copy();
 		sortedComponents.sort((left, right) -> Reflect.compare(left.name, right.name));
 		final sourceAuthorityBlockers = snapshot.sourceAuthorityBlockers();
@@ -70,7 +72,7 @@ class OcamlTargetReuseReportWriter {
 				targetRevisionObservationMilliseconds: nonNegative(targetRevisionObservationMilliseconds, "target revision observation"),
 				missPreparationMilliseconds: nonNegative(missPreparationMilliseconds, "miss preparation"),
 				finalProgramFingerprintAndKeyMilliseconds: null,
-				replayAndValidationMilliseconds: null
+				replayAndValidationMilliseconds: nonNegative(shadow.replayAndValidationMilliseconds, "replay and validation")
 			},
 			macroRealm: {
 				status: "observed",
@@ -97,16 +99,20 @@ class OcamlTargetReuseReportWriter {
 				quarantines: catalog.quarantines
 			},
 			sourceBundleCandidate: {
-				status: "not-observed",
-				entryCount: null,
-				packedBytes: null,
-				indexBytes: null,
-				sourceBundleRevision: null
+				status: "packed-observation",
+				entryCount: candidate.entries.length,
+				packedBytes: candidate.packedBytes,
+				indexBytes: candidate.indexBytes,
+				payloadBytes: candidate.payloadBytes,
+				sourceBundleRevision: reportHash(candidate.sourceBundleRevision, "source-bundle revision"),
+				diagnosticsEligible: candidate.diagnosticsEligible
 			},
 			shadowReplay: {
-				status: "not-implemented",
-				equal: null,
-				mismatchReason: null
+				status: shadow.status,
+				equal: shadow.equal,
+				mismatchReason: shadow.mismatchReason,
+				receiptSemanticsEqual: shadow.receiptSemanticsEqual,
+				artifactManifestEqual: shadow.artifactManifestEqual
 			},
 			memory: {
 				status: "not-observed",
