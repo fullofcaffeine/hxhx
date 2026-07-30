@@ -122,6 +122,8 @@ class OcamlFunctionPlanRegistry {
 	final declaredCallableByCallee:StringMap<OcamlCallableDeclarationPlan> = new StringMap();
 	final callableByCallee:StringMap<OcamlCallableBoundaryPlan> = new StringMap();
 	final originByProtection:StringMap<String> = new StringMap();
+	final standaloneAnonymousStructuresById:StringMap<OcamlAnonymousStructureDecision> = new StringMap();
+	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 
 	public function new() {}
 
@@ -136,6 +138,8 @@ class OcamlFunctionPlanRegistry {
 		declaredCallableByCallee.clear();
 		callableByCallee.clear();
 		originByProtection.clear();
+		standaloneAnonymousStructuresById.clear();
+		standaloneAnonymousOperationsById.clear();
 	}
 
 	/** Records how one early protection identity became one final plan origin. */
@@ -203,6 +207,7 @@ class OcamlFunctionPlanRegistry {
 		bytesProducers.requireRepresentations(representations);
 		bytesReads.requirePlanBinding(binding);
 		bytesReads.requireRepresentations(representations);
+		recordStandaloneAnonymousStructures(anonymousStructures);
 		return {
 			binding: binding,
 			anonymousStructures: anonymousStructures,
@@ -211,6 +216,30 @@ class OcamlFunctionPlanRegistry {
 			bytesProducers: bytesProducers,
 			bytesReads: bytesReads
 		};
+	}
+
+	/**
+		Keeps report-safe copies of anonymous-object facts from non-function roots.
+
+		A class-field initializer is emitted outside a normal function plan, but its
+		object literal still selects the same `HxAnon` representation and runtime
+		operations. Retaining only these immutable JSON-safe decisions lets the final
+		lowering report explain that choice without keeping the typed expression or
+		replanning it after syntax generation.
+	**/
+	function recordStandaloneAnonymousStructures(plan:OcamlAnonymousStructurePlan):Void {
+		for (structure in plan.structures()) {
+			final existing = standaloneAnonymousStructuresById.get(structure.id);
+			if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(structure))
+				throw 'reflaxe.ocaml [ocaml-anonymous:conflicting-standalone-structure]: standalone structure "${structure.id}" changed within one compilation request';
+			standaloneAnonymousStructuresById.set(structure.id, structure);
+		}
+		for (operation in plan.operations()) {
+			final existing = standaloneAnonymousOperationsById.get(operation.id);
+			if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(operation))
+				throw 'reflaxe.ocaml [ocaml-anonymous:conflicting-standalone-operation]: standalone operation "${operation.id}" changed within one compilation request';
+			standaloneAnonymousOperationsById.set(operation.id, operation);
+		}
 	}
 
 	/**
@@ -601,6 +630,8 @@ class OcamlFunctionPlanRegistry {
 	/** Returns every admitted anonymous representation in stable identity order. */
 	public function anonymousStructureDecisions():Array<OcamlAnonymousStructureDecision> {
 		final byId:Map<String, OcamlAnonymousStructureDecision> = [];
+		for (structure in standaloneAnonymousStructuresById)
+			byId.set(structure.id, structure);
 		for (record in sealedFunctions) {
 			for (structure in record.plan.anonymousStructures.structures()) {
 				final existing = byId.get(structure.id);
@@ -616,10 +647,18 @@ class OcamlFunctionPlanRegistry {
 
 	/** Returns every admitted anonymous operation in stable identity order. */
 	public function anonymousStructureOperations():Array<OcamlAnonymousStructureOperationDecision> {
-		final out = new Array<OcamlAnonymousStructureOperationDecision>();
-		for (record in sealedFunctions)
-			for (operation in record.plan.anonymousStructures.operations())
-				out.push(operation);
+		final byId:Map<String, OcamlAnonymousStructureOperationDecision> = [];
+		for (operation in standaloneAnonymousOperationsById)
+			byId.set(operation.id, operation);
+		for (record in sealedFunctions) {
+			for (operation in record.plan.anonymousStructures.operations()) {
+				final existing = byId.get(operation.id);
+				if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(operation))
+					throw 'reflaxe.ocaml [ocaml-anonymous:conflicting-operation]: operation "${operation.id}" differs between sealed roots';
+				byId.set(operation.id, operation);
+			}
+		}
+		final out = [for (operation in byId) operation];
 		out.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return out;
 	}

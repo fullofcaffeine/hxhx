@@ -8,6 +8,9 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -27,6 +30,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorage
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
@@ -39,7 +43,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 43;
+	public static inline final SCHEMA_VERSION = 44;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -107,7 +111,8 @@ class OcamlLoweringReportWriter {
 	}
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
-			representations:Array<OcamlRepresentationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
+			representations:Array<OcamlRepresentationDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
+			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
 			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
 			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
@@ -121,6 +126,33 @@ class OcamlLoweringReportWriter {
 				throw 'Program representation identity "${representation.id}" occurs more than once.';
 			validateNominalRepresentation(representation);
 			representationById.set(representation.id, representation);
+		}
+		final sortedAnonymousStructures = anonymousStructures.copy();
+		sortedAnonymousStructures.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final anonymousStructureById:Map<String, OcamlAnonymousStructureDecision> = [];
+		for (structure in sortedAnonymousStructures) {
+			OcamlAnonymousStructureContract.requireStructure(structure);
+			if (anonymousStructureById.exists(structure.id))
+				throw 'Anonymous structure identity "${structure.id}" occurs more than once.';
+			requireRepresentation(representationById, structure.representationId, structure.semanticTypeId, structure.carrierTypeId,
+				OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}"');
+			for (field in structure.fields) {
+				requireRepresentation(representationById, field.representationId, field.semanticTypeId, field.carrierTypeId,
+					OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}" field "${field.name}"');
+			}
+			anonymousStructureById.set(structure.id, structure);
+		}
+		final sortedAnonymousOperations = anonymousOperations.copy();
+		sortedAnonymousOperations.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final anonymousOperationIds:Map<String, Bool> = [];
+		for (operation in sortedAnonymousOperations) {
+			final structure = anonymousStructureById.get(operation.structureId);
+			if (structure == null)
+				throw 'Anonymous operation "${operation.id}" refers to missing structure "${operation.structureId}".';
+			OcamlAnonymousStructureContract.requireOperation(operation, structure);
+			if (anonymousOperationIds.exists(operation.id))
+				throw 'Anonymous operation identity "${operation.id}" occurs more than once.';
+			anonymousOperationIds.set(operation.id, true);
 		}
 		for (entry in sorted) {
 			final domain = switch (entry.place.kind) {
@@ -301,6 +333,15 @@ class OcamlLoweringReportWriter {
 				includedRequirementIds.set(requirementId, true);
 			}
 		}
+		for (operation in sortedAnonymousOperations) {
+			final expected = OcamlAnonymousStructureRuntimeRequirementRecorder.requirement(operation);
+			final recorded = requirementById.get(expected.id);
+			if (recorded == null)
+				throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "${expected.id}".';
+			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+				throw 'Anonymous operation "${operation.id}" disagrees with runtime requirement "${expected.id}".';
+			includedRequirementIds.set(expected.id, true);
+		}
 		for (call in sortedCalls) {
 			if (call.standardIMapTarget == null)
 				continue;
@@ -327,6 +368,10 @@ class OcamlLoweringReportWriter {
 		final canonicalPlans = haxe.Json.stringify(sorted);
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
+		final canonicalAnonymousStructures = haxe.Json.stringify({
+			structures: sortedAnonymousStructures,
+			operations: sortedAnonymousOperations
+		});
 		final sortedLocalConversions = localConversions.copy();
 		sortedLocalConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final sortedUnsafeOperations = unsafeOperations.copy();
@@ -367,6 +412,12 @@ class OcamlLoweringReportWriter {
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
+			anonymousStructureModel: OcamlAnonymousStructureContract.MODEL_REVISION,
+			anonymousStructureRevision: "sha256:" + Sha256.encode(canonicalAnonymousStructures),
+			anonymousStructureCount: sortedAnonymousStructures.length,
+			anonymousStructures: sortedAnonymousStructures,
+			anonymousStructureOperationCount: sortedAnonymousOperations.length,
+			anonymousStructureOperations: sortedAnonymousOperations,
 			localConversionModel: "typed-ocaml-local-carrier-conversions-v2",
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,

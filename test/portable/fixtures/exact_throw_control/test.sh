@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
@@ -114,7 +114,7 @@ for (const control of throws) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v55'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v56'
 		|| !carrier
 		|| payload.inputCarrierTypeId !== carrier
 		|| payload.inputRepresentationId !== (expectedRepresentation.get(payload.inputSemanticTypeId)
@@ -160,8 +160,8 @@ for (const { chain, clause } of wrapperClauses) {
 		|| clause.nominalRepresentation !== null
 		|| clause.proofId !== 'represented-value-catch-control-v3'
 		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| clause.pipelineRevision !== 'ocaml-function-plans-v55'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v55') {
+		|| clause.pipelineRevision !== 'ocaml-function-plans-v56'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v56') {
 		fail(`wrapper catch clause ${clause.id} has an incomplete sealed policy`)
 	}
 }
@@ -288,7 +288,7 @@ const throws = report.lowering.controls.filter(control =>
 const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
 	chain.clauses.filter(clause => clause.semanticTypeId === 'haxe.Exception'
 		|| clause.semanticTypeId === 'haxe.ValueException'))
-if (report.schemaVersion !== 24
+if (report.schemaVersion !== 25
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| throws.length !== 12
@@ -299,7 +299,7 @@ if (report.schemaVersion !== 24
 	|| throws.some(control =>
 		control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value')
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
+	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
 	throw new Error('public inspection did not expose the 12 validated represented throw decisions')
 }
 NODE

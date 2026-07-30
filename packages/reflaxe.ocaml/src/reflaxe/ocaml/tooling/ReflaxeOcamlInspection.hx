@@ -7,6 +7,7 @@ import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureOperation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
@@ -86,7 +87,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 24,
+			schemaVersion: 25,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -107,6 +108,8 @@ class ReflaxeOcamlInspection {
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length,
 				representationDecisionCount: representation.decisions.length,
+				anonymousStructureCount: lowering.anonymousStructures.length,
+				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
 				localConversionCount: lowering.localConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
@@ -148,6 +151,11 @@ class ReflaxeOcamlInspection {
 				if (plan.runtimeRequirementIds.length > 0) {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
+			}
+			lines.push('[PASS] Anonymous objects: ${report.lowering.anonymousStructures.length} runtime shape${report.lowering.anonymousStructures.length == 1 ? "" : "s"} and ${report.lowering.anonymousStructureOperations.length} create, initialize, read, or write occurrence${report.lowering.anonymousStructureOperations.length == 1 ? "" : "s"} were validated before target syntax.');
+			for (structure in report.lowering.anonymousStructures) {
+				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
+				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
 			}
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
@@ -327,6 +335,9 @@ class ReflaxeOcamlInspection {
 					plans: [],
 					representation: representationFailure("not-enabled", path,
 						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
+					anonymousStructureRevision: null,
+					anonymousStructures: [],
+					anonymousStructureOperations: [],
 					localConversionRevision: null,
 					localConversions: [],
 					unsafeOperationCompleteness: null,
@@ -343,7 +354,7 @@ class ReflaxeOcamlInspection {
 					controlTargets: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-call-and-function-loop-throw-catch-control-families",
+					scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -351,8 +362,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 43) {
-						throw 'Unsupported lowering report schema $version; expected 43.';
+					if (version != 44) {
+						throw 'Unsupported lowering report schema $version; expected 44.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -366,6 +377,7 @@ class ReflaxeOcamlInspection {
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
+					final anonymousStructures = ReflaxeOcamlAnonymousStructureInspection.inspect(value, representation);
 					final localConversions = inspectLocalConversions(value);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
 					final callInventory = inspectCalls(value, representation);
@@ -373,7 +385,8 @@ class ReflaxeOcamlInspection {
 					final controls = inspectControls(value, representation, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, callInventory.calls);
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, anonymousStructures.operations,
+						callInventory.calls);
 					{
 						status: "present",
 						required: required,
@@ -383,6 +396,9 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						representation: representation,
+						anonymousStructureRevision: anonymousStructures.revision,
+						anonymousStructures: anonymousStructures.structures,
+						anonymousStructureOperations: anonymousStructures.operations,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
 						unsafeOperationCompleteness: requiredString(value, "unsafeOperationCompleteness"),
@@ -399,8 +415,8 @@ class ReflaxeOcamlInspection {
 						controlTargets: controlTargets,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -1957,7 +1973,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
-			calls:Array<InspectionCall>):Int {
+			anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -2033,6 +2049,36 @@ class ReflaxeOcamlInspection {
 				|| roots.length != 1
 				|| roots[0] != "HxString") {
 				throw 'Representation decision "${decision.id}" runtime requirement "$requirementId" does not match the sealed exact String dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (operation in anonymousOperations) {
+			if (operation.runtimeRequirementIds.length != 1)
+				throw 'Anonymous operation "${operation.id}" must own exactly one runtime requirement.';
+			final requirementId = operation.runtimeRequirementIds[0];
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			final expectedSubject = operation.resultSemanticTypeId.length == 0 ? operation.structureId : operation.resultSemanticTypeId;
+			if (requirementId != operation.id + ":runtime:haxe-anonymous-structure"
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != operation.occurrenceId
+				|| requiredString(source, "file") != operation.sourceFile
+				|| requiredInt(source, "min") != operation.sourceMin
+				|| requiredInt(source, "max") != operation.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-anonymous-structure"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != operation.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != expectedSubject
+				|| requiredString(requirement, "implementationFeature") != "haxe-anonymous-structure-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxAnon"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+				throw 'Anonymous operation "${operation.id}" runtime requirement "$requirementId" disagrees with its sealed runtime-container decision.';
 			}
 			referenced.set(requirementId, true);
 		}
@@ -2367,6 +2413,9 @@ class ReflaxeOcamlInspection {
 			admittedInputRevision: null,
 			plans: [],
 			representation: representationFailure("invalid", path, message),
+			anonymousStructureRevision: null,
+			anonymousStructures: [],
+			anonymousStructureOperations: [],
 			localConversionRevision: null,
 			localConversions: [],
 			unsafeOperationCompleteness: null,
@@ -2383,7 +2432,7 @@ class ReflaxeOcamlInspection {
 			controlTargets: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-call-and-function-loop-throw-catch-control-families",
+			scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
 			message: message
 		};
 	}

@@ -5,8 +5,17 @@ private typedef BasicAnon = {
 }
 
 class Main {
+	/** Writes one comparable line on both system targets and JavaScript. */
+	static function println(value:String):Void {
+		#if js
+		js.Syntax.code("console.log({0})", value);
+		#else
+		Sys.println(value);
+		#end
+	}
+
 	static function observe(value:BasicAnon):Void {
-		Sys.println(value.b + value.a + ":" + value.flag);
+		println(value.b + value.a + ":" + value.flag);
 	}
 
 	static function main() {
@@ -16,9 +25,9 @@ class Main {
 		var alias = o;
 		alias.a = 2;
 		alias.flag = true;
-		Sys.println(o.b + o.a + ":" + o.flag);
+		println(o.b + o.a + ":" + o.flag);
 
 		var f = {inc: function(x:Int) return x + 1};
-		Sys.println(f.inc(1));
+		println(Std.string(f.inc(1)));
 	}
 }

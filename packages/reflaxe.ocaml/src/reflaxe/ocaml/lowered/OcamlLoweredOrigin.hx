@@ -1,6 +1,6 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
 import haxe.macro.Expr;
 import haxe.macro.Expr.MetadataEntry;

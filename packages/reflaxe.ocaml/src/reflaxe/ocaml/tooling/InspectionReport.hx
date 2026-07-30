@@ -164,6 +164,87 @@ typedef InspectionLoweredPlan = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** One exact field carried by an admitted mutable anonymous object. */
+typedef InspectionAnonymousStructureField = {
+	final name:String;
+	final canonicalOrder:Int;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final representationRevision:String;
+	final storeConversion:String;
+	final loadConversion:String;
+}
+
+/**
+	The validated runtime shape selected for one anonymous-object family.
+
+	A structure is a name-sorted field layout plus the aliasing and mutation
+	rules that generated code must preserve. Source evaluation order is recorded
+	on the operation occurrences below because field-name order alone cannot
+	explain which initializer runs first.
+**/
+typedef InspectionAnonymousStructure = {
+	final id:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final fields:Array<InspectionAnonymousStructureField>;
+	final representationId:String;
+	final representationRevision:String;
+	final representationDomain:String;
+	final nullPolicy:String;
+	final identityPolicy:String;
+	final aliasingPolicy:String;
+	final mutationPolicy:String;
+	final proofId:String;
+	final proofClaim:String;
+	final programRevision:String;
+	final revision:String;
+}
+
+/**
+	One validated create, initialize, read, or write occurrence.
+
+	The evaluation schedule states the observable order explicitly. For example,
+	a field assignment evaluates its receiver before its new value, stores that
+	value once, and returns the assigned Haxe value.
+**/
+typedef InspectionAnonymousStructureOperation = {
+	final id:String;
+	final occurrenceId:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final structureId:String;
+	final structureRevision:String;
+	final structureRepresentationId:String;
+	final structureRepresentationRevision:String;
+	final fieldName:Null<String>;
+	final fieldCanonicalOrder:Int;
+	final fieldSourceOrder:Int;
+	final fieldSemanticTypeId:String;
+	final fieldCarrierTypeId:String;
+	final fieldRepresentationId:String;
+	final fieldRepresentationRevision:String;
+	final storeConversion:Null<String>;
+	final loadConversion:Null<String>;
+	final evaluationSchedule:Array<String>;
+	final resultSemanticTypeId:String;
+	final resultCarrierTypeId:String;
+	final resultRepresentationId:String;
+	final resultRepresentationRevision:String;
+	final runtimeModule:String;
+	final runtimeOperation:String;
+	final runtimeRequirementIds:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One program-owned Haxe-type to OCaml-carrier choice. **/
 typedef InspectionRepresentationDecision = {
 	final id:String;
@@ -495,6 +576,9 @@ typedef InspectionLowering = {
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
 	final representation:InspectionRepresentation;
+	final anonymousStructureRevision:Null<String>;
+	final anonymousStructures:Array<InspectionAnonymousStructure>;
+	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
 	final unsafeOperationCompleteness:Null<String>;
@@ -533,6 +617,8 @@ typedef InspectionSummary = {
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
+	final anonymousStructureCount:Int;
+	final anonymousStructureOperationCount:Int;
 	final localConversionCount:Int;
 	final unsafeOperationCount:Int;
 	final callCount:Int;

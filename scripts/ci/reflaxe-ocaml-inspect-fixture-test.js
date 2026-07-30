@@ -43,7 +43,7 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 24)
+	assert.strictEqual(report.schemaVersion, 25)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
@@ -71,7 +71,7 @@ try {
 	assert.strictEqual(report.runtime.semanticManifest, false)
 	assert.strictEqual(report.buildTiming.status, 'not-enabled')
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
-	assert.strictEqual(report.lowering.scope, 'typed-place-call-and-function-loop-throw-catch-control-families')
+	assert.strictEqual(report.lowering.scope, 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families')
 	assert(report.lowering.message.includes('not a whole-program IR'))
 	assert.strictEqual(report.lowering.localConversions.length, report.summary.localConversionCount)
 	assert.strictEqual(report.lowering.unsafeOperations.length, report.summary.unsafeOperationCount)
@@ -198,8 +198,9 @@ try {
 		...runtimeRequirements.compilerObservedModulesWithoutRequirementRoots
 	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxAnon'))
 	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots,
-		['HxAnon', 'HxEnum'])
+		['HxEnum'])
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)

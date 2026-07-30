@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
@@ -67,7 +67,7 @@ function requireCommon(control, name) {
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.runtimeCapabilityId !== 'hxhx-runtime:function-return-signal-v1'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.pipelineRevision !== 'ocaml-function-plans-v55'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v56'
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| !control.reason
@@ -218,7 +218,7 @@ const preserved = controls.filter(control =>
 const directional = controls.filter(control =>
 	control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
 	|| control.payload?.conversion === 'box-exact-bool-to-nullable-carrier')
-if (report.schemaVersion !== 24
+if (report.schemaVersion !== 25
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 12
@@ -236,7 +236,7 @@ if (report.schemaVersion !== 24
 			'exact-int-to-nullable-early-return-control-v1',
 			'exact-bool-to-nullable-early-return-control-v1'
 		].includes(control.proofId))
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
+	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
 	throw new Error('public inspection did not expose the 7 preserved and 5 primitive-to-nullable returns')
 }
 NODE

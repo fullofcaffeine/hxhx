@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 43
+if (report.schemaVersion !== 44
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
 	|| report.controlCatchCount !== report.controlCatches.length
@@ -70,7 +70,7 @@ for (const chain of catches) {
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
 		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v55'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v56'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -164,11 +164,11 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 24
+if (report.schemaVersion !== 25
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| report.lowering.controlCatches.length !== 10
-	|| report.lowering.scope !== 'typed-place-call-and-function-loop-throw-catch-control-families') {
+	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
 	throw new Error('public inspection did not expose the 10 validated catch-chain decisions')
 }
 NODE
