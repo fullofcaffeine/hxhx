@@ -17,7 +17,9 @@ import reflaxe.DirectToStringCompiler;
 import reflaxe.data.ClassFuncData;
 import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
+import reflaxe.lifecycle.FinalProgramFingerprintSnapshot;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.lifecycle.TargetReuseRevisionComponent;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
@@ -48,8 +50,11 @@ import reflaxe.ocaml.runtimegen.OcamlDuneBuildState;
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifest;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
+import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
+import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -114,6 +119,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
+	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
 
 	#if macro
 	/**
@@ -415,26 +421,79 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	#if macro
 	/**
-		Precompute whole-program OCaml lowering context from Reflaxe's existing typed-module pass.
+		Performs request hygiene and validation before Reflaxe fingerprints the program.
 
-		Why:
-		- Registering another `Context.onAfterTyping` callback asks stage0 Haxe's eval/macro bridge
-		  to encode the full compiler-sized typed module graph a second time.
-		- Bootstrap profiling showed the retained-memory wall inside macro API type encoding before
-		  Reflaxe output hooks start, so this work must piggyback on Reflaxe's already-materialized
-		  `filterTypes(moduleTypes)` call.
-
-		What:
-		- Preserves virtual-dispatch and primary-type discovery, and retains the typed
-		  classes needed to build the static-storage plan once Reflaxe assigns the final
-		  program revision.
-		- Returns the input unchanged so Reflaxe's filtering semantics are untouched.
+		This boundary deliberately avoids OCaml whole-program preparation. The final
+		plain-value fingerprint and reuse probe must exist before work that a future
+		exact replay hit could skip.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
 		OcamlSourcePositionMapper.beginRequest();
-		precomputeWholeProgramContext(moduleTypes);
+		targetReuseObservation = captureTargetReuseObservation();
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
 		return moduleTypes;
+	}
+
+	/**
+		Runs whole-program OCaml preparation only after the exact reuse probe exists.
+
+		The observation-only implementation still calls this on every request. A later
+		production hit may skip it only after immutable source replay passes its
+		independent authority, transaction, diagnostics, and memory gates.
+	**/
+	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
+		precomputeWholeProgramContext(moduleTypes);
+	}
+
+	public override function targetReuseNamespace():Null<String> {
+		return OcamlTargetReuseContract.NAMESPACE;
+	}
+
+	public override function targetReuseRevisionComponents(snapshot:FinalProgramFingerprintSnapshot):Array<TargetReuseRevisionComponent> {
+		return OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation());
+	}
+
+	public override function targetReuseBlockers(snapshot:FinalProgramFingerprintSnapshot):Array<String> {
+		return OcamlTargetReuseContract.blockers(requireTargetReuseObservation());
+	}
+
+	function requireTargetReuseObservation():OcamlTargetReuseObservation {
+		final observation = targetReuseObservation;
+		if (observation == null)
+			throw "reflaxe.ocaml: target reuse observation was requested before filterTypes";
+		return observation;
+	}
+
+	function captureTargetReuseObservation():OcamlTargetReuseObservation {
+		final outputDirectory = output == null ? null : output.outputDir;
+		final outputConfigured = outputDirectory != null && outputDirectory.length > 0;
+		final outputProjectName = outputConfigured ? DuneProjectEmitter.defaultProjectName(outputDirectory) : "unconfigured";
+		#if macro
+		final packageVersion = Context.definedValue("reflaxe.ocaml") ?? "unversioned";
+		return {
+			packageVersion: packageVersion,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+			sourceConfigurationRevision: OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName),
+			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
+			runtimeSchemaRevision: '${RuntimeSourceManifest.MODEL}:v${RuntimeSourceManifest.SCHEMA_VERSION}',
+			outputConfigured: outputConfigured,
+			progressOrTelemetryEnabled: profileEnabled,
+			loweringReportEnabled: Context.defined("ocaml_lowering_report"),
+			lifecycleTraceEnabled: Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")
+		};
+		#else
+		return {
+			packageVersion: "runtime-unversioned",
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+			sourceConfigurationRevision: OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName, []),
+			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
+			runtimeSchemaRevision: '${RuntimeSourceManifest.MODEL}:v${RuntimeSourceManifest.SCHEMA_VERSION}',
+			outputConfigured: outputConfigured,
+			progressOrTelemetryEnabled: false,
+			loweringReportEnabled: false,
+			lifecycleTraceEnabled: false
+		};
+		#end
 	}
 
 	function precomputeWholeProgramContext(types:Array<haxe.macro.Type.ModuleType>):Void {

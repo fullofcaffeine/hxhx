@@ -1,0 +1,90 @@
+package reflaxe.ocaml.reuse;
+
+#if (macro || reflaxe_runtime || eval)
+import haxe.Json;
+import haxe.crypto.Sha256;
+import reflaxe.lifecycle.TargetReuseRevisionComponent;
+
+/**
+	Plain request facts used to build the first OCaml target-reuse observation.
+
+	The values contain revisions and feature flags only. They deliberately exclude
+	typed Haxe nodes, compiler contexts, output writers, target plans, and source
+	bytes so the observation can never become an accidental cache payload.
+**/
+typedef OcamlTargetReuseObservation = {
+	final packageVersion:String;
+	final pipelineRevision:String;
+	final sourceConfigurationRevision:String;
+	final outputSchemaRevision:String;
+	final runtimeSchemaRevision:String;
+	final outputConfigured:Bool;
+	final progressOrTelemetryEnabled:Bool;
+	final loweringReportEnabled:Bool;
+	final lifecycleTraceEnabled:Bool;
+}
+
+/**
+	Defines the fail-closed identity currently offered by `reflaxe.ocaml`.
+
+	This contract makes the target's known request inputs observable before
+	whole-program OCaml preparation. It intentionally remains ineligible for
+	replay until implementation-content, semantic-runtime, and native-dependency
+	authorities are complete. The permanent blockers prevent a partial identity
+	from being mistaken for permission to skip target work.
+**/
+class OcamlTargetReuseContract {
+	public static inline final NAMESPACE = "reflaxe.ocaml.target-source/v1";
+	public static inline final IMPLEMENTATION_MODEL = "reflaxe-ocaml-target-implementation-candidate-v1";
+
+	/** Returns sorted target-owned revisions without exposing their raw inputs. **/
+	public static function revisionComponents(observation:OcamlTargetReuseObservation):Array<TargetReuseRevisionComponent> {
+		final implementationRevision = revision(IMPLEMENTATION_MODEL, [
+			required(observation.packageVersion, "package version"),
+			required(observation.pipelineRevision, "pipeline revision")
+		]);
+		final components = [
+			new TargetReuseRevisionComponent("artifact-output-schema", required(observation.outputSchemaRevision, "output schema revision")),
+			new TargetReuseRevisionComponent("runtime-input-schema", required(observation.runtimeSchemaRevision, "runtime schema revision")),
+			new TargetReuseRevisionComponent("source-configuration", required(observation.sourceConfigurationRevision, "source configuration revision")),
+			new TargetReuseRevisionComponent("target-implementation-candidate", implementationRevision)
+		];
+		components.sort((left, right) -> Reflect.compare(left.name, right.name));
+		return components;
+	}
+
+	/**
+		Returns stable reasons that exact source replay is not yet allowed.
+
+		Report and telemetry modes are request-specific blockers because a replay
+		would otherwise skip the target work that produces their evidence.
+	**/
+	public static function blockers(observation:OcamlTargetReuseObservation):Array<String> {
+		final values = [
+			"reflaxe.ocaml:native-dependency-authority-incomplete",
+			"reflaxe.ocaml:semantic-runtime-authority-incomplete",
+			"reflaxe.ocaml:target-implementation-authority-incomplete"
+		];
+		if (!observation.outputConfigured)
+			values.push("reflaxe.ocaml:output-not-configured");
+		if (observation.progressOrTelemetryEnabled)
+			values.push("reflaxe.ocaml:progress-or-telemetry-enabled");
+		if (observation.loweringReportEnabled)
+			values.push("reflaxe.ocaml:lowering-report-enabled");
+		if (observation.lifecycleTraceEnabled)
+			values.push("reflaxe.ocaml:lifecycle-trace-enabled");
+		values.sort(Reflect.compare);
+		return values;
+	}
+
+	static function revision(model:String, values:Array<String>):String {
+		return "sha256:" + Sha256.encode(Json.stringify([model, values]));
+	}
+
+	static function required(value:String, label:String):String {
+		if (value == null || StringTools.trim(value).length == 0)
+			throw 'OCaml target reuse $label must not be empty.';
+		return StringTools.trim(value);
+	}
+}
+#end
