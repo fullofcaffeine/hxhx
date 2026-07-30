@@ -118,6 +118,80 @@ Qualification-only machinery has been hard-cut:
   `REFLAXE_OCAML_TARGET_REUSE_PHASE_REPORT_DIR`, so measurement files cannot
   change the generated source tree or its reuse identity.
 
+### Required `thinking:xhigh` implementation review
+
+**Decision: GO for the opt-in exact-hit mechanism.** The second pass reviewed
+the complete path that can skip OCaml target generation, from request identity
+through cache admission, replay, publication, and later failure. It found two
+gaps and closed both before this decision:
+
+1. Generic Reflaxe previously appeared in the key through its classpath but not
+   through an exact content identity. Reflaxe commit
+   `e5a9cc0c043fa9434743b6f6e7abc697f827f818` now hashes every installed
+   framework Haxe source file. A lifecycle, preprocessing, filtering, or output
+   management change at the same path therefore produces a different key and a
+   safe miss.
+2. The hit path previously kept its catalog lease open through payload
+   validation. A test-only reporting error in the corrupt-payload branch could
+   have prevented the later close. The target now pins the entry only while it
+   copies the bytes, releases the lease on both copy success and failure, and
+   decodes and replays only the request-owned copy.
+
+The review confirmed these positive contracts:
+
+- **One semantic compiler:** a miss runs the existing `reflaxe.ocaml`
+  preparation, lowering, and syntax pipeline once. A hit reconstructs files
+  previously produced by that pipeline; it does not run another lowerer or
+  printer.
+- **Exact identity:** the key covers the final typed-program snapshot, source
+  origins and contents, classpaths, defines, resources, target configuration,
+  generic Reflaxe sources, `reflaxe.ocaml` sources, runtime sources, native
+  source declarations, and output schemas. Unknown callbacks, diagnostic
+  modes, missing source authority, or a replaced macro realm remain misses.
+- **Detached payload:** the long-lived catalog stores copied `Bytes` and plain
+  file/claim records. It cannot reach a typed expression, Haxe type or
+  variable, source-position object, compiler context, target plan, builder,
+  output writer, callback, open file, Dune state, or native executable.
+- **Fresh publication:** a hit writes every file into a new private output
+  transaction, creates a new framework receipt with the current file set,
+  rebuilds and validates the target manifest from cached immutable claims, and
+  publishes the complete tree through the normal replacement transaction.
+- **Success-only admission:** a miss stages a request-owned candidate after
+  validating the private tree. The catalog receives it only after source
+  publication and all work requested by that invocation, including Dune when
+  enabled, succeeds. A failed request discards the candidate.
+- **Fail-closed corruption:** malformed payloads and replay inconsistencies are
+  quarantined before public output. The framework aborts the private replay
+  transaction and then runs the ordinary target compiler.
+- **Bounded lifetime:** copied payload and index bytes obey the 64 MiB
+  single-entry and 128 MiB total limits. Active leases prevent eviction or
+  reset only during their bounded copy window; reset, least-recently-used
+  eviction, quarantine, and macro-realm replacement change future hits into
+  misses without changing compilation results.
+
+The full exact-hit contract passed after both corrections. It covers unchanged
+hits, source/configuration/resource/source-map invalidation, A→B→A reuse,
+macro-realm reset and replacement, `NoMacroCache`, corrupt payloads, failures
+before and after source publication, complete generated-tree equality, fresh
+Dune invocation, native executable equality, and runtime behavior.
+
+The three compiler-scale measurements above were made on candidate
+`717aa276315dddd54b8a70828f347fb0b9b7a118`. The final review corrections are
+in candidate `16e7e9c64b7c189e3814ac2df86c4176f19be84d`; they add
+framework content to the key and shorten the lease lifetime without changing
+generated files or adding target work to a hit. The compiler-scale sequences
+were not repeated after that hardening commit. The retained measurements remain
+valid mechanism/performance evidence, but they are not represented as a
+same-SHA release receipt for `16e7e9c64b7c189e3814ac2df86c4176f19be84d`.
+
+Upstream Haxe's macro callback does not expose a cooperative cancellation
+service to this first target-reuse rung. Terminating the Haxe server destroys
+its in-memory catalog, and an interrupted private directory is recovered or
+rejected by the existing output transaction on the next request. This review
+therefore proves ordinary exceptions and process/realm loss; it does not claim
+a request-local cancellation API. A future host capability that adds
+cooperative cancellation must add a dedicated no-admission fixture.
+
 This is a mechanism qualification, not a support declaration. Exact reuse is
 still opt-in and not the default package server route. Reuse after edits remains
 owned by `haxe_ocaml-850ii.33`, and the README readiness bars remain unchanged
@@ -143,11 +217,13 @@ The recommendation is accepted for five reasons:
    incomplete runtime authority, diagnostic/report modes, corruption, or an
    unknown ambient input cannot produce an optimistic hit.
 
-The expected speedup remains an inference until measured. Replaying and hashing
-the retained 27,792,458-byte tree should be much cheaper than rebuilding the
-target for roughly 1,916 seconds, but key construction, evaluator allocation,
-garbage collection, replay, manifest reconstruction, and publication must be
-timed directly.
+The review's expected speedup is now measured for the qualified candidate:
+replaying and validating the retained 27.8 MB tree reduced the median warm
+target lifecycle to 4.39% of cold and saved about 29.3 minutes end to end.
+Fingerprinting, lookup, validation, replay, manifest reconstruction,
+publication, Dune, evaluator memory, and semantic-compiler execution are
+reported separately so Dune or frontend reuse cannot be mistaken for the
+target-replay benefit.
 
 The proposed 128 MiB catalog budget and 64 MiB single-entry limit are accepted
 as observation defaults, not permanent product constants. The implementation
