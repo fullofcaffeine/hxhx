@@ -17,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -509,6 +510,17 @@ class CompilationContext {
 	**/
 	public function recordEnumDynamicLocalRuntimeRequirement(decision:OcamlLocalConversionDecision):Void {
 		OcamlEnumRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one directly thrown enum constructor needs `HxEnum`.
+
+		The control plan has already fixed the source occurrence, enum name,
+		carrier, boxing operation, and runtime tags. This request-local handoff
+		makes packaging follow that decision instead of scanning printed OCaml.
+	**/
+	public function recordEnumThrowRuntimeRequirement(decision:OcamlControlDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.recordThrow(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed program representation. **/

@@ -362,8 +362,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 46) {
-						throw 'Unsupported lowering report schema $version; expected 46.';
+					if (version != 47) {
+						throw 'Unsupported lowering report schema $version; expected 47.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -386,7 +386,7 @@ class ReflaxeOcamlInspection {
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
-						anonymousStructures.operations, callInventory.calls);
+						anonymousStructures.operations, callInventory.calls, controls);
 					{
 						status: "present",
 						required: required,
@@ -455,7 +455,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v14")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v15")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -601,6 +601,25 @@ class ReflaxeOcamlInspection {
 						|| payload == null) {
 						throw 'Control decision "${control.id}" has an invalid Haxe exception target, effect, mechanism, capability, or payload.';
 					}
+					final enumCarrier = "haxe-enum-native-variant-carrier-v1:" + payload.inputSemanticTypeId;
+					final enumRepresentation = "control-representation:enum-direct-v1:" + payload.inputSemanticTypeId;
+					final claimsDirectEnumPayload = payload.conversion == "box-enum-throw-carrier"
+						|| payload.proofId == "exact-enum-constructor-throw-control-v1"
+						|| control.proofId == "exact-enum-constructor-throw-control-v1"
+						|| payload.inputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+						|| payload.outputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+						|| payload.inputRepresentationId.startsWith("control-representation:enum-direct-v1:")
+						|| payload.outputRepresentationId.startsWith("control-representation:enum-direct-v1:");
+					final directEnumPayload = payload.inputSemanticTypeId.length > 0
+						&& payload.inputCarrierTypeId == enumCarrier
+						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+						&& payload.outputCarrierTypeId == enumCarrier
+						&& payload.inputRepresentationId == enumRepresentation
+						&& payload.outputRepresentationId == enumRepresentation
+						&& payload.nominalRepresentation == null;
+					if (claimsDirectEnumPayload && !directEnumPayload) {
+						throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
+					}
 					if (payload.inputSemanticTypeId == "Dynamic") {
 						if (payload.inputCarrierTypeId != "Obj.t"
 							|| payload.outputSemanticTypeId != "Dynamic"
@@ -620,7 +639,7 @@ class ReflaxeOcamlInspection {
 							|| payload.nominalRepresentation != null) {
 							throw 'Control decision "${control.id}" has an invalid exact Haxe exception-wrapper carrier.';
 						}
-					} else {
+					} else if (!directEnumPayload) {
 						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
 							'Control decision "${control.id}" input');
 						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
@@ -633,11 +652,11 @@ class ReflaxeOcamlInspection {
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
 						case "Dynamic": "preserve-dynamic-throw-carrier";
 						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
-						case _: payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier";
+						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
-						case _: payload.nominalRepresentation == null ? [] : ["Dynamic"];
+						case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
 					};
 					final expectedProofId = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
@@ -645,7 +664,7 @@ class ReflaxeOcamlInspection {
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
 						case "Dynamic": "dynamic-carrier-throw-control-v1";
 						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
-						case _: payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1";
+						case _: directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");
 					};
 					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,
 						payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.nominalRepresentation,
@@ -663,6 +682,8 @@ class ReflaxeOcamlInspection {
 						|| control.proofId != expectedProofId
 						|| !sameStrings(control.runtimeTags, expectedTags)
 						|| control.runtimeTagPolicy != "merge-dynamic-with-exact-runtime-value") {
+						if (directEnumPayload)
+							throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
 						throw 'Control decision "${control.id}" has an invalid represented Haxe exception crossing.';
 					}
 				case _:
@@ -1784,7 +1805,7 @@ class ReflaxeOcamlInspection {
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
 				final canonicalId = localConversionOccurrenceId(result);
-				if (result.pipelineRevision != "ocaml-function-plans-v60"
+				if (result.pipelineRevision != "ocaml-function-plans-v61"
 					|| result.id != canonicalId)
 					throw 'Local conversion "${result.id}" does not match its retained function, revisions, local, role, and source; expected "$canonicalId".';
 				if (result.conversion == "box-exact-enum-to-dynamic") {
@@ -2023,8 +2044,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
-			localConversions:Array<InspectionLocalConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
-			calls:Array<InspectionCall>):Int {
+			localConversions:Array<InspectionLocalConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>,
+			controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -2095,6 +2116,38 @@ class ReflaxeOcamlInspection {
 				|| roots[0] != "HxEnum"
 				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
 				throw 'Enum-to-Dynamic conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (control in controls) {
+			final payload = control.payload;
+			if (control.kind != "throw" || payload == null)
+				continue;
+			final enumPayload:InspectionControlPayload = payload;
+			if (enumPayload.conversion != "box-enum-throw-carrier")
+				continue;
+			final requirementId = control.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Direct enum throw "${control.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != control.id
+				|| requiredString(source, "file") != control.sourceFile
+				|| requiredInt(source, "min") != control.sourceMin
+				|| requiredInt(source, "max") != control.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != control.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != enumPayload.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != control.profileEligibility.join(",")) {
+				throw 'Direct enum throw "${control.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
 			}
 			referenced.set(requirementId, true);
 		}

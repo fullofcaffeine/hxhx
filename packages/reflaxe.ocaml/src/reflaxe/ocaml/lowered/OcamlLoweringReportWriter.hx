@@ -45,7 +45,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 46;
+	public static inline final SCHEMA_VERSION = 47;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -258,7 +258,8 @@ class OcamlLoweringReportWriter {
 					if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)) {
 						throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
 					}
-				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)) {
+				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)
+					&& !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)) {
 					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
 					requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
@@ -361,6 +362,18 @@ class OcamlLoweringReportWriter {
 				throw 'Enum-to-Dynamic conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
+		for (control in sortedControls) {
+			final payload = control.payload;
+			if (payload == null || !OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+				continue;
+			final expected = OcamlEnumRuntimeRequirementRecorder.throwRequirement(control);
+			final recorded = requirementById.get(expected.id);
+			if (recorded == null)
+				throw 'Direct enum throw "${control.id}" refers to missing runtime requirement "${expected.id}".';
+			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+				throw 'Direct enum throw "${control.id}" disagrees with runtime requirement "${expected.id}".';
+			includedRequirementIds.set(expected.id, true);
+		}
 		for (call in sortedCalls) {
 			if (call.standardIMapTarget == null)
 				continue;
@@ -450,7 +463,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v14",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v15",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

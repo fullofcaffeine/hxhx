@@ -2,6 +2,8 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
@@ -61,6 +63,42 @@ class OcamlEnumRuntimeRequirementRecorder {
 	/** Adds the admitted enum conversion to the request-owned runtime ledger. */
 	public static function record(ledger:OcamlRuntimeRequirementLedger, conversion:OcamlLocalConversionDecision):Void {
 		ledger.record(requirement(conversion));
+	}
+
+	/**
+		Builds the runtime reason for one directly thrown enum constructor.
+
+		The control decision already owns the enum identity, source occurrence,
+		private exception carrier, and exact tags. This method only maps that
+		sealed behavior to the checked `HxEnum` source module.
+	**/
+	public static function throwRequirement(decision:OcamlControlDecision):OcamlRuntimeRequirement {
+		final payload = decision.payload;
+		if (payload == null || !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)) {
+			throw 'reflaxe.ocaml [ocaml-enum:wrong-runtime-throw]: control decision "${decision.id}" is not a sealed direct enum-constructor throw';
+		}
+		return {
+			id: OcamlEnumDynamicCarrier.runtimeRequirementId(decision.id),
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: OcamlEnumDynamicCarrier.RUNTIME_CAPABILITY,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: payload.inputSemanticTypeId
+			},
+			implementationFeature: OcamlEnumDynamicCarrier.RUNTIME_FEATURE,
+			rootModules: [OcamlEnumDynamicCarrier.RUNTIME_MODULE],
+			profileEligibility: decision.profileEligibility,
+			explanation: 'The sealed throw evaluates one direct ${payload.inputSemanticTypeId} constructor and calls ${OcamlEnumDynamicCarrier.RUNTIME_MODULE}.${OcamlEnumDynamicCarrier.RUNTIME_OPERATION} with that enum name before the value enters the private exception carrier.'
+		};
+	}
+
+	/** Adds one direct enum-constructor throw to the request-owned runtime ledger. */
+	public static function recordThrow(ledger:OcamlRuntimeRequirementLedger, decision:OcamlControlDecision):Void {
+		ledger.record(throwRequirement(decision));
 	}
 }
 #end

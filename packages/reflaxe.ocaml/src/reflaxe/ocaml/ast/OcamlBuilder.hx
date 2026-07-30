@@ -499,6 +499,12 @@ class OcamlBuilder {
 				built;
 			case BoxHaxeExceptionWrapperThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+			case BoxEnumThrowCarrier:
+				final represented = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"), [
+					OcamlExpr.EConst(OcamlConst.CString(selectedPayload.inputSemanticTypeId)),
+					represented
+				]);
 			case _:
 				return controlPlanInvariant('throw decision "${decision.id}" selected unsupported payload conversion ${selectedPayload.conversion}', position);
 		}

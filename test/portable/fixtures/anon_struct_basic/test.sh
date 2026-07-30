@@ -62,7 +62,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 46
+if (report.schemaVersion !== 47
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -106,7 +106,7 @@ for (const operation of operations) {
 	const compoundWrite = operation.kind === 'compound-write-field'
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v60'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v61'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
@@ -148,9 +148,11 @@ if (countByKind.get('create') !== 1
 if (runtimeReport.authorityStatus !== 'partial'
 	|| runtimeReport.compilerObservationGranularity !== 'module-name-only'
 	|| !runtimeReport.compilerObservedModulesWithRequirementRoots.includes('HxAnon')
-	|| !runtimeReport.compilerObservedModulesWithoutRequirementRoots.includes('HxEnum')
+	|| !runtimeReport.compilerObservedModulesWithRequirementRoots.includes('HxEnum')
+	|| runtimeReport.compilerObservedModulesWithoutRequirementRoots.includes('HxAnon')
+	|| runtimeReport.compilerObservedModulesWithoutRequirementRoots.includes('HxEnum')
 	|| !runtimeReport.message.includes('does not prove that every generated use')) {
-	fail('runtime reporting hid the still-incomplete HxAnon/HxEnum occurrence ownership')
+	fail('runtime reporting lost HxAnon/HxEnum requirement roots or overstated occurrence ownership')
 }
 
 if (!/let __anonymous_value_[0-9]+ = HxAnon\.create \(\)/.test(source)

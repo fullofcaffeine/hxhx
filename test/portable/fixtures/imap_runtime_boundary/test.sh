@@ -5,14 +5,14 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 46
+if (report.schemaVersion !== 47
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v18') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
 const calls = report.calls?.filter(call => call.kind === 'standard-imap-method') ?? []
 if (calls.length !== 53
 	|| calls.some(call =>
-		call.pipelineRevision !== 'ocaml-function-plans-v60'
+		call.pipelineRevision !== 'ocaml-function-plans-v61'
 		|| call.receiver !== null
 		|| call.arguments?.length !== 0
 		|| call.result !== null

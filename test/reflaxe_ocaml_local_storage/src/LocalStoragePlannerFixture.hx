@@ -711,7 +711,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v60"
+			pipelineRevision: "ocaml-function-plans-v61"
 		};
 		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
 		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
@@ -753,7 +753,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-enum-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-enum-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v60"
+			pipelineRevision: "ocaml-function-plans-v61"
 		};
 		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
 		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
@@ -791,7 +791,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|indirect-dynamic-enum",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:indirect-dynamic-enum-v1",
-			pipelineRevision: "ocaml-function-plans-v60"
+			pipelineRevision: "ocaml-function-plans-v61"
 		});
 		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& indirectDynamicEnumPlan.conversions().length == 0,
@@ -844,7 +844,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|uninitialized-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:uninitialized-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v60"
+			pipelineRevision: "ocaml-function-plans-v61"
 		});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -858,7 +858,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|reassigned-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:reassigned-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v60"
+			pipelineRevision: "ocaml-function-plans-v61"
 		});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,

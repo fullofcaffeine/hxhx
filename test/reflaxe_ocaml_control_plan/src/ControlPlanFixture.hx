@@ -22,8 +22,11 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlRuntimeTagPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
+import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 /**
 	Checks control-family independence, immutability, and fail-closed validation.
@@ -195,7 +198,7 @@ class ControlPlanFixture {
 
 	static function throwDecision(id:String, min:Int, semanticTypeId:String, ?conversion:OcamlControlPayloadConversion, ?runtimeTags:Array<String>,
 			?targetId:String, ?targetKind:OcamlControlTargetKind, ?mechanism:OcamlControlTargetMechanism, ?outputSemanticTypeId:String,
-			?runtimeTagPolicy:OcamlControlRuntimeTagPolicy):OcamlControlDecision {
+			?runtimeTagPolicy:OcamlControlRuntimeTagPolicy, directEnum:Bool = false):OcamlControlDecision {
 		final carrierTypeId = switch (semanticTypeId) {
 			case "Int": "int";
 			case "Bool": "bool";
@@ -203,7 +206,7 @@ class ControlPlanFixture {
 			case "String": "string";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
-			case _: "unsupported";
+			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + semanticTypeId : "unsupported";
 		};
 		final outputSemanticType = outputSemanticTypeId ?? semanticTypeId;
 		final outputCarrierTypeId = switch (outputSemanticType) {
@@ -213,25 +216,25 @@ class ControlPlanFixture {
 			case "String": "string";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
-			case _: "unsupported";
+			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
 		};
-		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId);
+		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
-		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId);
+		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
 		final representationId = switch (semanticTypeId) {
 			case "Dynamic": OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID;
 			case "haxe.Exception": OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID;
 			case "haxe.ValueException": OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID;
-			case _: 'representation:$semanticTypeId:internal-value';
+			case _: directEnum ? OcamlControlPlan.enumThrowRepresentationId(semanticTypeId) : 'representation:$semanticTypeId:internal-value';
 		}
 		final outputRepresentationId = switch (outputSemanticType) {
 			case "Dynamic": OcamlControlPlan.DYNAMIC_CONTROL_REPRESENTATION_ID;
 			case "haxe.Exception": OcamlControlPlan.HAXE_EXCEPTION_CONTROL_REPRESENTATION_ID;
 			case "haxe.ValueException": OcamlControlPlan.HAXE_VALUE_EXCEPTION_CONTROL_REPRESENTATION_ID;
-			case _: 'representation:$outputSemanticType:internal-value';
+			case _: directEnum ? OcamlControlPlan.enumThrowRepresentationId(outputSemanticType) : 'representation:$outputSemanticType:internal-value';
 		}
 		final proof = 'fixture exact-$semanticTypeId Haxe exception crossing';
 		return {
@@ -258,7 +261,7 @@ class ControlPlanFixture {
 				proofClaim: proof,
 				nominalRepresentation: null
 			},
-			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId),
+			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum),
 			runtimeTagPolicy: runtimeTagPolicy ?? OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 			mechanism: mechanism ?? OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -506,6 +509,23 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-exception", 197, "haxe.Exception"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-value-exception", 198, "haxe.ValueException"));
+		final enumThrow = throwDecision("control:throw:enum", 199, "fixture.Signal", null, null, null, null, null, null, null, true);
+		OcamlControlPlan.requireDecision(enumThrow);
+		if (enumThrow.payload == null
+			|| !OcamlControlPlan.isAdmittedEnumThrowPayload(enumThrow.payload)
+			|| enumThrow.runtimeTags.join(",") != "Dynamic,fixture.Signal") {
+			throw "The direct enum throw lost its sealed carrier or exact runtime tags";
+		}
+		final enumRuntimeLedger = new OcamlRuntimeRequirementLedger();
+		enumRuntimeLedger.beginProgram(enumThrow.programRevision);
+		OcamlEnumRuntimeRequirementRecorder.recordThrow(enumRuntimeLedger, enumThrow);
+		final enumRequirements = enumRuntimeLedger.requirementsSorted();
+		if (enumRequirements.length != 1
+			|| enumRequirements[0].sourceId != enumThrow.id
+			|| enumRequirements[0].subject.id != "fixture.Signal"
+			|| enumRequirements[0].rootModules.join(",") != "HxEnum") {
+			throw "The direct enum throw lost its exact source-to-HxEnum runtime requirement";
+		}
 		OcamlControlPlan.requireLoopTarget(loop);
 		OcamlControlPlan.requireCatchChain(exactCatchChain);
 		for (clause in exactCatchChain.clauses)
@@ -599,6 +619,20 @@ class ControlPlanFixture {
 		final wrapperThrowWithNominalConversion = throwDecision("control:throw:wrapper-nominal-conversion", 256, "haxe.Exception",
 			OcamlControlPayloadConversion.BoxNominalThrowCarrier);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [wrapperThrowWithNominalConversion]));
+		final enumThrowWithWrongCarrier = throwDecision("control:throw:enum-wrong-carrier", 256, "fixture.Signal", null, null, null, null, null, null, null,
+			true);
+		Reflect.setField(enumThrowWithWrongCarrier.payload, "inputCarrierTypeId", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":fixture.OtherSignal");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowWithWrongCarrier]));
+		final enumThrowWithWrongRepresentation = throwDecision("control:throw:enum-wrong-representation", 256, "fixture.Signal", null, null, null, null, null,
+			null, null, true);
+		Reflect.setField(enumThrowWithWrongRepresentation.payload, "inputRepresentationId", OcamlControlPlan.enumThrowRepresentationId("fixture.OtherSignal"));
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowWithWrongRepresentation]));
+		final enumThrowWithWrongTags = throwDecision("control:throw:enum-wrong-tags", 256, "fixture.Signal", null, ["Dynamic"], null, null, null, null, null,
+			true);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowWithWrongTags]));
+		final enumThrowWithWrongProof = throwDecision("control:throw:enum-wrong-proof", 256, "fixture.Signal", null, null, null, null, null, null, null, true);
+		Reflect.setField(enumThrowWithWrongProof.payload, "proofId", OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowWithWrongProof]));
 		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 257, "Int");
 		final primitivePayload = primitiveWithNominalProof.payload;
 		if (primitivePayload == null)

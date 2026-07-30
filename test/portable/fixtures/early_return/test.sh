@@ -25,8 +25,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 46
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v14'
+if (report.schemaVersion !== 47
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -81,7 +81,7 @@ for (const control of returnControls) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v60') {
+		|| control.pipelineRevision !== 'ocaml-function-plans-v61') {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload

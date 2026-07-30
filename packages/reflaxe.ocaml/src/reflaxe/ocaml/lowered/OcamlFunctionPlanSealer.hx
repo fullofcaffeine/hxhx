@@ -171,6 +171,11 @@ class OcamlFunctionPlanSealer {
 				context.recordStandardIMapRuntimeRequirements(call);
 		}
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
+		for (control in controls.decisions()) {
+			final payload = control.payload;
+			if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+				context.recordEnumThrowRuntimeRequirement(control);
+		}
 		anonymousStructures.requireRepresentations(representations);
 		for (decision in anonymousStructures.operations())
 			context.recordAnonymousStructureRuntimeRequirement(decision);
@@ -205,6 +210,8 @@ class OcamlFunctionPlanSealer {
 				continue;
 			}
 			if (OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload))
+				continue;
+			if (OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
 				continue;
 			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
 				'control "${control.id}" input', position);

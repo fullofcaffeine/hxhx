@@ -191,6 +191,7 @@ try {
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxFPHelper'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxString'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBytes'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxEnum'))
 	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
 	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
 	assert.deepStrictEqual([
@@ -199,8 +200,7 @@ try {
 	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxAnon'))
-	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots,
-		['HxEnum'])
+	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots, [])
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)
