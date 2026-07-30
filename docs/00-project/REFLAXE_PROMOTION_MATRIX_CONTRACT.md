@@ -27,22 +27,24 @@ architecture bead deliberately changes that boundary.
 
 The accepted Oracle checkpoint for this boundary is
 `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`.
+The exact-host and native-container correction is recorded in
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 Promotion evidence should therefore stay focused on native plugin/builtin
 artifacts, target-core reuse, activation parity, and native artifact latency;
 it should not imply Reflaxe owns `hxhx` compiler-core semantics.
 
 The required product paths are:
 
-1. `one promoted reflaxe.ocaml plugin payload -> stock Haxe`
-2. `the same promoted reflaxe.ocaml plugin payload -> hxhx`
+1. `one semantic reflaxe.ocaml target core -> exact stock-Haxe native shell`
+2. `the same semantic target core -> hxhx native plugin shell`
 3. `the same target core -> built-in hxhx target`
 
 The current repository has an upstream eval-host adapter and a separate
 experimental `hxhx` native plugin loader. Those are predecessor evidence, not
-the final shared product. M22 requires one versioned plugin ABI across both
-hosts and attempts identical binary packaging first. Only a demonstrated OCaml
-compiler, runtime, linker, or loader incompatibility can justify different thin
-host loader shells around the same payload or reproducibly derived native core.
+the final shared product. M22 requires one versioned semantic request/result
+contract and one target-core identity across both hosts. It also runs a bounded
+one-container feasibility experiment, but tiny exact-host shells are an
+accepted product shape when they contain activation and transport only.
 
 This contract owns:
 
@@ -57,8 +59,9 @@ This contract owns:
 
 - multi-host promotion proofs for real Reflaxe compiler workloads,
 - the host/path comparison,
-- the shared stock-Haxe/`hxhx` plugin ABI and payload identity requirement,
-- the evidence-gated loader-shell fallback,
+- the shared stock-Haxe/`hxhx` semantic ABI and target-core identity
+  requirement,
+- exact host-shell and one-container experiment evidence,
 - canonical recommendation docs for choosing between promotion paths.
 
 This contract does not own:
@@ -75,10 +78,10 @@ This contract does not own:
 - ABI expectation: one versioned backend-facing ABI with the same immutable
   program/facts schema, lifecycle, diagnostics, resources, outputs, and
   capability negotiation
-- Payload expectation: one promoted Reflaxe plugin payload with one target-core
-  identity and digest
-- Packaging expectation: one identical native binary first; thin host loader
-  shells only after an exact OCaml compatibility failure is measured
+- Core expectation: one Haxe-authored semantic source/core identity across
+  every activation form
+- Packaging expectation: exact generated host shells are permitted; the
+  reference toolchain still compares them with one combined-container build
 - Semantic rule: loaders adapt host ABI and packaging only; target behavior
   cannot fork by host
 

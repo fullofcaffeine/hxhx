@@ -29,7 +29,7 @@ Canonical promotion contract:
 | I want a native executable from Haxe sources | Upstream `haxe` + `reflaxe.ocaml` | Native OCaml executable (via dune) |
 | I want `hxhx` to load a backend at runtime | `hxhx` native promotion lane | Native plugin artifact (`.cmxs` or `.cma`) + manifest |
 | I want backend logic shipped inside `hxhx` binary | Builtin backend lane | No runtime plugin load; backend linked into dist build |
-| I want one native plugin for stock Haxe and `hxhx` | Planned M22 shared-plugin lane | Not available today; one ABI/payload is the required design |
+| I want one native target core for stock Haxe and `hxhx` | Planned M22 shared-core lane | Not available today; one semantic ABI/core plus exact host adapters is the required design |
 
 Important:
 
@@ -163,28 +163,30 @@ For architecture and layering:
 
 ---
 
-## Planned M22 — one plugin payload for stock Haxe and `hxhx`
+## Planned M22 — one target core for stock Haxe and `hxhx`
 
 M22 plans the next product step, but none of the commands in this section exist
-yet. Implementation is deferred until Full1 and `haxe_ocaml-38gsp.1` prove
-that native `hxhx` uses the actual standalone target implementation. Keep using
+yet. Implementation is deferred until Full1, `haxe_ocaml-38gsp.1` proves that
+native `hxhx` uses the actual standalone target implementation, and
+`haxe_ocaml-38gsp.2` proves two-generation native self-promotion. Keep using
 Paths A, B, and C above as current truth; the current builtin route is not
 evidence that this future shared core already exists.
 
-The future product keeps one host-neutral core, one versioned plugin ABI, and
-one promoted payload:
+The future product keeps one host-neutral core and one versioned semantic
+request/result contract:
 
 - evaluated host-neutral development through upstream Haxe/Reflaxe;
-- stock-Haxe native plugin execution;
-- `hxhx` native plugin execution using the same payload;
+- stock-Haxe native execution through an exact eval-host shell;
+- `hxhx` native plugin execution through an `hxhx` shell;
 - `hxhx`-integrated builtin execution with the same target-core factory.
 
-The first packaging attempt must use one identical native binary for both
-plugin hosts. OCaml compiler/runtime identity may make that impossible on a
-particular supported toolchain. Only then may packaging use thin generated host
-loader shells around the same payload or reproducibly derived native core. A
-loader shell may translate the ABI or satisfy the host loader; it may not own
-target lowering, printing, mutation, or result behavior.
+The reference toolchain must compare one combined native container with the
+exact-shell design, but a byte-identical `.cmxs` is not the product invariant.
+OCaml compiler/runtime identity, linked modules, and interface digests may
+require separate generated shells. A shell may perform preflight, loading,
+registration, value/schema conversion, lifecycle, and error translation; it
+may not own target lowering, printing, runtime selection, mutation, output
+repair, or result behavior.
 
 Native execution does not imply privileged compiler access. Both hosts use the
 same typed/versioned capability negotiation. `hxhx` may expose more advanced
@@ -197,7 +199,8 @@ printers.
 The existing `ocaml_profile=portable|metal` switch is a separate output policy,
 not an M22 service-access preset. See
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md` for the planning-only
-contract.
+contract. The accepted exact-host decision is
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 ---
 

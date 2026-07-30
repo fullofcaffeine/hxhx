@@ -23,10 +23,10 @@ Fast on-ramp glossary for beginners. Full glossary: `docs/00-project/GLOSSARY.md
     behavior oracle, or invoking downstream tools such as clang.
 14. **replacement-ready**: gate bundle status proving scoped compatibility/readiness signals.
 15. **Haxe-provider (legacy term)**: old wording; use `linked-provider` instead.
-16. **shared native Reflaxe plugin (planned)**: one versioned ABI and promoted
-    payload intended to load in both stock Haxe and `hxhx`. Prefer one identical
-    binary; if proven OCaml host constraints require it, only the thin loader
-    shell may differ.
-17. **loader shell**: host-specific loading/ABI glue around the shared payload.
-    It must not contain target semantics, so different shells do not become two
-    compiler implementations.
+16. **shared native Reflaxe target (planned)**: one Haxe-authored semantic
+    target core and versioned request/result contract intended to run through
+    stock Haxe and `hxhx`. The exact native containers may differ.
+17. **host shell**: host-specific preflight, loading, registration,
+    value/schema conversion, lifecycle, and error glue around the shared
+    semantic core. It must not contain target semantics, so different shells do
+    not become two compiler implementations.

@@ -18,11 +18,12 @@ The practical user story today is:
 - package Reflaxe targets as native artifacts for `hxhx`,
 - embed `hxhx` as a compiler subprocess behind a stable command boundary.
 
-The planned native-plugin product goes further: one promoted Reflaxe plugin ABI
-and payload should work in both stock Haxe and `hxhx`. That shared plugin is not
-available today. The identical binary is the design target; thin host loader
-shells are allowed only if measured OCaml runtime or compiler constraints make
-them necessary, and the shells may not contain target behavior.
+The planned native-plugin product goes further: one Haxe-authored semantic
+target core and versioned contract should work in both stock Haxe and `hxhx`.
+That shared core is not available today. The reference toolchain will test one
+combined `.cmxs`, but exact generated host shells are allowed because OCaml
+interface/runtime identity is a packaging concern. The shells may not contain
+target behavior.
 
 `hxhx` is not yet a production replacement for upstream Haxe. The first Full1
 promise covers an explicit target/generator scope rather than every upstream
@@ -37,26 +38,29 @@ about production usability, not internal compiler milestones.
 For the longer planning contract behind these rows, see
 `docs/00-project/NORTH_STAR_GOALS.md`.
 
-Progress bars and the accompanying percentages are coarse editorial readiness
-estimates. The percentages are not computed by adding unlike evidence such as
-contract guards, focused regressions, upstream suites, packaged products, and
-release candidates. The words beside each estimate, the strongest current
-evidence, its freshness, the active owner bead, and the "Not ready yet" column
-control the claim.
+Progress bars and percentage ranges are coarse editorial readiness estimates.
+One block is roughly ten percentage points. A range is used when the available
+routes have materially different maturity or the next unresolved gate could
+change the estimate. The values are not computed by adding unlike evidence
+such as contract guards, focused regressions, upstream suites, packaged
+products, and release candidates. The words beside each estimate, the strongest
+current evidence, its freshness, the active owner Bead, and the "Not ready yet"
+column control the claim.
 
-Overall north-star readiness: `[####------]` about 35% (coarse; not additive).
+Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
+additive).
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
-| `reflaxe.ocaml` with upstream `haxe` | `[#######---]` about 70% | **Advanced preview.** It is the most usable route here, and a production candidate only for the declared example/runtime matrix after validating your own application. A deterministic source-only ZIP now has isolated macOS and Ubuntu install/native external-app proofs. | Use upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`. Package `build` and `watch` use a fresh Haxe process by default; add explicit local `--connect <port>` when you want upstream Haxe's frontend reuse. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`. | Active product owner `haxe_ocaml-s7jry` still needs the accepted semantic-safety chain: representation/storage/capture (`9bome`), calls/conversions (`taef5`), control effects (`w32h3`), and fail-closed runtime ownership (`0uwin`). The completed place/evaluation foundation (`9v1va`) and existing package receipts remain valid, but the historical `RO_PRODUCTION_READY:PASS` bundle does not open these newer prerequisites. Compiler-scale server timing and memory also remain evidence gates before server reuse can become the default. |
-| `reflaxe.ocaml` with `hxhx` | `[###-------]` about 30% | **Experimental.** Useful for validating the native compiler route, not the default production route. The current OCaml target wrapper still calls the independent Stage3 emitter, so it does not yet prove that both hosts reuse standalone `reflaxe.ocaml`. | Use this when testing `hxhx` compatibility or native compiler work. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md` and keep upstream Haxe available as the practical fallback. | Product owner `haxe_ocaml-38gsp` depends on Full1 and the standalone target. Hard-cut child `haxe_ocaml-38gsp.1` must first route native `hxhx` through the actual standalone target with no Stage3 semantic repair. |
-| `reflaxe.ocaml` as a native `hxhx` plugin | `[###-------]` about 30% | **Experimental promotion path.** ABI, registry, promotion workflow, plugin-safe output, and a same-candidate three-route workload proof exist; broad supported packaging does not. The existing proof packages a backend provider through Stage3; it does not yet run the standalone `reflaxe.ocaml` semantic core natively. | Reflaxe target authors can use the promotion docs to build and validate current native plugin artifacts, while treating them as loader/ABI evidence rather than the final shared target. | Hard-cut owner `haxe_ocaml-38gsp.1` must first route `hxhx` through standalone `reflaxe.ocaml`; then `haxe_ocaml-38gsp.2` will compile that same target core through itself and compare evaluated/native speed. The broader host-service SDK `haxe_ocaml-bomhr` remains deferred until Full1 and the authentic hard cut. |
-| One native Reflaxe plugin for stock Haxe and `hxhx` | `[#---------]` about 10% | **Planning contract only.** Stock Haxe currently has an eval-host adapter and `hxhx` has its own experimental native loader; they do not yet load one shared payload through one supported ABI. | Use the existing host-specific experimental lanes only. Do not assume their current `.cmxs`/`.cma` artifacts are interchangeable. | M22 implementation is deferred until Full1 and `haxe_ocaml-38gsp.1` prove the authentic shared target. After that, `haxe_ocaml-c4czv` must prove one versioned cross-host ABI, payload behavior, and install/upgrade/rollback path. Thin loader shells remain allowed only for a measured runtime/linker incompatibility and may contain no semantics. |
-| `reflaxe.ocaml` as a builtin/native `hxhx` target | `[##--------]` about 25% | **Architecture proof.** The target-core/adapter design supports a builtin host shape, but the current wrapper calls Stage3 `EmitterStage` rather than standalone `reflaxe.ocaml`. | Use the promotion matrix docs to understand plugin versus builtin packaging. Treat the current lane as bootstrap/diagnostic evidence. | Hard-cut owner `haxe_ocaml-38gsp.1` must first establish one semantic target implementation. M22 owner `haxe_ocaml-bomhr` is deferred until Full1 and that proof, then must add typed service negotiation and real artifact evidence without reintroducing target semantics in host adapters. |
-| `hxhx` as a MIT Haxe replacement | `[###-------]` about 30% | **Not production-ready.** A fresh strict/full, stage0-forbidden replacement bundle is green for its bounded Macro/JavaScript/Neko and plugin scope. Macro/eval also has a same-commit proof that checks the uploaded evidence files before passing. The larger goal remains Haxe `4.3.7` compatibility for the declared Full1 target/generator scope, with credible compiler performance and practical edit-compile-test latency. It is not an all-target claim. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where the supported scope matches your use case. Read `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md` before evaluating it for a project. | M7 run `29321576340` and macro/eval run `29353274632` are current green evidence, not a Full1 release candidate. `haxe.ocaml-f1cl` still owns same-candidate strict suites, the full required target matrix, performance, and release evidence. C++/Cppia and both HashLink forms remain required. The candidate-bound release handoff has correctly produced only a no-go receipt because real Full1 evidence is incomplete. |
-| `hxhx` as a hackable Haxe-in-Haxe compiler | `[####------]` about 40% | **Active design principle.** The package/phase/backend seams are real, while concentrated implementation and test responsibilities still limit routine reviewability. | Use repo docs, focused tests, and beads to make changes through bounded seams. Keep behavior-driven tests ahead of large rewrites. | The temporary bridge inventory/guard (`haxe_ocaml-slobw`) and grouped source/C++ smoke retries (`haxe_ocaml-o2udb`) are complete foundations. Broader extraction remains profile/recurrence-triggered, with no compiler-wide rewrite or speculative neutral IR planned. |
-| Pluggable Haxe customization and Haxe-family variants | `[#---------]` about 15% | **Architecture foundation only.** This is not a supported platform and must remain excluded from baseline evidence. | Use existing macro libraries, Reflaxe targets, and explicit `hxhx` experiments for bounded customization. Keep baseline Haxe compatibility as the default. | Post-Full1 owners `haxe_ocaml-h5jta` and `.1` are deferred until Full1 and the authentic shared-target hard cut. Their accepted architecture and compiler-transform review candidate remain future inputs; planning adds no readiness. |
-| Source/native target compilation beyond OCaml | `[####------]` about 40% | **Target bring-up.** The required matrix is now explicit, but the aggregate is not green. Required output includes C++ plus Cppia and both HashLink forms. | For OCaml output, use `reflaxe.ocaml` with upstream Haxe. Use the source-target lanes only for validation, experiments, and closing gate blockers. | Matrix owners `haxe.ocaml-f1cl.3.1` and `.3.11` require same-SHA per-target evidence. C++ is a mandatory Full1 target; the focused leaf `haxe_ocaml-94hk1` remains P2 until profiling proves the next high-leverage fix. JVM, Flash/SWF, and XML/JSON type descriptions are not part of the first Full1 claim. |
+| `reflaxe.ocaml` with upstream `haxe` | `[#######---]` about 65–70% | **Advanced preview.** This remains the most usable route. The declared example/runtime matrix, deterministic source package, and isolated macOS/Ubuntu native application proofs exist. | Use upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`. Package `build` and `watch` use a fresh Haxe process by default; explicit local `--connect <port>` is an experimental frontend-reuse lane. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`. | Representation/storage/capture (`9bome`) and calls/conversions (`taef5`) are now closed. Product owner `haxe_ocaml-s7jry` still needs control effects (`w32h3`), fail-closed runtime ownership (`0uwin`), complete artifact/native-dependency authority, and fresh release evidence. Exact target replay is still observation work, not a default server feature. |
+| `reflaxe.ocaml` with `hxhx` | `[##--------]` about 20–25% | **Experimental integration.** The current OCaml wrapper still calls the independent Stage3 emitter, so the route does not yet prove that native `hxhx` uses standalone `reflaxe.ocaml`. | Use it for native compiler and host integration experiments. Keep upstream Haxe plus standalone `reflaxe.ocaml` as the practical target baseline. | `haxe_ocaml-38gsp.1` must hard-cut to the real standalone core without Stage3 semantic repair. `38gsp.2` must then prove two native generations with stage0 forbidden. Full1 and product evidence remain separate gates. |
+| `reflaxe.ocaml` as a native `hxhx` plugin | `[###-------]` about 25–30% | **Experimental promotion path.** Loader, registry, manifest, plugin-safe output, and scoped same-candidate route proofs exist. The current artifact still packages a Stage3 backend provider rather than the standalone target core. | Use the promotion workflow as loader/ABI evidence, not as the final native target product. | Complete `38gsp.1`, then `38gsp.2`; prove exact typed OCaml dependencies, lifecycle cleanup, target-core identity, evaluated/native equivalence, and phase-separated speed. |
+| One native Reflaxe target core for stock Haxe and `hxhx` | `[#---------]` about 5–10% | **Reviewed planning contract only.** Stock Haxe has an exact-version eval-plugin seam and `hxhx` has an experimental native loader, but no supported shared semantic ABI/core exists. | Use the current host-specific lanes. Do not assume their `.cmxs`/`.cma` files are interchangeable. | M22 waits for Full1, `38gsp.1`, and `38gsp.2`. It must then prove exact stock profiles, typed capability parity, one semantic core through stock and `hxhx` shells plus builtin, lifecycle/reset safety, packaging/trust, and performance. A byte-identical container is an experiment, not the invariant. |
+| `reflaxe.ocaml` as a builtin/native `hxhx` target | `[##--------]` about 15–20% | **Architecture proof.** The adapter shape exists, but the current builtin wrapper still delegates target semantics to Stage3 `EmitterStage`. | Use the promotion matrix to understand the intended plugin/builtin composition. Treat the current route as bootstrap and diagnostic evidence. | `38gsp.1` must establish the authentic target core. The builtin must then consume the same canonical request/service contract as the plugin; direct calls may optimize transport only. |
+| `hxhx` as a MIT Haxe replacement | `[###-------]` about 25–30% | **Scoped replacement preview, not production-ready.** Stage0-forbidden Macro/JavaScript/Neko/plugin and macro/eval evidence exists for bounded lanes. The declared Full1 product still requires Haxe `4.3.7` suite and target compatibility, performance, and one candidate-bound release proof. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where its documented surface matches your project. Read `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`. | `haxe.ocaml-f1cl.3` and `.3.1` remain active; C++/Cppia and both HashLink forms are required. `haxe_ocaml-u6esu` still owns credible compiler performance evidence, and the aggregate release handoff remains a correct no-go. |
+| `hxhx` as a hackable Haxe-in-Haxe compiler | `[####------]` about 35–40% | **Strong design intent with mixed implementation.** Package, phase, typed-body, request, and backend seams are real, while several very large mixed-purpose files and the Stage3 emitter still make routine changes harder than the north star. | Make changes through the focused package/test seams and preserve behavior-driven upstream-oracle coverage. | Retire duplicate Stage3 target semantics, keep extracting only real ownership boundaries, and continue the mega-file guard. A whole-compiler rewrite or speculative universal IR is not planned. |
+| Pluggable Haxe customization and Haxe-family variants | `[#---------]` about 5–10% | **Architecture foundation only.** This is deliberately not an active supported product while baseline compatibility and one authentic target core are unfinished. | Use existing macro libraries, Reflaxe targets, and explicitly excluded experiments. Keep vanilla Haxe compatibility as the default. | Post-Full1 owners `haxe_ocaml-h5jta` and `.1` remain deferred. The future transform profile must stay separate from backend-target authority and reuse the same identity/packaging substrate. |
+| Declared Full1 source/native target matrix | `[###-------]` about 30–40% | **Uneven target bring-up.** The required matrix is explicit and several lanes work, but the same-candidate aggregate is not green. | Use OCaml through standalone `reflaxe.ocaml`; treat other native/source targets per their individual scope and current evidence. | Matrix owners `haxe.ocaml-f1cl.3.1` and `.3.11` still require authentic per-target evidence. C++/Cppia and both HashLink forms remain blockers. JVM, Flash/SWF, and XML/JSON type descriptions are outside the first Full1 claim. |
 
 ## Start here
 
@@ -122,8 +126,9 @@ Start here:
 
 Use the promotion workflow when you are a Reflaxe target author and want to
 build native plugin or builtin-host artifacts. The commands currently exercise
-the `hxhx` loader. M22 plans a shared plugin ABI and payload for stock Haxe and
-`hxhx`; that future product must not require two target implementations:
+the `hxhx` loader. M22 plans a shared semantic target ABI and core for stock
+Haxe and `hxhx`; that future product must not require two target
+implementations:
 
 - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
@@ -191,11 +196,11 @@ of the public quickstart:
 Current direction: keep target-core logic reusable so promotion is packaging/load choice, not backend rewrite.
 
 The M22 product contract requires stock Haxe and `hxhx` to expose one versioned
-plugin ABI and load one promoted payload. Prefer one identical native binary.
-If OCaml host-runtime or compiler identity prevents that packaging, generated
-host loader shells may differ only as thin ABI adapters around the same payload
-or reproducibly derived native core. Current manifest v1 artifacts predate that
-contract and remain host-specific until the hard cutover is implemented.
+semantic target ABI and run one Haxe-authored target core. Exact host shells may
+differ only in preflight, loading, registration, schema conversion, lifecycle,
+and error translation. A combined native container remains a measured
+feasibility experiment. Current manifest-v1 artifacts predate that contract and
+remain host-specific until the hard cutover is implemented.
 
 For upstream `haxe` + `reflaxe.ocaml` plugin packaging, `-D ocaml_plugin_mode=1` now enables plugin-safe output defaults and can be combined with:
 - `-D ocaml_module_prefix=<Prefix_>`

@@ -1,6 +1,6 @@
 # reflaxe.ocaml Upstream Haxe Native Plugin Integration Decision
 
-Last reviewed: 2026-07-18
+Last reviewed: 2026-07-29
 
 This note records what the current manifest-v1 integration actually supports.
 It also identifies the planned M22 hard cutover; current evidence must not be
@@ -23,15 +23,24 @@ In short:
 
 ## Future M22 product decision
 
-M22 requires stock Haxe and `hxhx` to expose one versioned native plugin ABI
-and load the same promoted Reflaxe payload. The identical native binary is the
-default design and must be attempted on the supported reference toolchain.
+M22 requires stock Haxe and `hxhx` to expose one versioned semantic target
+contract and run the same Haxe-authored semantic target core. It does not
+require one byte-identical native container.
 
-OCaml compiler and runtime identity can constrain dynlink packaging. If an
-experiment proves that one container cannot load in both hosts, M22 may use
-different thin host loader shells around the same payload or reproducibly
-derived native core. That is a packaging fallback, not permission to keep two
-ABIs, two target implementations, or host-specific target semantics.
+OCaml compiler/runtime identity, compilation-unit interface digests, linked
+modules, and loader behavior can constrain Dynlink packaging. M22 therefore
+permits tiny exact-host shells for preflight, loading, registration,
+schema/value conversion, request lifecycle, and error translation. The
+supported reference toolchain still runs a bounded one-container experiment,
+but a successful dual-shell proof is not a degraded product.
+
+This is not permission to keep two semantic ABIs, two target implementations,
+or host-specific target behavior. Both shells must invoke the same canonical
+request/result contract and prove the same target-core source identity,
+diagnostics, generated artifacts, and runtime behavior.
+
+The accepted redesign and its exact-host/provenance rules are recorded in
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 This future contract does not make the capability available today. Until its
 hard cutover and conformance evidence land, the current eval-host adapter below
@@ -189,10 +198,10 @@ Keep improving the supported eval-host adapter path until:
 Do not claim support until M22 proves:
 
 - a real, maintainable stock-Haxe extension seam for backend invocation;
-- the same versioned ABI, payload, and target-core identity in stock Haxe and
-  `hxhx`;
-- identical binary packaging on the reference toolchain, or an exact recorded
-  incompatibility plus thin loader-shell fallback;
+- the same versioned semantic ABI and target-core source identity in stock Haxe
+  and `hxhx`;
+- exact host/toolchain/interface preflight, generated shell identities, and a
+  recorded one-container feasibility experiment;
 - same-fixture diagnostics, emitted artifacts, and runtime behavior;
 - a packaging model that does not depend on undocumented compiler patching.
 

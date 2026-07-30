@@ -14,13 +14,14 @@ Compatibility target:
 - current manifest v1 does **not** provide shared cross-host binary
   compatibility; generated eval adapter manifests must keep
   `crossHostBinaryCompatibility=false`
-- planned M22 hard cutover: one versioned ABI and promoted plugin payload for
-  stock Haxe and `hxhx`, with identical binary packaging attempted first
+- planned M22 hard cutover: one versioned semantic ABI and target core for
+  stock Haxe and `hxhx`, with exact generated host shells and a bounded
+  one-container feasibility experiment
 
 M22 implementation is currently deferred until Full1 and
-`haxe_ocaml-38gsp.1`. The adapter constraints below define the future
-boundary; they do not claim that today's Stage3 builtin path already runs the
-standalone `reflaxe.ocaml` target core.
+`haxe_ocaml-38gsp.1` plus `haxe_ocaml-38gsp.2`. The adapter constraints below
+define the future boundary; they do not claim that today's Stage3 builtin path
+already runs the standalone `reflaxe.ocaml` target core.
 
 Scaffold entrypoint:
 
@@ -142,9 +143,9 @@ This keeps promotion as a packaging/load decision, not a backend rewrite.
 This is a future planning contract. Manifest/schema v1 and the commands above
 remain current truth; no service-negotiation v2 API exists yet.
 
-M22 requires stock Haxe and `hxhx` to implement one versioned native plugin ABI
-and load one promoted Reflaxe payload. It separates three concerns that are easy
-to conflate:
+M22 requires stock Haxe and `hxhx` to implement one versioned semantic target
+ABI and invoke one Haxe-authored target core. It separates three concerns that
+are easy to conflate:
 
 - execution: evaluated or native;
 - service access: host-neutral or capability-integrated;
@@ -152,10 +153,10 @@ to conflate:
 
 The intended presets are evaluated host-neutral development, stock-Haxe native
 plugin execution, `hxhx` native plugin execution, and integrated builtin
-execution through `hxhx`. The two plugin forms use the same payload and target
-core. Host glue, `#if reflaxe_ocaml`, and native externs stay in adapters and
-composition roots. The shared target core does not branch its semantic lowering
-by host.
+execution through `hxhx`. The two plugin forms use the same semantic contract
+and target-core source identity, but may use different exact-host shells. Host
+glue, `#if reflaxe_ocaml`, and native externs stay in adapters and composition
+roots. The shared target core does not branch its semantic lowering by host.
 
 Both plugin hosts implement the same typed/versioned capability negotiation.
 `hxhx` may advertise additional privileged services. Missing required semantic
@@ -163,11 +164,12 @@ facts fail before target execution; optional optimization and tooling services
 use their declared fallback or disablement. A missing stock-Haxe capability
 does not authorize a different target implementation.
 
-The identical plugin binary is the required design target on the supported
-reference toolchain. If a measured OCaml compiler, runtime, linker, or loader
-constraint makes one container impossible, only thin host loader shells may
-differ. They must open the same payload digest or reproducibly derived native
-core, and they may not contain lowering, printer, mutation, or result behavior.
+The supported reference toolchain compares one combined `.cmxs` with a shared
+core plus exact host shells. A single container is an experiment, not the
+semantic product requirement. Host shells may contain preflight, loading,
+registration, value/schema conversion, request lifecycle, and error
+translation. They may not contain lowering, printing, runtime selection,
+mutation, output repair, or other target behavior.
 
 The current upstream eval adapter remains the portable baseline until this hard
 cutover lands. Its `crossHostBinaryCompatibility=false` field describes current
@@ -175,6 +177,9 @@ v1 artifacts only; it must not be interpreted as the future architecture.
 
 Canonical plan:
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
+Accepted exact-host checkpoint:
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 ## Verification checklist
 

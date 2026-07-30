@@ -250,12 +250,13 @@ The shortest accepted route is:
 Typed-cache development does not technically wait for every Full1 target. It
 may proceed once its direct safety gates pass and the active-work cap allows
 it, but it cannot imply Full1 readiness. M22 and general customization
-implementation remain deferred until Full1 and the shared-target hard cut.
+implementation remain deferred until Full1, the shared-target hard cut, and
+the bounded two-generation native self-promotion proof.
 
 The native target proof in step 4 is intentionally narrower than M22. It proves
 that the real standalone target can compile and execute as a native artifact;
 it does not yet promise a shared stock-Haxe/`hxhx` ABI, supported SDK,
-installation lifecycle, or one cross-host payload. Earlier plugin receipts
+installation lifecycle, or exact host profiles. Earlier plugin receipts
 compiled and loaded a backend-provider fixture through the Stage3 route. They
 remain valid loader evidence, but they are not evidence that standalone
 `reflaxe.ocaml` compiled and executed its own semantic core.
@@ -290,7 +291,8 @@ Meaning in plain terms:
 ### M22. Native Reflaxe Compiler SDK
 
 - Status: Architecture retained; implementation deferred and support claim
-  blocked by Full1 plus the authentic shared-target hard cut
+  blocked by Full1, the authentic shared-target hard cut, and two-generation
+  native self-promotion
 - Bead: `haxe_ocaml-bomhr`
 - Contract child: `haxe_ocaml-bomhr.1` (complete)
 
@@ -298,7 +300,10 @@ Meaning in plain terms:
 
 - A target author keeps one ordinary-Haxe target core and can eventually run it
   through evaluated Reflaxe development, native `reflaxe.ocaml`, an `hxhx`
-  plugin, or an `hxhx` builtin.
+  plugin, an exact stock-Haxe native eval shell, or an `hxhx` builtin.
+- One semantic request/result contract and target-core identity are required.
+  A byte-identical `.cmxs` is a measured feasibility experiment; exact
+  generated host shells are allowed and may not contain target semantics.
 - `hxhx` will provide typed, versioned backend facts/services without exposing
   raw mutable compiler internals.
 - M22.1 contract work was allowed to proceed while Full1 closes and is now
@@ -307,11 +312,16 @@ Meaning in plain terms:
 - `haxe_ocaml-38gsp.1` must first prove that native `hxhx` invokes the actual
   standalone target. M22 must not freeze a new program envelope or host-service
   API around the temporary Stage3 semantic path.
+- `haxe_ocaml-38gsp.2` must then prove that target can compile and run itself
+  as a stage0-free native artifact before M22 product implementation.
 - M22 is the first unused historical milestone label. M18 through M21 already
   belong to earlier builtin and Stage2/3/4 work, so those records remain intact.
 
 Canonical plan:
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
+Exact-host checkpoint:
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 ## Fast “where are we now?” commands
 
