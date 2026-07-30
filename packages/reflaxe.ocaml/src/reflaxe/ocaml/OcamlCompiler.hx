@@ -474,8 +474,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (probe == null)
 			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
 		#if macro
-		if (Context.defined("reflaxe_ocaml_target_reuse_test_require_hit") && TargetReuseCatalog.sharedStats().entryCount > 0)
-			throw "reflaxe.ocaml: exact-hit fixture reached miss-only target preparation";
+		if (Context.defined("reflaxe_ocaml_target_reuse_test_require_hit") && probe.requestRevision != null) {
+			final unexpectedLease = TargetReuseCatalog.shared().lookup(OcamlTargetReuseContract.NAMESPACE, probe.requestRevision);
+			if (unexpectedLease != null) {
+				unexpectedLease.close();
+				throw "reflaxe.ocaml: exact-hit fixture reached miss-only target preparation despite an exact catalog entry";
+			}
+		}
 		#end
 		if (!probe.eligible)
 			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
