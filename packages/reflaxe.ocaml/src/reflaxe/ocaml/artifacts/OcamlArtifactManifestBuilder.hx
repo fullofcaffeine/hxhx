@@ -176,10 +176,10 @@ class OcamlArtifactManifestBuilder {
 	/**
 		Builds the verified stable-output view without writing the manifest root.
 
-		Callers use this after every source producer and output filter has run but
-		before adding volatile reuse evidence. A later final `seal()` independently
-		rematerializes every claim, so this observation cannot authorize publication
-		or conceal a file changed between packing and the final transaction check.
+		Callers use this after every source producer and output filter has run. A
+		later final `seal()` independently reads and validates every claim again, so
+		this earlier snapshot cannot authorize publication or conceal a file changed
+		between cache packing and the final transaction check.
 	**/
 	public function snapshotSourceBundle(semanticRuntime:OcamlArtifactAuthority, nativeDependencies:OcamlArtifactAuthority):OcamlSourceBundleSnapshot {
 		final checkedRuntime = OcamlArtifactManifestSchema.validatedAuthority(semanticRuntime, "semantic runtime");

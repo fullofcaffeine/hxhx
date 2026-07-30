@@ -1,6 +1,7 @@
 package reflaxe.ocaml;
 
 #if (macro || reflaxe_runtime)
+import haxe.io.Bytes;
 import haxe.io.Path;
 #if macro
 import haxe.macro.Context;
@@ -547,11 +548,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (lease == null)
 			return false;
 
+		targetReusePayloadBytes = lease.payloadBytes;
+		final payload = copyTargetReusePayloadAndClose(lease);
 		var candidate:Null<OcamlSourceBundleCandidate> = null;
 		final payloadValidationStarted = haxe.Timer.stamp();
 		try {
-			targetReusePayloadBytes = lease.payloadBytes;
-			candidate = OcamlSourceBundleCandidate.decode(lease.copyPayload());
+			candidate = OcamlSourceBundleCandidate.decode(payload);
 			final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(requestRevision, "current target request revision");
 			final normalizedProgramRevision = OcamlArtifactManifestSchema.normalizeRevision(snapshot.programRevision.id, "current program revision");
 			final normalizedConfigurationRevision = OcamlArtifactManifestSchema.normalizeRevision(requireTargetReuseObservation().sourceConfigurationRevision,
@@ -565,12 +567,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
 			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
 			OcamlTargetReuseTestHooks.recordCatalogState("payload-rejected:" + Std.string(error), requestRevision, TargetReuseCatalog.sharedStats());
-			lease.close();
 			catalog.recordMiss("corrupt-payload");
 			return false;
 		}
 		targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
-		lease.close();
 		OcamlTargetReuseTestHooks.failIfExpectedMissReachedHit();
 
 		try {
@@ -591,6 +591,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		return false;
 		#end
+	}
+
+	/**
+		Copies one cached source bundle and always releases its catalog lease.
+
+		A lease prevents reset or eviction while bytes are being copied. The returned
+		`Bytes` value belongs to this request, so decoding and replay no longer need
+		the catalog entry to stay pinned. Closing in both the success and error paths
+		prevents a failed allocation or copy from blocking later cache cleanup.
+	**/
+	static function copyTargetReusePayloadAndClose(lease:reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogLease):Bytes {
+		try {
+			final payload = lease.copyPayload();
+			lease.close();
+			return payload;
+		} catch (error:Dynamic) {
+			lease.close();
+			throw error;
+		}
 	}
 
 	/**
