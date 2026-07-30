@@ -582,6 +582,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				OcamlTargetReuseTestHooks.recordCatalogState("admission", candidate.targetRequestRevision, TargetReuseCatalog.sharedStats());
 			case CompiledMiss | ExactHit | Failed:
 		}
+		OcamlTargetReuseTestHooks.recordCompactedGcState("request-finish", TargetReuseCatalog.sharedStats());
 	}
 
 	function requireTargetReuseObservation():OcamlTargetReuseObservation {

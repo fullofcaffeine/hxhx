@@ -3,6 +3,11 @@ set -euo pipefail
 
 # Proves that the real standalone OCaml target admits one successful miss and
 # then skips its complete miss-only preparation on an exact server request.
+MODE="${1:-semantic}"
+if [[ "$MODE" != "semantic" && "$MODE" != "memory" && "$MODE" != "memory-control" && "$MODE" != "memory-gc" ]]; then
+	echo "usage: $0 [semantic|memory|memory-control|memory-gc]" >&2
+	exit 2
+fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE_TEMPLATE="$ROOT/test/reflaxe_ocaml_target_reuse_exact"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
@@ -11,6 +16,7 @@ WORK_DIR="$(mktemp -d "$ROOT/.reflaxe-ocaml-target-reuse-exact.XXXXXX")"
 PROJECT_DIR="$WORK_DIR/project"
 STATE_DIR="$WORK_DIR/server-state"
 TEST_SENTINEL_DIR="$WORK_DIR/test-sentinels"
+RESOURCE_INPUT="$PROJECT_DIR/reuse-resource.txt"
 OUTPUT_NAME="out_exact_hit_$$"
 SERVER_PORT="${REFLAXE_OCAML_EXACT_HIT_PORT:-$((25000 + ($$ % 10000)))}"
 SERVER_STARTED=0
@@ -31,7 +37,7 @@ trap cleanup EXIT
 compile_server() {
 	(
 		cd "$PROJECT_DIR"
-		"${HAXE_BIN:-haxe}" \
+		local arguments=(
 			--connect "$SERVER_PORT" \
 			build.hxml \
 			-D "ocaml_output=$OUTPUT_NAME" \
@@ -39,41 +45,90 @@ compile_server() {
 			-D reflaxe_output_transaction \
 			-D reflaxe_ocaml_target_reuse \
 			-D reflaxe_ocaml_target_reuse_test_require_hit \
-			-D reflaxe.dont_output_metadata_id \
-			"$@"
+			-D reflaxe.dont_output_metadata_id
+		)
+		if [[ "$MODE" = "memory-gc" ]]; then
+			arguments+=(-D reflaxe_ocaml_target_reuse_test_force_gc)
+		fi
+		arguments+=("$@")
+		"${HAXE_BIN:-haxe}" "${arguments[@]}"
 	)
 }
 
-compile_expected_hit() {
+compile_server_emit_only() {
+	(
+		cd "$PROJECT_DIR"
+		local arguments=(
+			--connect "$SERVER_PORT" \
+			build.hxml \
+			-D "ocaml_output=$OUTPUT_NAME" \
+			-D ocaml_no_build \
+			-D reflaxe_output_transaction \
+			-D reflaxe_ocaml_target_reuse \
+			-D reflaxe_ocaml_target_reuse_test_require_hit \
+			-D reflaxe.dont_output_metadata_id
+		)
+		if [[ "$MODE" = "memory-gc" ]]; then
+			arguments+=(-D reflaxe_ocaml_target_reuse_test_force_gc)
+		fi
+		arguments+=("$@")
+		"${HAXE_BIN:-haxe}" "${arguments[@]}"
+	)
+}
+
+compile_server_memory_control() {
+	(
+		cd "$PROJECT_DIR"
+		local arguments=(
+			--connect "$SERVER_PORT" \
+			build.hxml \
+			-D "ocaml_output=$OUTPUT_NAME" \
+			-D ocaml_no_build \
+			-D reflaxe_output_transaction \
+			-D reflaxe.dont_output_metadata_id
+		)
+		if [[ "$MODE" = "memory-gc" ]]; then
+			arguments+=(-D reflaxe_ocaml_target_reuse_test_force_gc)
+		fi
+		arguments+=("$@")
+		"${HAXE_BIN:-haxe}" "${arguments[@]}"
+	)
+}
+
+compile_with_expectation() {
+	local expectation="$1"
+	local runner="$2"
+	shift 2
+	local marker="$TEST_SENTINEL_DIR/expect-$expectation"
 	mkdir -p "$TEST_SENTINEL_DIR"
-	touch "$TEST_SENTINEL_DIR/expect-hit"
-	if ! compile_server "$@"; then
+	touch "$marker"
+	if ! "$runner" "$@"; then
 		if [[ -f "$TEST_SENTINEL_DIR/catalog-events.tsv" ]]; then
 			sed -n '1,240p' "$TEST_SENTINEL_DIR/catalog-events.tsv" >&2
 		fi
 		return 1
 	fi
-	if [[ ! -f "$TEST_SENTINEL_DIR/expect-hit" ]]; then
-		echo "reflaxe.ocaml expected-hit marker was consumed by miss-only preparation" >&2
+	if [[ ! -f "$marker" ]]; then
+		echo "reflaxe.ocaml expected-$expectation marker was consumed by the wrong target path" >&2
 		exit 1
 	fi
-	rm "$TEST_SENTINEL_DIR/expect-hit"
+	rm "$marker"
+}
+
+compile_expected_hit() {
+	compile_with_expectation hit compile_server "$@"
 }
 
 compile_expected_miss() {
-	mkdir -p "$TEST_SENTINEL_DIR"
-	touch "$TEST_SENTINEL_DIR/expect-miss"
-	if ! compile_server "$@"; then
-		if [[ -f "$TEST_SENTINEL_DIR/catalog-events.tsv" ]]; then
-			sed -n '1,240p' "$TEST_SENTINEL_DIR/catalog-events.tsv" >&2
-		fi
-		return 1
-	fi
-	if [[ ! -f "$TEST_SENTINEL_DIR/expect-miss" ]]; then
-		echo "reflaxe.ocaml expected-miss marker was consumed by an unexpected replay" >&2
-		exit 1
-	fi
-	rm "$TEST_SENTINEL_DIR/expect-miss"
+	compile_with_expectation miss compile_server "$@"
+}
+
+compile_expected_hit_emit_only() {
+	compile_with_expectation hit compile_server_emit_only "$@"
+}
+
+compile_expected_miss_emit_only() {
+	compile_with_expectation miss compile_server_emit_only "$@"
 }
 
 mkdir -p "$STATE_DIR"
@@ -124,6 +179,223 @@ assert_runtime() {
 		exit 1
 	fi
 }
+
+server_rss_kb() {
+	local total=0
+	local rss
+	local pid
+	while IFS= read -r pid; do
+		[[ "$pid" =~ ^[0-9]+$ ]] || continue
+		rss="$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
+		if [[ "$rss" =~ ^[0-9]+$ ]]; then
+			total="$((total + rss))"
+		fi
+	done < <(
+		HXHX_STATE_DIR="$STATE_DIR" \
+			HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
+			HAXE_BIN="${HAXE_BIN:-haxe}" \
+			bash "$SERVER_HELPER" owned-pids
+	)
+	printf '%s\n' "$total"
+}
+
+run_memory_gate() {
+	start_server
+	compile_server_emit_only
+	compile_expected_hit_emit_only
+	local gc_baseline_line=""
+	if [[ "$MODE" = "memory-gc" ]]; then
+		gc_baseline_line="$(tail -n 1 "$TEST_SENTINEL_DIR/gc-events.tsv")"
+	fi
+	local stable_revision
+	stable_revision="$(node "$MATRIX_HELPER" source-bundle-revision "$PROJECT_DIR/$OUTPUT_NAME/ocaml_artifact_manifest.json")"
+	local rss_baseline_kb
+	local rss_after_10_kb=0
+	local rss_after_20_kb=0
+	local rss_peak_kb
+	local current_rss_kb
+	rss_baseline_kb="$(server_rss_kb)"
+	rss_peak_kb="$rss_baseline_kb"
+	for request in {1..30}; do
+		compile_expected_hit_emit_only
+		if [[ "$(node "$MATRIX_HELPER" source-bundle-revision "$PROJECT_DIR/$OUTPUT_NAME/ocaml_artifact_manifest.json")" != "$stable_revision" ]]; then
+			echo "reflaxe.ocaml repeated exact hit $request changed the source-bundle revision" >&2
+			exit 1
+		fi
+		current_rss_kb="$(server_rss_kb)"
+		if (( current_rss_kb > rss_peak_kb )); then
+			rss_peak_kb="$current_rss_kb"
+		fi
+		if (( request == 10 )); then
+			rss_after_10_kb="$current_rss_kb"
+		elif (( request == 20 )); then
+			rss_after_20_kb="$current_rss_kb"
+		fi
+	done
+	local rss_after_30_kb
+	rss_after_30_kb="$(server_rss_kb)"
+	local gc_after_30_line=""
+	if [[ "$MODE" = "memory-gc" ]]; then
+		gc_after_30_line="$(tail -n 1 "$TEST_SENTINEL_DIR/gc-events.tsv")"
+	fi
+	if (( rss_after_30_kb > rss_baseline_kb + 131072 )); then
+		echo "reflaxe.ocaml thirty exact hits grew server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB after10=${rss_after_10_kb}KB after20=${rss_after_20_kb}KB after30=${rss_after_30_kb}KB peak=${rss_peak_kb}KB)" >&2
+		exit 1
+	fi
+	if (( rss_after_30_kb > rss_after_20_kb + 32768 )); then
+		echo "reflaxe.ocaml exact-hit RSS did not approach a plateau in the final ten requests (after20=${rss_after_20_kb}KB after30=${rss_after_30_kb}KB)" >&2
+		exit 1
+	fi
+
+	local current_resource="resource-a"
+	local next_resource
+	for variant in {1..8}; do
+		next_resource="resource-churn-$variant"
+		node "$MATRIX_HELPER" replace "$RESOURCE_INPUT" "$current_resource" "$next_resource"
+		compile_expected_miss_emit_only
+		compile_expected_hit_emit_only
+		current_resource="$next_resource"
+		current_rss_kb="$(server_rss_kb)"
+		if (( current_rss_kb > rss_peak_kb )); then
+			rss_peak_kb="$current_rss_kb"
+		fi
+	done
+	node "$MATRIX_HELPER" replace "$RESOURCE_INPUT" "$current_resource" "resource-a"
+	compile_expected_hit_emit_only
+
+	local catalog_line
+	local catalog_payload_bytes
+	local catalog_overhead_bytes
+	local catalog_budget_bytes
+	catalog_line="$(tail -n 1 "$TEST_SENTINEL_DIR/catalog-events.tsv")"
+	catalog_payload_bytes="$(printf '%s\n' "$catalog_line" | awk -F '\t' '{print $8}')"
+	catalog_overhead_bytes="$(printf '%s\n' "$catalog_line" | awk -F '\t' '{print $9}')"
+	catalog_budget_bytes="$(printf '%s\n' "$catalog_line" | awk -F '\t' '{print $10}')"
+	if (( catalog_payload_bytes + catalog_overhead_bytes > catalog_budget_bytes )); then
+		echo "reflaxe.ocaml multi-entry churn exceeded the catalog hard budget" >&2
+		exit 1
+	fi
+
+	local rss_before_final_10_kb
+	rss_before_final_10_kb="$(server_rss_kb)"
+	local gc_before_final_10_line=""
+	if [[ "$MODE" = "memory-gc" ]]; then
+		gc_before_final_10_line="$(tail -n 1 "$TEST_SENTINEL_DIR/gc-events.tsv")"
+	fi
+	for _ in {1..10}; do
+		compile_expected_hit_emit_only
+	done
+	local rss_final_kb
+	rss_final_kb="$(server_rss_kb)"
+	local gc_final_line=""
+	if [[ "$MODE" = "memory-gc" ]]; then
+		gc_final_line="$(tail -n 1 "$TEST_SENTINEL_DIR/gc-events.tsv")"
+	fi
+	if (( rss_final_kb > rss_before_final_10_kb + 32768 )); then
+		echo "reflaxe.ocaml post-churn exact hits did not approach an RSS plateau" >&2
+		exit 1
+	fi
+	if (( rss_final_kb > rss_baseline_kb + 131072 )); then
+		echo "reflaxe.ocaml exact-hit and churn sequence grew server RSS by more than 128 MiB (baseline=${rss_baseline_kb}KB after30=${rss_after_30_kb}KB beforeFinal10=${rss_before_final_10_kb}KB final=${rss_final_kb}KB catalogPayload=${catalog_payload_bytes}B catalogOverhead=${catalog_overhead_bytes}B)" >&2
+		exit 1
+	fi
+
+	local catalog_event_count
+	local reset_lookup_line
+	catalog_event_count="$(wc -l <"$TEST_SENTINEL_DIR/catalog-events.tsv" | tr -d ' ')"
+	compile_expected_miss_emit_only --macro 'ReuseTargetCatalogControl.reset("exact-memory-fixture")'
+	reset_lookup_line="$(sed -n "$((catalog_event_count + 1))p" "$TEST_SENTINEL_DIR/catalog-events.tsv")"
+	if [[ "$(printf '%s\n' "$reset_lookup_line" | awk -F '\t' '{print $1}')" != "lookup" \
+		|| "$(printf '%s\n' "$reset_lookup_line" | awk -F '\t' '{print $5}')" != "0" \
+		|| "$(printf '%s\n' "$reset_lookup_line" | awk -F '\t' '{print $8}')" != "0" \
+		|| "$(printf '%s\n' "$reset_lookup_line" | awk -F '\t' '{print $12}')" != "0" ]]; then
+		echo "reflaxe.ocaml explicit reset did not clear entries, payload bytes, and leases before lookup: $reset_lookup_line" >&2
+		exit 1
+	fi
+	compile_expected_hit_emit_only
+
+	if [[ "$MODE" = "memory-gc" ]]; then
+		local word_bytes
+		local gc_baseline_heap_words
+		local gc_baseline_live_words
+		local gc_after_30_heap_words
+		local gc_after_30_live_words
+		local gc_before_final_10_live_words
+		local gc_final_heap_words
+		local gc_final_live_words
+		local gc_final_top_heap_words
+		word_bytes="$(( $(getconf LONG_BIT) / 8 ))"
+		gc_baseline_heap_words="$(printf '%s\n' "$gc_baseline_line" | awk -F '\t' '{print $7}')"
+		gc_baseline_live_words="$(printf '%s\n' "$gc_baseline_line" | awk -F '\t' '{print $8}')"
+		gc_after_30_heap_words="$(printf '%s\n' "$gc_after_30_line" | awk -F '\t' '{print $7}')"
+		gc_after_30_live_words="$(printf '%s\n' "$gc_after_30_line" | awk -F '\t' '{print $8}')"
+		gc_before_final_10_live_words="$(printf '%s\n' "$gc_before_final_10_line" | awk -F '\t' '{print $8}')"
+		gc_final_heap_words="$(printf '%s\n' "$gc_final_line" | awk -F '\t' '{print $7}')"
+		gc_final_live_words="$(printf '%s\n' "$gc_final_line" | awk -F '\t' '{print $8}')"
+		gc_final_top_heap_words="$(printf '%s\n' "$gc_final_line" | awk -F '\t' '{print $12}')"
+		if (( (gc_after_30_live_words - gc_baseline_live_words) * word_bytes > 33554432 )); then
+			echo "reflaxe.ocaml thirty exact hits retained more than 32 MiB of compacted live heap" >&2
+			exit 1
+		fi
+		if (( (gc_final_live_words - gc_before_final_10_live_words) * word_bytes > 33554432 )); then
+			echo "reflaxe.ocaml final ten exact hits retained more than 32 MiB of compacted live heap" >&2
+			exit 1
+		fi
+		if (( (gc_final_live_words - gc_baseline_live_words) * word_bytes > catalog_payload_bytes + catalog_overhead_bytes + 33554432 )); then
+			echo "reflaxe.ocaml compacted live heap exceeded catalog bytes plus bounded request overhead" >&2
+			exit 1
+		fi
+		echo "REFLAXE_OCAML_TARGET_REUSE_MEMORY_GC_DIAGNOSTIC:PASS baseline_heap_words=$gc_baseline_heap_words baseline_live_words=$gc_baseline_live_words after30_heap_words=$gc_after_30_heap_words after30_live_words=$gc_after_30_live_words final_heap_words=$gc_final_heap_words final_live_words=$gc_final_live_words top_heap_words=$gc_final_top_heap_words word_bytes=$word_bytes"
+	fi
+
+	if [[ "$MODE" = "memory-gc" ]]; then
+		echo "REFLAXE_OCAML_TARGET_REUSE_MEMORY_COMPACTED_RSS:PASS baseline_kb=$rss_baseline_kb after10_kb=$rss_after_10_kb after20_kb=$rss_after_20_kb after30_kb=$rss_after_30_kb peak_kb=$rss_peak_kb final_kb=$rss_final_kb catalog_payload_bytes=$catalog_payload_bytes catalog_overhead_bytes=$catalog_overhead_bytes catalog_budget_bytes=$catalog_budget_bytes"
+	else
+		echo "REFLAXE_OCAML_TARGET_REUSE_MEMORY:PASS baseline_kb=$rss_baseline_kb after10_kb=$rss_after_10_kb after20_kb=$rss_after_20_kb after30_kb=$rss_after_30_kb peak_kb=$rss_peak_kb final_kb=$rss_final_kb catalog_payload_bytes=$catalog_payload_bytes catalog_overhead_bytes=$catalog_overhead_bytes catalog_budget_bytes=$catalog_budget_bytes"
+	fi
+}
+
+run_memory_control() {
+	start_server
+	compile_server_memory_control
+	local stable_revision
+	stable_revision="$(node "$MATRIX_HELPER" source-bundle-revision "$PROJECT_DIR/$OUTPUT_NAME/ocaml_artifact_manifest.json")"
+	local rss_baseline_kb
+	local rss_after_10_kb=0
+	local rss_after_20_kb=0
+	local rss_peak_kb
+	local current_rss_kb
+	rss_baseline_kb="$(server_rss_kb)"
+	rss_peak_kb="$rss_baseline_kb"
+	for request in {1..30}; do
+		compile_server_memory_control
+		if [[ "$(node "$MATRIX_HELPER" source-bundle-revision "$PROJECT_DIR/$OUTPUT_NAME/ocaml_artifact_manifest.json")" != "$stable_revision" ]]; then
+			echo "reflaxe.ocaml memory control request $request changed the source-bundle revision" >&2
+			exit 1
+		fi
+		current_rss_kb="$(server_rss_kb)"
+		if (( current_rss_kb > rss_peak_kb )); then
+			rss_peak_kb="$current_rss_kb"
+		fi
+		if (( request == 10 )); then
+			rss_after_10_kb="$current_rss_kb"
+		elif (( request == 20 )); then
+			rss_after_20_kb="$current_rss_kb"
+		fi
+	done
+	local rss_final_kb
+	rss_final_kb="$(server_rss_kb)"
+	echo "REFLAXE_OCAML_TARGET_REUSE_MEMORY_CONTROL:PASS baseline_kb=$rss_baseline_kb after10_kb=$rss_after_10_kb after20_kb=$rss_after_20_kb final_kb=$rss_final_kb peak_kb=$rss_peak_kb"
+}
+
+if [[ "$MODE" = "memory" || "$MODE" = "memory-gc" ]]; then
+	run_memory_gate
+	exit 0
+fi
+if [[ "$MODE" = "memory-control" ]]; then
+	run_memory_control
+	exit 0
+fi
 
 start_server
 
@@ -179,7 +451,7 @@ compile_expected_miss -D exact_reuse_config=two
 compile_expected_hit -D exact_reuse_config=two
 compile_expected_miss
 
-node "$MATRIX_HELPER" replace "$PROJECT_DIR/src/ReuseFixtureMacro.hx" '"resource-a"' '"resource-b"'
+node "$MATRIX_HELPER" replace "$RESOURCE_INPUT" "resource-a" "resource-b"
 compile_expected_miss
 resource_b_digest="$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")"
 assert_runtime "exact target replay"
@@ -188,7 +460,7 @@ if [[ "$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")" != "$re
 	echo "reflaxe.ocaml generated-resource exact hit changed the complete output" >&2
 	exit 1
 fi
-node "$MATRIX_HELPER" replace "$PROJECT_DIR/src/ReuseFixtureMacro.hx" '"resource-b"' '"resource-a"'
+node "$MATRIX_HELPER" replace "$RESOURCE_INPUT" "resource-b" "resource-a"
 compile_expected_hit
 if [[ "$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")" != "$first_digest" ]]; then
 	echo "reflaxe.ocaml restored generated resource did not recover the original source result" >&2

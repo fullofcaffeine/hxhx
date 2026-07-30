@@ -7,6 +7,9 @@ import haxe.macro.Context;
 import reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogStats;
 import sys.FileSystem;
 import sys.io.File;
+#if eval
+import eval.vm.Gc;
+#end
 
 /**
 	Test-only failure injection for the exact source-reuse lifecycle.
@@ -60,9 +63,47 @@ class OcamlTargetReuseTestHooks {
 			Std.string(stats.requestSequence),
 			Std.string(stats.entryCount),
 			Std.string(stats.admissions),
-			Std.string(stats.hits)
+			Std.string(stats.hits),
+			Std.string(stats.payloadBytes),
+			Std.string(stats.estimatedOverheadBytes),
+			Std.string(stats.totalBudgetBytes),
+			Std.string(stats.maximumEntryBytes),
+			Std.string(stats.activeLeases)
 		].join("\t") + "\n");
 		output.close();
+	}
+
+	/**
+		Compacts the eval heap and records live versus reserved memory.
+
+		This is deliberately test-only: it diagnoses whether repeated compiler
+		requests retain reachable objects without changing production GC policy.
+	**/
+	public static function recordCompactedGcState(event:String, stats:TargetReuseCatalogStats):Void {
+		if (!Context.defined("reflaxe_ocaml_target_reuse_test_force_gc"))
+			return;
+		#if eval
+		Gc.compact();
+		final gc = Gc.stat();
+		final safeEvent = event.split("\t").join(" ").split("\r").join(" ").split("\n").join(" ");
+		final output = File.append(sentinelPath("gc-events.tsv"), false);
+		output.writeString([
+			safeEvent,
+			Std.string(stats.requestSequence),
+			Std.string(stats.entryCount),
+			Std.string(stats.payloadBytes),
+			Std.string(stats.estimatedOverheadBytes),
+			Std.string(stats.activeLeases),
+			Std.string(gc.heap_words),
+			Std.string(gc.live_words),
+			Std.string(gc.free_words),
+			Std.string(gc.major_collections),
+			Std.string(gc.compactions),
+			Std.string(gc.top_heap_words),
+			Std.string(gc.stack_size)
+		].join("\t") + "\n");
+		output.close();
+		#end
 	}
 
 	/** Corrupts the first admitted payload so the next request must quarantine it. **/
