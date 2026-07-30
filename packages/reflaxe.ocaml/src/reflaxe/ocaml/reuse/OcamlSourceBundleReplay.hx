@@ -11,6 +11,8 @@ import reflaxe.output.OutputManager;
 /** Completed exact replay and its freshly rebuilt target artifact inventory. **/
 typedef OcamlSourceBundleReplayResult = {
 	final artifacts:OcamlArtifactManifestBuilder;
+	final fileReplayMilliseconds:Int;
+	final receiptAndManifestMilliseconds:Int;
 	final replayAndValidationMilliseconds:Int;
 }
 
@@ -33,6 +35,7 @@ class OcamlSourceBundleReplay {
 		if (outputDirectory == null || outputDirectory.length == 0)
 			throw "reflaxe.ocaml: exact source replay requires an active output directory";
 
+		final fileReplayStarted = haxe.Timer.stamp();
 		for (entry in candidate.entries) {
 			final bytes = candidate.copyFile(entry);
 			if (entry.owner == "reflaxe-framework")
@@ -40,6 +43,9 @@ class OcamlSourceBundleReplay {
 			else
 				output.replayTargetOwnedFile(entry.path, bytes);
 		}
+		final fileReplayMilliseconds = elapsedMilliseconds(fileReplayStarted);
+
+		final receiptAndManifestStarted = haxe.Timer.stamp();
 		output.finishFrameworkReplay();
 
 		final artifacts = new OcamlArtifactManifestBuilder(outputDirectory, candidate.programRevision, candidate.configurationRevision, candidate.profile);
@@ -56,6 +62,8 @@ class OcamlSourceBundleReplay {
 		OcamlArtifactManifestSchema.loadAndValidate(outputDirectory, candidate.programRevision, candidate.configurationRevision);
 		return {
 			artifacts: artifacts,
+			fileReplayMilliseconds: fileReplayMilliseconds,
+			receiptAndManifestMilliseconds: elapsedMilliseconds(receiptAndManifestStarted),
 			replayAndValidationMilliseconds: elapsedMilliseconds(started)
 		};
 	}

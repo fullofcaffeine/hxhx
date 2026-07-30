@@ -52,6 +52,81 @@ function makeCapture(label, content = 'same generated source\n') {
   return capture
 }
 
+function makeTargetPhase(label, outcome, sequence, targetLifecycleMilliseconds) {
+  const file = path.join(temp, `${label}.target-phase.json`)
+  const exactHit = outcome === 'exact-hit'
+  write(file, JSON.stringify({
+    schemaVersion: 1,
+    model: 'reflaxe-ocaml-target-reuse-phase',
+    outcome,
+    finalProgram: {
+      revision: `sha256:${'3'.repeat(64)}`,
+      programMembershipRevision: `sha256:${'4'.repeat(64)}`,
+      hostRequestRevision: `sha256:${'5'.repeat(64)}`,
+      compatibilityProgramRevision: `sha256:${'1'.repeat(64)}`,
+      declarationCount: 100
+    },
+    targetRequest: {
+      namespace: 'reflaxe.ocaml:exact-target-source-bundle:v1',
+      revision: `sha256:${'6'.repeat(64)}`,
+      eligible: true,
+      blockers: []
+    },
+    timing: {
+      targetRevisionObservationMilliseconds: 5,
+      finalProgramFingerprintAndKeyMilliseconds: 10,
+      targetLifecycleMilliseconds,
+      missPreparationMilliseconds: exactHit ? 0 : 200000,
+      lookupMilliseconds: 1,
+      payloadValidationMilliseconds: exactHit ? 2 : 0,
+      replayFilesMilliseconds: exactHit ? 5000 : 0,
+      replayReceiptAndManifestMilliseconds: exactHit ? 1000 : 0,
+      outputPublicationMilliseconds: 100
+    },
+    work: {
+      semanticCompilerRan: !exactHit,
+      missPreparationRan: !exactHit,
+      lookupRan: true,
+      replaySucceeded: exactHit,
+      payloadBytes: 1000
+    },
+    macroRealm: {
+      identityRevision: `sha256:${'7'.repeat(64)}`,
+      requestSequence: sequence,
+      survivedPriorRequest: sequence > 1,
+      resetGeneration: 0,
+      resetCause: 'process-start'
+    },
+    catalog: {
+      totalBudgetBytes: 134217728,
+      maximumEntryBytes: 67108864,
+      entryCount: 1,
+      payloadBytes: 1000,
+      estimatedOverheadBytes: 128,
+      activeLeases: 0,
+      hits: exactHit ? 1 : 0,
+      misses: [{ reason: 'not-found', count: 1 }],
+      ineligibleRequests: 0,
+      admissions: 1,
+      rejectedAdmissions: 0,
+      evictions: 0,
+      quarantines: 0
+    },
+    gc: {
+      status: 'observed',
+      heapWords: 10000,
+      liveWords: 5000,
+      freeWords: 5000,
+      topHeapWords: 12000,
+      minorCollections: 10,
+      majorCollections: 2,
+      compactions: 0,
+      stackWords: 100
+    }
+  }))
+  return file
+}
+
 function replaceFlagValue(args, flag, value) {
   const result = args.slice()
   const index = result.indexOf(flag)
@@ -63,12 +138,16 @@ function replaceFlagValue(args, flag, value) {
 try {
   const cold = makeCapture('cold')
   const warm = makeCapture('warm')
+  const coldTargetPhase = makeTargetPhase('cold', 'compiled-miss', 1, 250000)
+  const warmTargetPhase = makeTargetPhase('warm', 'exact-hit', 2, 15000)
   const capacity = path.join(temp, 'capacity.json')
   const report = path.join(temp, 'report.json')
   write(capacity, JSON.stringify({ schema: 'fixture.capacity.v1', status: 'pass' }))
   const common = [
     '--cold-capture', cold,
     '--warm-capture', warm,
+    '--cold-target-phase', coldTargetPhase,
+    '--warm-target-phase', warmTargetPhase,
     '--capacity-report', capacity,
     '--source-commit', 'a'.repeat(40),
     '--source-clean-at-start', 'true',
@@ -86,6 +165,7 @@ try {
     '--warm-dune-ms', '1000',
     '--minimum-absolute-saved-ms', '120000',
     '--maximum-warm-to-cold-ratio', '0.8',
+    '--maximum-target-lifecycle-ratio', '0.2',
     '--rss-baseline-kb', '100',
     '--rss-after-cold-kb', '200',
     '--rss-after-warm-kb', '250',
@@ -101,6 +181,8 @@ try {
   const parsed = JSON.parse(fs.readFileSync(report, 'utf8'))
   assert.strictEqual(parsed.status, 'pass')
   assert.strictEqual(parsed.performance.material_benefit, true)
+  assert.strictEqual(parsed.performance.target_reuse_mechanism_pass, true)
+  assert.strictEqual(parsed.warm.target_phase.outcome, 'exact-hit')
   assert.strictEqual(parsed.cold.capture.generated_tree.revision, parsed.warm.capture.generated_tree.revision)
 
   const mismatchedWarm = makeCapture('mismatch', 'different generated source\n')
@@ -116,8 +198,22 @@ try {
   run(['report', ...slowArgs], 1)
   assert.strictEqual(JSON.parse(fs.readFileSync(slowReport, 'utf8')).performance.material_benefit, false)
 
+  const falseHitPhase = makeTargetPhase('false-hit', 'compiled-miss', 2, 15000)
+  const falseHitReport = path.join(temp, 'false-hit-report.json')
+  let falseHitArgs = replaceFlagValue(common, '--warm-target-phase', falseHitPhase)
+  falseHitArgs = replaceFlagValue(falseHitArgs, '--out', falseHitReport)
+  run(['report', ...falseHitArgs], 1)
+  assert.strictEqual(JSON.parse(fs.readFileSync(falseHitReport, 'utf8')).status, 'fail')
+
+  const slowTargetPhase = makeTargetPhase('slow-target', 'exact-hit', 2, 100000)
+  const slowTargetReport = path.join(temp, 'slow-target-report.json')
+  let slowTargetArgs = replaceFlagValue(common, '--warm-target-phase', slowTargetPhase)
+  slowTargetArgs = replaceFlagValue(slowTargetArgs, '--out', slowTargetReport)
+  run(['report', ...slowTargetArgs], 1)
+  const slowTargetParsed = JSON.parse(fs.readFileSync(slowTargetReport, 'utf8'))
+  assert.strictEqual(slowTargetParsed.performance.target_reuse_mechanism_pass, false)
+
   console.log('COMPILER_SCALE_REFLAXE_SERVER_EVIDENCE_FIXTURE:PASS')
 } finally {
   fs.rmSync(temp, { recursive: true, force: true })
 }
-

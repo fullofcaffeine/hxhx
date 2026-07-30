@@ -16,6 +16,7 @@ WORK_DIR="$(mktemp -d "$ROOT/.reflaxe-ocaml-target-reuse-exact.XXXXXX")"
 PROJECT_DIR="$WORK_DIR/project"
 STATE_DIR="$WORK_DIR/server-state"
 TEST_SENTINEL_DIR="$WORK_DIR/test-sentinels"
+PHASE_REPORT_DIR="$WORK_DIR/phase-reports"
 RESOURCE_INPUT="$PROJECT_DIR/reuse-resource.txt"
 OUTPUT_NAME="out_exact_hit_$$"
 SERVER_PORT="${REFLAXE_OCAML_EXACT_HIT_PORT:-$((25000 + ($$ % 10000)))}"
@@ -131,11 +132,12 @@ compile_expected_miss_emit_only() {
 	compile_with_expectation miss compile_server_emit_only "$@"
 }
 
-mkdir -p "$STATE_DIR"
+mkdir -p "$STATE_DIR" "$PHASE_REPORT_DIR"
 cp -R "$FIXTURE_TEMPLATE" "$PROJECT_DIR"
 
 start_server() {
 	REFLAXE_OCAML_REUSE_TEST_SENTINEL_DIR="$TEST_SENTINEL_DIR" \
+		REFLAXE_OCAML_TARGET_REUSE_PHASE_REPORT_DIR="$PHASE_REPORT_DIR" \
 		HXHX_STATE_DIR="$STATE_DIR" \
 		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
 		HAXE_BIN="${HAXE_BIN:-haxe}" \
@@ -405,6 +407,9 @@ first_revision="$(node "$MATRIX_HELPER" source-bundle-revision "$PROJECT_DIR/$OU
 first_executable="$(current_executable)"
 first_executable_digest="$(shasum -a 256 "$first_executable" | awk '{print $1}')"
 compile_expected_hit
+node "$MATRIX_HELPER" verify-reuse-phase-pair \
+	"$PHASE_REPORT_DIR/request-000001.json" \
+	"$PHASE_REPORT_DIR/request-000002.json"
 second_digest="$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")"
 second_executable="$(current_executable)"
 second_executable_digest="$(shasum -a 256 "$second_executable" | awk '{print $1}')"

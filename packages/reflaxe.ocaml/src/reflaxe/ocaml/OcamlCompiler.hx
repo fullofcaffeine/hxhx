@@ -62,6 +62,7 @@ import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
+import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
@@ -138,6 +139,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var stagedTargetReuseCandidate:Null<OcamlSourceBundleCandidate>;
 	var targetRevisionObservationMilliseconds:Int = 0;
 	var targetMissPreparationMilliseconds:Int = 0;
+	var targetReuseLookupMilliseconds:Int = 0;
+	var targetReusePayloadValidationMilliseconds:Int = 0;
+	var targetReplayFilesMilliseconds:Int = 0;
+	var targetReplayReceiptAndManifestMilliseconds:Int = 0;
+	var targetReuseLookupRan:Bool = false;
+	var targetMissPreparationRan:Bool = false;
+	var targetReplaySucceeded:Bool = false;
+	var targetReusePayloadBytes:Null<Int>;
 	var skippedTargetGenerationWarnings:Int = 0;
 	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
 	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
@@ -444,9 +453,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/**
 		Performs request hygiene and validation before Reflaxe fingerprints the program.
 
-		This boundary deliberately avoids OCaml whole-program preparation. The final
-		plain-value fingerprint and reuse probe must exist before work that a future
-		exact replay hit could skip.
+		This boundary deliberately avoids whole-program OCaml analysis. Reflaxe first
+		reduces the final typed Haxe program and every relevant input to a stable
+		identity. An unchanged request can then find a previously validated generated
+		OCaml tree before starting the expensive work that the cached result replaces.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
 		OcamlSourcePositionMapper.beginRequest();
@@ -460,16 +470,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 		targetReuseObservation = captureTargetReuseObservation();
 		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
 		targetMissPreparationMilliseconds = 0;
+		targetReuseLookupMilliseconds = 0;
+		targetReusePayloadValidationMilliseconds = 0;
+		targetReplayFilesMilliseconds = 0;
+		targetReplayReceiptAndManifestMilliseconds = 0;
+		targetReuseLookupRan = false;
+		targetMissPreparationRan = false;
+		targetReplaySucceeded = false;
+		targetReusePayloadBytes = null;
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
 		return moduleTypes;
 	}
 
 	/**
-		Runs whole-program OCaml preparation only after the exact reuse probe exists.
+		Runs whole-program OCaml preparation only when no exact cached result was used.
 
-		The observation-only implementation still calls this on every request. A later
-		production hit may skip it only after immutable source replay passes its
-		independent authority, transaction, diagnostics, and memory gates.
+		This preparation computes representation, call, storage, and runtime decisions
+		needed to generate OCaml. An exact cache hit skips it; every edited, uncertain,
+		or ineligible request runs it normally.
 	**/
 	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
 		final probe = targetReuseProbe;
@@ -487,6 +505,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		if (!probe.eligible)
 			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
+		targetMissPreparationRan = true;
 		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
 		targetMissPreparationMilliseconds = elapsedMilliseconds(started);
@@ -505,11 +524,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	/**
-		Replays one exact immutable source bundle before OCaml target preparation.
+		Attempts to reuse the complete generated OCaml tree before ordinary generation.
 
-		Invalid bytes or mismatched identity are quarantined and become a normal
-		miss. Output or transaction failures remain request failures rather than
-		being hidden by retrying the semantic compiler.
+		A reusable entry is an immutable copy of every generated source/build file for
+		the exact typed program and configuration. The target validates its identity,
+		replays it into a fresh private output transaction, and rebuilds current
+		ownership manifests. Invalid bytes or mismatched identity are quarantined and
+		become a normal miss. Output or transaction failures remain request failures
+		instead of being hidden by a second compilation attempt.
 	**/
 	public override function tryReplayTargetReuse():Bool {
 		#if eval
@@ -520,12 +542,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final requestRevision:String = probe.requestRevision;
 		final catalog = TargetReuseCatalog.shared();
 		OcamlTargetReuseTestHooks.recordCatalogState("lookup", requestRevision, TargetReuseCatalog.sharedStats());
+		targetReuseLookupRan = true;
+		final lookupStarted = haxe.Timer.stamp();
 		final lease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+		targetReuseLookupMilliseconds = elapsedMilliseconds(lookupStarted);
 		if (lease == null)
 			return false;
 
 		var candidate:Null<OcamlSourceBundleCandidate> = null;
+		final payloadValidationStarted = haxe.Timer.stamp();
 		try {
+			targetReusePayloadBytes = lease.payloadBytes;
 			candidate = OcamlSourceBundleCandidate.decode(lease.copyPayload());
 			final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(requestRevision, "current target request revision");
 			final normalizedProgramRevision = OcamlArtifactManifestSchema.normalizeRevision(snapshot.programRevision.id, "current program revision");
@@ -537,18 +564,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 				|| !candidate.diagnosticsEligible)
 				throw "reflaxe.ocaml: exact source bundle does not match the current request";
 		} catch (error:Dynamic) {
+			targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
 			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
 			OcamlTargetReuseTestHooks.recordCatalogState("payload-rejected:" + Std.string(error), requestRevision, TargetReuseCatalog.sharedStats());
 			lease.close();
 			catalog.recordMiss("corrupt-payload");
 			return false;
 		}
+		targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
 		lease.close();
 		OcamlTargetReuseTestHooks.failIfExpectedMissReachedHit();
 
 		try {
 			final reusable:OcamlSourceBundleCandidate = cast candidate;
 			final replay = OcamlSourceBundleReplay.run(reusable, output);
+			targetReplayFilesMilliseconds = replay.fileReplayMilliseconds;
+			targetReplayReceiptAndManifestMilliseconds = replay.receiptAndManifestMilliseconds;
+			targetReplaySucceeded = true;
 			semanticRuntimeAuthority = reusable.semanticRuntimeAuthority;
 			nativeSourceDeclarationAuthority = reusable.nativeDependenciesAuthority;
 			scheduleReplayBuild(replay.artifacts);
@@ -564,10 +596,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	/**
-		Publishes a staged opaque payload only after the complete request succeeds.
+		Makes a newly generated source tree reusable only after the request succeeds.
 
-		The catalog receives a copied byte buffer and bounded accounting metadata,
-		not the request-local decoded candidate or any compiler-owned object.
+		The process-local cache receives copied bytes and bounded size accounting, not
+		the request's typed Haxe objects, target builders, output writers, or other
+		mutable compiler state.
 	**/
 	public override function finishTargetReuseRequest(outcome:TargetReuseRequestOutcome):Void {
 		final candidate = stagedTargetReuseCandidate;
@@ -582,7 +615,40 @@ class OcamlCompiler extends DirectToStringCompiler {
 				OcamlTargetReuseTestHooks.recordCatalogState("admission", candidate.targetRequestRevision, TargetReuseCatalog.sharedStats());
 			case CompiledMiss | ExactHit | Failed:
 		}
+		writeTargetReusePhaseReport(outcome, candidate);
 		OcamlTargetReuseTestHooks.recordCompactedGcState("request-finish", TargetReuseCatalog.sharedStats());
+	}
+
+	function writeTargetReusePhaseReport(outcome:TargetReuseRequestOutcome, candidate:Null<OcamlSourceBundleCandidate>):Void {
+		final snapshot = finalProgramFingerprint;
+		final probe = targetReuseProbe;
+		final realm = targetReuseCatalogRealm;
+		final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
+		final lifecycleMilliseconds = targetReuseLifecycleMilliseconds;
+		if (snapshot == null
+			|| probe == null
+			|| realm == null
+			|| fingerprintAndKeyMilliseconds == null
+			|| lifecycleMilliseconds == null)
+			return;
+		final payloadBytes = candidate == null ? targetReusePayloadBytes : candidate.payloadBytes;
+		OcamlTargetReusePhaseReportWriter.tryWrite(snapshot, probe, outcome, realm, TargetReuseCatalog.sharedStats(), {
+			targetRevisionObservationMilliseconds: targetRevisionObservationMilliseconds,
+			finalProgramFingerprintAndKeyMilliseconds: fingerprintAndKeyMilliseconds,
+			targetLifecycleMilliseconds: lifecycleMilliseconds,
+			missPreparationMilliseconds: targetMissPreparationMilliseconds,
+			lookupMilliseconds: targetReuseLookupMilliseconds,
+			payloadValidationMilliseconds: targetReusePayloadValidationMilliseconds,
+			replayFilesMilliseconds: targetReplayFilesMilliseconds,
+			replayReceiptAndManifestMilliseconds: targetReplayReceiptAndManifestMilliseconds,
+			outputPublicationMilliseconds: outputPublicationMilliseconds
+		}, {
+			semanticCompilerRan: targetMissPreparationRan,
+			missPreparationRan: targetMissPreparationRan,
+			lookupRan: targetReuseLookupRan,
+			replaySucceeded: targetReplaySucceeded,
+			payloadBytes: payloadBytes
+		});
 	}
 
 	function requireTargetReuseObservation():OcamlTargetReuseObservation {

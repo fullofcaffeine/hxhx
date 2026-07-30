@@ -101,6 +101,54 @@ function normalizeReuseSnapshot(outputDirectory) {
 	fs.unlinkSync(reportPath)
 }
 
+function verifyReusePhasePair(coldPath, warmPath) {
+	const cold = JSON.parse(fs.readFileSync(coldPath, 'utf8'))
+	const warm = JSON.parse(fs.readFileSync(warmPath, 'utf8'))
+	for (const [name, report] of [['cold', cold], ['warm', warm]]) {
+		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 1) {
+			fail(`${name} target-reuse phase report has the wrong model or schema`)
+		}
+		for (const [phase, value] of Object.entries(report.timing ?? {})) {
+			if (!Number.isInteger(value) || value < 0) {
+				fail(`${name} target-reuse phase ${phase} is not a non-negative integer`)
+			}
+		}
+		if (!Number.isInteger(report?.macroRealm?.requestSequence)
+			|| report.macroRealm.requestSequence < 1
+			|| !Number.isInteger(report?.catalog?.payloadBytes)
+			|| report.catalog.payloadBytes < 0
+			|| !Number.isInteger(report?.catalog?.activeLeases)
+			|| report.catalog.activeLeases !== 0) {
+			fail(`${name} target-reuse phase report has invalid realm or catalog accounting`)
+		}
+	}
+	if (cold.outcome !== 'compiled-miss'
+		|| cold?.work?.semanticCompilerRan !== true
+		|| cold.work.missPreparationRan !== true
+		|| cold.work.replaySucceeded !== false) {
+		fail('cold target-reuse phase did not record one ordinary semantic compilation')
+	}
+	if (warm.outcome !== 'exact-hit'
+		|| warm?.work?.semanticCompilerRan !== false
+		|| warm.work.missPreparationRan !== false
+		|| warm.work.lookupRan !== true
+		|| warm.work.replaySucceeded !== true) {
+		fail('warm target-reuse phase did not record one exact replay with no semantic compilation')
+	}
+	if (cold?.targetRequest?.revision !== warm?.targetRequest?.revision
+		|| cold?.finalProgram?.revision !== warm?.finalProgram?.revision
+		|| cold?.macroRealm?.identityRevision !== warm?.macroRealm?.identityRevision
+		|| warm?.macroRealm?.requestSequence !== cold?.macroRealm?.requestSequence + 1
+		|| warm?.macroRealm?.survivedPriorRequest !== true) {
+		fail('cold and warm target-reuse phases do not describe one exact request in one persistent macro realm')
+	}
+	if (!(cold?.work?.payloadBytes > 0)
+		|| warm?.work?.payloadBytes !== cold.work.payloadBytes
+		|| warm?.catalog?.hits < 1) {
+		fail('cold and warm target-reuse phases do not prove admission and a later catalog hit')
+	}
+}
+
 const [command, ...args] = process.argv.slice(2)
 switch (command) {
 	case 'replace':
@@ -126,6 +174,10 @@ switch (command) {
 	case 'normalize-reuse-snapshot':
 		if (args.length !== 1) fail('normalize-reuse-snapshot needs: output directory')
 		normalizeReuseSnapshot(args[0])
+		break
+	case 'verify-reuse-phase-pair':
+		if (args.length !== 2) fail('verify-reuse-phase-pair needs: cold-report warm-report')
+		verifyReusePhasePair(args[0], args[1])
 		break
 	default:
 		fail(`unknown command: ${command || '<missing>'}`)

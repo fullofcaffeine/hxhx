@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-07-22
+Last audited: 2026-07-30
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -102,7 +102,7 @@ performance claim must use measured medians from the relevant runner class.
     "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
     "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
     "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh",
-    "compilerScaleReflaxeServerReportSchema": "hxhx.compiler-scale-reflaxe-server.v1",
+    "compilerScaleReflaxeServerReportSchema": "hxhx.compiler-scale-reflaxe-server.v2",
     "compilerScaleReflaxeServerEvidence": "scripts/ci/compiler-scale-reflaxe-server-evidence.js",
     "compilerScaleReflaxeServerFixture": "scripts/ci/compiler-scale-reflaxe-server-evidence-fixture-test.js",
     "compilerScaleReflaxeServerRunner": "scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh",
@@ -471,6 +471,21 @@ The practical result and timing-provenance limitation are recorded in
 `docs/benchmarks/REFLAXE_COMPILER_SCALE_SERVER_CHECKPOINT_2026_07_29.md`.
 This negative result blocks default enablement and routes the next measurement
 to Reflaxe target generation rather than another identical server run.
+The version-2 evidence contract now distinguishes a real cached target result
+from an ordinary second compilation. Here, **target reuse** means that an
+unchanged typed Haxe program replays the complete OCaml source tree produced by
+an earlier successful request; it does not repeat OCaml whole-program analysis,
+lowering, or printing. Both requests write an external phase receipt that does
+not change generated source. A passing report requires the cold receipt to show
+one ordinary target compilation, the warm receipt to show an exact replay with
+no miss-only preparation, identical request and program identities, and warm
+target work no greater than 20% of cold target work. Generated files,
+manifests, the executable, `--version` behavior, cleanup, and the existing
+two-minute-or-0.80 complete-loop benefit remain independent required evidence.
+The report calls the outer Haxe request time left after subtracting measured
+target work `frontend_framework_transport_and_unattributed_ms`; it is not
+mislabelled as pure frontend time because it may also contain compiler-server
+transport and framework overhead.
 The runner's `--profile-only` mode is the bounded diagnostic route: it records
 one cold request with per-class Reflaxe telemetry and stops before Dune or a
 warm request, so it cannot be mistaken for performance admission evidence.

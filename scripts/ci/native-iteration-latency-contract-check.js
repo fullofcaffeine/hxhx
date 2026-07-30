@@ -190,10 +190,10 @@ function main() {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
     if (policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema
-        !== 'hxhx.compiler-scale-reflaxe-server.v1') {
+        !== 'hxhx.compiler-scale-reflaxe-server.v2') {
       fail(
         'policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema ' +
-        'must be hxhx.compiler-scale-reflaxe-server.v1'
+        'must be hxhx.compiler-scale-reflaxe-server.v2'
       )
     }
     if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v2') {

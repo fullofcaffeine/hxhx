@@ -20,6 +20,7 @@ REPORT_DIR="${HXHX_COMPILER_SCALE_SERVER_REPORT_DIR:-$ROOT/.artifacts/hxhx/compi
 OUTPUT_DIR="$REPORT_DIR/generated/out"
 BUILD_DIR="$REPORT_DIR/dune-build"
 SERVER_STATE_DIR="$REPORT_DIR/server-state"
+TARGET_PHASE_DIR="$REPORT_DIR/target-reuse-phases"
 SERVER_PORT="${HXHX_COMPILER_SCALE_SERVER_PORT:-$((26000 + ($$ % 8000)))}"
 RSS_SAMPLES_FILE="$REPORT_DIR/server-rss-kb.samples"
 SERVER_PROGRESS_FILE="$REPORT_DIR/logs/reflaxe-server-progress.log"
@@ -31,6 +32,7 @@ CAPACITY_POLICY="${HXHX_COMPILER_SCALE_CAPACITY_POLICY:-require}"
 CAPACITY_WAIT_SECS="${HXHX_COMPILER_SCALE_CAPACITY_WAIT_SECS:-1800}"
 MINIMUM_ABSOLUTE_SAVED_MS="${HXHX_COMPILER_SCALE_MINIMUM_SAVED_MS:-120000}"
 MAXIMUM_WARM_TO_COLD_RATIO="${HXHX_COMPILER_SCALE_MAXIMUM_WARM_TO_COLD_RATIO:-0.80}"
+MAXIMUM_TARGET_LIFECYCLE_RATIO="${HXHX_COMPILER_SCALE_MAXIMUM_TARGET_LIFECYCLE_RATIO:-0.20}"
 CEILING_RATIONALE="${HXHX_COMPILER_SCALE_CEILING_RATIONALE:-A 300-second profile completed Haxe typing in about 2 seconds, then spent about 250 seconds preparing Reflaxe macro/JIT execution before ordinary class rendering. Recent exact full source generation was about 2079 seconds, so 3000 seconds covers measured generation plus headroom without an unbounded wait.}"
 
 CAPACITY_LEASE_OWNER_PID="${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-$$}"
@@ -75,11 +77,16 @@ Important environment knobs:
   HXHX_COMPILER_SCALE_MINIMUM_SAVED_MS         Material absolute saving (default 120000)
   HXHX_COMPILER_SCALE_MAXIMUM_WARM_TO_COLD_RATIO
                                                  Material ratio alternative (default 0.80)
+  HXHX_COMPILER_SCALE_MAXIMUM_TARGET_LIFECYCLE_RATIO
+                                                 Required warm target-work ratio (default 0.20)
 
 The final report passes only when cold and warm source, manifest, executable,
-and version behavior match and the warm full loop saves at least two minutes
-or twenty percent. Those are alternatives because a multi-minute absolute
-saving is useful even when a large native link keeps the relative ratio high.
+and version behavior match; the warm request proves it replayed the cached
+OCaml source tree without running the semantic target compiler; warm target
+work is at most twenty percent of cold; and the warm full loop saves at least
+two minutes or twenty percent. The final two full-loop thresholds are
+alternatives because a multi-minute absolute saving is useful even when a
+large native link keeps the relative ratio high.
 USAGE
 }
 
@@ -105,6 +112,7 @@ server_env() {
 		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
 		HAXE_BIN="$HAXE_BIN" \
 		REFLAXE_OCAML_PROGRESS_FILE="$SERVER_PROGRESS_FILE" \
+		REFLAXE_OCAML_TARGET_REUSE_PHASE_REPORT_DIR="$TARGET_PHASE_DIR" \
 		"$@"
 }
 
@@ -238,9 +246,11 @@ run_bounded() {
 run_generation() {
 	local label="$1"
 	local log_file="$REPORT_DIR/logs/$label.haxe.log"
-	local telemetry_define="reflaxe_ocaml_progress"
+	local -a mode_arguments=(-D reflaxe_ocaml_target_reuse)
 	if [[ "$PROFILE_ONLY" = "1" ]]; then
-		telemetry_define="reflaxe_ocaml_telemetry"
+		# Detailed per-class telemetry changes observable diagnostics, so this
+		# profiling-only route intentionally performs a normal full generation.
+		mode_arguments=(-D reflaxe_ocaml_telemetry)
 	fi
 	(
 		cd "$HAXE_PACKAGE"
@@ -250,7 +260,7 @@ run_generation() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
-			-D "$telemetry_define" \
+			"${mode_arguments[@]}" \
 			-D "ocaml_output=$OUTPUT_DIR" \
 			--connect "$SERVER_PORT"
 	)
@@ -319,6 +329,18 @@ positive_integer "$GENERATION_CEILING_SECS" || fail "generation ceiling must be 
 positive_integer "$DUNE_CEILING_SECS" || fail "Dune ceiling must be a positive integer"
 positive_integer "$HEARTBEAT_SECS" || fail "heartbeat must be a positive integer"
 non_negative_integer "$MINIMUM_ABSOLUTE_SAVED_MS" || fail "minimum saved milliseconds must be non-negative"
+node -e '
+const warm = Number(process.argv[1])
+const target = Number(process.argv[2])
+if (!Number.isFinite(warm) || warm <= 0 || warm >= 1) {
+  console.error("compiler-scale Reflaxe server proof: warm/full ratio must be greater than zero and less than one")
+  process.exit(1)
+}
+if (!Number.isFinite(target) || target <= 0 || target > 1) {
+  console.error("compiler-scale Reflaxe server proof: target lifecycle ratio must be greater than zero and at most one")
+  process.exit(1)
+}
+' "$MAXIMUM_WARM_TO_COLD_RATIO" "$MAXIMUM_TARGET_LIFECYCLE_RATIO"
 case "$DUNE_JOBS" in
 	auto) ;;
 	''|*[!0-9]*|0) fail "Dune jobs must be auto or a positive integer" ;;
@@ -333,7 +355,7 @@ HAXE_VERSION="$("$HAXE_BIN" --version | head -n 1 | tr -d '\r')"
 [[ ! -e "$REPORT_DIR" ]] || fail "report directory already exists: $REPORT_DIR"
 tracked_source_clean && SOURCE_CLEAN_AT_START=true
 [[ "$SOURCE_CLEAN_AT_START" = "true" ]] || fail "tracked source must be clean before an evidence run"
-mkdir -p "$REPORT_DIR/logs" "$REPORT_DIR/generated"
+mkdir -p "$REPORT_DIR/logs" "$REPORT_DIR/generated" "$TARGET_PHASE_DIR"
 
 node "$CAPACITY_HELPER" \
 	--policy "$CAPACITY_POLICY" \
@@ -355,6 +377,8 @@ echo "Report: $REPORT_DIR"
 echo "Ceilings: generation=${GENERATION_CEILING_SECS}s dune=${DUNE_CEILING_SECS}s"
 
 COLD_GENERATION_MS="$(run_generation cold-generation)"
+COLD_TARGET_PHASE="$TARGET_PHASE_DIR/request-000001.json"
+[[ -f "$COLD_TARGET_PHASE" ]] || fail "cold request did not publish its external target phase receipt"
 RSS_AFTER_COLD_KB="$(sample_server_rss)"
 
 if [[ "$PROFILE_ONLY" = "1" ]]; then
@@ -392,6 +416,8 @@ COLD_DUNE_MS="$(run_dune cold-dune)"
 capture_state cold
 
 WARM_GENERATION_MS="$(run_generation warm-generation)"
+WARM_TARGET_PHASE="$TARGET_PHASE_DIR/request-000002.json"
+[[ -f "$WARM_TARGET_PHASE" ]] || fail "warm request did not publish its external target phase receipt"
 RSS_AFTER_WARM_KB="$(sample_server_rss)"
 WARM_DUNE_MS="$(run_dune warm-dune)"
 capture_state warm
@@ -409,6 +435,8 @@ tracked_source_clean && SOURCE_CLEAN_AT_END=true
 node "$EVIDENCE_HELPER" report \
 	--cold-capture "$REPORT_DIR/cold.capture.json" \
 	--warm-capture "$REPORT_DIR/warm.capture.json" \
+	--cold-target-phase "$COLD_TARGET_PHASE" \
+	--warm-target-phase "$WARM_TARGET_PHASE" \
 	--capacity-report "$REPORT_DIR/capacity_report.json" \
 	--source-commit "$(git -C "$ROOT" rev-parse HEAD)" \
 	--source-clean-at-start "$SOURCE_CLEAN_AT_START" \
@@ -426,6 +454,7 @@ node "$EVIDENCE_HELPER" report \
 	--warm-dune-ms "$WARM_DUNE_MS" \
 	--minimum-absolute-saved-ms "$MINIMUM_ABSOLUTE_SAVED_MS" \
 	--maximum-warm-to-cold-ratio "$MAXIMUM_WARM_TO_COLD_RATIO" \
+	--maximum-target-lifecycle-ratio "$MAXIMUM_TARGET_LIFECYCLE_RATIO" \
 	--rss-baseline-kb "$RSS_BASELINE_KB" \
 	--rss-after-cold-kb "$RSS_AFTER_COLD_KB" \
 	--rss-after-warm-kb "$RSS_AFTER_WARM_KB" \

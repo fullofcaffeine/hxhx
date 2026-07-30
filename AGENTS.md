@@ -17,6 +17,11 @@ bd export -o .beads/issues.jsonl  # Refresh tracked bead data before committing
 - Use the globally installed `$explain-technical-work` skill whenever writing or substantially
   revising user guides, contributor guides, architecture documents, PR bodies, issue descriptions,
   status reports, or hand-offs.
+- Use `$explain-technical-work` whenever adding or substantially revising code comments or API
+  documentation. Write comments for a capable developer who has not seen this repository: explain
+  the caller-visible behavior, why the boundary exists, and what must remain true before relying on
+  local compiler labels such as "target reuse", "semantic compiler", "sealed", or "source bundle".
+  Define those labels in plain language on first use instead of assuming earlier project context.
 - Write for a capable Haxe developer who is new to this repository. Lead with what the reader can
   do, what previously failed, what now happens, and what remains unfinished. Then introduce the
   exact compiler terms and owning modules needed for deeper work.

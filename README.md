@@ -23,7 +23,9 @@ target core and versioned contract should work in both stock Haxe and `hxhx`.
 That shared core is not available today. The reference toolchain will test one
 combined `.cmxs`, but exact generated host shells are allowed because OCaml
 interface/runtime identity is a packaging concern. The shells may not contain
-target behavior.
+target behavior. The project treats practical edit-compile-test latency as part
+of that product: native execution and compiler-server caching count as progress
+only when measured repeated builds stay equivalent to clean builds.
 
 `hxhx` is not yet a production replacement for upstream Haxe. The first Full1
 promise covers an explicit target/generator scope rather than every upstream

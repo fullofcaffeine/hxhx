@@ -4,9 +4,12 @@
  *
  * The shell runner owns compiler, server, Dune, and cleanup orchestration. This
  * helper owns content hashing and report validation so shell code never has to
- * parse or construct nested JSON. A passing report means that the cold and warm
- * requests published the same complete target program, built the same binary,
- * behaved the same under `--version`, and saved material end-to-end time.
+ * parse or construct nested JSON. "Target reuse" means an unchanged typed Haxe
+ * program replays the complete generated OCaml tree from a validated in-memory
+ * entry instead of repeating OCaml analysis, lowering, and printing. A passing
+ * report proves that this replay really occurred, that cold and warm published
+ * the same complete target program and native behavior, and that it saved
+ * material end-to-end time.
  */
 
 'use strict'
@@ -16,8 +19,10 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const REPORT_SCHEMA = 'hxhx.compiler-scale-reflaxe-server.v1'
+const REPORT_SCHEMA = 'hxhx.compiler-scale-reflaxe-server.v2'
 const CAPTURE_SCHEMA = 'hxhx.compiler-scale-reflaxe-capture.v1'
+const TARGET_PHASE_MODEL = 'reflaxe-ocaml-target-reuse-phase'
+const TARGET_PHASE_SCHEMA_VERSION = 1
 
 function fail(message) {
   throw new Error(message)
@@ -208,6 +213,87 @@ function validateCapture(record, label, errors) {
   }
 }
 
+function validateTargetPhase(record, label, errors) {
+  if (!record
+      || record.model !== TARGET_PHASE_MODEL
+      || record.schemaVersion !== TARGET_PHASE_SCHEMA_VERSION) {
+    errors.push(`${label} has an invalid model or schema`)
+    return
+  }
+  for (const [owner, value] of [
+    ['finalProgram.revision', record.finalProgram?.revision],
+    ['targetRequest.revision', record.targetRequest?.revision],
+    ['macroRealm.identityRevision', record.macroRealm?.identityRevision]
+  ]) {
+    if (typeof value !== 'string' || !value.startsWith('sha256:')) {
+      errors.push(`${label}.${owner} is not a sha256 revision`)
+    }
+  }
+  if (record.targetRequest?.eligible !== true
+      || !Array.isArray(record.targetRequest?.blockers)
+      || record.targetRequest.blockers.length !== 0) {
+    errors.push(`${label}.targetRequest must be eligible and have no blockers`)
+  }
+  for (const key of [
+    'targetRevisionObservationMilliseconds',
+    'finalProgramFingerprintAndKeyMilliseconds',
+    'targetLifecycleMilliseconds',
+    'missPreparationMilliseconds',
+    'lookupMilliseconds',
+    'payloadValidationMilliseconds',
+    'replayFilesMilliseconds',
+    'replayReceiptAndManifestMilliseconds',
+    'outputPublicationMilliseconds'
+  ]) {
+    if (!Number.isInteger(record.timing?.[key]) || record.timing[key] < 0) {
+      errors.push(`${label}.timing.${key} is invalid`)
+    }
+  }
+  for (const key of ['semanticCompilerRan', 'missPreparationRan', 'lookupRan', 'replaySucceeded']) {
+    if (typeof record.work?.[key] !== 'boolean') errors.push(`${label}.work.${key} is invalid`)
+  }
+  if (!Number.isInteger(record.work?.payloadBytes) || record.work.payloadBytes <= 0) {
+    errors.push(`${label}.work.payloadBytes must be a positive integer`)
+  }
+  if (!Number.isInteger(record.macroRealm?.requestSequence)
+      || record.macroRealm.requestSequence < 1
+      || !Number.isInteger(record.macroRealm?.resetGeneration)
+      || record.macroRealm.resetGeneration < 0) {
+    errors.push(`${label}.macroRealm sequence or reset generation is invalid`)
+  }
+  for (const key of [
+    'totalBudgetBytes',
+    'maximumEntryBytes',
+    'entryCount',
+    'payloadBytes',
+    'estimatedOverheadBytes',
+    'activeLeases',
+    'hits',
+    'ineligibleRequests',
+    'admissions',
+    'rejectedAdmissions',
+    'evictions',
+    'quarantines'
+  ]) {
+    if (!Number.isInteger(record.catalog?.[key]) || record.catalog[key] < 0) {
+      errors.push(`${label}.catalog.${key} is invalid`)
+    }
+  }
+  if (record.catalog?.activeLeases !== 0) errors.push(`${label}.catalog.activeLeases must be zero`)
+  if (!Array.isArray(record.catalog?.misses)) errors.push(`${label}.catalog.misses must be an array`)
+  if (record.gc?.status !== 'observed') errors.push(`${label}.gc.status must be observed`)
+  for (const key of ['heapWords', 'liveWords', 'freeWords', 'topHeapWords', 'compactions', 'stackWords']) {
+    if (!Number.isInteger(record.gc?.[key]) || record.gc[key] < 0) {
+      errors.push(`${label}.gc.${key} is invalid`)
+    }
+  }
+  for (const key of ['minorCollections', 'majorCollections']) {
+    if (!Number.isFinite(record.gc?.[key]) || record.gc[key] < 0) {
+      errors.push(`${label}.gc.${key} is invalid`)
+    }
+  }
+}
+
 function validateReport(report) {
   const errors = []
   if (!report || report.schema !== REPORT_SCHEMA) errors.push('schema is invalid')
@@ -219,8 +305,16 @@ function validateReport(report) {
   }
   validateCapture(report.cold?.capture, 'cold.capture', errors)
   validateCapture(report.warm?.capture, 'warm.capture', errors)
+  validateTargetPhase(report.cold?.target_phase, 'cold.target_phase', errors)
+  validateTargetPhase(report.warm?.target_phase, 'warm.target_phase', errors)
   for (const owner of ['cold', 'warm']) {
-    for (const key of ['generation_ms', 'dune_ms', 'full_ms']) {
+    for (const key of [
+      'generation_ms',
+      'target_lifecycle_ms',
+      'frontend_framework_transport_and_unattributed_ms',
+      'dune_ms',
+      'full_ms'
+    ]) {
       if (!Number.isInteger(report[owner]?.timing?.[key]) || report[owner].timing[key] < 0) {
         errors.push(`${owner}.timing.${key} is invalid`)
       }
@@ -228,6 +322,14 @@ function validateReport(report) {
     if (report[owner]?.timing?.full_ms
         !== report[owner]?.timing?.generation_ms + report[owner]?.timing?.dune_ms) {
       errors.push(`${owner}.timing.full_ms does not equal generation_ms + dune_ms`)
+    }
+    if (report[owner]?.timing?.target_lifecycle_ms
+        !== report[owner]?.target_phase?.timing?.targetLifecycleMilliseconds) {
+      errors.push(`${owner}.timing.target_lifecycle_ms does not match its target phase receipt`)
+    }
+    if (report[owner]?.timing?.frontend_framework_transport_and_unattributed_ms
+        !== Math.max(0, report[owner]?.timing?.generation_ms - report[owner]?.timing?.target_lifecycle_ms)) {
+      errors.push(`${owner}.timing frontend/framework/transport residual is incorrect`)
     }
   }
   const coldCapture = report.cold?.capture
@@ -248,6 +350,34 @@ function validateReport(report) {
   if (!sameJson(coldCapture?.version_behavior, warmCapture?.version_behavior)) {
     errors.push('cold/warm version behavior differs')
   }
+  const coldPhase = report.cold?.target_phase
+  const warmPhase = report.warm?.target_phase
+  if (coldPhase?.outcome !== 'compiled-miss'
+      || coldPhase?.work?.semanticCompilerRan !== true
+      || coldPhase?.work?.missPreparationRan !== true
+      || coldPhase?.work?.replaySucceeded !== false) {
+    errors.push('cold target phase must prove one ordinary semantic compilation')
+  }
+  if (warmPhase?.outcome !== 'exact-hit'
+      || warmPhase?.work?.semanticCompilerRan !== false
+      || warmPhase?.work?.missPreparationRan !== false
+      || warmPhase?.work?.lookupRan !== true
+      || warmPhase?.work?.replaySucceeded !== true) {
+    errors.push('warm target phase must prove exact replay without semantic compilation')
+  }
+  if (coldPhase?.targetRequest?.revision !== warmPhase?.targetRequest?.revision
+      || coldPhase?.finalProgram?.revision !== warmPhase?.finalProgram?.revision) {
+    errors.push('cold/warm target request or final-program revision differs')
+  }
+  if (coldPhase?.macroRealm?.identityRevision !== warmPhase?.macroRealm?.identityRevision
+      || warmPhase?.macroRealm?.requestSequence !== coldPhase?.macroRealm?.requestSequence + 1
+      || warmPhase?.macroRealm?.survivedPriorRequest !== true) {
+    errors.push('cold/warm target phases do not share one persistent macro realm')
+  }
+  if (coldPhase?.work?.payloadBytes !== warmPhase?.work?.payloadBytes
+      || warmPhase?.catalog?.hits < 1) {
+    errors.push('cold/warm target phases do not prove admission and reuse of one payload')
+  }
   if (report.performance?.cold_full_ms !== report.cold?.timing?.full_ms
       || report.performance?.warm_full_ms !== report.warm?.timing?.full_ms) {
     errors.push('performance totals do not match phase timings')
@@ -267,11 +397,27 @@ function validateReport(report) {
     : 1
   const material = savedMs >= report.performance?.minimum_absolute_saved_ms
     || ratio <= report.performance?.maximum_warm_to_cold_ratio
+  if (!Number.isFinite(report.performance?.maximum_target_lifecycle_ratio)
+      || report.performance.maximum_target_lifecycle_ratio <= 0
+      || report.performance.maximum_target_lifecycle_ratio > 1) {
+    errors.push('performance.maximum_target_lifecycle_ratio is invalid')
+  }
+  const targetLifecycleRatio = report.cold?.timing?.target_lifecycle_ms > 0
+    ? report.warm.timing.target_lifecycle_ms / report.cold.timing.target_lifecycle_ms
+    : 1
+  const mechanism = targetLifecycleRatio <= report.performance?.maximum_target_lifecycle_ratio
   if (report.performance?.saved_ms !== savedMs) errors.push('performance.saved_ms is incorrect')
   if (report.performance?.material_benefit !== material) {
     errors.push('performance.material_benefit is incorrect')
   }
   if (!material) errors.push('warm full loop did not demonstrate a material benefit')
+  if (report.performance?.target_lifecycle_ratio !== Number(targetLifecycleRatio.toFixed(6))) {
+    errors.push('performance.target_lifecycle_ratio is incorrect')
+  }
+  if (report.performance?.target_reuse_mechanism_pass !== mechanism) {
+    errors.push('performance.target_reuse_mechanism_pass is incorrect')
+  }
+  if (!mechanism) errors.push('warm target lifecycle did not demonstrate the required exact-reuse reduction')
   for (const key of ['baseline_kb', 'after_cold_kb', 'after_warm_kb', 'peak_kb', 'final_kb']) {
     if (!Number.isInteger(report.server_memory?.[key]) || report.server_memory[key] < 0) {
       errors.push(`server_memory.${key} is invalid`)
@@ -297,6 +443,8 @@ function validateReport(report) {
 function report(options) {
   const coldCapture = readJson(path.resolve(required(options, 'cold_capture')), 'cold capture')
   const warmCapture = readJson(path.resolve(required(options, 'warm_capture')), 'warm capture')
+  const coldTargetPhase = readJson(path.resolve(required(options, 'cold_target_phase')), 'cold target phase')
+  const warmTargetPhase = readJson(path.resolve(required(options, 'warm_target_phase')), 'warm target phase')
   const capacity = readJson(path.resolve(required(options, 'capacity_report')), 'capacity report')
   const coldGenerationMs = integer(options, 'cold_generation_ms')
   const coldDuneMs = integer(options, 'cold_dune_ms')
@@ -309,11 +457,21 @@ function report(options) {
       || maximumWarmToColdRatio >= 1) {
     fail('--maximum-warm-to-cold-ratio must be greater than zero and less than one')
   }
+  const maximumTargetLifecycleRatio = Number(required(options, 'maximum_target_lifecycle_ratio'))
+  if (!Number.isFinite(maximumTargetLifecycleRatio)
+      || maximumTargetLifecycleRatio <= 0
+      || maximumTargetLifecycleRatio > 1) {
+    fail('--maximum-target-lifecycle-ratio must be greater than zero and at most one')
+  }
   const coldFullMs = coldGenerationMs + coldDuneMs
   const warmFullMs = warmGenerationMs + warmDuneMs
+  const coldTargetLifecycleMs = coldTargetPhase?.timing?.targetLifecycleMilliseconds
+  const warmTargetLifecycleMs = warmTargetPhase?.timing?.targetLifecycleMilliseconds
   const savedMs = coldFullMs - warmFullMs
   const materialBenefit = savedMs >= minimumAbsoluteSavedMs
     || (coldFullMs > 0 && warmFullMs / coldFullMs <= maximumWarmToColdRatio)
+  const targetLifecycleRatio = coldTargetLifecycleMs > 0 ? warmTargetLifecycleMs / coldTargetLifecycleMs : 1
+  const targetReuseMechanismPass = targetLifecycleRatio <= maximumTargetLifecycleRatio
   const result = {
     schema: REPORT_SCHEMA,
     evidence_level: 'checkpoint',
@@ -343,18 +501,24 @@ function report(options) {
     cold: {
       timing: {
         generation_ms: coldGenerationMs,
+        target_lifecycle_ms: coldTargetLifecycleMs,
+        frontend_framework_transport_and_unattributed_ms: Math.max(0, coldGenerationMs - coldTargetLifecycleMs),
         dune_ms: coldDuneMs,
         full_ms: coldFullMs
       },
-      capture: coldCapture
+      capture: coldCapture,
+      target_phase: coldTargetPhase
     },
     warm: {
       timing: {
         generation_ms: warmGenerationMs,
+        target_lifecycle_ms: warmTargetLifecycleMs,
+        frontend_framework_transport_and_unattributed_ms: Math.max(0, warmGenerationMs - warmTargetLifecycleMs),
         dune_ms: warmDuneMs,
         full_ms: warmFullMs
       },
-      capture: warmCapture
+      capture: warmCapture,
+      target_phase: warmTargetPhase
     },
     performance: {
       cold_full_ms: coldFullMs,
@@ -363,7 +527,10 @@ function report(options) {
       speedup: warmFullMs > 0 ? Number((coldFullMs / warmFullMs).toFixed(3)) : null,
       minimum_absolute_saved_ms: minimumAbsoluteSavedMs,
       maximum_warm_to_cold_ratio: maximumWarmToColdRatio,
-      material_benefit: materialBenefit
+      material_benefit: materialBenefit,
+      target_lifecycle_ratio: Number(targetLifecycleRatio.toFixed(6)),
+      maximum_target_lifecycle_ratio: maximumTargetLifecycleRatio,
+      target_reuse_mechanism_pass: targetReuseMechanismPass
     },
     server_memory: {
       baseline_kb: integer(options, 'rss_baseline_kb'),
