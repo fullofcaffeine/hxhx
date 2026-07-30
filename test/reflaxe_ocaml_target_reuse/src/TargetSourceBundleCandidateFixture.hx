@@ -68,6 +68,7 @@ class TargetSourceBundleCandidateFixture {
 		assertTrue(candidate.copyFile(candidate.entries[0]).toString() == first.toString()
 			&& candidate.copyFile(candidate.entries[1]).toString() == second.toString(),
 			"decoded candidate should reproduce every verified file");
+		expectFailure(() -> OcamlSourceBundleCandidate.pack(OUTPUT_DIRECTORY, requestRevision, snapshot, true, candidate.payloadBytes - 1), "entry cap");
 
 		// The packed value must remain independent of later source-directory changes.
 		File.saveContent(Path.join([OUTPUT_DIRECTORY, "A.ml"]), "changed after packing\n");

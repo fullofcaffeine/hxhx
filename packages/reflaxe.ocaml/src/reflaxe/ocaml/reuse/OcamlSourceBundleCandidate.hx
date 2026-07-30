@@ -8,6 +8,7 @@ import haxe.io.BytesBuffer;
 import haxe.io.BytesInput;
 import haxe.io.BytesOutput;
 import haxe.io.Path;
+import reflaxe.lifecycle.TargetReuseCatalog;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactClaim;
@@ -89,10 +90,12 @@ class OcamlSourceBundleCandidate {
 		bytes that a future catalog would retain, not an easier request-local object
 		graph used only while building the payload.
 	**/
-	public static function pack(outputDirectory:String, targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot,
-			diagnosticsEligible:Bool):OcamlSourceBundleCandidate {
+	public static function pack(outputDirectory:String, targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot, diagnosticsEligible:Bool,
+			maximumPayloadBytes:Int = TargetReuseCatalog.DEFAULT_MAXIMUM_ENTRY_BYTES):OcamlSourceBundleCandidate {
 		if (!snapshot.completeForSourceBundle || snapshot.blockers.length > 0)
 			throw "OCaml source-bundle candidate requires complete source authority.";
+		if (maximumPayloadBytes <= 0)
+			throw "OCaml source-bundle candidate payload cap must be positive.";
 		final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(targetRequestRevision, "target request revision");
 		final content = new BytesBuffer();
 		final indexEntries = new Array<Dynamic>();
@@ -121,6 +124,9 @@ class OcamlSourceBundleCandidate {
 			entries: indexEntries
 		};
 		final encodedIndex = Bytes.ofString(Json.stringify(indexValue));
+		final payloadLength = MAGIC.length + 4 + encodedIndex.length + offset;
+		if (payloadLength > maximumPayloadBytes)
+			throw 'OCaml source-bundle candidate exceeds the $maximumPayloadBytes-byte entry cap.';
 		final output = new BytesOutput();
 		output.bigEndian = true;
 		output.writeString(MAGIC);

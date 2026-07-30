@@ -115,7 +115,11 @@ class OcamlTargetReuseReportWriter {
 				artifactManifestEqual: shadow.artifactManifestEqual
 			},
 			memory: {
-				status: "not-observed",
+				status: "exact-payload-accounting",
+				candidatePayloadBytes: candidate.payloadBytes,
+				candidateIndexBytes: candidate.indexBytes,
+				catalogPayloadBytes: catalog.payloadBytes,
+				catalogEstimatedOverheadBytes: catalog.estimatedOverheadBytes,
 				evaluatorRssBytes: null,
 				gcHeapBytes: null
 			}

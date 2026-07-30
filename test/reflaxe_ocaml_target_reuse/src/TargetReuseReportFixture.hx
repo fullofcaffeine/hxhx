@@ -63,7 +63,14 @@ class TargetReuseReportFixture {
 			&& report.shadowReplay.artifactManifestEqual == true
 			&& report.timing.replayAndValidationMilliseconds >= 0,
 			"report should prove private stable-source, receipt, and manifest equality");
-		assertTrue(report.memory.status == "not-observed", "unfinished memory evidence must remain explicit instead of reporting a false zero");
+		assertTrue(report.memory.status == "exact-payload-accounting"
+			&& report.memory.candidatePayloadBytes == report.sourceBundleCandidate.payloadBytes
+			&& report.memory.candidateIndexBytes == report.sourceBundleCandidate.indexBytes
+			&& report.memory.catalogPayloadBytes == 0
+			&& report.memory.catalogEstimatedOverheadBytes == 0
+			&& report.memory.evaluatorRssBytes == null
+			&& report.memory.gcHeapBytes == null,
+			"report should expose exact owned bytes while leaving unavailable process metrics explicitly null");
 
 		final serialized = File.getContent(reportPath);
 		assertTrue(!serialized.contains(Path.normalize(Sys.getCwd())), "report must not leak the current machine path");
