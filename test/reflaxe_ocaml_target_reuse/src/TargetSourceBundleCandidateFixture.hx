@@ -7,6 +7,7 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlSourceBundleSnapshot;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate.OcamlSourceBundlePackResult;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import sys.FileSystem;
 import sys.io.File;
@@ -70,6 +71,13 @@ class TargetSourceBundleCandidateFixture {
 		assertTrue(candidate.copyFile(candidate.entries[0]).toString() == first.toString()
 			&& candidate.copyFile(candidate.entries[1]).toString() == second.toString(),
 			"decoded candidate should reproduce every verified file");
+		switch (OcamlSourceBundleCandidate.tryPack(OUTPUT_DIRECTORY, requestRevision, snapshot, true, candidate.payloadBytes - 1)) {
+			case EntryBudgetExceeded(payloadBytes, maximumPayloadBytes):
+				assertTrue(payloadBytes == candidate.payloadBytes && maximumPayloadBytes == candidate.payloadBytes - 1,
+					"bounded packing should report the rejected size without allocating a payload");
+			case Packed(_):
+				throw "bounded packing unexpectedly created an oversized payload";
+		}
 		expectFailure(() -> OcamlSourceBundleCandidate.pack(OUTPUT_DIRECTORY, requestRevision, snapshot, true, candidate.payloadBytes - 1), "entry cap");
 
 		// The packed value must remain independent of later source-directory changes.

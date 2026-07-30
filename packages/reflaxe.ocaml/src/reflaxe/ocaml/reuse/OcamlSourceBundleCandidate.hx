@@ -34,6 +34,17 @@ typedef OcamlSourceBundleIndexEntry = {
 	final includeInSourceBundle:Bool;
 }
 
+/** Result of packing within the catalog's single-entry memory budget. **/
+enum OcamlSourceBundlePackResult {
+	Packed(candidate:OcamlSourceBundleCandidate);
+	EntryBudgetExceeded(payloadBytes:Int, maximumPayloadBytes:Int);
+}
+
+private typedef OcamlSourceBundleEncodedIndex = {
+	final bytes:Bytes;
+	final packedBytes:Int;
+}
+
 /**
 	An observation-only, immutable encoding of one complete generated source tree.
 
@@ -93,48 +104,49 @@ class OcamlSourceBundleCandidate {
 	**/
 	public static function pack(outputDirectory:String, targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot, diagnosticsEligible:Bool,
 			maximumPayloadBytes:Int = TargetReuseCatalog.DEFAULT_MAXIMUM_ENTRY_BYTES):OcamlSourceBundleCandidate {
+		return switch (tryPack(outputDirectory, targetRequestRevision, snapshot, diagnosticsEligible, maximumPayloadBytes)) {
+			case Packed(candidate):
+				candidate;
+			case EntryBudgetExceeded(_, limit):
+				throw 'OCaml source-bundle candidate exceeds the $limit-byte entry cap.';
+		}
+	}
+
+	/**
+		Packs only when the complete payload fits the declared single-entry cap.
+
+		The canonical index is measured before generated file bytes are copied.
+		An oversized program therefore remains a valid compilation and can decline
+		cache admission without temporarily allocating the oversized payload.
+	**/
+	public static function tryPack(outputDirectory:String, targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot, diagnosticsEligible:Bool,
+			maximumPayloadBytes:Int = TargetReuseCatalog.DEFAULT_MAXIMUM_ENTRY_BYTES):OcamlSourceBundlePackResult {
 		if (!snapshot.completeForSourceBundle || snapshot.blockers.length > 0)
 			throw "OCaml source-bundle candidate requires complete source authority.";
 		if (maximumPayloadBytes <= 0)
 			throw "OCaml source-bundle candidate payload cap must be positive.";
 		final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(targetRequestRevision, "target request revision");
+		final encodedIndex = encodeIndex(normalizedRequestRevision, snapshot, diagnosticsEligible);
+		final payloadLength = MAGIC.length + 4 + encodedIndex.bytes.length + encodedIndex.packedBytes;
+		if (payloadLength > maximumPayloadBytes)
+			return EntryBudgetExceeded(payloadLength, maximumPayloadBytes);
+
 		final content = new BytesBuffer();
-		final indexEntries = new Array<Dynamic>();
-		var offset = 0;
 		for (entry in snapshot.entries) {
 			final path = OcamlArtifactManifestSchema.normalizeRelativePath(entry.path);
 			final bytes = File.getBytes(Path.join([outputDirectory, path]));
 			final digest = "sha256:" + Sha256.make(bytes).toHex();
 			if (bytes.length != entry.bytes || digest != entry.sha256)
 				throw 'OCaml source-bundle file "$path" changed after authority observation.';
-			indexEntries.push(indexEntryValue(entry, offset));
 			content.add(bytes);
-			offset += bytes.length;
 		}
-		final indexValue = {
-			schemaVersion: SCHEMA_VERSION,
-			model: MODEL,
-			targetRequestRevision: normalizedRequestRevision,
-			programRevision: snapshot.programRevision,
-			configurationRevision: snapshot.configurationRevision,
-			profile: snapshot.profile,
-			sourceBundleRevision: snapshot.sourceBundleRevision,
-			diagnosticsEligible: diagnosticsEligible,
-			semanticRuntimeAuthority: snapshot.authorities.semanticRuntime,
-			nativeDependenciesAuthority: snapshot.authorities.nativeDependencies,
-			entries: indexEntries
-		};
-		final encodedIndex = Bytes.ofString(Json.stringify(indexValue));
-		final payloadLength = MAGIC.length + 4 + encodedIndex.length + offset;
-		if (payloadLength > maximumPayloadBytes)
-			throw 'OCaml source-bundle candidate exceeds the $maximumPayloadBytes-byte entry cap.';
 		final output = new BytesOutput();
 		output.bigEndian = true;
 		output.writeString(MAGIC);
-		output.writeInt32(encodedIndex.length);
-		output.write(encodedIndex);
+		output.writeInt32(encodedIndex.bytes.length);
+		output.write(encodedIndex.bytes);
 		output.write(content.getBytes());
-		return decode(output.getBytes());
+		return Packed(decode(output.getBytes()));
 	}
 
 	/** Decodes and fully validates one opaque candidate payload. **/
@@ -210,6 +222,31 @@ class OcamlSourceBundleCandidate {
 	/** Returns a caller-owned copy of one verified packed source file. **/
 	public function copyFile(entry:OcamlSourceBundleIndexEntry):Bytes
 		return payload.sub(dataOffset + entry.offset, entry.bytes);
+
+	static function encodeIndex(targetRequestRevision:String, snapshot:OcamlSourceBundleSnapshot, diagnosticsEligible:Bool):OcamlSourceBundleEncodedIndex {
+		final indexEntries = new Array<Dynamic>();
+		var offset = 0;
+		for (entry in snapshot.entries) {
+			indexEntries.push(indexEntryValue(entry, offset));
+			offset += entry.bytes;
+		}
+		return {
+			bytes: Bytes.ofString(Json.stringify({
+				schemaVersion: SCHEMA_VERSION,
+				model: MODEL,
+				targetRequestRevision: targetRequestRevision,
+				programRevision: snapshot.programRevision,
+				configurationRevision: snapshot.configurationRevision,
+				profile: snapshot.profile,
+				sourceBundleRevision: snapshot.sourceBundleRevision,
+				diagnosticsEligible: diagnosticsEligible,
+				semanticRuntimeAuthority: snapshot.authorities.semanticRuntime,
+				nativeDependenciesAuthority: snapshot.authorities.nativeDependencies,
+				entries: indexEntries
+			})),
+			packedBytes: offset
+		};
+	}
 
 	static function indexEntryValue(entry:OcamlArtifactEntry, offset:Int):Dynamic {
 		return {

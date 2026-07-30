@@ -65,6 +65,7 @@ import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate.OcamlSourceBundlePackResult;
 import reflaxe.ocaml.reuse.OcamlSourceBundleReplay;
 import reflaxe.ocaml.reuse.OcamlSourceBundleReplay.OcamlSourceBundleReplayCorruption;
 import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay;
@@ -565,9 +566,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		stagedTargetReuseCandidate = null;
 		switch (outcome) {
 			case CompiledMiss if (candidate != null):
-				TargetReuseCatalog.shared()
+				final admission = TargetReuseCatalog.shared()
 					.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, OcamlTargetReuseTestHooks.admissionPayload(candidate),
 						OcamlSourceBundleCandidate.ESTIMATED_CATALOG_OVERHEAD_BYTES);
+				if (admission.reason == "same-key-different-payload")
+					throw "reflaxe.ocaml: one exact target request produced different source-bundle bytes; the reuse namespace was quarantined";
 			case CompiledMiss | ExactHit | Failed:
 		}
 	}
@@ -3594,23 +3597,30 @@ class OcamlCompiler extends DirectToStringCompiler {
 				throw "reflaxe.ocaml: target source packing requires complete source authority";
 			final sourceSnapshot = artifacts.snapshotSourceBundle(runtimeAuthority, nativeAuthority);
 			final diagnosticsEligible = probe.eligible && skippedTargetGenerationWarnings == 0;
-			final candidate = OcamlSourceBundleCandidate.pack(outDir, probe.requestRevision, sourceSnapshot, diagnosticsEligible);
-			if (probe.eligible) {
+			var candidate:Null<OcamlSourceBundleCandidate> = null;
+			var rejectedPayloadBytes:Null<Int> = null;
+			switch (OcamlSourceBundleCandidate.tryPack(outDir, probe.requestRevision, sourceSnapshot, diagnosticsEligible)) {
+				case Packed(packed):
+					candidate = packed;
+				case EntryBudgetExceeded(payloadBytes, _):
+					rejectedPayloadBytes = payloadBytes;
+					TargetReuseCatalog.shared().recordMiss("entry-budget-exceeded");
+			}
+			if (probe.eligible && candidate != null)
 				if (diagnosticsEligible)
 					stagedTargetReuseCandidate = candidate;
 				else
 					TargetReuseCatalog.shared().recordMiss("target-generation-diagnostics");
-			}
 			OcamlTargetReuseTestHooks.failAfterStage();
 			if (reportTargetReuse) {
 				final realm = targetReuseCatalogRealm;
 				final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
 				if (realm == null || fingerprintAndKeyMilliseconds == null)
 					throw "reflaxe.ocaml: target reuse report was requested without complete lifecycle observations";
-				final shadow = OcamlSourceBundleShadowReplay.run(candidate, outDir);
+				final shadow = candidate == null ? null : OcamlSourceBundleShadowReplay.run(candidate, outDir);
 				OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
 					targetRevisionObservationMilliseconds, fingerprintAndKeyMilliseconds, targetMissPreparationMilliseconds, realm,
-					TargetReuseCatalog.sharedStats(), candidate, shadow, artifacts);
+					TargetReuseCatalog.sharedStats(), candidate, shadow, rejectedPayloadBytes, artifacts);
 			}
 		}
 		#end

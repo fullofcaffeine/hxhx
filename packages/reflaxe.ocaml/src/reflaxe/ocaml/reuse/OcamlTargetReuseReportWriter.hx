@@ -33,14 +33,47 @@ class OcamlTargetReuseReportWriter {
 	/** Writes one request-scoped report and registers its artifact ownership. **/
 	public static function write(outputDirectory:String, snapshot:FinalProgramFingerprintSnapshot, probe:TargetReuseProbe,
 			components:Array<TargetReuseRevisionComponent>, targetRevisionObservationMilliseconds:Int, fingerprintAndKeyMilliseconds:Int,
-			missPreparationMilliseconds:Int, realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, candidate:OcamlSourceBundleCandidate,
-			shadow:OcamlSourceBundleShadowReplayResult, artifacts:OcamlArtifactManifestBuilder):Void {
+			missPreparationMilliseconds:Int, realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats,
+			candidate:Null<OcamlSourceBundleCandidate>, shadow:Null<OcamlSourceBundleShadowReplayResult>, rejectedPayloadBytes:Null<Int>,
+			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sortedComponents = components.copy();
 		sortedComponents.sort((left, right) -> Reflect.compare(left.name, right.name));
 		final sourceAuthorityBlockers = snapshot.sourceAuthorityBlockers();
 		sourceAuthorityBlockers.sort(Reflect.compare);
 		final blockers = probe.blockers();
 		blockers.sort(Reflect.compare);
+		final sourceBundleCandidate:Dynamic = candidate == null ? {
+			status: "entry-budget-exceeded",
+			entryCount: null,
+			packedBytes: null,
+			indexBytes: null,
+			payloadBytes: rejectedPayloadBytes,
+			maximumPayloadBytes: catalog.maximumEntryBytes,
+			sourceBundleRevision: null,
+			diagnosticsEligible: false
+		} : {
+			status: "packed-observation",
+			entryCount: candidate.entries.length,
+			packedBytes: candidate.packedBytes,
+			indexBytes: candidate.indexBytes,
+			payloadBytes: candidate.payloadBytes,
+			maximumPayloadBytes: catalog.maximumEntryBytes,
+			sourceBundleRevision: reportHash(candidate.sourceBundleRevision, "source-bundle revision"),
+			diagnosticsEligible: candidate.diagnosticsEligible
+			};
+		final shadowReplay:Dynamic = shadow == null ? {
+			status: "not-run-entry-budget-exceeded",
+			equal: false,
+			mismatchReason: "entry-budget-exceeded",
+			receiptSemanticsEqual: false,
+			artifactManifestEqual: false
+		} : {
+			status: shadow.status,
+			equal: shadow.equal,
+			mismatchReason: shadow.mismatchReason,
+			receiptSemanticsEqual: shadow.receiptSemanticsEqual,
+			artifactManifestEqual: shadow.artifactManifestEqual
+			};
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: MODEL,
@@ -72,7 +105,7 @@ class OcamlTargetReuseReportWriter {
 				targetRevisionObservationMilliseconds: nonNegative(targetRevisionObservationMilliseconds, "target revision observation"),
 				missPreparationMilliseconds: nonNegative(missPreparationMilliseconds, "miss preparation"),
 				finalProgramFingerprintAndKeyMilliseconds: nonNegative(fingerprintAndKeyMilliseconds, "final-program fingerprint and key"),
-				replayAndValidationMilliseconds: nonNegative(shadow.replayAndValidationMilliseconds, "replay and validation")
+				replayAndValidationMilliseconds: shadow == null ? null : nonNegative(shadow.replayAndValidationMilliseconds, "replay and validation")
 			},
 			macroRealm: {
 				status: "observed",
@@ -98,26 +131,13 @@ class OcamlTargetReuseReportWriter {
 				evictions: catalog.evictions,
 				quarantines: catalog.quarantines
 			},
-			sourceBundleCandidate: {
-				status: "packed-observation",
-				entryCount: candidate.entries.length,
-				packedBytes: candidate.packedBytes,
-				indexBytes: candidate.indexBytes,
-				payloadBytes: candidate.payloadBytes,
-				sourceBundleRevision: reportHash(candidate.sourceBundleRevision, "source-bundle revision"),
-				diagnosticsEligible: candidate.diagnosticsEligible
-			},
-			shadowReplay: {
-				status: shadow.status,
-				equal: shadow.equal,
-				mismatchReason: shadow.mismatchReason,
-				receiptSemanticsEqual: shadow.receiptSemanticsEqual,
-				artifactManifestEqual: shadow.artifactManifestEqual
-			},
+			sourceBundleCandidate: sourceBundleCandidate,
+			shadowReplay: shadowReplay,
 			memory: {
-				status: "exact-payload-accounting",
-				candidatePayloadBytes: candidate.payloadBytes,
-				candidateIndexBytes: candidate.indexBytes,
+				status: candidate == null ? "entry-budget-rejected-before-packing" : "exact-payload-accounting",
+				candidatePayloadBytes: candidate == null ? 0 : candidate.payloadBytes,
+				candidateIndexBytes: candidate == null ? 0 : candidate.indexBytes,
+				rejectedPayloadBytes: rejectedPayloadBytes,
 				catalogPayloadBytes: catalog.payloadBytes,
 				catalogEstimatedOverheadBytes: catalog.estimatedOverheadBytes,
 				evaluatorRssBytes: null,
