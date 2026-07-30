@@ -230,18 +230,22 @@ The fork then added target-neutral lifecycle and scalability repairs:
   directory instead of exposing files while generation is still fallible; and
 - PR #17 added an explicit target hook after that directory becomes public, so
   external builders never have to infer lifecycle order from global Haxe
-  callback registration.
+  callback registration; and
+- the target-reuse fingerprint candidate records the final target-selected
+  program as immutable plain-value revisions, gives targets an exact
+  fail-closed reuse probe, and introduces a miss-only preparation hook without
+  skipping any target work.
 
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins stacked
-candidate fork commit `1433334fdf22582fa129725982d8d7fa5547da18`, published for review in
-[fork PR #17](https://github.com/fullofcaffeine/reflaxe/pull/17), with
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
+candidate fork commit `081ed8cdf5a0a059987800f14e706f7bb6ae215e`, published on branch
+`hxhx-agent/target-reuse-fingerprint`, with
 path-independent content digest
-`ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`.
-The last repository-validated rollback pin remains PR #16 commit
-`c63d2b1ad16cabaeb9cdfc02558f06523a2f224f` with digest
-`be01b11969325b1093f3d4d74b797c14e6adf67633794c7825d2e749bb7818bf`;
+`e6b2d2697a00e5e64e404660f7e4756b950c82c75e563c4b5bbfe8e4688d6013`.
+The last repository-validated rollback pin remains PR #17 commit
+`1433334fdf22582fa129725982d8d7fa5547da18` with digest
+`ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`;
 restoring both values together is the bounded rollback.
 
 PR #17 removes a package-only lifecycle race. Repository-local builds loaded
