@@ -30,7 +30,8 @@ class TargetReuseProbeFixture {
 			for (required in [
 				"reflaxe:unrevisioned-compile-begin-callback",
 				"reflaxe.ocaml:lowering-report-enabled",
-				"reflaxe.ocaml:target-implementation-authority-incomplete"
+				"reflaxe.ocaml:observation-report-enabled",
+				"reflaxe.ocaml:target-reuse-disabled"
 			])
 				if (!blockers.contains(required))
 					Context.fatalError('OCaml target reuse probe is missing blocker "$required"', Context.currentPos());

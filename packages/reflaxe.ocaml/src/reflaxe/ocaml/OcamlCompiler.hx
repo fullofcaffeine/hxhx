@@ -60,6 +60,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
+import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
 import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay;
@@ -505,7 +506,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
 			runtimeInputRevision: runtimeInputRevision,
 			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(sourceConfigurationRevision),
-			targetImplementationRevision: Context.definedValue("reflaxe_ocaml_target_implementation_revision"),
+			targetImplementationRevision: OcamlTargetImplementationRevision.current(),
+			reuseEnabled: Context.defined("reflaxe_ocaml_target_reuse"),
+			transactionalOutputEnabled: Context.defined("reflaxe_output_transaction"),
+			observationReportEnabled: Context.defined("reflaxe_ocaml_target_reuse_report"),
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: profileEnabled,
 			loweringReportEnabled: Context.defined("ocaml_lowering_report"),
@@ -521,6 +525,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 				outputProjectName, [])),
 			targetImplementationRevision: null,
+			reuseEnabled: false,
+			transactionalOutputEnabled: false,
+			observationReportEnabled: false,
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: false,
 			loweringReportEnabled: false,

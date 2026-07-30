@@ -10,7 +10,8 @@ class TargetReuseContractFixture {
 	}
 
 	static function observation(?configurationRevision:String, ?progress:Bool = false, ?loweringReport:Bool = false, ?lifecycleTrace:Bool = false,
-			?targetImplementationRevision:String):OcamlTargetReuseObservation {
+			?targetImplementationRevision:String, ?reuseEnabled:Bool = false, ?transactionalOutputEnabled:Bool = true,
+			?observationReportEnabled:Bool = false):OcamlTargetReuseObservation {
 		return {
 			packageVersion: "0.33.4",
 			pipelineRevision: "ocaml-function-plans-v55",
@@ -19,6 +20,9 @@ class TargetReuseContractFixture {
 			runtimeInputRevision: "sha256:" + Sha256.encode("runtime-input"),
 			nativeSourceInputRevision: "sha256:" + Sha256.encode("native-source-input"),
 			targetImplementationRevision: targetImplementationRevision,
+			reuseEnabled: reuseEnabled,
+			transactionalOutputEnabled: transactionalOutputEnabled,
+			observationReportEnabled: observationReportEnabled,
 			outputConfigured: true,
 			progressOrTelemetryEnabled: progress,
 			loweringReportEnabled: loweringReport,
@@ -41,23 +45,27 @@ class TargetReuseContractFixture {
 			"a source-affecting configuration change should change its revision domain");
 
 		final exactImplementation = OcamlTargetReuseContract.revisionComponents(observation(null, false, false, false,
-			"sha256:" + Sha256.encode("target implementation")));
+			"sha256:" + Sha256.encode("target implementation"), true));
 		assertTrue(exactImplementation[4].name == "target-implementation",
 			"an exact target source identity should replace the provisional implementation component");
 	}
 
 	static function testFailClosedBlockers():Void {
 		final baseline = OcamlTargetReuseContract.blockers(observation());
-		assertTrue(baseline.length == 1, "only the missing exact target implementation identity should block the complete baseline");
+		assertTrue(baseline.length == 2, "disabled reuse and the missing exact target identity should block the baseline");
+		assertTrue(baseline.contains("reflaxe.ocaml:target-reuse-disabled"), "production reuse should require an explicit opt-in");
 		assertTrue(baseline.contains("reflaxe.ocaml:target-implementation-authority-incomplete"),
 			"the package/pipeline candidate must not pretend to be complete implementation identity");
-		assertTrue(OcamlTargetReuseContract.blockers(observation(null, false, false, false, "sha256:" + Sha256.encode("target implementation"))).length == 0,
+		assertTrue(OcamlTargetReuseContract.blockers(observation(null, false, false, false, "sha256:" + Sha256.encode("target implementation"), true))
+			.length == 0,
 			"complete source inputs and an exact implementation identity should clear target-owned blockers");
 
-		final evidence = OcamlTargetReuseContract.blockers(observation(null, true, true, true));
+		final evidence = OcamlTargetReuseContract.blockers(observation(null, true, true, true, null, false, false, true));
 		assertTrue(evidence.contains("reflaxe.ocaml:progress-or-telemetry-enabled"), "progress or telemetry should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:lowering-report-enabled"), "lowering reports should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:lifecycle-trace-enabled"), "lifecycle traces should block replay");
+		assertTrue(evidence.contains("reflaxe.ocaml:transactional-output-disabled"), "non-transactional output should block replay");
+		assertTrue(evidence.contains("reflaxe.ocaml:observation-report-enabled"), "observation reports should block replay");
 	}
 
 	static function main():Void {

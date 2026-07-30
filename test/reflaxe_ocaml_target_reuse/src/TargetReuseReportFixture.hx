@@ -29,14 +29,15 @@ class TargetReuseReportFixture {
 		assertTrue(Std.string(report.targetRequest.revision).startsWith("sha256:"), "target request revision should be redacted");
 		assertTrue(report.targetRequest.eligible == false, "incomplete target authority must remain ineligible");
 		final blockers:Array<String> = cast report.targetRequest.blockers;
-		assertTrue(blockers.contains("reflaxe.ocaml:target-implementation-authority-incomplete"),
-			"report should explain incomplete target implementation identity");
+		assertTrue(blockers.contains("reflaxe.ocaml:target-reuse-disabled")
+			&& blockers.contains("reflaxe.ocaml:observation-report-enabled"),
+			"report should explain why observation mode cannot replay source");
 		final components:Array<Dynamic> = cast report.targetRequest.components;
 		assertTrue(components.length == 5
 			&& components[0].name == "artifact-output-schema"
 			&& components[1].name == "native-source-input"
 			&& components[2].name == "runtime-input"
-			&& components[4].name == "target-implementation-candidate",
+			&& components[4].name == "target-implementation",
 			"target revision components should be complete and sorted");
 		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0
 			&& report.timing.finalProgramFingerprintAndKeyMilliseconds >= 0

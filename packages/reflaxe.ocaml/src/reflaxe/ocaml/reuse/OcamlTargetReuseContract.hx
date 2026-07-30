@@ -20,6 +20,9 @@ typedef OcamlTargetReuseObservation = {
 	final runtimeInputRevision:String;
 	final nativeSourceInputRevision:String;
 	final targetImplementationRevision:Null<String>;
+	final reuseEnabled:Bool;
+	final transactionalOutputEnabled:Bool;
+	final observationReportEnabled:Bool;
 	final outputConfigured:Bool;
 	final progressOrTelemetryEnabled:Bool;
 	final loweringReportEnabled:Bool;
@@ -30,10 +33,10 @@ typedef OcamlTargetReuseObservation = {
 	Defines the fail-closed identity currently offered by `reflaxe.ocaml`.
 
 	This contract makes the target's known request inputs observable before
-	whole-program OCaml preparation. It intentionally remains ineligible for
-	replay until implementation-content, semantic-runtime, and native-dependency
-	authorities are complete. The permanent blockers prevent a partial identity
-	from being mistaken for permission to skip target work.
+	whole-program OCaml preparation. Replay additionally requires an explicit
+	opt-in, transactional output, and exact implementation, runtime, and native
+	source identities. The blockers prevent a partial or diagnostic request from
+	being mistaken for permission to skip target work.
 **/
 class OcamlTargetReuseContract {
 	public static inline final NAMESPACE = "reflaxe.ocaml.target-source/v1";
@@ -67,8 +70,14 @@ class OcamlTargetReuseContract {
 	**/
 	public static function blockers(observation:OcamlTargetReuseObservation):Array<String> {
 		final values = new Array<String>();
+		if (!observation.reuseEnabled)
+			values.push("reflaxe.ocaml:target-reuse-disabled");
 		if (observation.targetImplementationRevision == null)
 			values.push("reflaxe.ocaml:target-implementation-authority-incomplete");
+		if (!observation.transactionalOutputEnabled)
+			values.push("reflaxe.ocaml:transactional-output-disabled");
+		if (observation.observationReportEnabled)
+			values.push("reflaxe.ocaml:observation-report-enabled");
 		if (!observation.outputConfigured)
 			values.push("reflaxe.ocaml:output-not-configured");
 		if (observation.progressOrTelemetryEnabled)
