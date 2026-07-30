@@ -133,6 +133,7 @@
     "test:reflaxe-ocaml:nominal-throw-oracle": "bash scripts/reflaxe-ocaml/run-nominal-throw-control-oracle.sh",
     "test:reflaxe-ocaml:dynamic-throw-oracle": "bash scripts/reflaxe-ocaml/run-dynamic-throw-control-oracle.sh",
     "test:reflaxe-ocaml:enum-throw-oracle": "bash scripts/reflaxe-ocaml/run-enum-throw-control-oracle.sh",
+    "test:reflaxe-ocaml:enum-reflection-oracle": "bash scripts/reflaxe-ocaml/run-enum-reflection-layout-oracle.sh",
     "test:reflaxe-ocaml:inline-dynamic-carrier-oracle": "bash scripts/reflaxe-ocaml/run-inline-dynamic-carrier-oracle.sh",
     "test:reflaxe-ocaml:static-initialization": "bash scripts/ci/reflaxe-ocaml-static-initialization-fixture-test.sh",
     "clean": "bash scripts/dev/clean-artifacts.sh --safe",
