@@ -238,16 +238,27 @@ The shortest accepted route is:
    control, runtime, and output ownership;
 3. make native `hxhx` call that exact target implementation instead of the
    Stage3 semantic emitter for the combined product;
-4. close Full1 failures by their shared root cause on one candidate,
+4. compile that same standalone Haxe-authored target core through
+   `reflaxe.ocaml` into a native `hxhx` plugin or builtin proof and compare its
+   output and target-execution latency with evaluated Reflaxe;
+5. close Full1 failures by their shared root cause on one candidate,
    independently of that OCaml hard cut because OCaml output is not in the
    declared Full1 target scope; and
-5. admit typed-module reuse only after clean-versus-warm, failure/reset,
+6. admit typed-module reuse only after clean-versus-warm, failure/reset,
    memory, and end-to-end speed evidence.
 
 Typed-cache development does not technically wait for every Full1 target. It
 may proceed once its direct safety gates pass and the active-work cap allows
 it, but it cannot imply Full1 readiness. M22 and general customization
 implementation remain deferred until Full1 and the shared-target hard cut.
+
+The native target proof in step 4 is intentionally narrower than M22. It proves
+that the real standalone target can compile and execute as a native artifact;
+it does not yet promise a shared stock-Haxe/`hxhx` ABI, supported SDK,
+installation lifecycle, or one cross-host payload. Earlier plugin receipts
+compiled and loaded a backend-provider fixture through the Stage3 route. They
+remain valid loader evidence, but they are not evidence that standalone
+`reflaxe.ocaml` compiled and executed its own semantic core.
 
 The checked reasoning, local corrections, non-claims, and stop conditions are
 in

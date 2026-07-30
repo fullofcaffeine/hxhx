@@ -291,8 +291,9 @@ if a later report or cleanup assertion fails.
 
 ## Decision
 
-Keep the upstream-Haxe/Reflaxe server route explicit and optional. Do not
-only a tiny fraction of this particular full loop.
+Keep the upstream-Haxe/Reflaxe server route explicit and optional. Do not make
+it the default: the correct warm route currently saves only a small fraction of
+this particular full loop.
 
 Retain the one-observation handoff: it is a measured four-minute general
 generation improvement, keeps one exact validation immediately before syntax,
@@ -300,19 +301,29 @@ and passed the clean/warm correctness matrix. It does not close
 `haxe_ocaml-850ii.33.7`, because the same candidate's warm loop saved only
 54.164 seconds.
 
-The next engineering step is a focused architecture review of incremental
-target work—not a broad cache or mega-file rewrite. The review must decide the
-smallest immutable artifact boundary that can avoid reprocessing unchanged
-functions or modules while still reconstructing complete program membership
-and atomically replacing the generated source tree. Source-class concentration
-remains a measured architecture and performance concern, but the evidence still
-does not justify splitting a 25,301-line file merely for appearance.
+The focused architecture review is now complete and accepted. It selects an
+observation-only first slice followed by an exact, whole-program generated
+source-bundle replay. The first slice builds a complete request fingerprint,
+proves the upstream macro realm can own a bounded in-memory catalog, closes
+source-bundle authority, corrects source-position cache lifetime, and compares
+a shadow replay with normal generation. It skips no target work.
+
+Only a following child may enable exact hits, and only for an eligible unchanged
+request. An edit or uncertain observation remains a complete miss in this first
+production rung. The detailed identity, ownership, transaction, memory,
+differential, and stop contracts are in
+[`ORACLE_CHECKPOINT_REFLAXE_INCREMENTAL_TARGET_REUSE_2026_07_29.md`](../00-project/ORACLE_CHECKPOINT_REFLAXE_INCREMENTAL_TARGET_REUSE_2026_07_29.md).
+
+Source-class concentration remains a measured architecture and performance
+concern, but the evidence still does not justify splitting a 25,301-line file
+merely for appearance.
 
 Do not retain mutable `ClassFuncData`, typed-expression graphs, macro state, or
 target builders across requests. Do not treat a body digest as a complete cache
 identity. Do not skip lifecycle validation, generated-file deletion, runtime
 requirements, manifests, or failure rollback to manufacture a warm speedup.
 
-README Goals progress bars remain unchanged. The checkpoint proves correctness
-and improves general generation time, but it does not make the compiler-scale
-warm workflow materially incremental or improve production readiness.
+README Goals progress bars remain unchanged. The checkpoint proves correctness,
+improves general generation time, and now has an accepted next boundary, but it
+does not make the compiler-scale warm workflow materially incremental or
+improve production readiness.
