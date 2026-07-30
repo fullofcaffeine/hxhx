@@ -6,6 +6,18 @@ private typedef PlainAnonymousValue = {
 	var enabled:Bool;
 }
 
+private class StructuralSource {
+	public var name:String;
+	public var count:Int;
+	public var enabled:Bool;
+
+	public function new(name:String, count:Int, enabled:Bool) {
+		this.name = name;
+		this.count = count;
+		this.enabled = enabled;
+	}
+}
+
 /**
 	Provides typed expressions used to verify the anonymous-object boundary.
 
@@ -19,7 +31,7 @@ class AnonymousStructurePlanCases {
 	public static function admitted():Int {
 		var original:PlainAnonymousValue = {name: "first", count: 1, enabled: false};
 		var alias = original;
-		alias.count = 2;
+		alias.count += 1;
 		alias.enabled = true;
 		return original.count;
 	}
@@ -68,5 +80,28 @@ class AnonymousStructurePlanCases {
 	public static function methodBearing():Int {
 		var value = {read: function() return 1};
 		return value.read();
+	}
+
+	public static function dynamicCrossing():Int {
+		var value:Dynamic = {name: "dynamic", count: 1, enabled: false};
+		return value.count;
+	}
+
+	public static function structuralConversion():Int {
+		var value:PlainAnonymousValue = new StructuralSource("converted", 1, false);
+		return value.count;
+	}
+
+	public static function patternOnly():Int {
+		var value:PlainAnonymousValue = {name: "pattern", count: 1, enabled: false};
+		return switch (value) {
+			case {count: matched}: matched;
+		};
+	}
+
+	public static function unsupportedCompound():Int {
+		var value:PlainAnonymousValue = {name: "multiply", count: 2, enabled: false};
+		value.count *= 3;
+		return value.count;
 	}
 }

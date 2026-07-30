@@ -224,7 +224,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `44`)
+  - `schemaVersion` (current: `45`)
   - local identities use the `lexical-local-v1` form. They describe the
     variable's stable lexical declaration inside its owning function rather
     than exposing the Haxe macro process's temporary numeric variable ID.
@@ -236,13 +236,16 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     OCaml storage types, aliasing and mutation rules, and the representation
     revision that generated code must use.
   - `anonymousStructureOperations` describes each admitted object creation,
-    field initialization, field read, and field write. Each entry records the
-    source location, owning object shape, field conversion, result type,
-    `HxAnon` runtime requirement, and observable evaluation order. For example,
-    a write records that the receiver is evaluated before the new field value.
-    Field names are sorted only to give a stable object-shape identity; literal
-    initializers retain their original source order so their side effects do
-    not move.
+    field initialization, field read, plain field write, and `Int +=` field
+    update. Each entry records the source location, owning object shape, field
+    conversion, result type, runtime requirements, and observable evaluation
+    order. For example, an `Int +=` entry states that the object is evaluated
+    once, its old field is read, the right-hand side is evaluated once, Haxe
+    Int addition is applied, and the result is stored and returned. Its runtime
+    requirements therefore name both `HxAnon` for mutable field storage and
+    `HxInt` for Haxe integer arithmetic. Field names are sorted only to give a
+    stable object-shape identity; literal initializers retain their original
+    source order so their side effects do not move.
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
     represented before and after the call boundary, and the exact source-order

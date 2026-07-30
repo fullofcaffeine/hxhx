@@ -2163,6 +2163,10 @@ class OcamlBuilder {
 				if (plannedAnonymousOperation != null
 					&& plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.WriteField):
 				OcamlAnonymousStructureSyntax.buildWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
+			case TBinop(OpAssignOp(OpAdd), {expr: TField(receiver, FAnon(_))}, value)
+				if (plannedAnonymousOperation != null
+					&& plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.CompoundWriteField):
+				OcamlAnonymousStructureSyntax.buildCompoundWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
 			case _ if (plannedAnonymousOperation != null):
 				anonymousStructureInvariant('anonymous operation "${plannedAnonymousOperation.id}" no longer matches its typed expression', e.pos);
 			case _ if (plannedBytesAccess != null && bytesAccessOccurrence != null):

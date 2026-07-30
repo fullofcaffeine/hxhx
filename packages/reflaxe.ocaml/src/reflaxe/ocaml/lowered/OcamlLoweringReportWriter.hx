@@ -43,7 +43,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 44;
+	public static inline final SCHEMA_VERSION = 45;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -88,12 +88,15 @@ class OcamlLoweringReportWriter {
 	}
 
 	static function requireRepresentation(byId:Map<String, OcamlRepresentationDecision>, id:String, semanticTypeId:String, carrierTypeId:String,
-			domain:OcamlRepresentationDomain, owner:String):Void {
+			domain:OcamlRepresentationDomain, owner:String, ?expectedRevision:String):Void {
 		final decision = byId.get(id);
 		if (decision == null)
 			throw '$owner refers to missing program representation "$id".';
-		if (decision.semanticTypeId != semanticTypeId || decision.carrierTypeId != carrierTypeId || decision.domain != domain) {
-			throw '$owner expects $semanticTypeId -> $carrierTypeId in $domain, but representation ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}.';
+		if (decision.semanticTypeId != semanticTypeId
+			|| decision.carrierTypeId != carrierTypeId
+			|| decision.domain != domain
+			|| (expectedRevision != null && decision.revision != expectedRevision)) {
+			throw '$owner expects $semanticTypeId -> $carrierTypeId in $domain${expectedRevision == null ? "" : " at " + expectedRevision}, but representation ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain} at ${decision.revision}.';
 		}
 	}
 
@@ -135,10 +138,10 @@ class OcamlLoweringReportWriter {
 			if (anonymousStructureById.exists(structure.id))
 				throw 'Anonymous structure identity "${structure.id}" occurs more than once.';
 			requireRepresentation(representationById, structure.representationId, structure.semanticTypeId, structure.carrierTypeId,
-				OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}"');
+				OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}"', structure.representationRevision);
 			for (field in structure.fields) {
 				requireRepresentation(representationById, field.representationId, field.semanticTypeId, field.carrierTypeId,
-					OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}" field "${field.name}"');
+					OcamlRepresentationDomain.InternalValue, 'Anonymous structure "${structure.id}" field "${field.name}"', field.representationRevision);
 			}
 			anonymousStructureById.set(structure.id, structure);
 		}
@@ -334,13 +337,14 @@ class OcamlLoweringReportWriter {
 			}
 		}
 		for (operation in sortedAnonymousOperations) {
-			final expected = OcamlAnonymousStructureRuntimeRequirementRecorder.requirement(operation);
-			final recorded = requirementById.get(expected.id);
-			if (recorded == null)
-				throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "${expected.id}".';
-			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
-				throw 'Anonymous operation "${operation.id}" disagrees with runtime requirement "${expected.id}".';
-			includedRequirementIds.set(expected.id, true);
+			for (expected in OcamlAnonymousStructureRuntimeRequirementRecorder.requirements(operation)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Anonymous operation "${operation.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
 		}
 		for (call in sortedCalls) {
 			if (call.standardIMapTarget == null)

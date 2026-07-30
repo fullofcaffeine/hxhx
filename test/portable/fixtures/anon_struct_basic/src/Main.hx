@@ -5,6 +5,8 @@ private typedef BasicAnon = {
 }
 
 class Main {
+	static var events:Array<String> = [];
+
 	/** Writes one comparable line on both system targets and JavaScript. */
 	static function println(value:String):Void {
 		#if js
@@ -18,14 +20,39 @@ class Main {
 		println(value.b + value.a + ":" + value.flag);
 	}
 
+	/** Records when one `Int` operand is evaluated and returns that operand. */
+	static function markedInt(label:String, value:Int):Int {
+		events.push(label);
+		return value;
+	}
+
+	/** Records when one `String` field initializer is evaluated. */
+	static function markedString(label:String, value:String):String {
+		events.push(label);
+		return value;
+	}
+
+	/** Records when one `Bool` field initializer is evaluated. */
+	static function markedBool(label:String, value:Bool):Bool {
+		events.push(label);
+		return value;
+	}
+
 	static function main() {
-		var o:BasicAnon = {a: 1, b: "x", flag: false};
+		var o:BasicAnon = {
+			a: markedInt("field-a", 1),
+			b: markedString("field-b", "x"),
+			flag: markedBool("field-flag", false)
+		};
+		println(events.join(","));
+		events = [];
 		observe(o);
 
 		var alias = o;
-		alias.a = 2;
+		var assigned = alias.a += markedInt("alias-rhs", 1);
 		alias.flag = true;
 		println(o.b + o.a + ":" + o.flag);
+		println(events.join(",") + ":" + assigned);
 
 		var present:Null<BasicAnon> = o;
 		var missing:Null<BasicAnon> = null;

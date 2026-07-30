@@ -11,6 +11,7 @@ import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureField;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureFieldOperator;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureLoadConversion;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
@@ -118,7 +119,8 @@ class OcamlAnonymousStructurePlan {
 			final operation = operationsById.get(occurrence.decisionId);
 			if (operation == null
 				|| (operation.kind != OcamlAnonymousStructureOperationKind.ReadField
-					&& operation.kind != OcamlAnonymousStructureOperationKind.WriteField)) {
+					&& operation.kind != OcamlAnonymousStructureOperationKind.WriteField
+					&& operation.kind != OcamlAnonymousStructureOperationKind.CompoundWriteField)) {
 				throw 'reflaxe.ocaml [ocaml-anonymous:missing-operation-occurrence]: typed occurrence refers to invalid operation "${occurrence.decisionId}"';
 			}
 			if (operationIdByExpression.exists(occurrence.expression))
@@ -158,8 +160,8 @@ class OcamlAnonymousStructurePlan {
 	}
 
 	/**
-		Returns a read or write plan only when this function admitted the receiver
-		shape through a direct literal.
+		Returns a read, plain-write, or admitted `Int +=` plan only when this
+		function proved that the receiver came from a direct literal.
 
 		An anonymous parameter, structural class conversion, or another unowned
 		source remains on the legacy path. A typed node that should be in this
@@ -171,7 +173,7 @@ class OcamlAnonymousStructurePlan {
 			return null;
 		final expected = expectedOperation(expression);
 		if (expected == null)
-			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: planned anonymous operation "$id" no longer refers to a direct field read or write';
+			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: planned anonymous operation "$id" no longer refers to a direct field read, plain write, or admitted Int += write';
 		final structure = structuresBySemanticType.get(expected.semanticTypeId);
 		if (structure == null)
 			throw 'reflaxe.ocaml [ocaml-anonymous:missing-structure]: planned anonymous operation "$id" no longer has structure "${expected.semanticTypeId}"';
@@ -382,6 +384,13 @@ class OcamlAnonymousStructurePlan {
 					semanticTypeId: semanticTypeId,
 					fieldName: fieldRef.get().name
 				};
+			case TBinop(OpAssignOp(OpAdd), {expr: TField(receiver, FAnon(fieldRef))}, _):
+				final semanticTypeId = semanticTypeIdForType(receiver.t);
+				semanticTypeId == null ? null : {
+					kind: OcamlAnonymousStructureOperationKind.CompoundWriteField,
+					semanticTypeId: semanticTypeId,
+					fieldName: fieldRef.get().name
+				};
 			case _:
 				null;
 		}
@@ -481,6 +490,27 @@ class OcamlAnonymousStructurePlanner {
 					}
 					visit(lhs, path + "/child:0", true);
 					visit(rhs, path + "/child:1", false);
+				case TBinop(OpAssignOp(operation), lhs, rhs):
+					switch (lhs.expr) {
+						case TField(receiver, FAnon(fieldRef)):
+							final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
+							if (structure != null) {
+								final field = Lambda.find(structure.fields, candidate -> candidate.name == fieldRef.get().name);
+								if (operation != OpAdd
+									|| field == null
+									|| field.semanticTypeId != "Int"
+									|| !OcamlRepresentationRegistry.isExactInt(rhs.t)) {
+									throw 'reflaxe.ocaml [ocaml-anonymous:unsupported-compound-write]: admitted anonymous field "${fieldRef.get().name}" only supports exact Int += Int in this slice';
+								}
+								final write = fieldOperation(OcamlAnonymousStructureOperationKind.CompoundWriteField, expression, path, structure, field.name,
+									-1, OcamlAnonymousStructureFieldOperator.IntAdd);
+								operations.push(write);
+								operationIndexes.push({expression: expression, decisionId: write.id});
+							}
+						case _:
+					}
+					visit(lhs, path + "/child:0", true);
+					visit(rhs, path + "/child:1", false);
 				case TField(receiver, FAnon(fieldRef)) if (!suppressFieldRead):
 					final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
 					if (structure != null) {
@@ -493,6 +523,13 @@ class OcamlAnonymousStructurePlanner {
 						visit(child, path + "/child:" + childIndex, false);
 						childIndex++;
 					});
+				case TMeta(metadata, _) if (metadata.name == ":ast"):
+					// Haxe marks the typed expansion of a source pattern with
+					// `@:ast`. Its generated field reads belong to pattern
+					// matching, which this direct-operation slice does not own.
+					// Skipping the marked subtree keeps those reads on the
+					// existing path instead of misreporting them as source-level
+					// direct field operations.
 				case _:
 					var childIndex = 0;
 					TypedExprTools.iter(expression, child -> {
@@ -671,12 +708,14 @@ class OcamlAnonymousStructurePlanner {
 			fieldRepresentationRevision: "",
 			storeConversion: null,
 			loadConversion: null,
+			fieldOperator: null,
 			evaluationSchedule: ["create-container", "result-container"],
 			resultSemanticTypeId: structure.semanticTypeId,
 			resultCarrierTypeId: structure.carrierTypeId,
 			resultRepresentationId: structure.representationId,
 			resultRepresentationRevision: structure.representationRevision,
 			runtimeModule: OcamlAnonymousStructureContract.RUNTIME_MODULE,
+			runtimeReadOperation: null,
 			runtimeOperation: "create",
 			runtimeRequirementIds: [],
 			proofId: OcamlAnonymousStructureContract.PROOF_ID,
@@ -689,12 +728,13 @@ class OcamlAnonymousStructurePlanner {
 	}
 
 	function fieldOperation(kind:OcamlAnonymousStructureOperationKind, expression:TypedExpr, path:String, structure:OcamlAnonymousStructureDecision,
-			fieldName:String, sourceOrder:Int):OcamlAnonymousStructureOperationDecision {
+			fieldName:String, sourceOrder:Int, ?fieldOperator:OcamlAnonymousStructureFieldOperator):OcamlAnonymousStructureOperationDecision {
 		final field = Lambda.find(structure.fields, candidate -> candidate.name == fieldName);
 		if (field == null)
 			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-field]: typed operation names "$fieldName", which is absent from "${structure.semanticTypeId}"';
 		final reads = kind == OcamlAnonymousStructureOperationKind.ReadField;
 		final writes = kind == OcamlAnonymousStructureOperationKind.WriteField;
+		final compoundWrites = kind == OcamlAnonymousStructureOperationKind.CompoundWriteField;
 		final initializer = kind == OcamlAnonymousStructureOperationKind.InitializeField;
 		final provisional:OcamlAnonymousStructureOperationDecision = {
 			id: "",
@@ -713,13 +753,24 @@ class OcamlAnonymousStructurePlanner {
 			fieldRepresentationId: field.representationId,
 			fieldRepresentationRevision: field.representationRevision,
 			storeConversion: reads ? null : field.storeConversion,
-			loadConversion: reads ? field.loadConversion : null,
-			evaluationSchedule: initializer ? ["field-value", "box-field-value", "store-field"] : (reads ? ["receiver", "lookup-field", "unbox-field-value", "result-value"] : ["receiver", "field-value", "box-field-value", "store-field", "result-value"]),
+			loadConversion: reads || compoundWrites ? field.loadConversion : null,
+			fieldOperator: fieldOperator,
+			evaluationSchedule: initializer ? ["field-value", "box-field-value", "store-field"] : (reads ? ["receiver", "lookup-field", "unbox-field-value", "result-value"] : (compoundWrites ? [
+				"receiver",
+				"lookup-field",
+				"unbox-old-field-value",
+				"field-value",
+				"apply-field-operator",
+				"box-field-value",
+				"store-field",
+				"result-value"
+			] : ["receiver", "field-value", "box-field-value", "store-field", "result-value"])),
 			resultSemanticTypeId: initializer ? "Void" : field.semanticTypeId,
 			resultCarrierTypeId: initializer ? "" : field.carrierTypeId,
 			resultRepresentationId: initializer ? "" : field.representationId,
 			resultRepresentationRevision: initializer ? "" : field.representationRevision,
 			runtimeModule: OcamlAnonymousStructureContract.RUNTIME_MODULE,
+			runtimeReadOperation: compoundWrites ? "get" : null,
 			runtimeOperation: reads ? "get" : "set",
 			runtimeRequirementIds: [],
 			proofId: OcamlAnonymousStructureContract.PROOF_ID,

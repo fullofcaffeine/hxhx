@@ -203,11 +203,12 @@ typedef InspectionAnonymousStructure = {
 }
 
 /**
-	One validated create, initialize, read, or write occurrence.
+	One validated create, initialize, read, plain write, or compound-write occurrence.
 
 	The evaluation schedule states the observable order explicitly. For example,
-	a field assignment evaluates its receiver before its new value, stores that
-	value once, and returns the assigned Haxe value.
+	an `Int +=` field update evaluates its receiver once, reads the old value,
+	evaluates the right-hand side once, adds with Haxe Int32 behavior, stores the
+	new value, and returns that same new value.
 **/
 typedef InspectionAnonymousStructureOperation = {
 	final id:String;
@@ -229,12 +230,14 @@ typedef InspectionAnonymousStructureOperation = {
 	final fieldRepresentationRevision:String;
 	final storeConversion:Null<String>;
 	final loadConversion:Null<String>;
+	final fieldOperator:Null<String>;
 	final evaluationSchedule:Array<String>;
 	final resultSemanticTypeId:String;
 	final resultCarrierTypeId:String;
 	final resultRepresentationId:String;
 	final resultRepresentationRevision:String;
 	final runtimeModule:String;
+	final runtimeReadOperation:Null<String>;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
 	final proofId:String;

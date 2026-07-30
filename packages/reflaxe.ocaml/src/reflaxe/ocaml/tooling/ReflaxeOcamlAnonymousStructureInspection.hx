@@ -52,9 +52,9 @@ class ReflaxeOcamlAnonymousStructureInspection {
 		for (decision in structures) {
 			OcamlAnonymousStructureContract.requireStructure(decision);
 			requireRepresentation(representationById, decision.representationId, decision.semanticTypeId, decision.carrierTypeId,
-				'Anonymous structure "${decision.id}"');
+				decision.representationRevision, 'Anonymous structure "${decision.id}"');
 			for (field in decision.fields) {
-				requireRepresentation(representationById, field.representationId, field.semanticTypeId, field.carrierTypeId,
+				requireRepresentation(representationById, field.representationId, field.semanticTypeId, field.carrierTypeId, field.representationRevision,
 					'Anonymous structure "${decision.id}" field "${field.name}"');
 			}
 			structureById.set(decision.id, decision);
@@ -88,12 +88,16 @@ class ReflaxeOcamlAnonymousStructureInspection {
 	}
 
 	static function requireRepresentation(byId:Map<String, InspectionRepresentationDecision>, id:String, semanticTypeId:String, carrierTypeId:String,
-			owner:String):Void {
+			revision:String, owner:String):Void {
 		final decision = byId.get(id);
 		if (decision == null)
 			throw '$owner refers to missing program representation "$id".';
-		if (decision.semanticTypeId != semanticTypeId || decision.carrierTypeId != carrierTypeId || decision.domain != "internal-value")
-			throw '$owner expects $semanticTypeId -> $carrierTypeId in internal-value, but "$id" selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}.';
+		if (decision.semanticTypeId != semanticTypeId
+			|| decision.carrierTypeId != carrierTypeId
+			|| decision.domain != "internal-value"
+			|| decision.revision != revision) {
+			throw '$owner expects $semanticTypeId -> $carrierTypeId in internal-value at $revision, but "$id" selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain} at ${decision.revision}.';
+		}
 	}
 
 	static function requireStrictIdentityOrder(ids:Array<String>, label:String):Void {
@@ -144,7 +148,8 @@ class ReflaxeOcamlAnonymousStructureInspection {
 		if (kindValue != OcamlAnonymousStructureOperationKind.Create
 			&& kindValue != OcamlAnonymousStructureOperationKind.InitializeField
 			&& kindValue != OcamlAnonymousStructureOperationKind.ReadField
-			&& kindValue != OcamlAnonymousStructureOperationKind.WriteField) {
+			&& kindValue != OcamlAnonymousStructureOperationKind.WriteField
+			&& kindValue != OcamlAnonymousStructureOperationKind.CompoundWriteField) {
 			throw 'Anonymous operation has unsupported kind "$kindValue".';
 		}
 		final sourceMin = requiredInt(source, "min");
@@ -173,12 +178,14 @@ class ReflaxeOcamlAnonymousStructureInspection {
 			fieldRepresentationRevision: requiredString(value, "fieldRepresentationRevision"),
 			storeConversion: cast optionalString(value, "storeConversion"),
 			loadConversion: cast optionalString(value, "loadConversion"),
+			fieldOperator: cast optionalString(value, "fieldOperator"),
 			evaluationSchedule: requiredStringArray(value, "evaluationSchedule"),
 			resultSemanticTypeId: requiredString(value, "resultSemanticTypeId"),
 			resultCarrierTypeId: requiredString(value, "resultCarrierTypeId"),
 			resultRepresentationId: requiredString(value, "resultRepresentationId"),
 			resultRepresentationRevision: requiredString(value, "resultRepresentationRevision"),
 			runtimeModule: requiredString(value, "runtimeModule"),
+			runtimeReadOperation: optionalString(value, "runtimeReadOperation"),
 			runtimeOperation: requiredString(value, "runtimeOperation"),
 			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
 			proofId: requiredString(value, "proofId"),
@@ -244,12 +251,14 @@ class ReflaxeOcamlAnonymousStructureInspection {
 			fieldRepresentationRevision: decision.fieldRepresentationRevision,
 			storeConversion: decision.storeConversion,
 			loadConversion: decision.loadConversion,
+			fieldOperator: decision.fieldOperator,
 			evaluationSchedule: decision.evaluationSchedule.copy(),
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeModule: decision.runtimeModule,
+			runtimeReadOperation: decision.runtimeReadOperation,
 			runtimeOperation: decision.runtimeOperation,
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
 			proofId: decision.proofId,

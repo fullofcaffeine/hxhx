@@ -83,30 +83,42 @@ class OcamlRuntimeRequirementLedger {
 	**/
 	public function recordPlacePlan(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
-		for (requirementId in requirementIds) {
-			final expectedPrefix = originId + ":runtime:";
-			if (!requirementId.startsWith(expectedPrefix))
-				throw 'Place runtime requirement "$requirementId" is not scoped to origin "$originId".';
-			final capability = requirementId.substr(expectedPrefix.length);
-			final implementation = placeImplementation(capability);
-			record({
-				id: requirementId,
-				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
-				sourceId: originId,
-				source: source,
-				semanticCapability: capability,
-				cause: OcamlRuntimeRequirementCause.LoweringDecision,
-				decisionId: decisionId,
-				subject: {
-					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
-					id: semanticTypeId
-				},
-				implementationFeature: implementation.feature,
-				rootModules: [implementation.module],
-				profileEligibility: ["metal", "portable"],
-				explanation: implementation.explanation
-			});
-		}
+		for (requirementId in requirementIds)
+			record(requirementForPlaceCapability(decisionId, originId, originId, source, semanticTypeId, requirementId));
+	}
+
+	/**
+		Builds one checked runtime reason for field, array, or similar place work.
+
+		`originId` scopes the requirement identity to the sealed lowering
+		decision. `sourceId` names the Haxe occurrence shown to a report reader.
+		Keeping both explicit lets another sealed model reuse Haxe Int32
+		arithmetic without copying the module-selection policy.
+	**/
+	public static function requirementForPlaceCapability(decisionId:String, originId:String, sourceId:String, source:OcamlLoweredSourceSpan,
+			semanticTypeId:String, requirementId:String):OcamlRuntimeRequirement {
+		final expectedPrefix = originId + ":runtime:";
+		if (!requirementId.startsWith(expectedPrefix))
+			throw 'Place runtime requirement "$requirementId" is not scoped to origin "$originId".';
+		final capability = requirementId.substr(expectedPrefix.length);
+		final implementation = placeImplementation(capability);
+		return normalize({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: sourceId,
+			source: source,
+			semanticCapability: capability,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decisionId,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: semanticTypeId
+			},
+			implementationFeature: implementation.feature,
+			rootModules: [implementation.module],
+			profileEligibility: ["metal", "portable"],
+			explanation: implementation.explanation
+		});
 	}
 
 	/**

@@ -17,6 +17,21 @@ enum abstract OcamlAnonymousStructureOperationKind(String) from String to String
 
 	/** Replace one statically known field and return the assigned Haxe value. */
 	final WriteField = "write-field";
+
+	/**
+		Read, update, and replace one statically known field.
+
+		This first compound-write boundary admits only `Int += Int`. Other
+		compound operators remain outside the model and must not be approximated
+		by target syntax.
+	**/
+	final CompoundWriteField = "compound-write-field";
+}
+
+/** The exact Haxe operation applied between a loaded field and a new value. */
+enum abstract OcamlAnonymousStructureFieldOperator(String) from String to String {
+	/** Haxe `Int` addition with signed 32-bit overflow behavior. */
+	final IntAdd = "int-add";
 }
 
 /** How one typed Haxe field value enters the `Obj.t` slot used by `HxAnon`. */
@@ -121,12 +136,14 @@ typedef OcamlAnonymousStructureOperationDecision = {
 	final fieldRepresentationRevision:String;
 	final storeConversion:Null<OcamlAnonymousStructureStoreConversion>;
 	final loadConversion:Null<OcamlAnonymousStructureLoadConversion>;
+	final fieldOperator:Null<OcamlAnonymousStructureFieldOperator>;
 	final evaluationSchedule:Array<String>;
 	final resultSemanticTypeId:String;
 	final resultCarrierTypeId:String;
 	final resultRepresentationId:String;
 	final resultRepresentationRevision:String;
 	final runtimeModule:String;
+	final runtimeReadOperation:Null<String>;
 	final runtimeOperation:String;
 	final runtimeRequirementIds:Array<String>;
 	final proofId:String;
@@ -139,12 +156,14 @@ typedef OcamlAnonymousStructureOperationDecision = {
 
 /** Pure validation and identity rules shared by planning, reports, and tests. */
 class OcamlAnonymousStructureContract {
-	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v1";
+	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v2";
 	public static inline final OCCURRENCE_PREFIX = "anonymous-occurrence:";
 	public static inline final RUNTIME_CAPABILITY = "haxe-anonymous-structure";
+	public static inline final INT32_ADD_CAPABILITY = "haxe-int32-add";
 	public static inline final RUNTIME_MODULE = "HxAnon";
-	public static inline final PROOF_ID = "direct-anonymous-runtime-operations-v1";
-	public static inline final PROOF_CLAIM = "The final typed expression root contains a direct anonymous literal with exact Int, Bool, or String fields and no iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern, raw, or adapter boundary. The validated structure uses one mutable HxAnon table. Construction evaluates and stores literal fields in source order, reads evaluate the receiver once, writes evaluate the receiver before the assigned value, and local copies preserve one shared reference so mutations remain visible through aliases.";
+	public static inline final INT32_ADD_MODULE = "HxInt";
+	public static inline final PROOF_ID = "direct-anonymous-runtime-operations-v2";
+	public static inline final PROOF_CLAIM = "The final typed expression root contains a direct anonymous literal with exact Int, Bool, or String fields and no iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern, raw, or adapter boundary. The validated structure uses one mutable HxAnon table. Construction evaluates and stores literal fields in source order, reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.";
 
 	/** Builds the stable representation identity for a normalized shape. */
 	public static function structureId(semanticTypeId:String):String {
@@ -156,9 +175,17 @@ class OcamlAnonymousStructureContract {
 		return "anonymous-operation:" + Sha256.encode(operationFingerprint(decision)).substr(0, 24);
 	}
 
-	/** Returns the exact runtime requirement owned by one operation. */
+	/** Returns the `HxAnon` runtime requirement owned by one operation. */
 	public static function runtimeRequirementId(operationId:String):String {
 		return operationId + ":runtime:" + RUNTIME_CAPABILITY;
+	}
+
+	/** Returns every runtime requirement selected by an operation, in stable order. */
+	public static function runtimeRequirementIds(operationId:String, kind:OcamlAnonymousStructureOperationKind):Array<String> {
+		final out = [runtimeRequirementId(operationId)];
+		if (kind == OcamlAnonymousStructureOperationKind.CompoundWriteField)
+			out.push(operationId + ":runtime:" + INT32_ADD_CAPABILITY);
+		return out;
 	}
 
 	/** Fails when a structure no longer matches the bounded representation proof. */
@@ -239,11 +266,14 @@ class OcamlAnonymousStructureContract {
 					requireRead(operation, field);
 				case WriteField:
 					requireWrite(operation, field);
+				case CompoundWriteField:
+					requireCompoundWrite(operation, field);
 				case Create:
 			}
 		}
-		if (operation.runtimeRequirementIds.length != 1 || operation.runtimeRequirementIds[0] != runtimeRequirementId(operation.id)) {
-			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime]: anonymous operation "${operation.id}" does not name its exact $RUNTIME_CAPABILITY requirement';
+		final expectedRuntimeRequirements = runtimeRequirementIds(operation.id, operation.kind);
+		if (operation.runtimeRequirementIds.join("\n") != expectedRuntimeRequirements.join("\n")) {
+			throw 'reflaxe.ocaml [ocaml-anonymous:wrong-runtime]: anonymous operation "${operation.id}" does not name its exact runtime requirements';
 		}
 		if (operation.id != operationId(copyOperation(operation, "")))
 			throw 'reflaxe.ocaml [ocaml-anonymous:stale-operation]: anonymous operation "${operation.id}" does not match its canonical facts';
@@ -287,11 +317,13 @@ class OcamlAnonymousStructureContract {
 			|| operation.fieldRepresentationRevision != ""
 			|| operation.storeConversion != null
 			|| operation.loadConversion != null
+			|| operation.fieldOperator != null
 			|| operation.evaluationSchedule.join(",") != "create-container,result-container"
 			|| operation.resultSemanticTypeId.length == 0
 			|| operation.resultCarrierTypeId != "Obj.t"
 			|| operation.resultRepresentationId != operation.structureRepresentationId
 			|| operation.resultRepresentationRevision != operation.structureRepresentationRevision
+			|| operation.runtimeReadOperation != null
 			|| operation.runtimeOperation != "create") {
 			throw 'reflaxe.ocaml [ocaml-anonymous:invalid-create]: anonymous create "${operation.id}" has conflicting field, result, or schedule facts';
 		}
@@ -301,11 +333,13 @@ class OcamlAnonymousStructureContract {
 		if (operation.fieldSourceOrder < 0
 			|| operation.storeConversion != field.storeConversion
 			|| operation.loadConversion != null
+			|| operation.fieldOperator != null
 			|| operation.evaluationSchedule.join(",") != "field-value,box-field-value,store-field"
 			|| operation.resultSemanticTypeId != "Void"
 			|| operation.resultCarrierTypeId != ""
 			|| operation.resultRepresentationId != ""
 			|| operation.resultRepresentationRevision != ""
+			|| operation.runtimeReadOperation != null
 			|| operation.runtimeOperation != "set") {
 			throw 'reflaxe.ocaml [ocaml-anonymous:invalid-initializer]: anonymous initializer "${operation.id}" has conflicting carrier, result, or schedule facts';
 		}
@@ -315,8 +349,10 @@ class OcamlAnonymousStructureContract {
 		if (operation.fieldSourceOrder != -1
 			|| operation.storeConversion != null
 			|| operation.loadConversion != field.loadConversion
+			|| operation.fieldOperator != null
 			|| operation.evaluationSchedule.join(",") != "receiver,lookup-field,unbox-field-value,result-value"
 			|| !hasFieldResult(operation, field)
+			|| operation.runtimeReadOperation != null
 			|| operation.runtimeOperation != "get") {
 			throw 'reflaxe.ocaml [ocaml-anonymous:invalid-read]: anonymous read "${operation.id}" has conflicting carrier, result, or schedule facts';
 		}
@@ -326,10 +362,27 @@ class OcamlAnonymousStructureContract {
 		if (operation.fieldSourceOrder != -1
 			|| operation.storeConversion != field.storeConversion
 			|| operation.loadConversion != null
+			|| operation.fieldOperator != null
 			|| operation.evaluationSchedule.join(",") != "receiver,field-value,box-field-value,store-field,result-value"
 			|| !hasFieldResult(operation, field)
+			|| operation.runtimeReadOperation != null
 			|| operation.runtimeOperation != "set") {
 			throw 'reflaxe.ocaml [ocaml-anonymous:invalid-write]: anonymous write "${operation.id}" has conflicting carrier, result, or schedule facts';
+		}
+	}
+
+	static function requireCompoundWrite(operation:OcamlAnonymousStructureOperationDecision, field:OcamlAnonymousStructureField):Void {
+		if (field.semanticTypeId != "Int"
+			|| field.carrierTypeId != "int"
+			|| operation.fieldSourceOrder != -1
+			|| operation.storeConversion != field.storeConversion
+			|| operation.loadConversion != field.loadConversion
+			|| operation.fieldOperator != OcamlAnonymousStructureFieldOperator.IntAdd
+			|| operation.evaluationSchedule.join(",") != "receiver,lookup-field,unbox-old-field-value,field-value,apply-field-operator,box-field-value,store-field,result-value"
+			|| !hasFieldResult(operation, field)
+			|| operation.runtimeReadOperation != "get"
+			|| operation.runtimeOperation != "set") {
+			throw 'reflaxe.ocaml [ocaml-anonymous:invalid-compound-write]: anonymous compound write "${operation.id}" does not describe exact Int += behavior';
 		}
 	}
 
@@ -372,12 +425,14 @@ class OcamlAnonymousStructureContract {
 			decision.fieldRepresentationRevision,
 			decision.storeConversion == null ? "" : (decision.storeConversion : String),
 			decision.loadConversion == null ? "" : (decision.loadConversion : String),
+			decision.fieldOperator == null ? "" : (decision.fieldOperator : String),
 			decision.evaluationSchedule.join(","),
 			decision.resultSemanticTypeId,
 			decision.resultCarrierTypeId,
 			decision.resultRepresentationId,
 			decision.resultRepresentationRevision,
 			decision.runtimeModule,
+			decision.runtimeReadOperation ?? "",
 			decision.runtimeOperation,
 			decision.proofId,
 			decision.proofClaim,
@@ -416,14 +471,16 @@ class OcamlAnonymousStructureContract {
 			fieldRepresentationRevision: decision.fieldRepresentationRevision,
 			storeConversion: decision.storeConversion,
 			loadConversion: decision.loadConversion,
+			fieldOperator: decision.fieldOperator,
 			evaluationSchedule: decision.evaluationSchedule.copy(),
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			resultCarrierTypeId: decision.resultCarrierTypeId,
 			resultRepresentationId: decision.resultRepresentationId,
 			resultRepresentationRevision: decision.resultRepresentationRevision,
 			runtimeModule: decision.runtimeModule,
+			runtimeReadOperation: decision.runtimeReadOperation,
 			runtimeOperation: decision.runtimeOperation,
-			runtimeRequirementIds: id == decision.id ? decision.runtimeRequirementIds.copy() : [runtimeRequirementId(id)],
+			runtimeRequirementIds: id == decision.id ? decision.runtimeRequirementIds.copy() : runtimeRequirementIds(id, decision.kind),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,

@@ -87,7 +87,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 25,
+			schemaVersion: 26,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -152,7 +152,7 @@ class ReflaxeOcamlInspection {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
 			}
-			lines.push('[PASS] Anonymous objects: ${report.lowering.anonymousStructures.length} runtime shape${report.lowering.anonymousStructures.length == 1 ? "" : "s"} and ${report.lowering.anonymousStructureOperations.length} create, initialize, read, or write occurrence${report.lowering.anonymousStructureOperations.length == 1 ? "" : "s"} were validated before target syntax.');
+			lines.push('[PASS] Anonymous objects: ${report.lowering.anonymousStructures.length} runtime shape${report.lowering.anonymousStructures.length == 1 ? "" : "s"} and ${report.lowering.anonymousStructureOperations.length} create, initialize, read, plain-write, or compound-write occurrence${report.lowering.anonymousStructureOperations.length == 1 ? "" : "s"} were validated before target syntax.');
 			for (structure in report.lowering.anonymousStructures) {
 				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
 				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
@@ -362,8 +362,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 44) {
-						throw 'Unsupported lowering report schema $version; expected 44.';
+					if (version != 45) {
+						throw 'Unsupported lowering report schema $version; expected 45.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -2053,8 +2053,9 @@ class ReflaxeOcamlInspection {
 			referenced.set(requirementId, true);
 		}
 		for (operation in anonymousOperations) {
-			if (operation.runtimeRequirementIds.length != 1)
-				throw 'Anonymous operation "${operation.id}" must own exactly one runtime requirement.';
+			final compoundWrite = operation.kind == "compound-write-field";
+			if (operation.runtimeRequirementIds.length != (compoundWrite ? 2 : 1))
+				throw 'Anonymous operation "${operation.id}" has the wrong number of runtime requirements for ${operation.kind}.';
 			final requirementId = operation.runtimeRequirementIds[0];
 			final requirement = requirements.get(requirementId);
 			if (requirement == null)
@@ -2081,6 +2082,33 @@ class ReflaxeOcamlInspection {
 				throw 'Anonymous operation "${operation.id}" runtime requirement "$requirementId" disagrees with its sealed runtime-container decision.';
 			}
 			referenced.set(requirementId, true);
+			if (compoundWrite) {
+				final arithmeticId = operation.runtimeRequirementIds[1];
+				final arithmetic = requirements.get(arithmeticId);
+				if (arithmetic == null)
+					throw 'Anonymous compound write "${operation.id}" refers to missing Int32 runtime requirement "$arithmeticId".';
+				final arithmeticSource = requiredObject(arithmetic, "source");
+				final arithmeticSubject = requiredObject(arithmetic, "subject");
+				final arithmeticRoots = requiredStringArray(arithmetic, "rootModules");
+				if (arithmeticId != operation.id + ":runtime:haxe-int32-add"
+					|| requiredString(arithmetic, "sourceKind") != "haxe-expression"
+					|| requiredString(arithmetic, "sourceId") != operation.occurrenceId
+					|| requiredString(arithmeticSource, "file") != operation.sourceFile
+					|| requiredInt(arithmeticSource, "min") != operation.sourceMin
+					|| requiredInt(arithmeticSource, "max") != operation.sourceMax
+					|| requiredString(arithmetic, "semanticCapability") != "haxe-int32-add"
+					|| requiredString(arithmetic, "cause") != "lowering-decision"
+					|| requiredString(arithmetic, "decisionId") != operation.id
+					|| requiredString(arithmeticSubject, "kind") != "haxe-type"
+					|| requiredString(arithmeticSubject, "id") != operation.fieldSemanticTypeId
+					|| requiredString(arithmetic, "implementationFeature") != "haxe-int32-arithmetic-v1"
+					|| arithmeticRoots.length != 1
+					|| arithmeticRoots[0] != "HxInt"
+					|| requiredStringArray(arithmetic, "profileEligibility").join(",") != "metal,portable") {
+					throw 'Anonymous compound write "${operation.id}" runtime requirement "$arithmeticId" disagrees with its sealed Int32 addition decision.';
+				}
+				referenced.set(arithmeticId, true);
+			}
 		}
 		for (call in calls) {
 			final target = call.standardIMapTarget;

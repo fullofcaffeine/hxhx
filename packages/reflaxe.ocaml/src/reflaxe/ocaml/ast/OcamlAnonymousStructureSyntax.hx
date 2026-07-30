@@ -3,6 +3,7 @@ package reflaxe.ocaml.ast;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureFieldOperator;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureLoadConversion;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
@@ -89,6 +90,50 @@ class OcamlAnonymousStructureSyntax {
 		]);
 		final writeAndReturn = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]), OcamlExpr.EIdent(valueName)]);
 		return OcamlExpr.ELet(receiverName, buildExpression(receiver), OcamlExpr.ELet(valueName, buildExpression(value), writeAndReturn, false), false);
+	}
+
+	/**
+		Applies a sealed `Int += Int` operation without evaluating either input twice.
+
+		The generated sequence evaluates the object, reads and unboxes its old
+		field, evaluates the right-hand side, performs Haxe's 32-bit addition,
+		stores the new value, and returns that same new value. The plan has already
+		selected every step; this helper only translates them into OCaml syntax.
+	**/
+	public static function buildCompoundWrite(operation:OcamlAnonymousStructureOperationDecision, receiver:TypedExpr, value:TypedExpr,
+			buildExpression:TypedExpr->OcamlExpr, freshName:String->String):OcamlExpr {
+		if (operation.kind != OcamlAnonymousStructureOperationKind.CompoundWriteField)
+			throw 'reflaxe.ocaml [ocaml-anonymous:compound-write-syntax-kind]: operation "${operation.id}" is not a compound field write';
+		final readOperation = operation.runtimeReadOperation;
+		if (readOperation == null)
+			throw 'reflaxe.ocaml [ocaml-anonymous:compound-write-syntax-read]: operation "${operation.id}" has no planned field read';
+		final receiverName = freshName("anonymous_receiver");
+		final oldValueName = freshName("anonymous_old_field_value");
+		final valueName = freshName("anonymous_field_value");
+		final newValueName = freshName("anonymous_new_field_value");
+		final loaded = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), readOperation), [
+			OcamlExpr.EIdent(receiverName),
+			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName))
+		]);
+		final updated = switch (operation.fieldOperator) {
+			case IntAdd:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [OcamlExpr.EIdent(oldValueName), OcamlExpr.EIdent(valueName)]);
+			case null:
+				throw 'reflaxe.ocaml [ocaml-anonymous:compound-write-syntax-operator]: operation "${operation.id}" has no planned field operator';
+		}
+		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(operation.runtimeModule), operation.runtimeOperation), [
+			OcamlExpr.EIdent(receiverName),
+			OcamlExpr.EConst(OcamlConst.CString(operation.fieldName)),
+			storeValue(operation, OcamlExpr.EIdent(newValueName))
+		]);
+		final storeAndReturn = OcamlExpr.ESeq([
+			OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
+			OcamlExpr.EIdent(newValueName)
+		]);
+		return OcamlExpr.ELet(receiverName, buildExpression(receiver),
+			OcamlExpr.ELet(oldValueName, loadValue(operation, loaded),
+				OcamlExpr.ELet(valueName, buildExpression(value), OcamlExpr.ELet(newValueName, updated, storeAndReturn, false), false), false),
+			false);
 	}
 
 	static function storeValue(operation:OcamlAnonymousStructureOperationDecision, value:OcamlExpr):OcamlExpr {
