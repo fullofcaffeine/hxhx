@@ -22,6 +22,7 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
 import reflaxe.ocaml.ast.OcamlBytesAccessSyntax;
 import reflaxe.ocaml.ast.OcamlBytesMutationSyntax;
 import reflaxe.ocaml.ast.OcamlBytesProducerSyntax;
@@ -39,6 +40,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
@@ -85,15 +88,20 @@ import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
-	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
+	Converts Haxe's final typed expressions into OCaml syntax.
 
-	Behavior-sensitive families move through focused typed OCaml lowering modules
-	before this class constructs syntax. Admitted place operations, local
-	mutable-storage choices, typed calls, exact-value early returns, and lexical
-	loop-control targets now arrive in one revision-sealed function plan. New
-	representation, scheduling, mutation, control, runtime, or ABI decisions do
-	not belong in this already-large builder; legacy `unit` fallbacks remain
-	migration debt, not the contract for a newly admitted family.
+	Some source expressions need more than a direct syntax translation. For
+	example, an anonymous object must preserve field types, aliasing, mutation,
+	and evaluation order even though OCaml has no matching built-in value. A
+	focused lowering module decides those behaviors first and records them in a
+	validated function plan; this builder only turns that decision into syntax.
+
+	Place operations, local mutable storage, typed calls, anonymous structures,
+	early returns, and loop control already use that boundary. New decisions
+	about representation, evaluation order, mutation, control, runtime support,
+	or plugin interfaces belong in their focused lowering owner rather than this
+	already-large traversal. Older `unit` fallbacks remain migration debt and
+	must not define a newly supported language family.
 **/
 class OcamlBuilder {
 	static final injectionPrinter = new OcamlASTPrinter();
@@ -107,6 +115,7 @@ class OcamlBuilder {
 	final representationRegistry:OcamlRepresentationRegistry;
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
+	var currentAnonymousStructurePlan:Null<OcamlAnonymousStructurePlan> = null;
 	var currentBytesAccessPlan:Null<OcamlBytesAccessPlan> = null;
 	var currentBytesMutationPlan:Null<OcamlBytesMutationPlan> = null;
 	var currentBytesProducerPlan:Null<OcamlBytesProducerPlan> = null;
@@ -223,6 +232,23 @@ class OcamlBuilder {
 
 	function callPlanInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-call:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/**
+		Stops code generation when an admitted anonymous-object operation has no
+		matching validated decision.
+
+		Continuing would let this syntax traversal guess field representation or
+		evaluation order, which can produce plausible OCaml with the wrong Haxe
+		behavior. The compiler therefore reports the missing boundary before
+		writing target code.
+	**/
+	function anonymousStructureInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-anonymous:plan-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -2108,6 +2134,10 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
+		final anonymousLiteralCandidate = OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(e);
+		final plannedAnonymousLiteral = currentAnonymousStructurePlan == null
+			|| !anonymousLiteralCandidate ? null : currentAnonymousStructurePlan.requireLiteral(e, representationRegistry);
+		final plannedAnonymousOperation = currentAnonymousStructurePlan == null ? null : currentAnonymousStructurePlan.operationFor(e, representationRegistry);
 		final bytesAccessOccurrence = OcamlBytesAccessPlan.admittedOccurrence(e);
 		final plannedBytesAccess = currentBytesAccessPlan == null
 			|| bytesAccessOccurrence == null ? null : currentBytesAccessPlan.requireFor(e, representationRegistry);
@@ -2121,6 +2151,20 @@ class OcamlBuilder {
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
+			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
+				OcamlAnonymousStructureSyntax.buildLiteral(plannedAnonymousLiteral, fields.map(field -> ({name: field.name, expr: field.expr})), buildExpr,
+					freshTmp);
+			case _ if (anonymousLiteralCandidate):
+				anonymousStructureInvariant("an admitted object literal reached syntax without its validated structure and initialization plan", e.pos);
+			case TField(receiver, FAnon(_))
+				if (plannedAnonymousOperation != null && plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.ReadField):
+				OcamlAnonymousStructureSyntax.buildRead(plannedAnonymousOperation, receiver, buildExpr, freshTmp);
+			case TBinop(OpAssign, {expr: TField(receiver, FAnon(_))}, value)
+				if (plannedAnonymousOperation != null
+					&& plannedAnonymousOperation.kind == OcamlAnonymousStructureOperationKind.WriteField):
+				OcamlAnonymousStructureSyntax.buildWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
+			case _ if (plannedAnonymousOperation != null):
+				anonymousStructureInvariant('anonymous operation "${plannedAnonymousOperation.id}" no longer matches its typed expression', e.pos);
 			case _ if (plannedBytesAccess != null && bytesAccessOccurrence != null):
 				OcamlBytesAccessSyntax.build(plannedBytesAccess, bytesAccessOccurrence.receiver, bytesAccessOccurrence.arguments, buildExpr, freshTmp);
 			case _ if (bytesAccessOccurrence != null):
@@ -7112,11 +7156,19 @@ class OcamlBuilder {
 		return buildExpr(value);
 	}
 
-	/** Builds one non-function root after rechecking its exact storage and Bytes plans. */
+	/**
+			Builds one non-function expression after rechecking every validated plan.
+	
+			A non-function root is a typed initializer or other expression compiled
+			outside a method body. It still needs the same anonymous-object, storage,
+			and Bytes decisions as a function so syntax cannot silently choose a
+			different representation.
+		**/
 	public function buildStandaloneExpr(expression:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
+		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7124,6 +7176,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
@@ -7131,6 +7184,7 @@ class OcamlBuilder {
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
+		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7138,11 +7192,18 @@ class OcamlBuilder {
 		return result;
 	}
 
-	/** Applies assignment coercion to a fully planned non-function root. */
+	/**
+			Applies the destination type conversion to one planned non-function value.
+	
+			The anonymous-object plan is installed while the right-hand side is built
+			so a field access cannot fall back to the older syntax-time guess merely
+			because it appears in a static initializer or another standalone root.
+		**/
 	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, localIdentities:LexicalLocalIdentityPlan, storagePlan:OcamlLocalStoragePlan,
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
+		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7150,6 +7211,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
@@ -7157,6 +7219,7 @@ class OcamlBuilder {
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
+		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7344,6 +7407,7 @@ class OcamlBuilder {
 		final storagePlan = functionPlan.localStorage;
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7357,6 +7421,8 @@ class OcamlBuilder {
 		functionPlan.bytesMutations.requireRepresentations(representationRegistry);
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
 		functionPlan.bytesReads.requireRepresentations(representationRegistry);
+		functionPlan.anonymousStructures.requireRepresentations(representationRegistry);
+		currentAnonymousStructurePlan = functionPlan.anonymousStructures;
 		currentBytesAccessPlan = functionPlan.bytesAccesses;
 		currentBytesMutationPlan = functionPlan.bytesMutations;
 		currentBytesProducerPlan = functionPlan.bytesProducers;
@@ -7513,6 +7579,7 @@ class OcamlBuilder {
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
+		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;

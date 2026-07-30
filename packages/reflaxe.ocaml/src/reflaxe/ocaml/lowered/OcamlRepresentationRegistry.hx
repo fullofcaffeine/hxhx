@@ -44,7 +44,7 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v17";
+	public static inline final MODEL_REVISION = "ocaml-representation-v18";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
@@ -763,6 +763,38 @@ class OcamlRepresentationRegistry {
 			proof: {
 				id: "dynamic-obj-carrier-v1",
 				claim: "OCaml Obj.repr embeds an already-produced non-Bool target value in Obj.t without rebuilding it; the runtime's Bool box keeps exact Bool distinguishable from OCaml Int. Primitive values retain their value, reference-bearing values retain their existing identity and aliases, and HxRuntime.hx_null already uses the same carrier. This proof covers immutable internal values and callable boundaries only."
+			},
+			profileEligibility: ["metal", "portable"]
+		});
+	}
+
+	/**
+		Selects the shared mutable runtime container for one sealed anonymous shape.
+
+		`semanticTypeId` is the planner's canonical structural identity, not a
+		printed Haxe type or a process-local macro object. The returned `Obj.t`
+		carrier preserves one `HxAnon` table across local aliases. This method does
+		not authorize field access by itself: each create, initialization, read, or
+		write still needs its own occurrence plan and runtime requirement.
+	**/
+	public function selectAnonymousStructure(semanticTypeId:String):OcamlRepresentationDecision {
+		if (semanticTypeId == null || !StringTools.startsWith(semanticTypeId, "anonymous{") || !StringTools.endsWith(semanticTypeId, "}"))
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-anonymous-shape]: "$semanticTypeId" is not a canonical anonymous-structure identity';
+		return register({
+			semanticTypeId: semanticTypeId,
+			domain: OcamlRepresentationDomain.InternalValue,
+			carrierTypeId: "Obj.t",
+			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
+			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
+			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
+			storageMutationPolicy: OcamlRepresentationStorageMutationPolicy.ImmutableBinding,
+			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
+			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
+			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
+			reason: "An admitted anonymous literal creates one HxAnon runtime table. Copying the Obj.t carrier preserves that table's identity, so writes through one local alias remain visible through every other alias.",
+			proof: {
+				id: "anonymous-runtime-container-v1",
+				claim: "The final typed shape has only fields admitted by the anonymous-structure planner and is not an iterator, key/value pair, sys.FileStat record, method-bearing structure, Dynamic crossing, or structural class conversion. One mutable HxAnon table therefore preserves construction order, reference identity, field mutation, and local aliasing for the bounded direct-literal slice."
 			},
 			profileEligibility: ["metal", "portable"]
 		});

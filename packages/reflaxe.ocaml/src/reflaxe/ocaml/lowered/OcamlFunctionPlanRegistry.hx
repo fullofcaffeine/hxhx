@@ -22,6 +22,10 @@ import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
 import reflaxe.ocaml.lowered.OcamlBytesProducerPlan.OcamlBytesProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlBytesReadPlan.OcamlBytesReadPlanner;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructurePlanner;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
@@ -46,6 +50,7 @@ typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
@@ -79,6 +84,7 @@ typedef OcamlFunctionSyntaxInput = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
@@ -107,7 +113,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v55";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v56";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -182,10 +188,13 @@ class OcamlFunctionPlanRegistry {
 	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr,
 			representations:OcamlRepresentationRegistry):OcamlSealedStandaloneExpressionPlan {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
+		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(expression);
+		anonymousStructures.requirePlanBinding(binding);
+		anonymousStructures.requireRepresentations(representations);
 		bytesAccesses.requirePlanBinding(binding);
 		bytesAccesses.requireRepresentations(representations);
 		bytesMutations.requirePlanBinding(binding);
@@ -196,6 +205,7 @@ class OcamlFunctionPlanRegistry {
 		bytesReads.requireRepresentations(representations);
 		return {
 			binding: binding,
+			anonymousStructures: anonymousStructures,
 			bytesAccesses: bytesAccesses,
 			bytesMutations: bytesMutations,
 			bytesProducers: bytesProducers,
@@ -216,6 +226,8 @@ class OcamlFunctionPlanRegistry {
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		plan.anonymousStructures.requirePlanBinding(expected);
+		plan.anonymousStructures.requireRepresentations(representations);
 		plan.bytesAccesses.requirePlanBinding(expected);
 		plan.bytesAccesses.requireRepresentations(representations);
 		plan.bytesMutations.requirePlanBinding(expected);
@@ -361,9 +373,12 @@ class OcamlFunctionPlanRegistry {
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan, localStorage:OcamlLocalStoragePlan,
 			localRepresentations:OcamlLocalRepresentationPlan, bytesAccesses:OcamlBytesAccessPlan, bytesMutations:OcamlBytesMutationPlan,
 			bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan, controls:OcamlControlPlan,
-			callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>):Void {
+			callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
+			?anonymousStructures:OcamlAnonymousStructurePlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		final sealedAnonymousStructures = anonymousStructures ?? new OcamlAnonymousStructurePlan([], []);
+		sealedAnonymousStructures.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
 		bytesMutations.requirePlanBinding(binding);
 		bytesProducers.requirePlanBinding(binding);
@@ -388,6 +403,7 @@ class OcamlFunctionPlanRegistry {
 				binding: binding,
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
+				anonymousStructures: sealedAnonymousStructures,
 				bytesAccesses: bytesAccesses,
 				bytesMutations: bytesMutations,
 				bytesProducers: bytesProducers,
@@ -580,6 +596,32 @@ class OcamlFunctionPlanRegistry {
 		}
 		chains.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return chains;
+	}
+
+	/** Returns every admitted anonymous representation in stable identity order. */
+	public function anonymousStructureDecisions():Array<OcamlAnonymousStructureDecision> {
+		final byId:Map<String, OcamlAnonymousStructureDecision> = [];
+		for (record in sealedFunctions) {
+			for (structure in record.plan.anonymousStructures.structures()) {
+				final existing = byId.get(structure.id);
+				if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(structure))
+					throw 'reflaxe.ocaml [ocaml-anonymous:conflicting-structure]: structure "${structure.id}" differs between sealed functions';
+				byId.set(structure.id, structure);
+			}
+		}
+		final out = [for (structure in byId) structure];
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
+	}
+
+	/** Returns every admitted anonymous operation in stable identity order. */
+	public function anonymousStructureOperations():Array<OcamlAnonymousStructureOperationDecision> {
+		final out = new Array<OcamlAnonymousStructureOperationDecision>();
+		for (record in sealedFunctions)
+			for (operation in record.plan.anonymousStructures.operations())
+				out.push(operation);
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
 	}
 
 	/** Returns every admitted callable definition in canonical callee order. */

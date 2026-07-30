@@ -15,8 +15,10 @@ import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 #end
@@ -483,6 +485,17 @@ class CompilationContext {
 	/** Records runtime support selected by one sealed read-only Bytes operation. **/
 	public function recordBytesReadRuntimeRequirements(decision:OcamlBytesReadDecision):Void {
 		OcamlBytesRuntimeRequirementRecorder.recordRead(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed anonymous-object operation needs `HxAnon`.
+
+		The operation was already selected from the final typed function. This
+		method only transfers that decision into the request's runtime inventory;
+		it does not infer a dependency from generated OCaml text.
+	**/
+	public function recordAnonymousStructureRuntimeRequirement(decision:OcamlAnonymousStructureOperationDecision):Void {
+		OcamlAnonymousStructureRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed program representation. **/
