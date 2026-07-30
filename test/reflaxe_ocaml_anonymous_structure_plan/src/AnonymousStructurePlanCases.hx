@@ -99,6 +99,16 @@ class AnonymousStructurePlanCases {
 		};
 	}
 
+	public static function literalInsideSwitchCase(input:String):Int {
+		final values = new Array<PlainAnonymousValue>();
+		switch (input.length) {
+			case 0:
+			case _:
+				values.push({name: input, count: 1, enabled: true});
+		}
+		return values.length;
+	}
+
 	public static function unsupportedCompound():Int {
 		var value:PlainAnonymousValue = {name: "multiply", count: 2, enabled: false};
 		value.count *= 3;

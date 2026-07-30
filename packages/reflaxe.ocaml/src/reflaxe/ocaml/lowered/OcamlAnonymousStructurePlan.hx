@@ -141,8 +141,10 @@ class OcamlAnonymousStructurePlan {
 	/** Returns and revalidates the complete plan for one typed object literal. */
 	public function requireLiteral(expression:TypedExpr, representations:OcamlRepresentationRegistry):OcamlAnonymousStructureLiteralPlan {
 		final literal = literalByExpression.get(expression);
-		if (literal == null)
-			throw "reflaxe.ocaml [ocaml-anonymous:missing-literal]: admitted object literal reached syntax without its sealed plan";
+		if (literal == null) {
+			final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+			throw 'reflaxe.ocaml [ocaml-anonymous:missing-literal]: admitted object literal at ${source.file}:${source.min}-${source.max} reached syntax without its sealed plan';
+		}
 		final structure = requireStructure(literal.structureId, representations);
 		final create = requireOperation(literal.createId, structure, representations);
 		final initializers = [
@@ -451,7 +453,7 @@ class OcamlAnonymousStructurePlanner {
 		final operations = new Array<OcamlAnonymousStructureOperationDecision>();
 		final literalIndexes = new Array<AnonymousLiteralIndex>();
 		final operationIndexes = new Array<AnonymousOperationIndex>();
-		function visit(expression:TypedExpr, path:String, suppressFieldRead:Bool):Void {
+		function visit(expression:TypedExpr, path:String, suppressFieldRead:Bool, suppressPatternOperations:Bool):Void {
 			final literalStructure = literalStructures.get(expression);
 			if (literalStructure != null) {
 				final fields = switch (expression.expr) {
@@ -477,41 +479,45 @@ class OcamlAnonymousStructurePlanner {
 
 			switch (expression.expr) {
 				case TBinop(OpAssign, lhs, rhs):
-					switch (lhs.expr) {
-						case TField(receiver, FAnon(fieldRef)):
-							final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
-							final field = structure == null ? null : Lambda.find(structure.fields, candidate -> candidate.name == fieldRef.get().name);
-							if (structure != null && field != null && matchesFieldInput(rhs.t, field.semanticTypeId)) {
-								final write = fieldOperation(OcamlAnonymousStructureOperationKind.WriteField, expression, path, structure, field.name, -1);
-								operations.push(write);
-								operationIndexes.push({expression: expression, decisionId: write.id});
-							}
-						case _:
-					}
-					visit(lhs, path + "/child:0", true);
-					visit(rhs, path + "/child:1", false);
-				case TBinop(OpAssignOp(operation), lhs, rhs):
-					switch (lhs.expr) {
-						case TField(receiver, FAnon(fieldRef)):
-							final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
-							if (structure != null) {
-								final field = Lambda.find(structure.fields, candidate -> candidate.name == fieldRef.get().name);
-								if (operation != OpAdd
-									|| field == null
-									|| field.semanticTypeId != "Int"
-									|| !OcamlRepresentationRegistry.isExactInt(rhs.t)) {
-									throw 'reflaxe.ocaml [ocaml-anonymous:unsupported-compound-write]: admitted anonymous field "${fieldRef.get().name}" only supports exact Int += Int in this slice';
+					if (!suppressPatternOperations) {
+						switch (lhs.expr) {
+							case TField(receiver, FAnon(fieldRef)):
+								final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
+								final field = structure == null ? null : Lambda.find(structure.fields, candidate -> candidate.name == fieldRef.get().name);
+								if (structure != null && field != null && matchesFieldInput(rhs.t, field.semanticTypeId)) {
+									final write = fieldOperation(OcamlAnonymousStructureOperationKind.WriteField, expression, path, structure, field.name, -1);
+									operations.push(write);
+									operationIndexes.push({expression: expression, decisionId: write.id});
 								}
-								final write = fieldOperation(OcamlAnonymousStructureOperationKind.CompoundWriteField, expression, path, structure, field.name,
-									-1, OcamlAnonymousStructureFieldOperator.IntAdd);
-								operations.push(write);
-								operationIndexes.push({expression: expression, decisionId: write.id});
-							}
-						case _:
+							case _:
+						}
 					}
-					visit(lhs, path + "/child:0", true);
-					visit(rhs, path + "/child:1", false);
-				case TField(receiver, FAnon(fieldRef)) if (!suppressFieldRead):
+					visit(lhs, path + "/child:0", true, suppressPatternOperations);
+					visit(rhs, path + "/child:1", false, suppressPatternOperations);
+				case TBinop(OpAssignOp(operation), lhs, rhs):
+					if (!suppressPatternOperations) {
+						switch (lhs.expr) {
+							case TField(receiver, FAnon(fieldRef)):
+								final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
+								if (structure != null) {
+									final field = Lambda.find(structure.fields, candidate -> candidate.name == fieldRef.get().name);
+									if (operation != OpAdd
+										|| field == null
+										|| field.semanticTypeId != "Int"
+										|| !OcamlRepresentationRegistry.isExactInt(rhs.t)) {
+										throw 'reflaxe.ocaml [ocaml-anonymous:unsupported-compound-write]: admitted anonymous field "${fieldRef.get().name}" only supports exact Int += Int in this slice';
+									}
+									final write = fieldOperation(OcamlAnonymousStructureOperationKind.CompoundWriteField, expression, path, structure,
+										field.name, -1, OcamlAnonymousStructureFieldOperator.IntAdd);
+									operations.push(write);
+									operationIndexes.push({expression: expression, decisionId: write.id});
+								}
+							case _:
+						}
+					}
+					visit(lhs, path + "/child:0", true, suppressPatternOperations);
+					visit(rhs, path + "/child:1", false, suppressPatternOperations);
+				case TField(receiver, FAnon(fieldRef)) if (!suppressFieldRead && !suppressPatternOperations):
 					final structure = structureForAdmittedReceiver(receiver, literalStructures, admittedLocals);
 					if (structure != null) {
 						final read = fieldOperation(OcamlAnonymousStructureOperationKind.ReadField, expression, path, structure, fieldRef.get().name, -1);
@@ -520,25 +526,32 @@ class OcamlAnonymousStructurePlanner {
 					}
 					var childIndex = 0;
 					TypedExprTools.iter(expression, child -> {
-						visit(child, path + "/child:" + childIndex, false);
+						visit(child, path + "/child:" + childIndex, false, suppressPatternOperations);
 						childIndex++;
 					});
-				case TMeta(metadata, _) if (metadata.name == ":ast"):
-					// Haxe marks the typed expansion of a source pattern with
-					// `@:ast`. Its generated field reads belong to pattern
-					// matching, which this direct-operation slice does not own.
-					// Skipping the marked subtree keeps those reads on the
-					// existing path instead of misreporting them as source-level
-					// direct field operations.
+				case TMeta(metadata, child) if (metadata.name == ":ast"):
+					/*
+						Haxe wraps the typed code produced for a `switch` pattern
+						in `@:ast`. That wrapper contains compiler-generated field
+						reads, so this direct-operation planner must not claim its
+						reads or writes as if the user had written them.
+
+						The wrapper can also contain ordinary source expressions,
+						including object literals in a case body. Continue walking
+						so those literals receive create/initializer plans, while
+						the extra flag keeps pattern-generated field operations on
+						the existing syntax path.
+					 */
+					visit(child, path + "/child:0", false, true);
 				case _:
 					var childIndex = 0;
 					TypedExprTools.iter(expression, child -> {
-						visit(child, path + "/child:" + childIndex, false);
+						visit(child, path + "/child:" + childIndex, false, suppressPatternOperations);
 						childIndex++;
 					});
 			}
 		}
-		visit(root, "root", false);
+		visit(root, "root", false, false);
 		return new OcamlAnonymousStructurePlan(structures, operations, literalIndexes, operationIndexes);
 	}
 

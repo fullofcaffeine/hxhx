@@ -27,7 +27,9 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 		built. Parameters,
 	reassigned locals, iterators, key/value pairs, `sys.FileStat`, and
 	method-bearing shapes remain outside that boundary, so a matching field list
-	alone cannot select the generic `HxAnon` representation.
+	alone cannot select the generic `HxAnon` representation. A literal created
+	inside a `switch` case also proves that Haxe's internal pattern marker does
+	not hide source expressions that still need target plans.
 **/
 class AnonymousStructurePlanFixture {
 	static inline final PROGRAM_REVISION = "program:anonymous-structure-fixture";
@@ -107,6 +109,7 @@ class AnonymousStructurePlanFixture {
 		requireUnowned("dynamicCrossing", 1, 4, registry);
 		requireUnowned("structuralConversion", 0, 0, registry);
 		requireUnowned("patternOnly", 1, 4, registry);
+		requireSwitchCaseLiteral(registry);
 		final unsupportedCompoundBody = requireBody(requireField("unsupportedCompound"));
 		expectFailure("unsupported anonymous compound write", "unsupported-compound-write",
 			() -> new OcamlAnonymousStructurePlanner(functionBinding("unsupportedCompound"), registry).plan(unsupportedCompoundBody));
@@ -265,6 +268,33 @@ class AnonymousStructurePlanFixture {
 			'$name should have $expectedStructures structures and $expectedOperations operations, received ${plan.structures().length}/${plan.operations().length}');
 		for (expression in fieldOperations(body))
 			assertTrue(plan.operationFor(expression, registry) == null, '$name should leave same-shaped field access on the existing path');
+	}
+
+	/**
+		Checks an object literal created inside the generated body of a `switch`.
+
+		Haxe wraps pattern-matching internals in `@:ast` metadata. The target must
+		ignore compiler-generated field reads in that wrapper, while still
+		planning source object literals nested below it. Otherwise syntax reaches
+		a valid literal without the create and field-initialization decisions it
+		needs.
+	**/
+	static function requireSwitchCaseLiteral(registry:OcamlRepresentationRegistry):Void {
+		final name = "literalInsideSwitchCase";
+		final body = requireBody(requireField(name));
+		final plan = new OcamlAnonymousStructurePlanner(functionBinding(name), registry).plan(body);
+		assertTrue(plan.structures().length == 1 && plan.operations().length == 4,
+			'the switch-case literal should have one structure, one create, and three initializers, received ${plan.structures().length}/${plan.operations().length}');
+		var literalCount = 0;
+		function visit(expression:TypedExpr):Void {
+			if (OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(expression)) {
+				literalCount++;
+				plan.requireLiteral(expression, registry);
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(body);
+		assertTrue(literalCount == 1, 'the switch-case fixture should expose one admitted literal, received $literalCount');
 	}
 
 	/** Returns direct anonymous reads and writes from one typed function body. */
