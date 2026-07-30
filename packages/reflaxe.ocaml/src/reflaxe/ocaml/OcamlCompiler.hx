@@ -62,6 +62,7 @@ import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
+import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
 import reflaxe.ocaml.reuse.OcamlSourceBundleReplay;
@@ -565,7 +566,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		switch (outcome) {
 			case CompiledMiss if (candidate != null):
 				TargetReuseCatalog.shared()
-					.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, candidate.copyPayload(),
+					.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, OcamlTargetReuseTestHooks.admissionPayload(candidate),
 						OcamlSourceBundleCandidate.ESTIMATED_CATALOG_OVERHEAD_BYTES);
 			case CompiledMiss | ExactHit | Failed:
 		}
@@ -2584,6 +2585,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case Err(message):
 				haxe.macro.Context.error(message, haxe.macro.Context.currentPos());
 		}
+		OcamlTargetReuseTestHooks.failAfterPublishedWork();
 		#end
 	}
 
@@ -3599,6 +3601,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				else
 					TargetReuseCatalog.shared().recordMiss("target-generation-diagnostics");
 			}
+			OcamlTargetReuseTestHooks.failAfterStage();
 			if (reportTargetReuse) {
 				final realm = targetReuseCatalogRealm;
 				final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;

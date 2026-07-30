@@ -38,18 +38,41 @@ compile_server() {
 			-D reflaxe_output_transaction \
 			-D reflaxe_ocaml_target_reuse \
 			-D reflaxe_ocaml_target_reuse_test_require_hit \
-			-D reflaxe.dont_output_metadata_id
+			-D reflaxe.dont_output_metadata_id \
+			"$@"
 	)
 }
 
 mkdir -p "$STATE_DIR"
 cp -R "$FIXTURE_TEMPLATE" "$PROJECT_DIR"
 
-HXHX_STATE_DIR="$STATE_DIR" \
-	HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
-	HAXE_BIN="${HAXE_BIN:-haxe}" \
-	bash "$SERVER_HELPER" start
-SERVER_STARTED=1
+start_server() {
+	REFLAXE_OCAML_REUSE_TEST_SENTINEL_DIR="$WORK_DIR/test-sentinels" \
+		HXHX_STATE_DIR="$STATE_DIR" \
+		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
+		HAXE_BIN="${HAXE_BIN:-haxe}" \
+		bash "$SERVER_HELPER" start
+	SERVER_STARTED=1
+}
+
+stop_server() {
+	HXHX_STATE_DIR="$STATE_DIR" \
+		HXHX_HAXE_SERVER_PORT="$SERVER_PORT" \
+		HAXE_BIN="${HAXE_BIN:-haxe}" \
+		bash "$SERVER_HELPER" stop
+	SERVER_STARTED=0
+}
+
+reset_generated_state() {
+	if [[ -d "$PROJECT_DIR/$OUTPUT_NAME" ]]; then
+		find "$PROJECT_DIR/$OUTPUT_NAME" -depth -delete
+	fi
+	if [[ -d "$PROJECT_DIR/.$OUTPUT_NAME.reflaxe-ocaml-dune-build" ]]; then
+		find "$PROJECT_DIR/.$OUTPUT_NAME.reflaxe-ocaml-dune-build" -depth -delete
+	fi
+}
+
+start_server
 
 compile_server
 first_digest="$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")"
@@ -101,5 +124,45 @@ if [[ "$restored_digest" != "$first_digest" || "$restored_revision" != "$first_r
 	echo "reflaxe.ocaml A-to-B-to-A replay did not restore the original source result" >&2
 	exit 1
 fi
+
+stop_server
+reset_generated_state
+start_server
+compile_server -D reflaxe_ocaml_target_reuse_test_corrupt_first_admission
+corrupt_baseline_digest="$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")"
+compile_server -D reflaxe_ocaml_target_reuse_test_corrupt_first_admission
+compile_server -D reflaxe_ocaml_target_reuse_test_corrupt_first_admission
+if [[ "$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")" != "$corrupt_baseline_digest" ]]; then
+	echo "reflaxe.ocaml corrupt-payload fallback changed the generated result" >&2
+	exit 1
+fi
+
+stop_server
+reset_generated_state
+start_server
+if compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_stage; then
+	echo "reflaxe.ocaml staged-candidate failure injection unexpectedly succeeded" >&2
+	exit 1
+fi
+if [[ -e "$PROJECT_DIR/$OUTPUT_NAME" ]]; then
+	echo "reflaxe.ocaml staged-candidate failure published generated source" >&2
+	exit 1
+fi
+compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_stage
+compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_stage
+
+stop_server
+reset_generated_state
+start_server
+if compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_published_work; then
+	echo "reflaxe.ocaml post-publication failure injection unexpectedly succeeded" >&2
+	exit 1
+fi
+if [[ ! -f "$PROJECT_DIR/$OUTPUT_NAME/ocaml_artifact_manifest.json" ]]; then
+	echo "reflaxe.ocaml post-publication failure did not preserve the documented public source tree" >&2
+	exit 1
+fi
+compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_published_work
+compile_server -D reflaxe_ocaml_target_reuse_test_fail_once_after_published_work
 
 echo "REFLAXE_OCAML_TARGET_REUSE_EXACT_HIT:PASS digest=$restored_digest"
