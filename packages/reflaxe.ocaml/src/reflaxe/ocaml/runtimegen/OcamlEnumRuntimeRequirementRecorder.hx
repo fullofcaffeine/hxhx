@@ -14,12 +14,14 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
 
 /**
-	Explains why one exact enum-to-`Dynamic` local conversion needs `HxEnum`.
+	Explains why one sealed enum operation needs the generated `HxEnum` helper.
 
 	The generated-module scan can confirm that emitted OCaml mentions `HxEnum`,
 	but it cannot explain which Haxe expression required that module. This
-	recorder uses the already sealed local conversion as the semantic cause, so
-	packaging can trace the runtime file back to the exact source occurrence.
+	recorder maps an already checked enum-to-`Dynamic` conversion or direct enum
+	throw to one source-owned runtime reason. It does not inspect generated text
+	or infer a new enum decision, so packaging can trace the helper back to the
+	exact Haxe expression that required it.
 **/
 class OcamlEnumRuntimeRequirementRecorder {
 	/** Builds the one runtime requirement owned by an admitted conversion. */

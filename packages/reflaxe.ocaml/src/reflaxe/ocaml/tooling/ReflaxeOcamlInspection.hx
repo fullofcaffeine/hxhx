@@ -58,6 +58,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v61";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -460,6 +461,15 @@ class ReflaxeOcamlInspection {
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
 			throw "Control count does not match its inventory.";
+		final canonicalControls = Json.stringify({
+			targets: requiredArray(value, "controlTargets"),
+			decisions: rawControls,
+			catchChains: requiredArray(value, "controlCatches")
+		});
+		final expectedControlRevision = "sha256:" + Sha256.encode(canonicalControls);
+		final reportedControlRevision = requiredSha256Revision(value, "controlRevision");
+		if (reportedControlRevision != expectedControlRevision)
+			throw "Control report revision does not match its targets, decisions, and catch chains.";
 		final representationById:Map<String, InspectionRepresentationDecision> = [];
 		for (decision in representation.decisions)
 			representationById.set(decision.id, decision);
@@ -473,6 +483,9 @@ class ReflaxeOcamlInspection {
 				throw 'Control report contains duplicate identity "${control.id}".';
 			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
 				throw 'Control decision "${control.id}" has an invalid source span.';
+			if (control.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION) {
+				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$FUNCTION_PLAN_PIPELINE_REVISION".';
+			}
 			final payload = control.payload;
 			switch (control.kind) {
 				case "return":
@@ -694,7 +707,6 @@ class ReflaxeOcamlInspection {
 				|| control.functionId.length == 0
 				|| control.programRevision.length == 0
 				|| control.bodyRevision.length == 0
-				|| control.pipelineRevision.length == 0
 				|| control.profileEligibility.length != 2
 				|| control.profileEligibility[0] != "metal"
 				|| control.profileEligibility[1] != "portable") {

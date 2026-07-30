@@ -468,8 +468,13 @@ class OcamlControlPlan {
 		}
 		final indexedDecisionIds:Map<String, Bool> = [];
 		for (occurrence in decisionOccurrences ?? []) {
-			if (!decisionsById.exists(occurrence.decisionId))
+			final decision = decisionsById.get(occurrence.decisionId);
+			if (decision == null)
 				throw 'reflaxe.ocaml [ocaml-control:missing-decision-occurrence]: typed control occurrence refers to missing decision "${occurrence.decisionId}"';
+			final occurrenceSource = OcamlLoweredOrigin.sourceSpan(occurrence.expression.pos);
+			if (sourceKey(decision.source) != sourceKey(occurrenceSource)) {
+				throw 'reflaxe.ocaml [ocaml-control:stale-decision-source]: control decision "${decision.id}" belongs to ${sourceKey(decision.source)}, but its exact typed occurrence is at ${sourceKey(occurrenceSource)}';
+			}
 			if (indexedDecisionIds.exists(occurrence.decisionId))
 				throw 'reflaxe.ocaml [ocaml-control:duplicate-decision-occurrence]: control decision "${occurrence.decisionId}" is indexed by more than one typed occurrence';
 			if (decisionIdByExpression.exists(occurrence.expression)
@@ -1597,8 +1602,11 @@ class OcamlControlPlan {
 	Return-family admission depends on the callable result carrier. Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
-	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, and one exact
-	whole-program-monomorphic class payload. Nested function literals own
+	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
+	whole-program-monomorphic class payload, or a directly visible ordinary enum
+	constructor. A direct enum throw means the thrown expression itself is the
+	constructor value or call; values reached through locals, casts, fields, or
+	other expressions remain outside this slice. Nested function literals own
 	independent boundaries and are deliberately skipped. Each source `try` is
 	admitted independently, so one unsupported catch chain does not discard
 	another represented chain in the same function.

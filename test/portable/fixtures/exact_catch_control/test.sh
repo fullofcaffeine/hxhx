@@ -173,14 +173,16 @@ if (report.schemaVersion !== 27
 }
 NODE
 
-node - "$REPORT_FILE" <<'NODE'
+node - "$REPORT_FILE" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const chain = report.controlCatches.find(candidate => candidate.clauses.length > 1)
 if (!chain)
 	throw new Error('missing multi-clause catch chain to corrupt')
 chain.clauses[0].bodyResultPolicy = 'infer-in-printer'
+resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 

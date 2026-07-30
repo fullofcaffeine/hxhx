@@ -135,8 +135,9 @@ expect_invalid() {
 	local expected="$2"
 	rm -rf "$INVALID_OUTPUT"
 	cp -R out "$INVALID_OUTPUT"
-	node - "$INVALID_OUTPUT/ocaml_lowering_report.json" "$mutation" <<'NODE'
+node - "$INVALID_OUTPUT/ocaml_lowering_report.json" "$mutation" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[4])
 const path = process.argv[2]
 const mutation = process.argv[3]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -156,6 +157,36 @@ switch (mutation) {
 		control.proofId = 'exact-value-throw-control-v2'
 		control.payload.proofId = control.proofId
 		break
+	case 'source':
+		control.source.min += 1
+		control.source.max += 1
+		const sourceRequirement = report.runtimeRequirements.find(item => item.decisionId === control.id)
+		if (sourceRequirement == null)
+			throw new Error('missing direct enum throw runtime requirement to corrupt')
+		sourceRequirement.source.min = control.source.min
+		sourceRequirement.source.max = control.source.max
+		break
+	case 'function':
+		control.functionId += ':forged'
+		break
+	case 'enum':
+		const previousEnum = control.payload.inputSemanticTypeId
+		const forgedEnum = 'OtherSignal'
+		control.payload.inputSemanticTypeId = forgedEnum
+		control.payload.outputSemanticTypeId = forgedEnum
+		control.payload.inputCarrierTypeId = `haxe-enum-native-variant-carrier-v1:${forgedEnum}`
+		control.payload.outputCarrierTypeId = control.payload.inputCarrierTypeId
+		control.payload.inputRepresentationId = `control-representation:enum-direct-v1:${forgedEnum}`
+		control.payload.outputRepresentationId = control.payload.inputRepresentationId
+		control.runtimeTags = ['Dynamic', forgedEnum]
+		const enumRequirement = report.runtimeRequirements.find(item => item.decisionId === control.id)
+		if (enumRequirement == null || enumRequirement.subject?.id !== previousEnum)
+			throw new Error('missing direct enum throw enum requirement to corrupt')
+		enumRequirement.subject.id = forgedEnum
+		break
+	case 'revision':
+		control.pipelineRevision = 'ocaml-function-plans-v60'
+		break
 	case 'runtime':
 		const requirementId = `${control.id}:runtime:haxe-enum-dynamic-box`
 		report.runtimeRequirements = report.runtimeRequirements.filter(item => item.id !== requirementId)
@@ -164,6 +195,8 @@ switch (mutation) {
 	default:
 		throw new Error(`unknown mutation ${mutation}`)
 }
+if (['carrier', 'tags', 'proof', 'revision'].includes(mutation))
+	resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
@@ -184,6 +217,10 @@ NODE
 expect_invalid carrier "invalid direct enum-constructor exception carrier"
 expect_invalid tags "invalid direct enum-constructor exception carrier"
 expect_invalid proof "invalid direct enum-constructor exception carrier"
+expect_invalid source "Control report revision does not match its targets, decisions, and catch chains"
+expect_invalid function "Control report revision does not match its targets, decisions, and catch chains"
+expect_invalid enum "Control report revision does not match its targets, decisions, and catch chains"
+expect_invalid revision "uses unsupported function-plan pipeline"
 expect_invalid runtime "refers to missing runtime requirement"
 
 rm -rf "$INVALID_OUTPUT"

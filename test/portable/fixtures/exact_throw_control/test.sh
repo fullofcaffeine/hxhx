@@ -304,8 +304,9 @@ if (report.schemaVersion !== 27
 }
 NODE
 
-node - "$REPORT_FILE" <<'NODE'
+node - "$REPORT_FILE" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const transfer = report.controls.find(control =>
@@ -313,6 +314,7 @@ const transfer = report.controls.find(control =>
 if (!transfer)
 	throw new Error('missing nullable Bool throw to corrupt')
 transfer.payload.conversion = 'preserve-nullable-int-throw-carrier'
+resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 
@@ -330,8 +332,9 @@ if ! grep -q "invalid represented Haxe exception crossing" "$TAMPER_INSPECTION";
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 
-node - "$REPORT_FILE" <<'NODE'
+node - "$REPORT_FILE" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const transfer = report.controls.find(control =>
@@ -339,6 +342,7 @@ const transfer = report.controls.find(control =>
 if (!transfer)
 	throw new Error('missing exact ValueException throw to corrupt')
 transfer.payload.inputRepresentationId = 'representation:haxe.ValueException:internal-value'
+resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 
@@ -356,8 +360,9 @@ if ! grep -q "invalid exact Haxe exception-wrapper carrier" "$TAMPER_INSPECTION"
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
 
-node - "$REPORT_FILE" <<'NODE'
+node - "$REPORT_FILE" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const clause = report.controlCatches
@@ -366,6 +371,7 @@ const clause = report.controlCatches
 if (!clause)
 	throw new Error('missing ValueException catch clause to corrupt')
 clause.conversion = 'preserve-or-wrap-haxe-exception'
+resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 

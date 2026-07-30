@@ -132,8 +132,9 @@ if (report.schemaVersion !== 27
 NODE
 
 cp -R out "$INVALID_OUTPUT"
-node - "$INVALID_OUTPUT/ocaml_lowering_report.json" <<'NODE'
+node - "$INVALID_OUTPUT/ocaml_lowering_report.json" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
 const fs = require('fs')
+const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const control = report.controls.find(item =>
@@ -141,6 +142,7 @@ const control = report.controls.find(item =>
 if (control?.payload == null)
 	throw new Error('missing Dynamic throw payload to corrupt')
 control.payload.inputRepresentationId = 'representation:Dynamic:internal-value'
+resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \

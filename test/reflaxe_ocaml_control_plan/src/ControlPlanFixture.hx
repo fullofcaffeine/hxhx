@@ -24,6 +24,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
@@ -633,6 +634,14 @@ class ControlPlanFixture {
 		final enumThrowWithWrongProof = throwDecision("control:throw:enum-wrong-proof", 256, "fixture.Signal", null, null, null, null, null, null, null, true);
 		Reflect.setField(enumThrowWithWrongProof.payload, "proofId", OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowWithWrongProof]));
+		final enumThrowFromOtherFunction = throwDecision("control:throw:enum-other-function", 256, "fixture.Signal", null, null, null, null, null, null, null,
+			true);
+		Reflect.setField(enumThrowFromOtherFunction, "functionId", "Other|Other|static|function|value|generics:0|required:Int->Int");
+		expectThrows("stale-binding", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowFromOtherFunction]));
+		final enumThrowFromOtherRevision = throwDecision("control:throw:enum-other-revision", 256, "fixture.Signal", null, null, null, null, null, null, null,
+			true);
+		Reflect.setField(enumThrowFromOtherRevision, "pipelineRevision", "typed-ocaml-function-plan-v32");
+		expectThrows("stale-binding", () -> new OcamlControlPlan(false, false, true, binding(), [], [enumThrowFromOtherRevision]));
 		final primitiveWithNominalProof = throwDecision("control:throw:primitive-with-nominal-proof", 257, "Int");
 		final primitivePayload = primitiveWithNominalProof.payload;
 		if (primitivePayload == null)
@@ -713,6 +722,8 @@ class ControlPlanFixture {
 			throw "The same-span occurrence fixture did not produce one loop and two break nodes";
 		final sameSourceBreakA = loopDecision("control:break:same-source:a", 110, loop.id, OcamlControlTransferKind.Break);
 		final sameSourceBreakB = loopDecision("control:break:same-source:b", 110, loop.id, OcamlControlTransferKind.Break);
+		Reflect.setField(sameSourceBreakA, "source", OcamlLoweredOrigin.sourceSpan(typedBreaks[0].pos));
+		Reflect.setField(sameSourceBreakB, "source", OcamlLoweredOrigin.sourceSpan(typedBreaks[1].pos));
 		final indexedSameSource = new OcamlControlPlan(false, true, false, binding(), [loop], [sameSourceBreakA, sameSourceBreakB],
 			[{expression: typedLoops[0], targetId: loop.id}], [
 			{expression: typedBreaks[0], decisionId: sameSourceBreakA.id},
@@ -738,11 +749,17 @@ class ControlPlanFixture {
 				{expression: typedBreaks[0], decisionId: sameSourceBreakA.id},
 				{expression: typedBreaks[0], decisionId: sameSourceBreakA.id}
 			]));
+		final ambiguousSourceBreakB = loopDecision("control:break:ambiguous-source:b", 110, loop.id, OcamlControlTransferKind.Break);
+		Reflect.setField(ambiguousSourceBreakB, "source", OcamlLoweredOrigin.sourceSpan(typedBreaks[0].pos));
 		expectThrows("ambiguous-decision-occurrence",
-			() -> new OcamlControlPlan(false, true, false, binding(), [loop], [sameSourceBreakA, sameSourceBreakB],
-				[{expression: typedLoops[0], targetId: loop.id}], [
+			() -> new OcamlControlPlan(false, true, false, binding(), [loop], [sameSourceBreakA, ambiguousSourceBreakB], [
+				{
+					expression: typedLoops[0],
+					targetId: loop.id
+				}
+			], [
 				{expression: typedBreaks[0], decisionId: sameSourceBreakA.id},
-				{expression: typedBreaks[0], decisionId: sameSourceBreakB.id}
+				{expression: typedBreaks[0], decisionId: ambiguousSourceBreakB.id}
 			]));
 
 		final typedThrowsRoot = Context.typeExpr(macro {
@@ -764,6 +781,8 @@ class ControlPlanFixture {
 			throw "The exact throw occurrence fixture did not produce two throw nodes";
 		final sameSourceThrowA = throwDecision("control:throw:same-source:a", 260, "Int");
 		final sameSourceThrowB = throwDecision("control:throw:same-source:b", 260, "Int");
+		Reflect.setField(sameSourceThrowA, "source", OcamlLoweredOrigin.sourceSpan(typedThrows[0].pos));
+		Reflect.setField(sameSourceThrowB, "source", OcamlLoweredOrigin.sourceSpan(typedThrows[1].pos));
 		final indexedThrows = new OcamlControlPlan(false, false, true, binding(), [], [sameSourceThrowA, sameSourceThrowB], [], [
 			{expression: typedThrows[0], decisionId: sameSourceThrowA.id},
 			{expression: typedThrows[1], decisionId: sameSourceThrowB.id}
@@ -772,6 +791,42 @@ class ControlPlanFixture {
 			|| indexedThrows.decisionFor(typedThrows[1])?.id != sameSourceThrowB.id) {
 			throw "The typed occurrence index collapsed distinct same-span throw nodes";
 		}
+
+		final typedEnumThrowRoot = Context.typeExpr(macro throw haxe.io.Error.Blocked);
+		final typedEnumThrows:Array<TypedExpr> = [];
+		function collectEnumThrowNodes(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TThrow(_):
+					typedEnumThrows.push(expression);
+				case _:
+			}
+			TypedExprTools.iter(expression, collectEnumThrowNodes);
+		}
+		collectEnumThrowNodes(typedEnumThrowRoot);
+		if (typedEnumThrows.length != 1)
+			throw "The direct enum throw occurrence fixture did not produce one throw node";
+		final sourceBoundEnumThrow = throwDecision("control:throw:enum-source-bound", 270, "haxe.io.Error", null, null, null, null, null, null, null, true);
+		Reflect.setField(sourceBoundEnumThrow, "source", OcamlLoweredOrigin.sourceSpan(typedEnumThrows[0].pos));
+		final indexedEnumThrow = new OcamlControlPlan(false, false, true, binding(), [], [sourceBoundEnumThrow], [],
+			[{expression: typedEnumThrows[0], decisionId: sourceBoundEnumThrow.id}]);
+		if (indexedEnumThrow.decisionFor(typedEnumThrows[0])?.id != sourceBoundEnumThrow.id)
+			throw "The direct enum throw lost its exact source-bound typed occurrence";
+		final wrongEnumThrow = throwDecision("control:throw:enum-wrong-type", 275, "fixture.Signal", null, null, null, null, null, null, null, true);
+		Reflect.setField(wrongEnumThrow, "source", OcamlLoweredOrigin.sourceSpan(typedEnumThrows[0].pos));
+		final wrongEnumPlan = new OcamlControlPlan(false, false, true, binding(), [], [wrongEnumThrow], [],
+			[{expression: typedEnumThrows[0], decisionId: wrongEnumThrow.id}]);
+		if (wrongEnumPlan.decisionFor(typedEnumThrows[0]) != null)
+			throw "A direct enum throw accepted a sealed decision for another enum type";
+		final wrongSourceEnumThrow = throwDecision("control:throw:enum-wrong-source", 280, "haxe.io.Error", null, null, null, null, null, null, null, true);
+		final actualEnumSource = OcamlLoweredOrigin.sourceSpan(typedEnumThrows[0].pos);
+		Reflect.setField(wrongSourceEnumThrow, "source", {
+			file: actualEnumSource.file,
+			min: actualEnumSource.min + 1,
+			max: actualEnumSource.max + 1
+		});
+		expectThrows("stale-decision-source",
+			() -> new OcamlControlPlan(false, false, true, binding(), [], [wrongSourceEnumThrow], [],
+				[{expression: typedEnumThrows[0], decisionId: wrongSourceEnumThrow.id}]));
 
 		final typedCatchRoot = Context.typeExpr(macro try {
 			throw true;
