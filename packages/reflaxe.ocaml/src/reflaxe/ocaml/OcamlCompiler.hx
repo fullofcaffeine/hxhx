@@ -29,6 +29,7 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlAssignOp;
@@ -430,6 +431,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		- Returns the input unchanged so Reflaxe's filtering semantics are untouched.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
+		OcamlSourcePositionMapper.beginRequest();
 		precomputeWholeProgramContext(moduleTypes);
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
 		return moduleTypes;

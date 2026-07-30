@@ -394,6 +394,11 @@ if (( rss_final_kb > rss_after_20_kb + 32768 )); then
 	fail "owned server RSS did not approach a plateau in the final ten requests (after20=${rss_after_20_kb}KB final=${rss_final_kb}KB)"
 fi
 
+compile_and_verify_state sourcemap-base "$expected_a" -D ocaml_sourcemap=directives
+replace_source_text "$MAIN_SOURCE" "class Main {" $'\n\nclass Main {'
+compile_and_verify_state sourcemap-newlines-inserted "$expected_a" -D ocaml_sourcemap=directives
+cp "$WORK_DIR/Main.original.hx" "$MAIN_SOURCE"
+
 stop_server
 start_server
 clear_output
