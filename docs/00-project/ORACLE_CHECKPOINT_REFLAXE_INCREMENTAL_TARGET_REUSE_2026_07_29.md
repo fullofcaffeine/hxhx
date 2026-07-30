@@ -387,6 +387,38 @@ still use the real standalone target, retain one semantic core, record artifact
 and implementation identities, and measure build, load, target execution,
 output equivalence, memory, and end-to-end latency.
 
+### Typed OCaml access for native Haxe-authored tools
+
+Self-promotion should let the native target use the OCaml platform without
+turning its Haxe source into raw target-language fragments. The ownership model
+has two separate typed boundaries:
+
+1. `reflaxe.ocaml` owns Haxe-facing OCaml platform libraries: exact externs for
+   representable OCaml APIs, generated typed bindings for suitable `.mli`
+   interfaces, and small checked `.ml`/`.mli` adapters for OCaml features Haxe
+   cannot express faithfully.
+2. A compiler host owns versioned compiler facts and services. It exposes
+   immutable program snapshots and capability-limited actions, not its private
+   mutable OCaml compiler graph.
+
+Native `hxhx` and a self-promoted `reflaxe.ocaml` may both consume the first
+layer. The native target may consume the second only through the same declared
+host capability contract as any promoted target.
+
+This does not mean importing every private upstream Haxe compiler module as a
+public Haxe library. Platform APIs and appropriate `compiler-libs` surfaces may
+be represented exactly or wrapped by a checked adapter. Private host state
+remains behind the plugin boundary. Unsupported OCaml types fail with a
+specific binding/adapter diagnostic instead of widening to `Dynamic`, `Obj.t`,
+or an unexplained `Obj.magic`.
+
+`haxe_ocaml-v8a9b` remains the one product owner for typed OCaml imports,
+adapters, native dependencies, toolchain locks, ownership, and provenance. The
+self-promotion proof may use the already declared typed low-level facade and
+one narrowly accepted adapter; it must not create a competing interop system or
+wait for every future ecosystem binding before measuring native target
+execution.
+
 ## Stop conditions and non-claims
 
 Stop and redesign if:
