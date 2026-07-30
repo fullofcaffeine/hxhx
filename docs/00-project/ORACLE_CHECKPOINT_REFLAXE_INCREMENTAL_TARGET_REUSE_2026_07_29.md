@@ -401,9 +401,41 @@ has two separate typed boundaries:
    immutable program snapshots and capability-limited actions, not its private
    mutable OCaml compiler graph.
 
-Native `hxhx` and a self-promoted `reflaxe.ocaml` may both consume the first
-layer. The native target may consume the second only through the same declared
-host capability contract as any promoted target.
+“Haxe-facing” describes how the API is authored and type-checked; it does not
+mean every Haxe execution host can call the API directly. Native `hxhx` and a
+self-promoted native `reflaxe.ocaml` may consume the first layer because their
+Haxe code is compiled and linked as OCaml. The current evaluated target cannot
+call arbitrary `Unix`, `Dynlink`, `Gc`, `Bigarray`, or `compiler-libs` modules
+merely because upstream Haxe itself is an OCaml program.
+
+The evaluated target has three different sources of capability:
+
+- portable Haxe APIs such as `Sys`, `FileSystem`, `sys.io`, and `sys.net`;
+- the public Haxe macro API supplied by its host; and
+- explicit versioned host services or helper processes.
+
+The native target may call typed OCaml libraries directly. It consumes compiler
+facts only through the same declared host capability contract as any promoted
+target.
+
+Native execution and privileged compiler access are independent dimensions.
+The current evaluated target already sees substantial compiler information
+through the public Haxe macro API. Merely compiling the target to native OCaml
+does not grant additional compiler facts.
+
+`hxhx` may later expose a richer capability-integrated preset containing
+stable declaration/local/expression identities, exact body/API revisions,
+sealed post-macro program snapshots, source origins and content revisions,
+dependency/invalidation observations, feature/DCE/reachability results,
+resource and initialization facts, transactional output, cancellation,
+diagnostics, and cache observations. These are immutable snapshots or
+capability-limited actions, preferably batched across the native boundary.
+
+The supported native baseline must not receive raw parser, typer, macro, or
+compiler-context objects. Even an in-process builtin uses the same typed
+interface where practical. This keeps the target core reusable with stock Haxe,
+makes host upgrades and incremental requests auditable, and prevents allocation
+identity or mutable compiler state from becoming part of target semantics.
 
 This does not mean importing every private upstream Haxe compiler module as a
 public Haxe library. Platform APIs and appropriate `compiler-libs` surfaces may
@@ -418,6 +450,128 @@ self-promotion proof may use the already declared typed low-level facade and
 one narrowly accepted adapter; it must not create a competing interop system or
 wait for every future ecosystem binding before measuring native target
 execution.
+
+Candidate typed surfaces include OCaml `Stdlib`, `Bytes`, `Buffer`, `Bigarray`,
+sequences and collections, exceptions/backtraces, `Unix` filesystem/process/
+pipe/signal/socket/time/resource APIs, `Dynlink`, `Gc` and profiling facts,
+typed package interfaces, and selected version-pinned `compiler-libs`
+interfaces. First-order functions, labels/optional arguments, tuples, records,
+closed variants, exceptions, opaque types, callbacks, and appropriate
+first-order generics should use exact bindings. Functors, GADTs, first-class
+modules, higher-rank contracts, or C-linked APIs use a checked adapter when a
+faithful Haxe type cannot be generated.
+
+### Raw-plugin capability parity and the `hxhx` superset
+
+A Haxe-authored native plugin should not become less capable merely because its
+source is Haxe rather than handwritten OCaml. For each supported host and
+toolchain profile, the interop plan must compare two small reference plugins:
+
+```text
+handwritten OCaml reference plugin
+  -> uses one documented host or OCaml capability
+Haxe-authored plugin compiled by reflaxe.ocaml
+  -> performs the same supported operation through a typed Haxe API
+```
+
+The comparison establishes **useful capability parity**: both plugins can
+perform the supported operation and observe the same lifecycle, result,
+diagnostic, and failure behavior. It does not promise access to every private
+module, unsafe value, or mutable compiler object that handwritten OCaml can
+technically reach inside one particular executable. Each raw-plugin capability
+must be classified as an exact typed binding, a checked adapter, a versioned
+host service, or an explicit unsupported/private capability.
+
+For stock Haxe, this inventory includes the version-pinned native eval-plugin
+surface and the public macro lifecycle used by Reflaxe. The Haxe-facing layer
+should cover the supported equivalents of plugin value encoding/decoding,
+native callable registration, plugin initialization and compatibility checks,
+source positions, diagnostics, exceptions, and lifecycle cleanup. Haxe 4.3.7
+and a future Haxe 5 release require separate host/toolchain profiles unless
+their compatibility is proven; a private OCaml module name is not a
+cross-version API.
+
+`hxhx` is a Haxe implementation and therefore owns the same compatible
+baseline behavior for supported plugins. It may then advertise additional
+services as a strict superset. A plugin requests those additions through the
+versioned capability catalog, so the same target core can run against the
+stock-Haxe baseline and opt into richer `hxhx` facts when available. Missing
+optional capabilities preserve baseline behavior; missing required capabilities
+fail before plugin execution.
+
+Target access needs the same distinction. Stock Haxe does not provide a stable
+public API that turns its private OCaml target-generator modules into a general
+dynamic target SDK. The stock-Haxe adapter therefore activates the shared target
+through the supported Reflaxe macro/eval lifecycle. `hxhx` can provide a
+first-class target SDK because it owns its Haxe-authored compiler boundary, but
+that SDK exposes the shared immutable program/facts envelope and versioned
+services—not a mechanical translation of upstream private OCaml records.
+`reflaxe.ocaml` compiles this Haxe-authored adapter and target code to native
+OCaml; it does not make the private upstream compiler implementation the API.
+
+The distributable authoring surface should therefore have three explicit
+layers:
+
+1. a portable Reflaxe target API used by the shared target core;
+2. exact-host, version-pinned bindings/adapters for the supported native
+   plugin and compiler-facing interfaces of Haxe 4.3.7 and later Haxe releases;
+   and
+3. an `hxhx` adapter that implements the same common target API from
+   `hxhx`'s own immutable Haxe-authored facts, plus negotiated extensions.
+
+The second layer makes advanced stock-Haxe custom-target experiments possible
+without pretending that private compiler internals are portable. It is tied to
+the exact Haxe build, OCaml ABI, interface schema, and support profile. The third
+layer preserves observable Haxe compatibility while allowing a different
+implementation and a richer `hxhx` service set. Shared target semantics remain
+in the first layer; exact-host code is confined to adapters and composition
+roots.
+
+These exact-host bindings also need a provenance decision before distribution.
+Upstream Haxe is a GPL behavior and architecture oracle, not implementation
+material for the MIT core. The project must not copy or mechanically translate
+upstream compiler implementation. A focused review must decide whether a
+particular interface declaration can be clean-room authored from observed
+behavior, must be generated locally from a user-supplied upstream installation,
+or belongs in a separately licensed package. Every generated or packaged
+binding records its upstream tag/commit, interface digest, generator identity,
+license disposition, Haxe version, and OCaml toolchain.
+
+Before M22 implementation begins, a focused Oracle review must challenge this
+capability matrix, the Haxe 4.3.7 and Haxe 5 profile boundary, the stock-Haxe
+activation route, the `hxhx` superset negotiation, and the one-payload versus
+thin-loader-shell evidence. It must also decide the exact-host binding package
+and provenance boundary. That later review should use executable raw-OCaml and
+Haxe-authored reference plugins plus one custom-target adapter. It is not a
+blocker for the current source-bundle reuse or first self-promotion work.
+
+A shared feature that needs one of these APIs should depend on a small typed
+Haxe interface. Evaluated execution can implement the interface through a
+portable Haxe path, host service, or helper; native execution can implement it
+with direct typed OCaml calls. A genuinely native-only feature instead requires
+a typed native capability and fails before execution when that capability is
+absent. It must not silently choose different target semantics in evaluated
+mode.
+
+The self-promotion evidence has two generations:
+
+```text
+evaluated standalone target
+  -> generates and builds native target artifact A
+native target artifact A
+  -> generates and builds successor native target artifact B from the same source
+```
+
+Artifacts A and B must have the same semantic target identity, normalized
+generated source, output claims, manifests, behavior, and supported capability
+surface. Compare native artifact bytes when the pinned OCaml toolchain is
+reproducible; otherwise record and explain the exact nondeterministic native
+metadata rather than weakening the source and behavior equality gates.
+
+The first self-promotion proof may use only the host-neutral compiler-fact
+baseline. It records the negotiated service catalog so a later M22 experiment
+can add one evidence-backed `hxhx` capability without conflating native
+execution with privileged access.
 
 ## Stop conditions and non-claims
 
