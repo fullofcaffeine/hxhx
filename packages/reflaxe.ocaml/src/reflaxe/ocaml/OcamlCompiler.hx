@@ -25,10 +25,12 @@ import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
+import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -45,6 +47,7 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
+import reflaxe.ocaml.runtimegen.DuneProjectEmitter.DuneProjectConfig;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
 import reflaxe.ocaml.runtimegen.OcamlDuneBuildState;
@@ -124,6 +127,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
 	var targetRevisionObservationMilliseconds:Int = 0;
 	var targetMissPreparationMilliseconds:Int = 0;
+	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
+	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
 
 	#if macro
 	/**
@@ -2369,6 +2374,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	public override function onCompileStart():Void {
 		pendingPublishedOutputBuild = null;
+		semanticRuntimeAuthority = null;
+		nativeSourceDeclarationAuthority = null;
 		#if macro
 		if (Context.defined("reflaxe_output_transaction") && Context.defined("ocaml_mli")) {
 			Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
@@ -2378,17 +2385,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	function sealArtifactManifest(artifacts:OcamlArtifactManifestBuilder):Void {
-		artifacts.seal({
-			status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-			model: "recorded-runtime-requirements-partial-v5",
-			revision: ctx.runtimeRequirementRevision(),
-			message: "The compiler records exact semantic runtime requirements and checks them against packaged sources. Whole-program authority remains incomplete because some generated runtime uses still have only module-name observations rather than occurrence-level reasons."
-		}, {
-			status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-			model: "free-form-dune-libraries-v1",
-			revision: null,
-			message: "Native libraries and source units are not yet backed by a locked, structured dependency manifest."
-		});
+		final runtimeAuthority = semanticRuntimeAuthority;
+		final nativeAuthority = nativeSourceDeclarationAuthority;
+		if (runtimeAuthority == null || nativeAuthority == null)
+			throw "reflaxe.ocaml: source-bundle authorities must be sealed before the artifact manifest";
+		artifacts.seal(runtimeAuthority, nativeAuthority);
 	}
 
 	/**
@@ -3318,6 +3319,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
+		nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarationsDisabled();
 		if (!noDune) {
 			final resolvedMainModuleId = resolveMainModuleIdForDune();
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
@@ -3368,7 +3370,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				out.length > 0 ? out : null;
 			}
 
-			DuneProjectEmitter.emit(output, {
+			final duneProjectConfig:DuneProjectConfig = {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
 				mainModuleId: resolvedMainModuleId,
@@ -3379,14 +3381,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 				duneLibraries: duneLibs,
 				duneLayout: duneLayoutValue,
 				executables: executables
-			}, artifacts);
+			};
+			nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarations(duneProjectConfig);
+			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts);
 		}
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
+		semanticRuntimeAuthority = OcamlSourceBundleAuthority.semanticRuntimeDisabled();
 		if (!noRuntime) {
 			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
-			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(), ctx.runtimeRequirementsSorted(),
-				ctx.runtimeRequirementRevision());
+			semanticRuntimeAuthority = RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(),
+				ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision());
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.

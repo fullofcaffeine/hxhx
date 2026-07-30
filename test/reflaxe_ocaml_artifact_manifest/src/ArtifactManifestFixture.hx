@@ -9,6 +9,9 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
+import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
+import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority.OcamlNativeSourceDeclaration;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -150,6 +153,77 @@ class ArtifactManifestFixture {
 		assertTrue(report.summary.blockers.length == 0, "a complete manifest should not report prerequisite blockers");
 	}
 
+	static function testSourceBundleAuthorities():Void {
+		final executableConfig:OcamlNativeSourceDeclaration = {
+			projectName: "fixture",
+			exeName: "fixture",
+			mainModuleId: "Main",
+			pluginMainModuleId: null,
+			pluginRegisterPluginId: null,
+			pluginRegisterProviderType: null,
+			pluginLoadMarker: null,
+			duneLibraries: ["unix", "str"],
+			duneLayout: "exe",
+			executables: null
+		};
+		final native = OcamlSourceBundleAuthority.nativeDeclarations(executableConfig);
+		assertTrue(native.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE,
+			"normalized native source declarations should be complete for source replay");
+		assertTrue(native.revision == OcamlSourceBundleAuthority.nativeDeclarations(executableConfig).revision,
+			"equivalent native source declarations should have one revision");
+		final reorderedConfig:OcamlNativeSourceDeclaration = {
+			projectName: executableConfig.projectName,
+			exeName: executableConfig.exeName,
+			mainModuleId: executableConfig.mainModuleId,
+			pluginMainModuleId: executableConfig.pluginMainModuleId,
+			pluginRegisterPluginId: executableConfig.pluginRegisterPluginId,
+			pluginRegisterProviderType: executableConfig.pluginRegisterProviderType,
+			pluginLoadMarker: executableConfig.pluginLoadMarker,
+			duneLibraries: ["str", "unix"],
+			duneLayout: executableConfig.duneLayout,
+			executables: executableConfig.executables
+		};
+		assertTrue(native.revision != OcamlSourceBundleAuthority.nativeDeclarations(reorderedConfig).revision,
+			"native library emission order should participate in source declaration identity");
+
+		final runtimeManifest:RuntimeSourceManifestSnapshot = {
+			schemaVersion: 1,
+			model: "fixture-runtime",
+			runtimeVersion: "fixture-v1",
+			revision: "sha256:" + Sha256.encode("runtime-manifest"),
+			modules: [
+				{
+					module: "HxRuntime",
+					scope: "application",
+					files: [
+						{
+							path: "HxRuntime.ml",
+							sha256: "sha256:" + Sha256.encode("runtime-file"),
+							bytes: 14
+						}
+					],
+					dependencies: [],
+					duneLibraries: ["unix"],
+					profiles: ["portable"],
+					license: "MIT"
+				}
+			]
+		};
+		final requirementRevision = "sha256:" + Sha256.encode("requirements");
+		final runtime = OcamlSourceBundleAuthority.semanticRuntime(runtimeManifest, requirementRevision, "portable", "selective", "recorded", false,
+			runtimeManifest.modules);
+		assertTrue(runtime.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE,
+			"a checked runtime manifest plus exact selected closure should be complete for source replay");
+		assertTrue(runtime.revision != OcamlSourceBundleAuthority.semanticRuntime(runtimeManifest, "sha256:" + Sha256.encode("changed"), "portable",
+			"selective", "recorded", false, runtimeManifest.modules)
+			.revision,
+			"runtime requirement changes should invalidate semantic runtime authority");
+		assertTrue(OcamlSourceBundleAuthority.semanticRuntimeDisabled().status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE,
+			"an explicitly disabled runtime should own its empty source selection");
+		assertTrue(OcamlSourceBundleAuthority.nativeDeclarationsDisabled().status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE,
+			"explicitly disabled Dune scaffolding should own its empty native source declaration");
+	}
+
 	static function testRegistrationFailures(root:String):Void {
 		final unsafeOutput = Path.join([root, "unsafe"]);
 		prepareOutput(unsafeOutput, []);
@@ -278,6 +352,7 @@ class ArtifactManifestFixture {
 		try {
 			testStableAndVolatileRevisions(root);
 			testCompleteAuthorities(root);
+			testSourceBundleAuthorities();
 			testRegistrationFailures(root);
 			testStaleCleanup(root);
 			testSealedValidation(root);

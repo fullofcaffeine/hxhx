@@ -4,6 +4,8 @@ package reflaxe.ocaml.runtimegen;
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
+import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
@@ -354,7 +356,7 @@ class RuntimeCopier {
 
 	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
 			compilerObservedModules:Array<String>, programOwnedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>,
-			requirementRevision:String):Void {
+			requirementRevision:String):OcamlArtifactAuthority {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
@@ -457,6 +459,8 @@ class RuntimeCopier {
 					includeInSourceBundle: true
 				});
 			}
+		return OcamlSourceBundleAuthority.semanticRuntime(sourceManifest, requirementRevision, profile,
+			OcamlRuntimeMode.toDefineValue(buildContext.runtimeMode), selectionMode, allowHxHxRuntime, selectedEntries);
 	}
 }
 #end

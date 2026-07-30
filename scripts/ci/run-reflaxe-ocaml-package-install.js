@@ -198,10 +198,10 @@ function generatedSourceRevision(outputDirectory) {
 	if (manifest.schemaVersion !== 1 || manifest.model !== 'reflaxe-ocaml-artifact-manifest') {
 		fail('generated OCaml output has an unsupported artifact manifest')
 	}
-	if (manifest.summary?.completeForSourceBundle !== false
+	if (manifest.summary?.completeForSourceBundle !== true
 		|| !Array.isArray(manifest.summary?.blockers)
-		|| manifest.summary.blockers.length !== 2) {
-		fail('generated artifact manifest did not preserve the current runtime/dependency packaging blockers')
+		|| manifest.summary.blockers.length !== 0) {
+		fail('generated artifact manifest did not close every generated-source replay authority')
 	}
 	const timing = manifest.entries?.find(entry => entry.path === 'ocaml_build_timing_report.json')
 	if (!timing || timing.stability !== 'volatile' || timing.includeInSourceBundle !== false) {
@@ -633,8 +633,8 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
-		|| scaffoldInspectionReport.artifactManifest?.completeForSourceBundle !== false
-		|| scaffoldInspectionReport.artifactManifest?.blockers?.length !== 2
+		|| scaffoldInspectionReport.artifactManifest?.completeForSourceBundle !== true
+		|| scaffoldInspectionReport.artifactManifest?.blockers?.length !== 0
 		|| scaffoldInspectionReport.buildTiming?.status !== 'present'
 		|| scaffoldInspectionReport.buildTiming?.nativeBuildRan !== true
 		|| !Number.isInteger(scaffoldInspectionReport.buildTiming?.duneBuildMilliseconds)
