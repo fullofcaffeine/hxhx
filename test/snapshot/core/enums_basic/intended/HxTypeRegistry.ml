@@ -20,8 +20,14 @@ let init () : unit =
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "MyEnum");
   ignore (HxType.enum_ "haxe.StackItem");
-  HxType.register_enum_ctors "MyEnum" [ "A"; "B"; "C" ];
-  HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
+  HxType.register_enum_ctor_layout "MyEnum" "A" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "MyEnum" "B" 1 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "MyEnum" "C" 2 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "CFunction" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "Module" 1 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "FilePos" 2 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "Method" 3 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "LocalFunction" 4 (HxType.EnumBlock 3);
   HxType.register_enum_ctor "MyEnum" "A" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (MyEnum.A)
   );

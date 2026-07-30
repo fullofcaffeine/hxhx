@@ -43,11 +43,29 @@ let class_instance_fields : (string, string list) Hashtbl.t = Hashtbl.create 251
 let class_static_fields : (string, string list) Hashtbl.t = Hashtbl.create 251
 let class_ctors : (string, Obj.t HxArray.t -> Obj.t) Hashtbl.t = Hashtbl.create 251
 let class_empty_ctors : (string, unit -> Obj.t) Hashtbl.t = Hashtbl.create 251
-let enum_ctors : (string, string list) Hashtbl.t = Hashtbl.create 251
 let enum_ctor_fns : (string, Obj.t HxArray.t -> Obj.t) Hashtbl.t = Hashtbl.create 251
 
 let enum_ctor_key (enum_name : string) (ctor_name : string) : string =
   enum_name ^ "." ^ ctor_name
+
+(* Haxe and native OCaml number enum constructors differently.
+
+   Haxe uses declaration order for every constructor. OCaml uses one immediate
+   sequence for constructors without payloads and a separate block-tag sequence
+   for constructors with payloads. Generated HxTypeRegistry code records the
+   correspondence while the typed Haxe declaration is still available. *)
+type enum_constructor_representation =
+  | EnumImmediate of int
+  | EnumBlock of int
+
+type enum_constructor_layout = {
+  name : string;
+  haxe_index : int;
+  representation : enum_constructor_representation;
+}
+
+let enum_layouts : (string, enum_constructor_layout list) Hashtbl.t =
+  Hashtbl.create 251
 
 (* Generated programs install their `HxTypeRegistry.init` function before
    calling `main`. Most programs never use reflection or typed runtime tag
@@ -260,10 +278,40 @@ let getClassFields (c : Obj.t) : string HxArray.t =
       | Some fields -> fields_to_hx_array fields
       | None -> fields_to_hx_array []
 
-(* `Type.getEnumConstructs` support. *)
+(* Generated code registers one row per constructor. Replacing the same Haxe
+   index makes accidental duplicate initialization deterministic, while the
+   lookup APIs sort by Haxe index before exposing declaration order. *)
+let register_enum_ctor_layout (enum_name : string) (ctor_name : string)
+    (haxe_index : int) (representation : enum_constructor_representation) : unit =
+  let previous =
+    match Hashtbl.find_opt enum_layouts enum_name with
+    | Some layouts -> layouts
+    | None -> []
+  in
+  let without_same_index =
+    Stdlib.List.filter (fun layout -> layout.haxe_index <> haxe_index) previous
+  in
+  Hashtbl.replace enum_layouts enum_name
+    ({ name = ctor_name; haxe_index; representation } :: without_same_index)
 
-let register_enum_ctors (name : string) (ctors : string list) : unit =
-  Hashtbl.replace enum_ctors name ctors
+let enum_layout_in_haxe_order (enum_name : string) : enum_constructor_layout list =
+  match Hashtbl.find_opt enum_layouts enum_name with
+  | None -> []
+  | Some layouts ->
+      Stdlib.List.sort
+        (fun left right -> Stdlib.compare left.haxe_index right.haxe_index)
+        layouts
+
+let enum_layout_for_value (enum_name : string) (value : Obj.t) :
+    enum_constructor_layout option =
+  let matches layout =
+    match layout.representation with
+    | EnumImmediate tag ->
+        Obj.is_int value && (Obj.obj value : int) = tag
+    | EnumBlock tag ->
+        (not (Obj.is_int value)) && Obj.tag value = tag
+  in
+  Stdlib.List.find_opt matches (enum_layout_in_haxe_order enum_name)
 
 (* `Type.createEnum` / `Type.createEnumIndex` support.
 
@@ -300,14 +348,13 @@ let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
     HxRuntime.hx_null
   else if is_type_value enum_marker e then
     let enum_name = type_value_name enum_marker e in
-    match Hashtbl.find_opt enum_ctors enum_name with
+    match
+      Stdlib.List.find_opt
+        (fun layout -> layout.haxe_index = idx)
+        (enum_layout_in_haxe_order enum_name)
+    with
     | None -> HxRuntime.hx_null
-    | Some ctors ->
-        if idx < 0 || idx >= Stdlib.List.length ctors then
-          HxRuntime.hx_null
-        else
-          let ctor_name = Stdlib.List.nth ctors idx in
-          createEnum e ctor_name params
+    | Some layout -> createEnum e layout.name params
   else
     HxRuntime.hx_null
 
@@ -320,9 +367,11 @@ let getEnumConstructs (e : Obj.t) : string HxArray.t =
     if HxRuntime.is_null (Obj.repr name) then
       fields_to_hx_array []
     else
-      match Hashtbl.find_opt enum_ctors name with
-      | Some ctors -> fields_to_hx_array ctors
-      | None -> fields_to_hx_array []
+      let names =
+        enum_layout_in_haxe_order name
+        |> Stdlib.List.map (fun layout -> layout.name)
+      in
+      fields_to_hx_array names
 
 (* `Type.getEnum` / enum introspection support (minimal, dynamic-friendly).
 
@@ -351,15 +400,19 @@ let enumIndex (o : Obj.t) : int =
   if HxRuntime.is_null o then
     -1
   else
-    let v =
-      match HxEnum.name_opt o with
-      | Some _ -> Obj.field o 2
-      | None -> o
-    in
-    if Obj.is_int v then
-      (Obj.obj v : int)
-    else
-      Obj.tag v
+    match HxEnum.name_opt o with
+    | Some name ->
+        ensure_registry_initialized ();
+        let value = Obj.field o 2 in
+        (match enum_layout_for_value name value with
+        | Some layout -> layout.haxe_index
+        | None -> -1)
+    | None ->
+        (* Exact typed enums are compiled to a generated pattern match before
+           reaching this runtime function. An unboxed Dynamic value has lost
+           the enum name needed to distinguish Haxe order, so the legacy
+           best-effort result remains limited to its raw OCaml representation. *)
+        if Obj.is_int o then (Obj.obj o : int) else Obj.tag o
 
 let enumParameters (o : Obj.t) : Obj.t HxArray.t =
   let out = HxArray.create () in
@@ -389,16 +442,9 @@ let enumConstructor (o : Obj.t) : string =
     | None -> hx_null_string
     | Some name ->
         let v = Obj.field o 2 in
-        let idx =
-          if Obj.is_int v then
-            (Obj.obj v : int)
-          else
-            Obj.tag v
-        in
-        match Hashtbl.find_opt enum_ctors name with
+        match enum_layout_for_value name v with
+        | Some layout -> layout.name
         | None -> hx_null_string
-        | Some ctors -> (
-            try Stdlib.List.nth ctors idx with _ -> hx_null_string)
 
 let merge_tags (a : string list) (b : string list) : string list =
   let seen : (string, unit) Hashtbl.t =
