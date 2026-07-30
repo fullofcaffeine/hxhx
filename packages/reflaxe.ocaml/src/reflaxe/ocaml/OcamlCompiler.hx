@@ -442,6 +442,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
 		OcamlSourcePositionMapper.beginRequest();
+		targetReuseRuntimeSourceManifest = null;
 		final started = haxe.Timer.stamp();
 		targetReuseObservation = captureTargetReuseObservation();
 		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
@@ -2389,7 +2390,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		pendingPublishedOutputBuild = null;
 		semanticRuntimeAuthority = null;
 		nativeSourceDeclarationAuthority = null;
-		targetReuseRuntimeSourceManifest = null;
 		#if macro
 		if (Context.defined("reflaxe_output_transaction") && Context.defined("ocaml_mli")) {
 			Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
@@ -3451,9 +3451,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final snapshot = finalProgramFingerprint;
 			final probe = targetReuseProbe;
 			final realm = targetReuseCatalogRealm;
+			final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
 			final runtimeAuthority = semanticRuntimeAuthority;
 			final nativeAuthority = nativeSourceDeclarationAuthority;
-			if (snapshot == null || probe == null || probe.requestRevision == null || realm == null)
+			if (snapshot == null || probe == null || probe.requestRevision == null || realm == null || fingerprintAndKeyMilliseconds == null)
 				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
 			if (runtimeAuthority == null || nativeAuthority == null)
 				throw "reflaxe.ocaml: target reuse report was requested before source authority was complete";
@@ -3461,8 +3462,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final candidate = OcamlSourceBundleCandidate.pack(outDir, probe.requestRevision, sourceSnapshot, false);
 			final shadow = OcamlSourceBundleShadowReplay.run(candidate, outDir);
 			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
-				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, realm, TargetReuseCatalog.sharedStats(), candidate, shadow,
-				artifacts);
+				targetRevisionObservationMilliseconds, fingerprintAndKeyMilliseconds, targetMissPreparationMilliseconds, realm,
+				TargetReuseCatalog.sharedStats(), candidate, shadow, artifacts);
 		}
 		#end
 

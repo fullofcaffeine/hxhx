@@ -32,8 +32,8 @@ class OcamlTargetReuseReportWriter {
 
 	/** Writes one request-scoped report and registers its artifact ownership. **/
 	public static function write(outputDirectory:String, snapshot:FinalProgramFingerprintSnapshot, probe:TargetReuseProbe,
-			components:Array<TargetReuseRevisionComponent>, targetRevisionObservationMilliseconds:Int, missPreparationMilliseconds:Int,
-			realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, candidate:OcamlSourceBundleCandidate,
+			components:Array<TargetReuseRevisionComponent>, targetRevisionObservationMilliseconds:Int, fingerprintAndKeyMilliseconds:Int,
+			missPreparationMilliseconds:Int, realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, candidate:OcamlSourceBundleCandidate,
 			shadow:OcamlSourceBundleShadowReplayResult, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sortedComponents = components.copy();
 		sortedComponents.sort((left, right) -> Reflect.compare(left.name, right.name));
@@ -71,7 +71,7 @@ class OcamlTargetReuseReportWriter {
 			timing: {
 				targetRevisionObservationMilliseconds: nonNegative(targetRevisionObservationMilliseconds, "target revision observation"),
 				missPreparationMilliseconds: nonNegative(missPreparationMilliseconds, "miss preparation"),
-				finalProgramFingerprintAndKeyMilliseconds: null,
+				finalProgramFingerprintAndKeyMilliseconds: nonNegative(fingerprintAndKeyMilliseconds, "final-program fingerprint and key"),
 				replayAndValidationMilliseconds: nonNegative(shadow.replayAndValidationMilliseconds, "replay and validation")
 			},
 			macroRealm: {

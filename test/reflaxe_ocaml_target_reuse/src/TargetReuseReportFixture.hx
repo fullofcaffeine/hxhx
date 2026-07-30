@@ -38,7 +38,9 @@ class TargetReuseReportFixture {
 			&& components[2].name == "runtime-input"
 			&& components[4].name == "target-implementation-candidate",
 			"target revision components should be complete and sorted");
-		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0 && report.timing.missPreparationMilliseconds >= 0,
+		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0
+			&& report.timing.finalProgramFingerprintAndKeyMilliseconds >= 0
+			&& report.timing.missPreparationMilliseconds >= 0,
 			"completed target phases should report non-negative durations");
 		assertTrue(report.macroRealm.status == "observed"
 			&& Std.string(report.macroRealm.identityRevision).startsWith("sha256:")
