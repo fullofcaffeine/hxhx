@@ -112,6 +112,7 @@ class OcamlFunctionPlanSealer {
 		final preliminaryCalls = callPlanner.plan(data.expr);
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
+		localRepresentations.requirePlanBinding(binding);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);

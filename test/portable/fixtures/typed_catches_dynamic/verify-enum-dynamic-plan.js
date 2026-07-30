@@ -116,6 +116,20 @@ try {
 		const conversion = report.localConversions.find(entry => entry.conversion === 'box-exact-enum-to-dynamic')
 		conversion.inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'
 	})
+	expectLoweringRejection('an enum conversion whose source moved while retaining its old ID', /does not match its retained function/, report => {
+		const conversion = report.localConversions.find(entry => entry.conversion === 'box-exact-enum-to-dynamic')
+		const operation = report.unsafeOperations.find(entry => entry.conversionId === conversion.id)
+		conversion.source.min += 1
+		conversion.unsafeOperation.source.min += 1
+		operation.source.min += 1
+	})
+	expectLoweringRejection('an enum conversion whose body revision changed while retaining its old ID', /does not match its retained function/, report => {
+		const conversion = report.localConversions.find(entry => entry.conversion === 'box-exact-enum-to-dynamic')
+		const operation = report.unsafeOperations.find(entry => entry.conversionId === conversion.id)
+		conversion.bodyRevision = 'body:coherently-tampered'
+		conversion.unsafeOperation.bodyRevision = conversion.bodyRevision
+		operation.bodyRevision = conversion.bodyRevision
+	})
 	expectLoweringRejection('an unsafe record detached from its enum conversion', /does not preserve its sealed enum-to-Dynamic conversion/, report => {
 		const operation = report.unsafeOperations.find(entry => entry.operation === 'box-exact-enum-to-dynamic')
 		operation.inputSemanticTypeId = 'OtherEnum'

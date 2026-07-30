@@ -14,8 +14,10 @@ typedef OcamlEnumDynamicCarrierIdentity = {
 		Target-neutral name for the native OCaml variant value.
 
 		This is evidence about the carrier family, not rendered OCaml syntax.
-		The syntax builder still derives the concrete expression from the final
-		typed node and must match this identity before emitting a conversion.
+		Final planning validates this identity before sealing the function. The
+		syntax builder then uses the final typed node only as the value to emit and
+		applies the already-sealed enum name; it does not decide the enum identity
+		a second time.
 	**/
 	final carrierTypeId:String;
 }

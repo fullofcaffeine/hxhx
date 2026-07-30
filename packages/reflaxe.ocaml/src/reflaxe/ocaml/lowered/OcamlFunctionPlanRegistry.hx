@@ -113,7 +113,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v59";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v60";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -412,6 +412,7 @@ class OcamlFunctionPlanRegistry {
 		bytesMutations.requirePlanBinding(binding);
 		bytesProducers.requirePlanBinding(binding);
 		bytesReads.requirePlanBinding(binding);
+		localRepresentations.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);

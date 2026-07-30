@@ -1065,6 +1065,18 @@ class OcamlBuilder {
 	**/
 	function requireLocalConversion(localId:Int, role:OcamlLocalConversionRole, expression:TypedExpr, inputSemanticTypeId:String, inputCarrierTypeId:String,
 			outputSemanticTypeId:String, outputCarrierTypeId:String):OcamlLocalConversionDecision {
+		final conversion = requireLocalConversionOccurrence(localId, role, expression);
+		return requireLocalConversionShape(conversion, localId, expression, inputSemanticTypeId, inputCarrierTypeId, outputSemanticTypeId, outputCarrierTypeId);
+	}
+
+	/**
+		Resolves one occurrence using only its sealed function, local, role, and source.
+
+		Callers that already have a complete semantic plan, such as exact
+		enum-to-Dynamic initialization, use this lookup so syntax does not
+		reclassify the typed expression and make the same target decision again.
+	**/
+	function requireLocalConversionOccurrence(localId:Int, role:OcamlLocalConversionRole, expression:TypedExpr):OcamlLocalConversionDecision {
 		final binding = currentFunctionPlanBinding;
 		if (binding == null)
 			return localStorageInvariant('local $localId requires an occurrence conversion outside a sealed function body', expression.pos);
@@ -1078,12 +1090,18 @@ class OcamlBuilder {
 			final occurrenceId = OcamlLocalRepresentationPlan.occurrenceId(binding, stableId, role, source);
 			return localStorageInvariant('local $stableId has no sealed $role conversion for occurrence "$occurrenceId"', expression.pos);
 		}
+		return conversion;
+	}
+
+	/** Confirms that a typed occurrence still has the carriers named by its seal. */
+	function requireLocalConversionShape(conversion:OcamlLocalConversionDecision, localId:Int, expression:TypedExpr, inputSemanticTypeId:String,
+			inputCarrierTypeId:String, outputSemanticTypeId:String, outputCarrierTypeId:String):OcamlLocalConversionDecision {
 		if (conversion.inputSemanticTypeId != inputSemanticTypeId
 			|| conversion.inputCarrierTypeId != inputCarrierTypeId
 			|| conversion.outputSemanticTypeId != outputSemanticTypeId
 			|| conversion.outputCarrierTypeId != outputCarrierTypeId) {
 			return
-				localStorageInvariant('local $stableId occurrence "${conversion.id}" expects ${conversion.inputSemanticTypeId}/${conversion.inputCarrierTypeId} -> ${conversion.outputSemanticTypeId}/${conversion.outputCarrierTypeId}, but the final typed occurrence is $inputSemanticTypeId/$inputCarrierTypeId -> $outputSemanticTypeId/$outputCarrierTypeId',
+				localStorageInvariant('local ${conversion.localId} occurrence "${conversion.id}" expects ${conversion.inputSemanticTypeId}/${conversion.inputCarrierTypeId} -> ${conversion.outputSemanticTypeId}/${conversion.outputCarrierTypeId}, but the final typed occurrence is $inputSemanticTypeId/$inputCarrierTypeId -> $outputSemanticTypeId/$outputCarrierTypeId',
 				expression.pos);
 		}
 		return conversion;
@@ -1149,15 +1167,6 @@ class OcamlBuilder {
 		conversion:OcamlLocalCarrierConversion
 	}> {
 		final unwrapped = unwrap(expression);
-		final directEnumCarrier = OcamlEnumDynamicCarrier.fromDirectValue(unwrapped);
-		if (directEnumCarrier != null) {
-			return {
-				semanticTypeId: directEnumCarrier.semanticTypeId,
-				carrierTypeId: directEnumCarrier.carrierTypeId,
-				payload: unwrapped,
-				conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic
-			};
-		}
 		return switch (unwrapped.expr) {
 			case TConst(TNull):
 				{
@@ -1200,22 +1209,12 @@ class OcamlBuilder {
 						conversion: OcamlLocalCarrierConversion.BoxExactBoolToDynamic
 					};
 				} else {
-					final enumCarrier = OcamlEnumDynamicCarrier.fromDirectValue(payload);
-					if (enumCarrier != null) {
-						{
-							semanticTypeId: enumCarrier.semanticTypeId,
-							carrierTypeId: enumCarrier.carrierTypeId,
-							payload: payload,
-							conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic
-						};
-					} else {
-						semanticCarrier == null ? null : {
-							semanticTypeId: semanticCarrier.semanticTypeId,
-							carrierTypeId: semanticCarrier.carrierTypeId,
-							payload: payload,
-							conversion: OcamlLocalCarrierConversion.BoxConcreteToDynamic
-						};
-					}
+					semanticCarrier == null ? null : {
+						semanticTypeId: semanticCarrier.semanticTypeId,
+						carrierTypeId: semanticCarrier.carrierTypeId,
+						payload: payload,
+						conversion: OcamlLocalCarrierConversion.BoxConcreteToDynamic
+					};
 				}
 			case _:
 				null;
@@ -1224,11 +1223,23 @@ class OcamlBuilder {
 
 	/** Materializes one occurrence-bound initializer into Dynamic's Obj.t carrier. */
 	function buildDynamicWrite(localId:Int, rhs:TypedExpr):OcamlExpr {
+		final conversion = requireLocalConversionOccurrence(localId, OcamlLocalConversionRole.Initializer, rhs);
+		if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic) {
+			final unwrapped = unwrap(rhs);
+			final payload = switch (unwrapped.expr) {
+				case TCast(child, null): unwrap(child);
+				case _: unwrapped;
+			}
+			final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(payload)]);
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
+				OcamlExpr.EConst(OcamlConst.CString(conversion.inputSemanticTypeId)),
+				nativeVariant
+			]);
+		}
 		final input = dynamicWriteInput(rhs);
 		if (input == null)
 			return localStorageInvariant('local $localId has no admitted concrete-to-Dynamic input shape', rhs.pos);
-		final conversion = requireLocalConversion(localId, OcamlLocalConversionRole.Initializer, rhs, input.semanticTypeId, input.carrierTypeId, "Dynamic",
-			"Obj.t");
+		requireLocalConversionShape(conversion, localId, rhs, input.semanticTypeId, input.carrierTypeId, "Dynamic", "Obj.t");
 		if (conversion.conversion != input.conversion)
 			return
 				localStorageInvariant('local $localId occurrence "${conversion.id}" selected ${conversion.conversion}, but the final typed input requires ${input.conversion}',
@@ -1241,12 +1252,7 @@ class OcamlBuilder {
 			case BoxExactBoolToDynamic:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(input.payload)]);
 			case BoxExactEnumToDynamic:
-				OcamlEnumDynamicCarrier.requireIdentity(conversion.inputSemanticTypeId, conversion.inputCarrierTypeId);
-				final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(input.payload)]);
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
-					OcamlExpr.EConst(OcamlConst.CString(conversion.inputSemanticTypeId)),
-					nativeVariant
-				]);
+				localStorageInvariant('local $localId occurrence "${conversion.id}" reached generic Dynamic syntax with an enum-specific seal', rhs.pos);
 			case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier,
 				BoxExactBoolToNullableBool, NullableBoolTruthiness:
 				localStorageInvariant('local $localId occurrence "${conversion.id}" selected invalid Dynamic conversion ${conversion.conversion}', rhs.pos);

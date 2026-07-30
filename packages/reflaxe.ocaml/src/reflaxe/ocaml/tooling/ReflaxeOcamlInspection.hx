@@ -1783,6 +1783,10 @@ class ReflaxeOcamlInspection {
 				if (seen.exists(result.id)) throw 'Local conversion report contains duplicate identity "${result.id}".';
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
+				final canonicalId = localConversionOccurrenceId(result);
+				if (result.pipelineRevision != "ocaml-function-plans-v60"
+					|| result.id != canonicalId)
+					throw 'Local conversion "${result.id}" does not match its retained function, revisions, local, role, and source; expected "$canonicalId".';
 				if (result.conversion == "box-exact-enum-to-dynamic") {
 					final expectedCarrier = "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId;
 					if (result.role != "initializer"
@@ -1801,6 +1805,21 @@ class ReflaxeOcamlInspection {
 		];
 		conversions.sort((left, right) -> compareStrings(left.id, right.id));
 		return conversions;
+	}
+
+	/** Rebuilds the occurrence key using the same schema as final target planning. */
+	static function localConversionOccurrenceId(conversion:InspectionLocalConversion):String {
+		return "local-conversion:" + Sha256.encode([
+			conversion.functionId,
+			conversion.programRevision,
+			conversion.bodyRevision,
+			conversion.pipelineRevision,
+			conversion.localId,
+			conversion.role,
+			conversion.sourceFile,
+			Std.string(conversion.sourceMin),
+			Std.string(conversion.sourceMax)
+		].join("\n")).substr(0, 32);
 	}
 
 	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {

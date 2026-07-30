@@ -42,6 +42,34 @@ class LocalStoragePlannerFixture {
 			throw '$label should have failed.';
 	}
 
+	/**
+		Copies one JSON-shaped plan record without sharing nested source or proof objects.
+
+		These tamper fixtures deliberately change several matching fields at once.
+		A shallow copy would also modify the original valid plan and make a later
+		failure ambiguous.
+	**/
+	static function copyPlanRecord(value:Dynamic):Dynamic {
+		return haxe.Json.parse(haxe.Json.stringify(value));
+	}
+
+	/**
+		Recomputes the IDs that authenticate one deliberately modified conversion.
+
+		Most tamper tests keep the old ID and prove that canonical-identity checks
+		reject the altered facts. The binding test instead needs an internally
+		consistent stale record, so this helper rebuilds its conversion and unsafe
+		operation IDs before checking it against the current function.
+	**/
+	static function reidentifyConversion(conversion:Dynamic, binding:OcamlFunctionPlanBinding):Void {
+		final id = OcamlLocalRepresentationPlan.occurrenceId(binding, conversion.localId, conversion.role, conversion.source);
+		conversion.id = id;
+		if (conversion.unsafeOperation != null) {
+			conversion.unsafeOperation.conversionId = id;
+			conversion.unsafeOperation.id = id + ":unsafe:" + conversion.unsafeOperation.operation;
+		}
+	}
+
 	static function plan(source:Expr):OcamlLocalStoragePlan {
 		final expression = Context.typeExpr(source);
 		return storagePlan(expression, "fixture|storage");
@@ -683,7 +711,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v59"
+			pipelineRevision: "ocaml-function-plans-v60"
 		};
 		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
 		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
@@ -725,7 +753,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-enum-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-enum-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v59"
+			pipelineRevision: "ocaml-function-plans-v60"
 		};
 		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
 		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
@@ -763,7 +791,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|indirect-dynamic-enum",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:indirect-dynamic-enum-v1",
-			pipelineRevision: "ocaml-function-plans-v59"
+			pipelineRevision: "ocaml-function-plans-v60"
 		});
 		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& indirectDynamicEnumPlan.conversions().length == 0,
@@ -780,6 +808,34 @@ class LocalStoragePlannerFixture {
 		final wrongEnumCarrier:Dynamic = Reflect.copy(enumConversion);
 		Reflect.setField(wrongEnumCarrier, "inputCarrierTypeId", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum");
 		expectFailure("wrong enum Dynamic carrier", "wrong-dynamic-carrier", () -> new OcamlLocalRepresentationPlan([enumDecision], [cast wrongEnumCarrier]));
+		final staleEnumSource = copyPlanRecord(enumConversion);
+		staleEnumSource.source.min += 1;
+		staleEnumSource.unsafeOperation.source.min += 1;
+		expectFailure("coherently changed enum source with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumSource]));
+		final staleEnumFunction = copyPlanRecord(enumConversion);
+		staleEnumFunction.functionId = "fixture|different-enum-function";
+		staleEnumFunction.unsafeOperation.functionId = staleEnumFunction.functionId;
+		expectFailure("coherently changed enum function with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumFunction]));
+		final staleEnumRevision = copyPlanRecord(enumConversion);
+		staleEnumRevision.bodyRevision = "body:dynamic-enum-carrier-stale";
+		staleEnumRevision.unsafeOperation.bodyRevision = staleEnumRevision.bodyRevision;
+		expectFailure("coherently changed enum body revision with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumRevision]));
+		final priorPipelineEnum = copyPlanRecord(enumConversion);
+		priorPipelineEnum.pipelineRevision = "ocaml-function-plans-v59";
+		priorPipelineEnum.unsafeOperation.pipelineRevision = priorPipelineEnum.pipelineRevision;
+		final priorPipelineBinding:OcamlFunctionPlanBinding = {
+			functionId: priorPipelineEnum.functionId,
+			programRevision: priorPipelineEnum.programRevision,
+			bodyRevision: priorPipelineEnum.bodyRevision,
+			pipelineRevision: priorPipelineEnum.pipelineRevision
+		};
+		reidentifyConversion(priorPipelineEnum, priorPipelineBinding);
+		final priorPipelinePlan = new OcamlLocalRepresentationPlan([enumDecision], [cast priorPipelineEnum]);
+		expectFailure("canonical enum conversion from a prior target pipeline", "stale-local-conversion-binding",
+			() -> priorPipelinePlan.requirePlanBinding(dynamicEnumBinding));
 		final uninitializedDynamicInput = Context.typeExpr(macro {
 			var value:Dynamic;
 			value;
@@ -788,7 +844,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|uninitialized-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:uninitialized-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v59"
+			pipelineRevision: "ocaml-function-plans-v60"
 		});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -802,13 +858,14 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|reassigned-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:reassigned-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v59"
+			pipelineRevision: "ocaml-function-plans-v60"
 		});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,
 			"a reassigned Dynamic local must reject the entire immutable slice instead of publishing its initializer conversion");
-		final wrongDynamicRole:Dynamic = Reflect.copy(dynamicConversions[0]);
-		Reflect.setField(wrongDynamicRole, "role", OcamlLocalConversionRole.Assignment);
+		final wrongDynamicRole:Dynamic = copyPlanRecord(dynamicConversions[0]);
+		wrongDynamicRole.role = OcamlLocalConversionRole.Assignment;
+		reidentifyConversion(wrongDynamicRole, dynamicCarrierBinding);
 		final dynamicDecisions:Array<OcamlLocalRepresentationDecision> = dynamicReferences.map(reference -> ({
 			localId: reference.localId,
 			choice: OcamlLocalRepresentationChoice.ProgramDecision(reference.representationId, reference.semanticTypeId, reference.domain),

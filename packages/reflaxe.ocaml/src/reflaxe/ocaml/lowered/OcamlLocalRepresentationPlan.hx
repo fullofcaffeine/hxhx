@@ -242,6 +242,26 @@ class OcamlLocalRepresentationPlan {
 		].join("\n")).substr(0, 32);
 	}
 
+	/**
+		Requires every retained occurrence to belong to one sealed function body.
+
+		A conversion is not reusable merely because its enum and carrier fields
+		look valid. Its function, program, body, and target-pipeline revisions must
+		match the function being sealed. This check runs before runtime reasons or
+		OCaml syntax can consume the plan.
+	**/
+	public function requirePlanBinding(binding:OcamlFunctionPlanBinding):Void {
+		for (conversion in orderedConversions) {
+			if (conversion.functionId != binding.functionId
+				|| conversion.programRevision != binding.programRevision
+				|| conversion.bodyRevision != binding.bodyRevision
+				|| conversion.pipelineRevision != binding.pipelineRevision) {
+				throw 'reflaxe.ocaml [ocaml-representation:stale-local-conversion-binding]: occurrence "${conversion.id}" belongs to ${conversion.functionId}/${conversion.bodyRevision}/${conversion.pipelineRevision}, expected ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+			}
+			requireCanonicalConversionIdentity(conversion);
+		}
+	}
+
 	/** Resolves one occurrence by its reusable lexical identity. */
 	public function conversionFor(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole,
 			source:OcamlLoweredSourceSpan):Null<OcamlLocalConversionDecision> {
@@ -451,6 +471,26 @@ class OcamlLocalRepresentationPlan {
 			case other:
 				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-role]: occurrence "${decision.id}" uses unsupported role "$other"';
 		}
+		requireCanonicalConversionIdentity(decision);
+	}
+
+	/**
+		Recomputes the occurrence identity from the immutable fields it authenticates.
+
+		Without this check, a stale ID could be paired with coherently forged source
+		or revision fields in both the conversion and its unsafe-operation record.
+		Cross-record agreement would then look valid even though the ID described a
+		different source occurrence.
+	**/
+	static function requireCanonicalConversionIdentity(decision:OcamlLocalConversionDecision):Void {
+		final expected = occurrenceId({
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		}, decision.localId, decision.role, decision.source);
+		if (decision.id != expected)
+			throw 'reflaxe.ocaml [ocaml-representation:noncanonical-local-conversion]: occurrence "${decision.id}" does not match its retained function, revisions, local, role, and source; expected "$expected"';
 	}
 
 	static function requireConversionShape(decision:OcamlLocalConversionDecision, inputSemanticTypeId:String, inputCarrierTypeId:String,
