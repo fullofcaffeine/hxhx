@@ -27,6 +27,21 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 #end
 
 /**
+	Records how one Haxe enum constructor is represented by native OCaml.
+
+	Haxe assigns one index in declaration order. OCaml instead assigns separate
+	numeric sequences to constructors without payloads and constructors with
+	payloads. Generated runtime metadata keeps both numbers so reflection can
+	report Haxe behavior without treating an OCaml tag as a Haxe index.
+**/
+typedef OcamlEnumConstructorLayout = {
+	final name:String;
+	final haxeIndex:Int;
+	final carriesPayload:Bool;
+	final ocamlTag:Int;
+}
+
+/**
  * Per-compilation, instance-based state for reflaxe.ocaml.
  *
  * M2+ will expand this to track mutability, renames, and other stateful decisions
@@ -141,13 +156,14 @@ class CompilationContext {
 	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
 
 	/**
-	 * Enum constructor names by enum full name (`pack.Enum`).
+	 * Haxe constructor order and native OCaml representation by enum full name.
 	 *
-	 * Why
-	 * - `Type.getEnumConstructs(E)` returns the list of constructor identifiers for `E`.
-	 * - OCaml variants do not carry reflection metadata; we must generate it at compile time.
+	 * `Type.getEnumConstructs`, `Type.enumConstructor`, `Type.enumIndex`, and
+	 * `Type.createEnumIndex` all consume this one generated layout. Keeping one
+	 * record prevents those APIs from drifting when payload and constant
+	 * constructors are interleaved.
 	 */
-	public final enumConstructsByFullName:Map<String, Array<String>> = [];
+	public final enumConstructorLayoutsByFullName:Map<String, Array<OcamlEnumConstructorLayout>> = [];
 
 	/**
 	 * Defining module id for each compiled enum full name (`pack.Enum` → `pack.Module`).

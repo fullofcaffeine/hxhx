@@ -39,15 +39,16 @@ class Main {
 	}
 
 	static function dynamicCases():Void {
-		final values:Array<Dynamic> = [
-			MixedShape.Alpha,
-			MixedShape.Bravo(3),
-			MixedShape.Charlie,
-			MixedShape.Delta("dynamic", 4),
-			MixedShape.Echo
-		];
-		for (value in values)
-			line("dynamic:" + describe(value));
+		final alpha:Dynamic = MixedShape.Alpha;
+		line("dynamic:" + describe(alpha));
+		final bravo:Dynamic = MixedShape.Bravo(3);
+		line("dynamic:" + describe(bravo));
+		final charlie:Dynamic = MixedShape.Charlie;
+		line("dynamic:" + describe(charlie));
+		final delta:Dynamic = MixedShape.Delta("dynamic", 4);
+		line("dynamic:" + describe(delta));
+		final echo:Dynamic = MixedShape.Echo;
+		line("dynamic:" + describe(echo));
 	}
 
 	static function factoryCases():Void {

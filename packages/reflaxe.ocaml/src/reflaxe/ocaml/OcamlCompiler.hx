@@ -3395,21 +3395,27 @@ class OcamlCompiler extends DirectToStringCompiler {
 					lines.push("  ignore (HxType.enum_ " + ocamlStringLiteral(n) + ");");
 				}
 				for (n in enumNames) {
-					final ctors = ctx.enumConstructsByFullName.get(n);
-					if (ctors == null)
+					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
+					if (layouts == null)
 						continue;
-					lines.push("  HxType.register_enum_ctors " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(ctors) + ";");
+					for (layout in layouts) {
+						final representation = layout.carriesPayload ? ("HxType.EnumBlock " + Std.string(layout.ocamlTag)) : ("HxType.EnumImmediate "
+							+ Std.string(layout.ocamlTag));
+						lines.push("  HxType.register_enum_ctor_layout " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(layout.name) + " "
+							+ Std.string(layout.haxeIndex) + " (" + representation + ");");
+					}
 				}
 				// `Type.createEnum` / `Type.createEnumIndex` constructor registry (M10).
 				for (n in enumNames) {
-					final ctors = ctx.enumConstructsByFullName.get(n);
-					if (ctors == null)
+					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
+					if (layouts == null)
 						continue;
 					final modId = ctx.enumModuleIdByFullName.get(n);
 					if (modId == null)
 						continue;
 					final modName = moduleIdToOcamlModuleName(modId);
-					for (ctorName in ctors) {
+					for (layout in layouts) {
+						final ctorName = layout.name;
 						final key = n + ":" + ctorName;
 						final expected = ctx.enumCtorArgsByFullNameAndCtor.get(key);
 						final argsInfo = expected != null ? expected : [];
@@ -3840,13 +3846,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.nonStdTypeRegistryEnums.set(runtimeName, true);
 		}
 		ctx.enumModuleIdByFullName.set(runtimeName, enumType.module);
-		// Enum constructor names for `Type.getEnumConstructs` (M10).
+		// Haxe declaration indices and native OCaml tags are different number
+		// spaces. Record both while the typed enum declaration is available so
+		// Dynamic reflection never has to infer source order from runtime layout.
 		{
-			final ctors = options.map(o -> {
-				final n = extractNativeString(o.field.meta);
-				n != null ? n : o.name;
-			});
-			ctx.enumConstructsByFullName.set(runtimeName, ctors);
+			var immediateTag = 0;
+			var blockTag = 0;
+			final layouts:Array<OcamlEnumConstructorLayout> = [];
+			for (option in options) {
+				final native = extractNativeString(option.field.meta);
+				final carriesPayload = option.args.length > 0;
+				final ocamlTag = if (carriesPayload) blockTag++ else immediateTag++;
+				layouts.push({
+					name: native != null ? native : option.name,
+					haxeIndex: option.field.index,
+					carriesPayload: carriesPayload,
+					ocamlTag: ocamlTag
+				});
+			}
+			layouts.sort((left, right) -> left.haxeIndex - right.haxeIndex);
+			ctx.enumConstructorLayoutsByFullName.set(runtimeName, layouts);
 		}
 		// Enum constructor signatures for `Type.createEnum` / `Type.createEnumIndex` (M10).
 		{
