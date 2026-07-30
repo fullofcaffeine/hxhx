@@ -19,6 +19,7 @@ import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
 import reflaxe.lifecycle.FinalProgramFingerprintSnapshot;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.lifecycle.TargetReuseCatalog;
 import reflaxe.lifecycle.TargetReuseRevisionComponent;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
@@ -448,6 +449,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		independent authority, transaction, diagnostics, and memory gates.
 	**/
 	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
+		final probe = targetReuseProbe;
+		if (probe == null)
+			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
+		if (!probe.eligible)
+			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
 		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
 		targetMissPreparationMilliseconds = elapsedMilliseconds(started);
@@ -3402,10 +3408,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (Context.defined("reflaxe_ocaml_target_reuse_report")) {
 			final snapshot = finalProgramFingerprint;
 			final probe = targetReuseProbe;
-			if (snapshot == null || probe == null)
+			final realm = targetReuseCatalogRealm;
+			if (snapshot == null || probe == null || realm == null)
 				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
 			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
-				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, artifacts);
+				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, realm, TargetReuseCatalog.sharedStats(), artifacts);
 		}
 		#end
 

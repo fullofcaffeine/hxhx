@@ -21,7 +21,8 @@ class TargetReuseProbeFixture {
 			final ocaml:OcamlCompiler = cast compiler;
 			final snapshot = ocaml.finalProgramFingerprint;
 			final probe = ocaml.targetReuseProbe;
-			if (snapshot == null || probe == null || probe.requestRevision == null)
+			final realm = ocaml.targetReuseCatalogRealm;
+			if (snapshot == null || probe == null || probe.requestRevision == null || realm == null)
 				Context.fatalError("OCaml target reuse observation was not sealed before target startup", Context.currentPos());
 			if (probe.eligible)
 				Context.fatalError("the incomplete OCaml target must not authorize source replay", Context.currentPos());

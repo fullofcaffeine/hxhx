@@ -105,6 +105,7 @@
     "test:reflaxe-ocaml:transactional-dune": "bash scripts/ci/reflaxe-ocaml-transactional-dune-test.sh",
     "test:reflaxe-ocaml:artifact-manifest": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_artifact_manifest/src -D reflaxe_runtime --macro 'nullSafety(\"reflaxe.ocaml\")' --run ArtifactManifestFixture",
     "test:reflaxe-ocaml:target-reuse-contract": "bash scripts/ci/reflaxe-ocaml-target-reuse-contract-test.sh",
+    "test:reflaxe-ocaml:target-reuse-realm": "bash scripts/ci/reflaxe-ocaml-target-reuse-realm-test.sh",
     "test:reflaxe-ocaml:runtime-manifest": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_runtime_manifest/src -D reflaxe_runtime --macro 'nullSafety(\"reflaxe.ocaml\")' --run RuntimeSourceManifestFixture",
     "test:reflaxe-ocaml:runtime-requirements": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_runtime_requirements/src -D reflaxe_runtime --macro 'nullSafety(\"reflaxe.ocaml\")' --run RuntimeRequirementLedgerFixture",
     "test:reflaxe-ocaml:semantic-identities": "bash scripts/ci/reflaxe-ocaml-semantic-identity-test.sh",

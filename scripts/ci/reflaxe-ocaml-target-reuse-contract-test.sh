@@ -6,6 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$ROOT/test/portable/fixtures/call_exact_int_static"
 PROBE_SOURCE="$ROOT/test/reflaxe_ocaml_target_reuse/src"
+CATALOG_SOURCE="$ROOT/test/reflaxe_target_reuse_catalog/src"
 OUTPUT_NAME="out_target_reuse_contract_$$"
 
 cleanup() {
@@ -16,6 +17,12 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$ROOT"
+haxe \
+	-cp "$CATALOG_SOURCE" \
+	-lib reflaxe \
+	-D reflaxe_runtime \
+	--run TargetReuseCatalogFixture
+
 haxe \
 	-cp packages/reflaxe.ocaml/src \
 	-cp "$PROBE_SOURCE" \
@@ -34,3 +41,6 @@ haxe build.hxml \
 
 haxe -cp "$PROBE_SOURCE" --run TargetReuseReportFixture "$OUTPUT_NAME"
 echo "REFLAXE_OCAML_TARGET_REUSE_PROBE:PASS"
+
+cd "$ROOT"
+bash scripts/ci/reflaxe-ocaml-target-reuse-realm-test.sh

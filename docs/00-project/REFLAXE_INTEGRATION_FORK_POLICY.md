@@ -234,15 +234,19 @@ The fork then added target-neutral lifecycle and scalability repairs:
 - the target-reuse fingerprint candidate records the final target-selected
   program as immutable plain-value revisions, gives targets an exact
   fail-closed reuse probe, and introduces a miss-only preparation hook without
-  skipping any target work.
+  skipping any target work; and
+- the target-reuse catalog candidate adds one bounded process-local owner in
+  the reusable macro-interpreter realm, with copied opaque bytes, leases,
+  least-recently-used eviction, reset, quarantine, and redacted counters. It
+  does not yet authorize a target cache hit.
 
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `081ed8cdf5a0a059987800f14e706f7bb6ae215e`, published on branch
+candidate fork commit `e2f0f81a6e42de920d3fb01b93a3814aedd41fc3`, published on branch
 `hxhx-agent/target-reuse-fingerprint`, with
 path-independent content digest
-`e6b2d2697a00e5e64e404660f7e4756b950c82c75e563c4b5bbfe8e4688d6013`.
+`70ab77074fee4386192cc4306dc9f07dc4e2517ff9d14f4d55c61d9576a4aaf4`.
 The last repository-validated rollback pin remains PR #17 commit
 `1433334fdf22582fa129725982d8d7fa5547da18` with digest
 `ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`;

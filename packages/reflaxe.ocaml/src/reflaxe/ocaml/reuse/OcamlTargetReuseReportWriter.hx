@@ -4,6 +4,8 @@ package reflaxe.ocaml.reuse;
 import haxe.Json;
 import haxe.io.Path;
 import reflaxe.lifecycle.FinalProgramFingerprintSnapshot;
+import reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogRealmObservation;
+import reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogStats;
 import reflaxe.lifecycle.TargetReuseProbe;
 import reflaxe.lifecycle.TargetReuseRevisionComponent;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
@@ -30,7 +32,7 @@ class OcamlTargetReuseReportWriter {
 	/** Writes one request-scoped report and registers its artifact ownership. **/
 	public static function write(outputDirectory:String, snapshot:FinalProgramFingerprintSnapshot, probe:TargetReuseProbe,
 			components:Array<TargetReuseRevisionComponent>, targetRevisionObservationMilliseconds:Int, missPreparationMilliseconds:Int,
-			artifacts:OcamlArtifactManifestBuilder):Void {
+			realm:TargetReuseCatalogRealmObservation, catalog:TargetReuseCatalogStats, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sortedComponents = components.copy();
 		sortedComponents.sort((left, right) -> Reflect.compare(left.name, right.name));
 		final sourceAuthorityBlockers = snapshot.sourceAuthorityBlockers();
@@ -71,17 +73,28 @@ class OcamlTargetReuseReportWriter {
 				replayAndValidationMilliseconds: null
 			},
 			macroRealm: {
-				status: "not-proven",
-				identityRevision: null,
-				resetCause: null
+				status: "observed",
+				identityRevision: reportHash(realm.identityRevision, "macro-realm identity"),
+				requestSequence: realm.requestSequence,
+				survivedPriorRequest: realm.survivedPriorRequest,
+				resetGeneration: realm.resetGeneration,
+				resetCause: realm.lastResetCause
 			},
 			catalog: {
-				status: "not-implemented",
-				entryCount: null,
-				payloadBytes: null,
-				estimatedOverheadBytes: null,
-				hits: null,
-				misses: null
+				status: "observation-only",
+				totalBudgetBytes: catalog.totalBudgetBytes,
+				maximumEntryBytes: catalog.maximumEntryBytes,
+				entryCount: catalog.entryCount,
+				payloadBytes: catalog.payloadBytes,
+				estimatedOverheadBytes: catalog.estimatedOverheadBytes,
+				activeLeases: catalog.activeLeases,
+				hits: catalog.hits,
+				misses: catalog.misses,
+				ineligibleRequests: catalog.ineligibleRequests,
+				admissions: catalog.admissions,
+				rejectedAdmissions: catalog.rejectedAdmissions,
+				evictions: catalog.evictions,
+				quarantines: catalog.quarantines
 			},
 			sourceBundleCandidate: {
 				status: "not-observed",

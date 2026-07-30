@@ -38,8 +38,17 @@ class TargetReuseReportFixture {
 			"target revision components should be complete and sorted");
 		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0 && report.timing.missPreparationMilliseconds >= 0,
 			"completed target phases should report non-negative durations");
-		assertTrue(report.catalog.status == "not-implemented"
-			&& report.sourceBundleCandidate.status == "not-observed"
+		assertTrue(report.macroRealm.status == "observed"
+			&& Std.string(report.macroRealm.identityRevision).startsWith("sha256:")
+			&& report.macroRealm.requestSequence >= 1,
+			"report should identify the current macro realm without exposing process details");
+		assertTrue(report.catalog.status == "observation-only"
+			&& report.catalog.totalBudgetBytes == 128 * 1024 * 1024
+			&& report.catalog.maximumEntryBytes == 64 * 1024 * 1024
+			&& report.catalog.entryCount == 0
+			&& report.catalog.ineligibleRequests >= 1,
+			"catalog report should expose bounded real counters without admitting a payload");
+		assertTrue(report.sourceBundleCandidate.status == "not-observed"
 			&& report.shadowReplay.status == "not-implemented"
 			&& report.memory.status == "not-observed",
 			"unfinished evidence must remain explicit instead of reporting false zeroes");
