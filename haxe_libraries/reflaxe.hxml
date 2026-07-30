@@ -1,6 +1,6 @@
-# @install: lix --silent download "gh://github.com/fullofcaffeine/reflaxe#ec90501fb42df9f641b4d5e00a3b22ceba51908a" into reflaxe/4.0.0-beta/github/ec90501fb42df9f641b4d5e00a3b22ceba51908a
-# @content-sha256: 2e5d6905236fc8eaeb0b48f0e2ad445354b8bcf3c4f971e3859661105a135021
--cp ${HAXE_LIBCACHE}/reflaxe/4.0.0-beta/github/ec90501fb42df9f641b4d5e00a3b22ceba51908a/src/
+# @install: lix --silent download "gh://github.com/fullofcaffeine/reflaxe#d6085dfb815e6675efb8dd49e495c8c809396949" into reflaxe/4.0.0-beta/github/d6085dfb815e6675efb8dd49e495c8c809396949
+# @content-sha256: 3ae4cb3f50740b2351acfd5f84eab15245cea2931221cba37226faef72ed89f8
+-cp ${HAXE_LIBCACHE}/reflaxe/4.0.0-beta/github/d6085dfb815e6675efb8dd49e495c8c809396949/src/
 -D reflaxe=4.0.0-beta
 --macro nullSafety("reflaxe")
 --macro reflaxe.ReflectCompiler.Start()

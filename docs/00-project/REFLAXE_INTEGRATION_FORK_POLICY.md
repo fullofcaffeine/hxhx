@@ -243,10 +243,10 @@ The fork then added target-neutral lifecycle and scalability repairs:
 As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `ec90501fb42df9f641b4d5e00a3b22ceba51908a`, published on branch
+candidate fork commit `d6085dfb815e6675efb8dd49e495c8c809396949`, published on branch
 `hxhx-agent/target-reuse-fingerprint`, with
 path-independent content digest
-`2e5d6905236fc8eaeb0b48f0e2ad445354b8bcf3c4f971e3859661105a135021`.
+`3ae4cb3f50740b2351acfd5f84eab15245cea2931221cba37226faef72ed89f8`.
 The last repository-validated rollback pin remains PR #17 commit
 `1433334fdf22582fa129725982d8d7fa5547da18` with digest
 `ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`;
