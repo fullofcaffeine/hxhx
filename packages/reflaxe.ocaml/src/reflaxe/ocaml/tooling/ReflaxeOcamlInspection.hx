@@ -87,7 +87,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 26,
+			schemaVersion: 27,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -362,8 +362,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 45) {
-						throw 'Unsupported lowering report schema $version; expected 45.';
+					if (version != 46) {
+						throw 'Unsupported lowering report schema $version; expected 46.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -385,8 +385,8 @@ class ReflaxeOcamlInspection {
 					final controls = inspectControls(value, representation, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, anonymousStructures.operations,
-						callInventory.calls);
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
+						anonymousStructures.operations, callInventory.calls);
 					{
 						status: "present",
 						required: required,
@@ -1748,7 +1748,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function inspectLocalConversions(value:Dynamic):Array<InspectionLocalConversion> {
-		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v2")
+		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v3")
 			throw "Unsupported local conversion report model.";
 		final raw = requiredArray(value, "localConversions");
 		if (raw.length != requiredInt(value, "localConversionCount"))
@@ -1783,6 +1783,18 @@ class ReflaxeOcamlInspection {
 				if (seen.exists(result.id)) throw 'Local conversion report contains duplicate identity "${result.id}".';
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
+				if (result.conversion == "box-exact-enum-to-dynamic") {
+					final expectedCarrier = "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId;
+					if (result.role != "initializer"
+						|| result.inputSemanticTypeId.length == 0
+						|| result.inputCarrierTypeId != expectedCarrier
+						|| result.outputSemanticTypeId != "Dynamic"
+						|| result.outputCarrierTypeId != "Obj.t"
+						|| result.proofId != "dynamic-box-exact-enum-v1"
+						|| result.unsafeOperationId == null) {
+						throw 'Local conversion "${result.id}" has an invalid exact enum-to-Dynamic contract.';
+					}
+				}
 				seen.set(result.id, true);
 				result;
 			}
@@ -1794,7 +1806,7 @@ class ReflaxeOcamlInspection {
 	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
 		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
 			throw "Unsupported unsafe-operation report model.";
-		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-and-inline-dynamic-local-slices")
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-slices")
 			throw "Unsupported unsafe-operation completeness claim.";
 		final raw = requiredArray(value, "unsafeOperations");
 		if (raw.length != requiredInt(value, "unsafeOperationCount"))
@@ -1829,6 +1841,25 @@ class ReflaxeOcamlInspection {
 				final conversion = conversionById.get(result.conversionId);
 				if (conversion == null
 					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed local conversion.';
+				if (conversion.conversion == "box-exact-enum-to-dynamic"
+					&& (result.id != conversion.id + ":unsafe:box-exact-enum-to-dynamic"
+						|| result.operation != "box-exact-enum-to-dynamic"
+						|| result.sourceFile != conversion.sourceFile
+						|| result.sourceMin != conversion.sourceMin
+						|| result.sourceMax != conversion.sourceMax
+						|| result.inputSemanticTypeId != conversion.inputSemanticTypeId
+						|| result.inputCarrierTypeId != conversion.inputCarrierTypeId
+						|| result.outputSemanticTypeId != conversion.outputSemanticTypeId
+						|| result.outputCarrierTypeId != conversion.outputCarrierTypeId
+						|| result.reason != conversion.reason
+						|| result.proofId != conversion.proofId
+						|| result.proofClaim != conversion.proofClaim
+						|| result.profileEligibility.join(",") != conversion.profileEligibility.join(",")
+						|| result.functionId != conversion.functionId
+						|| result.programRevision != conversion.programRevision
+						|| result.bodyRevision != conversion.bodyRevision
+						|| result.pipelineRevision != conversion.pipelineRevision))
+					throw 'Unsafe operation "${result.id}" does not preserve its sealed enum-to-Dynamic conversion.';
 				if (seen.exists(result.id)) throw 'Unsafe-operation report contains duplicate identity "${result.id}".';
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Unsafe operation "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Unsafe operation "${result.id}" has no eligible profile.';
@@ -1973,7 +2004,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
-			anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>):Int {
+			localConversions:Array<InspectionLocalConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>,
+			calls:Array<InspectionCall>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -2018,6 +2050,34 @@ class ReflaxeOcamlInspection {
 					throw 'Lowered plan "${plan.id}" refers to missing runtime requirement "$requirementId".';
 				referenced.set(requirementId, true);
 			}
+		}
+		for (conversion in localConversions) {
+			if (conversion.conversion != "box-exact-enum-to-dynamic")
+				continue;
+			final requirementId = conversion.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Enum-to-Dynamic conversion "${conversion.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != conversion.id
+				|| requiredString(source, "file") != conversion.sourceFile
+				|| requiredInt(source, "min") != conversion.sourceMin
+				|| requiredInt(source, "max") != conversion.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != conversion.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != conversion.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
+				throw 'Enum-to-Dynamic conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
 		}
 		for (decision in representation.decisions) {
 			final selectsExactStringSentinel = decision.boxingPolicy == "nullable-string-carrier"
@@ -2244,7 +2304,7 @@ class ReflaxeOcamlInspection {
 				id: "raw-unsafe",
 				label: "Whole-program raw and unsafe operation inventory",
 				status: lowering.status == "present" ? "partial" : "unavailable",
-				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact Null<Int> and Null<Bool> locals; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the exact nullable-primitive local slices is not available."
+				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact nullable-primitive and immutable Dynamic-local crossings, including exact enum boxing; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the admitted local-carrier slices is not available."
 			},
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
 			unavailable("export-abi", "Curated public OCaml export ABI", "Inferred .mli files are not a stable export contract.")

@@ -4,6 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
@@ -18,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 
 /** Focused executable checks for local-storage decisions and explanations. */
 class LocalStoragePlannerFixture {
@@ -681,7 +683,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v58"
+			pipelineRevision: "ocaml-function-plans-v59"
 		};
 		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
 		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
@@ -714,6 +716,70 @@ class LocalStoragePlannerFixture {
 		assertTrue(dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprConcreteToDynamic).length == 2
 			&& dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.BoxExactBoolToDynamic).length == 1,
 			"only concrete and Bool Dynamic crossings should publish unsafe-operation proof records");
+		final dynamicEnumInput = Context.typeExpr(macro {
+			final constant:Dynamic = LocalDynamicEnum.Idle;
+			final payload:Dynamic = LocalDynamicEnum.Payload(7);
+			Std.string(constant) + Std.string(payload);
+		});
+		final dynamicEnumBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-enum-carrier",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-enum-carrier-v1",
+			pipelineRevision: "ocaml-function-plans-v59"
+		};
+		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
+		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
+		final dynamicEnumPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities, dynamicEnumStorage, representations,
+			dynamicEnumBinding);
+		final dynamicEnumReferences = dynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic");
+		final dynamicEnumConversions = dynamicEnumPlan.conversions();
+		assertTrue(dynamicEnumReferences.length == 2 && dynamicEnumConversions.length == 2,
+			"constant and payload enum constructors should each seal one immutable Dynamic local conversion");
+		for (conversion in dynamicEnumConversions) {
+			assertTrue(conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic
+				&& conversion.inputSemanticTypeId == "LocalDynamicEnum"
+				&& conversion.inputCarrierTypeId == OcamlEnumDynamicCarrier.CARRIER_MODEL + ":LocalDynamicEnum"
+				&& conversion.outputSemanticTypeId == "Dynamic"
+				&& conversion.outputCarrierTypeId == OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
+				"an enum-to-Dynamic decision should name the exact Haxe enum, native variant carrier, and Dynamic output carrier");
+			assertTrue(conversion.unsafeOperation != null
+				&& conversion.unsafeOperation.operation == OcamlUnsafeOperationKind.BoxExactEnumToDynamic,
+				"an enum-to-Dynamic decision should own the Obj.repr plus HxEnum boxing boundary");
+			final requirement = OcamlEnumRuntimeRequirementRecorder.requirement(conversion);
+			assertTrue(requirement.id == OcamlEnumDynamicCarrier.runtimeRequirementId(conversion.id)
+				&& requirement.semanticCapability == OcamlEnumDynamicCarrier.RUNTIME_CAPABILITY
+				&& requirement.rootModules.join(",") == OcamlEnumDynamicCarrier.RUNTIME_MODULE
+				&& requirement.subject.id == "LocalDynamicEnum",
+				"the runtime requirement should trace HxEnum back to the exact sealed source conversion");
+		}
+		final indirectDynamicEnumInput = Context.typeExpr(macro {
+			final seed = LocalDynamicEnum.Idle;
+			final fromLocal:Dynamic = seed;
+			final make = () -> LocalDynamicEnum.Payload(9);
+			final fromCall:Dynamic = make();
+			Std.string(fromLocal) + Std.string(fromCall);
+		});
+		final indirectDynamicEnumPlan = representationPlan(indirectDynamicEnumInput, representations, {
+			functionId: "fixture|indirect-dynamic-enum",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:indirect-dynamic-enum-v1",
+			pipelineRevision: "ocaml-function-plans-v59"
+		});
+		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& indirectDynamicEnumPlan.conversions().length == 0,
+			"enum locals and function results must remain outside the direct-constructor Dynamic slice until their own data-flow boundaries are sealed");
+		final enumConversion = dynamicEnumConversions[0];
+		final enumReference = dynamicEnumReferences.filter(reference -> reference.localId == enumConversion.localId)[0];
+		final enumDecision:OcamlLocalRepresentationDecision = {
+			localId: enumReference.localId,
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(enumReference.representationId, enumReference.semanticTypeId, enumReference.domain),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		};
+		final wrongEnumCarrier:Dynamic = Reflect.copy(enumConversion);
+		Reflect.setField(wrongEnumCarrier, "inputCarrierTypeId", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum");
+		expectFailure("wrong enum Dynamic carrier", "wrong-dynamic-carrier", () -> new OcamlLocalRepresentationPlan([enumDecision], [cast wrongEnumCarrier]));
 		final uninitializedDynamicInput = Context.typeExpr(macro {
 			var value:Dynamic;
 			value;
@@ -722,7 +788,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|uninitialized-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:uninitialized-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v58"
+			pipelineRevision: "ocaml-function-plans-v59"
 		});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -736,7 +802,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|reassigned-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:reassigned-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v58"
+			pipelineRevision: "ocaml-function-plans-v59"
 		});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,

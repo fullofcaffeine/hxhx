@@ -197,6 +197,15 @@ class OcamlLocalRepresentationPlanner {
 	static function dynamicCarrierInput(expression:TypedExpr, declaredLocalIds:Map<Int, Bool>,
 			representations:OcamlRepresentationRegistry):Null<DynamicCarrierInput> {
 		final unwrapped = unwrapTransparent(expression);
+		final directEnumCarrier = OcamlEnumDynamicCarrier.fromDirectValue(unwrapped);
+		if (directEnumCarrier != null) {
+			return {
+				semanticTypeId: directEnumCarrier.semanticTypeId,
+				carrierTypeId: directEnumCarrier.carrierTypeId,
+				sourceLocalId: null,
+				conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic
+			};
+		}
 		return switch (unwrapped.expr) {
 			case TConst(TNull):
 				{
@@ -240,6 +249,14 @@ class OcamlLocalRepresentationPlanner {
 			};
 		if (OcamlRepresentationRegistry.isExactString(unwrapped.t))
 			return dynamicBoxInput("String", "string", sourceLocalId);
+		final enumCarrier = OcamlEnumDynamicCarrier.fromDirectValue(unwrapped);
+		if (enumCarrier != null)
+			return {
+				semanticTypeId: enumCarrier.semanticTypeId,
+				carrierTypeId: enumCarrier.carrierTypeId,
+				sourceLocalId: sourceLocalId,
+				conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic
+			};
 		final layout = representations.monomorphicClassForType(unwrapped.t);
 		if (layout != null)
 			return dynamicBoxInput(layout.semanticTypeId, layout.targetTypeName, sourceLocalId);
@@ -1171,6 +1188,10 @@ class OcamlLocalRepresentationPlanner {
 					id: "dynamic-box-exact-bool-v1",
 					claim: "OCaml uses immediate values for both Bool and Int, so the runtime's tagged Bool box preserves the exact Haxe Bool identity when it enters Dynamic's Obj.t carrier."
 				};
+			case BoxExactEnumToDynamic: {
+					id: "dynamic-box-exact-enum-v1",
+					claim: "The typed input is one exact ordinary Haxe enum represented as a native OCaml variant. HxEnum.box_if_needed records its fully qualified enum name before it enters Dynamic, preserving constant-constructor identity and payload values."
+				};
 			case LegacyCoercion, Identity:
 				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: occurrence "$id" cannot seal ${pending.conversion}';
 		}
@@ -1184,6 +1205,7 @@ class OcamlLocalRepresentationPlanner {
 			case PreserveDynamicCarrier: "The source occurrence already produces the selected Dynamic Obj.t carrier.";
 			case BoxConcreteToDynamic: "The source occurrence produces one concrete typed value and must enter the selected Dynamic Obj.t carrier once.";
 			case BoxExactBoolToDynamic: "The source occurrence produces exact Bool and must enter Dynamic through the distinguishable runtime Bool box.";
+			case BoxExactEnumToDynamic: "The source occurrence produces one exact Haxe enum and must enter Dynamic through its named HxEnum runtime box.";
 			case LegacyCoercion, Identity: "";
 		}
 		final unsafeOperation:Null<OcamlUnsafeOperationRecord> = switch (pending.conversion) {
@@ -1205,6 +1227,8 @@ class OcamlLocalRepresentationPlanner {
 				unsafeRecord(id, OcamlUnsafeOperationKind.ObjReprConcreteToDynamic, source, pending, reason, proof.id, proof.claim, binding);
 			case BoxExactBoolToDynamic:
 				unsafeRecord(id, OcamlUnsafeOperationKind.BoxExactBoolToDynamic, source, pending, reason, proof.id, proof.claim, binding);
+			case BoxExactEnumToDynamic:
+				unsafeRecord(id, OcamlUnsafeOperationKind.BoxExactEnumToDynamic, source, pending, reason, proof.id, proof.claim, binding);
 			case LegacyCoercion, Identity:
 				null;
 		}

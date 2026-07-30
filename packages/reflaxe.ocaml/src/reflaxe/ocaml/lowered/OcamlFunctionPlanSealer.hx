@@ -23,6 +23,7 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructure
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -159,6 +160,10 @@ class OcamlFunctionPlanSealer {
 
 		visit(data.expr);
 		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
+		for (conversion in localRepresentations.conversions()) {
+			if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
+				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
+		}
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
 			if (call.standardIMapTarget != null)

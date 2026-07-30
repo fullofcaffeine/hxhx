@@ -16,10 +16,12 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 #end
 
@@ -496,6 +498,17 @@ class CompilationContext {
 	**/
 	public function recordAnonymousStructureRuntimeRequirement(decision:OcamlAnonymousStructureOperationDecision):Void {
 		OcamlAnonymousStructureRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed enum-to-`Dynamic` initializer needs `HxEnum`.
+
+		The conversion already names the exact source expression and enum carrier.
+		This method transfers that answer to the request's runtime inventory; it
+		does not rediscover the dependency from generated OCaml.
+	**/
+	public function recordEnumDynamicLocalRuntimeRequirement(decision:OcamlLocalConversionDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/** Records runtime support selected by one sealed program representation. **/

@@ -224,7 +224,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `45`)
+  - `schemaVersion` (current: `46`)
   - local identities use the `lexical-local-v1` form. They describe the
     variable's stable lexical declaration inside its owning function rather
     than exposing the Haxe macro process's temporary numeric variable ID.

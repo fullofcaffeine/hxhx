@@ -50,6 +50,15 @@ enum abstract OcamlLocalCarrierConversion(String) from String to String {
 
 	/** Exact Bool enters Dynamic through the runtime's distinguishable Bool box. */
 	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
+
+	/**
+		An exact ordinary Haxe enum enters Dynamic through its named runtime box.
+
+		The sealed input identities name both the Haxe enum and its native OCaml
+		variant carrier. Syntax may only apply `HxEnum.box_if_needed`; it may not
+		infer the enum identity from generated target text.
+	**/
+	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
 /** The source role that requires one local-carrier conversion. */
@@ -67,6 +76,7 @@ enum abstract OcamlUnsafeOperationKind(String) from String to String {
 	final NullableBoolTruthiness = "nullable-bool-truthiness";
 	final ObjReprConcreteToDynamic = "obj-repr-concrete-to-dynamic";
 	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
+	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
 /** Revision-bound proof for one admitted unsafe target operation. */
@@ -364,7 +374,7 @@ class OcamlLocalRepresentationPlan {
 			case NullableBoolTruthiness:
 				requireConversionShape(decision, "Null<Bool>", "Obj.t", "Bool", "bool");
 				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.NullableBoolTruthiness);
-			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
+			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic:
 				throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${decision.id}" selects a Dynamic conversion for $semanticTypeId';
 			case LegacyCoercion, Identity:
 				throw 'reflaxe.ocaml [ocaml-representation:invalid-nullable-primitive-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact $semanticTypeId conversion';
@@ -372,7 +382,7 @@ class OcamlLocalRepresentationPlan {
 		final conversionFamily = switch (decision.conversion) {
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt: "Null<Int>";
 			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness: "Null<Bool>";
-			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic: "Dynamic";
+			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic: "Dynamic";
 			case LegacyCoercion, Identity: semanticTypeId;
 		}
 		if (conversionFamily != semanticTypeId)
@@ -401,6 +411,13 @@ class OcamlLocalRepresentationPlan {
 			case BoxExactBoolToDynamic:
 				requireConversionShape(decision, "Bool", "bool", "Dynamic", "Obj.t");
 				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.BoxExactBoolToDynamic);
+			case BoxExactEnumToDynamic:
+				OcamlEnumDynamicCarrier.requireIdentity(decision.inputSemanticTypeId, decision.inputCarrierTypeId);
+				if (decision.outputSemanticTypeId != "Dynamic"
+					|| decision.outputCarrierTypeId != OcamlEnumDynamicCarrier.DYNAMIC_CARRIER) {
+					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-carrier]: enum Dynamic occurrence "${decision.id}" must produce Dynamic/${OcamlEnumDynamicCarrier.DYNAMIC_CARRIER}';
+				}
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.BoxExactEnumToDynamic);
 			case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier,
 				BoxExactBoolToNullableBool, NullableBoolTruthiness:
 				throw 'reflaxe.ocaml [ocaml-representation:invalid-dynamic-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact Dynamic conversion';
