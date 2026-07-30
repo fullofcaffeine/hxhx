@@ -12,7 +12,7 @@ if (report.schemaVersion !== 45
 const calls = report.calls?.filter(call => call.kind === 'standard-imap-method') ?? []
 if (calls.length !== 53
 	|| calls.some(call =>
-		call.pipelineRevision !== 'ocaml-function-plans-v57'
+		call.pipelineRevision !== 'ocaml-function-plans-v58'
 		|| call.receiver !== null
 		|| call.arguments?.length !== 0
 		|| call.result !== null

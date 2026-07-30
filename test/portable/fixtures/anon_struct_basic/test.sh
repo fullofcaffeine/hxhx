@@ -13,10 +13,12 @@ FIRST_REPORT="$(mktemp)"
 INSPECTION_REPORT="$(mktemp)"
 INVALID_LOG="$(mktemp)"
 ORACLE_DIR="$(mktemp -d)"
+OVERFLOW_OUTPUT="out-overflow-$$"
+OVERFLOW_EXECUTABLE="${OVERFLOW_OUTPUT//-/_}.exe"
 INVALID_SCHEDULE_OUTPUT="out-invalid-anonymous-schedule-$$"
 INVALID_REVISION_OUTPUT="out-invalid-anonymous-revision-$$"
 INVALID_ORDER_OUTPUT="out-invalid-anonymous-order-$$"
-trap 'rm -f "$FIRST_REPORT" "$INSPECTION_REPORT" "$INVALID_LOG"; rm -rf "$ORACLE_DIR" "$INVALID_SCHEDULE_OUTPUT" "$INVALID_REVISION_OUTPUT" "$INVALID_ORDER_OUTPUT"' EXIT
+trap 'rm -f "$FIRST_REPORT" "$INSPECTION_REPORT" "$INVALID_LOG"; rm -rf "$ORACLE_DIR" "$OVERFLOW_OUTPUT" "$INVALID_SCHEDULE_OUTPUT" "$INVALID_REVISION_OUTPUT" "$INVALID_ORDER_OUTPUT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$RUNTIME_REPORT_FILE" ]; then
 	echo "Missing generated anonymous-object source, lowering report, or runtime report" >&2
@@ -31,6 +33,24 @@ haxe -cp src -main Main -neko "$ORACLE_DIR/main.n"
 neko "$ORACLE_DIR/main.n" >"$ORACLE_DIR/neko.stdout"
 diff -u expected.stdout "$ORACLE_DIR/neko.stdout"
 
+# JavaScript represents Haxe `Int` values with JavaScript numbers, so this
+# particular overflow edge does not wrap on the stock JS target. Neko and the
+# Haxe evaluator provide the signed 32-bit oracle used by native OCaml.
+haxe -cp src -main Main -D anon_overflow_probe -js "$ORACLE_DIR/overflow.js"
+node "$ORACLE_DIR/overflow.js" >"$ORACLE_DIR/overflow-js.stdout"
+diff -u expected.overflow-js.stdout "$ORACLE_DIR/overflow-js.stdout"
+
+haxe -cp src -main Main -D anon_overflow_probe -neko "$ORACLE_DIR/overflow.n"
+neko "$ORACLE_DIR/overflow.n" >"$ORACLE_DIR/overflow-neko.stdout"
+diff -u expected.overflow-int32.stdout "$ORACLE_DIR/overflow-neko.stdout"
+
+haxe -cp src -D anon_overflow_probe --run Main >"$ORACLE_DIR/overflow-eval.stdout"
+diff -u expected.overflow-int32.stdout "$ORACLE_DIR/overflow-eval.stdout"
+
+haxe build.hxml -D anon_overflow_probe -D "ocaml_output=$OVERFLOW_OUTPUT"
+"$OVERFLOW_OUTPUT/_build/default/$OVERFLOW_EXECUTABLE" >"$ORACLE_DIR/overflow-ocaml.stdout"
+diff -u expected.overflow-int32.stdout "$ORACLE_DIR/overflow-ocaml.stdout"
+
 node - "$SOURCE_FILE" "$REPORT_FILE" "$RUNTIME_REPORT_FILE" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
@@ -43,7 +63,7 @@ function fail(message) {
 }
 
 if (report.schemaVersion !== 45
-	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v2'
+	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
 	|| !sha256.test(report.anonymousStructureRevision)) {
@@ -86,8 +106,8 @@ for (const operation of operations) {
 	const compoundWrite = operation.kind === 'compound-write-field'
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v57'
-		|| operation.proofId !== 'direct-anonymous-runtime-operations-v2'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v58'
+		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
 		|| operation.runtimeRequirementIds?.length !== (compoundWrite ? 2 : 1)

@@ -246,6 +246,14 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     `HxInt` for Haxe integer arithmetic. Field names are sorted only to give a
     stable object-shape identity; literal initializers retain their original
     source order so their side effects do not move.
+    The proof applies to each admitted occurrence, not to every expression in
+    its function. A function may also pass an object through `Dynamic` or use
+    it in a pattern; those operations stay outside this plan even when the
+    direct literal and its initializers are recorded.
+    Signed-overflow validation uses stock Haxe eval and Neko as the 32-bit
+    behavior oracle. Stock JavaScript stores `Int` in JavaScript numbers, so
+    its `2147483647 + 1` result is `2147483648`; native OCaml intentionally
+    matches the wrapping eval/Neko result `-2147483648` through `HxInt`.
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
     represented before and after the call boundary, and the exact source-order

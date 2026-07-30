@@ -39,6 +39,12 @@ class Main {
 	}
 
 	static function main() {
+		#if anon_overflow_probe
+		var overflow = {value: 2147483647};
+		println(Std.string(overflow.value += 1));
+		return;
+		#end
+
 		var o:BasicAnon = {
 			a: markedInt("field-a", 1),
 			b: markedString("field-b", "x"),

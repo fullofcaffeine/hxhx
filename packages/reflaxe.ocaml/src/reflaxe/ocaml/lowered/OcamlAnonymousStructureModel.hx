@@ -156,14 +156,14 @@ typedef OcamlAnonymousStructureOperationDecision = {
 
 /** Pure validation and identity rules shared by planning, reports, and tests. */
 class OcamlAnonymousStructureContract {
-	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v2";
+	public static inline final MODEL_REVISION = "ocaml-anonymous-structure-v3";
 	public static inline final OCCURRENCE_PREFIX = "anonymous-occurrence:";
 	public static inline final RUNTIME_CAPABILITY = "haxe-anonymous-structure";
 	public static inline final INT32_ADD_CAPABILITY = "haxe-int32-add";
 	public static inline final RUNTIME_MODULE = "HxAnon";
 	public static inline final INT32_ADD_MODULE = "HxInt";
-	public static inline final PROOF_ID = "direct-anonymous-runtime-operations-v2";
-	public static inline final PROOF_CLAIM = "The final typed expression root contains a direct anonymous literal with exact Int, Bool, or String fields and no iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern, raw, or adapter boundary. The validated structure uses one mutable HxAnon table. Construction evaluates and stores literal fields in source order, reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.";
+	public static inline final PROOF_ID = "direct-anonymous-runtime-operations-v3";
+	public static inline final PROOF_CLAIM = "This proof is local to each admitted anonymous-object occurrence, not to the whole function. It owns construction and source-ordered initialization for a direct literal with exact Int, Bool, or String fields. It owns a field operation only when the receiver is that literal or an unchanged local alias. Iterator, key/value, sys.FileStat, method, Dynamic, structural-conversion, pattern-expansion, raw, and adapter operations remain outside this plan even when another expression in the same function uses one of those boundaries. The validated structure uses one mutable HxAnon table. Reads evaluate the receiver once, plain writes evaluate the receiver before the assigned value, and admitted Int += writes evaluate the receiver once, load the old value, evaluate the right-hand side once, apply Haxe Int32 addition, store the result, and return it. Local copies preserve one shared reference so mutations remain visible through aliases.";
 
 	/** Builds the stable representation identity for a normalized shape. */
 	public static function structureId(semanticTypeId:String):String {
