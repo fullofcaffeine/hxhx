@@ -57,7 +57,7 @@ typedef OcamlTargetReusePhaseTiming = {
 class OcamlTargetReusePhaseReportWriter {
 	public static inline final ENVIRONMENT_VARIABLE = "REFLAXE_OCAML_TARGET_REUSE_PHASE_REPORT_DIR";
 	public static inline final MODEL = "reflaxe-ocaml-target-reuse-phase";
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final SCHEMA_VERSION = 2;
 
 	/** Writes the current request receipt only when the server was given an external report directory. **/
 	public static function tryWrite(snapshot:FinalProgramFingerprintSnapshot, probe:TargetReuseProbe, outcome:TargetReuseRequestOutcome,
@@ -172,16 +172,24 @@ class OcamlTargetReusePhaseReportWriter {
 	static function gcObservation() {
 		#if eval
 		final stats = Gc.stat();
+		final overflowedFields:Array<String> = [];
+		final heapWords = gcInteger(stats.heap_words, "heapWords", overflowedFields);
+		final liveWords = gcInteger(stats.live_words, "liveWords", overflowedFields);
+		final freeWords = gcInteger(stats.free_words, "freeWords", overflowedFields);
+		final topHeapWords = gcInteger(stats.top_heap_words, "topHeapWords", overflowedFields);
+		final compactions = gcInteger(stats.compactions, "compactions", overflowedFields);
+		final stackWords = gcInteger(stats.stack_size, "stackWords", overflowedFields);
 		return {
-			status: "observed",
-			heapWords: stats.heap_words,
-			liveWords: stats.live_words,
-			freeWords: stats.free_words,
-			topHeapWords: stats.top_heap_words,
+			status: overflowedFields.length == 0 ? "observed" : "partial-overflow",
+			heapWords: heapWords,
+			liveWords: liveWords,
+			freeWords: freeWords,
+			topHeapWords: topHeapWords,
 			minorCollections: stats.minor_collections,
 			majorCollections: stats.major_collections,
-			compactions: stats.compactions,
-			stackWords: stats.stack_size
+			compactions: compactions,
+			stackWords: stackWords,
+			overflowedFields: overflowedFields
 		};
 		#else
 		return {
@@ -193,9 +201,26 @@ class OcamlTargetReusePhaseReportWriter {
 			minorCollections: 0.0,
 			majorCollections: 0.0,
 			compactions: 0,
-			stackWords: 0
+			stackWords: 0,
+			overflowedFields: []
 		};
 		#end
+	}
+
+	/**
+		Reports one evaluator GC counter without inventing a larger value.
+
+		Haxe 4.3.7 exposes several native OCaml counters as 32-bit Haxe `Int`
+		values. A sufficiently large compiler process can therefore present a
+		valid native count as a negative wrapped value. The phase report records
+		that field as `null` and names it in `overflowedFields`; current RSS and
+		every counter that still fits remain available to the evidence checker.
+	**/
+	static function gcInteger(value:Int, field:String, overflowedFields:Array<String>):Null<Int> {
+		if (value >= 0)
+			return value;
+		overflowedFields.push(field);
+		return null;
 	}
 
 	static function nonNegative(value:Int, label:String):Int {

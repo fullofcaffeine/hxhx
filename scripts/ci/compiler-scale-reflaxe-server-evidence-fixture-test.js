@@ -52,11 +52,11 @@ function makeCapture(label, content = 'same generated source\n') {
   return capture
 }
 
-function makeTargetPhase(label, outcome, sequence, targetLifecycleMilliseconds) {
+function makeTargetPhase(label, outcome, sequence, targetLifecycleMilliseconds, overflowTopHeap = false) {
   const file = path.join(temp, `${label}.target-phase.json`)
   const exactHit = outcome === 'exact-hit'
   write(file, JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: 2,
     model: 'reflaxe-ocaml-target-reuse-phase',
     outcome,
     finalProgram: {
@@ -113,15 +113,16 @@ function makeTargetPhase(label, outcome, sequence, targetLifecycleMilliseconds) 
       quarantines: 0
     },
     gc: {
-      status: 'observed',
+      status: overflowTopHeap ? 'partial-overflow' : 'observed',
       heapWords: 10000,
       liveWords: 5000,
       freeWords: 5000,
-      topHeapWords: 12000,
+      topHeapWords: overflowTopHeap ? null : 12000,
       minorCollections: 10,
       majorCollections: 2,
       compactions: 0,
-      stackWords: 100
+      stackWords: 100,
+      overflowedFields: overflowTopHeap ? ['topHeapWords'] : []
     }
   }))
   return file
@@ -184,6 +185,23 @@ try {
   assert.strictEqual(parsed.performance.target_reuse_mechanism_pass, true)
   assert.strictEqual(parsed.warm.target_phase.outcome, 'exact-hit')
   assert.strictEqual(parsed.cold.capture.generated_tree.revision, parsed.warm.capture.generated_tree.revision)
+
+  const overflowColdPhase = makeTargetPhase('overflow-cold', 'compiled-miss', 1, 250000, true)
+  const overflowReport = path.join(temp, 'overflow-report.json')
+  let overflowArgs = replaceFlagValue(common, '--cold-target-phase', overflowColdPhase)
+  overflowArgs = replaceFlagValue(overflowArgs, '--out', overflowReport)
+  run(['report', ...overflowArgs])
+  run(['validate', '--report', overflowReport])
+  assert.strictEqual(JSON.parse(fs.readFileSync(overflowReport, 'utf8')).cold.target_phase.gc.status, 'partial-overflow')
+
+  const invalidOverflowPhase = makeTargetPhase('invalid-overflow', 'compiled-miss', 1, 250000, true)
+  const invalidOverflow = JSON.parse(fs.readFileSync(invalidOverflowPhase, 'utf8'))
+  invalidOverflow.gc.overflowedFields = []
+  write(invalidOverflowPhase, JSON.stringify(invalidOverflow))
+  const invalidOverflowReport = path.join(temp, 'invalid-overflow-report.json')
+  let invalidOverflowArgs = replaceFlagValue(common, '--cold-target-phase', invalidOverflowPhase)
+  invalidOverflowArgs = replaceFlagValue(invalidOverflowArgs, '--out', invalidOverflowReport)
+  run(['report', ...invalidOverflowArgs], 1)
 
   const mismatchedWarm = makeCapture('mismatch', 'different generated source\n')
   const mismatchReport = path.join(temp, 'mismatch-report.json')

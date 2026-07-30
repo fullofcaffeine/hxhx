@@ -105,7 +105,7 @@ function verifyReusePhasePair(coldPath, warmPath) {
 	const cold = JSON.parse(fs.readFileSync(coldPath, 'utf8'))
 	const warm = JSON.parse(fs.readFileSync(warmPath, 'utf8'))
 	for (const [name, report] of [['cold', cold], ['warm', warm]]) {
-		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 1) {
+		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 2) {
 			fail(`${name} target-reuse phase report has the wrong model or schema`)
 		}
 		for (const [phase, value] of Object.entries(report.timing ?? {})) {

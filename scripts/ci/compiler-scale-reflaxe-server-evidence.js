@@ -22,7 +22,7 @@ const path = require('path')
 const REPORT_SCHEMA = 'hxhx.compiler-scale-reflaxe-server.v2'
 const CAPTURE_SCHEMA = 'hxhx.compiler-scale-reflaxe-capture.v1'
 const TARGET_PHASE_MODEL = 'reflaxe-ocaml-target-reuse-phase'
-const TARGET_PHASE_SCHEMA_VERSION = 1
+const TARGET_PHASE_SCHEMA_VERSION = 2
 
 function fail(message) {
   throw new Error(message)
@@ -281,9 +281,25 @@ function validateTargetPhase(record, label, errors) {
   }
   if (record.catalog?.activeLeases !== 0) errors.push(`${label}.catalog.activeLeases must be zero`)
   if (!Array.isArray(record.catalog?.misses)) errors.push(`${label}.catalog.misses must be an array`)
-  if (record.gc?.status !== 'observed') errors.push(`${label}.gc.status must be observed`)
-  for (const key of ['heapWords', 'liveWords', 'freeWords', 'topHeapWords', 'compactions', 'stackWords']) {
-    if (!Number.isInteger(record.gc?.[key]) || record.gc[key] < 0) {
+  const gcIntegerFields = ['heapWords', 'liveWords', 'freeWords', 'topHeapWords', 'compactions', 'stackWords']
+  const overflowedFields = record.gc?.overflowedFields
+  if (!Array.isArray(overflowedFields)
+      || new Set(overflowedFields).size !== overflowedFields.length
+      || overflowedFields.some(field => !gcIntegerFields.includes(field))) {
+    errors.push(`${label}.gc.overflowedFields is invalid`)
+  }
+  const overflowedSet = new Set(Array.isArray(overflowedFields) ? overflowedFields : [])
+  if (record.gc?.status === 'observed') {
+    if (overflowedSet.size !== 0) errors.push(`${label}.gc observed status cannot list overflowed fields`)
+  } else if (record.gc?.status === 'partial-overflow') {
+    if (overflowedSet.size === 0) errors.push(`${label}.gc partial-overflow status must name an overflowed field`)
+  } else {
+    errors.push(`${label}.gc.status must be observed or partial-overflow`)
+  }
+  for (const key of gcIntegerFields) {
+    if (overflowedSet.has(key)) {
+      if (record.gc?.[key] !== null) errors.push(`${label}.gc.${key} must be null after overflow`)
+    } else if (!Number.isInteger(record.gc?.[key]) || record.gc[key] < 0) {
       errors.push(`${label}.gc.${key} is invalid`)
     }
   }
