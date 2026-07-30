@@ -518,6 +518,7 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-type-registry-dynamic-args",
 			"compiler-type-registry-dynamic-string",
 			"compiler-type-registry-optional-null",
+			"haxe-anonymous-structure",
 			"haxe-bytes-access",
 			"haxe-bytes-producer",
 			"haxe-bytes-read",
@@ -635,6 +636,8 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxString should overlap the exact String sentinel representation requirement root");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxBytes\n",
 			"compiler-observed HxBytes should overlap the supported non-null producer requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxAnon\n",
+			"compiler-observed HxAnon should overlap the bounded direct anonymous-object requirement root");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
@@ -643,8 +646,8 @@ class M6RuntimeCopierIntegrationTest {
 			"selective packaging should retain HxBacktrace because of the declared native boundary");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxFPHelper").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxFPHelper because of the declared native boundary");
-		assertArrayEquals(["HxAnon", "HxEnum"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
-			"partial coverage should keep compiler-observed modules with no recorded root visible");
+		assertArrayEquals(["HxEnum"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
+			"partial coverage should keep compiler-observed modules with no recorded root visible without treating HxAnon overlap as occurrence completeness");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 

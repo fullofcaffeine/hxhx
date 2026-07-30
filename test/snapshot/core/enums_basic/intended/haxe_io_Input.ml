@@ -21,12 +21,12 @@ let set_bigEndian__impl = fun (self : t) (b : bool) -> (
 
 let readByte__impl = fun (self : t) () -> (
   ignore self;
-  HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_3 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_3 "fileName" (Obj.repr "haxe/io/Input.hx"));
-    ignore (HxAnon.set __anon_3 "lineNumber" (Obj.repr 38));
-    ignore (HxAnon.set __anon_3 "className" (Obj.repr "haxe.io.Input"));
-    ignore (HxAnon.set __anon_3 "methodName" (Obj.repr "readByte"));
-    __anon_3
+  HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anonymous_value_3 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_3 "fileName" (Obj.repr "haxe/io/Input.hx"));
+    ignore (HxAnon.set __anonymous_value_3 "lineNumber" (Obj.repr 38));
+    ignore (HxAnon.set __anonymous_value_3 "className" (Obj.repr "haxe.io.Input"));
+    ignore (HxAnon.set __anonymous_value_3 "methodName" (Obj.repr "readByte"));
+    __anonymous_value_3
   )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"]
 )
 

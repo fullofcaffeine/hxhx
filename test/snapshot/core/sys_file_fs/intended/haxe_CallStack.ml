@@ -50,10 +50,10 @@ let parseFileLine = fun line -> try let __fallback_result_13 = let fileNeedle = 
             ln := __assign_9;
             __assign_9
           )) done);
-          let __anon_11 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_11 "file" (Obj.repr file));
-            ignore (HxAnon.set __anon_11 "line" (Obj.repr (!ln)));
-            __anon_11
+          let __anonymous_value_11 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_11 "file" (Obj.repr file));
+            ignore (HxAnon.set __anonymous_value_11 "line" (Obj.repr (!ln)));
+            __anonymous_value_11
           )
         )
       )

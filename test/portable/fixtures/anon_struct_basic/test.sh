@@ -8,6 +8,7 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
+RUNTIME_REPORT_FILE="out/ocaml_runtime_requirement_report.json"
 FIRST_REPORT="$(mktemp)"
 INSPECTION_REPORT="$(mktemp)"
 INVALID_LOG="$(mktemp)"
@@ -15,8 +16,8 @@ ORACLE_DIR="$(mktemp -d)"
 INVALID_OUTPUT="out-invalid-anonymous-structure-$$"
 trap 'rm -f "$FIRST_REPORT" "$INSPECTION_REPORT" "$INVALID_LOG"; rm -rf "$ORACLE_DIR" "$INVALID_OUTPUT"' EXIT
 
-if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
-	echo "Missing generated anonymous-object source or lowering report" >&2
+if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$RUNTIME_REPORT_FILE" ]; then
+	echo "Missing generated anonymous-object source, lowering report, or runtime report" >&2
 	exit 1
 fi
 
@@ -28,10 +29,11 @@ haxe -cp src -main Main -neko "$ORACLE_DIR/main.n"
 neko "$ORACLE_DIR/main.n" >"$ORACLE_DIR/neko.stdout"
 diff -u expected.stdout "$ORACLE_DIR/neko.stdout"
 
-node - "$SOURCE_FILE" "$REPORT_FILE" <<'NODE'
+node - "$SOURCE_FILE" "$REPORT_FILE" "$RUNTIME_REPORT_FILE" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
+const runtimeReport = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))
 const sha256 = /^sha256:[0-9a-f]{64}$/
 
 function fail(message) {
@@ -49,6 +51,9 @@ if (report.schemaVersion !== 44
 const structure = report.anonymousStructures.find(item => item.semanticTypeId === 'anonymous{a:Int,b:String,flag:Bool}')
 if (!structure) {
 	fail('the report has no BasicAnon runtime shape')
+}
+if (report.anonymousStructures.some(item => item.semanticTypeId.includes('inc:'))) {
+	fail('the bounded plan incorrectly claimed the method-bearing anonymous object')
 }
 const fields = structure.fields ?? []
 if (structure.carrierTypeId !== 'Obj.t'
@@ -100,6 +105,14 @@ if (countByKind.get('create') !== 1
 	|| countByKind.get('read-field') !== 3
 	|| countByKind.get('write-field') !== 2) {
 	fail(`unexpected anonymous operation partition: ${JSON.stringify(Object.fromEntries(countByKind))}`)
+}
+
+if (runtimeReport.authorityStatus !== 'partial'
+	|| runtimeReport.compilerObservationGranularity !== 'module-name-only'
+	|| !runtimeReport.compilerObservedModulesWithRequirementRoots.includes('HxAnon')
+	|| !runtimeReport.compilerObservedModulesWithoutRequirementRoots.includes('HxEnum')
+	|| !runtimeReport.message.includes('does not prove that every generated use')) {
+	fail('runtime reporting hid the still-incomplete HxAnon/HxEnum occurrence ownership')
 }
 
 if (!/let __anonymous_value_[0-9]+ = HxAnon\.create \(\)/.test(source)

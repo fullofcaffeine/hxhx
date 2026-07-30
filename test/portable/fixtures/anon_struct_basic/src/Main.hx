@@ -27,6 +27,11 @@ class Main {
 		alias.flag = true;
 		println(o.b + o.a + ":" + o.flag);
 
+		var present:Null<BasicAnon> = o;
+		var missing:Null<BasicAnon> = null;
+		println(Std.string(present == null));
+		println(Std.string(missing == null));
+
 		var f = {inc: function(x:Int) return x + 1};
 		println(Std.string(f.inc(1)));
 	}

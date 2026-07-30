@@ -11,7 +11,9 @@ private typedef PlainAnonymousValue = {
 
 	The cases deliberately separate a direct object and its local alias from
 	same-shaped values whose runtime origin is unknown. The planner should own
-	only the first family.
+	only the first family. Iterator pairs and file metadata also stay outside
+	this generic object plan because their existing OCaml representations have
+	different behavior and runtime support.
 **/
 class AnonymousStructurePlanCases {
 	public static function admitted():Int {
@@ -35,6 +37,32 @@ class AnonymousStructurePlanCases {
 	public static function keyValuePair():Int {
 		var entry = {key: "one", value: 1};
 		return entry.value;
+	}
+
+	public static function iteratorShape():Int {
+		var iterator:Iterator<Int> = {
+			hasNext: function() return false,
+			next: function() return 0
+		};
+		return iterator.next();
+	}
+
+	public static function fileStatShape():Int {
+		final stamp = Date.fromTime(0);
+		var stat:sys.FileStat = {
+			gid: 1,
+			uid: 2,
+			atime: stamp,
+			mtime: stamp,
+			ctime: stamp,
+			size: 3,
+			dev: 4,
+			ino: 5,
+			nlink: 6,
+			rdev: 7,
+			mode: 8
+		};
+		return stat.size;
 	}
 
 	public static function methodBearing():Int {

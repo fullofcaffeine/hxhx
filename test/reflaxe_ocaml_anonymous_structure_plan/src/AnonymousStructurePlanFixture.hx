@@ -23,8 +23,9 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 	A successful fixture proves that one direct literal and its unchanged local
 	alias receive deterministic create, initialization, read, write, carrier,
 	and runtime-support decisions before OCaml syntax is built. Parameters,
-	reassigned locals, key/value pairs, and method-bearing shapes remain outside
-	that boundary, so a matching field list alone cannot select `HxAnon`.
+	reassigned locals, iterators, key/value pairs, `sys.FileStat`, and
+	method-bearing shapes remain outside that boundary, so a matching field list
+	alone cannot select the generic `HxAnon` representation.
 **/
 class AnonymousStructurePlanFixture {
 	static inline final PROGRAM_REVISION = "program:anonymous-structure-fixture";
@@ -91,6 +92,8 @@ class AnonymousStructurePlanFixture {
 		requireUnowned("parameterOnly", 0, 0, registry);
 		requireUnowned("reassigned", 1, 4, registry);
 		requireUnowned("keyValuePair", 0, 0, registry);
+		requireUnowned("iteratorShape", 0, 0, registry);
+		requireUnowned("fileStatShape", 0, 0, registry);
 		requireUnowned("methodBearing", 0, 0, registry);
 
 		expectFailure("duplicate structure", "duplicate-structure", () -> new OcamlAnonymousStructurePlan([structure, structure], operations));
@@ -151,7 +154,8 @@ class AnonymousStructurePlanFixture {
 
 		Some cases still contain a direct literal, so their create and
 		initialization records remain valid. Their field reads stay unowned when
-		the receiver is a parameter, a reassigned local, or a dedicated shape.
+		the receiver is a parameter, a reassigned local, or a dedicated iterator,
+		key/value, or file-metadata shape with its own OCaml representation.
 	**/
 	static function requireUnowned(name:String, expectedStructures:Int, expectedOperations:Int, registry:OcamlRepresentationRegistry):Void {
 		final body = requireBody(requireField(name));

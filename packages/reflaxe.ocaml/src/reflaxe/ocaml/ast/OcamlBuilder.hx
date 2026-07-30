@@ -7158,7 +7158,6 @@ class OcamlBuilder {
 
 	/**
 			Builds one non-function expression after rechecking every validated plan.
-	
 			A non-function root is a typed initializer or other expression compiled
 			outside a method body. It still needs the same anonymous-object, storage,
 			and Bytes decisions as a function so syntax cannot silently choose a
@@ -7194,7 +7193,6 @@ class OcamlBuilder {
 
 	/**
 			Applies the destination type conversion to one planned non-function value.
-	
 			The anonymous-object plan is installed while the right-hand side is built
 			so a field access cannot fall back to the older syntax-time guess merely
 			because it appears in a static initializer or another standalone root.

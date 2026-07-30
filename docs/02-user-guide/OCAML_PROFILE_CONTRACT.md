@@ -224,13 +224,25 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `43`)
+  - `schemaVersion` (current: `44`)
   - local identities use the `lexical-local-v1` form. They describe the
     variable's stable lexical declaration inside its owning function rather
     than exposing the Haxe macro process's temporary numeric variable ID.
     Unchanged source therefore produces comparable local and plan evidence
     across clean compiler processes.
   - the sealed assignment/update plans and their source locations
+  - `anonymousStructures` describes each admitted mutable anonymous-object
+    shape before OCaml text is written. It lists the exact Haxe field types,
+    OCaml storage types, aliasing and mutation rules, and the representation
+    revision that generated code must use.
+  - `anonymousStructureOperations` describes each admitted object creation,
+    field initialization, field read, and field write. Each entry records the
+    source location, owning object shape, field conversion, result type,
+    `HxAnon` runtime requirement, and observable evaluation order. For example,
+    a write records that the receiver is evaluated before the new field value.
+    Field names are sorted only to give a stable object-shape identity; literal
+    initializers retain their original source order so their side effects do
+    not move.
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
     represented before and after the call boundary, and the exact source-order
