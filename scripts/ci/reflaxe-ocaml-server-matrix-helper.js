@@ -31,6 +31,14 @@ function programRevision(manifestPath) {
 	process.stdout.write(manifest.programRevision)
 }
 
+function sourceBundleRevision(manifestPath) {
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	if (typeof manifest?.summary?.sourceBundleRevision !== 'string' || manifest.summary.sourceBundleRevision.length === 0) {
+		fail(`artifact manifest has no sourceBundleRevision: ${manifestPath}`)
+	}
+	process.stdout.write(manifest.summary.sourceBundleRevision)
+}
+
 function treeDigest(root) {
 	const hash = crypto.createHash('sha256')
 	const visit = (directory, prefix) => {
@@ -55,6 +63,44 @@ function treeDigest(root) {
 	process.stdout.write(`sha256:${hash.digest('hex')}`)
 }
 
+function verifyReuseReport(outputDirectory) {
+	const reportPath = path.join(outputDirectory, 'ocaml_target_reuse_observation.json')
+	const manifestPath = path.join(outputDirectory, 'ocaml_artifact_manifest.json')
+	const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	if (report?.sourceBundleCandidate?.status !== 'packed-observation'
+		|| !(report.sourceBundleCandidate.payloadBytes > report.sourceBundleCandidate.packedBytes)
+		|| report?.shadowReplay?.status !== 'stable-source-equal'
+		|| report.shadowReplay.equal !== true
+		|| report.shadowReplay.receiptSemanticsEqual !== true
+		|| report.shadowReplay.artifactManifestEqual !== true) {
+		fail(`target-reuse shadow proof is incomplete: ${reportPath}`)
+	}
+	if (manifest?.summary?.completeForSourceBundle !== true
+		|| manifest.summary.sourceBundleRevision !== report.sourceBundleCandidate.sourceBundleRevision) {
+		fail(`target-reuse report and final source manifest disagree: ${outputDirectory}`)
+	}
+}
+
+function normalizeReuseSnapshot(outputDirectory) {
+	verifyReuseReport(outputDirectory)
+	const reportPath = path.join(outputDirectory, 'ocaml_target_reuse_observation.json')
+	const manifestPath = path.join(outputDirectory, 'ocaml_artifact_manifest.json')
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	const entries = manifest.entries.filter(entry => entry.path !== 'ocaml_target_reuse_observation.json')
+	if (entries.length !== manifest.entries.length - 1) {
+		fail(`target-reuse report is not owned exactly once: ${manifestPath}`)
+	}
+	manifest.entries = entries
+	manifest.summary.entryCount -= 1
+	manifest.summary.volatileEvidenceEntryCount -= 1
+	// The artifact-set revision includes the intentionally volatile report.
+	// Snapshot comparisons continue to prove the stable source-bundle revision.
+	manifest.summary.artifactSetRevision = 'normalized:target-reuse-report-removed'
+	fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+	fs.unlinkSync(reportPath)
+}
+
 const [command, ...args] = process.argv.slice(2)
 switch (command) {
 	case 'replace':
@@ -65,9 +111,21 @@ switch (command) {
 		if (args.length !== 1) fail('program-revision needs: manifest')
 		programRevision(args[0])
 		break
+	case 'source-bundle-revision':
+		if (args.length !== 1) fail('source-bundle-revision needs: manifest')
+		sourceBundleRevision(args[0])
+		break
 	case 'tree-digest':
 		if (args.length !== 1) fail('tree-digest needs: directory')
 		treeDigest(args[0])
+		break
+	case 'verify-reuse-report':
+		if (args.length !== 1) fail('verify-reuse-report needs: output directory')
+		verifyReuseReport(args[0])
+		break
+	case 'normalize-reuse-snapshot':
+		if (args.length !== 1) fail('normalize-reuse-snapshot needs: output directory')
+		normalizeReuseSnapshot(args[0])
 		break
 	default:
 		fail(`unknown command: ${command || '<missing>'}`)

@@ -59,6 +59,10 @@ program_revision() {
 	node "$MATRIX_HELPER" program-revision "$1/ocaml_artifact_manifest.json"
 }
 
+source_bundle_revision() {
+	node "$MATRIX_HELPER" source-bundle-revision "$1/ocaml_artifact_manifest.json"
+}
+
 tree_digest() {
 	node "$MATRIX_HELPER" tree-digest "$1"
 }
@@ -76,6 +80,7 @@ compile_clean() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
+			-D reflaxe_ocaml_target_reuse_report \
 			"$@" \
 			build.hxml
 	)
@@ -88,6 +93,7 @@ compile_server() {
 			-D reflaxe_output_transaction \
 			-D ocaml_no_build \
 			-D reflaxe.dont_output_metadata_id \
+			-D reflaxe_ocaml_target_reuse_report \
 			--connect "$SERVER_PORT" \
 			"$@" \
 			build.hxml
@@ -127,6 +133,9 @@ assert_no_private_state() {
 	if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-output-*' -print -quit | grep -q .; then
 		fail "a completed request left private output transaction state"
 	fi
+	if find "$PROJECT_DIR" -maxdepth 1 -type d -name '.*.reflaxe-ocaml-shadow-*' -print -quit | grep -q .; then
+		fail "a completed request left private source-bundle shadow state"
+	fi
 	if grep -R -a -F '.reflaxe-output-transaction' "$PROJECT_DIR/out" "$BUILD_DIR" >/dev/null 2>&1; then
 		fail "a private transaction path entered generated output or Dune metadata"
 	fi
@@ -140,8 +149,10 @@ snapshot_output() {
 	[[ -f "$PROJECT_DIR/out/_GeneratedFiles.json" ]] \
 		|| fail "request '$name' did not publish the complete generated-file receipt"
 	assert_no_private_state
+	node "$MATRIX_HELPER" verify-reuse-report "$PROJECT_DIR/out"
 	mkdir -p "$destination"
 	cp -R "$PROJECT_DIR/out/." "$destination/"
+	node "$MATRIX_HELPER" normalize-reuse-snapshot "$destination"
 }
 
 compare_snapshots() {
@@ -363,7 +374,7 @@ run_published restored-a "$expected_a"
 	|| fail "A-to-B-to-A did not restore the exact original program revision"
 
 compile_server
-stable_digest="$(tree_digest "$PROJECT_DIR/out")"
+stable_digest="$(source_bundle_revision "$PROJECT_DIR/out")"
 rss_baseline_kb="$(server_rss_kb)"
 rss_peak_kb="$rss_baseline_kb"
 repeated_total_ms=0
@@ -374,8 +385,8 @@ for request in {1..30}; do
 	compile_server
 	elapsed="$(( $(milliseconds) - started ))"
 	repeated_total_ms="$((repeated_total_ms + elapsed))"
-	[[ "$(tree_digest "$PROJECT_DIR/out")" = "$stable_digest" ]] \
-		|| fail "unchanged repeated request $request changed generated output"
+	[[ "$(source_bundle_revision "$PROJECT_DIR/out")" = "$stable_digest" ]] \
+		|| fail "unchanged repeated request $request changed the generated source bundle"
 	current_rss_kb="$(server_rss_kb)"
 	if (( current_rss_kb > rss_peak_kb )); then
 		rss_peak_kb="$current_rss_kb"
