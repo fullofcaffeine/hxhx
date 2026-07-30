@@ -55,6 +55,7 @@ import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifest;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
@@ -127,6 +128,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
+	var targetReuseRuntimeSourceManifest:Null<RuntimeSourceManifestSnapshot>;
 	var targetRevisionObservationMilliseconds:Int = 0;
 	var targetMissPreparationMilliseconds:Int = 0;
 	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
@@ -491,12 +493,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final outputProjectName = outputConfigured ? DuneProjectEmitter.defaultProjectName(outputDirectory) : "unconfigured";
 		#if macro
 		final packageVersion = Context.definedValue("reflaxe.ocaml") ?? "unversioned";
+		final sourceConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName);
+		targetReuseRuntimeSourceManifest = Context.defined("ocaml_no_runtime") ? null : RuntimeCopier.loadCheckedSourceManifest();
+		final runtimeInputRevision = targetReuseRuntimeSourceManifest == null ? "sha256:" +
+			haxe.crypto.Sha256.encode("runtime-source-input:disabled") : targetReuseRuntimeSourceManifest.revision;
 		return {
 			packageVersion: packageVersion,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
-			sourceConfigurationRevision: OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName),
+			sourceConfigurationRevision: sourceConfigurationRevision,
 			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
-			runtimeSchemaRevision: '${RuntimeSourceManifest.MODEL}:v${RuntimeSourceManifest.SCHEMA_VERSION}',
+			runtimeInputRevision: runtimeInputRevision,
+			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(sourceConfigurationRevision),
+			targetImplementationRevision: Context.definedValue("reflaxe_ocaml_target_implementation_revision"),
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: profileEnabled,
 			loweringReportEnabled: Context.defined("ocaml_lowering_report"),
@@ -508,7 +516,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 			sourceConfigurationRevision: OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName, []),
 			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
-			runtimeSchemaRevision: '${RuntimeSourceManifest.MODEL}:v${RuntimeSourceManifest.SCHEMA_VERSION}',
+			runtimeInputRevision: "sha256:" + haxe.crypto.Sha256.encode("runtime-source-input:runtime-unavailable"),
+			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+				outputProjectName, [])),
+			targetImplementationRevision: null,
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: false,
 			loweringReportEnabled: false,
@@ -2378,6 +2389,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		pendingPublishedOutputBuild = null;
 		semanticRuntimeAuthority = null;
 		nativeSourceDeclarationAuthority = null;
+		targetReuseRuntimeSourceManifest = null;
 		#if macro
 		if (Context.defined("reflaxe_output_transaction") && Context.defined("ocaml_mli")) {
 			Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
@@ -3393,7 +3405,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (!noRuntime) {
 			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
 			semanticRuntimeAuthority = RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(),
-				ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision());
+				ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision(), targetReuseRuntimeSourceManifest);
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.

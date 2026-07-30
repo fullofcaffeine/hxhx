@@ -94,6 +94,23 @@ class RuntimeCopier {
 		#end
 	}
 
+	/**
+		Loads the checked complete runtime-source catalog without selecting modules.
+
+		The target-reuse probe calls this before expensive OCaml preparation. A
+		matching final program, configuration, target implementation, and complete
+		catalog revision deterministically select the same runtime closure later.
+	**/
+	public static function loadCheckedSourceManifest():RuntimeSourceManifestSnapshot {
+		final stdDir = tryResolveStdDir();
+		if (stdDir == null)
+			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be identified.";
+		final runtimeDir = Path.join([stdDir, "runtime"]);
+		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir))
+			throw 'The reflaxe.ocaml runtime source directory "$runtimeDir" is missing.';
+		return RuntimeSourceManifest.load(runtimeDir);
+	}
+
 	static function requestedProfile():Null<String> {
 		#if macro
 		return haxe.macro.Context.definedValue("ocaml_profile");
@@ -355,8 +372,8 @@ class RuntimeCopier {
 	}
 
 	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
-			compilerObservedModules:Array<String>, programOwnedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>,
-			requirementRevision:String):OcamlArtifactAuthority {
+			compilerObservedModules:Array<String>, programOwnedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>, requirementRevision:String,
+			?checkedSourceManifest:RuntimeSourceManifestSnapshot):OcamlArtifactAuthority {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
@@ -378,7 +395,7 @@ class RuntimeCopier {
 		final rawRequestedProfile = requestedProfile();
 		final buildContext = OcamlBuildContext.resolve();
 		final profile = OcamlProfileContract.toDefineValue(buildContext.profile);
-		final sourceManifest = RuntimeSourceManifest.load(runtimeDir);
+		final sourceManifest = checkedSourceManifest ?? RuntimeSourceManifest.load(runtimeDir);
 		final availableModules = [
 			for (entry in sourceManifest.modules)
 				if (entry.profiles.contains(profile)

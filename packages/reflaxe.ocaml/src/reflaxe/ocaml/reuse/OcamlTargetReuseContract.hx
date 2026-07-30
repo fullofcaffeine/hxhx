@@ -17,7 +17,9 @@ typedef OcamlTargetReuseObservation = {
 	final pipelineRevision:String;
 	final sourceConfigurationRevision:String;
 	final outputSchemaRevision:String;
-	final runtimeSchemaRevision:String;
+	final runtimeInputRevision:String;
+	final nativeSourceInputRevision:String;
+	final targetImplementationRevision:Null<String>;
 	final outputConfigured:Bool;
 	final progressOrTelemetryEnabled:Bool;
 	final loweringReportEnabled:Bool;
@@ -39,15 +41,19 @@ class OcamlTargetReuseContract {
 
 	/** Returns sorted target-owned revisions without exposing their raw inputs. **/
 	public static function revisionComponents(observation:OcamlTargetReuseObservation):Array<TargetReuseRevisionComponent> {
-		final implementationRevision = revision(IMPLEMENTATION_MODEL, [
+		final implementationCandidateRevision = revision(IMPLEMENTATION_MODEL, [
 			required(observation.packageVersion, "package version"),
 			required(observation.pipelineRevision, "pipeline revision")
 		]);
+		final implementationRevision = observation.targetImplementationRevision == null ? implementationCandidateRevision : requiredRevision(observation.targetImplementationRevision,
+			"target implementation revision");
+		final implementationName = observation.targetImplementationRevision == null ? "target-implementation-candidate" : "target-implementation";
 		final components = [
 			new TargetReuseRevisionComponent("artifact-output-schema", required(observation.outputSchemaRevision, "output schema revision")),
-			new TargetReuseRevisionComponent("runtime-input-schema", required(observation.runtimeSchemaRevision, "runtime schema revision")),
+			new TargetReuseRevisionComponent("native-source-input", requiredRevision(observation.nativeSourceInputRevision, "native source input revision")),
+			new TargetReuseRevisionComponent("runtime-input", requiredRevision(observation.runtimeInputRevision, "runtime input revision")),
 			new TargetReuseRevisionComponent("source-configuration", required(observation.sourceConfigurationRevision, "source configuration revision")),
-			new TargetReuseRevisionComponent("target-implementation-candidate", implementationRevision)
+			new TargetReuseRevisionComponent(implementationName, implementationRevision)
 		];
 		components.sort((left, right) -> Reflect.compare(left.name, right.name));
 		return components;
@@ -60,11 +66,9 @@ class OcamlTargetReuseContract {
 		would otherwise skip the target work that produces their evidence.
 	**/
 	public static function blockers(observation:OcamlTargetReuseObservation):Array<String> {
-		final values = [
-			"reflaxe.ocaml:native-dependency-authority-incomplete",
-			"reflaxe.ocaml:semantic-runtime-authority-incomplete",
-			"reflaxe.ocaml:target-implementation-authority-incomplete"
-		];
+		final values = new Array<String>();
+		if (observation.targetImplementationRevision == null)
+			values.push("reflaxe.ocaml:target-implementation-authority-incomplete");
 		if (!observation.outputConfigured)
 			values.push("reflaxe.ocaml:output-not-configured");
 		if (observation.progressOrTelemetryEnabled)
@@ -85,6 +89,13 @@ class OcamlTargetReuseContract {
 		if (value == null || StringTools.trim(value).length == 0)
 			throw 'OCaml target reuse $label must not be empty.';
 		return StringTools.trim(value);
+	}
+
+	static function requiredRevision(value:String, label:String):String {
+		final normalized = required(value, label);
+		if (!~/^sha256:[0-9a-f]{64}$/.match(normalized))
+			throw 'OCaml target reuse $label must be a lowercase SHA-256 revision.';
+		return normalized;
 	}
 }
 #end

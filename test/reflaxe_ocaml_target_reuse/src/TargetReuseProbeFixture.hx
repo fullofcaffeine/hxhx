@@ -30,8 +30,6 @@ class TargetReuseProbeFixture {
 			for (required in [
 				"reflaxe:unrevisioned-compile-begin-callback",
 				"reflaxe.ocaml:lowering-report-enabled",
-				"reflaxe.ocaml:native-dependency-authority-incomplete",
-				"reflaxe.ocaml:semantic-runtime-authority-incomplete",
 				"reflaxe.ocaml:target-implementation-authority-incomplete"
 			])
 				if (!blockers.contains(required))

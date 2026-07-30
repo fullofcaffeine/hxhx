@@ -35,6 +35,20 @@ class OcamlSourceBundleAuthority {
 	public static inline final NATIVE_DECLARATION_MODEL = "normalized-native-source-declarations-v1";
 
 	/**
+		Builds the early native-source input revision used before Dune text exists.
+
+		The final-program fingerprint owns main/declaration facts, while the source
+		configuration revision owns every reviewed Dune/entrypoint define and project
+		name. The final generated authority remains a separate postcondition.
+	**/
+	public static function nativeInputRevision(sourceConfigurationRevision:String):String {
+		return "sha256:" + Sha256.encode(Json.stringify([
+			NATIVE_DECLARATION_MODEL,
+			requiredRevision(sourceConfigurationRevision, "source configuration")
+		]));
+	}
+
+	/**
 		Owns the checked runtime catalog and the exact selected closure.
 
 		The runtime source manifest verifies every repository-owned source file

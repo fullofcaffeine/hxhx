@@ -32,9 +32,11 @@ class TargetReuseReportFixture {
 		assertTrue(blockers.contains("reflaxe.ocaml:target-implementation-authority-incomplete"),
 			"report should explain incomplete target implementation identity");
 		final components:Array<Dynamic> = cast report.targetRequest.components;
-		assertTrue(components.length == 4
+		assertTrue(components.length == 5
 			&& components[0].name == "artifact-output-schema"
-			&& components[3].name == "target-implementation-candidate",
+			&& components[1].name == "native-source-input"
+			&& components[2].name == "runtime-input"
+			&& components[4].name == "target-implementation-candidate",
 			"target revision components should be complete and sorted");
 		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0 && report.timing.missPreparationMilliseconds >= 0,
 			"completed target phases should report non-negative durations");
