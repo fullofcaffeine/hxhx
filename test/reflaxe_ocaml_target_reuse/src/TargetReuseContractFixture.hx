@@ -10,8 +10,8 @@ class TargetReuseContractFixture {
 	}
 
 	static function observation(?configurationRevision:String, ?progress:Bool = false, ?loweringReport:Bool = false, ?lifecycleTrace:Bool = false,
-			?targetImplementationRevision:String, ?reuseEnabled:Bool = false, ?transactionalOutputEnabled:Bool = true,
-			?observationReportEnabled:Bool = false):OcamlTargetReuseObservation {
+			?targetImplementationRevision:String, ?reuseEnabled:Bool = false, ?transactionalOutputEnabled:Bool = true, ?observationReportEnabled:Bool = false,
+			?mliEnabled:Bool = false):OcamlTargetReuseObservation {
 		return {
 			packageVersion: "0.33.4",
 			pipelineRevision: "ocaml-function-plans-v55",
@@ -23,6 +23,7 @@ class TargetReuseContractFixture {
 			reuseEnabled: reuseEnabled,
 			transactionalOutputEnabled: transactionalOutputEnabled,
 			observationReportEnabled: observationReportEnabled,
+			mliEnabled: mliEnabled,
 			outputConfigured: true,
 			progressOrTelemetryEnabled: progress,
 			loweringReportEnabled: loweringReport,
@@ -66,6 +67,9 @@ class TargetReuseContractFixture {
 		assertTrue(evidence.contains("reflaxe.ocaml:lifecycle-trace-enabled"), "lifecycle traces should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:transactional-output-disabled"), "non-transactional output should block replay");
 		assertTrue(evidence.contains("reflaxe.ocaml:observation-report-enabled"), "observation reports should block replay");
+		final mli = OcamlTargetReuseContract.blockers(observation(null, false, false, false, "sha256:" + Sha256.encode("target implementation"), true, true,
+			false, true));
+		assertTrue(mli.contains("reflaxe.ocaml:mli-generation-enabled"), "interface generation should block first-rung replay");
 	}
 
 	static function main():Void {

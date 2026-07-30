@@ -20,6 +20,7 @@ import reflaxe.data.EnumOptionData;
 import reflaxe.lifecycle.FinalProgramFingerprintSnapshot;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.lifecycle.TargetReuseCatalog;
+import reflaxe.lifecycle.TargetReuseRequestOutcome;
 import reflaxe.lifecycle.TargetReuseRevisionComponent;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
@@ -63,6 +64,8 @@ import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
 import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
 import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlSourceBundleReplay;
+import reflaxe.ocaml.reuse.OcamlSourceBundleReplay.OcamlSourceBundleReplayCorruption;
 import reflaxe.ocaml.reuse.OcamlSourceBundleShadowReplay;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
@@ -130,8 +133,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
 	var targetReuseRuntimeSourceManifest:Null<RuntimeSourceManifestSnapshot>;
+	var stagedTargetReuseCandidate:Null<OcamlSourceBundleCandidate>;
 	var targetRevisionObservationMilliseconds:Int = 0;
 	var targetMissPreparationMilliseconds:Int = 0;
+	var skippedTargetGenerationWarnings:Int = 0;
 	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
 	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
 
@@ -443,7 +448,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
 		OcamlSourcePositionMapper.beginRequest();
+		pendingPublishedOutputBuild = null;
+		stagedTargetReuseCandidate = null;
 		targetReuseRuntimeSourceManifest = null;
+		semanticRuntimeAuthority = null;
+		nativeSourceDeclarationAuthority = null;
+		skippedTargetGenerationWarnings = 0;
 		final started = haxe.Timer.stamp();
 		targetReuseObservation = captureTargetReuseObservation();
 		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
@@ -463,6 +473,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final probe = targetReuseProbe;
 		if (probe == null)
 			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
+		#if macro
+		if (Context.defined("reflaxe_ocaml_target_reuse_test_require_hit") && TargetReuseCatalog.sharedStats().entryCount > 0)
+			throw "reflaxe.ocaml: exact-hit fixture reached miss-only target preparation";
+		#end
 		if (!probe.eligible)
 			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
 		final started = haxe.Timer.stamp();
@@ -480,6 +494,76 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	public override function targetReuseBlockers(snapshot:FinalProgramFingerprintSnapshot):Array<String> {
 		return OcamlTargetReuseContract.blockers(requireTargetReuseObservation());
+	}
+
+	/**
+		Replays one exact immutable source bundle before OCaml target preparation.
+
+		Invalid bytes or mismatched identity are quarantined and become a normal
+		miss. Output or transaction failures remain request failures rather than
+		being hidden by retrying the semantic compiler.
+	**/
+	public override function tryReplayTargetReuse():Bool {
+		#if eval
+		final probe = targetReuseProbe;
+		final snapshot = finalProgramFingerprint;
+		if (probe == null || probe.requestRevision == null || snapshot == null || output == null)
+			throw "reflaxe.ocaml: exact replay started without a sealed request or output transaction";
+		final requestRevision:String = probe.requestRevision;
+		final catalog = TargetReuseCatalog.shared();
+		final lease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+		if (lease == null)
+			return false;
+
+		var candidate:Null<OcamlSourceBundleCandidate> = null;
+		try {
+			candidate = OcamlSourceBundleCandidate.decode(lease.copyPayload());
+			if (candidate.targetRequestRevision != requestRevision
+				|| candidate.programRevision != snapshot.programRevision.id
+				|| candidate.configurationRevision != requireTargetReuseObservation().sourceConfigurationRevision
+				|| !candidate.diagnosticsEligible)
+				throw "reflaxe.ocaml: exact source bundle does not match the current request";
+		} catch (error:Dynamic) {
+			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+			lease.close();
+			catalog.recordMiss("corrupt-payload");
+			return false;
+		}
+		lease.close();
+
+		try {
+			final reusable:OcamlSourceBundleCandidate = cast candidate;
+			final replay = OcamlSourceBundleReplay.run(reusable, output);
+			semanticRuntimeAuthority = reusable.semanticRuntimeAuthority;
+			nativeSourceDeclarationAuthority = reusable.nativeDependenciesAuthority;
+			scheduleReplayBuild(replay.artifacts);
+			return true;
+		} catch (error:OcamlSourceBundleReplayCorruption) {
+			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+			catalog.recordMiss("corrupt-replay");
+			return false;
+		}
+		#else
+		return false;
+		#end
+	}
+
+	/**
+		Publishes a staged opaque payload only after the complete request succeeds.
+
+		The catalog receives a copied byte buffer and bounded accounting metadata,
+		not the request-local decoded candidate or any compiler-owned object.
+	**/
+	public override function finishTargetReuseRequest(outcome:TargetReuseRequestOutcome):Void {
+		final candidate = stagedTargetReuseCandidate;
+		stagedTargetReuseCandidate = null;
+		switch (outcome) {
+			case CompiledMiss if (candidate != null):
+				TargetReuseCatalog.shared()
+					.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, candidate.copyPayload(),
+						OcamlSourceBundleCandidate.ESTIMATED_CATALOG_OVERHEAD_BYTES);
+			case CompiledMiss | ExactHit | Failed:
+		}
 	}
 
 	function requireTargetReuseObservation():OcamlTargetReuseObservation {
@@ -510,6 +594,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			reuseEnabled: Context.defined("reflaxe_ocaml_target_reuse"),
 			transactionalOutputEnabled: Context.defined("reflaxe_output_transaction"),
 			observationReportEnabled: Context.defined("reflaxe_ocaml_target_reuse_report"),
+			mliEnabled: Context.defined("ocaml_mli"),
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: profileEnabled,
 			loweringReportEnabled: Context.defined("ocaml_lowering_report"),
@@ -528,6 +613,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			reuseEnabled: false,
 			transactionalOutputEnabled: false,
 			observationReportEnabled: false,
+			mliEnabled: false,
 			outputConfigured: outputConfigured,
 			progressOrTelemetryEnabled: false,
 			loweringReportEnabled: false,
@@ -1115,6 +1201,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 		#if macro
+		skippedTargetGenerationWarnings += 1;
 		Context.warning("reflaxe.ocaml: unable to infer a unique entrypoint module from static main candidates; set"
 			+ " -D ocaml_dune_exes=<exe>:<module> to disambiguate.",
 			Context.currentPos());
@@ -2414,6 +2501,40 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	/**
+		Schedules the same fresh post-publication Dune work for an exact replay.
+
+		The cached payload owns generated source only. Build mode, run intent,
+		toolchain diagnostics, and external Dune state remain current-request work.
+	**/
+	function scheduleReplayBuild(artifacts:OcamlArtifactManifestBuilder):Void {
+		#if eval
+		if (output == null || output.outputDir == null || output.publicOutputDir == null)
+			throw "reflaxe.ocaml: exact replay cannot schedule a build without transactional output paths";
+		final noBuild = haxe.macro.Context.defined("ocaml_no_build");
+		final emitOnly = haxe.macro.Context.defined("ocaml_emit_only");
+		final shouldRun = haxe.macro.Context.defined("ocaml_run");
+		if ((noBuild || emitOnly) && !shouldRun)
+			return;
+		final privateDirectory:String = cast output.outputDir;
+		final publicDirectory:String = cast output.publicOutputDir;
+		if (Path.normalize(privateDirectory) == Path.normalize(publicDirectory))
+			throw "reflaxe.ocaml: exact replay requires a private source transaction before Dune";
+		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
+		pendingPublishedOutputBuild = {
+			publicDirectory: publicDirectory,
+			buildDirectory: OcamlDuneBuildState.forOutputDirectory(publicDirectory),
+			exeName: DuneProjectEmitter.defaultExeName(publicDirectory),
+			mode: buildMode == null ? "native" : buildMode,
+			duneLayout: haxe.macro.Context.definedValue("ocaml_dune_layout"),
+			run: shouldRun,
+			strict: buildMode != null,
+			timingReport: haxe.macro.Context.defined("ocaml_build_timing_report"),
+			artifacts: artifacts
+		};
+		#end
+	}
+
+	/**
 		Runs native work only after transactional source publication succeeds.
 
 		The public generated directory is Dune's workspace root. Reusable Dune
@@ -3454,23 +3575,35 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 
 		#if macro
-		if (Context.defined("reflaxe_ocaml_target_reuse_report")) {
-			final snapshot = finalProgramFingerprint;
-			final probe = targetReuseProbe;
-			final realm = targetReuseCatalogRealm;
-			final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
+		final snapshot = finalProgramFingerprint;
+		final probe = targetReuseProbe;
+		final reportTargetReuse = Context.defined("reflaxe_ocaml_target_reuse_report");
+		if (reportTargetReuse || (probe != null && probe.eligible)) {
 			final runtimeAuthority = semanticRuntimeAuthority;
 			final nativeAuthority = nativeSourceDeclarationAuthority;
-			if (snapshot == null || probe == null || probe.requestRevision == null || realm == null || fingerprintAndKeyMilliseconds == null)
-				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
+			if (snapshot == null || probe == null || probe.requestRevision == null)
+				throw "reflaxe.ocaml: target source packing requires a sealed final-program probe";
 			if (runtimeAuthority == null || nativeAuthority == null)
-				throw "reflaxe.ocaml: target reuse report was requested before source authority was complete";
+				throw "reflaxe.ocaml: target source packing requires complete source authority";
 			final sourceSnapshot = artifacts.snapshotSourceBundle(runtimeAuthority, nativeAuthority);
-			final candidate = OcamlSourceBundleCandidate.pack(outDir, probe.requestRevision, sourceSnapshot, false);
-			final shadow = OcamlSourceBundleShadowReplay.run(candidate, outDir);
-			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
-				targetRevisionObservationMilliseconds, fingerprintAndKeyMilliseconds, targetMissPreparationMilliseconds, realm,
-				TargetReuseCatalog.sharedStats(), candidate, shadow, artifacts);
+			final diagnosticsEligible = probe.eligible && skippedTargetGenerationWarnings == 0;
+			final candidate = OcamlSourceBundleCandidate.pack(outDir, probe.requestRevision, sourceSnapshot, diagnosticsEligible);
+			if (probe.eligible) {
+				if (diagnosticsEligible)
+					stagedTargetReuseCandidate = candidate;
+				else
+					TargetReuseCatalog.shared().recordMiss("target-generation-diagnostics");
+			}
+			if (reportTargetReuse) {
+				final realm = targetReuseCatalogRealm;
+				final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
+				if (realm == null || fingerprintAndKeyMilliseconds == null)
+					throw "reflaxe.ocaml: target reuse report was requested without complete lifecycle observations";
+				final shadow = OcamlSourceBundleShadowReplay.run(candidate, outDir);
+				OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
+					targetRevisionObservationMilliseconds, fingerprintAndKeyMilliseconds, targetMissPreparationMilliseconds, realm,
+					TargetReuseCatalog.sharedStats(), candidate, shadow, artifacts);
+			}
 		}
 		#end
 

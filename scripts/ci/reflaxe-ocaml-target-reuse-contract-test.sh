@@ -52,3 +52,4 @@ echo "REFLAXE_OCAML_TARGET_REUSE_PROBE:PASS"
 
 cd "$ROOT"
 bash scripts/ci/reflaxe-ocaml-target-reuse-realm-test.sh
+bash scripts/ci/reflaxe-ocaml-target-reuse-exact-hit-test.sh

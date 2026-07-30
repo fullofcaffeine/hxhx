@@ -23,6 +23,7 @@ typedef OcamlTargetReuseObservation = {
 	final reuseEnabled:Bool;
 	final transactionalOutputEnabled:Bool;
 	final observationReportEnabled:Bool;
+	final mliEnabled:Bool;
 	final outputConfigured:Bool;
 	final progressOrTelemetryEnabled:Bool;
 	final loweringReportEnabled:Bool;
@@ -78,6 +79,8 @@ class OcamlTargetReuseContract {
 			values.push("reflaxe.ocaml:transactional-output-disabled");
 		if (observation.observationReportEnabled)
 			values.push("reflaxe.ocaml:observation-report-enabled");
+		if (observation.mliEnabled)
+			values.push("reflaxe.ocaml:mli-generation-enabled");
 		if (!observation.outputConfigured)
 			values.push("reflaxe.ocaml:output-not-configured");
 		if (observation.progressOrTelemetryEnabled)

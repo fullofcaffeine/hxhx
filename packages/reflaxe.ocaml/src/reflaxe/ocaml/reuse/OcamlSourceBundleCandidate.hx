@@ -46,6 +46,7 @@ typedef OcamlSourceBundleIndexEntry = {
 class OcamlSourceBundleCandidate {
 	public static inline final MODEL = "reflaxe-ocaml-source-bundle-candidate";
 	public static inline final SCHEMA_VERSION = 1;
+	public static inline final ESTIMATED_CATALOG_OVERHEAD_BYTES = 1024;
 	static inline final MAGIC = "ROSBC1\n";
 
 	public final targetRequestRevision:String;
