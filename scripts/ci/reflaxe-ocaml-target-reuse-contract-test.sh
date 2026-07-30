@@ -31,6 +31,14 @@ haxe \
 	--macro 'nullSafety("reflaxe.ocaml")' \
 	--run TargetReuseContractFixture
 
+haxe \
+	-cp packages/reflaxe.ocaml/src \
+	-cp "$PROBE_SOURCE" \
+	-lib reflaxe \
+	-D reflaxe_runtime \
+	--macro 'nullSafety("reflaxe.ocaml")' \
+	--run TargetSourceBundleCandidateFixture
+
 cd "$FIXTURE"
 haxe build.hxml \
 	-cp "$PROBE_SOURCE" \

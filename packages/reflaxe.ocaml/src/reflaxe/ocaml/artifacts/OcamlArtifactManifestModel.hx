@@ -124,6 +124,30 @@ typedef OcamlArtifactManifestReport = {
 	final excludedBuildProducts:Array<String>;
 }
 
+/**
+	Immutable source-producing subset observed before the final manifest is written.
+
+	This snapshot contains only verified plain values. It deliberately excludes
+	the framework receipt, manifest root, volatile reports, Dune products, and
+	every compiler/request object so a target may pack it without retaining the
+	active compilation.
+**/
+typedef OcamlSourceBundleSnapshot = {
+	final schemaVersion:Int;
+	final model:String;
+	final programRevision:String;
+	final configurationRevision:String;
+	final profile:String;
+	final entries:Array<OcamlArtifactEntry>;
+	final authorities:{
+		final semanticRuntime:OcamlArtifactAuthority;
+		final nativeDependencies:OcamlArtifactAuthority;
+	};
+	final sourceBundleRevision:String;
+	final completeForSourceBundle:Bool;
+	final blockers:Array<String>;
+}
+
 /** Minimum trusted data used to clean a file owned by the preceding manifest. **/
 typedef OcamlPreviousArtifactEntry = {
 	final path:String;

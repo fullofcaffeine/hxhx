@@ -12,6 +12,7 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlPreviousArtifactEntry;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlSourceBundleSnapshot;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -170,6 +171,43 @@ class OcamlArtifactManifestBuilder {
 				includeInSourceBundle: true
 			});
 		}
+	}
+
+	/**
+		Builds the verified stable-source view without writing the manifest root.
+
+		Callers use this after every source producer and output filter has run but
+		before adding volatile reuse evidence. A later final `seal()` independently
+		rematerializes every claim, so this observation cannot authorize publication
+		or conceal a file changed between packing and the final transaction check.
+	**/
+	public function snapshotSourceBundle(semanticRuntime:OcamlArtifactAuthority, nativeDependencies:OcamlArtifactAuthority):OcamlSourceBundleSnapshot {
+		final checkedRuntime = OcamlArtifactManifestSchema.validatedAuthority(semanticRuntime, "semantic runtime");
+		final checkedDependencies = OcamlArtifactManifestSchema.validatedAuthority(nativeDependencies, "native dependencies");
+		final entries = materializeEntries().filter(entry -> entry.includeInSourceBundle);
+		final completeForSourceBundle = checkedRuntime.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE
+			&& checkedDependencies.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE;
+		final blockers = new Array<String>();
+		if (checkedRuntime.status != OcamlArtifactManifestSchema.AUTHORITY_COMPLETE)
+			blockers.push(checkedRuntime.message);
+		if (checkedDependencies.status != OcamlArtifactManifestSchema.AUTHORITY_COMPLETE)
+			blockers.push(checkedDependencies.message);
+		return {
+			schemaVersion: OcamlArtifactManifestSchema.SCHEMA_VERSION,
+			model: OcamlArtifactManifestSchema.MODEL,
+			programRevision: programRevision,
+			configurationRevision: configurationRevision,
+			profile: profile,
+			entries: entries,
+			authorities: {
+				semanticRuntime: checkedRuntime,
+				nativeDependencies: checkedDependencies
+			},
+			sourceBundleRevision: OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, entries,
+				checkedRuntime, checkedDependencies, "source-bundle"),
+			completeForSourceBundle: completeForSourceBundle,
+			blockers: blockers
+		};
 	}
 
 	/**
