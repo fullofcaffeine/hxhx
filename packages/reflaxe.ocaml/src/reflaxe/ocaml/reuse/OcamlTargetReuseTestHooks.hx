@@ -4,6 +4,7 @@ package reflaxe.ocaml.reuse;
 import haxe.io.Bytes;
 import haxe.io.Path;
 import haxe.macro.Context;
+import reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogStats;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -16,6 +17,54 @@ import sys.io.File;
 	present; ordinary requests receive unchanged bytes and no filesystem access.
 **/
 class OcamlTargetReuseTestHooks {
+	static inline final EXPECT_HIT_MARKER = "expect-hit";
+	static inline final EXPECT_MISS_MARKER = "expect-miss";
+
+	/**
+		Fails when the fixture marked this request as an expected exact hit.
+
+		The marker is external to the macro realm, so losing or replacing that
+		realm cannot turn an expected hit into an unobserved cold compilation.
+	**/
+	public static function failIfExpectedHitReachedMiss():Void {
+		if (!Context.defined("reflaxe_ocaml_target_reuse_test_require_hit"))
+			return;
+		final path = sentinelPath(EXPECT_HIT_MARKER);
+		if (!FileSystem.exists(path))
+			return;
+		FileSystem.deleteFile(path);
+		throw "reflaxe.ocaml: expected exact target reuse hit reached miss-only preparation";
+	}
+
+	/** Fails before replay when the fixture marked this request as an expected miss. **/
+	public static function failIfExpectedMissReachedHit():Void {
+		if (!Context.defined("reflaxe_ocaml_target_reuse_test_require_hit"))
+			return;
+		final path = sentinelPath(EXPECT_MISS_MARKER);
+		if (!FileSystem.exists(path))
+			return;
+		FileSystem.deleteFile(path);
+		throw "reflaxe.ocaml: expected exact target reuse miss reached replay";
+	}
+
+	/** Records redacted catalog state so a failed server fixture remains diagnosable. **/
+	public static function recordCatalogState(event:String, requestRevision:String, stats:TargetReuseCatalogStats):Void {
+		if (!Context.defined("reflaxe_ocaml_target_reuse_test_require_hit"))
+			return;
+		final safeEvent = event.split("\t").join(" ").split("\r").join(" ").split("\n").join(" ");
+		final output = File.append(sentinelPath("catalog-events.tsv"), false);
+		output.writeString([
+			safeEvent,
+			requestRevision,
+			stats.realmIdentityRevision,
+			Std.string(stats.requestSequence),
+			Std.string(stats.entryCount),
+			Std.string(stats.admissions),
+			Std.string(stats.hits)
+		].join("\t") + "\n");
+		output.close();
+	}
+
 	/** Corrupts the first admitted payload so the next request must quarantine it. **/
 	public static function admissionPayload(candidate:OcamlSourceBundleCandidate):Bytes {
 		final payload = candidate.copyPayload();
@@ -44,16 +93,20 @@ class OcamlTargetReuseTestHooks {
 	}
 
 	static function consumeOnce(name:String):Bool {
+		final path = sentinelPath(name);
+		if (FileSystem.exists(path))
+			return false;
+		File.saveContent(path, "consumed\n");
+		return true;
+	}
+
+	static function sentinelPath(name:String):String {
 		final root = Sys.getEnv("REFLAXE_OCAML_REUSE_TEST_SENTINEL_DIR");
 		if (root == null || root.length == 0)
 			throw "reflaxe.ocaml: exact-reuse failure fixture requires REFLAXE_OCAML_REUSE_TEST_SENTINEL_DIR";
 		if (!FileSystem.exists(root))
 			FileSystem.createDirectory(root);
-		final path = Path.join([root, name]);
-		if (FileSystem.exists(path))
-			return false;
-		File.saveContent(path, "consumed\n");
-		return true;
+		return Path.join([root, name]);
 	}
 }
 #end

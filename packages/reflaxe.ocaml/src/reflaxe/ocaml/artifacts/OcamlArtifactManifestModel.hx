@@ -125,12 +125,13 @@ typedef OcamlArtifactManifestReport = {
 }
 
 /**
-	Immutable source-producing subset observed before the final manifest is written.
+	Immutable stable-output subset observed before the final manifest is written.
 
-	This snapshot contains only verified plain values. It deliberately excludes
-	the framework receipt, manifest root, volatile reports, Dune products, and
-	every compiler/request object so a target may pack it without retaining the
-	active compilation.
+	This snapshot contains verified build inputs plus deterministic reports that
+	must remain present on an exact replay. `includeInSourceBundle` still decides
+	which entries contribute to the semantic source revision. The snapshot
+	excludes the regenerated framework receipt, manifest root, volatile reports,
+	Dune products, and every compiler/request object.
 **/
 typedef OcamlSourceBundleSnapshot = {
 	final schemaVersion:Int;

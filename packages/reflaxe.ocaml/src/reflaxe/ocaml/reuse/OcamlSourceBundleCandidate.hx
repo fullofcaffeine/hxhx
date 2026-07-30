@@ -46,12 +46,13 @@ private typedef OcamlSourceBundleEncodedIndex = {
 }
 
 /**
-	An observation-only, immutable encoding of one complete generated source tree.
+	An immutable encoding of one complete stable generated target tree.
 
 	The payload contains a canonical JSON index followed by one contiguous byte
-	range for every stable source file. Decoding revalidates paths, ownership,
-	offsets, digests, source-bundle identity, and prerequisite authorities. It
-	never retains compiler objects, target plans, callbacks, writers, or open
+	range for every stable file, including deterministic reports that do not
+	contribute to the semantic source-bundle revision. Decoding revalidates paths,
+	ownership, offsets, digests, source identity, and prerequisite authorities.
+	It never retains compiler objects, target plans, callbacks, writers, or open
 	files.
 **/
 class OcamlSourceBundleCandidate {
@@ -207,7 +208,8 @@ class OcamlSourceBundleCandidate {
 		}
 		if (dataOffset + expectedOffset != payload.length)
 			throw "OCaml source-bundle candidate has trailing or missing packed bytes.";
-		final actualRevision = OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, artifactEntries,
+		final sourceEntries = artifactEntries.filter(entry -> entry.includeInSourceBundle);
+		final actualRevision = OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, sourceEntries,
 			semanticRuntimeAuthority, nativeDependenciesAuthority, "source-bundle");
 		if (actualRevision != sourceBundleRevision)
 			throw "OCaml source-bundle candidate source revision does not match its index.";
@@ -282,8 +284,8 @@ class OcamlSourceBundleCandidate {
 			includeInSourceBundle: requiredBool(value, "includeInSourceBundle")
 		};
 		final normalized = OcamlArtifactManifestSchema.normalizeClaim(claim, profile);
-		if (!normalized.includeInSourceBundle || normalized.stability != "stable")
-			throw 'OCaml source-bundle candidate entry "${normalized.path}" is not stable source.';
+		if (normalized.stability != "stable")
+			throw 'OCaml source-bundle candidate entry "${normalized.path}" is not stable output.';
 		return {
 			path: normalized.path,
 			offset: requiredInt(value, "offset"),

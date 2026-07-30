@@ -3,6 +3,7 @@
 --no-output
 -lib reflaxe.ocaml
 -dce full
+--macro ReuseFixtureMacro.install()
 -D no-traces
 -D no_traces
 -D ocaml_output=out

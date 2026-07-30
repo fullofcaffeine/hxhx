@@ -174,7 +174,7 @@ class OcamlArtifactManifestBuilder {
 	}
 
 	/**
-		Builds the verified stable-source view without writing the manifest root.
+		Builds the verified stable-output view without writing the manifest root.
 
 		Callers use this after every source producer and output filter has run but
 		before adding volatile reuse evidence. A later final `seal()` independently
@@ -184,7 +184,8 @@ class OcamlArtifactManifestBuilder {
 	public function snapshotSourceBundle(semanticRuntime:OcamlArtifactAuthority, nativeDependencies:OcamlArtifactAuthority):OcamlSourceBundleSnapshot {
 		final checkedRuntime = OcamlArtifactManifestSchema.validatedAuthority(semanticRuntime, "semantic runtime");
 		final checkedDependencies = OcamlArtifactManifestSchema.validatedAuthority(nativeDependencies, "native dependencies");
-		final entries = materializeEntries().filter(entry -> entry.includeInSourceBundle);
+		final entries = materializeEntries().filter(entry -> entry.stability == "stable");
+		final sourceEntries = entries.filter(entry -> entry.includeInSourceBundle);
 		final completeForSourceBundle = checkedRuntime.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE
 			&& checkedDependencies.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE;
 		final blockers = new Array<String>();
@@ -203,7 +204,7 @@ class OcamlArtifactManifestBuilder {
 				semanticRuntime: checkedRuntime,
 				nativeDependencies: checkedDependencies
 			},
-			sourceBundleRevision: OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, entries,
+			sourceBundleRevision: OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, sourceEntries,
 				checkedRuntime, checkedDependencies, "source-bundle"),
 			completeForSourceBundle: completeForSourceBundle,
 			blockers: blockers

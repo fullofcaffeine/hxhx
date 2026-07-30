@@ -476,6 +476,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (probe == null)
 			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
 		#if macro
+		OcamlTargetReuseTestHooks.failIfExpectedHitReachedMiss();
 		if (Context.defined("reflaxe_ocaml_target_reuse_test_require_hit") && probe.requestRevision != null) {
 			final unexpectedLease = TargetReuseCatalog.shared().lookup(OcamlTargetReuseContract.NAMESPACE, probe.requestRevision);
 			if (unexpectedLease != null) {
@@ -518,6 +519,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			throw "reflaxe.ocaml: exact replay started without a sealed request or output transaction";
 		final requestRevision:String = probe.requestRevision;
 		final catalog = TargetReuseCatalog.shared();
+		OcamlTargetReuseTestHooks.recordCatalogState("lookup", requestRevision, TargetReuseCatalog.sharedStats());
 		final lease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, requestRevision);
 		if (lease == null)
 			return false;
@@ -525,18 +527,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 		var candidate:Null<OcamlSourceBundleCandidate> = null;
 		try {
 			candidate = OcamlSourceBundleCandidate.decode(lease.copyPayload());
-			if (candidate.targetRequestRevision != requestRevision
-				|| candidate.programRevision != snapshot.programRevision.id
-				|| candidate.configurationRevision != requireTargetReuseObservation().sourceConfigurationRevision
+			final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(requestRevision, "current target request revision");
+			final normalizedProgramRevision = OcamlArtifactManifestSchema.normalizeRevision(snapshot.programRevision.id, "current program revision");
+			final normalizedConfigurationRevision = OcamlArtifactManifestSchema.normalizeRevision(requireTargetReuseObservation().sourceConfigurationRevision,
+				"current source configuration revision");
+			if (candidate.targetRequestRevision != normalizedRequestRevision
+				|| candidate.programRevision != normalizedProgramRevision
+				|| candidate.configurationRevision != normalizedConfigurationRevision
 				|| !candidate.diagnosticsEligible)
 				throw "reflaxe.ocaml: exact source bundle does not match the current request";
 		} catch (error:Dynamic) {
 			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+			OcamlTargetReuseTestHooks.recordCatalogState("payload-rejected:" + Std.string(error), requestRevision, TargetReuseCatalog.sharedStats());
 			lease.close();
 			catalog.recordMiss("corrupt-payload");
 			return false;
 		}
 		lease.close();
+		OcamlTargetReuseTestHooks.failIfExpectedMissReachedHit();
 
 		try {
 			final reusable:OcamlSourceBundleCandidate = cast candidate;
@@ -571,6 +579,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						OcamlSourceBundleCandidate.ESTIMATED_CATALOG_OVERHEAD_BYTES);
 				if (admission.reason == "same-key-different-payload")
 					throw "reflaxe.ocaml: one exact target request produced different source-bundle bytes; the reuse namespace was quarantined";
+				OcamlTargetReuseTestHooks.recordCatalogState("admission", candidate.targetRequestRevision, TargetReuseCatalog.sharedStats());
 			case CompiledMiss | ExactHit | Failed:
 		}
 	}
