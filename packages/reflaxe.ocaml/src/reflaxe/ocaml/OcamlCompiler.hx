@@ -55,6 +55,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
+import reflaxe.ocaml.reuse.OcamlTargetReuseReportWriter;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -120,6 +121,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
+	var targetRevisionObservationMilliseconds:Int = 0;
+	var targetMissPreparationMilliseconds:Int = 0;
 
 	#if macro
 	/**
@@ -429,7 +432,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
 		OcamlSourcePositionMapper.beginRequest();
+		final started = haxe.Timer.stamp();
 		targetReuseObservation = captureTargetReuseObservation();
+		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
+		targetMissPreparationMilliseconds = 0;
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
 		return moduleTypes;
 	}
@@ -442,7 +448,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		independent authority, transaction, diagnostics, and memory gates.
 	**/
 	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
+		final started = haxe.Timer.stamp();
 		precomputeWholeProgramContext(moduleTypes);
+		targetMissPreparationMilliseconds = elapsedMilliseconds(started);
 	}
 
 	public override function targetReuseNamespace():Null<String> {
@@ -494,6 +502,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			lifecycleTraceEnabled: false
 		};
 		#end
+	}
+
+	static function elapsedMilliseconds(started:Float):Int {
+		return Std.int(Math.max(0, (haxe.Timer.stamp() - started) * 1000));
 	}
 
 	function precomputeWholeProgramContext(types:Array<haxe.macro.Type.ModuleType>):Void {
@@ -3385,6 +3397,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 				modules.push(m);
 			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
 		}
+
+		#if macro
+		if (Context.defined("reflaxe_ocaml_target_reuse_report")) {
+			final snapshot = finalProgramFingerprint;
+			final probe = targetReuseProbe;
+			if (snapshot == null || probe == null)
+				throw "reflaxe.ocaml: target reuse report was requested without a sealed final-program probe";
+			OcamlTargetReuseReportWriter.write(outDir, snapshot, probe, OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation()),
+				targetRevisionObservationMilliseconds, targetMissPreparationMilliseconds, artifacts);
+		}
+		#end
 
 		artifacts.recordFrameworkModules(excludedFrameworkPaths);
 

@@ -410,6 +410,7 @@ class OcamlArtifactManifestSchema {
 			case "package-alias-emitter": OcamlArtifactOwner.PackageAliasGeneration;
 			case "lowering-report-writer": OcamlArtifactOwner.LoweringReport;
 			case "lifecycle-trace-writer": OcamlArtifactOwner.LifecycleTrace;
+			case "target-reuse-report-writer": OcamlArtifactOwner.TargetReuseReport;
 			case "mli-generator": OcamlArtifactOwner.MliInference;
 			case "build-timing-report-writer": OcamlArtifactOwner.BuildTimingReport;
 			case "binding-emitter": OcamlArtifactOwner.BindingGeneration;

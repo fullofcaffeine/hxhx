@@ -1,0 +1,61 @@
+import haxe.Json;
+import haxe.io.Path;
+import sys.FileSystem;
+import sys.io.File;
+
+using StringTools;
+
+/** Validates the redacted report and its volatile artifact ownership. **/
+class TargetReuseReportFixture {
+	static function assertTrue(condition:Bool, message:String):Void {
+		if (!condition)
+			throw message;
+	}
+
+	static function main():Void {
+		final args = Sys.args();
+		assertTrue(args.length == 1, "expected one generated OCaml output directory");
+		final outputDirectory = args[0];
+		final reportPath = Path.join([outputDirectory, "ocaml_target_reuse_observation.json"]);
+		final manifestPath = Path.join([outputDirectory, "ocaml_artifact_manifest.json"]);
+		assertTrue(FileSystem.exists(reportPath), "target reuse observation report should exist");
+		assertTrue(FileSystem.exists(manifestPath), "artifact manifest should exist");
+
+		final report:Dynamic = Json.parse(File.getContent(reportPath));
+		assertTrue(report.schemaVersion == 1
+			&& report.model == "reflaxe-ocaml-target-reuse-observation", "report should use the supported schema");
+		assertTrue(report.mode == "observation-only", "report must not claim a production cache hit");
+		assertTrue(Std.string(report.finalProgram.revision).startsWith("sha256:"), "final-program revision should be redacted");
+		assertTrue(Std.string(report.targetRequest.revision).startsWith("sha256:"), "target request revision should be redacted");
+		assertTrue(report.targetRequest.eligible == false, "incomplete target authority must remain ineligible");
+		final blockers:Array<String> = cast report.targetRequest.blockers;
+		assertTrue(blockers.contains("reflaxe.ocaml:target-implementation-authority-incomplete"),
+			"report should explain incomplete target implementation identity");
+		final components:Array<Dynamic> = cast report.targetRequest.components;
+		assertTrue(components.length == 4
+			&& components[0].name == "artifact-output-schema"
+			&& components[3].name == "target-implementation-candidate",
+			"target revision components should be complete and sorted");
+		assertTrue(report.timing.targetRevisionObservationMilliseconds >= 0 && report.timing.missPreparationMilliseconds >= 0,
+			"completed target phases should report non-negative durations");
+		assertTrue(report.catalog.status == "not-implemented"
+			&& report.sourceBundleCandidate.status == "not-observed"
+			&& report.shadowReplay.status == "not-implemented"
+			&& report.memory.status == "not-observed",
+			"unfinished evidence must remain explicit instead of reporting false zeroes");
+
+		final serialized = File.getContent(reportPath);
+		assertTrue(!serialized.contains(Path.normalize(Sys.getCwd())), "report must not leak the current machine path");
+
+		final manifest:Dynamic = Json.parse(File.getContent(manifestPath));
+		final entries:Array<Dynamic> = cast manifest.entries;
+		final owned = entries.filter(entry -> entry.path == "ocaml_target_reuse_observation.json");
+		assertTrue(owned.length == 1, "artifact manifest should own the reuse observation exactly once");
+		assertTrue(owned[0].owner == "target-reuse-report-writer"
+			&& owned[0].kind == "compiler-report"
+			&& owned[0].stability == "volatile"
+			&& owned[0].includeInSourceBundle == false,
+			"reuse observation should be volatile evidence outside the source bundle");
+		Sys.println("REFLAXE_OCAML_TARGET_REUSE_REPORT:PASS");
+	}
+}

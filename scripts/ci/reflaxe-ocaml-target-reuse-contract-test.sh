@@ -29,6 +29,8 @@ haxe build.hxml \
 	-cp "$PROBE_SOURCE" \
 	--macro 'TargetReuseProbeFixture.install()' \
 	-D ocaml_no_build \
+	-D reflaxe_ocaml_target_reuse_report \
 	-D "ocaml_output=$OUTPUT_NAME"
 
+haxe -cp "$PROBE_SOURCE" --run TargetReuseReportFixture "$OUTPUT_NAME"
 echo "REFLAXE_OCAML_TARGET_REUSE_PROBE:PASS"

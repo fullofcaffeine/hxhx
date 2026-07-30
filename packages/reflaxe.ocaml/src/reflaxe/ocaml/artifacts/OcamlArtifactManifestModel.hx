@@ -11,6 +11,7 @@ enum abstract OcamlArtifactOwner(String) from String to String {
 	var PackageAliasGeneration = "package-alias-emitter";
 	var LoweringReport = "lowering-report-writer";
 	var LifecycleTrace = "lifecycle-trace-writer";
+	var TargetReuseReport = "target-reuse-report-writer";
 	var MliInference = "mli-generator";
 	var BuildTimingReport = "build-timing-report-writer";
 	var BindingGeneration = "binding-emitter";
