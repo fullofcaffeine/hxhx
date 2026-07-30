@@ -1,11 +1,13 @@
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import haxe.io.Path;
+import reflaxe.lifecycle.TargetReuseCatalog;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlSourceBundleSnapshot;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
 import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -77,7 +79,51 @@ class TargetSourceBundleCandidateFixture {
 		final corrupted = candidate.copyPayload();
 		corrupted.set(corrupted.length - 1, corrupted.get(corrupted.length - 1) ^ 0xff);
 		expectFailure(() -> OcamlSourceBundleCandidate.decode(corrupted), "digest mismatch");
+		proveCatalogQuarantine(candidate, corrupted);
 		Sys.println("REFLAXE_OCAML_SOURCE_BUNDLE_CANDIDATE:PASS");
+	}
+
+	/**
+		Proves that opaque catalog bytes are decoded before replay and quarantined
+		when target-level validation rejects them.
+	**/
+	static function proveCatalogQuarantine(candidate:OcamlSourceBundleCandidate, corrupted:Bytes):Void {
+		final catalog = new TargetReuseCatalog(1024 * 1024, 512 * 1024);
+		final admitted = catalog.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, candidate.copyPayload(), 0);
+		assertTrue(admitted.admitted, "valid packed candidate should enter the bounded catalog");
+		final validLease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision);
+		assertTrue(validLease != null, "valid packed candidate should be available through a lease");
+		if (validLease == null)
+			throw "valid packed candidate lease unexpectedly missing";
+		OcamlSourceBundleCandidate.decode(validLease.copyPayload());
+		validLease.close();
+
+		final corruptRequestRevision = revision("corrupt-catalog-entry");
+		assertTrue(catalog.admit(OcamlTargetReuseContract.NAMESPACE, corruptRequestRevision, corrupted, 0).admitted,
+			"catalog should treat target payload bytes as opaque until the target validates them");
+		final corruptLease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, corruptRequestRevision);
+		assertTrue(corruptLease != null, "corrupt fixture payload should be leased before target validation");
+		if (corruptLease == null)
+			throw "corrupt fixture payload lease unexpectedly missing";
+		var decodeFailed = false;
+		try {
+			OcamlSourceBundleCandidate.decode(corruptLease.copyPayload());
+		} catch (_:Dynamic) {
+			decodeFailed = true;
+			assertTrue(catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, corruptRequestRevision),
+				"target validation failure should quarantine the exact catalog entry");
+		}
+		assertTrue(decodeFailed, "corrupt catalog payload must fail target validation before replay");
+		expectFailure(() -> corruptLease.copyPayload(), "quarantined");
+		corruptLease.close();
+		assertTrue(catalog.lookup(OcamlTargetReuseContract.NAMESPACE, corruptRequestRevision) == null,
+			"quarantined payload must not remain available for replay");
+		final stats = catalog.snapshotStats();
+		assertTrue(stats.quarantines == 1 && stats.activeLeases == 0 && stats.entryCount == 1,
+			"catalog counters should retain only the valid entry after quarantine");
+		catalog.resetAll();
+		assertTrue(catalog.snapshotStats().entryCount == 0
+			&& catalog.snapshotStats().payloadBytes == 0, "reset should remove the remaining candidate bytes");
 	}
 
 	static function entry(path:String, bytes:Bytes):OcamlArtifactEntry {
