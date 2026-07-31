@@ -61,6 +61,12 @@ class Main {
 		line("dynamic:" + describe(echo));
 	}
 
+	static function dynamicArrayCases():Void {
+		final values:Array<Dynamic> = [MixedShape.Alpha, MixedShape.Delta("array", 6)];
+		for (value in values)
+			line("array-dynamic:" + describe(value));
+	}
+
 	static function factoryCases():Void {
 		final enumType:Dynamic = MixedShape;
 		line("constructors:" + Type.getEnumConstructs(enumType).join(","));
@@ -75,6 +81,7 @@ class Main {
 	static function main():Void {
 		typedCases();
 		dynamicCases();
+		dynamicArrayCases();
 		factoryCases();
 	}
 }
