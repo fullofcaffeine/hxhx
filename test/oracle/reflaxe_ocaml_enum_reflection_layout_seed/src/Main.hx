@@ -32,10 +32,20 @@ class Main {
 		return Type.enumConstructor(value) + ":" + Type.enumIndex(value) + ":" + parameters(value);
 	}
 
+	static function describeTyped(value:MixedShape):String {
+		final values = Type.enumParameters(value);
+		final rendered:Array<String> = [];
+		for (item in values)
+			rendered.push(Std.string(item));
+		return Type.enumConstructor(value) + ":" + Type.enumIndex(value) + ":" + rendered.join(",");
+	}
+
 	static function typedCases():Void {
 		final values:Array<MixedShape> = [Alpha, Bravo(1), Charlie, Delta("typed", 2), Echo];
-		for (value in values)
+		for (value in values) {
 			line("typed:" + describe(value));
+			line("typed-direct:" + describeTyped(value));
+		}
 	}
 
 	static function dynamicCases():Void {

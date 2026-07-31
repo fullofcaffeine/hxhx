@@ -13,4 +13,5 @@ Haxe constructor indices follow declaration order. Native OCaml represents
 constant constructors and payload constructors with two separate tag
 sequences, so those tag numbers cannot be used as Haxe indices. The fixture
 checks the public constructor name, index, parameters, declaration-order list,
-and factory APIs through both typed and `Dynamic` values.
+and factory APIs through both direct typed calls and values that cross a
+`Dynamic` boundary.

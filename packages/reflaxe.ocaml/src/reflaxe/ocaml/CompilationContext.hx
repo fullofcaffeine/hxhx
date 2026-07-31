@@ -158,10 +158,11 @@ class CompilationContext {
 	/**
 	 * Haxe constructor order and native OCaml representation by enum full name.
 	 *
-	 * `Type.getEnumConstructs`, `Type.enumConstructor`, `Type.enumIndex`, and
-	 * `Type.createEnumIndex` all consume this one generated layout. Keeping one
-	 * record prevents those APIs from drifting when payload and constant
-	 * constructors are interleaved.
+	 * Dynamic-backed `Type.getEnumConstructs`, `Type.enumConstructor`,
+	 * `Type.enumIndex`, and `Type.createEnumIndex` consume this generated
+	 * layout. Direct typed calls compile from the same `EnumField.index` values.
+	 * Keeping both paths rooted in that typed declaration order prevents drift
+	 * when payload and constant constructors are interleaved.
 	 */
 	public final enumConstructorLayoutsByFullName:Map<String, Array<OcamlEnumConstructorLayout>> = [];
 

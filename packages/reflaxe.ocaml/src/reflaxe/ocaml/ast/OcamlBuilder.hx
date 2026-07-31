@@ -2890,13 +2890,7 @@ class OcamlBuilder {
 														}
 													}
 												case "enumIndex" if (args.length == 1):
-													{
-														final a0 = args[0];
-														final built = buildExpr(a0);
-														final asObj = (isDynamicLike(a0.t) || nullablePrimitiveKind(a0.t) != null) ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"),
-															"repr"), [built]);
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumIndex"), [asObj]);
-													}
+													buildEnumIndex(args[0]);
 												case "enumParameters" if (args.length == 1):
 													{
 														final a0 = args[0];
@@ -4272,80 +4266,7 @@ class OcamlBuilder {
 			case TEnumIndex(_):
 				switch (e.expr) {
 					case TEnumIndex(enumValueExpr):
-						final unwrappedType = unwrapNullType(enumValueExpr.t);
-						final isNullable = unwrappedType != enumValueExpr.t;
-						switch (unwrappedType) {
-							case TEnum(eRef, _):
-								final enumType = eRef.get();
-								final scrutRaw = buildExpr(enumValueExpr);
-								final scrut = isNullable ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [scrutRaw]) : scrutRaw;
-								final modName = moduleIdToOcamlModuleName(enumType.module);
-								final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
-
-								final ctors:Array<EnumField> = [];
-								for (name in enumType.names) {
-									final ef = enumType.constructs.get(name);
-									if (ef != null)
-										ctors.push(ef);
-								}
-								ctors.sort((a, b) -> a.index - b.index);
-
-								final arms:Array<OcamlMatchCase> = [];
-								for (ef in ctors) {
-									final ctorName = if (isOcamlNativeEnumType(enumType, "Option")
-										|| isOcamlNativeEnumType(enumType, "Result")) {
-										ef.name;
-									} else if (isOcamlNativeEnumType(enumType, "List")) {
-										ef.name == "Nil" ? "[]" : (ef.name == "Cons" ? "::" : ef.name);
-									} else {
-										isSameModule ? ef.name : (modName + "." + ef.name);
-									}
-
-									final argCount = switch (ef.type) {
-										case TFun(args, _): args.length;
-										case _: 0;
-									}
-									final patArgs:Array<OcamlPat> = [];
-									for (_ in 0...argCount)
-										patArgs.push(OcamlPat.PAny);
-
-									arms.push({
-										pat: OcamlPat.PConstructor(ctorName, patArgs),
-										guard: null,
-										expr: OcamlExpr.EConst(OcamlConst.CInt(ef.index))
-									});
-								}
-								if (isNullable) {
-									final tmp = freshTmp("enum_idx");
-									final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-									final nonNullIdx = if (arms.length == 0) {
-										OcamlExpr.EConst(OcamlConst.CInt(-1));
-									} else {
-										OcamlExpr.EMatch(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]), arms);
-									}
-									OcamlExpr.ELet(tmp, scrutRaw,
-										OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
-											OcamlExpr.EConst(OcamlConst.CInt(-1)), nonNullIdx),
-										false);
-								} else {
-									// If the enum has constructors, the match is exhaustive: no default arm
-									// (avoid redundant-case warnings under -warn-error).
-									if (arms.length == 0)
-										OcamlExpr.EConst(OcamlConst.CInt(-1))
-									else
-										OcamlExpr.EMatch(scrut, arms);
-								}
-							case _:
-								// Dynamic-friendly fallback: `Type.enumIndex(v)` is commonly called with `v:Dynamic`
-								// (notably by utest). In that case the typed AST can still use `TEnumIndex`, but we
-								// have no static enum identity to pattern-match on. Defer to the runtime best-effort
-								// inspection (`HxType.enumIndex`) which understands boxed enum values.
-								final built = buildExpr(enumValueExpr);
-								final asObj = (isDynamicLike(enumValueExpr.t)
-									|| nullablePrimitiveKind(enumValueExpr.t) != null) ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"),
-										"repr"), [built]);
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumIndex"), [asObj]);
-						}
+						buildEnumIndex(enumValueExpr);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CInt(-1));
 				}
@@ -4811,6 +4732,83 @@ class OcamlBuilder {
 		}
 		#end
 		return built;
+	}
+
+	/** Builds the Haxe declaration index from a typed enum match or a Dynamic value's generated layout. */
+	function buildEnumIndex(enumValueExpr:TypedExpr):OcamlExpr {
+		final unwrappedType = unwrapNullType(enumValueExpr.t);
+		final isNullable = unwrappedType != enumValueExpr.t;
+		return switch (unwrappedType) {
+			case TEnum(eRef, _):
+				// OCaml numbers constant and payload constructors separately.
+				// Matching the typed value returns its Haxe source index instead.
+				final enumType = eRef.get();
+				final scrutRaw = buildExpr(enumValueExpr);
+				final scrut = isNullable ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [scrutRaw]) : scrutRaw;
+				final modName = moduleIdToOcamlModuleName(enumType.module);
+				final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
+
+				final ctors:Array<EnumField> = [];
+				for (name in enumType.names) {
+					final ef = enumType.constructs.get(name);
+					if (ef != null)
+						ctors.push(ef);
+				}
+				ctors.sort((a, b) -> a.index - b.index);
+
+				final arms:Array<OcamlMatchCase> = [];
+				for (ef in ctors) {
+					final ctorName = if (isOcamlNativeEnumType(enumType, "Option") || isOcamlNativeEnumType(enumType, "Result")) {
+						ef.name;
+					} else if (isOcamlNativeEnumType(enumType, "List")) {
+						ef.name == "Nil" ? "[]" : (ef.name == "Cons" ? "::" : ef.name);
+					} else {
+						isSameModule ? ef.name : (modName + "." + ef.name);
+					}
+
+					final argCount = switch (ef.type) {
+						case TFun(args, _): args.length;
+						case _: 0;
+					}
+					final patArgs:Array<OcamlPat> = [];
+					for (_ in 0...argCount)
+						patArgs.push(OcamlPat.PAny);
+
+					arms.push({
+						pat: OcamlPat.PConstructor(ctorName, patArgs),
+						guard: null,
+						expr: OcamlExpr.EConst(OcamlConst.CInt(ef.index))
+					});
+				}
+
+				if (isNullable) {
+					final tmp = freshTmp("enum_idx");
+					final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+					final nonNullIdx = if (arms.length == 0) {
+						OcamlExpr.EConst(OcamlConst.CInt(-1));
+					} else {
+						OcamlExpr.EMatch(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]), arms);
+					}
+					OcamlExpr.ELet(tmp, scrutRaw,
+						OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull), OcamlExpr.EConst(OcamlConst.CInt(-1)), nonNullIdx),
+						false);
+				} else {
+					// If the enum has constructors, the match is exhaustive: no
+					// default arm is needed, which also avoids OCaml warnings.
+					if (arms.length == 0)
+						OcamlExpr.EConst(OcamlConst.CInt(-1))
+					else
+						OcamlExpr.EMatch(scrut, arms);
+				}
+			case _:
+				// A Dynamic value has no static enum identity here. Its earlier
+				// representation conversion must preserve that identity in an
+				// HxEnum box before this runtime lookup can succeed.
+				final built = buildExpr(enumValueExpr);
+				final asObj = (isDynamicLike(enumValueExpr.t)
+					|| nullablePrimitiveKind(enumValueExpr.t) != null) ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumIndex"), [asObj]);
+		}
 	}
 
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
