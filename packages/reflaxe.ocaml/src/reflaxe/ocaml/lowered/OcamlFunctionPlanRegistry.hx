@@ -125,7 +125,7 @@ private typedef OcamlSealedFunctionRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v1";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();

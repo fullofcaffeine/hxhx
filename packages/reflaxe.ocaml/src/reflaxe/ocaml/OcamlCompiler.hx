@@ -3,6 +3,7 @@ package reflaxe.ocaml;
 #if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
 import haxe.io.Path;
+import haxe.ds.ObjectMap;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -149,6 +150,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var skippedTargetGenerationWarnings:Int = 0;
 	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
 	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
+	final compilerExpressionOrdinals:ObjectMap<TypedExpr, Int> = new ObjectMap();
+	var nextCompilerExpressionOrdinal:Int = 0;
 
 	#if macro
 	/**
@@ -391,6 +394,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/** Starts a fresh, revision-keyed target-plan registry for this request. */
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
+		compilerExpressionOrdinals.clear();
+		nextCompilerExpressionOrdinal = 0;
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
 		staticStoragePlan.beginProgram(revision.id);
@@ -1453,6 +1458,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/** Returns one stable owner for a typed class-field initializer. */
 	static function fieldInitializerOwner(classType:ClassType, field:ClassField, kind:String):String {
 		return 'field-initializer:$kind:${classType.module}|${classType.name}::${field.name}';
+	}
+
+	/**
+		Returns one request-local owner for an expression compiled outside a field or function.
+
+		Reflaxe can ask the target to compile two distinct macro-generated roots
+		that carry the same source span and the same expression structure. The
+		zero-based ordinal distinguishes those typed objects, while a repeated call
+		for the same object receives the same owner. The map is cleared when the
+		next complete program begins and is never part of a reusable cache entry.
+	**/
+	function compilerExpressionOwner(expression:TypedExpr):String {
+		var ordinal = compilerExpressionOrdinals.get(expression);
+		if (ordinal == null) {
+			ordinal = nextCompilerExpressionOrdinal++;
+			compilerExpressionOrdinals.set(expression, ordinal);
+		}
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		return 'compiler-expression:${source.file}:${source.min}:${source.max}:root:$ordinal';
 	}
 
 	/**
@@ -3940,9 +3964,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final emitSourceMap = false;
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
-		final source = OcamlLoweredOrigin.sourceSpan(expr.pos);
-		final ownerId = 'compiler-expression:${source.file}:${source.min}:${source.max}';
-		final e = buildStandaloneExpression(builder, ownerId, expr);
+		final e = buildStandaloneExpression(builder, compilerExpressionOwner(expr), expr);
 		return printer.printExpr(e);
 	}
 

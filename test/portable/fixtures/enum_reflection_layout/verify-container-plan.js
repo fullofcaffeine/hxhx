@@ -17,6 +17,18 @@ function readReport(name) {
 const lowering = readReport('ocaml_lowering_report.json')
 const runtime = readReport('ocaml_runtime_requirement_report.json')
 const generated = fs.readFileSync(path.join(fixtureRoot, 'out', 'Main.ml'), 'utf8')
+const builderSource = fs.readFileSync(
+	path.join(repoRoot, 'packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx'),
+	'utf8'
+)
+const arrayElementBuilder = builderSource.match(
+	/function buildArrayLiteralElement\([\s\S]*?\n\t}\n\n\t\/\*\*/
+)
+assert.notEqual(arrayElementBuilder, null, 'could not locate the array-element syntax boundary')
+assert.match(arrayElementBuilder[0], /if \(plan == null\)\s*\n\s*return containerElementInvariant/,
+	'array syntax must stop when its complete container plan is absent')
+assert.doesNotMatch(arrayElementBuilder[0], /fromDirectValue/,
+	'array syntax must consume the sealed enum identity instead of classifying the typed constructor again')
 
 const conversions = lowering.containerElementConversions
 assert.equal(lowering.schemaVersion, 50)

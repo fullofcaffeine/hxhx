@@ -4,6 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -25,6 +26,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 
 /** Focused executable checks for local-storage decisions and explanations. */
+@:access(reflaxe.ocaml.OcamlCompiler)
 class LocalStoragePlannerFixture {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -904,6 +906,18 @@ class LocalStoragePlannerFixture {
 			&& duplicatePositionOrdinals.join(",") == "0,1",
 			"two macro-generated arrays with identical source positions must keep distinct deterministic structural ordinals");
 		OcamlContainerElementPlanner.requireCompleteness(duplicatePositionArrays, duplicatePositionBinding, duplicatePositionPlan);
+		final standaloneOwnerCompiler = new OcamlCompiler();
+		final firstStandaloneRoot = Context.typeExpr(macro([LocalDynamicEnum.Idle] : Array<Dynamic>));
+		final secondStandaloneRoot = Context.typeExpr(macro([LocalDynamicEnum.Payload(13)] : Array<Dynamic>));
+		secondStandaloneRoot.pos = firstStandaloneRoot.pos;
+		final firstStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(firstStandaloneRoot);
+		final repeatedStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(firstStandaloneRoot);
+		final secondStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(secondStandaloneRoot);
+		assertTrue(firstStandaloneOwner == repeatedStandaloneOwner
+			&& firstStandaloneOwner != secondStandaloneOwner
+			&& StringTools.endsWith(firstStandaloneOwner, ":root:0")
+			&& StringTools.endsWith(secondStandaloneOwner, ":root:1"),
+			"distinct macro-generated standalone roots with the same source span need separate stable request-local owners");
 		final excludedDynamicArrayInput = Context.typeExpr(macro {
 			final seed = LocalDynamicEnum.Idle;
 			final factory = () -> LocalDynamicEnum.Payload(9);

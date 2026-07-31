@@ -1135,13 +1135,9 @@ class OcamlBuilder {
 		tag or rendered expression.
 	**/
 	function buildArrayLiteralElement(container:TypedExpr, item:TypedExpr, elementIndex:Int):OcamlExpr {
-		final binding = currentFunctionPlanBinding;
 		final plan = currentContainerElementPlan;
-		if (plan == null) {
-			if (binding == null)
-				return buildExpr(item);
-			return containerElementInvariant("sealed function reached array syntax without its container-element plan", container.pos);
-		}
+		if (plan == null)
+			return containerElementInvariant("array literal reached syntax without an exact container-element plan", container.pos);
 		final conversion = switch (plan.syntaxLookup(container, elementIndex)) {
 			case Unknown:
 				return containerElementInvariant("typed array element is absent from the sealed request-local syntax lookup", item.pos);
@@ -1152,14 +1148,7 @@ class OcamlBuilder {
 			case Required(_, conversion):
 				conversion;
 		};
-		final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
-		if (identity == null
-			|| identity.semanticTypeId != conversion.inputSemanticTypeId
-			|| identity.carrierTypeId != conversion.inputCarrierTypeId) {
-			return
-				containerElementInvariant('array element occurrence "${conversion.id}" no longer matches its sealed ${conversion.inputSemanticTypeId} constructor carrier',
-					item.pos);
-		}
+		OcamlEnumDynamicCarrier.requireIdentity(conversion.inputSemanticTypeId, conversion.inputCarrierTypeId);
 		final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(item)]);
 		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
 			OcamlExpr.EConst(OcamlConst.CString(conversion.inputSemanticTypeId)),
