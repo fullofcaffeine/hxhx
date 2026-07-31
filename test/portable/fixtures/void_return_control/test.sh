@@ -159,6 +159,7 @@ if (!control)
 control.mechanism = 'runtime-return-signal'
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
+haxe -cp "$ROOT/scripts/ci" --run RecomputeLoweringControlRevision "$REPORT_FILE"
 
 if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \

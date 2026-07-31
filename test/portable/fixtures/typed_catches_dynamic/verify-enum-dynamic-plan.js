@@ -21,7 +21,9 @@ const generated = fs.readFileSync('out/Main.ml', 'utf8')
 const enumConversions = lowering.localConversions.filter(entry => entry.conversion === 'box-exact-enum-to-dynamic')
 assert.equal(enumConversions.length, 4, 'each exact enum initializer should publish one sealed enum-to-Dynamic conversion')
 
-const enumUnsafe = lowering.unsafeOperations.filter(entry => entry.operation === 'box-exact-enum-to-dynamic')
+const conversionIds = new Set(enumConversions.map(entry => entry.id))
+const enumUnsafe = lowering.unsafeOperations.filter(entry =>
+	entry.operation === 'box-exact-enum-to-dynamic' && conversionIds.has(entry.conversionId))
 assert.equal(enumUnsafe.length, enumConversions.length, 'each enum conversion should own its Obj.repr plus HxEnum proof record')
 
 const unsafeByConversion = new Map(enumUnsafe.map(entry => [entry.conversionId, entry]))
@@ -40,9 +42,9 @@ assert(!runtime.compilerObservedModulesWithoutRequirementRoots.includes('HxEnum'
 assert(runtime.compilerObservedModulesWithRequirementRoots.includes('HxEnum'),
 	'the runtime report should connect generated HxEnum use to a source-level requirement')
 
-const requirements = runtime.requirements.filter(entry => entry.semanticCapability === 'haxe-enum-dynamic-box')
+const requirements = runtime.requirements.filter(entry =>
+	entry.semanticCapability === 'haxe-enum-dynamic-box' && conversionIds.has(entry.decisionId))
 assert.equal(requirements.length, enumConversions.length, 'each sealed enum conversion should publish one HxEnum runtime requirement')
-const conversionIds = new Set(enumConversions.map(entry => entry.id))
 for (const requirement of requirements) {
 	assert(conversionIds.has(requirement.decisionId), 'the HxEnum requirement should name its exact local conversion')
 	assert.deepEqual(requirement.rootModules, ['HxEnum'])

@@ -18,7 +18,7 @@ const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
 const generatedTypeRegistry = fs.readFileSync('out/HxTypeRegistry.ml', 'utf8')
 const repositoryRoot = path.resolve(__dirname, '../../../..')
 
-assert.equal(report.schemaVersion, 43)
+assert.equal(report.schemaVersion, 48)
 assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v18')
 assert.equal(
 	report.representationScope,
@@ -137,7 +137,7 @@ assert.match(generatedMain, /let value = Obj\.repr 1\.5/)
 assert.match(generatedMain, /let value = HxRuntime\.box_bool true/)
 assert.match(generatedMain, /let value = \(Obj\.magic \(HxRuntime\.hx_null\) : Obj\.t\)/)
 assert.match(generatedMain, /let value = Obj\.repr \(samplevalue_create/)
-assert.match(generatedMain, /let value = Obj\.repr \(let __anon_/)
+assert.match(generatedMain, /let value = Obj\.repr \(let __anonymous_value_/)
 assert.match(generatedMain, /ordinaryText __call_arg_/)
 assert.match(generatedMain, /nativeText __call_arg_/)
 assert.match(generatedMain, /HxSys\.printlnValue v/)
