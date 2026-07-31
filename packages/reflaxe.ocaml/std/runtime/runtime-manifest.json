@@ -148,33 +148,6 @@
       "license": "MIT"
     },
     {
-      "module": "HxHxMacroRpc",
-      "scope": "tooling",
-      "files": [{ "path": "HxHxMacroRpc.ml", "sha256": "d4fb82be05c0f334087fd24b89549baf551fdede020c5068d2324e57d575c56c" }],
-      "dependencies": [],
-      "duneLibraries": ["unix"],
-      "profiles": ["portable"],
-      "license": "MIT"
-    },
-    {
-      "module": "HxHxNativeLexer",
-      "scope": "tooling",
-      "files": [{ "path": "HxHxNativeLexer.ml", "sha256": "069df623059772a430868932fb02d77af5d2f41bb3ca05c7fb55a27215173c5a" }],
-      "dependencies": [],
-      "duneLibraries": [],
-      "profiles": ["portable"],
-      "license": "MIT"
-    },
-    {
-      "module": "HxHxNativeParser",
-      "scope": "tooling",
-      "files": [{ "path": "HxHxNativeParser.ml", "sha256": "1ff33394ff1693ac37c286cd0128d3dc0d7b06113a3fe901271cae36fcc1bf4a" }],
-      "dependencies": ["HxHxNativeLexer"],
-      "duneLibraries": [],
-      "profiles": ["portable"],
-      "license": "MIT"
-    },
-    {
       "module": "HxInt",
       "scope": "application",
       "files": [{ "path": "HxInt.ml", "sha256": "3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b" }],

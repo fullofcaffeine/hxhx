@@ -17,6 +17,10 @@ const facadePath = 'packages/hxhx-core/src/backend/source/SourceNativeBackend.hx
 const mvpCorePath = 'packages/hxhx-core/src/backend/source/SourceMvpTargetCore.hx'
 const javaCorePath = 'packages/hxhx-core/src/backend/source/JavaSourceTargetCore.hx'
 const phpCorePath = 'packages/hxhx-core/src/backend/source/PhpSourceTargetCore.hx'
+const sourceTargetPath = 'packages/hxhx-core/src/backend/source/SourceNativeTarget.hx'
+const sourceIdentifierPath = 'packages/hxhx-core/src/backend/source/SourceIdentifier.hx'
+const phpNamePath = 'packages/hxhx-core/src/backend/source/PhpName.hx'
+const phpSyntaxPath = 'packages/hxhx-core/src/backend/source/PhpSyntax.hx'
 const runtimeStrategyPath = 'docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md'
 
 function fail(message) {
@@ -53,6 +57,10 @@ function main() {
   const mvpCore = readText(mvpCorePath)
   const javaCore = readText(javaCorePath)
   const phpCore = readText(phpCorePath)
+  const sourceTarget = readText(sourceTargetPath)
+  const sourceIdentifier = readText(sourceIdentifierPath)
+  const phpName = readText(phpNamePath)
+  const phpSyntax = readText(phpSyntaxPath)
   const runtimeStrategy = readText(runtimeStrategyPath)
 
   for (const snippet of [
@@ -61,6 +69,9 @@ function main() {
     'SourceNativeBackend.hx',
     'JavaSourceTargetCore.hx',
     'PhpSourceTargetCore.hx',
+    'SourceIdentifier',
+    'PhpName',
+    'PhpSyntax',
     'SourceMvpTargetCore.hx',
     'SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md',
     'SourceSharedLowering',
@@ -87,8 +98,12 @@ function main() {
   }
 
   for (const snippet of [
-    'enum SourceNativeTarget',
     'public static function emitTarget',
+    'return SourceIdentifier.sanitize(name);',
+    'PhpName.typeIdentifier',
+    'PhpName.valueIdentifier',
+    'PhpName.globalFunction',
+    'PhpName.typePath',
     'readSourceNativeTemplate',
     'appendSourceNativeTemplateLines',
     'renderExpr',
@@ -103,10 +118,65 @@ function main() {
   ]) {
     requireIncludes(sourceCommonPath, sourceCommon, snippet)
   }
+  requireIncludes(sourceTargetPath, sourceTarget, 'enum SourceNativeTarget')
+  if (sourceCommon.includes('enum SourceNativeTarget')) {
+    fail(`${sourceCommonPath} must not nest the source-target identity inside the shared syntax kernel`)
+  }
+  for (const retiredName of [
+    'sanitizePhpTypeName',
+    'sanitizePhpValueName',
+    'sanitizePhpGlobalFunctionName',
+    'sanitizePhpTypePath',
+    'isPhpReservedVariableName',
+    'isPhpReservedTypeName',
+  ]) {
+    if (sourceCommon.includes(retiredName)) {
+      fail(`${sourceCommonPath} must not retain retired PHP naming helper: ${retiredName}`)
+    }
+  }
 
   requireIncludes(mvpCorePath, mvpCore, 'Python, C#, and Lua')
   requireIncludes(javaCorePath, javaCore, 'SourceTargetCommon.emitTarget(Java')
-  requireIncludes(phpCorePath, phpCore, 'SourceTargetCommon.emitTarget(Php')
+  requireIncludes(phpCorePath, phpCore, 'SourceTargetCommon.emitPhpTarget(')
+  if (phpCore.includes('SourceTargetCommon.emitTarget(Php')) {
+    fail(`${phpCorePath} must not restore the generic source-target PHP entry`)
+  }
+  for (const snippet of [
+    'class SourceIdentifier',
+    'public static function sanitize',
+  ]) {
+    requireIncludes(sourceIdentifierPath, sourceIdentifier, snippet)
+  }
+  for (const snippet of [
+    'class PhpName',
+    'public static function typeIdentifier',
+    'public static function valueIdentifier',
+    'public static function globalFunction',
+    'public static function typePath',
+  ]) {
+    requireIncludes(phpNamePath, phpName, snippet)
+  }
+  for (const [filePath, text] of [
+    [sourceIdentifierPath, sourceIdentifier],
+    [phpNamePath, phpName],
+  ]) {
+    if (/\bstatic\s+var\b/.test(text)) {
+      fail(`${filePath} must not retain static request or render state`)
+    }
+  }
+  for (const snippet of [
+    'class PhpSyntax',
+    'public static function quoteString',
+    'public static function assocEntry',
+    'public static function sortedAssocEntries',
+    'public static function assocArrayExpr',
+    'public static function appendStaticAssocMap',
+  ]) {
+    requireIncludes(phpSyntaxPath, phpSyntax, snippet)
+  }
+  if (/\bstatic\s+var\b/.test(phpSyntax)) {
+    fail(`${phpSyntaxPath} must not retain static request or render state`)
+  }
   requireIncludes(runtimeStrategyPath, runtimeStrategy, 'Source-Native Runtime Packaging Strategy')
   requireIncludes(runtimeStrategyPath, runtimeStrategy, 'Current Inventory')
   requireIncludes(runtimeStrategyPath, runtimeStrategy, 'Migration Plan')

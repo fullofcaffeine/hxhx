@@ -333,9 +333,15 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		final unrelatedWire = wire(compile(sourceCache, dependencyCatalog, args));
 		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.parser_hits") > 0,
 			"changing a define that no conditional expression reads should keep matching parser results reusable");
-		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.dependency_conditional_compilation_changes") == 0
-			&& reportInt(unrelatedWire, "hxhx_server_report.dependency_predicted_invalidations") == 0,
+		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.dependency_conditional_compilation_changes") == 0,
 			"an unrelated define should not pretend that an evaluated compile-time choice changed");
+		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.dependency_program_configuration_changes") == 1
+			&& unrelatedWire.indexOf("dependency_program_configuration_change[0].name=define:unrelated") >= 0,
+			"the request-wide observer should still name the define because later macro or feature work may inspect it");
+		assertTrue(reportInt(unrelatedWire, "hxhx_server_report.dependency_predicted_invalidations") == 2,
+			"configuration observation should conservatively recheck every current typed module");
+		assertTrue(unrelatedWire.indexOf("private-unrelated-a") < 0 && unrelatedWire.indexOf("private-unrelated-b") < 0,
+			"the request-wide configuration report must not reveal either define value");
 
 		writeBuild(false, "private-unrelated-b");
 		final changedWire = wire(compile(sourceCache, dependencyCatalog, args));
@@ -422,6 +428,104 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		assertTrue(!restoredReply.isError, "restored generated-declaration baseline should compile");
 		assertTrue(reportValue(wire(restoredReply), "hxhx_server_report.dependency_snapshot") == firstSnapshot,
 			"returning to exact generated result A should reproduce the original dependency snapshot");
+	}
+
+	/** Prove that the public report preserves body-sensitive static initialization. **/
+	static function verifyStaticInitialization(root:String):Void {
+		final staticRoot = haxe.io.Path.join([root, "static-initialization"]);
+		ensureDirectory(staticRoot);
+		final apiPath = haxe.io.Path.join([staticRoot, "InitApi.hx"]);
+		File.saveContent(apiPath, "class InitApi { public static function make():Int return 1; }");
+		File.saveContent(haxe.io.Path.join([staticRoot, "Main.hx"]),
+			"class Main { public static var value:Int = InitApi.make(); public static function main():Void {} }");
+		final args = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"-cp",
+			staticRoot,
+			"-main",
+			"Main"
+		];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+		final firstReply = compile(sourceCache, dependencyCatalog, args);
+		final firstWire = wire(firstReply);
+		assertTrue(!firstReply.isError, "static-initialization baseline should compile: " + firstWire);
+		final firstSnapshot = reportValue(firstWire, "hxhx_server_report.dependency_snapshot");
+
+		File.saveContent(apiPath, "class InitApi { public static function make():Int return 2; }");
+		final changedReply = compile(sourceCache, dependencyCatalog, args);
+		final changedWire = wire(changedReply);
+		assertTrue(!changedReply.isError, "static-initialization provider edit should compile: " + changedWire);
+		assertTrue(reportInt(changedWire, "hxhx_server_report.dependency_public_changes") == 0
+			&& reportInt(changedWire, "hxhx_server_report.dependency_implementation_changes") == 1,
+			"a provider body edit should preserve its public signature while changing its implementation");
+		assertTrue(reportInt(changedWire, "hxhx_server_report.dependency_predicted_invalidations") == 2
+			&& changedWire.indexOf(".module=Main") >= 0,
+			"a provider body edit should reach the module whose static field consumes it");
+		assertTrue(changedWire.indexOf("static-initialization:Main->InitApi:initializer:Main#static#value->type:InitApi@shared-typing") >= 0,
+			"the public report should name the exact static field and provider type behind the selected body-sensitive edge");
+		assertTrue(changedWire.indexOf(FileSystem.absolutePath(staticRoot)) < 0, "static-initialization reasons must not expose an absolute workspace path");
+
+		File.saveContent(apiPath, "class InitApi { public static function make():Int return 1; }");
+		final restoredReply = compile(sourceCache, dependencyCatalog, args);
+		assertTrue(!restoredReply.isError, "restored static-initialization baseline should compile");
+		assertTrue(reportValue(wire(restoredReply), "hxhx_server_report.dependency_snapshot") == firstSnapshot,
+			"returning to exact static-initialization revision A should reproduce the original snapshot");
+	}
+
+	/**
+		Prove both Stage3 typing exits publish the same normalized request settings.
+
+		Each variant uses a fresh catalog, so the test compares sealed snapshot
+		fingerprints rather than relying on the catalog's exact-argv history key.
+	**/
+	static function verifyProgramConfigurationSnapshots(root:String):Void {
+		final configurationRoot = haxe.io.Path.join([root, "program-configuration"]);
+		ensureDirectory(configurationRoot);
+		File.saveContent(haxe.io.Path.join([configurationRoot, "Main.hx"]), "class Main { public static function main():Void {} }");
+		final projectArgs = [
+			"--hxhx-no-run",
+			"--hxhx-server-report",
+			"-cp",
+			configurationRoot,
+			"-main",
+			"Main"
+		];
+		final configurationA = ["--dce", "full", "-D", "ocaml_profile=portable"];
+		final noEmitA = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-no-emit"].concat(projectArgs).concat(configurationA)));
+		final typeOnlyA = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-type-only"].concat(projectArgs).concat(configurationA)));
+		final configurationAReordered = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-no-emit"].concat(projectArgs).concat(["-D", "ocaml_profile=portable", "--dce", "full"])));
+		final baselineSnapshot = reportValue(noEmitA, "hxhx_server_report.dependency_snapshot");
+		assertTrue(baselineSnapshot == reportValue(typeOnlyA, "hxhx_server_report.dependency_snapshot"),
+			"type-only and no-emit requests should publish the same normalized program configuration");
+		assertTrue(baselineSnapshot == reportValue(configurationAReordered, "hxhx_server_report.dependency_snapshot"),
+			"define insertion order should not change the Stage3 dependency snapshot");
+
+		final changedDce = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-no-emit"].concat(projectArgs).concat(["--dce", "no", "-D", "ocaml_profile=portable"])));
+		assertTrue(baselineSnapshot != reportValue(changedDce, "hxhx_server_report.dependency_snapshot"),
+			"changing DCE policy should change the sealed dependency snapshot even when source is unchanged");
+
+		final changedProfile = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-no-emit"].concat(projectArgs).concat(["--dce", "full", "-D", "ocaml_profile=metal"])));
+		assertTrue(baselineSnapshot != reportValue(changedProfile, "hxhx_server_report.dependency_snapshot"),
+			"changing the normalized OCaml profile should change the sealed dependency snapshot");
+
+		final changedTarget = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-backend", "js-native", "--hxhx-no-emit"].concat(projectArgs).concat(configurationA)));
+		assertTrue(baselineSnapshot != reportValue(changedTarget, "hxhx_server_report.dependency_snapshot"),
+			"changing the backend target should change the sealed dependency snapshot");
+
+		final privateValue = "machine-private-value::configuration-secret";
+		final privateConfiguration = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
+			["--hxhx-no-emit"].concat(projectArgs).concat(["-D", "private_build=" + privateValue])));
+		assertTrue(privateConfiguration.indexOf(privateValue) < 0,
+			"the server report must not expose a raw define value retained by program-configuration observation");
 	}
 
 	/** A build macro must run before typing even when its module is discovered from a caller. **/
@@ -538,6 +642,8 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			verifySecondaryTypeReplacement(root);
 			verifyConditionalCompilation(root);
 			verifyGeneratedDeclarations(root);
+			verifyStaticInitialization(root);
+			verifyProgramConfigurationSnapshots(root);
 			verifyLazyGeneratedDeclarations(root);
 			final withoutReportArgs = args.filter(argument -> argument != "--hxhx-server-report");
 			final withoutReport = wire(compile(sourceCache, dependencyCatalog, withoutReportArgs));

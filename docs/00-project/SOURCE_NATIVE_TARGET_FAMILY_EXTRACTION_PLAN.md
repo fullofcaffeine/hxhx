@@ -49,6 +49,10 @@ Some extraction seams already exist:
 - [`SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`](../02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md)
   defines the runtime-template direction; this plan defines target-family
   module ownership around that direction.
+- `SourceIdentifier` owns the shared ASCII identifier subset,
+  `PhpName` owns PHP reserved identifiers and type-path namespace spelling,
+  and `PhpSyntax` owns deterministic PHP quoting and associative-array
+  fragments.
 
 ## Ownership Rules
 
@@ -101,7 +105,14 @@ model is target-owned API or syntax behavior.
    `PhpSourceTargetCore`.
    PHP is the largest family and should move after stable runtime bodies,
    generated tables, resource support, helper overloads, and intrinsic surfaces
-   have clear ownership boundaries.
+   have clear ownership boundaries. The
+   [PHP render-session hard-cut plan](PHP_RENDER_SESSION_HARD_CUT_PLAN.md)
+   defines the state-lifetime boundary for that move: immutable program facts,
+   sealed per-function lowering plans, explicit lexical scopes, and no
+   process-global current-renderer pointer. `SourceIdentifier`, `PhpName`, and
+   `PhpSyntax` are the first bounded extractions: one shared base identifier
+   contract plus PHP-owned naming and syntax, all with explicit inputs and no
+   compiler/request state.
 
 4. Split C# from the shared MVP path before adding broader C# API/runtime
    support.

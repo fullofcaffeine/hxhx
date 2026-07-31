@@ -18,6 +18,7 @@ class TyType {
 	static final KIND_NULLABLE = "nullable";
 	static final KIND_NOMINAL = "nominal";
 	static final KIND_FUNCTION = "function";
+	static final KIND_ANONYMOUS = "anonymous";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
 	static final KIND_UNRESOLVED = "unresolved";
 	static final KIND_NO_NORMAL_COMPLETION = "no-normal-completion";
@@ -31,17 +32,24 @@ class TyType {
 	final unresolvedPath:String;
 	final functionArguments:Array<TyType>;
 	final functionReturn:Null<TyType>;
+	final anonymousFieldNames:Array<String>;
+	final anonymousFieldTypes:Array<TyType>;
+	final typeParameterIdentity:Null<TyTypeParameterId>;
 
 	function new(display:String, kind:String, nominalIdentity:Null<TyNominalTypeId>, typeArguments:Array<TyType>, nullableInner:Null<TyType>,
-			unresolvedPath:String, ?functionArguments:Array<TyType>, ?functionReturn:TyType) {
+			unresolvedPath:String, ?functionArguments:Array<TyType>, ?functionReturn:TyType, ?anonymousFieldNames:Array<String>,
+			?anonymousFieldTypes:Array<TyType>, ?typeParameterIdentity:TyTypeParameterId) {
 		this.display = display;
 		this.kind = kind;
 		this.nominalIdentity = nominalIdentity;
-		this.typeArguments = typeArguments == null ? [] : typeArguments;
+		this.typeArguments = typeArguments == null ? [] : typeArguments.copy();
 		this.nullableInner = nullableInner;
 		this.unresolvedPath = unresolvedPath == null ? "" : unresolvedPath;
-		this.functionArguments = functionArguments == null ? [] : functionArguments;
+		this.functionArguments = functionArguments == null ? [] : functionArguments.copy();
 		this.functionReturn = functionReturn;
+		this.anonymousFieldNames = anonymousFieldNames == null ? [] : anonymousFieldNames.copy();
+		this.anonymousFieldTypes = anonymousFieldTypes == null ? [] : anonymousFieldTypes.copy();
+		this.typeParameterIdentity = typeParameterIdentity;
 	}
 
 	public static function unknown():TyType {
@@ -101,9 +109,40 @@ class TyType {
 		return new TyType(shown, KIND_FUNCTION, null, [], null, "", actualArguments, actualResult);
 	}
 
-	public static function typeParameter(name:String):TyType {
-		final clean = name == null ? "" : StringTools.trim(name);
-		return new TyType(clean, KIND_TYPE_PARAMETER, null, [], null, clean);
+	/**
+		Create a deterministic structural type for an anonymous object literal.
+
+		Field order is not semantic, so names and their inferred types are sorted
+		together. Duplicate names keep the final observed value, matching the
+		object literal's effective field.
+	**/
+	public static function anonymous(fieldNames:Array<String>, fieldTypes:Array<TyType>):TyType {
+		final fields = new Map<String, TyType>();
+		final count = fieldNames == null
+			|| fieldTypes == null ? 0 : (fieldNames.length < fieldTypes.length ? fieldNames.length : fieldTypes.length);
+		for (index in 0...count) {
+			final name = fieldNames[index] == null ? "" : StringTools.trim(fieldNames[index]);
+			if (name.length > 0)
+				fields.set(name, fieldTypes[index] == null ? unknown() : fieldTypes[index]);
+		}
+		final names = [for (name in fields.keys()) name];
+		names.sort((left, right) -> Reflect.compare(left, right));
+		final types = new Array<TyType>();
+		for (name in names) {
+			final type = fields.get(name);
+			types.push(type == null ? unknown() : type);
+		}
+		final shown = "{" + [
+			for (index in 0...names.length)
+				names[index] + ":" + types[index].getCanonicalDisplay()
+		].join(",") + "}";
+		return new TyType(shown, KIND_ANONYMOUS, null, [], null, "", null, null, names, types);
+	}
+
+	public static function typeParameter(identity:TyTypeParameterId):TyType {
+		if (identity == null)
+			throw "semantic type parameter requires an exact binder identity";
+		return new TyType(identity.getName(), KIND_TYPE_PARAMETER, null, [], null, "", null, null, null, null, identity);
 	}
 
 	public static function unresolved(path:String, args:Array<TyType>, ?display:String):TyType {
@@ -136,6 +175,9 @@ class TyType {
 	public function isFunction():Bool
 		return kind == KIND_FUNCTION;
 
+	public function isAnonymous():Bool
+		return kind == KIND_ANONYMOUS;
+
 	public function isNullWrapped():Bool
 		return kind == KIND_NULLABLE;
 
@@ -159,16 +201,30 @@ class TyType {
 		return nominalIdentity;
 
 	public function getTypeArguments():Array<TyType>
-		return typeArguments;
+		return typeArguments.copy();
 
 	public function getUnresolvedPath():String
 		return unresolvedPath;
 
 	public function getFunctionArguments():Array<TyType>
-		return functionArguments;
+		return functionArguments.copy();
 
 	public function getFunctionReturn():Null<TyType>
 		return functionReturn;
+
+	public function getAnonymousFieldNames():Array<String>
+		return anonymousFieldNames.copy();
+
+	public function getAnonymousFieldTypes():Array<TyType>
+		return anonymousFieldTypes.copy();
+
+	/** Return the declared parameter name carried by this exact type parameter. **/
+	public function getTypeParameterName():Null<String>
+		return typeParameterIdentity == null ? null : typeParameterIdentity.getName();
+
+	/** Return the exact class-, abstract-, or method-level binder identity. **/
+	public function getTypeParameterIdentity():Null<TyTypeParameterId>
+		return typeParameterIdentity;
 
 	public function getSemanticKey():String {
 		if (kind == KIND_PRIMITIVE)
@@ -182,17 +238,49 @@ class TyType {
 		if (kind == KIND_NO_NORMAL_COMPLETION)
 			return "no-normal-completion";
 		if (kind == KIND_TYPE_PARAMETER)
-			return "type-parameter:" + unresolvedPath;
+			return "type-parameter:" + (typeParameterIdentity == null ? "<missing>" : typeParameterIdentity.getCanonicalKey());
 		if (kind == KIND_NULLABLE)
 			return "nullable:" + (nullableInner == null ? "dynamic" : nullableInner.getSemanticKey());
 		if (kind == KIND_FUNCTION) {
 			final arguments = [for (argument in functionArguments) argument.getSemanticKey()].join(",");
 			return "function:(" + arguments + ")->" + (functionReturn == null ? "unknown" : functionReturn.getSemanticKey());
 		}
+		if (kind == KIND_ANONYMOUS)
+			return "anonymous:{" + [
+				for (index in 0...anonymousFieldNames.length)
+					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getSemanticKey()
+			].join(",") + "}";
 		final args = typeArguments.length == 0 ? "" : "<" + [for (arg in typeArguments) arg.getSemanticKey()].join(",") + ">";
 		if (kind == KIND_NOMINAL)
 			return "nominal:" + (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + args;
 		return "unresolved:" + unresolvedPath + args;
+	}
+
+	/**
+		Render this semantic type as a canonical Haxe-shaped type hint.
+
+		Unlike `display`, this spelling uses the resolved nominal identity when one
+		exists. Source-shaped backend projections can therefore carry a readable
+		type hint without asking each target to repeat import and alias resolution.
+	**/
+	public function getCanonicalDisplay():String {
+		if (kind == KIND_NULLABLE)
+			return "Null<" + (nullableInner == null ? "Dynamic" : nullableInner.getCanonicalDisplay()) + ">";
+		if (kind == KIND_FUNCTION) {
+			final arguments = [for (argument in functionArguments) argument.getCanonicalDisplay()];
+			return "(" + arguments.join(",") + ")->" + (functionReturn == null ? "Dynamic" : functionReturn.getCanonicalDisplay());
+		}
+		if (kind == KIND_ANONYMOUS)
+			return "{" + [
+				for (index in 0...anonymousFieldNames.length)
+					anonymousFieldNames[index] + ":" + anonymousFieldTypes[index].getCanonicalDisplay()
+			].join(",") + "}";
+		final arguments = typeArguments.length == 0 ? "" : "<" + [for (argument in typeArguments) argument.getCanonicalDisplay()].join(",") + ">";
+		if (kind == KIND_NOMINAL)
+			return (nominalIdentity == null ? "" : nominalIdentity.getCanonicalName()) + arguments;
+		if (kind == KIND_UNRESOLVED)
+			return unresolvedPath + arguments;
+		return display;
 	}
 
 	static function genericStart(text:String):Int {

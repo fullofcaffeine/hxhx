@@ -45,16 +45,21 @@ class TypedFunction {
 	public function withBody(loweredBody:TypedFunctionBody):TypedFunction
 		return new TypedFunction(ownerName, sourceOrdinal, sourceDeclaration, declaration, environment, loweredBody);
 
-	public function getStableIdentity():String {
+	/** Compute the exact owner used by function-local identities before body typing begins. **/
+	public static function stableIdentityFor(ownerName:String, sourceOrdinal:Int, sourceDeclaration:HxFunctionDecl,
+			declaration:Null<TyDeclarationInfo>):String {
 		if (declaration != null)
 			return declaration.getIdentity().getCanonicalKey();
-		return ownerName
+		return (ownerName == null ? "" : ownerName)
 			+ "#"
 			+ (HxFunctionDecl.getIsStatic(sourceDeclaration) ? "static:" : "instance:")
 			+ HxFunctionDecl.getName(sourceDeclaration)
 			+ "#"
 			+ sourceOrdinal;
 	}
+
+	public function getStableIdentity():String
+		return stableIdentityFor(ownerName, sourceOrdinal, sourceDeclaration, declaration);
 
 	public function assertParsedBodyCurrent():Void {
 		final current = TypedBodyFingerprint.forStatements(HxFunctionDecl.getBody(sourceDeclaration));

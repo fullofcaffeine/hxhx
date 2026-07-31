@@ -62,12 +62,6 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
-	static function protocolLine(key:String, payload:String):String {
-		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
-			"\t", "\\t");
-		return "ast " + key + " " + escaped.length + ":" + escaped;
-	}
-
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
 		final mainClass = HxModuleDecl.getMainClass(decl);
 		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
@@ -216,111 +210,6 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("Any.hx", new HxModuleDecl("", [], any, [any], false, false)),
 			typedSyntheticModule("RuntimeOnlyHeavy.hx", new HxModuleDecl("", [], heavy, [heavy], false, false))
 		], false);
-	}
-
-	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
-		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "DateToolsLike"),
-			"ast static_main 0",
-			protocolLine("method", "make|public|1|o|Float|||o:" + structural + "|"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final cls = HxModuleDecl.getMainClass(decl);
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (HxFunctionDecl.getName(fn) == "make") {
-				final args = HxFunctionDecl.getArgs(fn);
-				assertTrue(args.length == 1, "native protocol structural arg fixture should decode one arg");
-				assertTrue(HxFunctionArg.getTypeHint(args[0]) == structural,
-					"native protocol argtypes should split at top-level commas only, preserving structural hints");
-				return;
-			}
-		}
-		throw "native protocol structural arg fixture should decode make";
-	}
-
-	static function assertNativeProtocolStructuralNullReturnRecovery():Void {
-		final structuralNull = "Null<{file:String, pos:Int}>";
-		final source = "class CompilerLike { public static function getDisplayPos():" + structuralNull + " { return null; } }";
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "CompilerLike"),
-			"ast static_main 0",
-			protocolLine("method", "getDisplayPos|public|1||Null||||"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final cls = HxModuleDecl.getMainClass(decl);
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (HxFunctionDecl.getName(fn) == "getDisplayPos") {
-				assertTrue(HxFunctionDecl.getReturnTypeHint(fn) == structuralNull,
-					"native protocol return recovery should preserve source Null<structural> hints instead of stale bare Null");
-				return;
-			}
-		}
-		throw "native protocol structural Null return fixture should decode getDisplayPos";
-	}
-
-	static function assertNativeProtocolZeroArgConstructorOwnership():Void {
-		final source = [
-			"class GenericCell<T> {",
-			"  public function new(elt:T, next:Null<GenericCell<T>>) {}",
-			"}",
-			"class GenericStack<T> {",
-			"  public function new() {}",
-			"}",
-			"class PlainZero {",
-			"  public function new() {}",
-			"}"
-		].join("\n");
-		function decodeConstructor(className:String, args:String, argTypes:String):HxFunctionDecl {
-			final encoded = [
-				"hxhx_frontend_v=3",
-				protocolLine("class", className),
-				"ast static_main 0",
-				protocolLine("method", "new|public|0|" + args + "|Void|||" + argTypes + "|"),
-				"ok"
-			].join("\n");
-			final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(ParserStageNativeDecode.decodeNativeProtocol(encoded, source)));
-			assertTrue(functions.length == 1, "native protocol constructor fixture should decode one constructor for " + className);
-			return functions[0];
-		}
-
-		final stackCtor = decodeConstructor("GenericStack", "", "");
-		assertTrue(HxFunctionDecl.getArgs(stackCtor).length == 0,
-			"native protocol source enrichment should not borrow GenericCell constructor args for GenericStack.new()");
-		final cellCtor = decodeConstructor("GenericCell", "elt,next", "elt:T,next:Null<GenericCell<T>>");
-		assertTrue(HxFunctionDecl.getArgs(cellCtor).length == 2,
-			"native protocol source enrichment should preserve the parameterized GenericCell constructor control");
-		final plainCtor = decodeConstructor("PlainZero", "", "");
-		assertTrue(HxFunctionDecl.getArgs(plainCtor).length == 0,
-			"native protocol source enrichment should preserve unrelated non-generic zero-argument constructors");
-
-		final stack = new HxClassDecl("GenericStack", false, [stackCtor], [], "", ["__hxhx_type_params=T"]);
-		final cell = new HxClassDecl("GenericCell", false, [cellCtor], [], "", ["__hxhx_type_params=T"]);
-		final plain = new HxClassDecl("PlainZero", false, [plainCtor], []);
-		final names = new StringMap<Bool>();
-		final classes = new StringMap<HxClassDecl>();
-		for (cls in [stack, cell, plain]) {
-			final name = HxClassDecl.getName(cls);
-			names.set(name, true);
-			classes.set(name, cls);
-		}
-		final lookup = {names: names, byName: classes};
-		final stackDecl = @:privateAccess backend.cpp.CppTargetCore.renderGenericClassFactoryDeclaration(stack, lookup).join("\n");
-		final stackLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stack, lookup).join("\n");
-		final cellLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(cell, lookup).join("\n");
-		final plainLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(plain, lookup).join("\n");
-		assertContains(stackDecl, "std::shared_ptr<GenericStack<T>> __hxhx_make_shared_GenericStack();",
-			"C++ generic factory declarations should preserve the decoded zero-argument constructor contract");
-		assertContains(stackLines, "GenericStack() {", "C++ generic classes should preserve decoded zero-argument constructors");
-		assertContains(stackLines, "std::shared_ptr<GenericStack<T>> __hxhx_make_shared_GenericStack() {",
-			"C++ generic factory definitions should match the zero-argument declaration");
-		assertContains(cellLines, "GenericCell(T elt, std::shared_ptr<GenericCell<T>> next) {",
-			"C++ parameterized generic constructor controls should retain their own arguments");
-		assertContains(plainLines, "PlainZero() {", "C++ non-generic zero-argument constructor controls should remain unchanged");
 	}
 
 	static function deleteRecursive(path:String):Void {
@@ -2567,7 +2456,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final firstScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
 		@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(firstScope, fn);
 		final key = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKeyForScope(firstScope, fn);
-		final cached = @:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache.get(key);
+		final cached = firstScope.functionAnalysisMemo.functionPreparations.get(key);
 		assertTrue(cached != null, "C++ function-scope prep should cache prepared function argument state");
 		assertTrue(cached.argLocalTypes.get("len") == "std::optional<int>", "C++ function-scope prep cache should retain optional scalar argument C++ types");
 		assertTrue(cached.argLocalTypeHints.get("label") == "String", "C++ function-scope prep cache should retain argument type hints");
@@ -2581,6 +2470,91 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ cached function-scope prep replay should restore optional scalar argument types");
 		assertTrue(replayScope.localTypeHints.get("label") == "String", "C++ cached function-scope prep replay should restore argument type hints");
 		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
+		assertTrue(firstScope.functionAnalysisMemo == replayScope.functionAnalysisMemo,
+			"C++ scopes from one program lookup should share function-analysis results");
+		final nestedLookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(firstScope);
+		final nestedScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, nestedLookup, "void");
+		assertTrue(nestedLookup == lookup && nestedScope.classLookup == lookup, "C++ nested render scopes should retain the authoritative program lookup");
+		assertTrue(nestedScope.declaredTypeMemo == firstScope.declaredTypeMemo, "C++ nested render scopes should retain program-owned declared-type results");
+		assertTrue(nestedScope.functionAnalysisMemo == firstScope.functionAnalysisMemo,
+			"C++ nested render scopes should retain program-owned function-analysis results");
+		final isolatedScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		assertTrue(isolatedScope.functionAnalysisMemo != firstScope.functionAnalysisMemo,
+			"C++ a second program lookup should start with isolated function-analysis state");
+		assertTrue(!isolatedScope.functionAnalysisMemo.functionPreparations.exists(key),
+			"C++ function preparation from one request should not appear in a later lookup");
+	}
+
+	/**
+		Prove that inferred function signatures share one program lookup but cannot
+		survive into a separately constructed lookup.
+	**/
+	static function assertCppInferredSignaturesUseProgramMemo():Void {
+		final owner = new HxClassDecl("SignatureMemoOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		names.set("SignatureMemoOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("SignatureMemoOwner", owner);
+		final lookup = {names: names, byName: classes};
+		final argFn = new HxFunctionDecl("withArgs", Public, true, [
+			new HxFunctionArg("count", "Int", NoDefault, false, false),
+			new HxFunctionArg("label", "String", NoDefault, false, false)
+		], "Void", [], "");
+		final argTypes = @:privateAccess backend.cpp.CppTargetCore.inferredFunctionArgCppTypes(argFn, owner, lookup);
+		assertTrue(argTypes.join(",") == "int,std::string", "C++ inferred argument signatures should preserve declared scalar types");
+		argTypes[0] = "mutated";
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferredFunctionArgCppTypes(argFn, owner, lookup).join(",") == "int,std::string",
+			"C++ inferred argument cache hits should return a copy rather than expose retained memo state");
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
+		final argKey = @:privateAccess backend.cpp.CppTargetCore.functionArgTypesCacheKey(owner, argFn, lookup);
+		assertTrue(scope.functionAnalysisMemo.functionArgumentTypes.exists(argKey), "C++ inferred argument signatures should be cached on the program lookup");
+		assertTrue(!scope.functionAnalysisMemo.inferredSignaturesInProgress.exists(@:privateAccess backend.cpp.CppTargetCore.functionSignatureKey(owner,
+			argFn, lookup)),
+			"C++ completed argument inference should remove its recursion guard");
+
+		final returnFn = new HxFunctionDecl("inferReturn", Public, true, [], "", [SReturn(EInt(1), HxPos.unknown())], "");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferredFunctionReturnCppType(returnFn, owner, lookup) == "int",
+			"C++ return inference should retain integer value returns");
+		final returnKey = @:privateAccess backend.cpp.CppTargetCore.functionDeclCacheKey(owner, returnFn, lookup);
+		assertTrue(scope.functionAnalysisMemo.functionReturnTypes.exists(returnKey), "C++ inferred return signatures should be cached on the program lookup");
+		assertTrue(!scope.functionAnalysisMemo.inferredSignaturesInProgress.exists(@:privateAccess backend.cpp.CppTargetCore.functionSignatureKey(owner,
+			returnFn, lookup)),
+			"C++ completed return inference should remove its recursion guard");
+
+		final recursiveArgFn = new HxFunctionDecl("recursiveArgs", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Void", [],
+			"");
+		final recursiveArgKey = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKey(owner, recursiveArgFn, lookup);
+		final recursiveArgFallback = [
+			for (arg in HxFunctionDecl.getArgs(recursiveArgFn))
+				@:privateAccess backend.cpp.CppTargetCore.cppFunctionArgBaseType(arg, null)
+		].join(",");
+		scope.functionAnalysisMemo.inferredSignaturesInProgress.set(recursiveArgKey, true);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferredFunctionArgCppTypes(recursiveArgFn, owner, lookup).join(",") == recursiveArgFallback,
+			"C++ recursive argument inference should retain the conservative declared-type fallback");
+		assertTrue(!scope.functionAnalysisMemo.functionArgumentTypes.exists(@:privateAccess backend.cpp.CppTargetCore.functionArgTypesCacheKey(owner,
+			recursiveArgFn, lookup)),
+			"C++ recursive argument fallback should not publish a completed signature");
+		assertTrue(scope.functionAnalysisMemo.inferredSignaturesInProgress.exists(recursiveArgKey),
+			"C++ recursive argument fallback should leave the outer inference guard intact");
+		scope.functionAnalysisMemo.inferredSignaturesInProgress.remove(recursiveArgKey);
+
+		final recursiveReturnFn = new HxFunctionDecl("recursiveReturn", Public, true, [], "", [], "");
+		final recursiveReturnKey = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKey(owner, recursiveReturnFn, lookup);
+		scope.functionAnalysisMemo.inferredSignaturesInProgress.set(recursiveReturnKey, true);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferredFunctionReturnCppType(recursiveReturnFn, owner, lookup) == "",
+			"C++ recursive return inference should retain the conservative unknown-type fallback");
+		assertTrue(!scope.functionAnalysisMemo.functionReturnTypes.exists(@:privateAccess backend.cpp.CppTargetCore.functionDeclCacheKey(owner,
+			recursiveReturnFn, lookup)),
+			"C++ recursive return fallback should not publish a completed signature");
+		assertTrue(scope.functionAnalysisMemo.inferredSignaturesInProgress.exists(recursiveReturnKey),
+			"C++ recursive return fallback should leave the outer inference guard intact");
+		scope.functionAnalysisMemo.inferredSignaturesInProgress.remove(recursiveReturnKey);
+
+		final isolatedScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		assertTrue(isolatedScope.functionAnalysisMemo.functionArgumentTypes.keys().hasNext() == false,
+			"C++ argument signatures from one request should not appear in a separate lookup");
+		assertTrue(isolatedScope.functionAnalysisMemo.functionReturnTypes.keys().hasNext() == false,
+			"C++ return signatures from one request should not appear in a separate lookup");
 	}
 
 	static function assertCppPrimitiveTypeHintsStayDirect():Void {
@@ -2605,6 +2579,40 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ active generic type parameters should still win over the primitive hint fast path");
 	}
 
+	/**
+		Prove that declared-type memoization follows the per-program lookup lifetime.
+
+		Scopes within one render request should share computed answers. A second
+		lookup with the same source shape must still start empty so a long-lived
+		compiler process cannot reuse the first request's answers accidentally.
+	**/
+	static function assertCppDeclaredTypeMemoIsProgramOwned():Void {
+		final owner = new HxClassDecl("DeclaredTypeMemoOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		names.set("DeclaredTypeMemoOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("DeclaredTypeMemoOwner", owner);
+		final firstLookup:backend.cpp.CppClassLookup = {names: names, byName: classes};
+		final firstScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, firstLookup, "void");
+		final siblingScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, firstLookup, "void");
+		assertTrue(firstScope.declaredTypeMemo == siblingScope.declaredTypeMemo,
+			"C++ render scopes from one program lookup should share declared-type memoization");
+
+		final secondLookup:backend.cpp.CppClassLookup = {names: names, byName: classes};
+		final secondScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, secondLookup, "void");
+		assertTrue(firstScope.declaredTypeMemo != secondScope.declaredTypeMemo,
+			"C++ program lookups should never share declared-type memoization across requests");
+
+		final arg = new HxFunctionArg("value", "String", NoDefault, false, false);
+		@:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(arg, firstScope);
+		final key = @:privateAccess
+			backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(arg, siblingScope, "value", "String", null);
+		assertTrue(siblingScope.declaredTypeMemo.functionArgTypesByShape.exists(key),
+			"C++ sibling scopes should observe declared-type answers cached by the same program lookup");
+		assertTrue(!secondScope.declaredTypeMemo.functionArgTypesByShape.exists(key),
+			"C++ a new program lookup should begin without declared-type answers from an earlier request");
+	}
+
 	static function assertCppFunctionArgDeclaredTypeCacheUsesScopeShape():Void {
 		final owner = new HxClassDecl("ArgTypeCacheOwner", false, [], [], "", ["__hxhx_type_params=T"]);
 		final names = new StringMap<Bool>();
@@ -2614,19 +2622,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final lookup = {names: names, byName: classes};
 		final genericArg = new HxFunctionArg("value", "T", NoDefault, false, false);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
-		@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache = new StringMap<String>();
 		scope.typeParamCppNames.set("T", "std::string");
 		final first = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(genericArg, scope);
 		assertTrue(first == "std::string", "C++ arg declared-type cache should use the active type-parameter mapping");
 		final firstKey = @:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(genericArg, scope, "value", "T", null);
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(firstKey) == "std::string",
+		assertTrue(scope.declaredTypeMemo.functionArgTypesByShape.get(firstKey) == "std::string",
 			"C++ arg declared-type cache should store explicit-hint lookups");
 		scope.typeParamCppNames.set("T", "int");
 		final second = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(genericArg, scope);
 		assertTrue(second == "int", "C++ arg declared-type cache should separate changed type-parameter mappings");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(firstKey) == "std::string",
+		assertTrue(scope.declaredTypeMemo.functionArgTypesByShape.get(firstKey) == "std::string",
 			"C++ arg declared-type cache should not overwrite a prior scope-shape entry");
-		@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache = new StringMap<String>();
 		final pointerPosInfos = new HxClassDecl("PosInfos", false, [], []);
 		final valuePosInfos = new HxClassDecl("PosInfos", false, [], [
 			new HxFieldDecl("fileName", Public, false, "String", null),
@@ -2656,7 +2662,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final valueArgKey = @:privateAccess
 			backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(posArg, valueArgScope, "pos", "PosInfos", null);
 		assertTrue(pointerArgKey != valueArgKey, "C++ arg declared-type cache keys should include resolved class shape");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(pointerArgKey) == "std::shared_ptr<PosInfos>",
+		assertTrue(pointerArgScope.declaredTypeMemo.functionArgTypesByShape.get(pointerArgKey) == "std::shared_ptr<PosInfos>",
 			"C++ arg declared-type cache should preserve the pointer-shaped entry");
 	}
 
@@ -2667,19 +2673,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("FieldTypeCacheOwner", owner);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
-		@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache = new StringMap<String>();
 		scope.typeParamCppNames.set("T", "std::string");
 		final first = @:privateAccess backend.cpp.CppTargetCore.knownStdlibFieldCppType("FieldTypeCacheOwner", "slot", "T", null, scope);
 		assertTrue(first == "std::string", "C++ field type cache should use the active type-parameter mapping");
 		final firstKey = @:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCacheKey("FieldTypeCacheOwner", "slot", "T", null, scope);
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
-			"C++ field type cache should store explicit-hint lookups");
+		assertTrue(scope.declaredTypeMemo.fieldTypesByShape.get(firstKey) == "std::string", "C++ field type cache should store explicit-hint lookups");
 		scope.typeParamCppNames.set("T", "int");
 		final second = @:privateAccess backend.cpp.CppTargetCore.knownStdlibFieldCppType("FieldTypeCacheOwner", "slot", "T", null, scope);
 		assertTrue(second == "int", "C++ field type cache should separate changed type-parameter mappings");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
+		assertTrue(scope.declaredTypeMemo.fieldTypesByShape.get(firstKey) == "std::string",
 			"C++ field type cache should not overwrite a prior scope-shape entry");
-		@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache = new StringMap<String>();
 		final posException = new HxClassDecl("PosException", false, [], []);
 		final pointerPosInfos = new HxClassDecl("PosInfos", false, [], []);
 		final valuePosInfos = new HxClassDecl("PosInfos", false, [], [
@@ -2714,7 +2717,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final valueFieldKey = @:privateAccess
 			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", null, valueFieldScope);
 		assertTrue(pointerFieldKey != valueFieldKey, "C++ field type cache keys should include resolved class shape");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(pointerFieldKey) == "std::shared_ptr<PosInfos>",
+		assertTrue(pointerFieldScope.declaredTypeMemo.fieldTypesByShape.get(pointerFieldKey) == "std::shared_ptr<PosInfos>",
 			"C++ field type cache should preserve the pointer-shaped entry");
 	}
 
@@ -3149,16 +3152,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("DynamicReturnOwner", owner);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "std::any");
-		@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache = new StringMap<Bool>();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerCallReturnsErasedDynamicValue("dynamicValue", scope),
 			"C++ same-owner Dynamic return detection should recognize erased Dynamic values");
 		final key = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKeyForScope(scope, dynamicFn);
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache.exists(key),
-			"C++ erased-Dynamic return detection should cache completed scans");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache.get(key),
-			"C++ erased-Dynamic return cache should preserve positive scan results");
+		assertTrue(scope.functionAnalysisMemo.erasedDynamicReturnResults.exists(key), "C++ erased-Dynamic return detection should cache completed scans");
+		assertTrue(scope.functionAnalysisMemo.erasedDynamicReturnResults.get(key), "C++ erased-Dynamic return cache should preserve positive scan results");
+		assertTrue(!scope.functionAnalysisMemo.erasedDynamicReturnScansInProgress.exists(key),
+			"C++ completed erased-Dynamic return scans should remove their recursion guard");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerCallReturnsErasedDynamicValue("dynamicValue", scope),
 			"C++ erased-Dynamic return cache should replay repeated same-owner checks");
+	}
+
+	/**
+		Prove that process-stable analysis services do not retain program state.
+
+		Each render constructs a fresh program lookup, including its trace and
+		analysis context. The service objects contain function references only, so
+		they may remain process-stable without a request reset hook.
+	**/
+	static function assertCppAnalysisServicesStayProcessStableAcrossPrograms():Void {
+		final localInferenceBefore = @:privateAccess backend.cpp.CppTargetCore.localTypeInferenceApi();
+		final stdlibSignaturesBefore = @:privateAccess backend.cpp.CppTargetCore.knownStdlibSignatures();
+		final renderProgram = cppHelperReachabilityProgram();
+		final renderContext = context("", false, true);
+		final main = @:privateAccess backend.cpp.CppTargetCore.mainModule(renderProgram, renderContext);
+		final sourceBefore = @:privateAccess backend.cpp.CppTargetCore.renderProgram(renderProgram, main, []);
+
+		final localInferenceAfter = @:privateAccess backend.cpp.CppTargetCore.localTypeInferenceApi();
+		final stdlibSignaturesAfter = @:privateAccess backend.cpp.CppTargetCore.knownStdlibSignatures();
+		final sourceAfter = @:privateAccess backend.cpp.CppTargetCore.renderProgram(renderProgram, main, []);
+		assertTrue(localInferenceBefore == localInferenceAfter, "C++ renders should share the process-stable local inference service table");
+		assertTrue(stdlibSignaturesBefore == stdlibSignaturesAfter, "C++ renders should share the process-stable known-stdlib signature service");
+		assertTrue(sourceBefore == sourceAfter, "fresh C++ program contexts should preserve deterministic rendered output");
 	}
 
 	static function assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference():Void {
@@ -5004,9 +5029,6 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	public static function runRenderChecks():Void {
-		assertNativeProtocolStructuralArgTypeSplitting();
-		assertNativeProtocolStructuralNullReturnRecovery();
-		assertNativeProtocolZeroArgConstructorOwnership();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("=")) == "0",
@@ -5049,8 +5071,6 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(pairKvLines, "auto stacks = __hxhx_kv_pair_label.second;", "C++ key/value loops over pair arrays should bind the pair value");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "NaN")) == "std::numeric_limits<double>::quiet_NaN()",
 			"C++ Math.NaN should lower as a target intrinsic instead of a generated helper field");
-		assertTrue(@:privateAccess ParserStage.sourceStructuralTypeHintIsMoreSpecific("String", "{ ms:Float, seconds:Int }"),
-			"parser enrichment should prefer scanned structural source hints over erased native String argument hints");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Math"), "isNaN"),
 				[EField(EIdent("Math"), "NaN")])) == "std::isnan(std::numeric_limits<double>::quiet_NaN())",
@@ -5069,7 +5089,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
+		assertCppInferredSignaturesUseProgramMemo();
 		assertCppPrimitiveTypeHintsStayDirect();
+		assertCppDeclaredTypeMemoIsProgramOwned();
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
@@ -5086,6 +5108,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppErasedDynamicPlusUsesAnyHelper();
 		assertCppErasedDynamicEqualityUsesAnyHelper();
 		assertCppErasedDynamicReturnDetectionIsCached();
+		assertCppAnalysisServicesStayProcessStableAcrossPrograms();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppBindCallableEvidenceGuardStaysConservative();
 		assertCppPrepLocalInferenceEvidenceGuardsStayConservative();
@@ -10084,9 +10107,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(bytesBufferLines, "b = {};", "C++ BytesBuffer-style BytesData nulling should reset vector storage instead of assigning nullptr");
 		assertTrue(bytesBufferLines.indexOf("b = nullptr") < 0, "C++ BytesData locals are vector-backed and should not receive nullptr assignments");
 		final bytesBufferSource = "class BytesBuffer { public function getBytes():Bytes untyped { return null; } }";
-		final decodedBytesBufferGetBytes = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||||||", "untyped { return null; }",
-			-1, bytesBufferSource);
-		final bytesBufferUntypedGetBytes = new HxFunctionDecl("getBytes", Public, false, [], HxFunctionDecl.getReturnTypeHint(decodedBytesBufferGetBytes), [
+		final parsedBytesBufferGetBytes = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(new HxParser(bytesBufferSource).parseModule("BytesBuffer")))[0];
+		final bytesBufferUntypedGetBytes = new HxFunctionDecl("getBytes", Public, false, [], HxFunctionDecl.getReturnTypeHint(parsedBytesBufferGetBytes), [
 			SVar("b", "BytesData", ENew("BytesData", []), HxPos.unknown()),
 			SReturn(ENew("Bytes", [EInt(0), EIdent("b")]), HxPos.unknown())
 		], "");

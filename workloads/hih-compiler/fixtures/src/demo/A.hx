@@ -36,7 +36,7 @@ class A {
 		return !false;
 
 	// Acceptance fixture for Stage 3 return expression parsing + emission:
-	// - return a simple field/call chain captured from the native frontend protocol
+	// - return a simple field/call chain retained by the Haxe-authored frontend
 	static function callPing():Void
 		return Util.ping();
 

@@ -8,22 +8,6 @@ class M14HihExprTextParserIntegrationTest {
 			fail(msg);
 	}
 
-	static function nativeAstRecord(key:String, payload:String):String {
-		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
-			"\t", "\\t");
-		return "ast " + key + " " + escaped.length + ":" + escaped;
-	}
-
-	static function assertDirectiveRejected(payload:String, label:String):Void {
-		var rejected = false;
-		try {
-			HxModuleDirectiveProtocol.decode(payload);
-		} catch (_:Dynamic) {
-			rejected = true;
-		}
-		assertTrue(rejected, "native directive decoder accepted " + label);
-	}
-
 	static function assertPushTryCatchRaw(stmts:Array<HxStmt>, msg:String):Void {
 		assertTrue(stmts.length == 1, msg + ": expected one push statement");
 		switch (stmts[0]) {
@@ -214,6 +198,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (malformedBodyStmts[0]) {
 			case SExpr(EUnsupported(raw), _):
 				assertTrue(raw.indexOf("body_parse_error") == 0, "expected detailed body parse marker");
+				assertTrue(raw.indexOf("fn=<unknown>") >= 0, "body recovery without a real declaration identity should use one deterministic local fallback");
 				assertTrue(raw.indexOf("tok=") >= 0, "expected detailed body parse marker to include token");
 				assertTrue(raw.indexOf("err=") >= 0, "expected detailed body parse marker to include error");
 			case _:
@@ -271,47 +256,6 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected spaced function literal expression to parse as lambda addition");
 		}
-		assertTrue(@:privateAccess ParserStage.initHasMergedReturnIdentifier(ELambda(["x", "y"], EBinop("+", EIdent("returnx"), EIdent("y")))),
-			"native/scanned merge should recognize compacted return identifiers in field lambdas");
-		final compactedNativeFunctionLiteral = @:privateAccess ParserStageNativeDecode.parseReturnExprText("function(x,y)returnx+y");
-		switch (compactedNativeFunctionLiteral) {
-			case ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y"))):
-			case ELambda(_, EBinop(_, EIdent(bad), _)) if (bad == "returnx"):
-				fail("native compacted field lambda payload should split return from the first body identifier");
-			case _:
-				fail("expected compacted native field lambda payload to parse as lambda addition");
-		}
-
-		// Native parser payloads can compact escaped quote strings to `"""`.
-		// This should still parse as a normal string literal (`"`).
-		final denseArrayRaw = '[" ".code,"(".code,")".code,"%".code,"!".code,"^".code,""".code,"<".code,">".code,"&".code,"|".code,"\\n".code,"\\r".code,",".code,";".code]';
-		final denseArrayExpr = HxParser.parseExprText(denseArrayRaw);
-		switch (denseArrayExpr) {
-			case EArrayDecl(values):
-				assertTrue(values.length == 15, "expected 15 array elements");
-				switch (values[6]) {
-					case EField(EString(v), "code"):
-						assertTrue(v == "\"", 'expected index 6 to be quote char, got "' + v + '"');
-					case _:
-						fail("expected index 6 to parse as quote-char .code access");
-				}
-			case _:
-				fail("expected dense quote payload to parse as EArrayDecl");
-		}
-
-		// Block-expression initializers should not degrade to EUnsupported when they
-		// appear in dense native payload text with trailing tokens.
-		final denseBlockRaw = '{varh=newhaxe.ds.StringMap();h.set("quot",""");h;}staticpublicfunctionparse(){}';
-		final denseBlockExpr = HxParser.parseExprText(denseBlockRaw);
-		switch (denseBlockExpr) {
-			case ETryCatchRaw(raw):
-				assertTrue(raw.indexOf("opaque_block_expr:") == 0, "expected opaque block marker");
-			case EUnsupported(raw):
-				fail("dense block payload parsed as unsupported: " + raw);
-			case _:
-				// Parseable block expressions may now lower structurally instead of staying opaque.
-		}
-
 		final typedBlockExpr = HxParser.parseExprText('{ var b:{v:Int} = {v:1.2}; }');
 		switch (typedBlockExpr) {
 			case ETryCatchRaw(raw):
@@ -424,28 +368,15 @@ class M14HihExprTextParserIntegrationTest {
 				fail("constructor expression should parse as ENew");
 		}
 
-		// Native payloads may compact `new` spacing (`newFoo(...)`); keep constructor parsing resilient.
-		final compactNewExprRaw = "newjs.lib.DataView(newjs.lib.ArrayBuffer(8))";
-		final compactNewExpr = HxParser.parseExprText(compactNewExprRaw);
-		switch (compactNewExpr) {
-			case ENew(typePath, args):
-				assertTrue(typePath == "js.lib.DataView", "expected compact outer constructor type path");
-				assertTrue(args.length == 1, "expected compact constructor argument");
-				switch (args[0]) {
-					case ENew(innerTypePath, innerArgs):
-						assertTrue(innerTypePath == "js.lib.ArrayBuffer", "expected compact nested constructor type path");
-						assertTrue(innerArgs.length == 1, "expected compact nested constructor argument");
-						switch (innerArgs[0]) {
-							case EInt(v):
-								assertTrue(v == 8, "expected compact nested constructor literal argument");
-							case _:
-								fail("expected compact nested constructor argument to parse as EInt");
-						}
-					case _:
-						fail("expected compact nested constructor argument to parse as ENew");
-				}
+		// The parser must not repair source text before lexing it. `newjs` is a
+		// valid identifier and must not be reinterpreted as the `new` keyword.
+		final newPrefixIdentifier = HxParser.parseExprText("newjs.lib.DataView(8)");
+		switch (newPrefixIdentifier) {
+			case ECall(EField(EField(EIdent("newjs"), "lib"), "DataView"), [EInt(8)]):
+			case ENew(typePath, _):
+				fail("valid newjs identifier was rewritten as constructor " + typePath);
 			case _:
-				fail("compact constructor expression should parse as ENew");
+				fail("newjs-prefixed identifier call should remain a normal field call");
 		}
 
 		// Haxe accepts float literals with a trailing decimal point. Upstream math
@@ -645,51 +576,10 @@ class M14HihExprTextParserIntegrationTest {
 			"expected normal, legacy/current alias, wildcard, and using declarations to retain their distinct meanings: "
 			+ importIdentities.join("|"));
 
-		final nativeDirectiveDecl = ParserStageNativeDecode.decodeNativeProtocol([
-			"hxhx_frontend_v=3",
-			nativeAstRecord("package", "python.internal"),
-			nativeAstRecord("directive", "import-normal\npython.Syntax\n"),
-			nativeAstRecord("directive", "import-normal\npython.Syntax.staticValue\n"),
-			nativeAstRecord("directive", "import-alias\npython.Syntax.code\npy"),
-			nativeAstRecord("directive", "import-all\npython.Syntax\n"),
-			nativeAstRecord("directive", "using\npython.NativeArray\n"),
-			nativeAstRecord("class", "NativeDirectives"),
-			nativeAstRecord("header_only", "0"),
-			nativeAstRecord("toplevel_main", "0"),
-			"ast static_main 0",
-			"ok"
-		].join("\n"));
-		final nativeDirectiveIdentities = [
-			for (directive in HxModuleDecl.getDirectives(nativeDirectiveDecl))
-				HxModuleDirective.canonicalIdentity(directive)
-		];
-		assertTrue(nativeDirectiveIdentities.join("|") == "import-normal:python.Syntax|import-normal:python.Syntax.staticValue|import-alias:python.Syntax.code:py|import-all:python.Syntax|using:python.NativeArray",
-			"expected native protocol v3 to preserve the same directive meanings: "
-			+ nativeDirectiveIdentities.join("|"));
-		final detachedDirectives = HxModuleDecl.getDirectives(nativeDirectiveDecl);
+		final detachedDirectives = HxModuleDecl.getDirectives(importInAliasDecl);
 		detachedDirectives.resize(0);
-		assertTrue(HxModuleDecl.getDirectives(nativeDirectiveDecl).length == 5,
+		assertTrue(HxModuleDecl.getDirectives(importInAliasDecl).length == 6,
 			"callers must not be able to mutate a parsed module's retained directive list through its getter");
-		assertDirectiveRejected("import-normal\npython.Syntax\nunexpected", "an alias on an ordinary import");
-		assertDirectiveRejected("import-all\npython.Syntax.*\n", "a wildcard encoded in both the kind and path");
-		assertDirectiveRejected("import-alias\npython.Syntax\n", "an aliased import without a local name");
-		assertDirectiveRejected("using\npython.NativeArray\nunexpected", "an alias on a using directive");
-		assertDirectiveRejected("import-normal\npython..Syntax\n", "a path with an empty segment");
-		assertDirectiveRejected("import-normal\npython.Syntax bad\n", "a path segment containing whitespace");
-		assertDirectiveRejected("import-normal\npython.Syntax/value\n", "a path segment containing a slash");
-		assertDirectiveRejected("import-normal\npython.9Syntax\n", "a path segment beginning with a digit");
-		assertDirectiveRejected("import-normal\npython.bad-name\n", "a path segment containing an operator");
-		assertDirectiveRejected("import-alias\npython.Syntax\n9Alias", "an alias beginning with a digit");
-		assertDirectiveRejected("import-alias\npython.Syntax\nbad-name", "an alias containing an operator");
-		var rejectedStringOnlyProtocol = false;
-		try {
-			ParserStageNativeDecode.decodeNativeProtocol("hxhx_frontend_v=2\nast imports 0:\nast class 4:Main\nok");
-		} catch (error:Dynamic) {
-			rejectedStringOnlyProtocol = Std.string(error).indexOf("missing/invalid protocol header") >= 0;
-		}
-		assertTrue(rejectedStringOnlyProtocol,
-			"the decoder must reject protocol v2 instead of silently accepting imports that have already lost their aliases");
-
 		final switchNoSemicolonThenElseIfStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case _: false; }\nif (result && expected != null) { result = check(); } else if (stdout.length > 0) { println(stdout.toString()); }");
 		assertTrue(switchNoSemicolonThenElseIfStmts.length == 2, "expected no-semicolon switch initializer before if/else-if to parse as two statements");
 		switch (switchNoSemicolonThenElseIfStmts[0]) {

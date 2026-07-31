@@ -5,23 +5,32 @@
 	prove whether the future cache would have invalidated every affected module.
 **/
 class CompilerDependencyComparison {
+	final programConfigurationChanges:Array<String>;
 	final sourceOriginChanges:Array<String>;
 	final conditionalCompilationChanges:Array<String>;
 	final generatedDeclarationChanges:Array<String>;
+	final macroFileDependencyChanges:Array<String>;
 	final publicInterfaceChanges:Array<String>;
 	final implementationChanges:Array<String>;
 	final invalidations:Array<CompilerDependencyInvalidation>;
 
-	public function new(sourceOriginChanges:Array<String>, conditionalCompilationChanges:Array<String>, generatedDeclarationChanges:Array<String>,
-			publicInterfaceChanges:Array<String>, implementationChanges:Array<String>, invalidations:Array<CompilerDependencyInvalidation>) {
+	public function new(programConfigurationChanges:Array<String>, sourceOriginChanges:Array<String>, conditionalCompilationChanges:Array<String>,
+			generatedDeclarationChanges:Array<String>, macroFileDependencyChanges:Array<String>, publicInterfaceChanges:Array<String>,
+			implementationChanges:Array<String>, invalidations:Array<CompilerDependencyInvalidation>) {
+		this.programConfigurationChanges = sortedCopy(programConfigurationChanges);
 		this.sourceOriginChanges = sortedCopy(sourceOriginChanges);
 		this.conditionalCompilationChanges = sortedCopy(conditionalCompilationChanges);
 		this.generatedDeclarationChanges = sortedCopy(generatedDeclarationChanges);
+		this.macroFileDependencyChanges = sortedCopy(macroFileDependencyChanges);
 		this.publicInterfaceChanges = sortedCopy(publicInterfaceChanges);
 		this.implementationChanges = sortedCopy(implementationChanges);
 		this.invalidations = invalidations == null ? [] : invalidations.copy();
 		this.invalidations.sort(compareInvalidations);
 	}
+
+	/** Request-wide target or define inputs whose hashed values changed. **/
+	public function getProgramConfigurationChanges():Array<String>
+		return programConfigurationChanges.copy();
 
 	public function getSourceOriginChanges():Array<String>
 		return sourceOriginChanges.copy();
@@ -33,6 +42,10 @@ class CompilerDependencyComparison {
 	/** Modules whose build-macro generated fields or methods changed. **/
 	public function getGeneratedDeclarationChanges():Array<String>
 		return generatedDeclarationChanges.copy();
+
+	/** Modules whose explicitly registered external macro file changed. **/
+	public function getMacroFileDependencyChanges():Array<String>
+		return macroFileDependencyChanges.copy();
 
 	public function getPublicInterfaceChanges():Array<String>
 		return publicInterfaceChanges.copy();

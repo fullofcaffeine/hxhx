@@ -92,7 +92,7 @@ class RuntimeSourceManifestFixture {
 	static function testValidManifest(runtimeDirectory:String):Void {
 		final first = RuntimeSourceManifest.load(runtimeDirectory);
 		final second = RuntimeSourceManifest.load(runtimeDirectory);
-		assertTrue(first.modules.length == 33, "the locked catalog should own all 33 runtime modules");
+		assertTrue(first.modules.length == 30, "the locked catalog should own all 30 runtime modules");
 		assertTrue(first.revision == second.revision, "unchanged runtime sources should have one deterministic revision");
 		assertTrue(first.revision.startsWith("sha256:"), "the runtime revision should identify its digest algorithm");
 		final reflectClosure = RuntimeSourceManifest.resolveClosure(first, ["HxReflect"], "portable", false);
@@ -165,11 +165,12 @@ class RuntimeSourceManifestFixture {
 		final snapshot = RuntimeSourceManifest.load(runtimeDirectory);
 		expectFailure("unknown root", "Unknown OCaml runtime module",
 			() -> RuntimeSourceManifest.resolveClosure(snapshot, ["DoesNotExist"], "portable", false));
-		expectFailure("tooling in application", "tooling-only", () -> RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxNativeLexer"], "portable", false));
+		expectFailure("tooling in application", "tooling-only",
+			() -> RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxBackendPluginHost"], "portable", false));
 		expectFailure("tooling in metal", "not allowed in the \"metal\" profile",
-			() -> RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxNativeLexer"], "metal", true));
-		assertArrayEquals(["HxHxNativeLexer", "HxHxNativeParser"], [
-			for (entry in RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxNativeParser"], "portable", true))
+			() -> RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxBackendPluginHost"], "metal", true));
+		assertArrayEquals(["HxHxBackendPluginDynlink", "HxHxBackendPluginHost"], [
+			for (entry in RuntimeSourceManifest.resolveClosure(snapshot, ["HxHxBackendPluginDynlink"], "portable", true))
 				entry.module
 		],
 			"an explicitly authorized portable compiler tool should receive its checked dependency");

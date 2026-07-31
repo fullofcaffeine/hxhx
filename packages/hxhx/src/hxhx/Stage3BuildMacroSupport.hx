@@ -28,9 +28,6 @@ class Stage3BuildMacroSupport {
 	public static function parseGeneratedMembers(members:Array<String>):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		if (members == null || members.length == 0)
 			return {functions: [], fields: []};
-		#if hxhx_stage0_no_hx_parser
-		return {functions: [], fields: []};
-		#else
 		final combined = members.join("\n");
 		final fake = "class __HxHxBuildFields {\n" + combined + "\n}\n";
 		final parser = new HxParser(fake);
@@ -40,7 +37,6 @@ class Stage3BuildMacroSupport {
 			functions: HxClassDecl.getFunctions(cls),
 			fields: HxClassDecl.getFields(cls)
 		};
-		#end
 	}
 
 	/**

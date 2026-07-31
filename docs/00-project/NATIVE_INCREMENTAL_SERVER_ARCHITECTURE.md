@@ -1,7 +1,8 @@
 # Native hxhx incremental server architecture
 
-Status: implemented source/module-lookup/parser reuse and initial dependency
-observation; experimental user route.
+Status: implemented source/module-lookup/parser reuse and initial dependency,
+request-configuration, and explicit macro-file observation; experimental user
+route.
 
 This is the living implementation contract for `haxe_ocaml-850ii.32`. The
 independent design review and its wider roadmap remain in
@@ -65,11 +66,39 @@ target behavior. `Stage3Compiler` remains the one compiler owner.
 | `CompilerSourceProvider` | The request API for lookup, reads, parsing, reporting, and success-only publication | Haxe dependency or target semantics |
 | `CompilerSourceResolver` | Exact-case lookup order and the observations that prove its answer | Cache storage |
 | `CompilationServerSourceCache` | In-memory entries, hit/miss facts, staged publication, reset, and estimated-size eviction | Mutable request compiler state |
+| `CompilerProgramConfigurationObservation` | A sorted, privacy-safe record of the selected target and normalized compiler defines | Feature/DCE reachability, target semantics, or cache admission |
 | `CompilerDependencyCollector` | Read-only facts about module interfaces, typed bodies, imports, types, and resolved calls | Reusing a typed module or deciding target behavior |
 | `CompilationServerDependencyCatalog` | The last successful dependency snapshot for each exact reported invocation | Typed module storage or type checking |
 | `CompilerDependencyInvalidator` | A prediction of affected modules from two complete clean observations | Skipping compiler work |
 | `ResolverStage` and `ModuleLoader` | Which modules the current request needs | Persistent storage or eviction |
 | `ParserStage` | Turning filtered source into the Haxe parser model | Cross-request publication |
+
+## Request-state prerequisite disposition
+
+The production parser and source-native targets now keep the active program,
+function, local scope, naming tables, type lookups, and target plan in values
+owned by one request or one rendered program. A failed PHP request, for example,
+discards its private output and its renderer object; the next request does not
+need a process-wide PHP reset to recover.
+
+The request-state audit still lists mutable process fields, but they have three
+different jobs and therefore three different end states:
+
+| Remaining owner | Positive lifecycle contract | Cache and product boundary |
+| --- | --- | --- |
+| Stage3 `EmitterStage` | `CompilerRequestStaticState` clears its 16 temporary OCaml-emission fields before compiler work and again during cleanup. Semantic requests remain serialized. | This duplicate emitter is a bootstrap/diagnostic comparison, never a reusable cache payload or shared-target readiness path. `haxe_ocaml-38gsp.1` removes it from the product route by hard-cutting native hxhx to the standalone `reflaxe.ocaml` target. |
+| `MacroState` | Macro defines, generated declarations, hooks, messages, positions, and temporary local IDs start fresh or are reset for every request. | Macro execution remains fresh per request in the first typed-cache milestone. Later reuse requires a separately reviewed realm and complete observation contract. |
+| `BackendRegistry` and `NativeBackendPluginHost` | Dynamic provider registrations are cleared at request boundaries; built-in registrations remain fixed for the compiler binary. | Initial typed reuse may identify a plugin by immutable revision, but it cannot retain mutable registrations or changeable native code. Versioned worker processes own that later lifecycle. |
+
+This closes `haxe_ocaml-850ii.32.2` on the safety property needed by reusable
+compiler facts: no resettable static field can become a cache payload, and the
+production parser and source-native renderers do not carry request state through
+the process. It does not enable typed-module reuse. `haxe_ocaml-850ii.32.5`
+must still prove the complete dependency, failure, cancellation, reset, memory,
+and clean-versus-warm gates. If that admission exercise uses the Stage3
+diagnostic lane before its retirement, the lane remains serialized and its
+before/after reset is part of the differential evidence, not a reusable state
+mechanism.
 
 `CompilerSourceProvider` is one concrete Haxe class with typed callbacks. The
 direct compiler connects those callbacks to ordinary filesystem and parser
@@ -148,11 +177,15 @@ records which defines each `#if` expression actually evaluated. A plain
 `#if enabled` depends only on whether `enabled` exists; `#if mode == "debug"`
 also depends on a SHA-256 digest of `mode`'s value. The digest lets later
 requests notice a change without retaining the original configuration text.
-Short-circuited operands and unrelated defines are not recorded. Raw define
-values are never stored in the dependency report or long-lived dependency
-snapshot. This lets an equal filtered source remain a parser hit without
-allowing a future typed-module cache to overlook a relevant build-configuration
-change.
+Short-circuited operands and unrelated defines do not invalidate the parsed
+module. Raw define values are never stored in the parser or dependency report.
+
+The typed-program observer has a wider rule, described below: it records every
+normalized define and conservatively rechecks typed modules when any one
+changes. The two rules are intentionally different. An unrelated define can
+leave filtered source and parser output reusable while still forcing fresh
+typing because a later macro, feature check, or target-neutrality decision may
+inspect it.
 
 This is separate from **feature selection**. Conditional compilation chooses
 which source text exists through `#if` before parsing. Feature selection later
@@ -168,8 +201,25 @@ fails the request instead of becoming a stale hit.
 ### Typed-module and dependency observations
 
 When `--hxhx-server-report` is present, hxhx observes the complete typed program
-after typing and generation hooks have finished. It records six related
-identities for each module:
+after typing and generation hooks have finished.
+
+Before the module records, hxhx seals one **program-configuration observation**.
+It contains:
+
+- the selected backend target;
+- every normalized compiler define, including `dce` and
+  `ocaml_profile` when present; and
+- only a report-safe input name plus a SHA-256 value revision.
+
+Inputs are sorted, so define insertion order cannot change the observation.
+Raw target and define values are discarded. If an input changes, observation
+mode currently predicts fresh work for every current typed module. That is a
+safe, deliberately conservative boundary: it prevents a later typed cache from
+reusing a module across an unproven target, feature, macro, or DCE change.
+Precise feature reachability and target-neutrality edges remain future work and
+may reduce this set only after clean-build differential evidence exists.
+
+The observer then records seven related identities for each module:
 
 - the **source revision** says whether that module's direct input changed;
 - the **source-origin revision** says which ordered class-path entry supplied
@@ -180,6 +230,10 @@ identities for each module:
 - the **generated-declaration observation** says whether `@:build` macros
   produced a different set of fields or methods, using only a SHA-256 revision
   of the generated result rather than retaining generated source text;
+- the **macro-file dependency observation** says whether a file explicitly
+  registered through `Context.registerModuleDependency(modulePath, file)`
+  changed state, path identity, or exact bytes, without retaining its path or
+  contents;
 - the **public-interface revision** describes declarations another module can
   use, such as public function signatures; and
 - the **implementation revision** additionally describes the complete source
@@ -198,6 +252,31 @@ annotated module; a changed generated public signature then follows ordinary
 public-interface edges to real callers. Reports name the affected module but
 never the generated member text or private macro values. Macro execution still
 runs on every request, and failed or cancelled requests publish no observation.
+
+An ordinary macro can also declare that one typed module depends on an external
+file. For example, a schema macro may resolve `schema.json` and register it for
+`demo.Model`. If the JSON bytes change while `Model.hx` does not, source-only
+observation would otherwise make the module look unchanged.
+
+For report-enabled server requests, hxhx now reads each explicitly registered
+file after macro execution and before dependency publication. Relative names
+are resolved from the request working directory, matching upstream Haxe
+4.3.7's conversion of the registered name to a full path in the active
+compilation context. The long-lived record contains only a SHA-256
+path-identity revision, a closed `file`/`missing`/`not-file` state, and a
+content revision. Equivalent duplicates coalesce; conflicting observations for
+one path identity fail the request. A registration naming a module outside the
+completed typed program also fails instead of authorizing reuse.
+
+Changing, deleting, restoring, or replacing the registered file predicts fresh
+work for its owning module and reports
+`macro-file-dependency-changed:<module>`. If rerunning the macro changes the
+module's public interface or implementation, the usual typed dependency edges
+propagate that stronger effect. If the recomputed typed module is identical,
+the file change remains an input-only recheck and does not spread to callers.
+Raw paths and bytes remain request-local and never enter the dependency report.
+This does not cache the macro result or process: the macro still runs and types
+are still rebuilt on every request.
 
 A **dependency edge** is a plain record saying why one module used another.
 For example, `Main` may depend on `Api` because it imported `Api`, mentioned an
@@ -247,13 +326,31 @@ existing dependency edges propagate that stronger change normally. Adding,
 renaming, removing, restoring, and replacing a secondary-type fallback are
 covered by focused source-cache and real wait-server sequences.
 
-The observer does not yet prove complete invalidation for generated
-declarations, macro observations, feature/DCE state, static initialization,
-target/profile changes, inherited or abstract-forwarded fields, enum-abstract
-values, or unsupported initializer structures. Imported static fields such as
+Static field initializers now add a second, explicit relationship when they
+consume another module. For example, `static var value = Api.make()` records
+the ordinary declaration edge and a `static-initialization` edge naming both
+the field being initialized and the exact selected `Api.make` declaration.
+This matters because a body-only provider change can alter initialization
+behavior or the ordering needed by the whole program even when `make` keeps the
+same public signature. Instance field initializers keep ordinary call, type,
+inline, and constant edges; they are not mislabeled as program initialization.
+The collector derives these facts from the sealed typed initializer, not from
+generated target code or source-text guesses.
+
+The observer does not yet prove complete invalidation for undeclared macro
+filesystem reads, environment/process/network/time observations, precise
+feature/DCE reachability, proven target-neutral sharing,
+inherited or abstract-forwarded fields, enum-abstract values, or unsupported
+initializer structures. Target/profile and define changes are currently
+covered by the conservative all-module configuration rule above, not by
+fine-grained dependency edges. Static-initializer edges cover the exact typed
+field, call, and nominal-type relationships currently present in
+`TypedFieldInitializer`; they do not yet constitute a target-specific
+static-storage or emitted-order plan. Imported static fields such as
 `import Api.label; ... label` also remain deferred until the typer carries an
-exact import binding. The enum names for those future edge families reserve
-typed vocabulary; they are not a claim that collection is already complete.
+exact import binding. The enum names for the remaining future edge families
+reserve typed vocabulary; they are not a claim that collection is already
+complete.
 
 A small example shows why the field-specific record matters:
 
@@ -281,8 +378,14 @@ dependency report only; every module is still typed normally, and generated
 target code is unchanged by this observation-only slice.
 
 The observer compares the current successful snapshot with the previous
-successful snapshot for the exact compiler argument list. Public-interface
-changes propagate through all recorded callers. Body-only changes propagate
+successful snapshot for the exact compiler argument list. A project
+configuration changed behind the same `.hxml` path is therefore compared
+directly. Two requests with different literal argument lists currently occupy
+different bounded catalog entries and may report a cold observation instead of
+a cross-variant configuration diff. That behavior is conservative and cannot
+authorize stale reuse; grouping equivalent invocation variants requires a
+separate canonical project-request identity before typed caching.
+Public-interface changes propagate through all recorded callers. Body-only changes propagate
 only through edges that consume the implementation, such as inline calls.
 Source-origin-only changes recheck the selected module without pretending equal
 interfaces or bodies changed. A conditional-compilation-only change likewise
@@ -380,9 +483,16 @@ sequences. Together they cover:
 - ordinary body edits versus public-signature and inline-body edits;
 - shared providers with several callers and a two-hop inline consumer;
 - exact A to B to A snapshot and reason-path reproduction;
-- unrelated and short-circuited defines preserving parser and dependency
-  identities;
+- unrelated and short-circuited defines preserving parser reuse while the
+  request-wide observer conservatively rechecks typed modules;
 - presence-only versus value-sensitive `#if` inputs;
+- target, DCE, profile, and ordinary define changes producing deterministic,
+  value-private configuration observations;
+- explicit macro-file registrations remaining stable under duplicate order,
+  then invalidating their owner after byte changes, deletion, or path
+  replacement without reporting the raw path or content;
+- external-host macro requests preserving exact A to B to A identity while
+  failed requests and reset publish no stale observation;
 - condition changes that stay local when typed behavior is equal and propagate
   through callers when the selected public interface changes;
 - predicted caller invalidation without skipping normal typing;
@@ -429,8 +539,8 @@ project admit sealed typed-module reuse. A **sealed typed module** means a
 completed, validated type-checking result that later requests can read but not
 mutate. Before reuse is allowed, the compiler needs deterministic revisions for
 public APIs, implementations, function bodies, configuration (including more
-than conditional compilation), broader macro inputs and effects, and module
-dependencies.
+than conditional compilation), macro inputs and effects beyond explicit
+registered files, and module dependencies.
 
 `haxe_ocaml-850ii.32.5` owns that admission decision. In addition to the
 designed edit matrix, it requires a scheduled seeded 10,000-edit differential,

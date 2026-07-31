@@ -17,6 +17,11 @@ bd export -o .beads/issues.jsonl  # Refresh tracked bead data before committing
 - Use the globally installed `$explain-technical-work` skill whenever writing or substantially
   revising user guides, contributor guides, architecture documents, PR bodies, issue descriptions,
   status reports, or hand-offs.
+- Use `$explain-technical-work` whenever adding or substantially revising code comments or API
+  documentation. Write comments for a capable developer who has not seen this repository: explain
+  the caller-visible behavior, why the boundary exists, and what must remain true before relying on
+  local compiler labels such as "target reuse", "semantic compiler", "sealed", or "source bundle".
+  Define those labels in plain language on first use instead of assuming earlier project context.
 - Write for a capable Haxe developer who is new to this repository. Lead with what the reader can
   do, what previously failed, what now happens, and what remains unfinished. Then introduce the
   exact compiler terms and owning modules needed for deeper work.
@@ -164,6 +169,15 @@ Agent policy:
   - Use upstream Haxe as a behavior/architecture reference point only: upstream keeps target generators such as PHP, C#, Java, and Lua in separate generator modules plus shared generator support. Stay close to that ownership idea where it helps, without copying upstream compiler code or mechanically mirroring its implementation.
   - If a bounded Full1 fix must touch a mega-file, keep the change narrow, add focused coverage, and record whether an extraction follow-up already exists. If none exists, file one before expanding the same area again.
   - If a single file starts owning multiple independent target families or exceeds reviewable size for routine patches, prefer an incremental extraction plan over another local helper in that file.
+- Keep compiler semantics Haxe-authored.
+  - **Compiler semantics** are decisions about how Haxe source is tokenized, parsed, resolved, typed, expanded, invalidated, lowered, diagnosed, and mapped to target behavior. Their durable source of truth belongs in ordinary Haxe modules compiled through the supported native route.
+  - Handwritten OCaml is appropriate only for a narrow primitive that Haxe cannot yet express faithfully or efficiently at the boundary, such as operating-system I/O, process control, sockets, native loading, hashing, runtime representation support, or toolchain integration. Haxe must still own when the primitive is used, what its typed inputs and outputs mean, and how failures affect compiler behavior.
+  - A handwritten OCaml adapter must not parse Haxe source, reconstruct or repair compiler facts, choose dependency/cache/typing/lowering semantics, patch generated output, or turn an unsupported case into placeholder success. Target runtime modules may implement explicitly selected runtime operations, but they do not get to infer compiler intent from generated text.
+  - Treat generated OCaml as an artifact, never as semantic source. Do not hand-edit it. Fix the Haxe owner or the smallest justified handwritten adapter, regenerate, and review the artifact diff.
+  - A temporary semantic bridge is a migration exception, not an architecture. Give it a Bead, a machine-readable inventory entry, focused behavior evidence, explicit exclusion from readiness claims, and a named removal gate. If the Haxe replacement becomes capable enough, compare it on a real workload and hard-cut; do not keep both implementations behind defines or environment switches.
+  - Re-evaluate old bootstrap assumptions when the compiler grows. A bridge created because the Haxe parser, typer, target, or runtime was once incomplete must not keep accumulating features merely because it already exists. The native-parser incident is the reference failure mode: a small February 2026 OCaml proof grew into a second parser and drifted from `HxParser`.
+  - Before adding or materially expanding a handwritten `.ml`/`.mli` file used by `hxhx`, state which non-semantic primitive it owns and why a Haxe-authored implementation is not yet suitable. If that answer requires compiler-language behavior, stop and move the work to the Haxe owner or update the explicit retirement plan first.
+  - Keep `docs/00-project/HANDWRITTEN_OCAML_OWNERSHIP.json` exhaustive and run `npm run guard:handwritten-ocaml-ownership`. A runtime-manifest row proves source identity and integrity, not permission to own compiler semantics or readiness evidence.
 - For long-running attached sessions, do not wait indefinitely on silence alone.
   - Set a bounded silent-check window up front.
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
@@ -254,6 +268,43 @@ iteration speed while preserving correctness, customizability, and embeddability
 - For `Full 1.0` / `Haxe 4.3.7-equivalent` claims, relevant upstream Haxe 4.3.7 suite results are the primary proof.
   - Repo-local tests, focused regressions, and bridge-specific M14 tests are supporting evidence for diagnosis and iteration speed.
   - They do not substitute for upstream-suite parity when making a strict public equivalence claim.
+- Treat Haxe `4.3.7` as the current compatibility floor, not the permanent
+  language ceiling. Periodically intake later upstream releases, including
+  Haxe 5.x when available, through clean-room black-box behavior checks, suite
+  evidence, and explicit compatibility decisions; never copy, translate, or
+  mechanically merge upstream compiler implementation.
+- Treat faster Haxe language evolution as a long-term `hxhx` product goal.
+  `hxhx` should be a strict behavioral superset of each supported vanilla Haxe
+  baseline: existing valid source keeps its behavior, while clearly identified
+  `hxhx` extensions may add accepted programs sooner.
+- The deferred post-Full1 language-extension owner is
+  `haxe_ocaml-h5jta.2`. Its first candidate is object-field shorthand
+  (`{callee}` meaning `{callee: callee}`), together with an optional
+  deterministic `dehxhxify` translation to standard Haxe.
+  - Ordinary and typed macros run after parsing, so do not assume they can
+    implement new grammar. Prefer the latest structured extension seam that can
+    express a feature correctly, and investigate a versioned pre-parse
+    macro/eval or parser-extension seam before hard-coding multiple features.
+  - Before implementing this parser-level extension program, ask GPT-5.6 Sol
+    Oracle to brainstorm and review the extension ladder. Keep exact upstream
+    baseline evidence separate from `hxhx`-only syntax.
+  - This is durable future direction, not current-priority authorization and not
+    a readiness change. Full1 and the authentic shared-target hard cut remain
+    prerequisites.
+- Keep optional language frontends separate from ordinary `hxhx` evolution.
+  Deferred R&D owner `haxe_ocaml-h5jta.3` must later assess the
+  Oracle-brainstormed sibling `../tshx-codex-starter` as a possible optional
+  TypeScript-compatible frontend/plugin.
+  - Modern `hxhx` additions may borrow good TypeScript ideas but should remain
+    recognizably Haxe. The optional frontend may pursue broader or eventual full
+    TypeScript source compatibility.
+  - Do not put TS grammar or TS-specific semantic policy into baseline compiler
+    core. Reassess standalone translation versus a versioned frontend/plugin
+    only after production-quality Full1 `hxhx`, standalone `reflaxe.ocaml`, the
+    authentic shared target, and the extension lifecycle.
+  - Pin and inventory the external skeleton at review time, then request a fresh
+    GPT-5.6 Sol Oracle brainstorm in the `hxhx` context. This is post-1.0 R&D,
+    not current P0/P1 work or readiness evidence.
 
 ## Beginner-Friendly Terms (Read This First)
 

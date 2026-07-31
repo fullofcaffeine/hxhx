@@ -59,6 +59,20 @@ function main() {
     'class FixtureDirectSocket { static function run() { final socket = new sys.net.Socket(); } }',
     'direct sys.net.Socket use in current compiler source'
   )
+  assertRejected(
+    sources,
+    manifest,
+    'RetiredNativeParser',
+    '@:native("HxHxNativeParser") extern class FixtureRetiredNativeParser {}',
+    'handwritten native lexer/parser module must stay retired'
+  )
+  assertRejected(
+    sources,
+    manifest,
+    'RetiredExpressionRewrite',
+    'class FixtureRetiredExpressionRewrite { static function run(source:String) return HxParserSourceNormalize.normalizeDenseEscapedQuotes(source); }',
+    'protocol-era expression source rewrite helper must stay retired'
+  )
 
   const expandedManifest = JSON.parse(JSON.stringify(manifest))
   expandedManifest.bridges[0].allowedHaxeFiles.push('packages/hxhx/src/hxhx/QuietlyExpandedBoundary.hx')

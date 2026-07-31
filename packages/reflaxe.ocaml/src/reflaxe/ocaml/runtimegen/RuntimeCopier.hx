@@ -364,9 +364,7 @@ class RuntimeCopier {
 			throw 'The reflaxe.ocaml runtime source directory "$runtimeDir" is missing.';
 
 		#if macro
-		final allowHxHxRuntime = enabledDefine("hih_native_parser")
-			|| enabledDefine("hxhx_native_frontend")
-			|| enabledDefine("hxhx")
+		final allowHxHxRuntime = enabledDefine("hxhx")
 			|| enabledDefine("hxhx_backend_plugin_host_runtime")
 			|| enabledDefine("hxhx_macro_host");
 		#else

@@ -245,8 +245,8 @@ class M14ModuleImportAliasTargetIntegrationTest {
 			return;
 		final runtime = commandOutput("php", [result.entryPath]);
 		assertTrue(runtime.code == 0, "PHP using-order program failed: " + runtime.stderr);
-		assertTrue(StringTools.trim(runtime.stdout) == "first", "PHP reversed module declaration order while selecting an extension method: "
-			+ runtime.stdout);
+		assertTrue(StringTools.trim(runtime.stdout) == "second",
+			"PHP did not match Haxe 4.3.7's later-module-type precedence while selecting an extension method: " + runtime.stdout);
 	}
 
 	static function emit(targetId:String, root:String):String {
@@ -475,7 +475,7 @@ class M14ModuleImportAliasTargetIntegrationTest {
 		assertTrue(scannedPrivate.length == 2
 			&& HxClassDecl.getVisibility(scannedPrivate[0]) == HxVisibility.Public
 			&& HxClassDecl.getVisibility(scannedPrivate[1]) == HxVisibility.Private,
-			"the native-parser sibling scanner must retain top-level type visibility");
+			"the Haxe frontend sibling scanner must retain top-level type visibility");
 		final scannedPrivateEnum = ParserStageScanHelpers.scanModuleLocalHelperEnums("enum PublicEnum { A; } private enum PrivateEnum { B; }", "Main");
 		final scannedPrivateTypedef = ParserStageScanHelpers.scanModuleLocalHelperTypedefs("typedef PublicShape = {}; private typedef PrivateShape = {};",
 			"Main");
@@ -485,7 +485,7 @@ class M14ModuleImportAliasTargetIntegrationTest {
 			assertTrue(pair.length == 2
 				&& HxClassDecl.getVisibility(pair[0]) == HxVisibility.Public
 				&& HxClassDecl.getVisibility(pair[1]) == HxVisibility.Private,
-				"every native-parser secondary-type scanner must retain public/private visibility");
+				"every Haxe frontend secondary-type scanner must retain public/private visibility");
 
 		final leftTypeSource = HxModuleDirective.normalImport("a.Tools");
 		final rightTypeSource = HxModuleDirective.normalImport("b.Tools");

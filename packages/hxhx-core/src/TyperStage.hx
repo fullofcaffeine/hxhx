@@ -3,6 +3,12 @@ private typedef TyMethodCallResolution = {
 	final declaration:Null<TyDeclarationInfo>;
 };
 
+private typedef TyExtensionCallResolution = {
+	final type:TyType;
+	final declaration:TyDeclarationInfo;
+	final usingProvider:TyNominalTypeId;
+};
+
 private typedef TypedClassBuildResult = {
 	final classes:Array<TypedClass>;
 	final mainFunctions:Array<TyFunctionEnv>;
@@ -27,6 +33,19 @@ class TyperStage {
 	static inline function isStrict():Bool {
 		final v = Sys.getEnv("HXHX_TYPER_STRICT");
 		return v == "1" || v == "true" || v == "yes";
+	}
+
+	/**
+		Combine an assignment with the local's already-selected type.
+
+		`Dynamic` permits the assignment but does not change the static contract
+		of a known local. An unknown local may still become Dynamic, while other
+		compatibility and mismatch decisions remain owned by `TyType.unify`.
+	**/
+	static function assignedLocalType(existing:TyType, incoming:TyType):Null<TyType> {
+		if (existing != null && !existing.isUnknown() && !existing.isDynamic() && incoming != null && incoming.isDynamic())
+			return existing;
+		return TyType.unify(existing, incoming);
 	}
 
 	static function arrayElementType(t:TyType):Null<TyType> {
@@ -112,6 +131,26 @@ class TyperStage {
 		return provider != null && provider.getVisibility() == HxVisibility.Public ? provider : null;
 	}
 
+	/**
+		Resolve the type named by one `using` directive in its source module.
+
+		A one-segment directive can name a secondary type declared in the same
+		module. Its canonical identity includes that module (`Main.Helper`), so a
+		direct full-name lookup alone is insufficient. Ordinary type-path
+		resolution preserves that source meaning while still enforcing visibility.
+	**/
+	static function usingDirectiveProvider(path:String, packagePath:String, modulePath:String, sourceDirectives:Array<HxModuleDirective>, index:TyperIndex,
+			loader:ModuleLoader):Null<TyNominalInfo> {
+		if (index == null || path == null || path.length == 0)
+			return null;
+		var provider = index.resolveTypePath(path, packagePath, sourceDirectives, null, modulePath);
+		if (provider == null && loader != null) {
+			loader.ensureTypeAvailable(path, packagePath, sourceDirectives);
+			provider = index.resolveTypePath(path, packagePath, sourceDirectives, null, modulePath);
+		}
+		return provider;
+	}
+
 	static function providerDefinesStaticMember(provider:TyNominalInfo, memberName:String):Bool {
 		if (provider == null || memberName == null || memberName.length == 0)
 			return false;
@@ -141,7 +180,7 @@ class TyperStage {
 	}
 
 	/** Resolve parsed directives once so every target consumes the same Haxe meaning. **/
-	static function resolveModuleDirectives(sourceDirectives:Array<HxModuleDirective>, packagePath:String, index:TyperIndex,
+	static function resolveModuleDirectives(sourceDirectives:Array<HxModuleDirective>, packagePath:String, modulePath:String, index:TyperIndex,
 			loader:ModuleLoader):Array<TyModuleDirective> {
 		final out = new Array<TyModuleDirective>();
 		for (source in sourceDirectives) {
@@ -152,7 +191,7 @@ class TyperStage {
 					if (moduleProviders.length > 0) {
 						out.push(new TyModuleDirective(source, UsingType, providerIdentities(moduleProviders)));
 					} else {
-						final provider = exactDirectiveProvider(path, packagePath, sourceDirectives, index, loader);
+						final provider = usingDirectiveProvider(path, packagePath, modulePath, sourceDirectives, index, loader);
 						out.push(provider == null ? new TyModuleDirective(source,
 							Unresolved) : new TyModuleDirective(source, UsingType, [provider.getIdentity()]));
 					}
@@ -251,39 +290,7 @@ class TyperStage {
 	}
 
 	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType):Void {
-		switch (pattern) {
-			case PBind(name):
-				scope.declareLocal(name, baseTy == null || baseTy.isUnknown() ? TyType.fromHintText("Dynamic") : baseTy);
-			case PEnumExtract(_name, args):
-				if (args != null) {
-					for (arg in args)
-						declarePatternBindings(scope, arg, TyType.fromHintText("Dynamic"));
-				}
-			case PObject(_fieldNames, fieldPatterns):
-				if (fieldPatterns != null) {
-					for (fieldPattern in fieldPatterns)
-						declarePatternBindings(scope, fieldPattern, TyType.fromHintText("Dynamic"));
-				}
-			case PCapture(name, inner):
-				scope.declareLocal(name, baseTy == null || baseTy.isUnknown() ? TyType.fromHintText("Dynamic") : baseTy);
-				declarePatternBindings(scope, inner, baseTy);
-			case PArray(items):
-				if (items != null) {
-					for (item in items)
-						declarePatternBindings(scope, item, TyType.fromHintText("Dynamic"));
-				}
-			case PExtractor(_, resultPattern):
-				declarePatternBindings(scope, resultPattern, TyType.fromHintText("Dynamic"));
-			case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-				PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
-				declarePatternBindings(scope, inner, baseTy);
-			case POr(patterns):
-				if (patterns != null) {
-					for (p in patterns)
-						declarePatternBindings(scope, p, baseTy);
-				}
-			case _:
-		}
+		TySwitchPatternBindings.declare(scope, pattern, baseTy);
 	}
 
 	static function buildTypedClasses(parsed:ParsedModule, index:TyperIndex, loader:ModuleLoader, modulePath:String,
@@ -291,7 +298,7 @@ class TyperStage {
 		final declaration = parsed.getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final directives = HxModuleDecl.getDirectives(declaration);
-		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, index, loader);
+		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
 		final mainClass = HxModuleDecl.getMainClass(declaration);
 		final typedClasses = new Array<TypedClass>();
 		var mainFunctions = new Array<TyFunctionEnv>();
@@ -312,13 +319,25 @@ class TyperStage {
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
 				final inferenceEnvironment = lexicalEnvironment.copyForInference();
-				final declaration = resolveCallDeclaration(callee, arguments, inferenceEnvironment, context, position);
-				final importedBareCall = switch (callee) {
+				var declaration = resolveCallDeclaration(callee, arguments, inferenceEnvironment, context, position);
+				var extensionProvider:Null<TyNominalTypeId> = null;
+				if (declaration == null) {
+					switch (callee) {
+						case EField(receiver, field):
+							final extension = resolveExtensionCall(receiver, field, arguments, inferenceEnvironment, context, position);
+							if (extension != null) {
+								declaration = extension.declaration;
+								extensionProvider = extension.usingProvider;
+							}
+						case _:
+					}
+				}
+				final requiresOwnerQualification = (declaration != null && declaration.getIsEnumConstructor()) || switch (callee) {
 					case EIdent(name) if (declaration != null && lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.staticMethodCandidates(name).length == 0) && context.importedStaticMethod(name) != null;
 					case _: false;
 				};
-				return new TypedCallResolution(declaration, importedBareCall);
+				return new TypedCallResolution(declaration, requiresOwnerQualification, extensionProvider);
 			};
 			final fieldResolver:TypedFieldDeclarationResolver = function(expression, position, lexicalEnvironment) {
 				final field = resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
@@ -337,16 +356,18 @@ class TyperStage {
 				if (initializer == null || fieldInfo == null)
 					continue;
 				final fieldType = fieldInfo.getType();
-				final fieldEnvironment = new TyFunctionEnv("<field-initializer:" + fieldInfo.getName() + ">", [], [], fieldType, fieldType);
+				final fieldEnvironment = new TyFunctionEnv("<field-initializer:" + fieldInfo.getName() + ">", [], [], fieldType, fieldType,
+					fieldInfo.getCanonicalKey(), null, false, 0, fieldInfo.getIsStatic());
 				typedFieldInitializers.push(new TypedFieldInitializer(fieldInfo,
 					TypedBodyBuilder.buildExpression(initializer, HxFieldDecl.getPos(field), fieldEnvironment, typeResolver, callResolver, fieldResolver)));
 			}
 			final sourceFunctions = HxClassDecl.getFunctions(classDeclaration);
 			for (functionIndex in 0...sourceFunctions.length) {
 				final sourceFunction = sourceFunctions[functionIndex];
-				final functionEnvironment = typeFunction(sourceFunction, context);
-				functionEnvironments.push(functionEnvironment);
 				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(sourceFunction);
+				final functionIdentity = TypedFunction.stableIdentityFor(className, functionIndex, sourceFunction, semanticDeclaration);
+				final functionEnvironment = typeFunction(sourceFunction, context, functionIdentity, semanticDeclaration);
+				functionEnvironments.push(functionEnvironment);
 				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunction, semanticDeclaration, functionEnvironment,
 					typeResolver, callResolver, fieldResolver));
 			}
@@ -429,25 +450,29 @@ class TyperStage {
 			ResolvedModule.getGeneratedDeclarations(m));
 	}
 
-	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext):TyFunctionEnv {
+	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext, functionIdentity:String, ?semanticDeclaration:TyDeclarationInfo):TyFunctionEnv {
 		// Stage 3 local scope:
 		// - parameters (type hints, if any)
 		// - locals (not parsed yet; reserved for later)
 		final params = new Array<TySymbol>();
-		for (arg in HxFunctionDecl.getArgs(fn)) {
+		final functionArgs = HxFunctionDecl.getArgs(fn);
+		final semanticArguments = semanticDeclaration == null ? [] : semanticDeclaration.getSignature().getArgs();
+		for (argumentIndex in 0...functionArgs.length) {
+			final arg = functionArgs[argumentIndex];
 			final name = HxFunctionArg.getName(arg);
-			final ty = typeFromHintInContext(HxFunctionArg.getTypeHint(arg), ctx);
-			params.push(new TySymbol(name, ty));
+			final ty = argumentIndex < semanticArguments.length ? semanticArguments[argumentIndex] : typeFromHintInContext(HxFunctionArg.getTypeHint(arg), ctx);
+			params.push(new TySymbol(name, ty, TyLocalId.forSourceDeclaration(functionIdentity, argumentIndex, Parameter, name), Parameter));
 		}
 
 		final locals = new Array<TySymbol>();
-		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
+		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown(), functionIdentity, null, false, 0,
+			HxFunctionDecl.getIsStatic(fn));
 
 		final semanticBody = TypedBodyBuilder.expandStructuralStatements(HxFunctionDecl.getBody(fn));
 		final returnExprTy = inferReturnType(semanticBody, scope, ctx);
 		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
 		final retTy = if (retHintText != null && retHintText.length > 0) {
-			final hinted = typeFromHintInContext(retHintText, ctx);
+			final hinted = semanticDeclaration == null ? typeFromHintInContext(retHintText, ctx) : semanticDeclaration.getSignature().getReturnType();
 			// If we couldn't infer a concrete return type (e.g. because the parser produced an
 			// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
 			if (!returnExprTy.isUnknown()) {
@@ -467,8 +492,9 @@ class TyperStage {
 			// - Otherwise, default to `Void` to match the common `function f() { ... }` / `static function main()` shape.
 			//
 			// Bring-up heuristic:
-			// - The native frontend protocol can capture a "first return string literal" even when
-			//   we can't parse a complex body (e.g. a `switch` with returns in cases).
+			// - The parsed declaration can retain a "first return string literal" even when
+			//   best-effort body recovery cannot model a complex body (for example, a
+			//   `switch` with returns in cases).
 			// - If present, treat the function as returning `String` instead of collapsing to `Void`.
 			if (!returnExprTy.isUnknown()) {
 				returnExprTy;
@@ -478,7 +504,7 @@ class TyperStage {
 			}
 		}
 
-		return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
+		return scope.withReturnTypes(retTy, returnExprTy);
 	}
 
 	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext):TyType {
@@ -504,8 +530,10 @@ class TyperStage {
 		function typeStmt(s:HxStmt):Void {
 			switch (s) {
 				case SBlock(stmts, _pos):
+					scope.enterLexicalScope();
 					for (ss in stmts)
 						typeStmt(ss);
+					scope.exitLexicalScope();
 				case SSwitch(scrutinee, patterns, bodies, pos):
 					// Bring-up: type-check the scrutinee, then each case body.
 					// Binder patterns declare a best-effort local for the body.
@@ -515,35 +543,49 @@ class TyperStage {
 						for (i in 0...count) {
 							final pattern = patterns[i];
 							final body = bodies[i];
+							scope.enterLexicalScope();
 							declarePatternBindings(scope, pattern, scrutTy);
 							typeStmt(body);
+							scope.exitLexicalScope();
 						}
 					}
 				case SIf(cond, thenBranch, elseBranch, pos):
 					// Best-effort: ensure the condition is at least type-checked for locals.
 					inferExprType(cond, scope, ctx, pos);
+					scope.enterLexicalScope();
 					typeStmt(thenBranch);
-					if (elseBranch != null)
+					scope.exitLexicalScope();
+					if (elseBranch != null) {
+						scope.enterLexicalScope();
 						typeStmt(elseBranch);
+						scope.exitLexicalScope();
+					}
 				case SWhile(cond, body, pos):
 					inferExprType(cond, scope, ctx, pos);
+					scope.enterLexicalScope();
 					typeStmt(body);
+					scope.exitLexicalScope();
 				case SDoWhile(body, cond, pos):
+					scope.enterLexicalScope();
 					typeStmt(body);
+					scope.exitLexicalScope();
 					inferExprType(cond, scope, ctx, pos);
 				case STry(tryBody, catches, _):
+					scope.enterLexicalScope();
 					typeStmt(tryBody);
+					scope.exitLexicalScope();
 					for (c in catches) {
-						scope.declareLocal(c.name, TyType.fromHintText("Dynamic"));
+						scope.enterLexicalScope();
+						final writtenCatchType = StringTools.trim(c.typeHint == null ? "" : c.typeHint);
+						final catchType = writtenCatchType.length == 0 ? TyType.fromHintText("Dynamic") : typeFromHintInContext(writtenCatchType, ctx);
+						scope.declareLocal(c.name, catchType, CatchVariable);
 						typeStmt(c.body);
+						scope.exitLexicalScope();
 					}
 				case SBreak(_):
 				case SContinue(_):
 				case SForIn(name, iterable, body, pos):
 					// Bring-up: type-check the iterable expression and bind the loop variable.
-					//
-					// We intentionally model the loop variable as a function-local symbol for now
-					// (not a nested scope) so later statements can still reference it during bring-up.
 					final iterableTy = inferExprType(iterable, scope, ctx, pos);
 					final loopTy = switch (iterable) {
 						case ERange(_, _):
@@ -554,24 +596,38 @@ class TyperStage {
 							final elem = arrayElementType(iterableTy);
 							(elem != null && !elem.isUnknown()) ? elem : TyType.fromHintText("Dynamic");
 					}
-					scope.declareLocal(name, loopTy);
+					scope.enterLexicalScope();
+					scope.declareLocal(name, loopTy, LoopVariable);
 					typeStmt(body);
+					scope.exitLexicalScope();
 				case SForKeyValue(keyName, valueName, iterable, body, pos):
 					inferExprType(iterable, scope, ctx, pos);
-					scope.declareLocal(keyName, TyType.fromHintText("String"));
-					scope.declareLocal(valueName, TyType.fromHintText("Dynamic"));
+					scope.enterLexicalScope();
+					scope.declareLocal(keyName, TyType.fromHintText("String"), LoopVariable);
+					scope.declareLocal(valueName, TyType.fromHintText("Dynamic"), LoopVariable);
 					typeStmt(body);
+					scope.exitLexicalScope();
 				case SVar(name, typeHint, init, pos):
-					// Declare first so subsequent statements can reference the symbol deterministically.
 					final hinted = typeFromHintInContext(typeHint, ctx);
-					final sym = scope.declareLocal(name, hinted);
+					final hasWrittenType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
+					var initializerType:Null<TyType> = null;
 					if (init != null) {
-						final initTy = inferExprType(init, scope, ctx, pos);
-						final u = TyType.unify(sym.getType(), initTy);
+						// The new declaration is not visible in its own initializer.
+						// A same-name read therefore selects the nearest outer local.
+						initializerType = inferExprType(init, scope, ctx, pos);
+					}
+					final sym = scope.declareLocal(name, hinted, Variable);
+					if (initializerType != null) {
+						final u = assignedLocalType(sym.getType(), initializerType);
 						if (u == null) {
 							if (isStrict()) {
 								throw new TyperError(ctx.getFilePath(), pos,
-									"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType());
+									"initializer type "
+									+ initializerType
+									+ " is not compatible with local "
+									+ name
+									+ ":"
+									+ sym.getType());
 							}
 							// A written local type remains the semantic contract in permissive
 							// bring-up mode. Conversion typing is incomplete, so replacing that
@@ -579,7 +635,10 @@ class TyperStage {
 							// later operator binding.
 							return;
 						}
-						sym.setType(u);
+						// The written local type is the static contract. Unification checks
+						// whether the initializer can enter that slot; it must not replace
+						// `Int` with `Null<Int>` or otherwise widen the declared identity.
+						sym.setType(hasWrittenType ? hinted : u);
 					}
 				case SReturnVoid(pos):
 					unifyInto(TyType.fromHintText("Void"), pos);
@@ -648,9 +707,15 @@ class TyperStage {
 		return c >= "A".code && c <= "Z".code;
 	}
 
-	static function isTypeErrorProbeCallee(callee:HxExpr):Bool {
+	static function helperCompileTimeProbeName(callee:HxExpr):Null<String> {
 		final path = dottedFieldPath(callee);
-		return path == "typeError" || path == "HelperMacros.typeError" || StringTools.endsWith(path, ".HelperMacros.typeError");
+		for (name in ["typeError", "typeErrorText", "getErrorMessage"])
+			if (path == name || path == "HelperMacros." + name || StringTools.endsWith(path, ".HelperMacros." + name))
+				return name;
+		for (name in ["followWithAbstracts", "followWithAbstractsOnce"])
+			if (path == name || path == "MyMacroHelper." + name || StringTools.endsWith(path, ".MyMacroHelper." + name))
+				return name;
+		return null;
 	}
 
 	/** Type a macro diagnostic probe without making its enclosing `try` value-producing. **/
@@ -807,7 +872,7 @@ class TyperStage {
 		compared structurally so `Array<T>` can accept `Array<String>` without
 		turning the backend carrier into the binding key.
 	**/
-	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<String>):Int {
+	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>):Int {
 		if (expected == null || actual == null)
 			return -1;
 		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
@@ -856,7 +921,7 @@ class TyperStage {
 		return functionOverloadTypeScore(exp, act);
 	}
 
-	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<String>):Int {
+	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>):Int {
 		if (!sig.acceptsArity(suppliedArity))
 			return -1;
 		final expected = sig.getArgs();
@@ -936,6 +1001,33 @@ class TyperStage {
 		return {type: TyType.unknown(), declaration: null};
 	}
 
+	/**
+		Resolve a receiver-style call through exact module `using` facts.
+
+		The receiver becomes the first argument for ordinary overload selection.
+		The result retains both the static declaration and the using provider, so
+		backends do not repeat directive precedence or inheritance lookup.
+	**/
+	static function resolveExtensionCall(receiver:HxExpr, field:String, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
+			pos:HxPos):Null<TyExtensionCallResolution> {
+		final receiverType = inferExprType(receiver, scope, ctx, pos);
+		final receiverOwner = nominalInfoForType(ctx.getIndex(), receiverType);
+		if (receiverOwner != null && receiverOwner.instanceMethodCandidates(field).length > 0)
+			return null;
+		final extensionArguments = [receiver].concat(args == null ? [] : args);
+		for (extension in ctx.extensionMethods(field)) {
+			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments, scope, ctx, pos,
+				extension.getCandidates());
+			if (resolution.declaration != null)
+				return {
+					type: resolution.type,
+					declaration: resolution.declaration,
+					usingProvider: extension.getUsingProvider()
+				};
+		}
+		return null;
+	}
+
 	/** Best-effort exact declaration selection for ordinary call nodes. **/
 	static function resolveCallDeclaration(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyDeclarationInfo> {
 		switch (callee) {
@@ -943,8 +1035,22 @@ class TyperStage {
 				if (scope.resolveSymbol(name) != null)
 					return null;
 				final owner = ctx.currentClass();
+				if (owner != null && !scope.isStaticContext() && owner.instanceMethodCandidates(name).length > 0)
+					return resolveMethodCall(owner, name, false, args, scope, ctx, pos).declaration;
 				if (owner != null && owner.staticMethodCandidates(name).length > 0)
 					return resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
+				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
+				if (moduleEnumConstructor != null)
+					return resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
+						moduleEnumConstructor.getCandidates()).declaration;
+				final importedMethod = ctx.importedStaticMethod(name);
+				return importedMethod == null ? null : resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx,
+					pos, importedMethod.getCandidates()).declaration;
+			case EEnumValue(name):
+				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
+				if (moduleEnumConstructor != null)
+					return resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
+						moduleEnumConstructor.getCandidates()).declaration;
 				final importedMethod = ctx.importedStaticMethod(name);
 				return importedMethod == null ? null : resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx,
 					pos, importedMethod.getCandidates()).declaration;
@@ -1209,11 +1315,19 @@ class TyperStage {
 				final fieldType = inferExprType(EField(obj, field), scope, ctx, pos);
 				fieldType.isNullable() ? fieldType : TyType.nullable(fieldType);
 			case ECall(callee, args):
-				if (args.length == 1 && isTypeErrorProbeCallee(callee)) {
-					try {
-						typeErrorProbe(args[0], scope, ctx, pos);
-					} catch (_:TyperError) {}
-					return TyType.fromHintText("Bool");
+				final compileTimeProbe = helperCompileTimeProbeName(callee);
+				if (args.length == 1 && compileTimeProbe != null) {
+					if (compileTimeProbe == "typeError") {
+						try {
+							typeErrorProbe(args[0], scope, ctx, pos);
+						} catch (_:TyperError) {}
+						return TyType.fromHintText("Bool");
+					}
+					// These helpers inspect intentionally invalid syntax and turn
+					// its diagnostic into text. Their argument belongs to the
+					// compile-time probe and must not mutate or fail the enclosing
+					// function's ordinary typing scope.
+					return TyType.fromHintText("String");
 				}
 				switch (callee) {
 					case EIdent("__hxhx_parenthesized") if (args.length == 1):
@@ -1283,16 +1397,37 @@ class TyperStage {
 						// same declaration lookup as the structural typed-call builder so
 						// the expression result retains its nominal semantic type.
 						final owner = scope.resolveSymbol(name) == null ? ctx.currentClass() : null;
-						if (owner != null && owner.staticMethodCandidates(name).length > 0) {
+						if (owner != null && !scope.isStaticContext() && owner.instanceMethodCandidates(name).length > 0) {
+							resolveMethodCall(owner, name, false, args, scope, ctx, pos).type;
+						} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
 							resolveMethodCall(owner, name, true, args, scope, ctx, pos).type;
 						} else {
-							final importedMethod = scope.resolveSymbol(name) == null ? ctx.importedStaticMethod(name) : null;
-							if (importedMethod != null) {
+							final moduleEnumConstructor = scope.resolveSymbol(name) == null ? ctx.moduleEnumConstructorMethod(name) : null;
+							if (moduleEnumConstructor != null) {
+								resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
+									moduleEnumConstructor.getCandidates()).type;
+							} else {
+								final importedMethod = scope.resolveSymbol(name) == null ? ctx.importedStaticMethod(name) : null;
+								if (importedMethod != null) {
+									resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx, pos,
+										importedMethod.getCandidates()).type;
+								} else {
+									inferFunctionValueCall(callee, args, scope, ctx, pos);
+								}
+							}
+						}
+					case EEnumValue(name):
+						final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
+						if (moduleEnumConstructor != null) {
+							resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx, pos,
+								moduleEnumConstructor.getCandidates()).type;
+						} else {
+							final importedMethod = ctx.importedStaticMethod(name);
+							if (importedMethod != null)
 								resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx, pos,
 									importedMethod.getCandidates()).type;
-							} else {
+							else
 								inferFunctionValueCall(callee, args, scope, ctx, pos);
-							}
 						}
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.
@@ -1304,24 +1439,34 @@ class TyperStage {
 								} else {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
-									for (a in args)
-										inferExprType(a, scope, ctx, pos);
 									final idx = ctx.getIndex();
 									final c2 = nominalInfoForType(idx, objTy);
-									if (c2 != null) {
+									if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
 										resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 									} else {
-										TyType.unknown();
+										final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
+										if (extension == null) {
+											for (a in args)
+												inferExprType(a, scope, ctx, pos);
+											TyType.unknown();
+										} else {
+											extension.type;
+										}
 									}
 								}
 							case EThis:
 								final c = ctx.currentClass();
-								if (c != null) {
+								if (c != null && c.instanceMethodCandidates(field).length > 0) {
 									resolveMethodCall(c, field, false, args, scope, ctx, pos).type;
 								} else {
-									for (a in args)
-										inferExprType(a, scope, ctx, pos);
-									TyType.unknown();
+									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
+									if (extension == null) {
+										for (a in args)
+											inferExprType(a, scope, ctx, pos);
+										TyType.unknown();
+									} else {
+										extension.type;
+									}
 								}
 							case _:
 								// Fully-qualified static call: `pack.sub.Type.method(...)`.
@@ -1342,14 +1487,19 @@ class TyperStage {
 
 								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
-								for (a in args)
-									inferExprType(a, scope, ctx, pos);
 								final idx = ctx.getIndex();
 								final c2 = nominalInfoForType(idx, objTy);
-								if (c2 != null) {
+								if (c2 != null && c2.instanceMethodCandidates(field).length > 0) {
 									resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 								} else {
-									TyType.unknown();
+									final extension = resolveExtensionCall(obj, field, args, scope, ctx, pos);
+									if (extension == null) {
+										for (a in args)
+											inferExprType(a, scope, ctx, pos);
+										TyType.unknown();
+									} else {
+										extension.type;
+									}
 								}
 						}
 					case _:
@@ -1362,41 +1512,68 @@ class TyperStage {
 			case EVars(declarations):
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);
-					if (initializer != null)
-						inferExprType(initializer, scope, ctx, HxExprVarDecl.getPosition(declaration));
+					final initializerType = initializer == null ? TyType.unknown() : inferExprType(initializer, scope, ctx,
+						HxExprVarDecl.getPosition(declaration));
+					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
+					final localType = writtenType.length == 0 ? initializerType : typeFromHintInContext(writtenType, ctx);
+					scope.declareLocal(HxExprVarDecl.getName(declaration), localType, Variable);
 				}
 				TyType.fromHintText("Void");
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw new TyperError(ctx.getFilePath(), pos, "expression-level variable declaration must be nested inside EVars");
 			case EWhile(condition, body, _, loopPosition):
 				inferExprType(condition, scope, ctx, loopPosition);
+				scope.enterLexicalScope();
 				for (entry in body)
 					inferExprType(entry, scope, ctx, loopPosition);
+				scope.exitLexicalScope();
 				TyType.fromHintText("Void");
 			case EBreak(_) | EContinue(_):
 				TyType.noNormalCompletion();
 			case ELambda(argNames, body):
-				// Stage 3 bring-up: type the body in a nested scope that:
-				// - introduces lambda args (shadowing outer locals/params),
-				// - but preserves visibility of outer locals/params for capture.
-				//
-				final lambdaArgs = new Array<TySymbol>();
+				// Lambda parameters shadow outer names while unresolved reads still
+				// select the captured declaration from the enclosing scope.
+				scope.enterLexicalScope();
 				for (n in argNames)
-					lambdaArgs.push(new TySymbol(n, TyType.fromHintText("Dynamic")));
-				final combinedParams = lambdaArgs.concat(scope.getParams().copy());
-				final combinedLocals = scope.getLocals().copy();
-				final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
-				final result = inferExprType(body, nested, ctx, pos);
+					scope.declareLocal(n, TyType.fromHintText("Dynamic"), LambdaParameter);
+				final result = inferExprType(body, scope, ctx, pos);
+				scope.exitLexicalScope();
 				TyType.functionType([for (_ in argNames) TyType.fromHintText("Dynamic")], result);
 			case EMacroExpr(inner, _wrappers):
 				inferExprType(inner, scope, ctx, pos);
 				TyType.fromHintText("haxe.macro.Expr");
 			case EMacroType(_typeText):
 				TyType.fromHintText("haxe.macro.ComplexType");
-			case ETryCatchRaw(_raw):
-				// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
-				// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.
-				TyType.fromHintText("Dynamic");
+			case ETryCatchRaw(raw):
+				final recovered = TypedBodyBuilder.recoveredOpaqueBlockStatements(raw);
+				if (recovered == null) {
+					final structural = TypedBodyBuilder.recoveredStructuralExpression(raw);
+					if (structural == null) {
+						// Stage 3 bring-up: richer try/catch expressions remain an
+						// explicitly dynamic structural leaf until their typed control
+						// model is available.
+						TyType.fromHintText("Dynamic");
+					} else {
+						inferExprType(structural, scope, ctx, pos);
+					}
+				} else {
+					scope.enterLexicalScope();
+					var resultType = TyType.fromHintText("Void");
+					for (statement in recovered)
+						switch (statement) {
+							case SVar(name, typeHint, initializer, declarationPosition, _):
+								final initializerType = initializer == null ? TyType.unknown() : inferExprType(initializer, scope, ctx, declarationPosition);
+								final writtenType = StringTools.trim(typeHint == null ? "" : typeHint);
+								final localType = writtenType.length == 0 ? initializerType : typeFromHintInContext(writtenType, ctx);
+								scope.declareLocal(name, localType, Variable);
+								resultType = TyType.fromHintText("Void");
+							case SExpr(value, expressionPosition):
+								resultType = inferExprType(value, scope, ctx, expressionPosition);
+							case _:
+						}
+					scope.exitLexicalScope();
+					resultType;
+				}
 			case ESwitchRaw(_raw):
 				// Stage 3 bring-up: we only preserve the shape of `switch` expressions so parsing/typing
 				// can proceed deterministically through upstream-shaped code (notably runci).
@@ -1413,10 +1590,10 @@ class TyperStage {
 						final pattern = patterns[i];
 						final branchExpr = exprs[i];
 						var branchTy:TyType = TyType.unknown();
-						// Bring-up: we do not model nested scopes yet; declare pattern binders as
-						// best-effort locals so case bodies can type their references.
+						scope.enterLexicalScope();
 						declarePatternBindings(scope, pattern, scrutTy);
 						branchTy = inferExprType(branchExpr, scope, ctx, pos);
+						scope.exitLexicalScope();
 
 						if (out.isUnknown())
 							out = branchTy;
@@ -1433,8 +1610,10 @@ class TyperStage {
 			case ENew(_typePath, args):
 				for (a in args)
 					inferExprType(a, scope, ctx, pos);
-				final c = ctx.resolveType(_typePath);
-				c != null ? TyType.nominal(c.getIdentity(), [], c.getFullName()) : TyType.fromHintText(_typePath);
+				// The parsed constructor path may be an applied type such as
+				// `Box<Int->Int>`. Resolve the structural hint so the exact
+				// nominal identity and its arguments reach local facts together.
+				typeFromHintInContext(_typePath, ctx);
 			case EUnop(_op, _fixity, e):
 				final inner = inferExprType(e, scope, ctx, pos);
 				final semanticIndex = ctx.getIndex();
@@ -1449,10 +1628,24 @@ class TyperStage {
 				if (bound != null) {
 					bound.getResultType();
 				} else {
-					switch (_op) {
-						case LogicalNot: TyType.fromHintText("Bool");
-						case Negate: inner.isNumeric() ? inner : TyType.unknown();
-						case Increment | Decrement | BitwiseNot: inner;
+					if (_op == LogicalNot)
+						TyType.fromHintText("Bool");
+					else if (_op == Negate)
+						inner.isNumeric() ? inner : TyType.unknown();
+					else {
+						if ((_op == Increment || _op == Decrement)
+							&& !isPropertyUpdate // Stage3 still models an abstract backing carrier as
+							// `this` in a small compatibility subset. Its explicit
+							// write-back is validated by the typed abstract lowering.
+							&& !e.match(EThis)
+							&& !inner.isNumeric()
+							&& !inner.isDynamic()
+							&& !inner.isUnknown()
+							&& !inner.isUnresolved())
+							throw new TyperError(ctx.getFilePath(), pos, inner.getDisplay() + " should be Int");
+						// Bitwise-not and accepted increment/decrement operations keep
+						// the operand type when no abstract operator overrides it.
+						inner;
 					}
 				}
 			case EBinop(op, a, b):
@@ -1468,11 +1661,17 @@ class TyperStage {
 							case EIdent(name):
 								final sym = scope.resolveSymbol(name);
 								if (sym != null) {
-									final u = TyType.unify(sym.getType(), rhs);
+									final u = assignedLocalType(sym.getType(), rhs);
 									if (u == null) {
-										// Bootstrap: don't fail hard on complex types (generics, abstracts, etc.).
-										// Keep typing moving by widening to Dynamic.
-										sym.setType(TyType.fromHintText("Dynamic"));
+										if (isStrict()) {
+											throw new TyperError(ctx.getFilePath(), pos,
+												"assigned type " + rhs + " is not compatible with local " + name + ":" + sym.getType());
+										}
+										// An already-known local type remains the semantic contract
+										// in permissive bring-up mode. Conversion typing is incomplete,
+										// so widening it to Dynamic here would erase exact written or
+										// inferred facts before a backend can apply the required
+										// assignment conversion.
 										rhs;
 									} else {
 										sym.setType(u);
@@ -1497,7 +1696,7 @@ class TyperStage {
 								case EIdent(name):
 									final symbol = scope.resolveSymbol(name);
 									if (symbol != null) {
-										final unified = TyType.unify(symbol.getType(), rightType);
+										final unified = assignedLocalType(symbol.getType(), rightType);
 										if (unified != null)
 											symbol.setType(unified);
 									}
@@ -1554,18 +1753,19 @@ class TyperStage {
 				final t2 = inferExprType(elseExpr, scope, ctx, pos);
 				final u = TyType.unify(t1, t2);
 				u == null ? TyType.fromHintText("Dynamic") : u;
-			case EAnon(_names, values):
-				for (v in values)
-					inferExprType(v, scope, ctx, pos);
-				TyType.fromHintText("Dynamic");
+			case EAnon(names, values):
+				final fieldTypes = [for (value in values) inferExprType(value, scope, ctx, pos)];
+				TyType.anonymous(names, fieldTypes);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				// Bring-up: type the iterable and bind the loop variable for the yield expression.
 				final itTy = inferExprType(iterable, scope, ctx, pos);
 				final elemTy = arrayElementType(itTy);
-				scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"));
+				scope.enterLexicalScope();
+				scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"), ComprehensionVariable);
 				if (guardExpr != null)
 					inferExprType(guardExpr, scope, ctx, pos);
 				inferExprType(yieldExpr, scope, ctx, pos);
+				scope.exitLexicalScope();
 				TyType.fromHintText("Array<Dynamic>");
 			case EArrayDecl(values):
 				var elem:TyType = TyType.unknown();

@@ -1,6 +1,4 @@
 import haxe.io.Path;
-import TypedExpr.TypedExprTag;
-import TypedStmt.TypedStmtTag;
 
 /**
 	Target-neutral revisions observed for one fully typed Haxe module.
@@ -18,6 +16,9 @@ import TypedStmt.TypedStmtTag;
 	The generated-declaration observation separately identifies fields and methods
 	produced by build macros, whose result can change while the annotated source is
 	byte-for-byte identical.
+	The macro-file observation identifies external files explicitly registered for
+	this module through `Context.registerModuleDependency`. It retains only path and
+	content revisions, not the external path or bytes.
 
 	The public-interface revision contains the resolved class and member signatures
 	that another module can consume. The implementation revision additionally
@@ -38,12 +39,15 @@ class CompilerTypedModuleRevision {
 	public final sourceOriginDescription:String;
 	public final conditionalCompilation:CompilerConditionalCompilationObservation;
 	public final generatedDeclarations:CompilerGeneratedDeclarationObservation;
+	public final macroFileDependencies:CompilerMacroFileDependencyObservation;
 	public final publicInterfaceRevision:String;
 	public final implementationRevision:String;
 
+	final canonicalIdentity:String;
+
 	public function new(modulePath:String, publicInterfaceRevision:String, implementationRevision:String, ?sourceRevision:String,
 			?sourceOriginRevision:String, ?sourceOriginDescription:String, ?conditionalCompilation:CompilerConditionalCompilationObservation,
-			?generatedDeclarations:CompilerGeneratedDeclarationObservation) {
+			?generatedDeclarations:CompilerGeneratedDeclarationObservation, ?macroFileDependencies:CompilerMacroFileDependencyObservation) {
 		this.modulePath = normalize(modulePath);
 		this.publicInterfaceRevision = publicInterfaceRevision == null ? "" : publicInterfaceRevision;
 		this.implementationRevision = implementationRevision == null ? "" : implementationRevision;
@@ -52,11 +56,28 @@ class CompilerTypedModuleRevision {
 		this.sourceOriginDescription = sourceOriginDescription == null ? this.modulePath + "@synthetic" : sourceOriginDescription;
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
 		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
+		this.macroFileDependencies = macroFileDependencies == null ? CompilerMacroFileDependencyObservation.empty() : macroFileDependencies;
 		if (this.modulePath.length == 0)
 			throw "typed module revision requires a module path";
+		canonicalIdentity = CompilerCacheIdentity.encode([
+			"compiler-typed-module-revision-v1",
+			this.modulePath,
+			this.sourceRevision,
+			this.sourceOriginRevision,
+			this.sourceOriginDescription,
+			this.conditionalCompilation.getCanonicalIdentity(),
+			this.generatedDeclarations.getCanonicalIdentity(),
+			this.macroFileDependencies.getCanonicalIdentity(),
+			this.publicInterfaceRevision,
+			this.implementationRevision,
+		]);
 	}
 
-	public static function fromTypedModule(module:TypedModule):CompilerTypedModuleRevision {
+	/** Return the complete exact identity of this sealed module observation. **/
+	public function getCanonicalIdentity():String
+		return canonicalIdentity;
+
+	public static function fromTypedModule(module:TypedModule, ?macroFileDependencies:CompilerMacroFileDependencyObservation):CompilerTypedModuleRevision {
 		if (module == null)
 			throw "cannot observe a null typed module";
 		final parsed = module.getParsed();
@@ -81,7 +102,7 @@ class CompilerTypedModuleRevision {
 			addPublicClassFacts(publicFacts, typedClass);
 		final publicRevision = CompilerCacheIdentity.encode(publicFacts);
 		final implementationFacts = new Array<Null<String>>();
-		implementationFacts.push("typed-module-implementation-v5");
+		implementationFacts.push("typed-module-implementation-v9");
 		implementationFacts.push(modulePath);
 		implementationFacts.push(publicRevision);
 		addDirectives(implementationFacts, directives);
@@ -93,18 +114,17 @@ class CompilerTypedModuleRevision {
 			for (fieldInitializer in typedClass.getFieldInitializers()) {
 				implementationFacts.push("typed-field-initializer");
 				implementationFacts.push(fieldInitializer.getField().getCanonicalKey());
-				addTypedExpression(implementationFacts, fieldInitializer.getExpression());
+				implementationFacts.push(CompilerTypedTreeRevision.expression(fieldInitializer.getField()
+					.getCanonicalKey(), fieldInitializer.getExpression()));
 			}
 			for (typedFunction in typedClass.getFunctions()) {
-				implementationFacts.push("typed-function");
-				implementationFacts.push(typedFunction.getStableIdentity());
-				for (statement in typedFunction.getBody().getStatements())
-					addTypedStatement(implementationFacts, statement);
+				implementationFacts.push("typed-function-body-revision");
+				implementationFacts.push(CompilerTypedTreeRevision.functionBody(typedFunction));
 			}
 		}
 		final implementationRevision = CompilerCacheIdentity.encode(implementationFacts);
 		return new CompilerTypedModuleRevision(modulePath, publicRevision, implementationRevision, sourceRevision, sourceOriginRevision,
-			sourceOriginDescription, conditionalCompilation, generatedDeclarations);
+			sourceOriginDescription, conditionalCompilation, generatedDeclarations, macroFileDependencies);
 	}
 
 	public static function semanticModulePath(module:TypedModule):String {
@@ -136,6 +156,7 @@ class CompilerTypedModuleRevision {
 		final sourceOriginDescriptions = new Array<String>();
 		final conditionalCompilations = new Array<CompilerConditionalCompilationObservation>();
 		final generatedDeclarations = new Array<CompilerGeneratedDeclarationObservation>();
+		final macroFileDependencies = new Array<CompilerMacroFileDependencyObservation>();
 		final publicValues = new Array<String>();
 		final implementationValues = new Array<String>();
 		for (contribution in contributions) {
@@ -146,6 +167,7 @@ class CompilerTypedModuleRevision {
 			sourceOriginDescriptions.push(contribution.sourceOriginDescription);
 			conditionalCompilations.push(contribution.conditionalCompilation);
 			generatedDeclarations.push(contribution.generatedDeclarations);
+			macroFileDependencies.push(contribution.macroFileDependencies);
 			publicValues.push(contribution.publicInterfaceRevision);
 			implementationValues.push(contribution.implementationRevision);
 		}
@@ -164,11 +186,14 @@ class CompilerTypedModuleRevision {
 		final generatedRevisionValues = uniqueSorted([for (generated in generatedDeclarations) generated.getCanonicalIdentity()]);
 		if (generatedRevisionValues.length != 1)
 			throw 'typed module revision merge received conflicting generated-declaration observations for ${normalizedPath}';
+		final macroFileRevisionValues = uniqueSorted([for (observation in macroFileDependencies) observation.getCanonicalIdentity()]);
+		if (macroFileRevisionValues.length != 1)
+			throw 'typed module revision merge received conflicting macro-file dependency observations for ${normalizedPath}';
 		final sourceRevision = uniqueSourceValues[0];
 		final publicRevision = CompilerCacheIdentity.encode(["typed-module-public-interface-set-v1", normalizedPath].concat(uniqueSorted(publicValues)));
 		final implementationRevision = CompilerCacheIdentity.encode(["typed-module-implementation-set-v1", normalizedPath].concat(uniqueSorted(implementationValues)));
 		return new CompilerTypedModuleRevision(normalizedPath, publicRevision, implementationRevision, sourceRevision, uniqueSourceOriginValues[0],
-			uniqueSourceOriginDescriptions[0], conditionalCompilations[0], generatedDeclarations[0]);
+			uniqueSourceOriginDescriptions[0], conditionalCompilations[0], generatedDeclarations[0], macroFileDependencies[0]);
 	}
 
 	static function addPublicClassFacts(out:Array<Null<String>>, typedClass:TypedClass):Void {
@@ -269,219 +294,6 @@ class CompilerTypedModuleRevision {
 		if (values != null)
 			for (value in values)
 				out.push(value ? "true" : "false");
-	}
-
-	static function addTypedStatement(out:Array<Null<String>>, statement:TypedStmt):Void {
-		if (statement == null) {
-			out.push("null-statement");
-			return;
-		}
-		out.push("statement:" + statementTagName(statement.getTag()));
-		addStrings(out, statement.getNames());
-		addStrings(out, statement.getCatchNames());
-		addStrings(out, statement.getCatchTypeHints());
-		addStrings(out, statement.getMetadata());
-		for (pattern in statement.getPatterns())
-			addPattern(out, pattern);
-		for (expression in statement.getExpressions())
-			addTypedExpression(out, expression);
-		for (child in statement.getStatements())
-			addTypedStatement(out, child);
-	}
-
-	static function addTypedExpression(out:Array<Null<String>>, expression:TypedExpr):Void {
-		if (expression == null) {
-			out.push("null-expression");
-			return;
-		}
-		out.push("expression:" + expressionTagName(expression.getTag()));
-		out.push(expression.getType().getSemanticKey());
-		addStrings(out, expression.getTexts());
-		out.push(expression.getBoolValue() ? "true" : "false");
-		out.push(Std.string(expression.getIntValue()));
-		out.push(Std.string(expression.getFloatValue()));
-		final declaration = expression.getDeclaration();
-		out.push(declaration == null ? null : declaration.getIdentity().getCanonicalKey());
-		final fieldInfo = expression.getFieldInfo();
-		out.push(fieldInfo == null ? null : fieldInfo.getCanonicalKey());
-		out.push(unaryOperatorName(expression.getUnaryOperator()));
-		out.push(unaryFixityName(expression.getUnaryFixity()));
-		out.push(opaqueKindName(expression.getOpaqueKind()));
-		for (pattern in expression.getPatterns())
-			addPattern(out, pattern);
-		for (child in expression.getExpressions())
-			addTypedExpression(out, child);
-	}
-
-	static function addPattern(out:Array<Null<String>>, pattern:HxSwitchPattern):Void {
-		switch (pattern) {
-			case PNull:
-				out.push("pattern:null");
-			case PWildcard:
-				out.push("pattern:wildcard");
-			case PBool(value):
-				out.push(value ? "pattern:bool:true" : "pattern:bool:false");
-			case PString(value):
-				out.push("pattern:string");
-				out.push(value);
-			case PInt(value):
-				out.push("pattern:int");
-				out.push(Std.string(value));
-			case PEnumValue(name):
-				out.push("pattern:enum-value");
-				out.push(name);
-			case PEnumExtract(name, arguments):
-				out.push("pattern:enum-extract");
-				out.push(name);
-				for (argument in arguments)
-					addPattern(out, argument);
-			case PObject(fieldNames, fieldPatterns):
-				out.push("pattern:object");
-				addStrings(out, fieldNames);
-				for (fieldPattern in fieldPatterns)
-					addPattern(out, fieldPattern);
-			case PCapture(name, inner):
-				out.push("pattern:capture");
-				out.push(name);
-				addPattern(out, inner);
-			case PArray(items):
-				out.push("pattern:array");
-				for (item in items)
-					addPattern(out, item);
-			case PExtractor(extractorText, resultPattern):
-				out.push("pattern:extractor");
-				out.push(extractorText);
-				addPattern(out, resultPattern);
-			case PLengthGuard(inner, bindingName, length):
-				out.push("pattern:length-guard");
-				out.push(bindingName);
-				out.push(Std.string(length));
-				addPattern(out, inner);
-			case PStartsWithGuard(inner, bindingName, prefix):
-				out.push("pattern:starts-with-guard");
-				out.push(bindingName);
-				out.push(prefix);
-				addPattern(out, inner);
-			case PIntEqualsGuard(inner, bindingName, value):
-				out.push("pattern:int-equals-guard");
-				out.push(bindingName);
-				out.push(Std.string(value));
-				addPattern(out, inner);
-			case PIntCompareGuard(inner, bindingName, op, value):
-				out.push("pattern:int-compare-guard");
-				out.push(bindingName);
-				out.push(op);
-				out.push(Std.string(value));
-				addPattern(out, inner);
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				out.push("pattern:parsed-int-switch-guard");
-				out.push(bindingName);
-				out.push(Std.string(multiplier));
-				out.push(Std.string(matchValue));
-				addPattern(out, inner);
-			case PUnsupportedGuard(inner):
-				out.push("pattern:unsupported-guard");
-				addPattern(out, inner);
-			case PBind(name):
-				out.push("pattern:bind");
-				out.push(name);
-			case POr(patterns):
-				out.push("pattern:or");
-				for (child in patterns)
-					addPattern(out, child);
-		}
-	}
-
-	static function statementTagName(tag:TypedStmtTag):String {
-		return switch (tag) {
-			case Block: "block";
-			case Var: "var";
-			case If: "if";
-			case ForIn: "for-in";
-			case ForKeyValue: "for-key-value";
-			case While: "while";
-			case DoWhile: "do-while";
-			case Switch: "switch";
-			case Try: "try";
-			case Break: "break";
-			case Continue: "continue";
-			case Throw: "throw";
-			case ReturnVoid: "return-void";
-			case Return: "return";
-			case Expression: "expression";
-		};
-	}
-
-	static function expressionTagName(tag:TypedExprTag):String {
-		return switch (tag) {
-			case NullValue: "null";
-			case BoolValue: "bool";
-			case StringValue: "string";
-			case IntValue: "int";
-			case FloatValue: "float";
-			case EnumValue: "enum";
-			case ThisValue: "this";
-			case SuperValue: "super";
-			case LocalRead: "local-read";
-			case NameRead: "name-read";
-			case FieldRead: "field-read";
-			case NullSafeFieldRead: "null-safe-field-read";
-			case Call: "call";
-			case MacroExpr: "macro-expr";
-			case MacroType: "macro-type";
-			case Lambda: "lambda";
-			case SwitchExpr: "switch";
-			case NewValue: "new";
-			case Unary: "unary";
-			case Binary: "binary";
-			case Assign: "assign";
-			case CompoundAssign: "compound-assign";
-			case Ternary: "ternary";
-			case Anonymous: "anonymous";
-			case ArrayComprehension: "array-comprehension";
-			case ArrayDecl: "array";
-			case ArrayAccess: "array-access";
-			case Range: "range";
-			case Cast: "cast";
-			case Untyped: "untyped";
-			case Opaque: "opaque";
-			case Block: "block";
-			case Temporary: "temporary";
-			case ReturnExpr: "return";
-			case VariableDeclarations: "variable-declarations";
-			case VariableDeclaration: "variable-declaration";
-			case WhileExpr: "while";
-			case BreakExpr: "break";
-			case ContinueExpr: "continue";
-		};
-	}
-
-	static function unaryOperatorName(unaryOperator:Null<HxUnaryOperator>):Null<String> {
-		return switch (unaryOperator) {
-			case null: null;
-			case Increment: "increment";
-			case Decrement: "decrement";
-			case Negate: "negate";
-			case LogicalNot: "logical-not";
-			case BitwiseNot: "bitwise-not";
-		};
-	}
-
-	static function unaryFixityName(fixity:Null<HxUnaryFixity>):Null<String> {
-		return switch (fixity) {
-			case null: null;
-			case Prefix: "prefix";
-			case Postfix: "postfix";
-		};
-	}
-
-	static function opaqueKindName(kind:Null<TypedOpaqueExprKind>):Null<String> {
-		return switch (kind) {
-			case null: null;
-			case TryCatch: "try-catch";
-			case Switch: "switch";
-			case Unsupported: "unsupported";
-		};
 	}
 
 	static function addStrings(out:Array<Null<String>>, values:Array<String>):Void {

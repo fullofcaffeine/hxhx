@@ -80,7 +80,6 @@ echo "== Targeted bootstrap kind refresh: compiling harness via $HAXE_BIN"
 	-D no-traces \
 	-D no_traces \
 	-D reflaxe_ocaml \
-	-D hih_native_parser \
 	-D ocaml_emit_only \
 	-D "ocaml_output=$OUT_DIR"
 

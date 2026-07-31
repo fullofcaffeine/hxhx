@@ -18,18 +18,16 @@ Run it via:
 npm run test:acceptance
 ```
 
-Native frontend hook:
+Frontend ownership:
 
-- This example enables `-D hih_native_parser` by default (see `build.hxml`).
-- In that mode, parsing is performed by stub OCaml modules copied from:
-  - `std/runtime/HxHxNativeLexer.ml`
-  - `std/runtime/HxHxNativeParser.ml`
-- This matches the upstream bootstrap strategy (#6843): keep lexer/parser native
-  while reimplementing the rest of the compiler pipeline in Haxe.
-- Wire format: `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md`
+- This workload uses the same Haxe-authored `HxParser` as product and bootstrap
+  compiler builds.
+- Earlier versions selected a handwritten OCaml parser with a build define.
+  That duplicate semantic path was retired after it interpreted valid source
+  differently from `HxParser`.
 - Upstream alignment: `CompilerDriver` embeds a tiny subset of fixtures shaped
-  after upstream `tests/misc` module-resolution files (and asserts native vs
-  pure-Haxe parser agreement for this subset).
+  after upstream `tests/misc` module-resolution files and checks the normal
+  `ParserStage` result against direct `HxParser` output.
 
 Related docs:
 

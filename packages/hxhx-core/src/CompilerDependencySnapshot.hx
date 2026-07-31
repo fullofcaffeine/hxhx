@@ -6,19 +6,23 @@
 	so equivalent compilations produce the same observation independent of map
 	iteration order. Equivalent repeated observations of one logical module are
 	coalesced. Two observations that reuse a module name but disagree on source,
-	conditional-compilation choices, generated declarations, public interface, or implementation fail
+	conditional-compilation choices, generated declarations, macro-file inputs,
+	public interface, or implementation fail
 	instead of silently overwriting one.
 **/
 class CompilerDependencySnapshot {
 	final modules:Array<CompilerTypedModuleRevision>;
 	final edges:Array<CompilerDependencyEdge>;
+	final programConfiguration:CompilerProgramConfigurationObservation;
 	final canonicalIdentity:String;
 
-	public function new(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>) {
+	public function new(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>,
+			?programConfiguration:CompilerProgramConfigurationObservation) {
 		this.modules = normalizeModules(modules);
 		this.edges = edges == null ? [] : edges.copy();
 		this.edges.sort(compareEdges);
-		canonicalIdentity = buildCanonicalIdentity(this.modules, this.edges);
+		this.programConfiguration = programConfiguration == null ? CompilerProgramConfigurationObservation.empty() : programConfiguration;
+		canonicalIdentity = buildCanonicalIdentity(this.modules, this.edges, this.programConfiguration);
 	}
 
 	public function getModules():Array<CompilerTypedModuleRevision>
@@ -26,6 +30,9 @@ class CompilerDependencySnapshot {
 
 	public function getEdges():Array<CompilerDependencyEdge>
 		return edges.copy();
+
+	public function getProgramConfiguration():CompilerProgramConfigurationObservation
+		return programConfiguration;
 
 	public function getCanonicalIdentity():String
 		return canonicalIdentity;
@@ -37,20 +44,14 @@ class CompilerDependencySnapshot {
 		return null;
 	}
 
-	static function buildCanonicalIdentity(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>):String {
+	static function buildCanonicalIdentity(modules:Array<CompilerTypedModuleRevision>, edges:Array<CompilerDependencyEdge>,
+			programConfiguration:CompilerProgramConfigurationObservation):String {
 		final values = new Array<Null<String>>();
-		values.push("compiler-dependency-snapshot-v4");
+		values.push("compiler-dependency-snapshot-v7");
+		values.push(programConfiguration.getCanonicalIdentity());
 		values.push(Std.string(modules.length));
-		for (module in modules) {
-			values.push(module.modulePath);
-			values.push(module.sourceRevision);
-			values.push(module.sourceOriginRevision);
-			values.push(module.sourceOriginDescription);
-			values.push(module.conditionalCompilation.getCanonicalIdentity());
-			values.push(module.generatedDeclarations.getCanonicalIdentity());
-			values.push(module.publicInterfaceRevision);
-			values.push(module.implementationRevision);
-		}
+		for (module in modules)
+			values.push(module.getCanonicalIdentity());
 		values.push(Std.string(edges.length));
 		for (edge in edges)
 			values.push(edge.canonicalKey());
@@ -77,6 +78,7 @@ class CompilerDependencySnapshot {
 				&& previous.sourceOriginDescription == module.sourceOriginDescription
 				&& previous.conditionalCompilation.getCanonicalIdentity() == module.conditionalCompilation.getCanonicalIdentity()
 				&& previous.generatedDeclarations.getCanonicalIdentity() == module.generatedDeclarations.getCanonicalIdentity()
+				&& previous.macroFileDependencies.getCanonicalIdentity() == module.macroFileDependencies.getCanonicalIdentity()
 				&& previous.publicInterfaceRevision == module.publicInterfaceRevision
 				&& previous.implementationRevision == module.implementationRevision;
 			if (!equivalent)

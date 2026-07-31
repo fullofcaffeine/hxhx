@@ -641,7 +641,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(listClass, lookup);
 		final kindLabel = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(kind);
 		assertTrue(kindLabel == "runtime_module", "haxe.ds.List should render through target-owned runtime support");
-		resetRendererCaches();
 		final start = Sys.time();
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(listClass, lookup);
 		final elapsed = Sys.time() - start;
@@ -676,22 +675,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(deps.indexOf("BodyOnly") < 0, "compile-time macro API helper body dependencies should not enter runtime C++ reachability");
 	}
 
-	static function resetRendererCaches():Void {
-		// Match the cache boundary used by CppTargetCore.renderProgram so each
-		// repetition measures a cold render pass, while classes within one pass
-		// can still share caches like the real helper renderer does.
-		@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
-		@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache = new StringMap<String>();
-		@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache = new StringMap<String>();
-		@:privateAccess backend.cpp.CppTargetCore.functionArgTypesCache = new StringMap<Array<String>>();
-		@:privateAccess backend.cpp.CppTargetCore.functionReturnTypesCache = new StringMap<String>();
-		@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache = new StringMap<Bool>();
-	}
-
 	static function renderOnce(extraMethods:Int):HelperRenderBenchResult {
 		final fixture = buildLookup(extraMethods);
 		final classOrder = ["List", "Dispatcher", "TestHandler", "TestResult", "RunnerGenericLike"];
-		resetRendererCaches();
 		final start = Sys.time();
 		final renderedParts = new Array<String>();
 		final classTimings = new Array<String>();
@@ -728,7 +714,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		classes.set("PrimitiveCallArgBenchOwner", owner);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
 		final args = [EString("literal"), EInt(7), EBool(true), EFloat(1.25)];
-		resetRendererCaches();
 		final start = Sys.time();
 		var sample = "";
 		for (_ in 0...callCount)
@@ -760,36 +745,30 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final negativeInt = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1));
 		final negativeFloat = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EFloat(1.5));
 		final nonLiteral = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EIdent("number"));
-		resetRendererCaches();
 		final fullStart = Sys.time();
 		var fullSample = "";
 		for (_ in 0...callCount)
 			fullSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(negativeInt, intParam, scope, "int");
 		final fullElapsed = Sys.time() - fullStart;
-		resetRendererCaches();
 		final literalTypeStart = Sys.time();
 		var literalTypeSample:Null<String> = null;
 		for (_ in 0...callCount)
 			literalTypeSample = @:privateAccess backend.cpp.CppTargetCore.primitiveLiteralCallArgCppType(negativeInt);
 		final literalTypeElapsed = Sys.time() - literalTypeStart;
-		resetRendererCaches();
 		final directStart = Sys.time();
 		var directSample:Null<String> = null;
 		for (_ in 0...callCount)
 			directSample = @:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(negativeInt, "int", scope);
 		final directElapsed = Sys.time() - directStart;
-		resetRendererCaches();
 		final declaredTypeStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(intParam, scope);
 		final declaredTypeElapsed = Sys.time() - declaredTypeStart;
-		resetRendererCaches();
 		final primitiveGateStart = Sys.time();
 		var primitiveGateSample = false;
 		for (_ in 0...callCount)
 			primitiveGateSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractCallArgMayNeedConversion(intParam, "int", scope);
 		final primitiveGateElapsed = Sys.time() - primitiveGateStart;
-		resetRendererCaches();
 		final abstractProbeStart = Sys.time();
 		var abstractGateSample = false;
 		for (_ in 0...callCount)
@@ -856,7 +835,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(literalCall == "Bytes::ofString(std::string(\"literal\"))", "Bytes.ofString literal calls should keep the explicit std::string wrapper");
 		final expression = ECall(EField(ECall(EField(ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s1")]), "sub"), [EInt(0), EInt(1)]), "compare"),
 			[ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s2")])]);
-		resetRendererCaches();
 		final start = Sys.time();
 		var sample = "";
 		for (_ in 0...callCount)
@@ -886,21 +864,18 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directBytesOfStringArgExpr(EIdent("text"), scope) == null,
 			"Bytes.ofString should keep primitive-backed String abstracts on generic adaptation");
 		scope.localTypeHints.set("text", "String");
-		resetRendererCaches();
 		final valueStart = Sys.time();
 		var valueSample = "";
 		for (_ in 0...callCount)
 			for (arg in args)
 				valueSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(arg, "std::string", scope);
 		final valueElapsed = Sys.time() - valueStart;
-		resetRendererCaches();
 		final stringStart = Sys.time();
 		var stringSample = "";
 		for (_ in 0...callCount)
 			for (arg in args)
 				stringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(arg, scope);
 		final stringElapsed = Sys.time() - stringStart;
-		resetRendererCaches();
 		final directStart = Sys.time();
 		var directSample = "";
 		for (_ in 0...callCount)
@@ -973,7 +948,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
 		final replace = ECall(EField(fresh, "replace"), [EString("aa"), EString("x")]);
 		final map = ECall(EField(fresh, "map"), [EString("aa"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
-		resetRendererCaches();
 		final start = Sys.time();
 		var sample = "";
 		for (_ in 0...callCount)
@@ -999,25 +973,21 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final match = ECall(EField(fresh, "match"), matchArgs);
 		final replace = ECall(EField(fresh, "replace"), [EString("aa"), EString("x")]);
 		final map = ECall(EField(fresh, "map"), [EString("aa"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
-		resetRendererCaches();
 		final fullStart = Sys.time();
 		var fullSample = "";
 		for (_ in 0...callCount)
 			fullSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(match, scope);
 		final fullElapsed = Sys.time() - fullStart;
-		resetRendererCaches();
 		final constructorStart = Sys.time();
 		var constructorSample = "";
 		for (_ in 0...callCount)
 			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
 		final constructorElapsed = Sys.time() - constructorStart;
-		resetRendererCaches();
 		final argsStart = Sys.time();
 		var argsSample = "";
 		for (_ in 0...callCount)
 			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "match", matchArgs, scope).join(", ");
 		final argsElapsed = Sys.time() - argsStart;
-		resetRendererCaches();
 		final shapeSample = [@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(match, scope), @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(replace, scope), @:privateAccess
@@ -1077,67 +1047,56 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "replace"), [EIdent("number"), EIdent("replacement")]), scope), @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "map"), [EIdent("typedText"), EIdent("callback")]), scope)
 		].join("\n");
-		resetRendererCaches();
 		final mapRenderStart = Sys.time();
 		var mapRenderSample = "";
 		for (_ in 0...callCount)
 			mapRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(map, scope);
 		final mapRenderElapsed = Sys.time() - mapRenderStart;
-		resetRendererCaches();
 		final replaceRenderStart = Sys.time();
 		var replaceRenderSample = "";
 		for (_ in 0...callCount)
 			replaceRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(replace, scope);
 		final replaceRenderElapsed = Sys.time() - replaceRenderStart;
-		resetRendererCaches();
 		final mapInferStart = Sys.time();
 		var mapInferSample = "";
 		for (_ in 0...callCount)
 			mapInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(map, scope);
 		final mapInferElapsed = Sys.time() - mapInferStart;
-		resetRendererCaches();
 		final replaceInferStart = Sys.time();
 		var replaceInferSample = "";
 		for (_ in 0...callCount)
 			replaceInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(replace, scope);
 		final replaceInferElapsed = Sys.time() - replaceInferStart;
-		resetRendererCaches();
 		final mapEqualityStart = Sys.time();
 		var mapEqualitySample = "";
 		for (_ in 0...callCount)
 			mapEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([map, EString("mapped")], scope).join(", ");
 		final mapEqualityElapsed = Sys.time() - mapEqualityStart;
-		resetRendererCaches();
 		final replaceEqualityStart = Sys.time();
 		var replaceEqualitySample = "";
 		for (_ in 0...callCount)
 			replaceEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([replace, EString("replaced")], scope).join(", ");
 		final replaceEqualityElapsed = Sys.time() - replaceEqualityStart;
-		resetRendererCaches();
 		final constructorStart = Sys.time();
 		var constructorSample = "";
 		for (_ in 0...callCount)
 			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
 		final constructorElapsed = Sys.time() - constructorStart;
-		resetRendererCaches();
 		final stringArgStart = Sys.time();
 		var stringArgSample = "";
 		for (_ in 0...callCount)
 			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegStringCallArgExpr(mapArgs[0], scope);
 		final stringArgElapsed = Sys.time() - stringArgStart;
-		resetRendererCaches();
 		final callbackArgStart = Sys.time();
 		var callbackArgSample = "";
 		for (_ in 0...callCount)
 			callbackArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackArgExpr(mapArgs[1], scope);
 		final callbackArgElapsed = Sys.time() - callbackArgStart;
-		resetRendererCaches();
 		final genericMapArgsStart = Sys.time();
 		var genericMapArgsSample = "";
 		for (_ in 0...callCount)
 			genericMapArgsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
 		final genericMapArgsElapsed = Sys.time() - genericMapArgsStart;
-		resetRendererCaches();
 		final genericReplaceArgsStart = Sys.time();
 		var genericReplaceArgsSample = "";
 		for (_ in 0...callCount)
@@ -1206,25 +1165,21 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("r", "", fresh, scope, "r_2") == "std::any",
 			"Fresh EReg inference should retain prepared renamed-local overrides");
 		scope.localTypeOverrides.remove("r_2");
-		resetRendererCaches();
 		final typeStart = Sys.time();
 		var typeSample = "";
 		for (_ in 0...callCount)
 			typeSample = @:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("r", "", fresh, scope, "r");
 		final typeElapsed = Sys.time() - typeStart;
-		resetRendererCaches();
 		final hintStart = Sys.time();
 		var hintSample = "";
 		for (_ in 0...callCount)
 			hintSample = @:privateAccess backend.cpp.CppTargetCore.cppTypeHint("EReg", scope);
 		final hintElapsed = Sys.time() - hintStart;
-		resetRendererCaches();
 		final initStart = Sys.time();
 		var initSample = "";
 		for (_ in 0...callCount)
 			initSample = @:privateAccess backend.cpp.CppTargetCore.renderLocalInitExpr(fresh, "auto", "std::shared_ptr<EReg>", scope);
 		final initElapsed = Sys.time() - initStart;
-		resetRendererCaches();
 		final constructorStart = Sys.time();
 		var constructorSample = "";
 		for (_ in 0...callCount)
@@ -1356,55 +1311,46 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("wrong:"), ECall(EField(split, "join"), [])), scope)
 			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(join, scope),
 			"Dynamic/scalar outer leaves, wrong join arity, and bare joins should retain general type inference");
-		resetRendererCaches();
 		final inferStart = Sys.time();
 		var inferSample = "";
 		for (_ in 0...callCount)
 			inferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(split, scope);
 		final inferElapsed = Sys.time() - inferStart;
-		resetRendererCaches();
 		final renderStart = Sys.time();
 		var renderSample = "";
 		for (_ in 0...callCount)
 			renderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(split, scope);
 		final renderElapsed = Sys.time() - renderStart;
-		resetRendererCaches();
 		final argsStart = Sys.time();
 		var argsSample = "";
 		for (_ in 0...callCount)
 			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "split", args, scope).join(", ");
 		final argsElapsed = Sys.time() - argsStart;
-		resetRendererCaches();
 		final lengthStart = Sys.time();
 		var lengthSample = "";
 		for (_ in 0...callCount)
 			lengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(length, scope);
 		final lengthElapsed = Sys.time() - lengthStart;
-		resetRendererCaches();
 		final lengthVectorStart = Sys.time();
 		var lengthVectorSample = false;
 		for (_ in 0...callCount)
 			lengthVectorSample = @:privateAccess backend.cpp.CppTargetCore.isCppVectorLengthExpr(length, scope);
 		final lengthVectorElapsed = Sys.time() - lengthVectorStart;
-		resetRendererCaches();
 		final lengthPrimitiveStart = Sys.time();
 		var lengthPrimitiveSample = false;
 		for (_ in 0...callCount)
 			lengthPrimitiveSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractPropertyExpr(split, "length", scope) != null;
 		final lengthPrimitiveElapsed = Sys.time() - lengthPrimitiveStart;
-		resetRendererCaches();
 		final lengthMethodValueStart = Sys.time();
 		var lengthMethodValueSample = false;
 		for (_ in 0...callCount)
 			lengthMethodValueSample = @:privateAccess backend.cpp.CppTargetCore.instanceMethodValueExpr(length, scope) != null;
 		final lengthMethodValueElapsed = Sys.time() - lengthMethodValueStart;
-		resetRendererCaches();
 		final lengthReferenceStart = Sys.time();
 		var lengthReferenceSample = false;
 		for (_ in 0...callCount)
 			lengthReferenceSample = @:privateAccess backend.cpp.CppTargetCore.exprHasReferenceType(split, scope);
 		final lengthReferenceElapsed = Sys.time() - lengthReferenceStart;
-		resetRendererCaches();
 		final lengthClassPreflightStart = Sys.time();
 		var lengthClassPreflightSample = false;
 		for (_ in 0...callCount)
@@ -1413,117 +1359,98 @@ class M14CppHelperRenderBenchIntegrationTest {
 				|| @:privateAccess backend.cpp.CppTargetCore.staticEnumTagValueExpr(split, "length", scope) != null
 				|| @:privateAccess backend.cpp.CppTargetCore.classReferenceValueExpr(length, scope) != null;
 		final lengthClassPreflightElapsed = Sys.time() - lengthClassPreflightStart;
-		resetRendererCaches();
 		final lengthPropertyStart = Sys.time();
 		var lengthPropertySample = false;
 		for (_ in 0...callCount)
 			lengthPropertySample = @:privateAccess backend.cpp.CppTargetCore.typedPropertyGetReadExpr(split, "length", scope) != null;
 		final lengthPropertyElapsed = Sys.time() - lengthPropertyStart;
-		resetRendererCaches();
 		final lengthJsonStart = Sys.time();
 		var lengthJsonSample = false;
 		for (_ in 0...callCount)
 			lengthJsonSample = @:privateAccess backend.cpp.CppTargetCore.jsonAnyFieldReadExpr(split, "length", scope) != null;
 		final lengthJsonElapsed = Sys.time() - lengthJsonStart;
-		resetRendererCaches();
 		final joinStart = Sys.time();
 		var joinSample = "";
 		for (_ in 0...callCount)
 			joinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(join, scope);
 		final joinElapsed = Sys.time() - joinStart;
-		resetRendererCaches();
 		final joinBoundStart = Sys.time();
 		var joinBoundSample = false;
 		for (_ in 0...callCount)
 			joinBoundSample = @:privateAccess backend.cpp.CppTargetCore.boundFunctionCallExpr(EField(split, "join"), joinArgs, scope) != null;
 		final joinBoundElapsed = Sys.time() - joinBoundStart;
-		resetRendererCaches();
 		final joinQualifiedStart = Sys.time();
 		var joinQualifiedSample = false;
 		for (_ in 0...callCount)
 			joinQualifiedSample = @:privateAccess backend.cpp.CppTargetCore.qualifiedValueTypeCarrierCtorExpr(split, "join", joinArgs, scope) != null;
 		final joinQualifiedElapsed = Sys.time() - joinQualifiedStart;
-		resetRendererCaches();
 		final joinReceiverTypeStart = Sys.time();
 		var joinReceiverTypeSample = "";
 		for (_ in 0...callCount)
 			joinReceiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(split, scope);
 		final joinReceiverTypeElapsed = Sys.time() - joinReceiverTypeStart;
-		resetRendererCaches();
 		final joinTemplateStart = Sys.time();
 		var joinTemplateSample = false;
 		for (_ in 0...callCount)
 			joinTemplateSample = @:privateAccess
 				backend.cpp.CppTargetCore.templateWrapValueMethodCallExpr("std::vector<std::string>", split, "join", joinArgs, scope) != null;
 		final joinTemplateElapsed = Sys.time() - joinTemplateStart;
-		resetRendererCaches();
 		final joinFieldCallStart = Sys.time();
 		var joinFieldCallSample = "";
 		for (_ in 0...callCount)
 			joinFieldCallSample = @:privateAccess backend.cpp.CppTargetCore.fieldCallExpr(split, "join", joinArgs, scope);
 		final joinFieldCallElapsed = Sys.time() - joinFieldCallStart;
-		resetRendererCaches();
 		final concatRenderStart = Sys.time();
 		var concatSample = "";
 		for (_ in 0...callCount)
 			concatSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concat, scope);
 		final concatRenderElapsed = Sys.time() - concatRenderStart;
-		resetRendererCaches();
 		final concatStringStart = Sys.time();
 		var concatStringSample = "";
 		for (_ in 0...callCount)
 			concatStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concat, scope);
 		final concatStringElapsed = Sys.time() - concatStringStart;
-		resetRendererCaches();
 		final concatLeftStringStart = Sys.time();
 		var concatLeftStringSample = "";
 		for (_ in 0...callCount)
 			concatLeftStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concatLeft, scope);
 		final concatLeftStringElapsed = Sys.time() - concatLeftStringStart;
-		resetRendererCaches();
 		final concatRightStringStart = Sys.time();
 		var concatRightStringSample = "";
 		for (_ in 0...callCount)
 			concatRightStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concatRight, scope);
 		final concatRightStringElapsed = Sys.time() - concatRightStringStart;
-		resetRendererCaches();
 		final concatEqArgStart = Sys.time();
 		var concatEqArgSample = "";
 		for (_ in 0...callCount)
 			concatEqArgSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(concat, "std::string", "std::string", scope);
 		final concatEqArgElapsed = Sys.time() - concatEqArgStart;
-		resetRendererCaches();
 		final concatAnyAddStart = Sys.time();
 		var concatAnyAddSample = false;
 		for (_ in 0...callCount)
 			concatAnyAddSample = @:privateAccess backend.cpp.CppTargetCore.anyAddExpr(concatLeft, concatRight, scope) != null;
 		final concatAnyAddElapsed = Sys.time() - concatAnyAddStart;
-		resetRendererCaches();
 		final concatStringSelectStart = Sys.time();
 		var concatStringSelectSample = false;
 		for (_ in 0...callCount)
 			concatStringSelectSample = @:privateAccess backend.cpp.CppTargetCore.isCppStringExpr(concatLeft, scope)
 				|| @:privateAccess backend.cpp.CppTargetCore.isCppStringExpr(concatRight, scope);
 		final concatStringSelectElapsed = Sys.time() - concatStringSelectStart;
-		resetRendererCaches();
 		final concatPrimitiveAbstractStart = Sys.time();
 		var concatPrimitiveAbstractSample = false;
 		for (_ in 0...callCount)
 			concatPrimitiveAbstractSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractToStringExpr(concat, scope) != null;
 		final concatPrimitiveAbstractElapsed = Sys.time() - concatPrimitiveAbstractStart;
-		resetRendererCaches();
 		final concatClassAbstractStart = Sys.time();
 		var concatClassAbstractSample = false;
 		for (_ in 0...callCount)
 			concatClassAbstractSample = @:privateAccess backend.cpp.CppTargetCore.classBackedAbstractToStringExpr(concat, scope) != null;
 		final concatClassAbstractElapsed = Sys.time() - concatClassAbstractStart;
-		resetRendererCaches();
 		final concatExplicitTypeStart = Sys.time();
 		var concatExplicitTypeSample = "";
 		for (_ in 0...callCount)
 			concatExplicitTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(concat, scope);
 		final concatExplicitTypeElapsed = Sys.time() - concatExplicitTypeStart;
-		resetRendererCaches();
 		final concatClassMetadataStart = Sys.time();
 		var concatClassMetadataSample = false;
 		for (_ in 0...callCount)
@@ -1531,7 +1458,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 				|| @:privateAccess backend.cpp.CppTargetCore.classNameFromCppExprType("", scope) != null
 				|| @:privateAccess backend.cpp.CppTargetCore.classReferencePathText(concat, scope) != null;
 		final concatClassMetadataElapsed = Sys.time() - concatClassMetadataStart;
-		resetRendererCaches();
 		final concatInferStart = Sys.time();
 		var concatInferSample = "";
 		for (_ in 0...callCount)
@@ -1633,7 +1559,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final wrongFieldSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(wrongField, scope);
 		assertTrue(wrongAritySample == "(r->matchedPos(0).pos)" && wrongFieldSample == "(r->matchedPos().other)",
 			"Wrong matchedPos arity and unrelated fields should retain general rendering");
-		resetRendererCaches();
 		final renderStart = Sys.time();
 		var posSample = "";
 		var lenSample = "";
@@ -1642,67 +1567,56 @@ class M14CppHelperRenderBenchIntegrationTest {
 			lenSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(len, scope);
 		}
 		final renderElapsed = Sys.time() - renderStart;
-		resetRendererCaches();
 		final inferStart = Sys.time();
 		var inferSample = "";
 		for (_ in 0...callCount)
 			inferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(pos, scope);
 		final inferElapsed = Sys.time() - inferStart;
-		resetRendererCaches();
 		final eqArgStart = Sys.time();
 		var eqArgSample = "";
 		for (_ in 0...callCount)
 			eqArgSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(pos, "int", "int", scope);
 		final eqArgElapsed = Sys.time() - eqArgStart;
-		resetRendererCaches();
 		final callRenderStart = Sys.time();
 		var callRenderSample = "";
 		for (_ in 0...callCount)
 			callRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedPos, scope);
 		final callRenderElapsed = Sys.time() - callRenderStart;
-		resetRendererCaches();
 		final callInferStart = Sys.time();
 		var callInferSample = "";
 		for (_ in 0...callCount)
 			callInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(matchedPos, scope);
 		final callInferElapsed = Sys.time() - callInferStart;
-		resetRendererCaches();
 		final callExplicitTypeStart = Sys.time();
 		var callExplicitTypeSample = "";
 		for (_ in 0...callCount)
 			callExplicitTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(matchedPos, scope);
 		final callExplicitTypeElapsed = Sys.time() - callExplicitTypeStart;
-		resetRendererCaches();
 		final fieldAccessStart = Sys.time();
 		var fieldAccessSample = "";
 		for (_ in 0...callCount)
 			fieldAccessSample = @:privateAccess backend.cpp.CppTargetCore.fieldAccessOp(matchedPos, scope);
 		final fieldAccessElapsed = Sys.time() - fieldAccessStart;
-		resetRendererCaches();
 		final fieldTypeStart = Sys.time();
 		var fieldTypeSample = "";
 		for (_ in 0...callCount)
 			fieldTypeSample = @:privateAccess backend.cpp.CppTargetCore.anonStructFieldCppType("__hxhx_anon_pos_int__len_int_", "pos", scope);
 		final fieldTypeElapsed = Sys.time() - fieldTypeStart;
-		resetRendererCaches();
 		final primitiveStart = Sys.time();
 		var primitiveSample = false;
 		for (_ in 0...callCount)
 			primitiveSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractPropertyExpr(matchedPos, "pos", scope) != null;
 		final primitiveElapsed = Sys.time() - primitiveStart;
-		resetRendererCaches();
 		final methodValueStart = Sys.time();
 		var methodValueSample = false;
 		for (_ in 0...callCount)
 			methodValueSample = @:privateAccess backend.cpp.CppTargetCore.instanceMethodValueExpr(pos, scope) != null;
 		final methodValueElapsed = Sys.time() - methodValueStart;
-		resetRendererCaches();
 		final referenceStart = Sys.time();
 		var referenceSample = false;
 		for (_ in 0...callCount)
 			referenceSample = @:privateAccess backend.cpp.CppTargetCore.exprHasReferenceType(matchedPos, scope);
 		final referenceElapsed = Sys.time() - referenceStart;
-		resetRendererCaches();
 		final classPreflightStart = Sys.time();
 		var classPreflightSample = false;
 		for (_ in 0...callCount)
@@ -1711,13 +1625,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 				|| @:privateAccess backend.cpp.CppTargetCore.staticEnumTagValueExpr(matchedPos, "pos", scope) != null
 				|| @:privateAccess backend.cpp.CppTargetCore.classReferenceValueExpr(pos, scope) != null;
 		final classPreflightElapsed = Sys.time() - classPreflightStart;
-		resetRendererCaches();
 		final propertyStart = Sys.time();
 		var propertySample = false;
 		for (_ in 0...callCount)
 			propertySample = @:privateAccess backend.cpp.CppTargetCore.typedPropertyGetReadExpr(matchedPos, "pos", scope) != null;
 		final propertyElapsed = Sys.time() - propertyStart;
-		resetRendererCaches();
 		final jsonStart = Sys.time();
 		var jsonSample = false;
 		for (_ in 0...callCount)
@@ -1825,108 +1737,91 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& extraAritySample == 'regex->matchSub("aa12", 1, 2, 3)'
 			&& otherMethodSample == 'regex->match("aa12")',
 			"Unknown receivers, wrong matchSub arity, and other EReg methods should retain general field-call rendering");
-		resetRendererCaches();
 		final twoRenderStart = Sys.time();
 		var twoRenderSample = "";
 		for (_ in 0...callCount)
 			twoRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(twoCall, scope);
 		final twoRenderElapsed = Sys.time() - twoRenderStart;
-		resetRendererCaches();
 		final threeRenderStart = Sys.time();
 		var threeRenderSample = "";
 		for (_ in 0...callCount)
 			threeRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(threeCall, scope);
 		final threeRenderElapsed = Sys.time() - threeRenderStart;
-		resetRendererCaches();
 		final twoInferStart = Sys.time();
 		var twoInferSample = "";
 		for (_ in 0...callCount)
 			twoInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(twoCall, scope);
 		final twoInferElapsed = Sys.time() - twoInferStart;
-		resetRendererCaches();
 		final threeInferStart = Sys.time();
 		var threeInferSample = "";
 		for (_ in 0...callCount)
 			threeInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(threeCall, scope);
 		final threeInferElapsed = Sys.time() - threeInferStart;
-		resetRendererCaches();
 		final twoArgsStart = Sys.time();
 		var twoArgsSample = "";
 		for (_ in 0...callCount)
 			twoArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "matchSub", twoArgs, scope).join(", ");
 		final twoArgsElapsed = Sys.time() - twoArgsStart;
-		resetRendererCaches();
 		final threeArgsStart = Sys.time();
 		var threeArgsSample = "";
 		for (_ in 0...callCount)
 			threeArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "matchSub", threeArgs, scope).join(", ");
 		final threeArgsElapsed = Sys.time() - threeArgsStart;
-		resetRendererCaches();
 		final twoInstanceArgsStart = Sys.time();
 		var twoInstanceArgsSample = "";
 		for (_ in 0...callCount)
 			twoInstanceArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderInstanceMethodCallArgs("std::shared_ptr<EReg>", "matchSub", twoArgs, scope).join(", ");
 		final twoInstanceArgsElapsed = Sys.time() - twoInstanceArgsStart;
-		resetRendererCaches();
 		final threeInstanceArgsStart = Sys.time();
 		var threeInstanceArgsSample = "";
 		for (_ in 0...callCount)
 			threeInstanceArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderInstanceMethodCallArgs("std::shared_ptr<EReg>", "matchSub", threeArgs, scope).join(", ");
 		final threeInstanceArgsElapsed = Sys.time() - threeInstanceArgsStart;
-		resetRendererCaches();
 		final twoExpectedBoolStart = Sys.time();
 		var twoExpectedBoolSample = "";
 		for (_ in 0...callCount)
 			twoExpectedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(twoCall, "bool", scope);
 		final twoExpectedBoolElapsed = Sys.time() - twoExpectedBoolStart;
-		resetRendererCaches();
 		final threeExpectedBoolStart = Sys.time();
 		var threeExpectedBoolSample = "";
 		for (_ in 0...callCount)
 			threeExpectedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(threeCall, "bool", scope);
 		final threeExpectedBoolElapsed = Sys.time() - threeExpectedBoolStart;
-		resetRendererCaches();
 		final knownReturnStart = Sys.time();
 		var knownReturnSample = "";
 		for (_ in 0...callCount)
 			knownReturnSample = @:privateAccess
 				backend.cpp.CppTargetCore.knownFieldCallReturnCppType(EIdent("regex"), "matchSub", threeArgs, scope);
 		final knownReturnElapsed = Sys.time() - knownReturnStart;
-		resetRendererCaches();
 		final instanceReturnStart = Sys.time();
 		var instanceReturnSample = "";
 		for (_ in 0...callCount)
 			instanceReturnSample = @:privateAccess backend.cpp.CppTargetCore.classMethodCppReturnType("EReg", "matchSub", false, scope);
 		final instanceReturnElapsed = Sys.time() - instanceReturnStart;
-		resetRendererCaches();
 		final receiverTypeStart = Sys.time();
 		var receiverTypeSample = "";
 		for (_ in 0...callCount)
 			receiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("regex"), scope);
 		final receiverTypeElapsed = Sys.time() - receiverTypeStart;
-		resetRendererCaches();
 		final stringArgStart = Sys.time();
 		var stringArgSample = "";
 		for (_ in 0...callCount)
 			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(stringArg, stringParam, scope, "std::string");
 		final stringArgElapsed = Sys.time() - stringArgStart;
-		resetRendererCaches();
 		final posArgStart = Sys.time();
 		var posArgSample = "";
 		for (_ in 0...callCount)
 			posArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(posArg, posParam, scope, "int");
 		final posArgElapsed = Sys.time() - posArgStart;
-		resetRendererCaches();
 		final optionalMatchStart = Sys.time();
 		var optionalMatchSample = false;
 		for (_ in 0...callCount)
 			optionalMatchSample = @:privateAccess backend.cpp.CppTargetCore.callArgMatchesParam(lenArg, lenParam, scope);
 		final optionalMatchElapsed = Sys.time() - optionalMatchStart;
-		resetRendererCaches();
 		final lenArgStart = Sys.time();
 		var lenArgSample = "";
 		for (_ in 0...callCount)
@@ -2006,13 +1901,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchedLeft"), [EInt(0)]), scope), @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "match"), [EString("a")]), scope)
 		].join("\n");
-		resetRendererCaches();
 		final matchedRenderStart = Sys.time();
 		var matchedRenderSample = "";
 		for (_ in 0...callCount)
 			matchedRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(matched, scope);
 		final matchedRenderElapsed = Sys.time() - matchedRenderStart;
-		resetRendererCaches();
 		final sideRenderStart = Sys.time();
 		var sideRenderSample = "";
 		for (_ in 0...callCount)
@@ -2020,13 +1913,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 				+ "|"
 				+ @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedRight, scope);
 		final sideRenderElapsed = Sys.time() - sideRenderStart;
-		resetRendererCaches();
 		final matchedInferStart = Sys.time();
 		var matchedInferSample = "";
 		for (_ in 0...callCount)
 			matchedInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(matched, scope);
 		final matchedInferElapsed = Sys.time() - matchedInferStart;
-		resetRendererCaches();
 		final sideInferStart = Sys.time();
 		var sideInferSample = "";
 		for (_ in 0...callCount)
@@ -2034,13 +1925,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 				+ "|"
 				+ @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(matchedRight, scope);
 		final sideInferElapsed = Sys.time() - sideInferStart;
-		resetRendererCaches();
 		final matchedEqualityStart = Sys.time();
 		var matchedEqualitySample = "";
 		for (_ in 0...callCount)
 			matchedEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([matched, EString("capture")], scope).join(", ");
 		final matchedEqualityElapsed = Sys.time() - matchedEqualityStart;
-		resetRendererCaches();
 		final sideEqualityStart = Sys.time();
 		var sideEqualitySample = "";
 		for (_ in 0...callCount)
@@ -2048,14 +1937,12 @@ class M14CppHelperRenderBenchIntegrationTest {
 				+ "|"
 				+ @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([matchedRight, EString("right")], scope).join(", ");
 		final sideEqualityElapsed = Sys.time() - sideEqualityStart;
-		resetRendererCaches();
 		final genericArgsStart = Sys.time();
 		var genericArgsSample = "";
 		for (_ in 0...callCount)
 			genericArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "matched", matchedArgs, scope).join(", ");
 		final genericArgsElapsed = Sys.time() - genericArgsStart;
-		resetRendererCaches();
 		final intArgStart = Sys.time();
 		var intArgSample = "";
 		for (_ in 0...callCount)
@@ -2117,55 +2004,46 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "match"), [EString("a"), EString("b")]), scope), @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "split"), args), scope)
 		].join("\n");
-		resetRendererCaches();
 		final typedRenderStart = Sys.time();
 		var typedRenderSample = "";
 		for (_ in 0...callCount)
 			typedRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedCall, scope);
 		final typedRenderElapsed = Sys.time() - typedRenderStart;
-		resetRendererCaches();
 		final freshRenderStart = Sys.time();
 		var freshRenderSample = "";
 		for (_ in 0...callCount)
 			freshRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(freshCall, scope);
 		final freshRenderElapsed = Sys.time() - freshRenderStart;
-		resetRendererCaches();
 		final typedInferStart = Sys.time();
 		var typedInferSample = "";
 		for (_ in 0...callCount)
 			typedInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typedCall, scope);
 		final typedInferElapsed = Sys.time() - typedInferStart;
-		resetRendererCaches();
 		final freshInferStart = Sys.time();
 		var freshInferSample = "";
 		for (_ in 0...callCount)
 			freshInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(freshCall, scope);
 		final freshInferElapsed = Sys.time() - freshInferStart;
-		resetRendererCaches();
 		final typedBoolStart = Sys.time();
 		var typedBoolSample = "";
 		for (_ in 0...callCount)
 			typedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(typedCall, "bool", scope);
 		final typedBoolElapsed = Sys.time() - typedBoolStart;
-		resetRendererCaches();
 		final freshBoolStart = Sys.time();
 		var freshBoolSample = "";
 		for (_ in 0...callCount)
 			freshBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(freshCall, "bool", scope);
 		final freshBoolElapsed = Sys.time() - freshBoolStart;
-		resetRendererCaches();
 		final constructorStart = Sys.time();
 		var constructorSample = "";
 		for (_ in 0...callCount)
 			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
 		final constructorElapsed = Sys.time() - constructorStart;
-		resetRendererCaches();
 		final stringArgStart = Sys.time();
 		var stringArgSample = "";
 		for (_ in 0...callCount)
 			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegStringCallArgExpr(args[0], scope);
 		final stringArgElapsed = Sys.time() - stringArgStart;
-		resetRendererCaches();
 		final genericArgsStart = Sys.time();
 		var genericArgsSample = "";
 		for (_ in 0...callCount)
@@ -2202,37 +2080,31 @@ class M14CppHelperRenderBenchIntegrationTest {
 		scope.localTypes.set("test", "std::string");
 		final arg = EIdent("test");
 		final param = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
-		resetRendererCaches();
 		final fullStart = Sys.time();
 		var fullSample = "";
 		for (_ in 0...callCount)
 			fullSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(arg, param, scope, "std::string");
 		final fullElapsed = Sys.time() - fullStart;
-		resetRendererCaches();
 		final declaredEnumStart = Sys.time();
 		var declaredEnumSample = false;
 		for (_ in 0...callCount)
 			declaredEnumSample = @:privateAccess backend.cpp.CppTargetCore.enumReferenceArgExprForExpectedType(arg, "std::string", scope) != null;
 		final declaredEnumElapsed = Sys.time() - declaredEnumStart;
-		resetRendererCaches();
 		final enumStart = Sys.time();
 		var enumSample = false;
 		for (_ in 0...callCount)
 			enumSample = @:privateAccess backend.cpp.CppTargetCore.enumReferenceArgExprForExpectedType(arg, "std::string", scope) != null;
 		final enumElapsed = Sys.time() - enumStart;
-		resetRendererCaches();
 		final structuralStart = Sys.time();
 		var structuralSample = false;
 		for (_ in 0...callCount)
 			structuralSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::string", scope) != null;
 		final structuralElapsed = Sys.time() - structuralStart;
-		resetRendererCaches();
 		final actualTypeStart = Sys.time();
 		var actualTypeSample = "";
 		for (_ in 0...callCount)
 			actualTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(arg, scope);
 		final actualTypeElapsed = Sys.time() - actualTypeStart;
-		resetRendererCaches();
 		final renderStart = Sys.time();
 		var renderSample = "";
 		for (_ in 0...callCount)
@@ -2262,19 +2134,16 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final unary = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1));
 		final concat = EBinop("+", EString("left"), EString("right"));
 		final localString = EString("{ local } value");
-		resetRendererCaches();
 		final intProbeStart = Sys.time();
 		var intProbeSample = false;
 		for (_ in 0...callCount)
 			intProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("int", scope) != null;
 		final intProbeElapsed = Sys.time() - intProbeStart;
-		resetRendererCaches();
 		final stringProbeStart = Sys.time();
 		var stringProbeSample = false;
 		for (_ in 0...callCount)
 			stringProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::string", scope) != null;
 		final stringProbeElapsed = Sys.time() - stringProbeStart;
-		resetRendererCaches();
 		final vectorProbeStart = Sys.time();
 		var vectorProbeSample = false;
 		for (_ in 0...callCount)
@@ -2286,19 +2155,16 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.structuralTypedefClassForCppType("ResidualStructuralGeneric<std::string>", scope) != null;
 		final ordinaryUserSample = @:privateAccess
 			backend.cpp.CppTargetCore.structuralTypedefClassForCppType("ResidualStructuralUserClass", scope) != null;
-		resetRendererCaches();
 		final unaryArgStart = Sys.time();
 		var unaryArgSample = "";
 		for (_ in 0...callCount)
 			unaryArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(unary, intParam, scope, "int");
 		final unaryArgElapsed = Sys.time() - unaryArgStart;
-		resetRendererCaches();
 		final concatArgStart = Sys.time();
 		var concatArgSample = "";
 		for (_ in 0...callCount)
 			concatArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(concat, stringParam, scope, "std::string");
 		final concatArgElapsed = Sys.time() - concatArgStart;
-		resetRendererCaches();
 		final localStringStart = Sys.time();
 		var localStringSample = "";
 		for (_ in 0...callCount)
@@ -2416,128 +2282,107 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], nestedBody, expectedType,
 			shadowScope) == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).value().substr(3)); }' && shadowScope.localNames.get("r") == "outer_r" && shadowScope.localTypes.get("r") == "std::string",
 			"Scope-isolated EReg callbacks should use the lambda argument and preserve an outer same-name local");
-		resetRendererCaches();
 		final mapStart = Sys.time();
 		var mapSample = "";
 		for (_ in 0...callCount)
 			mapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(map, scope);
 		final mapElapsed = Sys.time() - mapStart;
-		resetRendererCaches();
 		final argsStart = Sys.time();
 		var argsSample = "";
 		for (_ in 0...callCount)
 			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
 		final argsElapsed = Sys.time() - argsStart;
-		resetRendererCaches();
 		final typedInlineMapStart = Sys.time();
 		var typedInlineMapSample = "";
 		for (_ in 0...callCount)
 			typedInlineMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedInlineMap, scope);
 		final typedInlineMapElapsed = Sys.time() - typedInlineMapStart;
-		resetRendererCaches();
 		final typedNamedMapStart = Sys.time();
 		var typedNamedMapSample = "";
 		for (_ in 0...callCount)
 			typedNamedMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedNamedMap, scope);
 		final typedNamedMapElapsed = Sys.time() - typedNamedMapStart;
-		resetRendererCaches();
 		final typedInferStart = Sys.time();
 		var typedInferSample = "";
 		for (_ in 0...callCount)
 			typedInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typedInlineMap, scope);
 		final typedInferElapsed = Sys.time() - typedInferStart;
-		resetRendererCaches();
 		final typedKnownReturnStart = Sys.time();
 		var typedKnownReturnSample = "";
 		for (_ in 0...callCount)
 			typedKnownReturnSample = @:privateAccess backend.cpp.CppTargetCore.knownFieldCallReturnCppType(EIdent("regex"), "map", mapArgs, scope);
 		final typedKnownReturnElapsed = Sys.time() - typedKnownReturnStart;
-		resetRendererCaches();
 		final typedInstanceReturnStart = Sys.time();
 		var typedInstanceReturnSample = "";
 		for (_ in 0...callCount)
 			typedInstanceReturnSample = @:privateAccess backend.cpp.CppTargetCore.classMethodCppReturnType("EReg", "map", false, scope);
 		final typedInstanceReturnElapsed = Sys.time() - typedInstanceReturnStart;
-		resetRendererCaches();
 		final typedInlineEqStart = Sys.time();
 		var typedInlineEqSample = "";
 		for (_ in 0...callCount)
 			typedInlineEqSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(typedInlineMap, "std::string", "std::string", scope);
 		final typedInlineEqElapsed = Sys.time() - typedInlineEqStart;
-		resetRendererCaches();
 		final typedNamedEqStart = Sys.time();
 		var typedNamedEqSample = "";
 		for (_ in 0...callCount)
 			typedNamedEqSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(typedNamedMap, "std::string", "std::string", scope);
 		final typedNamedEqElapsed = Sys.time() - typedNamedEqStart;
-		resetRendererCaches();
 		final typedInlineArgsStart = Sys.time();
 		var typedInlineArgsSample = "";
 		for (_ in 0...callCount)
 			typedInlineArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
 		final typedInlineArgsElapsed = Sys.time() - typedInlineArgsStart;
-		resetRendererCaches();
 		final typedNamedArgsStart = Sys.time();
 		var typedNamedArgsSample = "";
 		for (_ in 0...callCount)
 			typedNamedArgsSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", typedNamedArgs, scope).join(", ");
 		final typedNamedArgsElapsed = Sys.time() - typedNamedArgsStart;
-		resetRendererCaches();
 		final typedStringArgStart = Sys.time();
 		var typedStringArgSample = "";
 		for (_ in 0...callCount)
 			typedStringArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(EString("aa"), stringParam, scope, "std::string");
 		final typedStringArgElapsed = Sys.time() - typedStringArgStart;
-		resetRendererCaches();
 		final typedInlineCallbackStart = Sys.time();
 		var typedInlineCallbackSample = "";
 		for (_ in 0...callCount)
 			typedInlineCallbackSample = @:privateAccess
 				backend.cpp.CppTargetCore.callArgExprForParam(nestedCallback, callbackParam, scope, expectedType);
 		final typedInlineCallbackElapsed = Sys.time() - typedInlineCallbackStart;
-		resetRendererCaches();
 		final typedNamedCallbackStart = Sys.time();
 		var typedNamedCallbackSample = "";
 		for (_ in 0...callCount)
 			typedNamedCallbackSample = @:privateAccess
 				backend.cpp.CppTargetCore.callArgExprForParam(EIdent("f"), callbackParam, scope, expectedType);
 		final typedNamedCallbackElapsed = Sys.time() - typedNamedCallbackStart;
-		resetRendererCaches();
 		final typedReceiverTypeStart = Sys.time();
 		var typedReceiverTypeSample = "";
 		for (_ in 0...callCount)
 			typedReceiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("regex"), scope);
 		final typedReceiverTypeElapsed = Sys.time() - typedReceiverTypeStart;
-		resetRendererCaches();
 		final expectedFunctionStart = Sys.time();
 		var expectedFunctionSample = "";
 		for (_ in 0...callCount)
 			expectedFunctionSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(nestedCallback, expectedType, scope);
 		final expectedFunctionElapsed = Sys.time() - expectedFunctionStart;
-		resetRendererCaches();
 		final identityPreflightStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.dynamicIdentityCallExprForExpectedFunction(nestedCallback, expectedType, scope);
 		final identityPreflightElapsed = Sys.time() - identityPreflightStart;
-		resetRendererCaches();
 		final boundPreflightStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.boundFunctionValueExprForExpectedFunction(nestedCallback, expectedType, scope);
 		final boundPreflightElapsed = Sys.time() - boundPreflightStart;
-		resetRendererCaches();
 		final varArgsPreflightStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.reflectMakeVarArgsExprForExpectedFunction(nestedCallback, expectedType, scope);
 		final varArgsPreflightElapsed = Sys.time() - varArgsPreflightStart;
-		resetRendererCaches();
 		final lambdaStart = Sys.time();
 		var lambdaSample = "";
 		for (_ in 0...callCount)
 			lambdaSample = @:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], body, expectedType, scope);
 		final lambdaElapsed = Sys.time() - lambdaStart;
-		resetRendererCaches();
 		final nestedLambdaStart = Sys.time();
 		var nestedLambdaSample = "";
 		for (_ in 0...callCount)
@@ -2545,7 +2390,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final nestedLambdaElapsed = Sys.time() - nestedLambdaStart;
 		scope.localTypes.set("r", "std::shared_ptr<EReg>");
 		scope.localNames.set("r", "r");
-		resetRendererCaches();
 		final directBodyStart = Sys.time();
 		var directBodySample = "";
 		for (_ in 0...callCount) {
@@ -2554,7 +2398,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 			directBodySample = rendered == null ? "" : rendered;
 		}
 		final directBodyElapsed = Sys.time() - directBodyStart;
-		resetRendererCaches();
 		final nestedBodyStart = Sys.time();
 		var nestedBodySample = "";
 		for (_ in 0...callCount) {
@@ -2563,7 +2406,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 			nestedBodySample = rendered == null ? "" : rendered;
 		}
 		final nestedBodyElapsed = Sys.time() - nestedBodyStart;
-		resetRendererCaches();
 		final isolatedBodyStart = Sys.time();
 		var isolatedBodySample = "";
 		for (_ in 0...callCount) {
@@ -2572,7 +2414,6 @@ class M14CppHelperRenderBenchIntegrationTest {
 			isolatedBodySample = rendered == null ? "" : rendered;
 		}
 		final isolatedBodyElapsed = Sys.time() - isolatedBodyStart;
-		resetRendererCaches();
 		final leafStart = Sys.time();
 		var leafSample = "";
 		for (_ in 0...callCount)
@@ -2582,29 +2423,24 @@ class M14CppHelperRenderBenchIntegrationTest {
 				backend.cpp.CppTargetCore.renderExpr(matchedRight, scope)
 			].join("|");
 		final leafElapsed = Sys.time() - leafStart;
-		resetRendererCaches();
 		final nestedLeafStart = Sys.time();
 		var nestedLeafSample = "";
 		for (_ in 0...callCount)
 			nestedLeafSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(nestedLeaf, scope);
 		final nestedLeafElapsed = Sys.time() - nestedLeafStart;
-		resetRendererCaches();
 		final bodyStart = Sys.time();
 		var bodySample = "";
 		for (_ in 0...callCount)
 			bodySample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(body, "std::string", scope);
 		final bodyElapsed = Sys.time() - bodyStart;
-		resetRendererCaches();
 		final stringStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.stringExpr(body, scope);
 		final stringElapsed = Sys.time() - stringStart;
-		resetRendererCaches();
 		final renderStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.renderExpr(body, scope);
 		final renderElapsed = Sys.time() - renderStart;
-		resetRendererCaches();
 		final inferStart = Sys.time();
 		for (_ in 0...callCount)
 			@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(body, scope);

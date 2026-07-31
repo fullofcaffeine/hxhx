@@ -20,15 +20,10 @@ HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
 HXHX_STAGE0_NO_OPT="${HXHX_STAGE0_NO_OPT:-0}"
-HXHX_STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_NO_NATIVE_PARSER:-0}"
-HXHX_STAGE0_NO_HX_PARSER="${HXHX_STAGE0_NO_HX_PARSER:-0}"
 HXHX_STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_NO_EXPR_MACROS:-0}"
 HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST:-0}"
 HXHX_STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_NO_INTERNAL_TOOLS:-0}"
 HXHX_STAGE0_NO_DISPLAY="${HXHX_STAGE0_NO_DISPLAY:-0}"
-HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
-HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT:-0}"
-HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT="${HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT:-0}"
 HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
 HXHX_STAGE0_SKIP_REFLAXE_NULL_SAFETY="${HXHX_STAGE0_SKIP_REFLAXE_NULL_SAFETY:-0}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-30}"
@@ -356,22 +351,6 @@ case "$HXHX_STAGE0_NO_OPT" in
     ;;
 esac
 
-case "$HXHX_STAGE0_NO_NATIVE_PARSER" in
-  0|1) ;;
-  *)
-    echo "Invalid HXHX_STAGE0_NO_NATIVE_PARSER: $HXHX_STAGE0_NO_NATIVE_PARSER (expected 0 or 1)." >&2
-    exit 2
-    ;;
-esac
-
-case "$HXHX_STAGE0_NO_HX_PARSER" in
-  0|1) ;;
-  *)
-    echo "Invalid HXHX_STAGE0_NO_HX_PARSER: $HXHX_STAGE0_NO_HX_PARSER (expected 0 or 1)." >&2
-    exit 2
-    ;;
-esac
-
 case "$HXHX_STAGE0_NO_EXPR_MACROS" in
   0|1) ;;
   *)
@@ -400,30 +379,6 @@ case "$HXHX_STAGE0_NO_DISPLAY" in
   0|1) ;;
   *)
     echo "Invalid HXHX_STAGE0_NO_DISPLAY: $HXHX_STAGE0_NO_DISPLAY (expected 0 or 1)." >&2
-    exit 2
-    ;;
-esac
-
-case "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" in
-  0|1) ;;
-  *)
-    echo "Invalid HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT: $HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT (expected 0 or 1)." >&2
-    exit 2
-    ;;
-esac
-
-case "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" in
-  0|1) ;;
-  *)
-    echo "Invalid HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT: $HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT (expected 0 or 1)." >&2
-    exit 2
-    ;;
-esac
-
-case "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" in
-  0|1) ;;
-  *)
-    echo "Invalid HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT: $HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT (expected 0 or 1)." >&2
     exit 2
     ;;
 esac
@@ -871,7 +826,6 @@ resolve_stage0_connect
         -D no-traces
         -D no_traces
         -D ocaml_output=out
-        -D hih_native_parser
         -D reflaxe_ocaml
         -D ocaml_emit_only
       )
@@ -905,12 +859,6 @@ resolve_stage0_connect
     if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
       haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
     fi
-    if [ "$HXHX_STAGE0_NO_NATIVE_PARSER" = "1" ]; then
-      haxe_args+=(-D hxhx_stage0_no_native_parser)
-    fi
-    if [ "$HXHX_STAGE0_NO_HX_PARSER" = "1" ]; then
-      haxe_args+=(-D hxhx_stage0_no_hx_parser)
-    fi
     if [ "$HXHX_STAGE0_NO_EXPR_MACROS" = "1" ]; then
       haxe_args+=(-D hxhx_stage0_no_expr_macros)
     fi
@@ -922,15 +870,6 @@ resolve_stage0_connect
     fi
     if [ "$HXHX_STAGE0_NO_DISPLAY" = "1" ]; then
       haxe_args+=(-D hxhx_stage0_no_display)
-    fi
-    if [ "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" = "1" ]; then
-      haxe_args+=(-D hxhx_stage0_no_source_normalize_extract)
-    fi
-    if [ "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" = "1" ]; then
-      haxe_args+=(-D hxhx_stage0_no_native_decode_extract)
-    fi
-    if [ "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" = "1" ]; then
-      haxe_args+=(-D hxhx_stage0_no_parser_scan_extract)
     fi
     if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
       haxe_args+=(-D hxhx_stage0_ocaml_only)

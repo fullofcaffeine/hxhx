@@ -13,37 +13,40 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyMethodGenericB
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodGenericBinding" } : t)
 
-let parameterName = fun hx_type methodTypeParameters -> try let __fallback_result_4 = (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || not (TyType.isTypeParameter (Obj.magic hx_type) ()) || methodTypeParameters == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let name = (TyType.getDisplay (Obj.magic hx_type) () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if HxArray.indexOf methodTypeParameters name 0 < 0 then let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_1;
-      __assign_1
-    ) else let __assign_2 = Obj.magic (name : string) in (
-      tempResult := __assign_2;
-      __assign_2
-    ));
-    !tempResult
+let parameterIdentity = fun hx_type methodTypeParameters -> try let __fallback_result_4 = (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || not (TyType.isTypeParameter (Obj.magic hx_type) ()) || methodTypeParameters == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+  let identity = Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ()) in (
+    ignore (if identity == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+    let _g = ref 0 in (
+      ignore (while !_g < HxArray.length methodTypeParameters do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic methodTypeParameters) (!_g)) in (
+        ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
+          ignore (_g := __new_2);
+          __new_2
+        ));
+        if TyTypeParameterId.equals (Obj.magic parameter) (Obj.magic identity) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parameter))) else ()
+      )) done);
+      Obj.magic (HxRuntime.hx_null)
+    )
   )
 ) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
 let inferableTypeParameters = fun declaration -> try let __fallback_result_10 = (
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_5 = HxArray.create () in __arr_5)))) else ());
-  let constraints = Obj.magic (TyDeclarationInfo.getTypeParameterConstraints (Obj.magic declaration) ()) in let _g = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in let _g1 = ref 0 in let _g2 = Obj.magic (TyDeclarationInfo.getTypeParameters (Obj.magic declaration) ()) in (
-    ignore (while !_g1 < HxArray.length _g2 do ignore (let name = (HxArray.get (Obj.magic _g2) (!_g1) : string) in (
+  let constraints = Obj.magic (TyDeclarationInfo.getTypeParameterConstraints (Obj.magic declaration) ()) in let _g = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in let _g1 = ref 0 in let _g2 = Obj.magic (TyDeclarationInfo.getTypeParameterIds (Obj.magic declaration) ()) in (
+    ignore (while !_g1 < HxArray.length _g2 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
       ignore (let __old_7 = !_g1 in let __new_8 = HxInt.add __old_7 1 in (
         ignore (_g1 := __new_8);
         __new_8
       ));
-      if not (HxMap.exists_string constraints name) then ignore (HxArray.push _g name) else ()
+      if not (HxMap.exists_string constraints (TyTypeParameterId.getName (Obj.magic parameter) ())) then ignore (HxArray.push _g parameter) else ()
     )) done);
     _g
   )
 ) in Obj.magic __fallback_result_10 with
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
-let isInferableParameter = fun hx_type methodTypeParameters -> parameterName (Obj.magic hx_type) (Obj.magic methodTypeParameters) != Obj.magic (HxRuntime.hx_null)
+let isInferableParameter = fun hx_type methodTypeParameters -> parameterIdentity (Obj.magic hx_type) (Obj.magic methodTypeParameters) != Obj.magic (HxRuntime.hx_null)
 
 let sameTypeConstructor = fun left right -> try let __fallback_result_12 = (
   ignore (if left == Obj.magic (HxRuntime.hx_null) || right == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -56,17 +59,17 @@ let sameTypeConstructor = fun left right -> try let __fallback_result_12 = (
 
 let rec collect = fun expected actual methodTypeParameters bindings__local -> try let __fallback_result_18 = (
   ignore (if expected == Obj.magic (HxRuntime.hx_null) || actual == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  let parameter = (parameterName (Obj.magic expected) (Obj.magic methodTypeParameters) : string) in (
+  let parameter = Obj.magic (parameterIdentity (Obj.magic expected) (Obj.magic methodTypeParameters)) in (
     ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (if TyType.isUnknown (Obj.magic actual) () || TyType.isDynamic (Obj.magic actual) () then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-      let previous = Obj.magic (HxMap.get_string bindings__local parameter) in (
+      let parameterKey = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in let previous = Obj.magic (HxMap.get_string bindings__local parameterKey) in (
         ignore (if previous == Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (HxMap.set_string bindings__local parameter actual);
+          ignore (HxMap.set_string bindings__local parameterKey actual);
           raise (HxRuntime.Hx_return (Obj.repr true))
         )) else ());
         let unified = Obj.magic (TyType.unify (Obj.magic previous) (Obj.magic actual)) in (
           ignore (if unified == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-          ignore (HxMap.set_string bindings__local parameter unified);
+          ignore (HxMap.set_string bindings__local parameterKey unified);
           raise (HxRuntime.Hx_return (Obj.repr true))
         )
       )
@@ -117,8 +120,8 @@ let argumentsAreConsistent = fun hx_sig argTypes suppliedArity methodTypeParamet
 
 let rec hasUnbound = fun hx_type methodTypeParameters inferred -> try let __fallback_result_28 = (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let parameter = (parameterName (Obj.magic hx_type) (Obj.magic methodTypeParameters) : string) in (
-    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (not (HxMap.exists_string inferred parameter)))) else ());
+  let parameter = Obj.magic (parameterIdentity (Obj.magic hx_type) (Obj.magic methodTypeParameters)) in (
+    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (not (HxMap.exists_string inferred (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()))))) else ());
     ignore (if TyType.isNullable (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (hasUnbound (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (Obj.magic methodTypeParameters) (Obj.magic inferred)))) else ());
     ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore (let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -172,8 +175,8 @@ let substitutedGenericDisplay = fun source arguments -> let base = ref (StringTo
 
 let rec substitute = fun hx_type methodTypeParameters inferred -> try let __fallback_result_46 = (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.unknown ())))) else ());
-  let parameter = (parameterName (Obj.magic hx_type) (Obj.magic methodTypeParameters) : string) in (
-    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore (let bound = Obj.magic (HxMap.get_string inferred parameter) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  let parameter = Obj.magic (parameterIdentity (Obj.magic hx_type) (Obj.magic methodTypeParameters)) in (
+    ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore (let bound = Obj.magic (HxMap.get_string inferred (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ())) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
       ignore (if bound == Obj.magic (HxRuntime.hx_null) then let __assign_35 = Obj.magic (TyType.unknown ()) in (
         tempResult := __assign_35;
         __assign_35
@@ -224,7 +227,7 @@ let rec substitute = fun hx_type methodTypeParameters inferred -> try let __fall
 ) in Obj.magic __fallback_result_46 with
   | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45
 
-let specializeResult = fun declaration signature argTypes -> try let __fallback_result_48 = let methodTypeParameters = Obj.magic (TyDeclarationInfo.getTypeParameters (Obj.magic declaration) ()) in (
+let specializeResult = fun declaration signature argTypes -> try let __fallback_result_48 = let methodTypeParameters = Obj.magic (TyDeclarationInfo.getTypeParameterIds (Obj.magic declaration) ()) in (
   ignore (if HxArray.length methodTypeParameters = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyFunSig.getReturnType (Obj.magic signature) ())))) else ());
   let inferred = Obj.magic (bindings (Obj.magic signature) (Obj.magic argTypes) (HxArray.length argTypes) (Obj.magic (inferableTypeParameters (Obj.magic declaration)))) in (
     ignore (if inferred == Obj.magic (HxRuntime.hx_null) || hasUnbound (Obj.magic (TyFunSig.getReturnType (Obj.magic signature) ())) (Obj.magic methodTypeParameters) (Obj.magic inferred) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.unknown ())))) else ());

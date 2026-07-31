@@ -45,10 +45,6 @@ Options:
   --stage0-opt               Disable stage0 `--no-opt` override.
   --stage0-no-inline         Add `--no-inline` to stage0 haxe compile (lower peak RSS; slower builds).
   --stage0-inline            Disable stage0 `--no-inline` override.
-  --stage0-no-native-parser  Add `-D hxhx_stage0_no_native_parser` (force pure-Haxe parser path in stage0 build).
-  --stage0-native-parser     Disable stage0 no-native-parser override.
-  --stage0-no-hx-parser      Add `-D hxhx_stage0_no_hx_parser` (trim pure-Haxe parser fallbacks in stage0 profiling lane).
-  --stage0-hx-parser         Disable stage0 no-hx-parser override.
   --stage0-no-expr-macros    Add `-D hxhx_stage0_no_expr_macros` (trim Stage3 expression-macro expander path in stage0 compile graph).
   --stage0-expr-macros       Disable stage0 no-expr-macros override.
   --stage0-no-external-macro-host
@@ -61,18 +57,6 @@ Options:
   --stage0-internal-tools    Disable stage0 no-internal-tools override.
   --stage0-no-display        Add `-D hxhx_stage0_no_display` (trim Stage3 display synthesis paths in profiling runs).
   --stage0-display           Disable stage0 no-display override.
-  --stage0-no-source-normalize-extract
-                            Add `-D hxhx_stage0_no_source_normalize_extract` (inline HxParser normalization helpers for stage0 A/B only).
-  --stage0-source-normalize-extract
-                            Disable stage0 no-source-normalize-extract override.
-  --stage0-no-native-decode-extract
-                            Add `-D hxhx_stage0_no_native_decode_extract` (inline ParserStage native decode helpers for stage0 A/B only).
-  --stage0-native-decode-extract
-                            Disable stage0 no-native-decode-extract override.
-  --stage0-no-parser-scan-extract
-                            Add `-D hxhx_stage0_no_parser_scan_extract` (inline ParserStage scan helpers for stage0 A/B only).
-  --stage0-parser-scan-extract
-                            Disable stage0 no-parser-scan-extract override.
   --stage0-ocaml-only        Add `-D hxhx_stage0_ocaml_only` (exclude linked js-native backend from stage0 compile graph).
   --stage0-with-js           Disable stage0 ocaml-only define (default behavior).
   --stage0-no-line-directives
@@ -105,20 +89,12 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
   HXHX_STAGE0_NO_OPT=1              Add `--no-opt` to stage0 haxe compile.
   HXHX_STAGE0_NO_INLINE=1           Add `--no-inline` to stage0 haxe compile.
-  HXHX_STAGE0_NO_NATIVE_PARSER=1    Add `-D hxhx_stage0_no_native_parser` for stage0 emit.
-  HXHX_STAGE0_NO_HX_PARSER=1        Add `-D hxhx_stage0_no_hx_parser` for stage0 emit.
   HXHX_STAGE0_NO_EXPR_MACROS=1      Add `-D hxhx_stage0_no_expr_macros` for stage0 emit.
   HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST=1
                                      Add `-D hxhx_stage0_no_external_macro_host` for stage0 emit.
   HXHX_STAGE0_NO_STAGE3=1            Add `-D hxhx_stage0_no_stage3` for stage0 emit.
   HXHX_STAGE0_NO_INTERNAL_TOOLS=1    Add `-D hxhx_stage0_no_internal_tools` for stage0 emit.
   HXHX_STAGE0_NO_DISPLAY=1           Add `-D hxhx_stage0_no_display` for stage0 emit.
-  HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
-                                     Add `-D hxhx_stage0_no_source_normalize_extract` for stage0 emit.
-  HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1
-                                     Add `-D hxhx_stage0_no_native_decode_extract` for stage0 emit.
-  HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1
-                                     Add `-D hxhx_stage0_no_parser_scan_extract` for stage0 emit.
   HXHX_STAGE0_OCAML_ONLY=1          Add `-D hxhx_stage0_ocaml_only` for stage0 emit.
   HXHX_STAGE0_NO_LINE_DIRECTIVES=1  Add `-D ocaml_no_line_directives` for stage0 emit.
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
@@ -202,16 +178,11 @@ HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 HXHX_STAGE0_NO_OPT="${HXHX_STAGE0_NO_OPT:-0}"
 HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
-HXHX_STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_NO_NATIVE_PARSER:-0}"
-HXHX_STAGE0_NO_HX_PARSER="${HXHX_STAGE0_NO_HX_PARSER:-0}"
 HXHX_STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_NO_EXPR_MACROS:-0}"
 HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST:-0}"
 HXHX_STAGE0_NO_STAGE3="${HXHX_STAGE0_NO_STAGE3:-0}"
 HXHX_STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_NO_INTERNAL_TOOLS:-0}"
 HXHX_STAGE0_NO_DISPLAY="${HXHX_STAGE0_NO_DISPLAY:-0}"
-HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
-HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT:-0}"
-HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT="${HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT:-0}"
 HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
 HXHX_STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_NO_LINE_DIRECTIVES:-0}"
 HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
@@ -308,18 +279,6 @@ while [ $# -gt 0 ]; do
 		--stage0-inline)
 			HXHX_STAGE0_NO_INLINE=0
 			;;
-		--stage0-no-native-parser)
-			HXHX_STAGE0_NO_NATIVE_PARSER=1
-			;;
-		--stage0-native-parser)
-			HXHX_STAGE0_NO_NATIVE_PARSER=0
-			;;
-		--stage0-no-hx-parser)
-			HXHX_STAGE0_NO_HX_PARSER=1
-			;;
-		--stage0-hx-parser)
-			HXHX_STAGE0_NO_HX_PARSER=0
-			;;
 		--stage0-no-expr-macros)
 			HXHX_STAGE0_NO_EXPR_MACROS=1
 			;;
@@ -349,24 +308,6 @@ while [ $# -gt 0 ]; do
 			;;
 		--stage0-display)
 			HXHX_STAGE0_NO_DISPLAY=0
-			;;
-		--stage0-no-source-normalize-extract)
-			HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
-			;;
-		--stage0-source-normalize-extract)
-			HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=0
-			;;
-		--stage0-no-native-decode-extract)
-			HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1
-			;;
-		--stage0-native-decode-extract)
-			HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=0
-			;;
-		--stage0-no-parser-scan-extract)
-			HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1
-			;;
-		--stage0-parser-scan-extract)
-			HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=0
 			;;
 		--stage0-ocaml-only)
 			HXHX_STAGE0_OCAML_ONLY=1
@@ -456,16 +397,11 @@ assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
 assert_bool_01 "HXHX_STAGE0_NO_OPT" "$HXHX_STAGE0_NO_OPT"
 assert_bool_01 "HXHX_STAGE0_NO_INLINE" "$HXHX_STAGE0_NO_INLINE"
-assert_bool_01 "HXHX_STAGE0_NO_NATIVE_PARSER" "$HXHX_STAGE0_NO_NATIVE_PARSER"
-assert_bool_01 "HXHX_STAGE0_NO_HX_PARSER" "$HXHX_STAGE0_NO_HX_PARSER"
 assert_bool_01 "HXHX_STAGE0_NO_EXPR_MACROS" "$HXHX_STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST" "$HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST"
 assert_bool_01 "HXHX_STAGE0_NO_STAGE3" "$HXHX_STAGE0_NO_STAGE3"
 assert_bool_01 "HXHX_STAGE0_NO_INTERNAL_TOOLS" "$HXHX_STAGE0_NO_INTERNAL_TOOLS"
 assert_bool_01 "HXHX_STAGE0_NO_DISPLAY" "$HXHX_STAGE0_NO_DISPLAY"
-assert_bool_01 "HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
-assert_bool_01 "HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
-assert_bool_01 "HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
 assert_bool_01 "HXHX_STAGE0_OCAML_ONLY" "$HXHX_STAGE0_OCAML_ONLY"
 assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
@@ -844,16 +780,11 @@ compute_fingerprint() {
 		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
 		echo "stage0_no_opt=$HXHX_STAGE0_NO_OPT"
 		echo "stage0_no_inline=$HXHX_STAGE0_NO_INLINE"
-		echo "stage0_no_native_parser=$HXHX_STAGE0_NO_NATIVE_PARSER"
-		echo "stage0_no_hx_parser=$HXHX_STAGE0_NO_HX_PARSER"
 		echo "stage0_no_expr_macros=$HXHX_STAGE0_NO_EXPR_MACROS"
 		echo "stage0_no_external_macro_host=$HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST"
 		echo "stage0_no_stage3=$HXHX_STAGE0_NO_STAGE3"
 		echo "stage0_no_internal_tools=$HXHX_STAGE0_NO_INTERNAL_TOOLS"
 		echo "stage0_no_display=$HXHX_STAGE0_NO_DISPLAY"
-		echo "stage0_no_source_normalize_extract=$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
-		echo "stage0_no_native_decode_extract=$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
-		echo "stage0_no_parser_scan_extract=$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
 		echo "stage0_ocaml_only=$HXHX_STAGE0_OCAML_ONLY"
 		echo "stage0_no_line_directives=$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 		echo "stage0_ocamlrunparam=$HXHX_STAGE0_OCAMLRUNPARAM"
@@ -918,16 +849,11 @@ write_report_json() {
   "stage0_disable_prepasses": $HXHX_STAGE0_DISABLE_PREPASSES,
   "stage0_no_opt": $HXHX_STAGE0_NO_OPT,
   "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
-  "stage0_no_native_parser": $HXHX_STAGE0_NO_NATIVE_PARSER,
-  "stage0_no_hx_parser": $HXHX_STAGE0_NO_HX_PARSER,
   "stage0_no_expr_macros": $HXHX_STAGE0_NO_EXPR_MACROS,
   "stage0_no_external_macro_host": $HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST,
   "stage0_no_stage3": $HXHX_STAGE0_NO_STAGE3,
   "stage0_no_internal_tools": $HXHX_STAGE0_NO_INTERNAL_TOOLS,
   "stage0_no_display": $HXHX_STAGE0_NO_DISPLAY,
-  "stage0_no_source_normalize_extract": $HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT,
-  "stage0_no_native_decode_extract": $HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT,
-  "stage0_no_parser_scan_extract": $HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT,
   "stage0_ocaml_only": $HXHX_STAGE0_OCAML_ONLY,
   "stage0_no_line_directives": $HXHX_STAGE0_NO_LINE_DIRECTIVES,
   "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",
@@ -1312,12 +1238,6 @@ fi
 if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
 	echo "== Stage0 compile mode: --no-inline enabled"
 fi
-if [ "$HXHX_STAGE0_NO_NATIVE_PARSER" = "1" ]; then
-	echo "== Stage0 compile mode: native parser disabled (-D hxhx_stage0_no_native_parser)"
-fi
-if [ "$HXHX_STAGE0_NO_HX_PARSER" = "1" ]; then
-	echo "== Stage0 compile mode: pure-Haxe parser fallbacks trimmed (-D hxhx_stage0_no_hx_parser)"
-fi
 if [ "$HXHX_STAGE0_NO_EXPR_MACROS" = "1" ]; then
 	echo "== Stage0 compile mode: Stage3 expression macros disabled (-D hxhx_stage0_no_expr_macros)"
 fi
@@ -1332,15 +1252,6 @@ if [ "$HXHX_STAGE0_NO_INTERNAL_TOOLS" = "1" ]; then
 fi
 if [ "$HXHX_STAGE0_NO_DISPLAY" = "1" ]; then
 	echo "== Stage0 compile mode: Stage3 display synthesis paths disabled (-D hxhx_stage0_no_display)"
-fi
-if [ "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" = "1" ]; then
-	echo "== Stage0 compile mode: HxParser normalization helpers inlined (-D hxhx_stage0_no_source_normalize_extract)"
-fi
-if [ "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" = "1" ]; then
-	echo "== Stage0 compile mode: ParserStage native decode helpers inlined (-D hxhx_stage0_no_native_decode_extract)"
-fi
-if [ "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" = "1" ]; then
-	echo "== Stage0 compile mode: ParserStage scan helpers inlined (-D hxhx_stage0_no_parser_scan_extract)"
 fi
 if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 	echo "== Stage0 compile mode: ocaml-only backend graph enabled (-D hxhx_stage0_ocaml_only)"
@@ -1449,12 +1360,6 @@ if [ "$skipped_emit" = "0" ]; then
 	if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
 		haxe_args+=(--no-inline)
 	fi
-	if [ "$HXHX_STAGE0_NO_NATIVE_PARSER" = "1" ]; then
-		haxe_args+=(-D hxhx_stage0_no_native_parser)
-	fi
-	if [ "$HXHX_STAGE0_NO_HX_PARSER" = "1" ]; then
-		haxe_args+=(-D hxhx_stage0_no_hx_parser)
-	fi
 	if [ "$HXHX_STAGE0_NO_EXPR_MACROS" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_expr_macros)
 	fi
@@ -1469,15 +1374,6 @@ if [ "$skipped_emit" = "0" ]; then
 	fi
 	if [ "$HXHX_STAGE0_NO_DISPLAY" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_display)
-	fi
-	if [ "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" = "1" ]; then
-		haxe_args+=(-D hxhx_stage0_no_source_normalize_extract)
-	fi
-	if [ "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" = "1" ]; then
-		haxe_args+=(-D hxhx_stage0_no_native_decode_extract)
-	fi
-	if [ "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" = "1" ]; then
-		haxe_args+=(-D hxhx_stage0_no_parser_scan_extract)
 	fi
 	if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_ocaml_only)

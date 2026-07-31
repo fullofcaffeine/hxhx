@@ -9,7 +9,7 @@ set -euo pipefail
 #
 # Notes
 # - This does NOT run the unit tests. It only validates CLI parsing, hxml expansion,
-#   -lib classpath resolution, and import-closure parsing via the native frontend seam.
+#   -lib classpath resolution, and import-closure parsing via the Haxe-authored frontend.
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"

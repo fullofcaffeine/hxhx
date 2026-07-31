@@ -77,11 +77,11 @@ let luaDescriptor = fun () -> descriptor ("lua-native" : string) ("builtin/lua-n
 
 let emitTarget = fun target program context -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_EmitResult.t) in (
   ignore (match target with
-    | Backend_source_SourceTargetCommon.Java -> let __assign_9 = Obj.magic (Backend_source_JavaSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
+    | Backend_source_SourceNativeTarget.Java -> let __assign_9 = Obj.magic (Backend_source_JavaSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
       tempResult := __assign_9;
       __assign_9
     )
-    | Backend_source_SourceTargetCommon.Php -> let __assign_10 = Obj.magic (Backend_source_PhpSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
+    | Backend_source_SourceNativeTarget.Php -> let __assign_10 = Obj.magic (Backend_source_PhpSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
       tempResult := __assign_10;
       __assign_10
     )
@@ -98,12 +98,12 @@ let registration = fun d target -> let __anon_8 = HxAnon.create () in (
   __anon_8
 )
 
-let pythonRegistration = fun () -> registration (pythonDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Python))
+let pythonRegistration = fun () -> registration (pythonDescriptor ()) (Obj.magic (Backend_source_SourceNativeTarget.Python))
 
-let javaRegistration = fun () -> registration (javaDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Java))
+let javaRegistration = fun () -> registration (javaDescriptor ()) (Obj.magic (Backend_source_SourceNativeTarget.Java))
 
-let csRegistration = fun () -> registration (csDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Cs))
+let csRegistration = fun () -> registration (csDescriptor ()) (Obj.magic (Backend_source_SourceNativeTarget.Cs))
 
-let phpRegistration = fun () -> registration (phpDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Php))
+let phpRegistration = fun () -> registration (phpDescriptor ()) (Obj.magic (Backend_source_SourceNativeTarget.Php))
 
-let luaRegistration = fun () -> registration (luaDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Lua))
+let luaRegistration = fun () -> registration (luaDescriptor ()) (Obj.magic (Backend_source_SourceNativeTarget.Lua))

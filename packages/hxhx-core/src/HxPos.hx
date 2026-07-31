@@ -49,8 +49,8 @@ class HxPos {
 		Sentinel “unknown” position.
 
 		Why
-		- Some bootstrap seams (notably the native frontend protocol) currently
-		  return partial ASTs without statement-level positions.
+		- Best-effort recovery can retain useful syntax without a trustworthy
+		  statement-level position.
 		- We still want to construct a well-typed AST and report diagnostics in a
 		  uniform shape, even when the location is not available.
 	**/

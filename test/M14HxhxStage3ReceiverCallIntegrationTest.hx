@@ -236,13 +236,13 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				'Ambiguous overload diagnostic should match Haxe 4.3.7 Issue10434 expected stderr.');
 			final upstream437BodyStart = upstream437OverloadSrc.indexOf('\n\t\tToolCache.extractTar();');
 			final rebasedBody = HxParser.parseFunctionBodyTextAt('\n\t\tToolCache.extractTar();\n\t', upstream437OverloadSrc, upstream437BodyStart);
-			assertEquals(Std.string(rebasedBody.length), '1', 'Native method_body slice should parse to one rebased expression statement.');
+			assertEquals(Std.string(rebasedBody.length), '1', 'A recovered method-body slice should parse to one rebased expression statement.');
 			switch (rebasedBody[0]) {
 				case SExpr(_, pos):
-					assertEquals(Std.string(pos.getLine()), '7', 'Native method_body statement line should be rebased to the original module.');
-					assertEquals(Std.string(pos.getColumn()), '3', 'Native method_body statement column should preserve the original indentation.');
+					assertEquals(Std.string(pos.getLine()), '7', 'The recovered method-body statement line should be rebased to the original module.');
+					assertEquals(Std.string(pos.getColumn()), '3', 'The recovered method-body statement column should preserve the original indentation.');
 				case _:
-					throw 'Native method_body slice did not parse to an expression statement.';
+					throw 'The recovered method-body slice did not parse to an expression statement.';
 			}
 
 			final upstream437TopLevelOverloadSrc = [
@@ -276,16 +276,16 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				'Main.hx:3: characters 27-37 : ... (?flags : Null<String>) -> Void',
 			].join("\n"),
 				'Top-level Issue10434 diagnostic should use the call-site position, not the overload declaration.');
-			final scannedTopLevelFunctions = @:privateAccess ParserStage.scanToplevelFunctions(upstream437TopLevelOverloadSrc, "Main");
-			assertEquals(Std.string(scannedTopLevelFunctions.length), '1', 'Native enrichment top-level scanner should discover the Issue10434 main function.');
-			switch (HxFunctionDecl.getBody(scannedTopLevelFunctions[0])[0]) {
+			final parsedTopLevelFunctions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(upstream437TopLevelParsed.getDecl()));
+			final parsedTopLevelMainFunctions = parsedTopLevelFunctions.filter(fn -> HxFunctionDecl.getName(fn) == "main");
+			assertEquals(Std.string(parsedTopLevelMainFunctions.length), '1',
+				'The Haxe parser should discover exactly one Issue10434 top-level main function.');
+			switch (HxFunctionDecl.getBody(parsedTopLevelMainFunctions[0])[0]) {
 				case SExpr(_, pos):
-					assertEquals(Std.string(pos.getLine()), '7',
-						'Native enrichment top-level scanner should rebase function body statements to the original module line.');
-					assertEquals(Std.string(pos.getColumn()), '3',
-						'Native enrichment top-level scanner should match the Issue10434 call-site diagnostic column.');
+					assertEquals(Std.string(pos.getLine()), '7', 'The Haxe parser should retain the original module line for top-level function statements.');
+					assertEquals(Std.string(pos.getColumn()), '3', 'The Haxe parser should retain the Issue10434 call-site diagnostic column.');
 				case _:
-					throw 'Native enrichment top-level scanner did not parse Issue10434 main body as an expression statement.';
+					throw 'The Haxe parser did not parse the Issue10434 main body as an expression statement.';
 			}
 
 			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);

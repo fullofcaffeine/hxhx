@@ -79,6 +79,9 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
   - Recommendation: `rejected`
 - `--no-source-normalize-extract` baseline vs extracted helper default (parity-aware)
+  - Historical only: the expression-source repair helper and this profiling switch were
+    retired with the single Haxe-parser hard cut on 2026-07-24. The measurements below
+    describe the old compiler graph and the command is no longer supported.
   - Baseline median: `7104MB`
   - Mitigation median: `6854MB`
   - Median reduction: `3.52%`

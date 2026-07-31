@@ -205,7 +205,7 @@ class NekoTargetCore {
 	}
 
 	static function renderProgram(program:GenIrProgram, context:BackendContext):String {
-		final modules = program.getTypedModules();
+		final modules = strictModuleProjections(program);
 		if (modules.length == 0)
 			throw "Neko native backend received an empty program";
 
@@ -246,7 +246,7 @@ class NekoTargetCore {
 	}
 
 	static function renderSplitProgram(program:GenIrProgram, context:BackendContext, entryPath:String):NekoSplitProgram {
-		final modules = program.getTypedModules();
+		final modules = strictModuleProjections(program);
 		if (modules.length == 0)
 			throw "Neko native backend received an empty program";
 
@@ -352,10 +352,17 @@ class NekoTargetCore {
 		return a < b ? a : b;
 	}
 
-	static function findMain(modules:Array<TypedModule>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
+	/**
+		Build the exact source-shaped view once at target entry so every Neko
+		lookup and render step sees the same local-binding projection.
+	**/
+	static function strictModuleProjections(program:GenIrProgram):Array<TypedBackendModuleProjection>
+		return [for (typed in program.getTypedModules()) typed.getBackendProjection()];
+
+	static function findMain(modules:Array<TypedBackendModuleProjection>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> = null;
 		for (typed in modules) {
-			final decl = typed.getBackendDeclaration();
+			final decl = typed.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
@@ -374,10 +381,10 @@ class NekoTargetCore {
 		return fallback;
 	}
 
-	static function buildClassMap(modules:Array<TypedModule>):StringMap<NekoClassInfo> {
+	static function buildClassMap(modules:Array<TypedBackendModuleProjection>):StringMap<NekoClassInfo> {
 		final classes = new StringMap<NekoClassInfo>();
 		for (typed in modules) {
-			final decl = typed.getBackendDeclaration();
+			final decl = typed.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final shortName = HxClassDecl.getName(cls);
@@ -391,10 +398,10 @@ class NekoTargetCore {
 		return classes;
 	}
 
-	static function buildRuntimeClassMeta(modules:Array<TypedModule>):Array<NekoRuntimeClassMeta> {
+	static function buildRuntimeClassMeta(modules:Array<TypedBackendModuleProjection>):Array<NekoRuntimeClassMeta> {
 		final metas = new Array<NekoRuntimeClassMeta>();
 		for (typed in modules) {
-			final decl = typed.getBackendDeclaration();
+			final decl = typed.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final shortName = HxClassDecl.getName(cls);

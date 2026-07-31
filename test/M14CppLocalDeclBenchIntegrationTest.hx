@@ -32,7 +32,7 @@ class M14CppLocalDeclBenchIntegrationTest {
 		return parsed == null || parsed <= 0 ? fallback : parsed;
 	}
 
-	static function fixture():CppLocalDeclFixture {
+	static function fixture(?traceContext:backend.cpp.CppTraceContext):CppLocalDeclFixture {
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
@@ -53,8 +53,11 @@ class M14CppLocalDeclBenchIntegrationTest {
 			classes.set(name, cls);
 			all.push(cls);
 		}
+		final lookup:backend.cpp.CppClassLookup = {names: names, byName: classes, all: all};
+		if (traceContext != null)
+			lookup.traceContext = traceContext;
 		return {
-			scope: @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: all}, "void"),
+			scope: @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void"),
 			owner: owner
 		};
 	}
@@ -90,15 +93,6 @@ class M14CppLocalDeclBenchIntegrationTest {
 
 	static function indexedBenchFixtureCount(name:String, calls:Int):Int {
 		return selectedBench(name) ? calls + 1 : 1;
-	}
-
-	static function resetTimingCaches():Void {
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingMethodFilterCache = null;
-	}
-
-	static function restoreEnv(name:String, value:Null<String>):Void {
-		Sys.putEnv(name, value);
 	}
 
 	static function render(stmt:HxStmt, scope:backend.cpp.CppRenderScope):String {
@@ -190,35 +184,21 @@ class M14CppLocalDeclBenchIntegrationTest {
 			eRegFullSample = render(eRegStmt, eRegFullFixtures[i].scope);
 		});
 
-		final timingEnv = "HXHX_TRACE_STAGE3_CPP_TIMINGS";
-		final filterEnv = "HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER";
-		final priorTiming = Sys.getEnv(timingEnv);
-		final priorFilter = Sys.getEnv(filterEnv);
-		final eRegTracedFixtures = [for (_ in 0...indexedBenchFixtureCount("ereg_full_traced", calls)) fixture()];
+		final eRegTracedFixtures = [
+			for (_ in 0...indexedBenchFixtureCount("ereg_full_traced", calls))
+				fixture(new backend.cpp.CppTraceContext(true, "LocalDeclBenchOwner.test"))
+		];
 		var eRegTracedSample = "";
 		var eRegTracedLineCount = 0;
 		var eRegTracedSeconds = -1.;
-		try {
-			Sys.putEnv(timingEnv, "1");
-			Sys.putEnv(filterEnv, "LocalDeclBenchOwner.test");
-			resetTimingCaches();
-			eRegTracedSeconds = elapsedIndexedNamed("ereg_full_traced", calls, i -> {
-				final measured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
-					eRegTracedSample = @:privateAccess
-						backend.cpp.CppTargetCore.renderTimedHelperFunctionBody("LocalDeclBenchOwner", "test", [eRegStmt], "", eRegTracedFixtures[i].scope)
-							.join("\n");
-				});
-				eRegTracedLineCount = measured.phases.length;
+		eRegTracedSeconds = elapsedIndexedNamed("ereg_full_traced", calls, i -> {
+			final tracedScope = eRegTracedFixtures[i].scope;
+			final measured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(tracedScope.traceContext, () -> {
+				eRegTracedSample = @:privateAccess
+					backend.cpp.CppTargetCore.renderTimedHelperFunctionBody("LocalDeclBenchOwner", "test", [eRegStmt], "", tracedScope).join("\n");
 			});
-		} catch (error:Dynamic) {
-			restoreEnv(timingEnv, priorTiming);
-			restoreEnv(filterEnv, priorFilter);
-			resetTimingCaches();
-			throw error;
-		}
-		restoreEnv(timingEnv, priorTiming);
-		restoreEnv(filterEnv, priorFilter);
-		resetTimingCaches();
+			eRegTracedLineCount = measured.phases.length;
+		});
 
 		final controls = fixture();
 		final untypedSample = render(SVar("untypedText", "", EString("literal"), HxPos.unknown()), controls.scope);

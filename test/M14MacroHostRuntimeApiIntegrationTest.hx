@@ -1,8 +1,19 @@
 import haxe.io.Path;
+import hxhx.CompilationServerDependencyCatalog;
+import hxhx.CompilationServerReply;
+import hxhx.CompilationServerRequest;
+import hxhx.CompilationServerRequestCodec;
+import hxhx.CompilationServerRequestDispatcher;
+import hxhx.CompilationServerSourceCache;
+import hxhx.CompilationServerProtocol;
+import hxhx.Stage3Compiler;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
+import sys.io.File;
 
 class M14MacroHostRuntimeApiIntegrationTest {
+	static var nextServerRequestId:Int = 6000;
+
 	static function fail(message:String):Void {
 		throw message;
 	}
@@ -16,6 +27,164 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		if (actual.indexOf(expected) >= 0)
 			return;
 		fail(label + ': expected "' + expected + '" in "' + actual + '"');
+	}
+
+	static function ensureDirectory(path:String):Void {
+		if (sys.FileSystem.exists(path))
+			return;
+		final parent = Path.directory(path);
+		if (parent != null && parent.length > 0 && parent != path)
+			ensureDirectory(parent);
+		sys.FileSystem.createDirectory(path);
+	}
+
+	static function compileServerRequest(sourceCache:CompilationServerSourceCache, dependencyCatalog:CompilationServerDependencyCatalog, args:Array<String>,
+			?requestFlags:Array<String>):CompilationServerReply {
+		nextServerRequestId += 1;
+		return CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(nextServerRequestId, args, requestFlags == null ? [] : requestFlags,
+			null), Stage3Compiler.runRequest, sourceCache,
+			dependencyCatalog);
+	}
+
+	static function wire(reply:CompilationServerReply):String
+		return CompilationServerRequestCodec.encodeReply(reply);
+
+	static function reportInt(result:String, key:String):Int {
+		final marker = key + "=";
+		final start = result.indexOf(marker);
+		assertTrue(start >= 0, "server report should contain " + key);
+		var end = start + marker.length;
+		while (end < result.length) {
+			final code = result.charCodeAt(end);
+			if (code < 48 || code > 57)
+				break;
+			end += 1;
+		}
+		final value = Std.parseInt(result.substring(start + marker.length, end));
+		assertTrue(value != null, "server report should contain an integer for " + key);
+		return value;
+	}
+
+	static function reportValue(result:String, key:String):String {
+		final marker = key + "=";
+		final start = result.indexOf(marker);
+		assertTrue(start >= 0, "server report should contain " + key);
+		final valueStart = start + marker.length;
+		var end = result.indexOf("\n", valueStart);
+		if (end < 0)
+			end = result.length;
+		return StringTools.trim(result.substring(valueStart, end));
+	}
+
+	static function dependencyReport(result:String):String
+		return result.split("\n").filter(line -> line.indexOf("hxhx_server_report.dependency_") >= 0).join("\n");
+
+	/**
+		Prove that a real external-host registration becomes a transactional,
+		privacy-safe server dependency observation.
+	**/
+	static function verifyExternalMacroFileDependency():Void {
+		final root = ".tmp/m14-macro-file-dependency";
+		final src = Path.join([root, "src"]);
+		final mainFile = Path.join([src, "Main.hx"]);
+		final dependencyFile = Path.join([root, "macro-input.txt"]);
+		final dependencyContentA = "private-macro-input-a";
+		final dependencyContentB = "private-macro-input-b";
+		deleteRecursive(root);
+		ensureDirectory(src);
+		File.saveContent(mainFile, "class Main { public static function main():Void {} }\n");
+		File.saveContent(dependencyFile, dependencyContentA);
+
+		final macroExpression = "hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()";
+		final args = [
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-server-report",
+			"--hxhx-macro-runtime",
+			"external-host",
+			"-D",
+			"macro_dependency_module=Main",
+			"-D",
+			"macro_dependency_file=" + dependencyFile,
+			"--macro",
+			macroExpression,
+			"--macro",
+			macroExpression,
+			"-cp",
+			src,
+			"-cp",
+			"test/fixtures/hxhx-macros/src",
+			"-main",
+			"Main"
+		];
+		final sourceCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
+
+		final firstReply = compileServerRequest(sourceCache, dependencyCatalog, args);
+		final firstWire = wire(firstReply);
+		assertTrue(!firstReply.isError, "macro-file dependency baseline should compile: " + firstWire);
+		final firstSnapshot = reportValue(firstWire, "hxhx_server_report.dependency_snapshot");
+		assertTrue(reportInt(firstWire, "hxhx_server_report.dependency_previous_snapshot") == 0,
+			"the first macro-file observation should have no previous snapshot");
+
+		final unchangedWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(unchangedWire, "hxhx_server_report.dependency_macro_file_changes") == 0
+			&& reportInt(unchangedWire, "hxhx_server_report.dependency_predicted_invalidations") == 0,
+			"unchanged duplicate registrations should coalesce into one stable observation");
+		assertTrue(reportValue(unchangedWire, "hxhx_server_report.dependency_snapshot") == firstSnapshot,
+			"an unchanged external macro input should reproduce the exact snapshot");
+
+		File.saveContent(dependencyFile, dependencyContentB);
+		final changedReply = compileServerRequest(sourceCache, dependencyCatalog, args);
+		final changedWire = wire(changedReply);
+		assertTrue(!changedReply.isError, "changed macro-file dependency should compile: " + changedWire);
+		assertTrue(reportInt(changedWire, "hxhx_server_report.dependency_macro_file_changes") == 1
+			&& reportInt(changedWire, "hxhx_server_report.dependency_predicted_invalidations") == 1,
+			"changing the registered bytes should recheck only the declared module");
+		assertContains("macro-file invalidation reason", changedWire, "macro-file-dependency-changed:Main");
+		final changedDependencyReport = dependencyReport(changedWire);
+		assertTrue(changedDependencyReport.indexOf(dependencyFile) < 0
+			&& changedDependencyReport.indexOf(dependencyContentA) < 0
+			&& changedDependencyReport.indexOf(dependencyContentB) < 0,
+			"dependency reports must retain neither the registered path nor its private bytes");
+
+		final cancelledReply = compileServerRequest(sourceCache, dependencyCatalog, args, [CompilationServerProtocol.REQUEST_TIMEOUT_FLAG, "0"]);
+		assertTrue(cancelledReply.isError, "an expired macro-file request should cancel");
+		final afterCancellationWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(afterCancellationWire, "hxhx_server_report.dependency_macro_file_changes") == 0,
+			"a cancelled request must not replace the last successful macro-file observation");
+
+		sys.FileSystem.deleteFile(mainFile);
+		final failedReply = compileServerRequest(sourceCache, dependencyCatalog, args);
+		assertTrue(failedReply.isError, "a request whose root module disappeared should fail");
+		File.saveContent(mainFile, "class Main { public static function main():Void {} }\n");
+		final afterFailureWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(afterFailureWire, "hxhx_server_report.dependency_macro_file_changes") == 0,
+			"a failed request must not replace the last successful macro-file observation");
+
+		sys.FileSystem.deleteFile(dependencyFile);
+		final deletedWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(deletedWire, "hxhx_server_report.dependency_macro_file_changes") == 1,
+			"deleting the registered file should change the declared module observation");
+
+		File.saveContent(dependencyFile, dependencyContentA);
+		final restoredWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportValue(restoredWire, "hxhx_server_report.dependency_snapshot") == firstSnapshot,
+			"returning to exact external input A should reproduce the original snapshot");
+
+		dependencyCatalog.reset();
+		final resetWire = wire(compileServerRequest(sourceCache, dependencyCatalog, args));
+		assertTrue(reportInt(resetWire, "hxhx_server_report.dependency_previous_snapshot") == 0,
+			"dependency reset must discard the retained macro-file observation");
+
+		final noReportArgs = args.copy();
+		noReportArgs.remove("--hxhx-server-report");
+		final moduleDefineIndex = noReportArgs.indexOf("macro_dependency_module=Main");
+		assertTrue(moduleDefineIndex >= 0, "the no-report fixture should find its module define");
+		noReportArgs[moduleDefineIndex] = "macro_dependency_module=NotInTypedProgram";
+		final noReportReply = compileServerRequest(sourceCache, dependencyCatalog, noReportArgs);
+		assertTrue(!noReportReply.isError, "an ordinary non-reporting compile must not read or validate dependency-observer inputs");
+		deleteRecursive(root);
 	}
 
 	static function main():Void {
@@ -325,6 +494,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final timerOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTimer()");
 			assertContains("timer output", timerOutput, "timer=ok");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TIMER") == "ok", "expected runtime timer define");
+
+			verifyExternalMacroFileDependency();
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

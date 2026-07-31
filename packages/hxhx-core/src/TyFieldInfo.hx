@@ -16,11 +16,13 @@ class TyFieldInfo {
 	final isFinal:Bool;
 	final isInline:Bool;
 	final hasInitializer:Bool;
+	final propertyGet:String;
+	final propertySet:String;
 	final noImportGlobal:Bool;
 	final canonicalKey:String;
 
 	public function new(owner:TyNominalTypeId, modulePath:String, name:String, type:TyType, isStatic:Bool, isPublic:Bool, isFinal:Bool, isInline:Bool,
-			hasInitializer:Bool, noImportGlobal:Bool = false) {
+			hasInitializer:Bool, noImportGlobal:Bool = false, propertyGet:String = "", propertySet:String = "") {
 		this.owner = owner;
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.name = name == null ? "" : StringTools.trim(name);
@@ -30,6 +32,8 @@ class TyFieldInfo {
 		this.isFinal = isFinal;
 		this.isInline = isInline;
 		this.hasInitializer = hasInitializer;
+		this.propertyGet = propertyGet == null ? "" : StringTools.trim(propertyGet);
+		this.propertySet = propertySet == null ? "" : StringTools.trim(propertySet);
 		this.noImportGlobal = noImportGlobal;
 		final ownerName = owner == null ? "" : owner.getCanonicalName();
 		canonicalKey = ownerName + "#" + (isStatic ? "static" : "instance") + "#" + this.name;
@@ -63,6 +67,14 @@ class TyFieldInfo {
 
 	public function getHasInitializer():Bool
 		return hasInitializer;
+
+	/** Return the exact Haxe read-access mode, such as `get` or `default`. **/
+	public function getPropertyGet():String
+		return propertyGet;
+
+	/** Return the exact Haxe write-access mode, such as `set` or `never`. **/
+	public function getPropertySet():String
+		return propertySet;
 
 	/** Whether `import Owner.*` must withhold this field from bare-name lookup. **/
 	public function getNoImportGlobal():Bool

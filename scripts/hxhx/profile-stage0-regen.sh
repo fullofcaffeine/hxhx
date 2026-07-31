@@ -28,16 +28,11 @@ FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
 HEARTBEAT_SECS="${HXHX_STAGE0_PROFILE_HEARTBEAT_SECS:-20}"
 NO_OPT="${HXHX_STAGE0_PROFILE_NO_OPT:-0}"
 NO_INLINE="${HXHX_STAGE0_PROFILE_NO_INLINE:-0}"
-STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_PROFILE_NO_NATIVE_PARSER:-0}"
-STAGE0_NO_HX_PARSER="${HXHX_STAGE0_PROFILE_NO_HX_PARSER:-0}"
 STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_PROFILE_NO_EXPR_MACROS:-0}"
 STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_PROFILE_NO_EXTERNAL_MACRO_HOST:-0}"
 STAGE0_NO_STAGE3="${HXHX_STAGE0_PROFILE_NO_STAGE3:-0}"
 STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_PROFILE_NO_INTERNAL_TOOLS:-0}"
 STAGE0_NO_DISPLAY="${HXHX_STAGE0_PROFILE_NO_DISPLAY:-0}"
-STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_PROFILE_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
-STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_PROFILE_NO_NATIVE_DECODE_EXTRACT:-0}"
-STAGE0_NO_PARSER_SCAN_EXTRACT="${HXHX_STAGE0_PROFILE_NO_PARSER_SCAN_EXTRACT:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
 STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
 STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_PROFILE_NO_LINE_DIRECTIVES:-0}"
@@ -65,16 +60,11 @@ Options:
   --heartbeat <seconds>                          Stage0 heartbeat seconds (default: 20)
   --no-opt                                       Enable stage0 --no-opt mitigation
   --no-inline                                    Enable stage0 --no-inline mitigation
-  --no-native-parser                             Disable native parser path for stage0 compile
-  --no-hx-parser                                 Trim pure-Haxe parser fallback paths in stage0 compile graph
   --no-expr-macros                               Trim Stage3 expression macro expander path in stage0 compile graph
   --no-external-macro-host                       Trim external macro-host runtime paths in stage0 compile graph
   --no-stage3                                    Trim Stage3 native lane paths in stage0 compile graph
   --no-internal-tools                            Trim internal bring-up CLI paths in stage0 compile graph
   --no-display                                   Trim Stage3 display synthesis paths in stage0 compile graph
-  --no-source-normalize-extract                  Inline HxParser normalization helpers for stage0 A/B (no extract)
-  --no-native-decode-extract                     Inline ParserStage native decode helpers for stage0 A/B (no extract)
-  --no-parser-scan-extract                       Inline ParserStage scanner helpers for stage0 A/B (no extract)
   --disable-prepasses                            Enable stage0 prepass disable define
   --ocaml-only                                   Enable stage0 ocaml-only backend graph define
   --no-line-directives                           Disable OCaml line directives during stage0 emit
@@ -137,14 +127,6 @@ while [ "$#" -gt 0 ]; do
 			NO_INLINE=1
 			shift
 			;;
-		--no-native-parser)
-			STAGE0_NO_NATIVE_PARSER=1
-			shift
-			;;
-		--no-hx-parser)
-			STAGE0_NO_HX_PARSER=1
-			shift
-			;;
 		--no-expr-macros)
 			STAGE0_NO_EXPR_MACROS=1
 			shift
@@ -163,18 +145,6 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--no-display)
 			STAGE0_NO_DISPLAY=1
-			shift
-			;;
-		--no-source-normalize-extract)
-			STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
-			shift
-			;;
-		--no-native-decode-extract)
-			STAGE0_NO_NATIVE_DECODE_EXTRACT=1
-			shift
-			;;
-		--no-parser-scan-extract)
-			STAGE0_NO_PARSER_SCAN_EXTRACT=1
 			shift
 			;;
 		--no-opt)
@@ -266,16 +236,11 @@ if ! is_non_negative_int "$HEARTBEAT_SECS"; then
 fi
 assert_bool_01 "NO_OPT" "$NO_OPT"
 assert_bool_01 "NO_INLINE" "$NO_INLINE"
-assert_bool_01 "STAGE0_NO_NATIVE_PARSER" "$STAGE0_NO_NATIVE_PARSER"
-assert_bool_01 "STAGE0_NO_HX_PARSER" "$STAGE0_NO_HX_PARSER"
 assert_bool_01 "STAGE0_NO_EXPR_MACROS" "$STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "STAGE0_NO_EXTERNAL_MACRO_HOST" "$STAGE0_NO_EXTERNAL_MACRO_HOST"
 assert_bool_01 "STAGE0_NO_STAGE3" "$STAGE0_NO_STAGE3"
 assert_bool_01 "STAGE0_NO_INTERNAL_TOOLS" "$STAGE0_NO_INTERNAL_TOOLS"
 assert_bool_01 "STAGE0_NO_DISPLAY" "$STAGE0_NO_DISPLAY"
-assert_bool_01 "STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" "$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
-assert_bool_01 "STAGE0_NO_NATIVE_DECODE_EXTRACT" "$STAGE0_NO_NATIVE_DECODE_EXTRACT"
-assert_bool_01 "STAGE0_NO_PARSER_SCAN_EXTRACT" "$STAGE0_NO_PARSER_SCAN_EXTRACT"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
 assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
 assert_bool_01 "STAGE0_NO_LINE_DIRECTIVES" "$STAGE0_NO_LINE_DIRECTIVES"
@@ -341,7 +306,7 @@ run_capacity_preflight() {
 run_capacity_preflight
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS no_display=$STAGE0_NO_DISPLAY no_source_normalize_extract=$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT no_native_decode_extract=$STAGE0_NO_NATIVE_DECODE_EXTRACT no_parser_scan_extract=$STAGE0_NO_PARSER_SCAN_EXTRACT disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS no_display=$STAGE0_NO_DISPLAY disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -355,16 +320,11 @@ HXHX_STAGE0_TELEMETRY_DETAIL="$TELEMETRY_DETAIL" \
 HXHX_STAGE0_TELEMETRY_CLASS="$TELEMETRY_CLASS" \
 HXHX_STAGE0_NO_OPT="$NO_OPT" \
 HXHX_STAGE0_NO_INLINE="$NO_INLINE" \
-HXHX_STAGE0_NO_NATIVE_PARSER="$STAGE0_NO_NATIVE_PARSER" \
-HXHX_STAGE0_NO_HX_PARSER="$STAGE0_NO_HX_PARSER" \
 HXHX_STAGE0_NO_EXPR_MACROS="$STAGE0_NO_EXPR_MACROS" \
 HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="$STAGE0_NO_EXTERNAL_MACRO_HOST" \
 HXHX_STAGE0_NO_STAGE3="$STAGE0_NO_STAGE3" \
 HXHX_STAGE0_NO_INTERNAL_TOOLS="$STAGE0_NO_INTERNAL_TOOLS" \
 HXHX_STAGE0_NO_DISPLAY="$STAGE0_NO_DISPLAY" \
-HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" \
-HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="$STAGE0_NO_NATIVE_DECODE_EXTRACT" \
-HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT="$STAGE0_NO_PARSER_SCAN_EXTRACT" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
 HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
 HXHX_STAGE0_NO_LINE_DIRECTIVES="$STAGE0_NO_LINE_DIRECTIVES" \

@@ -8,7 +8,6 @@ import backend.EmitResult;
 import backend.GenIrProgram;
 import backend.TargetCoreBackend;
 import backend.TargetDescriptor;
-import backend.source.SourceTargetCommon.SourceNativeTarget;
 
 /**
 	Thin registration facade for native source-target backends.

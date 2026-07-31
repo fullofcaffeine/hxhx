@@ -13,27 +13,32 @@
 	type names are never binding evidence.
 **/
 class TyMethodGenericBinding {
-	static function parameterName(type:TyType, methodTypeParameters:Array<String>):Null<String> {
+	static function parameterIdentity(type:TyType, methodTypeParameters:Array<TyTypeParameterId>):Null<TyTypeParameterId> {
 		if (type == null || !type.isTypeParameter() || methodTypeParameters == null)
 			return null;
-		final name = type.getDisplay();
-		return methodTypeParameters.indexOf(name) < 0 ? null : name;
+		final identity = type.getTypeParameterIdentity();
+		if (identity == null)
+			return null;
+		for (parameter in methodTypeParameters)
+			if (parameter.equals(identity))
+				return parameter;
+		return null;
 	}
 
 	/** Return the method parameters whose constraints need no further proof. **/
-	public static function inferableTypeParameters(declaration:Null<TyDeclarationInfo>):Array<String> {
+	public static function inferableTypeParameters(declaration:Null<TyDeclarationInfo>):Array<TyTypeParameterId> {
 		if (declaration == null)
 			return [];
 		final constraints = declaration.getTypeParameterConstraints();
 		return [
-			for (name in declaration.getTypeParameters())
-				if (!constraints.exists(name)) name
+			for (parameter in declaration.getTypeParameterIds())
+				if (!constraints.exists(parameter.getName())) parameter
 		];
 	}
 
 	/** Whether this exact semantic type is one of the inferable method parameters. **/
-	public static function isInferableParameter(type:TyType, methodTypeParameters:Array<String>):Bool {
-		return parameterName(type, methodTypeParameters) != null;
+	public static function isInferableParameter(type:TyType, methodTypeParameters:Array<TyTypeParameterId>):Bool {
+		return parameterIdentity(type, methodTypeParameters) != null;
 	}
 
 	/** Compare the semantic constructors around nested generic arguments. **/
@@ -47,22 +52,23 @@ class TyMethodGenericBinding {
 		return left.isUnresolved() && right.isUnresolved() && left.getUnresolvedPath() == right.getUnresolvedPath();
 	}
 
-	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<String>, bindings:haxe.ds.StringMap<TyType>):Bool {
+	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>):Bool {
 		if (expected == null || actual == null)
 			return true;
-		final parameter = parameterName(expected, methodTypeParameters);
+		final parameter = parameterIdentity(expected, methodTypeParameters);
 		if (parameter != null) {
 			if (actual.isUnknown() || actual.isDynamic())
 				return true;
-			final previous = bindings.get(parameter);
+			final parameterKey = parameter.getCanonicalKey();
+			final previous = bindings.get(parameterKey);
 			if (previous == null) {
-				bindings.set(parameter, actual);
+				bindings.set(parameterKey, actual);
 				return true;
 			}
 			final unified = TyType.unify(previous, actual);
 			if (unified == null)
 				return false;
-			bindings.set(parameter, unified);
+			bindings.set(parameterKey, unified);
 			return true;
 		}
 		if (expected.isNullable() || actual.isNullable())
@@ -91,7 +97,8 @@ class TyMethodGenericBinding {
 		return true;
 	}
 
-	static function bindings(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<String>):Null<haxe.ds.StringMap<TyType>> {
+	static function bindings(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int,
+			methodTypeParameters:Array<TyTypeParameterId>):Null<haxe.ds.StringMap<TyType>> {
 		final result = new haxe.ds.StringMap<TyType>();
 		final expected = sig.getArgs();
 		for (index in 0...suppliedArity) {
@@ -104,16 +111,16 @@ class TyMethodGenericBinding {
 	}
 
 	/** Reject a candidate when repeated method parameters infer incompatible types. **/
-	public static function argumentsAreConsistent(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<String>):Bool {
+	public static function argumentsAreConsistent(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>):Bool {
 		return bindings(sig, argTypes, suppliedArity, methodTypeParameters) != null;
 	}
 
-	static function hasUnbound(type:TyType, methodTypeParameters:Array<String>, inferred:haxe.ds.StringMap<TyType>):Bool {
+	static function hasUnbound(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>):Bool {
 		if (type == null)
 			return false;
-		final parameter = parameterName(type, methodTypeParameters);
+		final parameter = parameterIdentity(type, methodTypeParameters);
 		if (parameter != null)
-			return !inferred.exists(parameter);
+			return !inferred.exists(parameter.getCanonicalKey());
 		if (type.isNullable())
 			return hasUnbound(type.unwrapNull(), methodTypeParameters, inferred);
 		if (type.isFunction()) {
@@ -137,12 +144,12 @@ class TyMethodGenericBinding {
 		return base.length == 0 ? "" : base + "<" + [for (argument in arguments) argument.getDisplay()].join(",") + ">";
 	}
 
-	static function substitute(type:TyType, methodTypeParameters:Array<String>, inferred:haxe.ds.StringMap<TyType>):TyType {
+	static function substitute(type:TyType, methodTypeParameters:Array<TyTypeParameterId>, inferred:haxe.ds.StringMap<TyType>):TyType {
 		if (type == null)
 			return TyType.unknown();
-		final parameter = parameterName(type, methodTypeParameters);
+		final parameter = parameterIdentity(type, methodTypeParameters);
 		if (parameter != null) {
-			final bound = inferred.get(parameter);
+			final bound = inferred.get(parameter.getCanonicalKey());
 			return bound == null ? TyType.unknown() : bound;
 		}
 		if (type.isNullable())
@@ -172,7 +179,7 @@ class TyMethodGenericBinding {
 		argument evidence cannot close every method parameter used by that result.
 	**/
 	public static function specializeResult(declaration:TyDeclarationInfo, signature:TyFunSig, argTypes:Array<TyType>):TyType {
-		final methodTypeParameters = declaration.getTypeParameters();
+		final methodTypeParameters = declaration.getTypeParameterIds();
 		if (methodTypeParameters.length == 0)
 			return signature.getReturnType();
 		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration));

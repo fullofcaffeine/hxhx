@@ -179,10 +179,10 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		assertTrue(sampleOwner != null && HxClassDecl.getName(sampleOwner) == "DirectSupportLayer12",
 			"inherited direct-call methods should resolve to their declaring owner");
 		final inheritedFunction = @:privateAccess backend.cpp.CppTargetCore.ownerMethodDeclIn(sampleOwner, "inheritedInt");
+		final inheritedLookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(inheritedFixture.scope);
 		var inferredTypes:Array<String> = null;
 		final inferredArgTypesSeconds = elapsed(calls, () -> {
-			inferredTypes = @:privateAccess backend.cpp.CppTargetCore.inferredFunctionArgCppTypes(inheritedFunction, sampleOwner,
-				inheritedFixture.scope.classByName, inheritedFixture.scope.allClasses);
+			inferredTypes = @:privateAccess backend.cpp.CppTargetCore.inferredFunctionArgCppTypes(inheritedFunction, sampleOwner, inheritedLookup);
 		});
 		assertTrue(inferredTypes.join(",") == "int", "inherited ordinary calls should retain inferred Int parameters");
 

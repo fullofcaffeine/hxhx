@@ -75,10 +75,13 @@ class TypedExpr {
 	final unaryFixity:Null<HxUnaryFixity>;
 	final opaqueKind:Null<TypedOpaqueExprKind>;
 	final fieldInfo:Null<TyFieldInfo>;
+	final localBindings:Array<TyLocalBinding>;
+	final extensionProvider:Null<TyNominalTypeId>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
-			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo) {
+			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo, ?localBindings:Array<TyLocalBinding>,
+			?extensionProvider:TyNominalTypeId) {
 		this.tag = tag;
 		this.type = type == null ? TyType.unknown() : type;
 		this.position = position;
@@ -93,6 +96,8 @@ class TypedExpr {
 		this.unaryFixity = unaryFixity;
 		this.opaqueKind = opaqueKind;
 		this.fieldInfo = fieldInfo;
+		this.localBindings = localBindings == null ? [] : localBindings.copy();
+		this.extensionProvider = extensionProvider;
 	}
 
 	public static function nullValue(type:TyType, position:Null<HxPos>):TypedExpr
@@ -119,8 +124,8 @@ class TypedExpr {
 	public static function superValue(type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(SuperValue, type, position);
 
-	public static function localRead(name:String, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(LocalRead, type, position, [name]);
+	public static function localRead(name:String, type:TyType, position:Null<HxPos>, ?binding:TyLocalBinding):TypedExpr
+		return new TypedExpr(LocalRead, type, position, [name], null, null, false, 0, 0.0, null, null, null, null, null, binding == null ? [] : [binding]);
 
 	/**
 		Preserve a non-local name and, when typing selected a current-class field,
@@ -139,9 +144,9 @@ class TypedExpr {
 		return new TypedExpr(NullSafeFieldRead, type, position, [field], [object]);
 
 	public static function call(callee:TypedExpr, arguments:Array<TypedExpr>, declaration:Null<TyDeclarationInfo>, type:TyType, position:Null<HxPos>,
-			requiresOwnerQualification:Bool = false):TypedExpr
+			requiresOwnerQualification:Bool = false, ?extensionProvider:TyNominalTypeId):TypedExpr
 		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, requiresOwnerQualification, 0, 0.0,
-			declaration);
+			declaration, null, null, null, null, null, extensionProvider);
 
 	/** Preserve a nested source return until macro expansion consumes it or emission rejects it. **/
 	public static function returnExpr(expression:Null<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
@@ -149,9 +154,9 @@ class TypedExpr {
 
 	/** Preserve a source-level declaration as a structural child of an expression-level declaration list. **/
 	public static function variableDeclaration(name:String, typeHint:String, initializer:Null<TypedExpr>, isFinal:Bool, isStatic:Bool, type:TyType,
-			position:Null<HxPos>):TypedExpr
+			position:Null<HxPos>, ?binding:TyLocalBinding):TypedExpr
 		return new TypedExpr(VariableDeclaration, type, position, [name == null ? "" : name, typeHint == null ? "" : typeHint],
-			initializer == null ? [] : [initializer], null, isFinal, isStatic ? 1 : 0);
+			initializer == null ? [] : [initializer], null, isFinal, isStatic ? 1 : 0, 0.0, null, null, null, null, null, binding == null ? [] : [binding]);
 
 	/** Preserve the ordered declarations from one expression-level `var` or `final` form. **/
 	public static function variableDeclarations(declarations:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
@@ -175,12 +180,13 @@ class TypedExpr {
 	public static function macroType(typeText:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(MacroType, type, position, [typeText]);
 
-	public static function lambda(arguments:Array<String>, body:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(Lambda, type, position, arguments, [body]);
+	public static function lambda(arguments:Array<String>, body:TypedExpr, type:TyType, position:Null<HxPos>, ?bindings:Array<TyLocalBinding>):TypedExpr
+		return new TypedExpr(Lambda, type, position, arguments, [body], null, false, 0, 0.0, null, null, null, null, null, bindings);
 
-	public static function switchExpr(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, branches:Array<TypedExpr>, type:TyType,
-			position:Null<HxPos>):TypedExpr
-		return new TypedExpr(SwitchExpr, type, position, null, [scrutinee].concat(branches == null ? [] : branches), patterns);
+	public static function switchExpr(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, branches:Array<TypedExpr>, type:TyType, position:Null<HxPos>,
+			?bindings:Array<TyLocalBinding>):TypedExpr
+		return new TypedExpr(SwitchExpr, type, position, null, [scrutinee].concat(branches == null ? [] : branches), patterns, false, 0, 0.0, null, null,
+			null, null, null, bindings);
 
 	public static function newValue(typePath:String, arguments:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(NewValue, type, position, [typePath], arguments);
@@ -203,13 +209,14 @@ class TypedExpr {
 	public static function anonymous(fieldNames:Array<String>, fieldValues:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Anonymous, type, position, fieldNames, fieldValues);
 
-	public static function arrayComprehension(name:String, iterable:TypedExpr, guard:Null<TypedExpr>, value:TypedExpr, type:TyType,
-			position:Null<HxPos>):TypedExpr {
+	public static function arrayComprehension(name:String, iterable:TypedExpr, guard:Null<TypedExpr>, value:TypedExpr, type:TyType, position:Null<HxPos>,
+			?binding:TyLocalBinding):TypedExpr {
 		final children = [iterable];
 		if (guard != null)
 			children.push(guard);
 		children.push(value);
-		return new TypedExpr(ArrayComprehension, type, position, [name], children, null, guard != null);
+		return new TypedExpr(ArrayComprehension, type, position, [name], children, null, guard != null, 0, 0.0, null, null, null, null, null,
+			binding == null ? [] : [binding]);
 	}
 
 	public static function arrayDecl(values:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
@@ -235,8 +242,9 @@ class TypedExpr {
 		return new TypedExpr(Block, type, position, null, expressions);
 
 	/** Compiler-owned temporary declaration; its source type hint remains representation input. **/
-	public static function temporary(name:String, typeHint:String, initializer:TypedExpr, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(Temporary, type, position, [name, typeHint == null ? "" : typeHint], [initializer]);
+	public static function temporary(name:String, typeHint:String, initializer:TypedExpr, type:TyType, position:Null<HxPos>, ?binding:TyLocalBinding):TypedExpr
+		return new TypedExpr(Temporary, type, position, [name, typeHint == null ? "" : typeHint], [initializer], null, false, 0, 0.0, null, null, null, null,
+			null, binding == null ? [] : [binding]);
 
 	public function getTag():TypedExprTag
 		return tag;
@@ -262,6 +270,10 @@ class TypedExpr {
 	/** Whether a bare imported field/call must be projected through its exact owner. **/
 	public function getRequiresOwnerQualification():Bool
 		return boolValue;
+
+	/** Exact type named by the winning `using` directive for an extension call. **/
+	public function getExtensionProvider():Null<TyNominalTypeId>
+		return tag == Call ? extensionProvider : null;
 
 	/** Whether a `VariableDeclaration` was written with `final`. **/
 	public function getVariableIsFinal():Bool
@@ -293,13 +305,17 @@ class TypedExpr {
 	public function getFieldInfo():Null<TyFieldInfo>
 		return fieldInfo;
 
+	/** Local declaration facts owned by this declaration, read, lambda, loop, or compiler temporary. **/
+	public function getLocalBindings():Array<TyLocalBinding>
+		return localBindings.copy();
+
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
 		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind, fieldInfo);
+			opaqueKind, fieldInfo, localBindings, extensionProvider);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
 		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
-			unaryFixity, opaqueKind, fieldInfo);
+			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider);
 }

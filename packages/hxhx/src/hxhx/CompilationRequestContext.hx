@@ -76,15 +76,26 @@ class CompilationRequestContext {
 	}
 
 	/**
+		Return whether this request opted into dependency observation.
+
+		Callers use this before reading external macro inputs so an ordinary compile
+		without a dependency report keeps its existing filesystem behavior.
+	**/
+	public function dependencyObservationEnabled():Bool
+		return dependencyRequest != null;
+
+	/**
 		Record the sealed typed program for dependency observation.
 
 		This computes a report only. It never returns a typed cache hit or suppresses
 		typing, and failed requests discard the observation during `close`.
 	**/
-	public function recordDependencySnapshot(modules:Array<TypedModule>, index:TyperIndex):Void {
+	public function recordDependencySnapshot(modules:Array<TypedModule>, index:TyperIndex, backendId:String, defines:haxe.ds.StringMap<String>,
+			macroFileDependencies:haxe.ds.StringMap<CompilerMacroFileDependencyObservation>):Void {
 		ensureOpen();
 		if (dependencyRequest != null)
-			dependencyRequest.record(CompilerDependencyCollector.collect(modules, index));
+			dependencyRequest.record(CompilerDependencyCollector.collect(modules, index,
+				CompilerProgramConfigurationObservation.fromTargetAndDefines(backendId, defines), macroFileDependencies));
 	}
 
 	/** Declare that a rooted compile, rather than a command/control/display request, is about to type a program. **/
@@ -348,15 +359,21 @@ class CompilationRequestContext {
 		output.stdoutLine("hxhx_server_report.dependency_edges=" + dependencyReport.edgeCount);
 		output.stdoutLine("hxhx_server_report.dependency_snapshot=" + dependencyReport.snapshotFingerprint);
 		final dependencyComparison = dependencyReport.comparison;
+		final programConfigurationChanges = dependencyComparison == null ? [] : dependencyComparison.getProgramConfigurationChanges();
 		final sourceOriginChanges = dependencyComparison == null ? [] : dependencyComparison.getSourceOriginChanges();
 		final conditionalCompilationChanges = dependencyComparison == null ? [] : dependencyComparison.getConditionalCompilationChanges();
 		final generatedDeclarationChanges = dependencyComparison == null ? [] : dependencyComparison.getGeneratedDeclarationChanges();
+		final macroFileDependencyChanges = dependencyComparison == null ? [] : dependencyComparison.getMacroFileDependencyChanges();
 		final publicChanges = dependencyComparison == null ? [] : dependencyComparison.getPublicInterfaceChanges();
 		final implementationChanges = dependencyComparison == null ? [] : dependencyComparison.getImplementationChanges();
 		final invalidations = dependencyComparison == null ? [] : dependencyComparison.getInvalidations();
+		output.stdoutLine("hxhx_server_report.dependency_program_configuration_changes=" + programConfigurationChanges.length);
+		for (index in 0...programConfigurationChanges.length)
+			output.stdoutLine('hxhx_server_report.dependency_program_configuration_change[$index].name=${programConfigurationChanges[index]}');
 		output.stdoutLine("hxhx_server_report.dependency_source_origin_changes=" + sourceOriginChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_conditional_compilation_changes=" + conditionalCompilationChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_generated_declaration_changes=" + generatedDeclarationChanges.length);
+		output.stdoutLine("hxhx_server_report.dependency_macro_file_changes=" + macroFileDependencyChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_public_changes=" + publicChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_implementation_changes=" + implementationChanges.length);
 		output.stdoutLine("hxhx_server_report.dependency_predicted_invalidations=" + invalidations.length);

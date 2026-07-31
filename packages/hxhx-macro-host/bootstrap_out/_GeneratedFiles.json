@@ -88,7 +88,6 @@
 		"HxSwitchPattern.ml",
 		"HxStmt.ml",
 		"HxPos.ml",
-		"HxParserSourceNormalize.ml",
 		"HxParser.ml",
 		"HxParseError.ml",
 		"HxModuleDirectiveKind.ml",

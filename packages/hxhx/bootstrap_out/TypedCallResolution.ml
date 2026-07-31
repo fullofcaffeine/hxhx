@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable requiresOwnerQualification : bool }
+type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable requiresOwnerQualification : bool; mutable extensionProvider : TyNominalTypeId.t }
 
-let create = fun declaration2 requiresOwnerQualification2 -> let self = ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic (HxRuntime.hx_null); requiresOwnerQualification = false } : t) in (
+let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 -> let self = ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic (HxRuntime.hx_null); requiresOwnerQualification = false; extensionProvider = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (let requiresOwnerQualification2 = if Obj.repr requiresOwnerQualification2 == HxRuntime.hx_null then false else requiresOwnerQualification2 in ignore ((
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
@@ -16,13 +16,20 @@ let create = fun declaration2 requiresOwnerQualification2 -> let self = ({ __hx_
       (Obj.magic self : t).requiresOwnerQualification <- __assign_2;
       __assign_2
     ));
-    if requiresOwnerQualification2 && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact static declaration") ["Dynamic"; "String"]) else ()
+    ignore (let __assign_3 = Obj.magic extensionProvider2 in (
+      (Obj.magic self : t).extensionProvider <- __assign_3;
+      __assign_3
+    ));
+    ignore (if requiresOwnerQualification2 && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact static declaration") ["Dynamic"; "String"]) else ());
+    if extensionProvider2 != Obj.magic (HxRuntime.hx_null) && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "extension call resolution requires an exact static declaration") ["Dynamic"; "String"]) else ()
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic (HxRuntime.hx_null); requiresOwnerQualification = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic (HxRuntime.hx_null); requiresOwnerQualification = false; extensionProvider = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
 let getRequiresOwnerQualification = fun self () -> (Obj.magic self : t).requiresOwnerQualification
+
+let getExtensionProvider = fun self () -> (Obj.magic self : t).extensionProvider

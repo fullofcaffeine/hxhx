@@ -1,28 +1,24 @@
 /**
-	Symbol table entry for Stage 3 bring-up.
+	Mutable inference symbol for one function-local declaration.
 
-	Why:
-	- The typer is fundamentally “name resolution + types”.
-	- Even before full typing, we want a stable place to attach:
-	  - declared types (from hints)
-	  - inferred types (later)
-	  - source positions (later)
-
-	What:
-	- A name and a `TyType`.
-
-	How:
-	- This is deliberately small. As Stage 3 expands, this grows into proper
-	  scope tracking (locals, captures, fields, imports, etc.).
+	The stable identity and declaration kind never change. Typing may refine the
+	semantic type while the function is being built; the typed-body boundary then
+	snapshots the symbol as an immutable `TyLocalBinding`.
 **/
 class TySymbol {
 	public final name:String;
 
+	final identity:TyLocalId;
+	final kind:TyLocalDeclarationKind;
 	var ty:TyType;
 
-	public function new(name:String, ty:TyType) {
-		this.name = name;
-		this.ty = ty;
+	public function new(name:String, ty:TyType, identity:TyLocalId, kind:TyLocalDeclarationKind) {
+		if (identity == null)
+			throw "typed local symbol requires a stable identity";
+		this.name = name == null ? "" : name;
+		this.ty = ty == null ? TyType.unknown() : ty;
+		this.identity = identity;
+		this.kind = kind;
 	}
 
 	public function getName():String
@@ -30,6 +26,16 @@ class TySymbol {
 
 	public function getType():TyType
 		return ty;
+
+	public function getIdentity():TyLocalId
+		return identity;
+
+	public function getKind():TyLocalDeclarationKind
+		return kind;
+
+	/** Freeze the current inferred type for storage on a structural typed node. **/
+	public function toBinding():TyLocalBinding
+		return new TyLocalBinding(identity, name, ty, kind);
 
 	/**
 		Refine a symbol's type during typing.

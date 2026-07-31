@@ -1287,8 +1287,10 @@ class RuntimeContextApiMacros {
 	}
 
 	public static function probeRegisterModuleDependency():String {
-		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
-		final externFile = "runtime/macro-probe.txt";
+		final configuredModulePath = Context.definedValue("macro_dependency_module");
+		final configuredExternFile = Context.definedValue("macro_dependency_file");
+		final modulePath = configuredModulePath.length == 0 ? "hxhxmacros.RuntimeContextApiMacros" : configuredModulePath;
+		final externFile = configuredExternFile.length == 0 ? "runtime/macro-probe.txt" : configuredExternFile;
 		Context.registerModuleDependency(modulePath, externFile);
 		Compiler.define("HXHX_RUNTIME_MODULE_DEP", modulePath + "->" + externFile);
 		return "moduleDependency=" + modulePath + "->" + externFile;

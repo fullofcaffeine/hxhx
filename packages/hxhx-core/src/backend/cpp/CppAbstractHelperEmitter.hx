@@ -20,7 +20,7 @@ typedef CppAbstractMethodCallServices = {
 	var representation:HxClassDecl->CppClassLookup->Null<CppAbstractRepresentation>;
 	var lookupForScope:CppRenderScope->CppClassLookup;
 	var valueForExpectedType:HxExpr->String->CppRenderScope->String;
-	var inferredArgumentTypes:HxFunctionDecl->HxClassDecl->haxe.ds.StringMap<HxClassDecl>->Array<HxClassDecl>->Array<String>;
+	var inferredArgumentTypes:HxFunctionDecl->HxClassDecl->CppRenderScope->Array<String>;
 	var renderCallArguments:Array<HxFunctionArg>->Array<HxExpr>->CppRenderScope->Array<String>->Array<String>;
 	var inlineBody:HxExpr->HxFunctionDecl->CppRenderScope->Null<String>;
 	var sanitizeIdentifier:String->String;
@@ -98,7 +98,7 @@ class CppAbstractHelperEmitter {
 			if (representation == null)
 				return null;
 			final renderedReceiver = services.valueForExpectedType(receiver, representation.getCarrierCppType(), scope);
-			final parameterTypes = services.inferredArgumentTypes(fn, cls, scope.classByName, scope.allClasses);
+			final parameterTypes = services.inferredArgumentTypes(fn, cls, scope);
 			final renderedArguments = services.renderCallArguments(HxFunctionDecl.getArgs(fn), args, scope, parameterTypes);
 			return representation.instanceHelperCall(services.sanitizeIdentifier(method), renderedReceiver, renderedArguments);
 		}

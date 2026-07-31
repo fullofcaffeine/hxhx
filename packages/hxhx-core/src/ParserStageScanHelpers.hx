@@ -1,23 +1,25 @@
 /**
-	Scanner helpers extracted from `ParserStage`.
+	Recover module-local type facts that are not yet parsed directly by `HxParser`.
 
 	Why
-	- `ParserStage` is a large compile unit in stage0 memory probes.
-	- Keeping scanner logic in a dedicated module allows parity-aware A/B measurement
-	  via `hxhx_stage0_no_parser_scan_extract` without behavior changes.
+	- `HxParser` is the compiler's sole language parser, but its current module pass
+	  delegates selected helper-class, enum, typedef, and abstract details here.
+	- Keeping this transitional source scanning in one Haxe-authored module prevents
+	  target runtimes and backend emitters from reconstructing source meaning.
 
 	How
-	- Default path: `ParserStage` delegates helper scans to this module.
-	- Profiling baseline path: `-D hxhx_stage0_no_parser_scan_extract` compiles and uses
-	  the original inline scanner helpers in `ParserStage`.
+	- `ParserStage` parses the module with `HxParser`, then merges these scanner facts
+	  into the immutable parsed declaration.
+	- Each scanner must remain deterministic and must eventually shrink as the main
+	  parser learns the corresponding declarations directly.
 **/
 class ParserStageScanHelpers {
 	/**
 		Best-effort scanner for module-local helper classes.
 
 		Why
-		- The native frontend protocol v1 intentionally returns only a single class. This keeps
-		  the OCaml seam tiny, but it means we miss helper types declared in the same `.hx` file.
+		- The current `HxParser.parseModule` pass does not yet retain every helper type
+		  declared in the same `.hx` file.
 		- Upstream Haxe code (especially `tests/unit` and `tests/runci`) frequently uses:
 		  `private class Helper { static var x = ...; static function f(...) ... }`
 		- Without providers for these helpers, Stage3 OCaml emission fails with errors like:
@@ -300,12 +302,10 @@ class ParserStageScanHelpers {
 		Best-effort scanner for top-level `enum` declarations.
 
 		Why
-		- The native frontend protocol v1 returns only a single `class` surface.
 		- Upstream Haxe uses real enums heavily (e.g. `unit.MyEnum` in the unit suite).
-		- If an `.hx` file's *main type* is an enum, the native protocol would otherwise
-		  decode as `class Unknown`, and Stage3 emission would drop the module entirely,
-		  leading to OCaml failures like:
-			`Error: Unbound module MyEnum`.
+		- The current Haxe parser does not yet retain every enum detail in the
+		  primary module declaration, so Stage3 supplements that result from the
+		  same source text instead of using a second parser.
 
 		What
 		- Scan the source text for top-level `enum <Name> { ... }` declarations.
@@ -530,8 +530,8 @@ class ParserStageScanHelpers {
 
 			Why
 			- Upstream code often references module-local typedefs via `Module.TypeAlias`.
-			- The native frontend protocol v1 only returns one top-level class declaration, so
-			  these aliases would otherwise be invisible to Stage3 emission and type indexing.
+			- The current parsed-module shape does not yet retain every module-local typedef,
+			  so these aliases would otherwise be invisible to Stage3 emission and type indexing.
 
 		What
 		- Scans for top-level `typedef <Name> = ...;` declarations.
@@ -869,7 +869,7 @@ class ParserStageScanHelpers {
 		Why
 		- Module-local abstracts are common in upstream-shaped code and can expose static
 		  helper functions that must exist as OCaml providers during Stage3 linking.
-		- The native frontend protocol v1 does not surface these declarations.
+		- The current parsed-module shape does not yet surface every such declaration.
 
 		What
 		- Scans for top-level `abstract <Name>(...) { ... }` declarations.
@@ -1913,8 +1913,10 @@ class ParserStageScanHelpers {
 					// Best-effort: collect function name + arity + static flag from the scanned class body.
 					//
 					// Why include non-static functions:
-					// - Native parser bring-up can mislabel some method static flags in std modules.
-					// - `enrichNativeDecl` uses this scanned surface to reconcile static metadata.
+					// - The focused declaration scanner can recover a more complete method surface
+					//   than the current structured parser for some std modules.
+					// - `ParserStage.enrichPureParserDecl` uses this scanned surface to reconcile
+					//   static metadata without introducing another language parser.
 					// - Capturing only static functions hides useful "this is non-static" evidence and
 					//   can leave call-site receiver injection broken (partial applications at OCaml link-time).
 					final wantStaticFn = sawStatic;
@@ -2071,7 +2073,7 @@ class ParserStageScanHelpers {
 
 	/**
 		Convert a lightweight scanner offset into the same 1-based source position
-		shape produced by `HxParser`, so native-parser enrichment can report
+		shape produced by `HxParser`, so later declaration enrichment can report
 		diagnostics against scanned helper declarations instead of line 0.
 	**/
 	static function posFromIndex(source:String, index:Int):HxPos {

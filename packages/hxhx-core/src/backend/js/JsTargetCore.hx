@@ -12,6 +12,7 @@ private typedef JsClassUnit = {
 	final fullName:String;
 	final jsRef:String;
 	final decl:HxClassDecl;
+	final projection:TypedBackendClassProjection;
 	final exposeToplevelMain:Bool;
 };
 
@@ -63,12 +64,14 @@ class JsTargetCore implements ITargetCore {
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
 		for (typed in typedModules) {
-			final decl = typed.getBackendDeclaration();
+			final moduleProjection = typed.getBackendProjection();
+			final decl = moduleProjection.getDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final mainClassName = HxClassDecl.getName(mainClass);
 			final hasToplevelMain = HxModuleDecl.getHasToplevelMain(decl);
-			for (cls in HxModuleDecl.getClasses(decl)) {
+			for (classProjection in moduleProjection.getClasses()) {
+				final cls = classProjection.getDeclaration();
 				final className = HxClassDecl.getName(cls);
 				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
 				if (byFullName.exists(fullName))
@@ -81,6 +84,7 @@ class JsTargetCore implements ITargetCore {
 					fullName: fullName,
 					jsRef: jsRef,
 					decl: cls,
+					projection: classProjection,
 					exposeToplevelMain: hasToplevelMain && className == mainClassName});
 			}
 		}
@@ -277,10 +281,10 @@ class JsTargetCore implements ITargetCore {
 	/**
 		Recovers the value path from a compacted `cast path.to.Class.field` initializer.
 
-		The native protocol can remove the space after `cast` while the lightweight
-		bootstrap parser is active. This supplementary scan accepts only that narrow text
-		shape and is used only to order classes; normal expression emission remains owned
-		by the parsed AST or established static-field fallback.
+		Best-effort source recovery may retain a compact `castpath.to.Class.field`
+		text shape. This supplementary scan accepts only that narrow form and is used
+		only to order classes; normal expression emission remains owned by the parsed
+		AST or established static-field fallback.
 	**/
 	static function compactedCastStaticInitPath(initText:String):Null<String> {
 		final text = initText == null ? "" : StringTools.trim(initText);
@@ -621,11 +625,12 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitStaticFunctions(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
-		for (fn in HxClassDecl.getFunctions(unit.decl)) {
+		for (functionProjection in unit.projection.getFunctions()) {
+			final fn = functionProjection.getDeclaration();
 			if (!HxFunctionDecl.getIsStatic(fn))
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, staticRefs);
+			final fnScope = new JsFunctionScope(classRefs, staticRefs, null, functionProjection.getLocalCatalog());
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 
@@ -665,10 +670,11 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitPlainClassConstructor(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
-		final ctor = findConstructor(unit.decl);
+		final constructorProjection = findConstructorProjection(unit.projection);
+		final ctor = constructorProjection == null ? null : constructorProjection.getDeclaration();
 		final instanceFields = instanceFieldRefs(unit.decl);
 		final superRef = resolveSuperClassRef(unit, classRefs);
-		final scope = new JsFunctionScope(classRefs, instanceFields, superRef);
+		final scope = new JsFunctionScope(classRefs, instanceFields, superRef, constructorProjection == null ? null : constructorProjection.getLocalCatalog());
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
@@ -863,11 +869,12 @@ class JsTargetCore implements ITargetCore {
 		}
 		if (needsSkipConstructorMarker(unit, classRefs))
 			writer.writeln(unit.jsRef + "._hx_skip_constructor = false;");
-		for (fn in HxClassDecl.getFunctions(unit.decl)) {
+		for (functionProjection in unit.projection.getFunctions()) {
+			final fn = functionProjection.getDeclaration();
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef);
+			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef, functionProjection.getLocalCatalog());
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
@@ -971,6 +978,15 @@ class JsTargetCore implements ITargetCore {
 	static function findConstructor(decl:HxClassDecl):Null<HxFunctionDecl> {
 		for (fn in HxClassDecl.getFunctions(decl)) {
 			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "new")
+				return fn;
+		}
+		return null;
+	}
+
+	static function findConstructorProjection(projection:TypedBackendClassProjection):Null<TypedBackendFunctionProjection> {
+		for (fn in projection.getFunctions()) {
+			final declaration = fn.getDeclaration();
+			if (!HxFunctionDecl.getIsStatic(declaration) && HxFunctionDecl.getName(declaration) == "new")
 				return fn;
 		}
 		return null;
@@ -3397,7 +3413,7 @@ class JsTargetCore implements ITargetCore {
 
 	static function allowStaticBodyFallback(unit:JsClassUnit, fnName:String, reason:String):Bool {
 		// Stage3 JS-native bring-up: upstream `haxe.io.FPHelper` static underscore helpers can
-		// still surface `body_parse_error` from the bootstrap parser in some native-parser paths.
+		// still surface `body_parse_error` from best-effort bootstrap body recovery.
 		//
 		// Keep compileability for scoped JS-native workflows by falling back to a neutral return
 		// in these private helper bodies. Public/user unsupported expressions still fail fast.

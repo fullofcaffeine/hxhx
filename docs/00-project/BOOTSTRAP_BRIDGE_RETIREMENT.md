@@ -1,7 +1,9 @@
 # Temporary Bridge Boundaries
 
-This page explains four small adapters that `hxhx` still needs while its native
-compiler path matures.
+This page explains the four narrow adapters that `hxhx` still carries while its
+native compiler path matures. It also records the retired handwritten
+lexer/parser bridge so future work does not accidentally recreate a second
+frontend.
 
 A **bridge** is a temporary adapter between two parts of the compiler that do
 not yet connect cleanly. A bridge is not automatically a bug, and removing one
@@ -15,6 +17,12 @@ too early can break working behavior. The important rules are:
 The machine-readable companion is
 `docs/00-project/BOOTSTRAP_BRIDGE_INVENTORY.json`. Run
 `npm run guard:bridge-boundaries` after changing any file listed below.
+
+This inventory covers temporary Haxe-side and socket bridges. The broader
+handwritten-OCaml rule, including target runtime modules, native ABI adapters,
+generated artifacts, and the excluded Stage3 semantic shims, is documented in
+`docs/00-project/HANDWRITTEN_OCAML_OWNERSHIP.md` and enforced by
+`npm run guard:handwritten-ocaml-ownership`.
 
 ## Quick map
 
@@ -102,8 +110,9 @@ and `--connect host:port` sends it a compile request. Stage3 owns the request
 format. A small OCaml runtime module currently owns only the unreliable socket
 transport operations.
 
-- Long-lived owners: Full1 compiler closure `haxe.ocaml-f1cl` and the native
-  `hxhx + reflaxe.ocaml` product `haxe_ocaml-38gsp`.
+- Long-lived owner: native incremental-server product
+  `haxe_ocaml-850ii.32`. The completed cache-free transport foundation
+  `haxe_ocaml-850ii.32.1` proved that the OCaml module is socket-only.
 - Allowed Haxe files:
   - `packages/hxhx/src/hxhx/NativeCompilerServer.hx`
   - `packages/hxhx/src/hxhx/Stage3WaitServer.hx`
@@ -118,11 +127,31 @@ transport operations.
   - lifecycle, framing, connection failure, and shutdown behavior stay the same;
   - a native trace shows that `HxHxCompilerServer` is no longer linked or called.
 
-The copies under `packages/hxhx/bootstrap_out/**` and
-`packages/hxhx-macro-host/bootstrap_out/**` are generated bootstrap snapshots.
-Do not hand-edit those generated `.ml` files. Change the Haxe source or the
-hand-written runtime source, regenerate through the owning build command, and
-review the resulting snapshot diff.
+## Retired: handwritten native lexer/parser
+
+Early bootstrap builds used handwritten OCaml lexer/parser modules because the
+Haxe-authored parser could not yet process representative compiler input. By
+July 2026 that exception had become a second semantic frontend: the same Haxe
+source could be interpreted differently depending on a build define or
+environment flag.
+
+The concrete failure was
+`cast haxe.SysTools.winMetaCharacters`. The OCaml path joined two tokens into
+`casthaxe`, hid a startup dependency, and generated JavaScript that crashed
+before `main()`. The Haxe path preserved the expression. This was not merely a
+protocol bug; it proved that two parsers created two competing meanings for one
+source program.
+
+`haxe_ocaml-e1kqo` therefore hard-cut parsing to `HxParser`. The retirement
+removed the OCaml modules, Haxe externs, wire decoder, selection flags, runtime
+manifest rows, bootstrap patching, and protocol-only tests. Generated
+bootstrap snapshots are regenerated from the Haxe source rather than edited by
+hand.
+
+The durable rule is simple: valid Haxe syntax that the compiler cannot parse is
+now a Haxe-parser parity bug. Fix it in the Haxe-authored frontend and prove it
+against upstream Haxe 4.3.7 behavior. Do not restore a target-native semantic
+parser, not even as an apparently temporary fast path.
 
 ## Changing a boundary
 

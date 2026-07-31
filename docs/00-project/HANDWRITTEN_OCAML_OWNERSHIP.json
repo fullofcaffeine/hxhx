@@ -1,0 +1,194 @@
+{
+  "schema": "hxhx.handwritten-ocaml-ownership.v1",
+  "marker": "HANDWRITTEN_OCAML_OWNERSHIP:PASS",
+  "plainRule": "Haxe owns compiler decisions. Handwritten OCaml may implement an explicitly selected target runtime, operating-system, ABI, or toolchain primitive, but it may not parse Haxe source, reconstruct compiler facts, repair generated output, choose cache or lowering semantics, or turn missing behavior into placeholder success.",
+  "generatedArtifactRoots": [
+    {
+      "path": "packages/hxhx/bootstrap_out/",
+      "owner": "Haxe-authored hxhx source plus deterministic bootstrap regeneration",
+      "rule": "Generated artifact. Never edit the OCaml snapshot as semantic source."
+    },
+    {
+      "path": "packages/hxhx-macro-host/bootstrap_out/",
+      "owner": "Haxe-authored macro-host source plus deterministic bootstrap regeneration",
+      "rule": "Generated artifact. Never edit the OCaml snapshot as semantic source."
+    },
+    {
+      "path": "test/snapshot/",
+      "owner": "Reflaxe test generation and explicit golden review",
+      "rule": "Generated expected output. It is behavior evidence, not handwritten compiler architecture."
+    }
+  ],
+  "runtimeCatalog": {
+    "manifest": "packages/reflaxe.ocaml/std/runtime/runtime-manifest.json",
+    "sourceRoot": "packages/reflaxe.ocaml/std/runtime/",
+    "applicationClassification": {
+      "kind": "target-runtime-module",
+      "haxeDecisionOwners": [
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlRuntimeRequirementLedger.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlNativeRuntimeBoundary.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/RuntimeCopier.hx"
+      ],
+      "ownerBeads": [
+        "haxe_ocaml-0uwin",
+        "haxe_ocaml-s7jry"
+      ],
+      "whyOcaml": "The compiler has already selected a checked Haxe runtime capability. These modules implement its OCaml carrier or host primitive and are copied through the locked, hashed runtime manifest.",
+      "readinessRule": "A manifest entry proves source ownership and integrity, not full Haxe parity. Missing, stale, unknown, profile-illegal, or semantically unexplained runtime requirements remain fail-closed work under haxe_ocaml-0uwin.",
+      "focusedEvidence": [
+        "npm run test:reflaxe-ocaml:runtime-manifest",
+        "npm run test:reflaxe-ocaml:runtime-requirements"
+      ]
+    },
+    "toolingClassifications": [
+      {
+        "module": "HxHxBackendPluginDynlink",
+        "kind": "native-abi-adapter",
+        "haxeDecisionOwners": [
+          "packages/hxhx/src/hxhx/NativeBackendPluginDynlink.hx",
+          "packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx"
+        ],
+        "ownerBeads": [
+          "haxe.ocaml-8nv.5",
+          "haxe_ocaml-38gsp.1"
+        ],
+        "whyOcaml": "OCaml Dynlink loads the selected native artifact; Haxe validates the manifest, ABI snapshot, provider identity, and compiler-facing meaning.",
+        "focusedEvidence": [
+          "npm run test:m14:native-backend-plugin-host-abi",
+          "npm run guard:bridge-boundaries"
+        ]
+      },
+      {
+        "module": "HxHxBackendPluginHost",
+        "kind": "native-abi-adapter",
+        "haxeDecisionOwners": [
+          "packages/hxhx/src/hxhx/NativeBackendPluginHost.hx",
+          "packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx"
+        ],
+        "ownerBeads": [
+          "haxe.ocaml-8nv.5",
+          "haxe_ocaml-38gsp.1"
+        ],
+        "whyOcaml": "The OCaml callback registry captures native plugin registrations. Haxe decodes and validates the versioned snapshot before it affects backend selection.",
+        "focusedEvidence": [
+          "npm run test:m14:native-backend-plugin-host-abi",
+          "npm run guard:bridge-boundaries"
+        ]
+      },
+      {
+        "module": "HxHxCompilerServer",
+        "kind": "operating-system-adapter",
+        "haxeDecisionOwners": [
+          "packages/hxhx/src/hxhx/NativeCompilerServer.hx",
+          "packages/hxhx/src/hxhx/CompilationServerRequestDispatcher.hx"
+        ],
+        "ownerBeads": [
+          "haxe_ocaml-850ii.32",
+          "haxe_ocaml-850ii.32.1"
+        ],
+        "whyOcaml": "The module owns loopback socket I/O and calls the Haxe request handler. It does not decode compiler arguments, select display behavior, compile, cache, or synthesize semantic responses.",
+        "focusedEvidence": [
+          "npm run test:m14:hxhx-compiler-server-runtime",
+          "npm run guard:bridge-boundaries"
+        ]
+      },
+      {
+        "module": "HxHxMacroModuleDynlink",
+        "kind": "native-abi-adapter",
+        "haxeDecisionOwners": [
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleDynlink.hx",
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostAbi.hx"
+        ],
+        "ownerBeads": [
+          "haxe.ocaml-8nv.30.1",
+          "haxe_ocaml-38gsp.1"
+        ],
+        "whyOcaml": "OCaml Dynlink opens the selected macro module and captures registrations. Haxe owns ABI validation, plugin identity, expression selection, request lifetime, and compiler effects.",
+        "focusedEvidence": [
+          "npm run test:m14:native-macro-module-host-abi",
+          "npm run guard:bridge-boundaries"
+        ]
+      },
+      {
+        "module": "HxHxMacroModuleHost",
+        "kind": "native-abi-adapter",
+        "haxeDecisionOwners": [
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHost.hx",
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostAbi.hx"
+        ],
+        "ownerBeads": [
+          "haxe.ocaml-8nv.30.1",
+          "haxe_ocaml-38gsp.1"
+        ],
+        "whyOcaml": "The OCaml callback registry retains native closures and emits a versioned registration snapshot. Haxe validates that snapshot and owns all compiler-visible macro behavior and cleanup.",
+        "focusedEvidence": [
+          "npm run test:m14:native-macro-module-host-abi",
+          "npm run guard:bridge-boundaries"
+        ]
+      }
+    ]
+  },
+  "temporarySemanticShims": [
+    {
+      "path": "packages/hxhx-core/shims/Haxe_Int64.ml",
+      "kind": "temporary-stage3-semantic-shim",
+      "ownerBeads": [
+        "haxe_ocaml-38gsp.1"
+      ],
+      "reason": "The independent Stage3 emitter needs its own Int64 carrier and operation provider. The authentic shared-target hard cut must replace this host-private ownership with the standalone reflaxe.ocaml representation.",
+      "knownPlaceholderSuccess": false,
+      "readiness": "excluded",
+      "retirementEvidence": [
+        "The native hxhx route executes the standalone reflaxe.ocaml target core.",
+        "No Stage3 output or generated module references Haxe_Int64 from packages/hxhx-core/shims."
+      ]
+    },
+    {
+      "path": "packages/hxhx-core/shims/HxBootArray.ml",
+      "kind": "temporary-stage3-semantic-shim",
+      "ownerBeads": [
+        "haxe_ocaml-38gsp.1"
+      ],
+      "reason": "The independent Stage3 emitter uses dynamic array recovery and poison-value handling to keep bootstrap workloads advancing. This is diagnostic debt, not the shared target runtime.",
+      "knownPlaceholderSuccess": true,
+      "readiness": "excluded",
+      "retirementEvidence": [
+        "The native hxhx route executes the standalone reflaxe.ocaml target core.",
+        "No Stage3 output or generated module references HxBootArray."
+      ]
+    },
+    {
+      "path": "packages/hxhx-core/shims/HxBootProcess.ml",
+      "kind": "temporary-stage3-semantic-shim",
+      "ownerBeads": [
+        "haxe_ocaml-38gsp.1"
+      ],
+      "reason": "The independent Stage3 emitter depends on a separate process model whose stdout and stderr accessors currently return placeholder values. It cannot count toward product or Full1 evidence.",
+      "knownPlaceholderSuccess": true,
+      "readiness": "excluded",
+      "retirementEvidence": [
+        "The native hxhx route executes the standalone reflaxe.ocaml target core and its checked HxProcess runtime.",
+        "No Stage3 output or generated module references HxBootProcess."
+      ]
+    }
+  ],
+  "testFixtures": [
+    {
+      "path": "test/fixtures/hxhx_compiler_server_runtime/Fixture.ml",
+      "kind": "native-adapter-test-fixture",
+      "productionModule": "HxHxCompilerServer"
+    },
+    {
+      "path": "test/fixtures/native_backend_plugin/hxhx_backend_plugin_fixture.ml",
+      "kind": "native-adapter-test-fixture",
+      "productionModule": "HxHxBackendPluginHost"
+    }
+  ],
+  "retiredHandwrittenModules": [
+    "packages/reflaxe.ocaml/std/runtime/HxHxNativeLexer.ml",
+    "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml",
+    "packages/reflaxe.ocaml/std/runtime/HxHxMacroRpc.ml",
+    "test/fixtures/native_parser_constrained_generic_arity/NativeParserConstrainedGenericArityTest.ml",
+    "test/fixtures/native_parser_module_directives/NativeParserModuleDirectivesTest.ml"
+  ]
+}

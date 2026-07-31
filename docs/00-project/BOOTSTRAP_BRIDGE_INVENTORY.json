@@ -73,8 +73,8 @@
       "plainName": "Compiler-server socket helper",
       "reason": "Current native output cannot yet use the required sys.net.Socket input/output path reliably, so a small OCaml runtime module owns only the socket transport.",
       "ownerBeads": [
-        "haxe.ocaml-f1cl",
-        "haxe_ocaml-38gsp"
+        "haxe_ocaml-850ii.32",
+        "haxe_ocaml-850ii.32.1"
       ],
       "allowedHaxeFiles": [
         "packages/hxhx/src/hxhx/NativeCompilerServer.hx",

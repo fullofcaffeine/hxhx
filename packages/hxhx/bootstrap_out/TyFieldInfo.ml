@@ -4,10 +4,10 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable owner : TyNominalTypeId.t; mutable modulePath : string; mutable name : string; mutable hx_type : TyType.t; mutable isStatic : bool; mutable isPublic : bool; mutable isFinal : bool; mutable isInline : bool; mutable hasInitializer : bool; mutable noImportGlobal : bool; mutable canonicalKey : string }
+type t = { __hx_type : Obj.t; mutable owner : TyNominalTypeId.t; mutable modulePath : string; mutable name : string; mutable hx_type : TyType.t; mutable isStatic : bool; mutable isPublic : bool; mutable isFinal : bool; mutable isInline : bool; mutable hasInitializer : bool; mutable propertyGet : string; mutable propertySet : string; mutable noImportGlobal : bool; mutable canonicalKey : string }
 
-let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 isInline2 hasInitializer2 noImportGlobal2 -> let self = ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic (HxRuntime.hx_null); modulePath = ""; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; noImportGlobal = false; canonicalKey = "" } : t) in (
-  ignore (let noImportGlobal2 = if Obj.repr noImportGlobal2 == HxRuntime.hx_null then false else noImportGlobal2 in ignore ((
+let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 isInline2 hasInitializer2 noImportGlobal2 propertyGet2 propertySet2 -> let self = ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic (HxRuntime.hx_null); modulePath = ""; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = ""; propertySet = ""; noImportGlobal = false; canonicalKey = "" } : t) in (
+  ignore (let noImportGlobal2 = if Obj.repr noImportGlobal2 == HxRuntime.hx_null then false else noImportGlobal2 in let propertyGet2 = if Obj.repr propertyGet2 == HxRuntime.hx_null then ("" : string) else propertyGet2 in let propertySet2 = if Obj.repr propertySet2 == HxRuntime.hx_null then ("" : string) else propertySet2 in ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : t).owner <- __assign_1;
       __assign_1
@@ -68,31 +68,57 @@ let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 i
             (Obj.magic self : t).hasInitializer <- __assign_15;
             __assign_15
           ));
-          ignore (let __assign_16 = noImportGlobal2 in (
-            (Obj.magic self : t).noImportGlobal <- __assign_16;
-            __assign_16
-          ));
-          let tempString = ref ("" : string) in (
-            ignore (if owner2 == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("" : string) in (
-              tempString := __assign_17;
+          let tempRight3 = ref ("" : string) in (
+            ignore (if propertyGet2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
+              tempRight3 := __assign_16;
+              __assign_16
+            ) else let __assign_17 = (StringTools.trim (propertyGet2 : string) : string) in (
+              tempRight3 := __assign_17;
               __assign_17
-            ) else let __assign_18 = (TyNominalTypeId.getCanonicalName (Obj.magic owner2) () : string) in (
-              tempString := __assign_18;
+            ));
+            ignore (let __assign_18 = (!tempRight3 : string) in (
+              (Obj.magic self : t).propertyGet <- __assign_18;
               __assign_18
             ));
-            let tempString1 = ref ("" : string) in (
-              ignore (if isStatic2 then let __assign_19 = ("static" : string) in (
-                tempString1 := __assign_19;
+            let tempRight4 = ref ("" : string) in (
+              ignore (if propertySet2 == Obj.magic (HxRuntime.hx_null) then let __assign_19 = ("" : string) in (
+                tempRight4 := __assign_19;
                 __assign_19
-              ) else let __assign_20 = ("instance" : string) in (
-                tempString1 := __assign_20;
+              ) else let __assign_20 = (StringTools.trim (propertySet2 : string) : string) in (
+                tempRight4 := __assign_20;
                 __assign_20
               ));
-              ignore (let __assign_21 = ((((HxString.toStdString (!tempString) ^ "#") ^ HxString.toStdString (!tempString1)) ^ "#") ^ HxString.toStdString ((Obj.magic self : t).name) : string) in (
-                (Obj.magic self : t).canonicalKey <- __assign_21;
+              ignore (let __assign_21 = (!tempRight4 : string) in (
+                (Obj.magic self : t).propertySet <- __assign_21;
                 __assign_21
               ));
-              if HxString.length (!tempString) = 0 || HxString.length ((Obj.magic self : t).modulePath) = 0 || HxString.length ((Obj.magic self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field information requires owner, module, and field identities") ["Dynamic"; "String"]) else ()
+              ignore (let __assign_22 = noImportGlobal2 in (
+                (Obj.magic self : t).noImportGlobal <- __assign_22;
+                __assign_22
+              ));
+              let tempString = ref ("" : string) in (
+                ignore (if owner2 == Obj.magic (HxRuntime.hx_null) then let __assign_23 = ("" : string) in (
+                  tempString := __assign_23;
+                  __assign_23
+                ) else let __assign_24 = (TyNominalTypeId.getCanonicalName (Obj.magic owner2) () : string) in (
+                  tempString := __assign_24;
+                  __assign_24
+                ));
+                let tempString1 = ref ("" : string) in (
+                  ignore (if isStatic2 then let __assign_25 = ("static" : string) in (
+                    tempString1 := __assign_25;
+                    __assign_25
+                  ) else let __assign_26 = ("instance" : string) in (
+                    tempString1 := __assign_26;
+                    __assign_26
+                  ));
+                  ignore (let __assign_27 = ((((HxString.toStdString (!tempString) ^ "#") ^ HxString.toStdString (!tempString1)) ^ "#") ^ HxString.toStdString ((Obj.magic self : t).name) : string) in (
+                    (Obj.magic self : t).canonicalKey <- __assign_27;
+                    __assign_27
+                  ));
+                  if HxString.length (!tempString) = 0 || HxString.length ((Obj.magic self : t).modulePath) = 0 || HxString.length ((Obj.magic self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field information requires owner, module, and field identities") ["Dynamic"; "String"]) else ()
+                )
+              )
             )
           )
         )
@@ -102,7 +128,7 @@ let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 i
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic (HxRuntime.hx_null); modulePath = ""; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; noImportGlobal = false; canonicalKey = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic (HxRuntime.hx_null); modulePath = ""; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = ""; propertySet = ""; noImportGlobal = false; canonicalKey = "" } : t)
 
 let getOwner = fun self () -> (Obj.magic self : t).owner
 
@@ -121,6 +147,10 @@ let getIsFinal = fun self () -> (Obj.magic self : t).isFinal
 let getIsInline = fun self () -> (Obj.magic self : t).isInline
 
 let getHasInitializer = fun self () -> (Obj.magic self : t).hasInitializer
+
+let getPropertyGet = fun self () -> (Obj.magic self : t).propertyGet
+
+let getPropertySet = fun self () -> (Obj.magic self : t).propertySet
 
 let getNoImportGlobal = fun self () -> (Obj.magic self : t).noImportGlobal
 

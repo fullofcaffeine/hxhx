@@ -13,12 +13,15 @@ class JsFunctionScope {
 	final classRefs:haxe.ds.StringMap<String>;
 	final instanceFields:haxe.ds.StringMap<String>;
 	final superClassRef:Null<String>;
+	final localCatalog:Null<TypedBackendLocalCatalog>;
 	var tempCounter:Int = 0;
 
-	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>, ?superClassRef:String) {
+	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>, ?superClassRef:String,
+			?localCatalog:TypedBackendLocalCatalog) {
 		this.classRefs = classRefs == null ? new haxe.ds.StringMap<String>() : classRefs;
 		this.instanceFields = instanceFields == null ? new haxe.ds.StringMap<String>() : instanceFields;
 		this.superClassRef = superClassRef;
+		this.localCatalog = localCatalog;
 	}
 
 	function reserve(name:String):String {
@@ -41,7 +44,9 @@ class JsFunctionScope {
 		final existing = locals.get(raw);
 		if (existing != null)
 			return existing;
-		final safe = reserve(raw);
+		final exact = localCatalog == null ? null : localCatalog.findByProjectedName(raw);
+		final displayName = exact == null ? raw : exact.getBinding().getSourceName();
+		final safe = reserve(displayName);
 		locals.set(raw, safe);
 		return safe;
 	}
@@ -51,6 +56,14 @@ class JsFunctionScope {
 		if (local != null)
 			return local;
 		return instanceFields.get(raw);
+	}
+
+	/** Return the exact semantic local selected for one projected transport name. **/
+	public function resolveLocalBinding(raw:String):Null<TyLocalBinding> {
+		if (localCatalog == null)
+			return null;
+		final exact = localCatalog.findByProjectedName(raw);
+		return exact == null ? null : exact.getBinding();
 	}
 
 	public function resolveClassRef(raw:String):Null<String> {

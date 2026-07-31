@@ -78,11 +78,112 @@ class TyperContext {
 		return classFullName.length == 0 ? null : resolveType(classFullName);
 	}
 
+	/**
+		Resolve one unique enum constructor declared by a type in the current module.
+
+		Haxe makes same-module enum constructors available as bare calls. The
+		semantic owner is selected here, before target projection. If two enums
+		declare the same constructor name, this bounded lookup returns no result
+		instead of letting traversal order pick one.
+	**/
+	public function moduleEnumConstructorMethod(name:String):Null<TyImportedStaticMethod> {
+		if (index == null || name == null || name.length == 0)
+			return null;
+		var selectedProvider:Null<TyNominalInfo> = null;
+		var selectedCandidates:Array<TyFunSig> = [];
+		for (provider in index.getDeclaredByModulePath(modulePath)) {
+			if (!provider.getIsEnum())
+				continue;
+			final eligible = [
+				for (candidate in provider.staticMethodCandidates(name))
+					if (provider.declarationForSignature(candidate) != null
+						&& provider.declarationForSignature(candidate).getIsEnumConstructor()) candidate
+			];
+			if (eligible.length == 0)
+				continue;
+			if (selectedProvider != null)
+				return null;
+			selectedProvider = provider;
+			selectedCandidates = eligible;
+		}
+		return selectedProvider == null ? null : new TyImportedStaticMethod(selectedProvider, name, selectedCandidates);
+	}
+
 	function resolvedProvider(directive:TyModuleDirective):Null<TyNominalInfo> {
 		if (directive == null || index == null)
 			return null;
 		final provider = directive.getSingleProvider();
 		return provider == null ? null : index.getByFullName(provider.getCanonicalName());
+	}
+
+	static function asClass(info:Null<TyNominalInfo>):Null<TyClassInfo>
+		return info != null && Std.isOfType(info, TyClassInfo) ? cast info : null;
+
+	function superclass(info:Null<TyNominalInfo>):Null<TyClassInfo> {
+		final cls = asClass(info);
+		if (cls == null || index == null)
+			return null;
+		final superType = cls.getSuperType();
+		final identity = superType == null ? null : superType.getNominalIdentity();
+		return identity == null ? null : asClass(index.getByFullName(identity.getCanonicalName()));
+	}
+
+	function classIsOrExtends(candidate:Null<TyNominalInfo>, ancestor:TyNominalInfo):Bool {
+		if (candidate == null || ancestor == null)
+			return false;
+		final seen = new haxe.ds.StringMap<Bool>();
+		var current = asClass(candidate);
+		while (current != null) {
+			final name = current.getFullName();
+			if (name == ancestor.getFullName())
+				return true;
+			if (seen.exists(name))
+				return false;
+			seen.set(name, true);
+			current = superclass(current);
+		}
+		return false;
+	}
+
+	/**
+		Return extension-method groups in Haxe lookup order.
+
+		Later `using` directives and later types from a used module have priority.
+		Each result keeps the named using provider separate from the class that
+		actually declares an inherited static method. Argument compatibility is
+		checked later by the ordinary overload selector.
+	**/
+	public function extensionMethods(name:String):Array<TyExtensionMethod> {
+		final out = new Array<TyExtensionMethod>();
+		if (index == null || name == null || name.length == 0)
+			return out;
+		final current = currentClass();
+		for (directiveOffset in 0...resolvedDirectives.length) {
+			final directive = resolvedDirectives[resolvedDirectives.length - 1 - directiveOffset];
+			if (!directive.getKind().match(UsingType))
+				continue;
+			final providers = directive.getProviders();
+			for (providerOffset in 0...providers.length) {
+				final usingIdentity = providers[providers.length - 1 - providerOffset];
+				var declaring = index.getByFullName(usingIdentity.getCanonicalName());
+				final seen = new haxe.ds.StringMap<Bool>();
+				while (declaring != null && !seen.exists(declaring.getFullName())) {
+					seen.set(declaring.getFullName(), true);
+					final eligible = new Array<TyFunSig>();
+					for (candidate in declaring.staticMethodCandidates(name)) {
+						final declaration = declaring.declarationForSignature(candidate);
+						if (declaration == null || candidate.getArgs().length == 0)
+							continue;
+						if (declaration.getIsPublic() || classIsOrExtends(current, declaring))
+							eligible.push(candidate);
+					}
+					if (eligible.length > 0)
+						out.push(new TyExtensionMethod(usingIdentity, declaring, name, eligible));
+					declaring = superclass(declaring);
+				}
+			}
+		}
+		return out;
 	}
 
 	/** Resolve a bare name introduced by an exact or wildcard static import. **/

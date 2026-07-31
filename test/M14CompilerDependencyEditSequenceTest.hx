@@ -141,6 +141,22 @@ class M14CompilerDependencyEditSequenceTest {
 		];
 	}
 
+	static function staticInitializationSources(apiSource:String):Array<DependencyEditSource> {
+		return [
+			{modulePath: "InitApi", filePath: "InitApi.hx", source: apiSource},
+			{
+				modulePath: "StaticInitializerConsumer",
+				filePath: "StaticInitializerConsumer.hx",
+				source: "class StaticInitializerConsumer { public static var value:Int = InitApi.make(); }"
+			},
+			{
+				modulePath: "InstanceInitializerConsumer",
+				filePath: "InstanceInitializerConsumer.hx",
+				source: "class InstanceInitializerConsumer { public var value:Int = InitApi.make(); }"
+			}
+		];
+	}
+
 	static function aliasOnlySources(alias:String):Array<DependencyEditSource> {
 		return [
 			{
@@ -187,6 +203,30 @@ class M14CompilerDependencyEditSequenceTest {
 	static function generatedObservation(value:String):CompilerGeneratedDeclarationObservation
 		return CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets([value]);
 
+	static function programConfiguration(targetId:String, defines:Array<{name:String, value:String}>):CompilerProgramConfigurationObservation {
+		final defineMap = new StringMap<String>();
+		for (define in defines)
+			defineMap.set(define.name, define.value);
+		return CompilerProgramConfigurationObservation.fromTargetAndDefines(targetId, defineMap);
+	}
+
+	static function withProgramConfiguration(snapshot:CompilerDependencySnapshot,
+			configuration:CompilerProgramConfigurationObservation):CompilerDependencySnapshot
+		return new CompilerDependencySnapshot(snapshot.getModules(), snapshot.getEdges(), configuration);
+
+	static function macroFileObservation(files:Array<{path:String, state:String, content:Null<String>}>):CompilerMacroFileDependencyObservation {
+		final inputs = [
+			for (file in files)
+				CompilerMacroFileDependencyInput.fromObservedPath(file.path, file.state, file.content == null ? null : haxe.io.Bytes.ofString(file.content))
+		];
+		return new CompilerMacroFileDependencyObservation(inputs);
+	}
+
+	static function macroFileRevision(observation:CompilerMacroFileDependencyObservation, ?implementationRevision:String,
+			?sourceRevision:String):CompilerTypedModuleRevision
+		return new CompilerTypedModuleRevision("MacroOwner", "macro-public", implementationRevision == null ? "macro-implementation" : implementationRevision,
+			sourceRevision == null ? "macro-source" : sourceRevision, null, null, null, null, observation);
+
 	static function main():Void {
 		final aliasA = snapshot(aliasOnlySources("Service"));
 		final aliasB = snapshot(aliasOnlySources("Client"));
@@ -205,6 +245,160 @@ class M14CompilerDependencyEditSequenceTest {
 		final sharedBodyB = "class Shared { public static function ordinary():Int return 2; }";
 		final publicA = snapshot(sharedSources(sharedA));
 		final publicB = snapshot(sharedSources(sharedPublicB));
+		final configurationA = programConfiguration("ocaml-stage3", [{name: "dce", value: "full"}, {name: "ocaml_profile", value: "portable"}]);
+		final configurationAReordered = programConfiguration("ocaml-stage3", [{name: "ocaml_profile", value: "portable"}, {name: "dce", value: "full"}]);
+		final configuredA = withProgramConfiguration(publicA, configurationA);
+		final configuredAReordered = withProgramConfiguration(publicA, configurationAReordered);
+		assertTrue(configuredA.getCanonicalIdentity() == configuredAReordered.getCanonicalIdentity(),
+			"define insertion order must not change the sealed program-configuration or dependency-snapshot identity");
+		final unchangedConfiguration = CompilerDependencyInvalidator.compare(configuredA, configuredAReordered);
+		assertTrue(unchangedConfiguration.getProgramConfigurationChanges().length == 0
+			&& unchangedConfiguration.getInvalidations().length == 0,
+			"equivalent normalized compiler configuration should not predict work");
+
+		final configurationDceB = programConfiguration("ocaml-stage3", [{name: "dce", value: "no"}, {name: "ocaml_profile", value: "portable"}]);
+		final configuredDceB = withProgramConfiguration(publicA, configurationDceB);
+		final dceConfigurationComparison = CompilerDependencyInvalidator.compare(configuredA, configuredDceB);
+		assertTrue(dceConfigurationComparison.getProgramConfigurationChanges().join(",") == "define:dce",
+			"the comparison should name the changed DCE input without retaining its value");
+		assertTrue(affected(dceConfigurationComparison) == "Left,Main,Right,Shared",
+			"a request-wide DCE change should conservatively recheck every current module");
+		assertTrue(reasons(dceConfigurationComparison).indexOf("program-configuration-changed:define:dce") >= 0
+			&& reasons(dceConfigurationComparison).indexOf("full") < 0,
+			"configuration reasons should explain the input name without revealing either value");
+		final configuredBodyAndDceB = withProgramConfiguration(snapshot(sharedSources(sharedBodyB)), configurationDceB);
+		final bodyAndDceComparison = CompilerDependencyInvalidator.compare(configuredA, configuredBodyAndDceB);
+		final sharedBodyAndDceReason = bodyAndDceComparison.reasonFor("Shared");
+		final mainBodyAndDceReason = bodyAndDceComparison.reasonFor("Main");
+		assertTrue(sharedBodyAndDceReason != null && sharedBodyAndDceReason.describe().indexOf("implementation-changed:Shared") >= 0,
+			"a module's exact implementation cause should remain stronger than the request-wide configuration fallback");
+		assertTrue(mainBodyAndDceReason != null
+			&& mainBodyAndDceReason.describe().indexOf("program-configuration-changed:define:dce") >= 0,
+			"unchanged modules should retain the request-wide configuration reason");
+
+		final configurationTargetB = programConfiguration("js-native", [{name: "dce", value: "full"}, {name: "ocaml_profile", value: "metal"}]);
+		final configuredTargetB = withProgramConfiguration(publicA, configurationTargetB);
+		final targetConfigurationComparison = CompilerDependencyInvalidator.compare(configuredA, configuredTargetB);
+		assertTrue(targetConfigurationComparison.getProgramConfigurationChanges().join(",") == "define:ocaml_profile,target",
+			"target and profile changes should remain separate deterministic configuration inputs");
+		assertTrue(affected(targetConfigurationComparison) == "Left,Main,Right,Shared",
+			"a target/profile change should conservatively recheck every current module until target neutrality is proven");
+
+		final privateConfigurationA = withProgramConfiguration(publicA,
+			programConfiguration("ocaml-stage3", [{name: "private/path", value: "machine-private-value::secret-a"}]));
+		final privateConfigurationB = withProgramConfiguration(publicA,
+			programConfiguration("ocaml-stage3", [{name: "private/path", value: "machine-private-value::secret-b"}]));
+		final privateConfigurationComparison = CompilerDependencyInvalidator.compare(privateConfigurationA, privateConfigurationB);
+		assertTrue(privateConfigurationComparison.getProgramConfigurationChanges().join(",") == "define:private%002fpath",
+			"path-like define names should be escaped before they enter a line-oriented report");
+		final privateConfigurationReasons = reasons(privateConfigurationComparison);
+		assertTrue(privateConfigurationReasons.indexOf("machine-private-value") < 0
+			&& privateConfigurationA.getCanonicalIdentity().indexOf("machine-private-value") < 0
+			&& privateConfigurationB.getCanonicalIdentity().indexOf("machine-private-value") < 0,
+			"raw configuration values must not survive in invalidation reasons or long-lived snapshot identities");
+
+		final configuredAAgain = withProgramConfiguration(publicA,
+			programConfiguration("ocaml-stage3", [{name: "dce", value: "full"}, {name: "ocaml_profile", value: "portable"}]));
+		assertTrue(configuredA.getCanonicalIdentity() == configuredAAgain.getCanonicalIdentity(),
+			"returning to exact configuration A should reproduce the original dependency snapshot");
+		final configurationReverse = CompilerDependencyInvalidator.compare(configuredDceB, configuredAAgain);
+		assertTrue(affected(configurationReverse) == affected(dceConfigurationComparison)
+			&& reasons(configurationReverse) == reasons(dceConfigurationComparison),
+			"configuration A-to-B-to-A should reproduce affected modules and privacy-safe reason paths");
+
+		final macroPathA = "machine-private-value::macro-file-a";
+		final macroPathB = "machine-private-value::macro-file-b";
+		final macroObservationA = macroFileObservation([
+			{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-a"},
+			{path: macroPathB, state: CompilerMacroFileDependencyInput.MISSING_STATE, content: null}
+		]);
+		final macroObservationAReordered = macroFileObservation([
+			{path: macroPathB, state: CompilerMacroFileDependencyInput.MISSING_STATE, content: null},
+			{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-a"},
+			{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-a"}
+		]);
+		final macroSnapshotA = new CompilerDependencySnapshot([macroFileRevision(macroObservationA)], []);
+		final macroSnapshotAReordered = new CompilerDependencySnapshot([macroFileRevision(macroObservationAReordered)], []);
+		assertTrue(macroSnapshotA.getCanonicalIdentity() == macroSnapshotAReordered.getCanonicalIdentity(),
+			"registration order and equivalent duplicates must not change the macro-file dependency snapshot");
+
+		final macroObservationB = macroFileObservation([
+			{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-b"},
+			{path: macroPathB, state: CompilerMacroFileDependencyInput.MISSING_STATE, content: null}
+		]);
+		final macroSnapshotB = new CompilerDependencySnapshot([macroFileRevision(macroObservationB)], []);
+		final macroComparison = CompilerDependencyInvalidator.compare(macroSnapshotA, macroSnapshotB);
+		assertTrue(macroComparison.getMacroFileDependencyChanges().join(",") == "MacroOwner",
+			"changing registered file bytes should identify the owning module");
+		assertTrue(affected(macroComparison) == "MacroOwner"
+			&& reasons(macroComparison).indexOf("macro-file-dependency-changed:MacroOwner") >= 0,
+			"a macro-file-only change should recheck its owner with a direct privacy-safe reason");
+		assertTrue(reasons(macroComparison).indexOf("machine-private-value") < 0
+			&& reasons(macroComparison).indexOf("private-schema") < 0
+			&& macroSnapshotA.getCanonicalIdentity().indexOf("machine-private-value") < 0
+			&& macroSnapshotA.getCanonicalIdentity().indexOf("private-schema") < 0,
+			"registered paths and bytes must not survive in reasons or snapshot identities");
+
+		final missingMacroObservation = macroFileObservation([
+			{path: macroPathA, state: CompilerMacroFileDependencyInput.MISSING_STATE, content: null},
+			{path: macroPathB, state: CompilerMacroFileDependencyInput.MISSING_STATE, content: null}
+		]);
+		final missingMacroSnapshot = new CompilerDependencySnapshot([macroFileRevision(missingMacroObservation)], []);
+		assertTrue(affected(CompilerDependencyInvalidator.compare(macroSnapshotA, missingMacroSnapshot)) == "MacroOwner",
+			"deleting a registered file should recheck its owner");
+		final restoredMacroSnapshot = new CompilerDependencySnapshot([macroFileRevision(macroObservationA)], []);
+		assertTrue(restoredMacroSnapshot.getCanonicalIdentity() == macroSnapshotA.getCanonicalIdentity()
+			&& reasons(CompilerDependencyInvalidator.compare(macroSnapshotB, restoredMacroSnapshot)) == reasons(macroComparison),
+			"macro file A-to-B-to-A should reproduce the original identity and deterministic reason shape");
+
+		final replacedPathObservation = macroFileObservation([
+			{path: "machine-private-value::replacement", state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-a"}
+		]);
+		assertTrue(affected(CompilerDependencyInvalidator.compare(macroSnapshotA,
+			new CompilerDependencySnapshot([macroFileRevision(replacedPathObservation)], []))) == "MacroOwner",
+			"replacing a registration with another path should recheck its owner even when bytes match");
+
+		final macroConsumer = new CompilerTypedModuleRevision("MacroConsumer", "consumer-public", "consumer-implementation");
+		final macroImplementationEdge = new CompilerDependencyEdge("MacroConsumer", "MacroOwner", CompilerDependencyPhase.SharedTyping,
+			CompilerDependencyKind.InlineImplementation, "MacroOwner.inlineValue");
+		final macroAndBodyComparison = CompilerDependencyInvalidator.compare(new CompilerDependencySnapshot([macroFileRevision(macroObservationA), macroConsumer],
+			[macroImplementationEdge]),
+			new CompilerDependencySnapshot([macroFileRevision(macroObservationB, "macro-implementation-b"), macroConsumer], [macroImplementationEdge]));
+		assertTrue(affected(macroAndBodyComparison) == "MacroConsumer,MacroOwner"
+			&& reasons(macroAndBodyComparison).indexOf("macro-file-dependency-changed:MacroOwner") >= 0,
+			"a macro input that changes the owner implementation should retain its direct cause and propagate through body-sensitive edges");
+
+		final macroAndSourceComparison = CompilerDependencyInvalidator.compare(macroSnapshotA,
+			new CompilerDependencySnapshot([macroFileRevision(macroObservationB, "macro-implementation-b", "macro-source-b")], []));
+		final macroAndSourceReason = macroAndSourceComparison.reasonFor("MacroOwner");
+		assertTrue(macroAndSourceReason != null && macroAndSourceReason.describe().indexOf("implementation-changed:MacroOwner") >= 0,
+			"a direct source and implementation edit should remain stronger than the simultaneous macro-file input fallback");
+
+		var conflictingMacroObservationRejected = false;
+		try {
+			macroFileObservation([
+				{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-a"},
+				{path: macroPathA, state: CompilerMacroFileDependencyInput.FILE_STATE, content: "private-schema-b"}
+			]);
+		} catch (_:String) {
+			conflictingMacroObservationRejected = true;
+		}
+		assertTrue(conflictingMacroObservationRejected, "conflicting observations of one registered path must fail instead of publishing ambiguous state");
+		var impossibleMacroFileStateRejected = false;
+		try {
+			CompilerMacroFileDependencyInput.fromObservedPath(macroPathA, CompilerMacroFileDependencyInput.FILE_STATE, null);
+		} catch (_:String) {
+			impossibleMacroFileStateRejected = true;
+		}
+		assertTrue(impossibleMacroFileStateRejected, "a file observation without exact bytes must fail closed");
+		var impossibleMacroMissingStateRejected = false;
+		try {
+			CompilerMacroFileDependencyInput.fromObservedPath(macroPathA, CompilerMacroFileDependencyInput.MISSING_STATE, haxe.io.Bytes.ofString("impossible"));
+		} catch (_:String) {
+			impossibleMacroMissingStateRejected = true;
+		}
+		assertTrue(impossibleMacroMissingStateRejected, "a missing-file observation must not accept retained bytes");
+
 		final publicComparison = CompilerDependencyInvalidator.compare(publicA, publicB);
 		assertTrue(affected(publicComparison) == "Left,Main,Right,Shared",
 			"a shared public change should reach both callers and the downstream inline consumer");
@@ -382,6 +576,26 @@ class M14CompilerDependencyEditSequenceTest {
 		assertTrue(qualifiedReaderReason != null
 			&& qualifiedReaderReason.describe().indexOf("constant-value:QualifiedReader->pkg.Api:field:pkg.Api#static#label") >= 0,
 			"the fully qualified reader should retain the exact selected field identity");
+
+		final staticInitializationA = snapshot(staticInitializationSources("class InitApi { public static function make():Int return 1; }"));
+		final staticInitializationB = snapshot(staticInitializationSources("class InitApi { public static function make():Int return 2; }"));
+		final staticInitializationComparison = CompilerDependencyInvalidator.compare(staticInitializationA, staticInitializationB);
+		assertTrue(affected(staticInitializationComparison) == "InitApi,StaticInitializerConsumer",
+			"an implementation-only edit should reach a static initializer that consumes the provider without conservatively rechecking an instance initializer");
+		final staticInitializerReason = staticInitializationComparison.reasonFor("StaticInitializerConsumer");
+		assertTrue(staticInitializerReason != null
+			&& staticInitializerReason.describe()
+				.indexOf("static-initialization:StaticInitializerConsumer->InitApi:initializer:StaticInitializerConsumer#static#value->declaration:") >= 0,
+			"the body-sensitive reason should name the static field being initialized and the exact selected declaration");
+		assertTrue(!staticInitializationComparison.isAffected("InstanceInitializerConsumer"),
+			"an instance initializer call should continue to consume only the provider's public signature");
+		final staticInitializationAAgain = snapshot(staticInitializationSources("class InitApi { public static function make():Int return 1; }"));
+		assertTrue(staticInitializationA.getCanonicalIdentity() == staticInitializationAAgain.getCanonicalIdentity(),
+			"returning to exact static-initialization revision A should reproduce the original dependency snapshot");
+		final staticInitializationReverse = CompilerDependencyInvalidator.compare(staticInitializationB, staticInitializationAAgain);
+		assertTrue(affected(staticInitializationReverse) == affected(staticInitializationComparison)
+			&& reasons(staticInitializationReverse) == reasons(staticInitializationComparison),
+			"static-initialization A-to-B-to-A should reproduce affected modules and reason paths");
 
 		final publicAAgain = snapshot(sharedSources(sharedA));
 		assertTrue(publicA.getCanonicalIdentity() == publicAAgain.getCanonicalIdentity(),

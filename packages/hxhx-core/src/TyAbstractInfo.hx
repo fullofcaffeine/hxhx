@@ -10,7 +10,7 @@
 **/
 class TyAbstractInfo extends TyNominalInfo {
 	final underlyingType:TyType;
-	final typeParameters:Array<String>;
+	final typeParameters:Array<TyTypeParameterId>;
 	final implicitFromTypes:Array<TyType>;
 	final implicitToTypes:Array<TyType>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
@@ -19,7 +19,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<String>, implicitFromTypes:Array<TyType>,
+			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<TyTypeParameterId>, implicitFromTypes:Array<TyType>,
 			implicitToTypes:Array<TyType>, visibility:HxVisibility = HxVisibility.Public) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility);
@@ -39,7 +39,11 @@ class TyAbstractInfo extends TyNominalInfo {
 		return underlyingType;
 
 	public function getTypeParameters():Array<String>
-		return typeParameters;
+		return [for (parameter in typeParameters) parameter.getName()];
+
+	/** Exact abstract-level generic binder identities in declared order. **/
+	public function getTypeParameterIds():Array<TyTypeParameterId>
+		return typeParameters.copy();
 
 	/** Types that Haxe may convert into this abstract through its header `from` declarations. **/
 	public function getImplicitFromTypes():Array<TyType>

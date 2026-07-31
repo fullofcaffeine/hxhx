@@ -63,9 +63,10 @@ class HxConditionalCompilation {
 		Filter a whole source string.
 
 		Why
-		- Both the native frontend seam (`-D hih_native_parser`) and the pure-Haxe parser
-		  accept raw source strings. Filtering at this boundary ensures both frontends see
-		  the same active surface.
+		- The parser accepts raw source strings, while Haxe conditional compilation
+		  decides which declarations and expressions are active.
+		- Filtering at this boundary gives the sole Haxe-authored parser exactly the
+		  source surface selected by the request's definitions.
 	**/
 	public static function filterSource(source:String, defines:haxe.ds.StringMap<String>):String {
 		return filterSourceInternal(source, defines, false).getFilteredSource();

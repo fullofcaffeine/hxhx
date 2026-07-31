@@ -23,8 +23,7 @@ import haxe.io.Path;
 	  1. Try `<cp>/<modulePathWithSlashes>.hx`
 	  2. If the import looks like a “subtype in module” (`pack.Mod.SubType`), fall back
 		 to `<cp>/pack/Mod.hx` when `<cp>/pack/Mod/SubType.hx` does not exist.
-	- Parsing uses `ParserStage.parse`, which can route to either the pure-Haxe frontend
-	  or the native OCaml frontend hook (see `ParserStage` hxdoc).
+	- Parsing uses `ParserStage.parse`, the single Haxe-authored frontend entry point.
 **/
 class ResolverStage {
 	/**

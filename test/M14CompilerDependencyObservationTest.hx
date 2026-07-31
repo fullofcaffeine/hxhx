@@ -10,8 +10,9 @@ private typedef DependencyTestSource = {
 	Focused proof that dependency observation uses sealed target-neutral typed facts.
 
 	The fixture checks ordinary signature use, inline bodies, embeddable constants,
-	deterministic graph ordering, and the public-interface versus implementation
-	revision split. It does not enable typed-module reuse.
+	static-initializer relationships, deterministic graph ordering, and the
+	public-interface versus implementation revision split. It does not enable
+	typed-module reuse.
 **/
 class M14CompilerDependencyObservationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -79,16 +80,53 @@ class M14CompilerDependencyObservationTest {
 		return null;
 	}
 
-	static function functionIdentity(modules:Array<TypedModule>, modulePath:String, functionName:String):String {
+	static function hasAnyEdgeBetween(snapshot:CompilerDependencySnapshot, consumer:String, provider:String, kind:CompilerDependencyKind):Bool {
+		for (edge in snapshot.getEdges())
+			if (edge.consumerModule == consumer
+				&& edge.providerModule == provider
+				&& CompilerDependencyKindTools.name(edge.kind) == CompilerDependencyKindTools.name(kind))
+				return true;
+		return false;
+	}
+
+	static function typedFunction(modules:Array<TypedModule>, modulePath:String, functionName:String):TypedFunction {
 		for (module in modules) {
 			if (CompilerTypedModuleRevision.semanticModulePath(module) != modulePath)
 				continue;
 			for (typedClass in module.getTypedClasses())
 				for (typedFunction in typedClass.getFunctions())
 					if (HxFunctionDecl.getName(typedFunction.getSourceDeclaration()) == functionName)
-						return typedFunction.getStableIdentity();
+						return typedFunction;
 		}
 		throw 'missing typed function $modulePath.$functionName';
+	}
+
+	static function functionIdentity(modules:Array<TypedModule>, modulePath:String, functionName:String):String
+		return typedFunction(modules, modulePath, functionName).getStableIdentity();
+
+	static function functionBodyRevision(modules:Array<TypedModule>, modulePath:String, functionName:String):String
+		return CompilerTypedTreeRevision.functionBody(typedFunction(modules, modulePath, functionName));
+
+	static function typedProgramRevision(modules:Array<TypedModule>, macroMode:Bool = false):String
+		return new MacroExpandedProgram(modules, macroMode).getTypedProgramRevision().getCanonicalIdentity();
+
+	static function assertFunctionBodyRevisionPreservesTreeBoundaries():Void {
+		final position = new HxPos(0, 1, 1);
+		final declaration = new HxFunctionDecl("ambiguous", HxVisibility.Private, true, [], "Void", [], "", [], position);
+		final fingerprint = TypedBodyFingerprint.forStatements([]);
+		final first = new TypedFunction("RevisionFixture", 0, declaration, null, null, new TypedFunctionBody([
+			TypedStmt.block([
+				TypedStmt.block([TypedStmt.returnVoid(position)], position),
+				TypedStmt.returnVoid(position),
+			], position)
+		], fingerprint));
+		final second = new TypedFunction("RevisionFixture", 0, declaration, null, null, new TypedFunctionBody([
+			TypedStmt.block([
+				TypedStmt.block([TypedStmt.returnVoid(position), TypedStmt.returnVoid(position),], position)
+			], position)
+		], fingerprint));
+		assertTrue(CompilerTypedTreeRevision.functionBody(first) != CompilerTypedTreeRevision.functionBody(second),
+			"exact body revisions must preserve variable-length typed-tree boundaries");
 	}
 
 	static function visitExpression(expression:TypedExpr, visit:TypedExpr->Void):Void {
@@ -105,6 +143,7 @@ class M14CompilerDependencyObservationTest {
 	}
 
 	static function main():Void {
+		assertFunctionBodyRevisionPreservesTreeBoundaries();
 		final apiA = [
 			"class Api {",
 			"  public static function answer():Int return 42;",
@@ -131,6 +170,51 @@ class M14CompilerDependencyObservationTest {
 			"an import dependency should name module resolution as its owning compiler phase");
 		assertTrue(edgePhase(snapshot, CompilerDependencyKind.PublicInterface, "answer") == "shared-typing",
 			"an exact call dependency should name shared typing as its owning compiler phase");
+
+		final staticInitializerProgram = typedSources([
+			{
+				modulePath: "InitApi",
+				filePath: "InitApi.hx",
+				source: [
+					"class InitApi {",
+					"  public static var mutable:Int = 1;",
+					"  public function new() {}",
+					"  public static function make():Int return mutable;",
+					"}"
+				].join("\n")
+			},
+			{
+				modulePath: "StaticInitializerConsumer",
+				filePath: "StaticInitializerConsumer.hx",
+				source: [
+					"class StaticInitializerConsumer {",
+					"  public static var fromCall:Int = InitApi.make();",
+					"  public static var fromField:Int = InitApi.mutable;",
+					"  public static var fromNew:InitApi = new InitApi();",
+					"}"
+				].join("\n")
+			},
+			{
+				modulePath: "InstanceInitializerConsumer",
+				filePath: "InstanceInitializerConsumer.hx",
+				source: "class InstanceInitializerConsumer { public var fromCall:Int = InitApi.make(); }"
+			}
+		]);
+		final staticInitializerSnapshot = CompilerDependencyCollector.collect(staticInitializerProgram.modules, staticInitializerProgram.index);
+		assertTrue(hasEdgeBetween(staticInitializerSnapshot, "StaticInitializerConsumer", "InitApi", CompilerDependencyKind.StaticInitialization,
+			"initializer:StaticInitializerConsumer#static#fromCall->declaration:"),
+			"a static field initializer call should retain both the initializer field and exact selected declaration");
+		assertTrue(hasEdgeBetween(staticInitializerSnapshot, "StaticInitializerConsumer", "InitApi", CompilerDependencyKind.StaticInitialization,
+			"initializer:StaticInitializerConsumer#static#fromField->field:InitApi#static#mutable"),
+			"a mutable static field read should retain an initialization edge even though its value is not an embeddable constant");
+		assertTrue(hasEdgeBetween(staticInitializerSnapshot, "StaticInitializerConsumer", "InitApi", CompilerDependencyKind.StaticInitialization,
+			"initializer:StaticInitializerConsumer#static#fromNew->type:InitApi"),
+			"constructing a provider type during static initialization should retain its exact nominal identity");
+		assertTrue(edgePhaseBetween(staticInitializerSnapshot, "StaticInitializerConsumer", "InitApi", CompilerDependencyKind.StaticInitialization,
+			"fromCall") == "shared-typing",
+			"a static-initialization edge should name the phase that selected its declaration and type facts");
+		assertTrue(!hasAnyEdgeBetween(staticInitializerSnapshot, "InstanceInitializerConsumer", "InitApi", CompilerDependencyKind.StaticInitialization),
+			"an instance field initializer should keep ordinary dependencies without being mislabeled as program static initialization");
 
 		final aliasProgram = typedSources([
 			{
@@ -218,6 +302,14 @@ class M14CompilerDependencyObservationTest {
 		final reordered = CompilerDependencyCollector.collect([first.modules[1], first.modules[0]], first.index);
 		assertTrue(snapshot.getCanonicalIdentity() == reordered.getCanonicalIdentity(),
 			"equivalent module input order should produce one canonical dependency snapshot");
+		assertTrue(typedProgramRevision(first.modules) == typedProgramRevision([first.modules[1], first.modules[0]]),
+			"equivalent module input order should produce one exact typed-program revision");
+		assertTrue(typedProgramRevision(first.modules) == typedProgramRevision([first.modules[0], first.modules[0], first.modules[1]]),
+			"repeated equivalent type contributions should merge into one exact source-module revision");
+		assertTrue(typedProgramRevision(first.modules) != typedProgramRevision([first.modules[0]]),
+			"removing a typed module should change the exact program revision");
+		assertTrue(typedProgramRevision(first.modules) != typedProgramRevision(first.modules, true),
+			"macro-expanded and ordinary typed programs should have distinct exact revisions");
 
 		final apiOrdinaryBodyChanged = apiA.split("return 42").join("return 43");
 		final ordinaryChanged = typedProgram(apiOrdinaryBodyChanged, mainSource);
@@ -228,6 +320,36 @@ class M14CompilerDependencyObservationTest {
 			"ordinary body-only edit should retain the public-interface revision");
 		assertTrue(originalRevision.implementationRevision != ordinaryRevision.implementationRevision,
 			"ordinary body-only edit should change the implementation revision");
+		assertTrue(typedProgramRevision(first.modules) != typedProgramRevision(ordinaryChanged.modules),
+			"an implementation-only body edit should change the exact typed-program revision");
+		var conflictingProgramRevisionRejected = false;
+		try {
+			typedProgramRevision([first.modules[0], ordinaryChanged.modules[0]]);
+		} catch (_:Dynamic) {
+			conflictingProgramRevisionRejected = true;
+		}
+		assertTrue(conflictingProgramRevisionRejected, "conflicting observations for one source module should fail before sealing a program revision");
+		final repeatedFirst = typedProgram(apiA, mainSource);
+		assertTrue(typedProgramRevision(first.modules) == typedProgramRevision(repeatedFirst.modules),
+			"equivalent newly allocated typed programs should reproduce one exact revision");
+		assertTrue(functionBodyRevision(first.modules, "Api", "answer") == functionBodyRevision(repeatedFirst.modules, "Api", "answer"),
+			"equivalent newly allocated typed functions should reproduce one exact body revision");
+		assertTrue(functionBodyRevision(first.modules, "Api", "answer") != functionBodyRevision(ordinaryChanged.modules, "Api", "answer"),
+			"an ordinary semantic body edit should change the exact function-body revision");
+		final exactAnswerProjection = typedFunction(first.modules, "Api", "answer");
+		assertTrue(TypedBodySource.functionProjection(exactAnswerProjection)
+			.getBodyRevision() == CompilerTypedTreeRevision.functionBody(exactAnswerProjection),
+			"the strict backend projection should retain the exact body revision supplied by the typed owner");
+		final identicalBodyFunctions = typedSources([
+			{
+				modulePath: "Twin",
+				filePath: "Twin.hx",
+				source: "class Twin { public static function first():Int return 1; public static function second():Int return 1; }"
+			}
+		]);
+		assertTrue(functionBodyRevision(identicalBodyFunctions.modules, "Twin",
+			"first") != functionBodyRevision(identicalBodyFunctions.modules, "Twin", "second"),
+			"two declarations with identical statements should retain distinct body revisions");
 
 		final apiInlineBodyChanged = apiA.split("value * 2").join("value * 3");
 		final inlineChanged = typedProgram(apiInlineBodyChanged, mainSource);

@@ -119,7 +119,6 @@ case "$SCOPE" in
       -cp "$ROOT/packages/hxhx/src"
       -cp "$ROOT/packages/hxhx-core/src"
       -main hxhx.Main
-      -D hih_native_parser
       -D reflaxe_ocaml
       -D no_traces
       -D no-traces

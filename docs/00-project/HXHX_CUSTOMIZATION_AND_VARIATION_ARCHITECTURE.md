@@ -1,6 +1,6 @@
 # hxhx Customization And Variation Architecture
 
-Last prepared: 2026-07-18
+Last prepared: 2026-07-24
 Status: accepted architecture foundation; implementation deferred until Full1
 and the authentic shared-target hard cut; no production-readiness claim
 
@@ -13,11 +13,21 @@ Related beads:
 - `haxe.ocaml-rpmx` - Reflaxe compiler promotion matrix
 - `haxe_ocaml-h5jta.1` - Haxe-authored native compiler-transform SDK and
   Coro-class proof plan
+- `haxe_ocaml-h5jta.2` - Haxe-superset syntax and standard-Haxe translation
+  investigation
+- `haxe_ocaml-h5jta.3` - optional TypeScript-compatible frontend/plugin
+  research
 
 ## Purpose
 
 This document defines how `hxhx` can become easy to customize without making
 the stock compiler ambiguous.
+
+The long-term product motivation is faster Haxe language evolution with a
+modern, Haxe-authored compiler. `hxhx` may advance new features sooner than
+vanilla Haxe, but it must remain a behavioral superset of every supported
+upstream baseline: valid vanilla source keeps compiling with the same behavior,
+and extension-specific source is identified honestly as `hxhx`.
 
 The core rule is:
 
@@ -203,6 +213,80 @@ Rules:
 - Any frontend or typer difference must be represented as a named variation
   decision, not a hidden condition in shared code.
 
+#### First language-extension candidate
+
+The first intended syntax experiment is object-field shorthand:
+
+```haxe
+var callee = resolve();
+var call = {callee};
+```
+
+The shorthand means `{callee: callee}`. It must preserve the same lookup,
+evaluation, inferred anonymous-structure type, source diagnostics, and target
+behavior as the expanded form. It is an `hxhx` extension, so upstream Haxe is
+not expected to accept the shorthand source.
+
+This example deliberately tests the extension boundary before a larger dialect
+is designed. An ordinary expression macro or typed transform cannot recognize
+grammar that the parser has already rejected. The future design must compare:
+
+1. an ordinary upstream-compatible macro for features expressible after parse;
+2. a validated typed transform for features expressible after typing;
+3. a structured pre-parse token or syntax transform;
+4. a versioned parser-extension API; and
+5. built-in syntax owned by a selected `hxhx` language profile.
+
+Choose the latest compiler phase that can express the feature correctly. If a
+pre-parse macro/eval surface is investigated, it must exchange structured,
+versioned input and output, preserve source locations, participate in compiler
+server identities, and have deterministic lifecycle and capability rules. Raw
+text substitution and an unrestricted mutable parser context are not acceptable
+extension APIs.
+
+The same investigation may prototype a `dehxhxify` tool. It would translate
+supported `hxhx` source forms into ordinary Haxe—for this example, `{callee}`
+becomes `{callee: callee}`—while preserving behavior and reporting unsupported
+features. Translation is optional interoperability tooling, not a compatibility
+shortcut or a replacement for executing both forms in tests.
+
+Before the seam is selected, ask GPT-5.6 Sol Oracle to brainstorm and review
+the alternatives using this example. The review must cover parser ownership,
+macro/eval feasibility, diagnostics and source maps, formatter/editor tooling,
+incremental-cache identity, security/lifecycle, upstream-version intake, and
+translation fidelity. Oracle recommends the boundary; repository fixtures,
+black-box upstream checks, and variation/baseline gates prove it.
+
+#### Optional language frontends are not core syntax
+
+An optional frontend can have a broader compatibility goal than the ordinary
+`hxhx` language. The planned `ts2hx` research may pursue substantial or eventual
+full TypeScript source compatibility, but it must remain an explicitly selected
+frontend/plugin or separate product. TypeScript grammar, type-system policy, and
+runtime compatibility do not become hidden branches in baseline parser or typer
+code.
+
+This is deliberately separate from the object-field shorthand experiment:
+
+- ordinary `hxhx` extensions should remain close to Haxe and preserve its
+  language identity; and
+- the optional TypeScript frontend may accept a meaningfully different source
+  language, provided it lowers through a versioned, validated boundary.
+
+The earlier Oracle-brainstormed skeleton is currently in the sibling
+`../tshx-codex-starter` checkout. When `haxe_ocaml-h5jta.3` starts, pin and
+inventory that candidate before treating it as evidence. Then ask Oracle to
+re-evaluate it in the production `hxhx` context: compare standalone
+source-to-source translation, a host-neutral frontend snapshot, and a versioned
+pre-parse/frontend plugin. The review must cover diagnostic/source-map fidelity,
+display/editor behavior, macros, incremental identities, target reuse,
+lifecycle, trust, packaging, and exact-versus-approximate TypeScript semantics.
+
+This research begins only after production-quality Full1 `hxhx`, standalone
+`reflaxe.ocaml`, the authentic shared target, and the customization/frontend
+extension lifecycle. It is not current P0/P1 work and contributes no present
+readiness.
+
 ### 5. Research-only compiler-core framework changes
 
 Deeper Reflaxe-shaped compiler-core work is possible as research, but it is not
@@ -289,6 +373,8 @@ Variation claims:
 - A variation has its own name, version, compatibility statement, and gates.
 - A variation may be "Haxe-family", but it is not the baseline Haxe `4.3.7`
   replacement claim.
+- A Haxe-superset profile must state which additional forms it accepts and keep
+  those fixtures out of exact upstream-compatibility evidence.
 - README/North Star progress bars move only when user-facing readiness changes,
   not when a design note or internal spike lands.
 
@@ -388,3 +474,8 @@ The architecture is a tiered model:
    own claims and gates.
 6. Keep deeper compiler-core framework changes quarantined as research unless a
    dedicated architecture decision promotes them.
+7. Investigate Haxe-superset syntax and optional standard-Haxe translation only
+   after Full1 and the authentic shared-target hard cut; begin with the Oracle
+   extension-seam review recorded by `haxe_ocaml-h5jta.2`.
+8. Treat TypeScript compatibility as an optional frontend/plugin research
+   product under `haxe_ocaml-h5jta.3`, not as baseline `hxhx` core syntax.

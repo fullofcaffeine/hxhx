@@ -102,6 +102,18 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		FileSystem.createDirectory(path);
 	}
 
+	static function commandExists(name:String):Bool
+		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
+
+	static function commandOutput(command:String, args:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, args);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		return {code: code, stdout: stdout, stderr: stderr};
+	}
+
 	static function containsTransactionPath(path:String):Bool {
 		if (!FileSystem.exists(path) || !FileSystem.isDirectory(path))
 			return false;
@@ -304,7 +316,6 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertEquals(encodedError, "\x02\n", "socket error encoding should use Haxe's error control line");
 
 		MacroState.setDefine("HXHX_STALE_REQUEST_FIXTURE", "old");
-		HxParser.debugBodyLabel = "stale request body";
 		final realFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(11, ["--hxhx-no-run", "--hxhx-no-emit"], [], null),
 			Stage3Compiler.runRequest);
 		final realFailureWire = CompilationServerRequestCodec.encodeReply(realFailure);
@@ -313,7 +324,6 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(realFailureWire.indexOf("missing -main <TypeName>") >= 0, "a real Stage3 request should return its specific diagnostic to its client");
 		assertTrue(StringTools.endsWith(realFailureWire, "\x02\n"), "a real Stage3 failure should end with Haxe's failure marker");
 		assertTrue(!MacroState.defined("HXHX_STALE_REQUEST_FIXTURE"), "failed request should clear request-global macro state");
-		assertEquals(HxParser.debugBodyLabel, "", "failed request parser debug state");
 
 		final transactionRoot = ".tmp/m14_compilation_server_output_transaction";
 		final finalDirectory = haxe.io.Path.join([transactionRoot, "directory-output"]);
@@ -424,6 +434,7 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		FileSystem.createDirectory(srcDir);
 		final mainPath = haxe.io.Path.join([srcDir, "Main.hx"]);
 		final sourceA = "class Main { static function main():Void {} }\n";
+		final sourceB = "class Main { static function main():Void { var value:Int = 1; } }\n";
 		File.saveContent(mainPath, sourceA);
 		final recordingSources = new RecordingCompilerSourceProvider();
 		final sourceOwnedContext = new CompilationRequestContext(0, true, false, recordingSources.provider());
@@ -480,19 +491,29 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(realEmitFailureWire.indexOf("hxhx_server_report.output_transaction=aborted") >= 0, "failed emitted request should report aborted output");
 		assertTrue(!containsTransactionPath(tmpRoot), "real Stage3 requests should leave no transaction staging or backup path");
 
-		function proveTargetFailureRecovery(label:String, requestId:Int, targetArgs:Array<String>, generatedPath:String):Void {
+		function proveTargetFailureRecovery(label:String, requestId:Int, targetArgs:Array<String>, generatedPath:String):Bytes {
 			final directContext = new CompilationRequestContext(0, true, false);
 			final directCode = Stage3Compiler.runRequest(targetArgs, directContext);
 			assertTrue(directContext.close(directCode == 0), label + " direct request should clean up");
-			assertTrue(directCode == 0, label + " direct request should compile");
+			assertTrue(directCode == 0, label + " direct request should compile:\n" + directContext.output.events().map(event -> event.text).join(""));
 			assertTrue(FileSystem.exists(generatedPath), label + " direct request should create its target source");
 			final directBytes = File.getBytes(generatedPath);
+			final directRuntime = label == "PHP" && commandExists("php") ? commandOutput("php", [generatedPath]) : null;
+			if (directRuntime != null)
+				assertTrue(directRuntime.code == 0, "PHP direct output should execute, stderr:\n" + directRuntime.stderr);
 
 			final firstServer = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(requestId, targetArgs, [], null),
 				Stage3Compiler.runRequest);
 			assertTrue(!firstServer.isError, label + " first server request should compile");
 			assertTrue(FileSystem.exists(generatedPath), label + " first server request should publish its target source");
 			assertTrue(File.getBytes(generatedPath).compare(directBytes) == 0, label + " direct and first server target bytes should match");
+			if (directRuntime != null) {
+				final firstRuntime = commandOutput("php", [generatedPath]);
+				assertTrue(firstRuntime.code == directRuntime.code
+					&& firstRuntime.stdout == directRuntime.stdout
+					&& firstRuntime.stderr == directRuntime.stderr,
+					"PHP direct and first server runtime behavior should match");
+			}
 
 			final failedArgs = targetArgs.copy();
 			final mainIndex = failedArgs.indexOf("Main");
@@ -507,12 +528,20 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 				Stage3Compiler.runRequest);
 			assertTrue(!repeatedServer.isError, label + " repeated server request should recover");
 			assertTrue(File.getBytes(generatedPath).compare(directBytes) == 0, label + " repeated server target bytes should match a direct request");
+			if (directRuntime != null) {
+				final repeatedRuntime = commandOutput("php", [generatedPath]);
+				assertTrue(repeatedRuntime.code == directRuntime.code
+					&& repeatedRuntime.stdout == directRuntime.stdout
+					&& repeatedRuntime.stderr == directRuntime.stderr,
+					"PHP recovered server and direct runtime behavior should match");
+			}
+			return directBytes;
 		}
 
 		final phpRoot = haxe.io.Path.join([tmpRoot, "php"]);
 		final phpOutputDir = haxe.io.Path.join([phpRoot, "output"]);
 		final phpOutput = haxe.io.Path.join([phpOutputDir, "index.php"]);
-		proveTargetFailureRecovery("PHP", 300, [
+		final phpArgs = [
 			"--hxhx-no-run",
 			"--hxhx-backend",
 			"php-native",
@@ -524,7 +553,53 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 			srcDir,
 			"-main",
 			"Main"
-		], phpOutput);
+		];
+		final phpDirectBytes = proveTargetFailureRecovery("PHP", 300, phpArgs, phpOutput);
+
+		File.saveContent(mainPath, sourceB);
+		final phpChanged = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(303, phpArgs, [], null), Stage3Compiler.runRequest);
+		assertTrue(!phpChanged.isError, "PHP middle B server request should compile");
+		assertTrue(File.getBytes(phpOutput).compare(phpDirectBytes) != 0, "PHP middle B request should publish distinct target bytes");
+		if (commandExists("php")) {
+			final changedRuntime = commandOutput("php", [phpOutput]);
+			assertTrue(changedRuntime.code == 0 && changedRuntime.stdout == "",
+				"PHP middle B request should execute successfully, stderr:\n" + changedRuntime.stderr);
+		}
+
+		File.saveContent(mainPath, sourceA);
+		final phpReturned = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(304, phpArgs, [], null), Stage3Compiler.runRequest);
+		assertTrue(!phpReturned.isError, "PHP returned A server request should compile");
+		assertTrue(File.getBytes(phpOutput).compare(phpDirectBytes) == 0, "PHP A→B→A server sequence should restore exact A target bytes");
+		if (commandExists("php")) {
+			final returnedRuntime = commandOutput("php", [phpOutput]);
+			assertTrue(returnedRuntime.code == 0 && returnedRuntime.stdout == "",
+				"PHP returned A request should restore exact runtime behavior, stderr:\n" + returnedRuntime.stderr);
+		}
+
+		var cancelledPhpRenderCode = -1;
+		final cancelledPhp = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(305, phpArgs, [], null), (args, context) -> {
+			cancelledPhpRenderCode = Stage3Compiler.runRequest(args, context);
+			context.requestCancellation("php-after-render");
+			return cancelledPhpRenderCode;
+		});
+		final cancelledPhpWire = CompilationServerRequestCodec.encodeReply(cancelledPhp);
+		assertTrue(cancelledPhpRenderCode == 0, "PHP cancellation fixture should render and seal output before cancellation");
+		assertTrue(cancelledPhp.isError, "PHP cancellation after rendering should abort only that request");
+		assertTrue(cancelledPhpWire.indexOf("request cancelled [php-after-render] at request-complete") >= 0,
+			"PHP cancellation should prove the renderer completed before the request was rejected");
+		assertTrue(File.getBytes(phpOutput).compare(phpDirectBytes) == 0, "cancelled PHP request should preserve the last good target bytes");
+		assertTrue(!containsTransactionPath(tmpRoot), "cancelled PHP request should discard private staging output");
+
+		final phpAfterCancellation = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(306, phpArgs, [], null),
+			Stage3Compiler.runRequest);
+		assertTrue(!phpAfterCancellation.isError, "PHP request after target-specific cancellation should compile");
+		assertTrue(File.getBytes(phpOutput).compare(phpDirectBytes) == 0,
+			"PHP request after target-specific cancellation should reproduce direct target bytes");
+		if (commandExists("php")) {
+			final afterCancellationRuntime = commandOutput("php", [phpOutput]);
+			assertTrue(afterCancellationRuntime.code == 0 && afterCancellationRuntime.stdout == "",
+				"PHP request after target-specific cancellation should reproduce direct runtime behavior, stderr:\n" + afterCancellationRuntime.stderr);
+		}
 
 		final cppRoot = haxe.io.Path.join([tmpRoot, "cpp"]);
 		final cppOutput = haxe.io.Path.join([cppRoot, "src", "Main.cpp"]);

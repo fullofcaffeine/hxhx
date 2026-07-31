@@ -35,32 +35,6 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(message.indexOf(expected) >= 0, "expected failure containing `" + expected + "`, got `" + message + "`");
 	}
 
-	static function protocolLine(key:String, payload:String):String {
-		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
-			"\t", "\\t");
-		return "ast " + key + " " + escaped.length + ":" + escaped;
-	}
-
-	static function assertNativeReturnCaseFragmentDecode():Void {
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "PrinterLike"),
-			"ast static_main 0",
-			protocolLine("method", 'printOp|public|0|op|String|||op:Dynamic|case OpIncrement: "++";\n\t\t\tcase OpDecrement: "--";'),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
-		assertTrue(functions.length == 1, "native return case-fragment decode should preserve the method");
-		switch (HxFunctionDecl.getBody(functions[0])[0]) {
-			case SReturn(ENull, _):
-			case SReturn(EUnsupported(raw), _):
-				throw "native return case-fragment summary should not decode as unsupported: " + raw;
-			case _:
-				throw "native return case-fragment summary should decode to a neutral fallback";
-		}
-	}
-
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -96,7 +70,6 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
-		assertNativeReturnCaseFragmentDecode();
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null,
 			EUnsupported("8")) == "8", "numeric unsupported fragments should render as integer literals");
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("for_expr:for (key => value in 1) { }")) == "null",

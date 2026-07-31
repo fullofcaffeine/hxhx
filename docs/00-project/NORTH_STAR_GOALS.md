@@ -431,6 +431,14 @@ product capability.
 
 Sometimes a project needs more than a plugin: it may need a custom Haxe-family language, policy set, target bundle, or distribution.
 
+Because upstream Haxe language evolution has often been deliberately gradual,
+`hxhx` should offer a faster, well-governed lane for modern Haxe features. The
+goal is not fragmentation: `hxhx` should remain behaviorally compatible with
+all source accepted by each supported vanilla Haxe baseline while allowing
+additional `hxhx` forms to mature sooner. In that sense, the intended language
+is a strict behavioral superset: vanilla programs keep their behavior; new
+`hxhx` syntax adds accepted programs rather than changing existing ones.
+
 The repo should make that practical in Haxe by keeping the compiler understandable and modular:
 
 - frontend, typer, macro host, backend, and target-runtime boundaries should be separable,
@@ -440,10 +448,62 @@ The repo should make that practical in Haxe by keeping the compiler understandab
 
 This is related to plugin extensibility, but not identical: plugins should cover pluggable changes; compiler variations cover deliberate alternate compiler products.
 
+One intended post-Full1 use is a carefully controlled Haxe-superset language:
+every supported upstream Haxe program must keep compiling with the same
+behavior, while `hxhx` may accept additional source forms that upstream Haxe
+does not. The first candidate is object-field shorthand:
+
+```haxe
+var callee = resolve();
+var call = {callee}; // Equivalent to {callee: callee}.
+```
+
+This is a language-extension goal, not current syntax. The design must first
+decide whether the `hxhx` superset is the default product or an explicitly
+selected profile, while preserving a baseline profile whose Haxe compatibility
+and evidence remain unambiguous.
+
+Prefer the smallest extension seam that can express a feature safely. Ordinary
+and typed macros run after parsing and therefore cannot accept new grammar by
+themselves. Future work should compare macros, typed transforms, a structured
+pre-parse token/syntax transform, a versioned parser extension, and built-in
+profile-specific syntax. Raw source-text replacement is not a supported
+compiler-extension model.
+
+The same work should investigate a deterministic `dehxhxify` source-to-source
+tool that rewrites supported `hxhx` extensions to ordinary Haxe, for
+interoperability, experiments, and easier migration. Such output is a
+translation artifact, not proof by itself that behavior was preserved.
+
+Separately, a future `ts2hx` research product may use `hxhx` as the host for an
+optional TypeScript-oriented frontend/plugin. This is not the direction for
+ordinary `hxhx` syntax: modern `hxhx` additions should stay close to Haxe,
+whereas the optional frontend may pursue broad or eventual full TypeScript
+source compatibility. TypeScript grammar and TypeScript-specific semantic
+policy remain outside baseline `hxhx` core.
+
+The earlier Oracle-brainstormed skeleton in the sibling
+`../tshx-codex-starter` checkout is a future research input, not accepted
+architecture. After `hxhx` and `reflaxe.ocaml` reach production 1.0 quality,
+`haxe_ocaml-h5jta.3` must inventory that exact candidate and ask Oracle to
+compare a standalone translator, a versioned optional frontend/plugin, and
+tighter host integration. The review should determine whether `ts2hx` is a good
+consumer of `hxhx`, whether its requirements improve the general extension
+seam, and where the products should remain independent.
+
+Compatibility growth beyond 4.3.7, including a future Haxe 5.x baseline, should
+use periodic clean-room upstream intake: black-box behavior checks, suite
+updates, and explicit compatibility decisions. It must not copy, translate, or
+mechanically merge upstream compiler implementation.
+
 Current planning owner:
 
 - post-Full1 customization/variation platform: `haxe_ocaml-h5jta`
   (completed architecture/toggle foundation: `haxe.ocaml-vary`)
+- superset syntax, extension-seam, and standard-Haxe translation investigation:
+  `haxe_ocaml-h5jta.2`
+- optional TypeScript-compatible frontend/plugin research:
+  `haxe_ocaml-h5jta.3`
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - Haxe-family variation workflow:

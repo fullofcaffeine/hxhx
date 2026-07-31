@@ -16,6 +16,7 @@ class TypedModule {
 	final sourceOrigin:CompilerModuleOrigin;
 	final conditionalCompilation:CompilerConditionalCompilationObservation;
 	final generatedDeclarations:CompilerGeneratedDeclarationObservation;
+	final backendDeclarationCatalog:TypedBackendDeclarationCatalog;
 	final backendDeclaration:HxModuleDecl;
 
 	public function new(parsed:ParsedModule, env:TyModuleEnv, ?typedClasses:Array<TypedClass>, revision:Int = 1, ?sourceOrigin:CompilerModuleOrigin,
@@ -28,7 +29,8 @@ class TypedModule {
 		this.conditionalCompilation = conditionalCompilation == null ? CompilerConditionalCompilationObservation.empty() : conditionalCompilation;
 		this.generatedDeclarations = generatedDeclarations == null ? CompilerGeneratedDeclarationObservation.empty() : generatedDeclarations;
 		TypedBodyInvariant.assertClasses(this.typedClasses);
-		this.backendDeclaration = TypedBodySource.moduleDeclaration(parsed, this.typedClasses);
+		this.backendDeclarationCatalog = TypedBodySource.moduleDeclarationCatalog(parsed, this.typedClasses);
+		this.backendDeclaration = backendDeclarationCatalog.getDeclaration();
 	}
 
 	public function getParsed():ParsedModule {
@@ -76,6 +78,51 @@ class TypedModule {
 	**/
 	public function getBackendDeclaration():HxModuleDecl {
 		return backendDeclaration;
+	}
+
+	/**
+		Return the source-shaped backend migration view together with the exact
+		typed-local and bare field-read catalogs used to project every function
+		body.
+
+		Build this stricter view only when a migrated backend requests it. Legacy
+		backends keep the declaration-only compatibility path and cannot be
+		rejected by projection rules they do not yet consume.
+	**/
+	public function getBackendProjection():TypedBackendModuleProjection
+		return TypedBodySource.moduleProjection(parsed, typedClasses);
+
+	/**
+		Pair one declaration selected through the legacy backend view with the
+		strict projection built from the same sealed typed module.
+
+		Only `TypedModule` owns both views. The legacy declaration catalog resolves
+		the exact objects to a stable typed identity, which selects the strict
+		projection without exposing parsed source or asking a target to guess from
+		names or traversal order.
+	**/
+	public function findBackendFunctionProjection(backendClass:HxClassDecl, backendFunction:HxFunctionDecl):Null<{
+		module:TypedBackendModuleProjection,
+		classProjection:TypedBackendClassProjection,
+		functionProjection:TypedBackendFunctionProjection
+	}> {
+		final stableIdentity = backendDeclarationCatalog.findFunctionIdentity(backendClass, backendFunction);
+		if (stableIdentity == null)
+			return null;
+		final moduleProjection = getBackendProjection();
+		var selectedClass:Null<TypedBackendClassProjection> = null;
+		var selected:Null<TypedBackendFunctionProjection> = null;
+		for (projectedClass in moduleProjection.getClasses())
+			for (projectedFunction in projectedClass.getFunctions())
+				if (projectedFunction.getStableIdentity() == stableIdentity) {
+					if (selected != null)
+						throw "typed backend projection contains duplicate stable function identity " + stableIdentity;
+					selectedClass = projectedClass;
+					selected = projectedFunction;
+				}
+		if (selected == null)
+			throw "typed backend projection lost stable function identity " + stableIdentity;
+		return {module: moduleProjection, classProjection: selectedClass, functionProjection: selected};
 	}
 
 	/** Revalidate the sealed syntax revision before macro/backend consumption. **/

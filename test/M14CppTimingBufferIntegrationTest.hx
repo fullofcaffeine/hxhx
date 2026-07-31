@@ -36,13 +36,16 @@ class M14CppTimingBufferIntegrationTest {
 		return Sys.time() - start;
 	}
 
-	static function timingScope():backend.cpp.CppRenderScope {
+	static function timingScope(?traceContext:backend.cpp.CppTraceContext):backend.cpp.CppRenderScope {
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
 		final owner = new HxClassDecl("TestEReg", false, [], []);
 		names.set("TestEReg", true);
 		classes.set("TestEReg", owner);
-		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: [owner]}, "void");
+		final lookup:backend.cpp.CppClassLookup = {names: names, byName: classes, all: [owner]};
+		if (traceContext != null)
+			lookup.traceContext = traceContext;
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
 		scope.traceOwnerName = "TestEReg";
 		scope.traceMethodName = "test";
 		scope.traceStmtIndex = 1;
@@ -53,13 +56,21 @@ class M14CppTimingBufferIntegrationTest {
 		Sys.putEnv(name, value);
 	}
 
-	static function tracePrepTiming(owner:String, method:String, phase:String, seconds:Float):Void {
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("render_helper_method_prepare_timing owner=" + owner + " name=" + method + " phase="
-			+ phase + " seconds=" + Std.string(seconds));
+	static function tracePrepTiming(scope:backend.cpp.CppRenderScope, owner:String, method:String, phase:String, seconds:Float):Void {
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext,
+			"render_helper_method_prepare_timing owner="
+			+ owner
+			+ " name="
+			+ method
+			+ " phase="
+			+ phase
+			+ " seconds="
+			+ Std.string(seconds));
 	}
 
 	static function tracePrepCounts(owner:String, method:String, phase:String, scope:backend.cpp.CppRenderScope):Void {
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("render_helper_method_prepare_counts owner="
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext,
+			"render_helper_method_prepare_counts owner="
 			+ owner
 			+ " name="
 			+ method
@@ -80,8 +91,16 @@ class M14CppTimingBufferIntegrationTest {
 	static function main():Void {
 		final timingEnv = "HXHX_TRACE_STAGE3_CPP_TIMINGS";
 		final filterEnv = "HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER";
+		final deepEnv = "HXHX_TRACE_STAGE3_CPP_DEEP";
+		final lambdaEnv = "HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES";
+		final callDetailEnv = "HXHX_TRACE_STAGE3_CPP_CALL_ARG_DETAIL_PHASES";
+		final classificationEnv = "HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS";
 		final priorTiming = Sys.getEnv(timingEnv);
 		final priorFilter = Sys.getEnv(filterEnv);
+		final priorDeep = Sys.getEnv(deepEnv);
+		final priorLambda = Sys.getEnv(lambdaEnv);
+		final priorCallDetail = Sys.getEnv(callDetailEnv);
+		final priorClassification = Sys.getEnv(classificationEnv);
 		final calls = envInt("HXHX_CPP_TIMING_BOOKKEEPING_CALLS", DEFAULT_CALLS);
 		var timerReadSeconds = 0.0;
 		var labelSeconds = 0.0;
@@ -105,12 +124,44 @@ class M14CppTimingBufferIntegrationTest {
 		try {
 			Sys.putEnv(timingEnv, "1");
 			Sys.putEnv(filterEnv, "TestEReg.test");
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingMethodFilterCache = null;
+			Sys.putEnv(deepEnv, null);
+			Sys.putEnv(lambdaEnv, null);
+			Sys.putEnv(callDetailEnv, null);
+			Sys.putEnv(classificationEnv, null);
+			final scope = timingScope();
+			assertTrue(scope.traceContext.timingsEnabled
+				&& scope.traceContext.timingMethodFilter == "TestEReg.test"
+				&& !scope.traceContext.deepEnabled
+				&& !scope.traceContext.lambdaPhasesEnabled
+				&& !scope.traceContext.callArgDetailPhasesEnabled
+				&& !scope.traceContext.helperClassificationDetailsEnabled,
+				"one C++ program lookup should snapshot its trace environment");
+			Sys.putEnv(timingEnv, null);
+			Sys.putEnv(filterEnv, "Other.run");
+			Sys.putEnv(deepEnv, "1");
+			Sys.putEnv(lambdaEnv, "1");
+			Sys.putEnv(callDetailEnv, "1");
+			Sys.putEnv(classificationEnv, "1");
+			final isolatedScope = timingScope();
+			assertTrue(!isolatedScope.traceContext.timingsEnabled
+				&& isolatedScope.traceContext.timingMethodFilter == "Other.run"
+				&& isolatedScope.traceContext.deepEnabled
+				&& isolatedScope.traceContext.lambdaPhasesEnabled
+				&& isolatedScope.traceContext.callArgDetailPhasesEnabled
+				&& isolatedScope.traceContext.helperClassificationDetailsEnabled,
+				"a separate C++ program lookup should observe its own trace environment");
+			assertTrue(scope.traceContext != isolatedScope.traceContext, "C++ program lookups should not share trace configuration or nested buffers");
+			Sys.putEnv(timingEnv, "1");
+			Sys.putEnv(filterEnv, "TestEReg.test");
+			Sys.putEnv(deepEnv, null);
+			Sys.putEnv(lambdaEnv, null);
+			Sys.putEnv(callDetailEnv, null);
+			Sys.putEnv(classificationEnv, null);
+			final untracedScope = timingScope(new backend.cpp.CppTraceContext(false, ""));
 			var result = "";
-			final measured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
-				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("buffer_fixture phase=first");
-				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("buffer_fixture phase=second");
+			final measured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
+				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "buffer_fixture phase=first");
+				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "buffer_fixture phase=second");
 				result = "rendered";
 			});
 			assertTrue(result == "rendered", "timed render should preserve callback side effects");
@@ -118,27 +169,41 @@ class M14CppTimingBufferIntegrationTest {
 			assertTrue(measured.phases.length == 2, "timed render should retain both nested timing lines");
 			assertTrue(measured.phases[0] == "cpp_target_phase=buffer_fixture phase=first", "first timing line should remain verbatim");
 			assertTrue(measured.phases[1] == "cpp_target_phase=buffer_fixture phase=second", "timing lines should retain their original order");
-			assertTrue(@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhaseBuffer == null,
-				"timing buffer should be detached before diagnostics are available to flush");
+			assertTrue(scope.traceContext.timingPhaseBuffer == null, "timing buffer should be detached before diagnostics are available to flush");
+			var innerPhases = new Array<String>();
+			final outerMeasured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
+				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "nested_fixture phase=outer_before");
+				final innerMeasured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
+					@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "nested_fixture phase=inner");
+				});
+				innerPhases = innerMeasured.phases;
+				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "nested_fixture phase=outer_after");
+			});
+			assertTrue(innerPhases.length == 1 && innerPhases[0] == "cpp_target_phase=nested_fixture phase=inner",
+				"a nested measurement should own only its inner diagnostics");
+			assertTrue(outerMeasured.phases.length == 2
+				&& outerMeasured.phases[0] == "cpp_target_phase=nested_fixture phase=outer_before"
+				&& outerMeasured.phases[1] == "cpp_target_phase=nested_fixture phase=outer_after",
+				"a nested measurement should restore the enclosing buffer without merging or reordering its diagnostics");
+			assertTrue(scope.traceContext.timingPhaseBuffer == null, "nested measurements should restore the original timing sink");
 			var caughtExpectedError = false;
 			try {
-				@:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> throw "timing fixture error");
+				@:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> throw "timing fixture error");
 			} catch (error:String) {
 				caughtExpectedError = error == "timing fixture error";
 			}
 			assertTrue(caughtExpectedError, "timed render should rethrow its original error");
-			assertTrue(@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhaseBuffer == null, "exceptional timed render should restore the timing sink");
+			assertTrue(scope.traceContext.timingPhaseBuffer == null, "exceptional timed render should restore the timing sink");
 			var caughtExpectedException = false;
 			try {
-				@:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> throw new haxe.Exception("timing fixture exception"));
+				@:privateAccess
+				backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> throw new haxe.Exception("timing fixture exception"));
 			} catch (error:haxe.Exception) {
 				caughtExpectedException = error.message == "timing fixture exception";
 			}
 			assertTrue(caughtExpectedException, "timed render should rethrow its original haxe.Exception");
-			assertTrue(@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhaseBuffer == null,
-				"exceptional timed render should restore the timing sink for haxe.Exception values");
+			assertTrue(scope.traceContext.timingPhaseBuffer == null, "exceptional timed render should restore the timing sink for haxe.Exception values");
 
-			final scope = timingScope();
 			timerReadSeconds = elapsed(calls, () -> {
 				final start = Sys.time();
 				floatSink += Sys.time() - start;
@@ -152,13 +217,13 @@ class M14CppTimingBufferIntegrationTest {
 			final pushed = new Array<String>();
 			pushSeconds = elapsed(calls, () -> pushed.push(prebuiltLine));
 			assertTrue(pushed.length == calls, "buffer attribution should retain every prebuilt line");
-			final prebuiltRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prebuiltRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls)
-					@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("bookkeeping_fixture phase=prebuilt");
+					@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(scope.traceContext, "bookkeeping_fixture phase=prebuilt");
 			});
 			assertTrue(prebuiltRecords.phases.length == calls, "prebuilt timing attribution should record one line per call");
 			prebuiltRecordSeconds = prebuiltRecords.elapsed;
-			final scopeRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final scopeRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls) {
 					final phaseStart = Sys.time();
 					@:privateAccess backend.cpp.CppTargetCore.traceCppScopeStmtTimingPhase(scope,
@@ -171,38 +236,38 @@ class M14CppTimingBufferIntegrationTest {
 			final prepFn = new HxFunctionDecl("test", Public, false, [], "Void", [], "");
 			prepWorkSeconds = elapsed(calls,
 				() -> intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0);
-			final prepTimingRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepTimingRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls)
-					tracePrepTiming("TestEReg", "test", "infer_callable_args", 0.000001);
+					tracePrepTiming(scope, "TestEReg", "test", "infer_callable_args", 0.000001);
 			});
 			prepTimingRecordSeconds = prepTimingRecords.elapsed;
-			final prepNegativeCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepNegativeCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls)
 					tracePrepCounts("TestEReg", "test", "infer_callable_args", scope);
 			});
 			prepNegativeCountRecordSeconds = prepNegativeCountRecords.elapsed;
-			final positiveScope = timingScope();
+			final positiveScope = timingScope(scope.traceContext);
 			positiveScope.argTypeOverrides.set("callback", "std::function<int(int)>");
 			positiveScope.localTypeOverrides.set("callback", "std::function<int(int)>");
-			final prepPositiveCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepPositiveCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls)
 					tracePrepCounts("PositiveOwner", "run", "infer_callable_args", positiveScope);
 			});
 			prepPositiveCountRecordSeconds = prepPositiveCountRecords.elapsed;
-			final prepTracedNegative = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepTracedNegative = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls) {
 					final phaseStart = Sys.time();
 					intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0;
-					tracePrepTiming("TestEReg", "test", "infer_callable_args", Sys.time() - phaseStart);
+					tracePrepTiming(scope, "TestEReg", "test", "infer_callable_args", Sys.time() - phaseStart);
 					tracePrepCounts("TestEReg", "test", "infer_callable_args", scope);
 				}
 			});
 			prepTracedNegativeSeconds = prepTracedNegative.elapsed;
-			final prepTracedPositive = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepTracedPositive = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls) {
 					final phaseStart = Sys.time();
 					intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0;
-					tracePrepTiming("PositiveOwner", "run", "infer_callable_args", Sys.time() - phaseStart);
+					tracePrepTiming(positiveScope, "PositiveOwner", "run", "infer_callable_args", Sys.time() - phaseStart);
 					tracePrepCounts("PositiveOwner", "run", "infer_callable_args", positiveScope);
 				}
 			});
@@ -211,17 +276,13 @@ class M14CppTimingBufferIntegrationTest {
 			assertTrue(prepTracedNegative.phases.length == calls * 2 && prepTracedPositive.phases.length == calls * 2,
 				"each traced preparation phase should retain one timing and one count record");
 
-			Sys.putEnv(timingEnv, null);
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
 			prepFullUntracedSeconds = elapsed(calls, () -> {
-				@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
-				@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(scope, prepFn);
+				untracedScope.functionAnalysisMemo.functionPreparations.clear();
+				@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(untracedScope, prepFn);
 			});
-			Sys.putEnv(timingEnv, "1");
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-			final prepFullTraced = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final prepFullTraced = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls) {
-					@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
+					scope.functionAnalysisMemo.functionPreparations.clear();
 					@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(scope, prepFn);
 				}
 			});
@@ -231,16 +292,12 @@ class M14CppTimingBufferIntegrationTest {
 				"each traced cache-miss preparation should retain fifteen timing/count pairs plus the total record");
 
 			final args = [EString("value")];
-			Sys.putEnv(timingEnv, null);
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-			stringSink = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", args, scope);
+			stringSink = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", args, untracedScope);
 			argRenderSeconds = elapsed(calls,
-				() -> stringSink = @:privateAccess backend.cpp.CppTargetCore.renderFunctionTypeCallArgs("", args, scope).join(", "));
-			untracedCallSeconds = elapsed(calls, () -> stringSink = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", args, scope));
+				() -> stringSink = @:privateAccess backend.cpp.CppTargetCore.renderFunctionTypeCallArgs("", args, untracedScope).join(", "));
+			untracedCallSeconds = elapsed(calls, () -> stringSink = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", args, untracedScope));
 			final untracedOutput = stringSink;
-			Sys.putEnv(timingEnv, "1");
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-			final tracedCalls = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+			final tracedCalls = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(scope.traceContext, () -> {
 				for (_ in 0...calls)
 					stringSink = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", args, scope);
 			});
@@ -253,11 +310,9 @@ class M14CppTimingBufferIntegrationTest {
 			tracedCallSeconds = tracedCalls.elapsed;
 			tracedLineCount = tracedCalls.phases.length;
 
-			Sys.putEnv(timingEnv, null);
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
 			var untracedResult = 0;
-			final untraced = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
-				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("buffer_fixture phase=disabled");
+			final untraced = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(untracedScope.traceContext, () -> {
+				@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase(untracedScope.traceContext, "buffer_fixture phase=disabled");
 				untracedResult = 7;
 			});
 			assertTrue(untracedResult == 7, "buffer wrapper should preserve untraced callback behavior");
@@ -265,14 +320,18 @@ class M14CppTimingBufferIntegrationTest {
 		} catch (error:Dynamic) {
 			restoreEnv(timingEnv, priorTiming);
 			restoreEnv(filterEnv, priorFilter);
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingMethodFilterCache = null;
+			restoreEnv(deepEnv, priorDeep);
+			restoreEnv(lambdaEnv, priorLambda);
+			restoreEnv(callDetailEnv, priorCallDetail);
+			restoreEnv(classificationEnv, priorClassification);
 			throw error;
 		}
 		restoreEnv(timingEnv, priorTiming);
 		restoreEnv(filterEnv, priorFilter);
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
-		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingMethodFilterCache = null;
+		restoreEnv(deepEnv, priorDeep);
+		restoreEnv(lambdaEnv, priorLambda);
+		restoreEnv(callDetailEnv, priorCallDetail);
+		restoreEnv(classificationEnv, priorClassification);
 		Sys.println("M14_CPP_TIMING_BUFFER:PASS calls=" + calls + " timer_read_seconds=" + timerReadSeconds + " label_seconds=" + labelSeconds
 			+ " push_seconds=" + pushSeconds + " prebuilt_record_seconds=" + prebuiltRecordSeconds + " scope_record_seconds=" + scopeRecordSeconds
 			+ " arg_render_seconds=" + argRenderSeconds + " untraced_call_seconds=" + untracedCallSeconds + " traced_call_seconds=" + tracedCallSeconds

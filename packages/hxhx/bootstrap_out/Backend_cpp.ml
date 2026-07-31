@@ -3,7 +3,9 @@
 module CppAbstractHelperEmitter = Backend_cpp_CppAbstractHelperEmitter
 module CppAbstractProjection = Backend_cpp_CppAbstractProjection
 module CppAbstractRepresentation = Backend_cpp_CppAbstractRepresentation
+module CppDeclaredTypeMemo = Backend_cpp_CppDeclaredTypeMemo
 module CppExactCallEmitter = Backend_cpp_CppExactCallEmitter
+module CppFunctionAnalysisMemo = Backend_cpp_CppFunctionAnalysisMemo
 module CppKnownStdlibSignatures = Backend_cpp_CppKnownStdlibSignatures
 module CppLocalCallScanner = Backend_cpp_CppLocalCallScanner
 module CppLocalTypeInference = Backend_cpp_CppLocalTypeInference
@@ -15,4 +17,5 @@ module CppPrepLocalInferenceGuard = Backend_cpp_CppPrepLocalInferenceGuard
 module CppProgramPrelude = Backend_cpp_CppProgramPrelude
 module CppRuntimeSupport = Backend_cpp_CppRuntimeSupport
 module CppTargetCore = Backend_cpp_CppTargetCore
+module CppTraceContext = Backend_cpp_CppTraceContext
 module CppTypeModel = Backend_cpp_CppTypeModel

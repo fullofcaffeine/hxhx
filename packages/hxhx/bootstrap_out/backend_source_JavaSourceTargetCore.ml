@@ -13,4 +13,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.J
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.JavaSourceTargetCore" } : t)
 
-let emit = fun program context -> Backend_source_SourceTargetCommon.emitTarget (Obj.magic (Backend_source_SourceTargetCommon.Java)) (Obj.magic program) (Obj.magic context)
+let emit = fun program context -> Backend_source_SourceTargetCommon.emitTarget (Obj.magic (Backend_source_SourceNativeTarget.Java)) (Obj.magic program) (Obj.magic context)

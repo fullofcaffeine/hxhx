@@ -1,9 +1,44 @@
 {
-  "schema": "hxhx-native-server-request-state-audit.v2",
+  "schema": "hxhx-native-server-request-state-audit.v3",
   "scope": [
     "packages/hxhx/src",
     "packages/hxhx-core/src"
   ],
+  "lifecycle_policy": {
+    "reusable_payload_rule": "Only immutable sealed facts may cross requests. A resettable static field is never a reusable cache payload.",
+    "compatibility_lanes": [
+      {
+        "paths": [
+          "packages/hxhx-core/src/EmitterStage.hx"
+        ],
+        "kind": "duplicate-stage3-ocaml-emitter",
+        "execution": "serialized",
+        "cache_eligibility": "never",
+        "readiness_eligibility": "bootstrap-diagnostic-only",
+        "lifecycle_owner": "CompilerRequestStaticState.reset before compiler work and during request cleanup",
+        "retirement_owner": "haxe_ocaml-38gsp.1"
+      }
+    ],
+    "request_lifecycle_owners": [
+      {
+        "paths": [
+          "packages/hxhx/src/hxhx/macro/MacroState.hx"
+        ],
+        "kind": "macro-request-state",
+        "cache_eligibility": "never-in-initial-typed-reuse",
+        "lifecycle_owner": "Stage3Compiler.runOne -> MacroState.reset"
+      },
+      {
+        "paths": [
+          "packages/hxhx-core/src/backend/BackendRegistry.hx",
+          "packages/hxhx/src/hxhx/NativeBackendPluginHost.hx"
+        ],
+        "kind": "backend-plugin-request-registration",
+        "cache_eligibility": "never-in-initial-typed-reuse",
+        "lifecycle_owner": "Stage3BackendPluginSupport.resetRequestState"
+      }
+    ]
+  },
   "entries": [
     {
       "path": "packages/hxhx-core/src/CompilerGeneratedDeclarationObservation.hx",
@@ -13,6 +48,15 @@
       "request_reset_fields": [],
       "reset_owner": null,
       "reason": "EMPTY is one immutable observation for modules where no build macro generated declarations. It contains no request, source, or macro-private data and avoids repeating the same SHA-256 work for ordinary modules."
+    },
+    {
+      "path": "packages/hxhx-core/src/CompilerMacroFileDependencyObservation.hx",
+      "immutable_fields": [
+        "final:EMPTY"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "EMPTY is one immutable observation for modules with no explicitly registered macro file. It contains no request path, file bytes, macro state, or mutable collection."
     },
     {
       "path": "packages/hxhx-core/src/EmitterStage.hx",
@@ -39,16 +83,7 @@
         "var:currentPortableMetalizationRegionKey"
       ],
       "reset_owner": "CompilerRequestStaticState.reset -> EmitterStage.resetRequestState",
-      "reason": "The current-module, current-function, lookup, and lowering fields describe one OCaml emission and are cleared per request. The module-init trace and stateless backend dialect are process configuration."
-    },
-    {
-      "path": "packages/hxhx-core/src/HxParser.hx",
-      "immutable_fields": [],
-      "request_reset_fields": [
-        "var:debugBodyLabel"
-      ],
-      "reset_owner": "CompilerRequestStaticState.reset -> HxParser.resetRequestState",
-      "reason": "The debug label identifies the function body currently being parsed and must not survive a failed parse."
+      "reason": "The current-module, current-function, lookup, and lowering fields describe one OCaml emission and are cleared before and after each serialized request. This duplicate bootstrap/diagnostic emitter is never a reusable cache payload or shared-target readiness path; haxe_ocaml-38gsp.1 owns its retirement from the product route. The module-init trace and stateless backend dialect are process configuration."
     },
     {
       "path": "packages/hxhx-core/src/TyType.hx",
@@ -60,6 +95,7 @@
         "final:KIND_NULLABLE",
         "final:KIND_NOMINAL",
         "final:KIND_FUNCTION",
+        "final:KIND_ANONYMOUS",
         "final:KIND_TYPE_PARAMETER",
         "final:KIND_UNRESOLVED",
         "final:KIND_NO_NORMAL_COMPLETION"
@@ -77,91 +113,17 @@
         "final:dynamicRegistrations"
       ],
       "reset_owner": "Stage3BackendPluginSupport.resetRequestState -> BackendRegistry.clearDynamicRegistrations",
-      "reason": "Builtin backend declarations are fixed for the binary. Dynamically loaded provider registrations belong to one request and are cleared at its boundaries."
+      "reason": "Builtin backend declarations are fixed for the binary. Dynamically loaded provider registrations belong to one request and are cleared at its boundaries. The initial typed-module cache may key plugin descriptors but may not retain these registrations or changeable native plugin state."
     },
     {
       "path": "packages/hxhx-core/src/backend/cpp/CppTargetCore.hx",
-      "immutable_fields": [],
-      "request_reset_fields": [
-        "final:inferredSignatureStack",
-        "final:erasedDynamicReturnStack",
-        "var:erasedDynamicReturnCache",
-        "final:functionScopePrepStack",
-        "var:functionScopePrepCache",
-        "var:functionArgDeclaredTypeCache",
-        "var:fieldCppTypeCache",
-        "var:functionArgTypesCache",
-        "var:functionReturnTypesCache",
-        "var:traceCppDeepEnabledCache",
-        "var:traceCppTimingsEnabledCache",
-        "var:traceCppLambdaPhasesEnabledCache",
-        "var:traceCppCallArgDetailPhasesEnabledCache",
-        "var:traceCppHelperClassificationDetailsEnabledCache",
-        "var:traceCppTimingMethodFilterCache",
-        "var:traceCppTimingPhaseBuffer",
-        "var:cachedLocalTypeInferenceApi",
-        "var:cachedKnownStdlibSignatures"
+      "immutable_fields": [
+        "var:processLocalTypeInferenceApi",
+        "var:processKnownStdlibSignatures"
       ],
-      "reset_owner": "CompilerRequestStaticState.reset -> CppTargetCore.resetRequestState",
-      "reason": "These stacks, lookup caches, service objects, trace buffers, and environment probes are temporary C++ rendering work without a cross-request revision key."
-    },
-    {
-      "path": "packages/hxhx-core/src/backend/source/SourceTargetCommon.hx",
-      "immutable_fields": [],
-      "request_reset_fields": [
-        "var:phpRenderLocalTypes",
-        "var:phpRenderLocalInits",
-        "var:phpRenderCurrentFunctionName",
-        "var:phpRenderCurrentInstanceMethodNames",
-        "var:phpRenderCurrentInstanceMethodArgs",
-        "var:phpRenderSameClassMethodNames",
-        "var:phpRenderSameClassFieldNames",
-        "var:phpRenderSameClassFieldTypeHints",
-        "var:phpRenderSameClassStaticFieldNames",
-        "var:phpRenderSameClassName",
-        "var:phpRenderSameClassLocals",
-        "var:phpRenderInstanceMethodsByType",
-        "var:phpRenderInstanceMethodArgsByType",
-        "var:phpRenderInstanceFieldsByType",
-        "var:phpRenderInstanceFieldTypeHintsByType",
-        "var:phpRenderDynamicMethodsByType",
-        "var:phpRenderStaticMethodsByType",
-        "var:phpRenderStaticOverloadsByType",
-        "var:phpRenderInstanceOverloadsByType",
-        "var:phpRenderGenericStaticFunctionsByType",
-        "var:phpRenderStaticCallableFieldsByType",
-        "var:phpRenderClassBaseTypes",
-        "var:phpRenderStringExtensionMethodsByClass",
-        "var:phpRenderStringExtensionMethodsByField",
-        "var:phpRenderKnownTypeNames",
-        "var:phpRenderAbstractTypeNames",
-        "var:phpRenderEmittedTypeNames",
-        "var:phpRenderLocalTypeNames",
-        "var:phpRenderDuplicateTypeNames",
-        "var:phpRenderInterfaceTypeNames",
-        "var:phpRenderEnumConstructors",
-        "var:phpRenderAmbiguousEnumConstructors",
-        "var:phpRenderEnumConstructorsByEnum",
-        "var:phpRenderEnumAbstractValues",
-        "var:phpRenderAmbiguousEnumAbstractValues",
-        "var:phpRenderLocalEnumConstructors",
-        "var:phpRenderPreferredEnumName",
-        "var:phpRenderTypeAliases",
-        "var:phpRenderDynamicCallFieldsByLocal",
-        "var:phpRenderRefCaptureLocals",
-        "var:phpRenderThisValueSlot",
-        "var:phpThisValueCaptureName",
-        "var:phpRenderOptionalLambdaArgNamesByLocal",
-        "var:phpRenderOptionalLambdaOptionalArgNamesByLocal",
-        "var:phpRenderGenericConstructorSamples",
-        "var:csRenderEnumConstructors",
-        "var:csRenderAmbiguousEnumConstructors",
-        "var:csRenderLocalTypes",
-        "var:luaRenderLocalTypes",
-        "var:luaRenderSameClassStaticFieldTypes"
-      ],
-      "reset_owner": "CompilerRequestStaticState.reset -> SourceTargetCommon.resetRequestState",
-      "reason": "These fields carry the active PHP, C#, or Lua function and program lookups through recursive rendering helpers."
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "All six C++ trace settings and the nested timing buffer live in the per-program CppTraceContext shared by that program's lookup and render scopes. Declared types plus function preparation, erased-Dynamic return analysis, and inferred argument/return signatures likewise belong to the per-program CppClassLookup rather than process state. The two lazily initialized process services contain only stable function references; current scopes, lookups, programs, and trace contexts are call arguments rather than retained state. CppTargetCore therefore has no request-reset lifecycle."
     },
     {
       "path": "packages/hxhx/src/hxhx/CompilationRequestOutputTransaction.hx",
@@ -179,7 +141,7 @@
         "final:fallbackRows"
       ],
       "reset_owner": "Stage3BackendPluginSupport.resetRequestState -> NativeBackendPluginHost.clear",
-      "reason": "The non-native fallback captures provider registrations for the current request and is cleared with the real native host."
+      "reason": "The non-native fallback captures provider registrations for the current request and is cleared with the real native host. It is request lifecycle state, not a reusable cache payload."
     },
     {
       "path": "packages/hxhx/src/hxhx/macro/MacroHostClient.hx",
@@ -226,7 +188,7 @@
         "var:nextSyntheticLocalTVarId"
       ],
       "reset_owner": "Stage3Compiler.runOne -> MacroState.reset",
-      "reason": "Defines, generated modules, resources, hook registrations, diagnostics, compiler settings, and local IDs all belong to one macro request."
+      "reason": "Defines, generated modules, resources, hook registrations, diagnostics, compiler settings, and local IDs all belong to one macro request. Macro execution and this mutable state remain fresh or reset for every request and are excluded from initial typed-module reuse."
     }
   ]
 }

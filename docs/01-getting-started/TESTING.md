@@ -517,8 +517,6 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20`
     - Before regeneration begins, the profiler runs the same local-capacity preflight as other heavyweight gates. Saturated local runs stop with retryable exit code `75`; use `--capacity-policy warn` to retain a warning-only sample or `--capacity-policy off` only when deliberately accepting contaminated timing conditions.
     - optional OCaml runtime tuning: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocamlrunparam s=4M`
-    - optional native-parser bypass: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-native-parser`
-    - optional pure-Haxe parser fallback trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-hx-parser`
     - optional Stage3 expression-macro graph trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-expr-macros`
     - optional external macro-host runtime-path trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-external-macro-host`
     - optional Stage3 native-lane path trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-stage3`
@@ -526,15 +524,9 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional Stage3 display synthesis path trimming (profiling-only lane): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-display`
     - optional stage0 compile-graph minimization (OCaml-only backend graph): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocaml-only`
     - optional generated-output metadata trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-line-directives`
-    - optional parser-helper inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-source-normalize-extract`
-    - optional parser native-decode inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-native-decode-extract`
     - optional parser helper-scan inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-parser-scan-extract`
     - repeated baseline-vs-mitigation memory A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses"`
-    - repeated parser-source extraction A/B runner:
-      `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-source-normalize-extract" --mitigation-args "" --parity-mode status-exit`
-    - repeated parser native-decode extraction A/B runner:
-      `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-native-decode-extract" --mitigation-args "" --parity-mode status-exit`
     - repeated parser helper-scan extraction A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-parser-scan-extract" --mitigation-args "" --parity-mode status-exit`
     - optional parity gate for equivalent baseline/mitigation outcomes (exit code `4` on mismatch):

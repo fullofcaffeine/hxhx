@@ -3,7 +3,6 @@ package backend.source;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.GenIrProgram;
-import backend.source.SourceTargetCommon.SourceNativeTarget;
 
 /**
 	Dedicated Java source-target entry module.

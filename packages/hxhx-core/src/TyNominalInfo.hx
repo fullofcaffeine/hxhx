@@ -17,11 +17,12 @@ class TyNominalInfo {
 	final instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
 	final declarations:Array<TyDeclarationInfo>;
 	final visibility:HxVisibility;
+	final isEnum:Bool;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public) {
+			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public, isEnum:Bool = false) {
 		this.identity = identity;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
@@ -35,6 +36,7 @@ class TyNominalInfo {
 		this.instanceMethodLists = instanceMethodLists;
 		this.declarations = declarations;
 		this.visibility = visibility;
+		this.isEnum = isEnum;
 	}
 
 	public function getIdentity():TyNominalTypeId
@@ -50,11 +52,15 @@ class TyNominalInfo {
 		return modulePath;
 
 	public function getDeclarations():Array<TyDeclarationInfo>
-		return declarations;
+		return declarations.copy();
 
 	/** Whether another module may import this top-level type. **/
 	public function getVisibility():HxVisibility
 		return visibility;
+
+	/** Whether this nominal declaration is a Haxe enum rather than an ordinary class. **/
+	public function getIsEnum():Bool
+		return isEnum;
 
 	/** Resolve the stable declaration record that owns one indexed signature. **/
 	public function declarationForSignature(signature:TyFunSig):Null<TyDeclarationInfo> {
@@ -85,6 +91,10 @@ class TyNominalInfo {
 	/** Return the exact declared field selected by the semantic owner. **/
 	public function fieldInfo(name:String):Null<TyFieldInfo>
 		return fields.exists(name) ? fields.get(name) : null;
+
+	/** Return every declared field fact without exposing the mutable name index. **/
+	public function getFieldInfos():Array<TyFieldInfo>
+		return [for (field in fields) field];
 
 	public function propertyInfo(name:String):Null<TyPropertyInfo>
 		return properties.exists(name) ? properties.get(name) : null;

@@ -47,7 +47,7 @@ let printHxhxHelp = fun () -> ignore ((
   ignore (print_endline "  --hxhx-customization <id>            enable explicit Stage3 customization");
   ignore (print_endline "  --hxhx-no-emit                       typecheck only in Stage3 lane");
   ignore (print_endline "  --hxhx-no-run                        emit/build without execution");
-  ignore (print_endline "  --hxhx-parse <File.hx>               parse a file via native parser seam");
+  ignore (print_endline "  --hxhx-parse <File.hx>               parse a file with the Haxe-authored frontend");
   ignore (print_endline "  --hxhx-selftest                      run internal selftest");
   ignore (print_endline "");
   ignore (print_endline "Plugin commands:");

@@ -11,14 +11,17 @@
 	parsed source. Reports name only the changed define keys, never their values.
 	A changed build-macro result also rechecks the annotated module without retaining
 	or reporting the generated member source.
+	A changed file explicitly registered through `Context.registerModuleDependency`
+	rechecks its owning module without retaining or reporting the file path or bytes.
 	Public-interface changes propagate through every reverse dependency. A body-only
 	change propagates only through edges that explicitly consume implementation,
 	such as an inline call or an embeddable constant read. When a consumer's own
 	public interface also changed, the stronger public change continues outward.
-	This mirrors the fixed-point shape a
+	A request-wide target or define change conservatively rechecks every current
+	module. Finer feature, DCE, macro, and target-neutrality rules may later reduce
+	that set after separate evidence exists. This mirrors the fixed-point shape a
 	future typed-module cache needs while observation mode continues to type all
-	modules normally. Configuration, broader macro, and target-owned causes need
-	their own future direct-change revisions before this model can authorize reuse.
+	modules normally.
 	An input-only change rechecks the selected module but does not propagate when
 	its public interface and implementation are byte-for-byte equivalent.
 **/
@@ -33,15 +36,19 @@ class CompilerDependencyInvalidator {
 		final previousModules = moduleMap(previous);
 		final currentModules = moduleMap(current);
 		final moduleNames = unionModuleNames(previousModules, currentModules);
+		final programConfigurationChanges = current.getProgramConfiguration().changedInputNames(previous.getProgramConfiguration());
 		final sourceOriginChanges = new Array<String>();
 		final conditionalCompilationChanges = new Array<String>();
 		final generatedDeclarationChanges = new Array<String>();
+		final macroFileDependencyChanges = new Array<String>();
 		final publicChanges = new Array<String>();
 		final implementationChanges = new Array<String>();
 		final directSourceChanged = new haxe.ds.StringMap<Bool>();
+		final sourceContentChanged = new haxe.ds.StringMap<Bool>();
 		final sourceOriginChanged = new haxe.ds.StringMap<Bool>();
 		final conditionalCompilationChanged = new haxe.ds.StringMap<Bool>();
 		final generatedDeclarationsChanged = new haxe.ds.StringMap<Bool>();
+		final macroFileDependenciesChanged = new haxe.ds.StringMap<Bool>();
 		final publicChanged = new haxe.ds.StringMap<Bool>();
 		final implementationChanged = new haxe.ds.StringMap<Bool>();
 
@@ -64,6 +71,12 @@ class CompilerDependencyInvalidator {
 				generatedDeclarationChanges.push(modulePath);
 				generatedDeclarationsChanged.set(modulePath, true);
 			}
+			if (before != null
+				&& after != null
+				&& before.macroFileDependencies.getCanonicalIdentity() != after.macroFileDependencies.getCanonicalIdentity()) {
+				macroFileDependencyChanges.push(modulePath);
+				macroFileDependenciesChanged.set(modulePath, true);
+			}
 			if (before == null || after == null || before.publicInterfaceRevision != after.publicInterfaceRevision) {
 				publicChanges.push(modulePath);
 				publicChanged.set(modulePath, true);
@@ -72,11 +85,14 @@ class CompilerDependencyInvalidator {
 				implementationChanges.push(modulePath);
 				implementationChanged.set(modulePath, true);
 			}
+			if (before == null || after == null || before.sourceRevision != after.sourceRevision)
+				sourceContentChanged.set(modulePath, true);
 			if (before == null
 				|| after == null
 				|| before.sourceRevision != after.sourceRevision
 				|| conditionalCompilationChanged.exists(modulePath)
-				|| generatedDeclarationsChanged.exists(modulePath))
+				|| generatedDeclarationsChanged.exists(modulePath)
+				|| macroFileDependenciesChanged.exists(modulePath))
 				directSourceChanged.set(modulePath, true);
 		}
 
@@ -105,12 +121,23 @@ class CompilerDependencyInvalidator {
 			} else if (generatedDeclarationsChanged.exists(modulePath)) {
 				final strength = publicChanged.exists(modulePath) ? PUBLIC_INTERFACE_CHANGE : (implementationChanged.exists(modulePath) ? IMPLEMENTATION_CHANGE : MODULE_INPUT_CHANGE);
 				mark(modulePath, strength, ["generated-declarations-changed:" + modulePath], strengthByModule, reasonByModule, queue);
+			} else if (sourceContentChanged.exists(modulePath)) {
+				final strength = publicChanged.exists(modulePath) ? PUBLIC_INTERFACE_CHANGE : (implementationChanged.exists(modulePath) ? IMPLEMENTATION_CHANGE : MODULE_INPUT_CHANGE);
+				final reason = publicChanged.exists(modulePath) ? "public-interface-changed:" : (implementationChanged.exists(modulePath) ? "implementation-changed:" : "source-changed:");
+				mark(modulePath, strength, [reason + modulePath], strengthByModule, reasonByModule, queue);
+			} else if (macroFileDependenciesChanged.exists(modulePath)) {
+				final strength = publicChanged.exists(modulePath) ? PUBLIC_INTERFACE_CHANGE : (implementationChanged.exists(modulePath) ? IMPLEMENTATION_CHANGE : MODULE_INPUT_CHANGE);
+				mark(modulePath, strength, ["macro-file-dependency-changed:" + modulePath], strengthByModule, reasonByModule, queue);
 			} else if (publicChanged.exists(modulePath)) {
 				mark(modulePath, PUBLIC_INTERFACE_CHANGE, ["public-interface-changed:" + modulePath], strengthByModule, reasonByModule, queue);
 			} else if (implementationChanged.exists(modulePath)) {
 				mark(modulePath, IMPLEMENTATION_CHANGE, ["implementation-changed:" + modulePath], strengthByModule, reasonByModule, queue);
 			}
 		}
+		if (programConfigurationChanges.length > 0)
+			for (module in current.getModules())
+				mark(module.modulePath, MODULE_INPUT_CHANGE, ["program-configuration-changed:" + programConfigurationChanges.join(",")], strengthByModule,
+					reasonByModule, queue);
 
 		var cursor = 0;
 		while (cursor < queue.length) {
@@ -142,8 +169,8 @@ class CompilerDependencyInvalidator {
 		final invalidations = new Array<CompilerDependencyInvalidation>();
 		for (modulePath in strengthByModule.keys())
 			invalidations.push(new CompilerDependencyInvalidation(modulePath, reasonByModule.get(modulePath)));
-		return new CompilerDependencyComparison(sourceOriginChanges, conditionalCompilationChanges, generatedDeclarationChanges, publicChanges,
-			implementationChanges, invalidations);
+		return new CompilerDependencyComparison(programConfigurationChanges, sourceOriginChanges, conditionalCompilationChanges, generatedDeclarationChanges,
+			macroFileDependencyChanges, publicChanges, implementationChanges, invalidations);
 	}
 
 	static function mark(modulePath:String, strength:Int, reason:Array<String>, strengthByModule:haxe.ds.StringMap<Int>,

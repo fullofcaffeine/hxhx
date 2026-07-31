@@ -71,8 +71,8 @@ class CompilerDriver {
 			Sys.println("missing_import=ok");
 		}
 
-		// Stage2 bootstrap: keep the native frontend and the pure-Haxe frontend aligned
-		// using repo-owned deterministic fixtures.
+		// Keep ParserStage's declaration enrichment aligned with the Haxe parser
+		// on repo-owned deterministic fixtures.
 		final parserFixtures = [
 			new FrontendFixture("fixtures/parser/pack/ParserCaseMod.hx", [
 				"package pack;",
@@ -116,33 +116,31 @@ class CompilerDriver {
 				}
 			}
 
-			#if (hih_native_parser && !hxhx_stage0_no_native_parser && !hxhx_stage0_no_hx_parser)
-			// Compare against the pure-Haxe frontend for this subset.
+			// Compare the enriched module with HxParser's base facts for this subset.
 			final haxeDecl = new HxParser(src).parseModule();
 			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg)
-				throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
+				throw new HxParseError('Fixture ' + label + ': package differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			final haxeDirectives = HxModuleDecl.getDirectives(haxeDecl);
 			final parsedDirectives = HxModuleDecl.getDirectives(parsed);
 			if (haxeDirectives.length != parsedDirectives.length)
-				throw new HxParseError('Fixture ' + label + ': module-directive count differs (native vs haxe)', new HxPos(0, 0, 0));
+				throw new HxParseError('Fixture ' + label + ': module-directive count differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			for (i in 0...haxeDirectives.length) {
 				if (HxModuleDirective.canonicalIdentity(haxeDirectives[i]) != HxModuleDirective.canonicalIdentity(parsedDirectives[i]))
-					throw new HxParseError('Fixture ' + label + ': module directive differs (native vs haxe)', new HxPos(0, 0, 0));
+					throw new HxParseError('Fixture ' + label + ': module directive differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			}
 			final haxeMain = HxModuleDecl.getMainClass(haxeDecl);
 			if (HxClassDecl.getName(haxeMain) != HxClassDecl.getName(parsedMain))
-				throw new HxParseError('Fixture ' + label + ': class differs (native vs haxe)', new HxPos(0, 0, 0));
+				throw new HxParseError('Fixture ' + label + ': class differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			if (HxClassDecl.getHasStaticMain(haxeMain) != HxClassDecl.getHasStaticMain(parsedMain))
-				throw new HxParseError('Fixture ' + label + ': static main differs (native vs haxe)', new HxPos(0, 0, 0));
+				throw new HxParseError('Fixture ' + label + ': static main differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			final haxeFns = HxClassDecl.getFunctions(haxeMain);
 			final parsedFns = HxClassDecl.getFunctions(parsedMain);
 			if (haxeFns.length != parsedFns.length)
-				throw new HxParseError('Fixture ' + label + ': function count differs (native vs haxe)', new HxPos(0, 0, 0));
+				throw new HxParseError('Fixture ' + label + ': function count differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			for (i in 0...haxeFns.length) {
 				if (HxFunctionDecl.getName(haxeFns[i]) != HxFunctionDecl.getName(parsedFns[i]))
-					throw new HxParseError('Fixture ' + label + ': function name differs (native vs haxe)', new HxPos(0, 0, 0));
+					throw new HxParseError('Fixture ' + label + ': function name differs (ParserStage vs HxParser)', new HxPos(0, 0, 0));
 			}
-			#end
 		}
 
 		final typed = TyperStage.typeModule(ast);

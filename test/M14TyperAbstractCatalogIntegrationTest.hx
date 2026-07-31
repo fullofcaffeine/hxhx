@@ -134,8 +134,11 @@ class M14TyperAbstractCatalogIntegrationTest {
 		assertTrue(!neg.getDeclaration().getIsInline(), "non-inline static helper was marked inline");
 		assertEquals(neg.getOperandType().getNominalIdentity().getCanonicalName(), "demo.Catalog.Scalar",
 			"static unary operand lost its abstract semantic identity");
-		assertEquals(neg.getOperandType().getTypeArguments()[0].getSemanticKey(), "type-parameter:T",
-			"applied abstract type argument was not represented structurally");
+		final abstractParameter = neg.getOperandType().getTypeArguments()[0].getTypeParameterIdentity();
+		assertTrue(abstractParameter != null
+			&& abstractParameter.getName() == "T"
+			&& abstractParameter.getScopeIdentity() == "nominal:demo.Catalog.Scalar",
+			"applied abstract type argument was not represented by its exact nominal binder");
 		assertEquals(neg.getResultType().getSemanticKey(), neg.getOperandType().getSemanticKey(),
 			"operator result type must come from the declaration signature");
 
@@ -156,8 +159,11 @@ class M14TyperAbstractCatalogIntegrationTest {
 		final genericNot = findUnary(scalar, HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix);
 		assertEquals(genericNot.getDeclaration().getTypeParameters().join(","), "U", "method-level operator type parameters were discarded");
 		assertEquals(genericNot.getDeclaration().getTypeParameterConstraints().get("U"), "Int", "method-level operator constraint metadata was discarded");
-		assertEquals(genericNot.getOperandType().getTypeArguments()[0].getSemanticKey(), "type-parameter:U",
-			"method-level operator type argument was treated as an unresolved nominal path");
+		final methodParameter = genericNot.getOperandType().getTypeArguments()[0].getTypeParameterIdentity();
+		assertTrue(methodParameter != null
+			&& methodParameter.getName() == "U"
+			&& StringTools.startsWith(methodParameter.getScopeIdentity(), "method:demo.Catalog.Scalar#"),
+			"method-level operator type argument was not represented by its exact method binder");
 
 		final ordinary = eager.getByFullName("demo.Catalog.Ordinary");
 		assertTrue(ordinary != null && Std.isOfType(ordinary, TyClassInfo), "ordinary class must remain TyClassInfo");

@@ -324,13 +324,46 @@ class M14TypedBodyBoundaryIntegrationTest {
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
-		final temporary = TypedExpr.temporary("__op0", "Int", TypedExpr.intLiteral(1, intType, null), TyType.fromHintText("Void"), null);
-		final assignment = TypedExpr.assign(TypedExpr.localRead("value", intType, null), TypedExpr.localRead("__op0", intType, null), intType, null);
-		final block = TypedExpr.block([temporary, assignment], intType, position);
 		final sourceFunction = new HxFunctionDecl("lowered", HxVisibility.Private, false, [], "Int", [], "", [], position);
+		final owner = TypedFunction.stableIdentityFor("Main", 0, sourceFunction, null);
+		final allocator = new TyCompilerTemporaryAllocator(owner, "typed-body-boundary-fixture-v1", "__fixture_");
+		final valueBinding = allocator.allocate("value", intType);
+		final operandBinding = allocator.allocate("op", intType);
+		final value = TypedExpr.temporary(valueBinding.getSourceName(), "Int", TypedExpr.intLiteral(0, intType, null), TyType.fromHintText("Void"), null,
+			valueBinding);
+		final operand = TypedExpr.temporary(operandBinding.getSourceName(), "Int", TypedExpr.intLiteral(1, intType, null), TyType.fromHintText("Void"), null,
+			operandBinding);
+		final assignment = TypedExpr.assign(TypedExpr.localRead(valueBinding.getSourceName(), intType, null, valueBinding),
+			TypedExpr.localRead(operandBinding.getSourceName(), intType, null, operandBinding), intType, null);
+		final block = TypedExpr.block([value, operand, assignment], intType, position);
 		final typedFunction = new TypedFunction("Main", 0, sourceFunction, null, null,
 			new TypedFunctionBody([TypedStmt.expressionStmt(block, position)], TypedBodyFingerprint.forStatements([])));
 		TypedBodyInvariant.assertFunction(typedFunction);
+
+		var missingBindingRejected = false;
+		try {
+			final invalid = new TypedFunction("Main", 0, sourceFunction, null, null, new TypedFunctionBody([
+				TypedStmt.expressionStmt(TypedExpr.temporary("__missing", "Int", TypedExpr.intLiteral(1, intType, null), TyType.fromHintText("Void"), null),
+					position)
+			], TypedBodyFingerprint.forStatements([])));
+			TypedBodyInvariant.assertFunction(invalid);
+		} catch (_:Dynamic) {
+			missingBindingRejected = true;
+		}
+		assertTrue(missingBindingRejected, "typed-body invariant accepted a compiler temporary without a declaration binding");
+
+		var missingReadBindingRejected = false;
+		try {
+			final invalidRead = TypedExpr.assign(TypedExpr.localRead(valueBinding.getSourceName(), intType, null, valueBinding),
+				TypedExpr.localRead(valueBinding.getSourceName(), intType, null), intType, null);
+			final invalid = new TypedFunction("Main", 0, sourceFunction, null, null, new TypedFunctionBody([
+				TypedStmt.expressionStmt(TypedExpr.block([value, invalidRead], intType, position), position)
+			], TypedBodyFingerprint.forStatements([])));
+			TypedBodyInvariant.assertFunction(invalid);
+		} catch (_:Dynamic) {
+			missingReadBindingRejected = true;
+		}
+		assertTrue(missingReadBindingRejected, "typed-body invariant accepted a structural local read without a declaration binding");
 	}
 
 	static function assertNullableSourceProjection():Void {

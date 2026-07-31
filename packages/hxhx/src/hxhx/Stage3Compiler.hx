@@ -171,6 +171,26 @@ class Stage3Compiler {
 		return Stage3DiagnosticsSupport.formatDynamicException(e);
 	}
 
+	/**
+		Seal explicit macro-file registrations before publishing dependency facts.
+
+		Raw paths remain request-owned in `MacroState`; the observer passed to core
+		contains only path/content revisions.
+	**/
+	static function recordDependencySnapshot(requestContext:CompilationRequestContext, modules:Array<TypedModule>, typerIndex:TyperIndex, backendId:String,
+			definesMap:haxe.ds.StringMap<String>, cwd:String):Null<String> {
+		if (!requestContext.dependencyObservationEnabled())
+			return null;
+		try {
+			requestContext.recordDependencySnapshot(modules, typerIndex, backendId, definesMap, Stage3MacroFileDependencySupport.collect(cwd));
+			return null;
+		} catch (e:String) {
+			return e;
+		} catch (e:haxe.Exception) {
+			return e.message;
+		}
+	}
+
 	static function absFromCwd(cwd:String, path:String):String {
 		return Stage3PathSupport.absFromCwd(cwd, path);
 	}
@@ -515,7 +535,7 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
 			}
-			#if (hxhx_stage0_no_hx_parser || hxhx_stage0_no_expr_macros)
+			#if hxhx_stage0_no_expr_macros
 			closeMacroSession();
 			return error("expression macro expansion unavailable in stage0 profiling lane");
 			#else
@@ -628,7 +648,11 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error(typeOnlyHookError);
 			}
-			requestContext.recordDependencySnapshot(sealedTypedModules, typerIndex);
+			final typeOnlyDependencyError = recordDependencySnapshot(requestContext, sealedTypedModules, typerIndex, backendId, definesMap, cwd);
+			if (typeOnlyDependencyError != null) {
+				closeMacroSession();
+				return error("dependency observation failed: " + typeOnlyDependencyError);
+			}
 
 			closeMacroSession();
 			requestOutput.stdoutLine("typed_modules=" + typedCount);
@@ -718,7 +742,11 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error(hookError);
 		}
-		requestContext.recordDependencySnapshot(typedModules, typerIndex);
+		final dependencyError = recordDependencySnapshot(requestContext, typedModules, typerIndex, backendId, definesMap, cwd);
+		if (dependencyError != null) {
+			closeMacroSession();
+			return error("dependency observation failed: " + dependencyError);
+		}
 
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		final backendSelection = try {

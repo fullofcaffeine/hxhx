@@ -1,3 +1,4 @@
+import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
 
 /**
@@ -8,6 +9,23 @@ import TypedExpr.TypedExprTag;
 	run when a `TypedModule` is sealed and again at backend dispatch.
 **/
 class TypedBodyInvariant {
+	static function assertBinding(binding:TyLocalBinding, owner:String):Void {
+		if (binding == null || binding.getIdentity() == null || binding.getIdentity().getCanonicalKey().length == 0)
+			throw "typed local binding has an empty identity in " + owner;
+		if (binding.getType() == null)
+			throw "typed local binding has no semantic type in " + owner;
+	}
+
+	static function assertBindingNames(bindings:Array<TyLocalBinding>, names:Array<String>, owner:String):Void {
+		if (bindings.length != names.length)
+			throw "typed local binding/name count mismatch in " + owner;
+		for (index in 0...bindings.length) {
+			assertBinding(bindings[index], owner);
+			if (bindings[index].getSourceName() != names[index])
+				throw "typed local binding/name mismatch in " + owner;
+		}
+	}
+
 	static function scrubQuotedAndCommentText(raw:String):String {
 		if (raw == null || raw.length == 0)
 			return "";
@@ -89,7 +107,29 @@ class TypedBodyInvariant {
 			final declaration = expression.getDeclaration();
 			if (declaration != null && declaration.getIdentity().getCanonicalKey().length == 0)
 				throw "typed call contains an empty declaration identity in " + owner;
+			final extensionProvider = expression.getExtensionProvider();
+			if (extensionProvider != null && (declaration == null || !declaration.getIsStatic()))
+				throw "typed extension call must carry an exact static declaration in " + owner;
+		} else if (expression.getExtensionProvider() != null) {
+			throw "non-call typed expression carries an extension provider in " + owner;
 		}
+		final localBindings = expression.getLocalBindings();
+		for (binding in localBindings)
+			assertBinding(binding, owner);
+		if (expression.getTag() == LocalRead) {
+			if (localBindings.length != 1)
+				throw "typed local read must carry exactly one binding in " + owner;
+			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
+		}
+		if (expression.getTag() == Temporary) {
+			if (localBindings.length != 1)
+				throw "typed temporary must carry exactly one binding in " + owner;
+			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
+		}
+		if ((expression.getTag() == VariableDeclaration || expression.getTag() == ArrayComprehension) && localBindings.length > 0)
+			assertBindingNames(localBindings, [expression.getTexts()[0]], owner);
+		if (expression.getTag() == Lambda && localBindings.length > 0)
+			assertBindingNames(localBindings, expression.getTexts(), owner);
 		if (expression.getTag() == Temporary) {
 			if (expression.getTexts().length != 2 || expression.getExpressions().length != 1)
 				throw "typed temporary has an invalid structural payload in " + owner;
@@ -123,12 +163,71 @@ class TypedBodyInvariant {
 			assertExpr(expression, owner);
 		for (child in statement.getStatements())
 			assertStmt(child, owner);
+		final localBindings = statement.getLocalBindings();
+		for (binding in localBindings)
+			assertBinding(binding, owner);
+		if (localBindings.length == 0)
+			return;
+		final tag = statement.getTag();
+		if (tag == Var || tag == ForIn) {
+			assertBindingNames(localBindings, [statement.getNames()[0]], owner);
+		} else if (tag == ForKeyValue) {
+			assertBindingNames(localBindings, statement.getNames(), owner);
+		} else if (tag == Try) {
+			assertBindingNames(localBindings, statement.getCatchNames(), owner);
+		}
 	}
 
 	public static function assertFunction(typedFunction:TypedFunction):Void {
 		final owner = typedFunction.getStableIdentity();
-		for (statement in typedFunction.getBody().getStatements())
+		final declared = new StringMap<TyLocalBinding>();
+		function register(binding:TyLocalBinding):Void {
+			assertBinding(binding, owner);
+			final key = binding.getIdentity().getCanonicalKey();
+			final existing = declared.get(key);
+			if (existing != null && existing.getCanonicalIdentity() != binding.getCanonicalIdentity())
+				throw "typed local identity has conflicting facts in " + owner + ": " + key;
+			declared.set(key, binding);
+		}
+		final environment = typedFunction.getEnvironment();
+		if (environment != null)
+			for (parameter in environment.getParams())
+				register(parameter.toBinding());
+		function collectExpression(expression:TypedExpr):Void {
+			if (expression.getTag() != LocalRead)
+				for (binding in expression.getLocalBindings())
+					register(binding);
+			for (child in expression.getExpressions())
+				collectExpression(child);
+		}
+		function collectStatement(statement:TypedStmt):Void {
+			for (binding in statement.getLocalBindings())
+				register(binding);
+			for (expression in statement.getExpressions())
+				collectExpression(expression);
+			for (child in statement.getStatements())
+				collectStatement(child);
+		}
+		function assertExpressionReads(expression:TypedExpr):Void {
+			if (expression.getTag() == LocalRead)
+				for (binding in expression.getLocalBindings())
+					if (!declared.exists(binding.getIdentity().getCanonicalKey()))
+						throw "typed local read references an undeclared identity in " + owner + ": " + binding.getIdentity().getCanonicalKey();
+			for (child in expression.getExpressions())
+				assertExpressionReads(child);
+		}
+		function assertStatementReads(statement:TypedStmt):Void {
+			for (expression in statement.getExpressions())
+				assertExpressionReads(expression);
+			for (child in statement.getStatements())
+				assertStatementReads(child);
+		}
+		for (statement in typedFunction.getBody().getStatements()) {
+			collectStatement(statement);
 			assertStmt(statement, owner);
+		}
+		for (statement in typedFunction.getBody().getStatements())
+			assertStatementReads(statement);
 	}
 
 	public static function assertClasses(classes:Array<TypedClass>):Void {

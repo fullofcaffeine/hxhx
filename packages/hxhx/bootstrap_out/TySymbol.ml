@@ -4,29 +4,62 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable ty : TyType.t }
+type t = { __hx_type : Obj.t; mutable name : string; mutable identity : TyLocalId.t; mutable kind : TyLocalDeclarationKind.tylocaldeclarationkind; mutable ty : TyType.t }
 
-let create = fun name2 ty2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (name2 : string) in (
-      (Obj.magic self : t).name <- __assign_1;
-      __assign_1
-    ));
-    let __assign_2 = Obj.magic ty2 in (
-      (Obj.magic self : t).ty <- __assign_2;
-      __assign_2
+    ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local symbol requires a stable identity") ["Dynamic"; "String"]) else ());
+    let tempRight = ref ("" : string) in (
+      ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+        tempRight := __assign_1;
+        __assign_1
+      ) else let __assign_2 = (name2 : string) in (
+        tempRight := __assign_2;
+        __assign_2
+      ));
+      ignore (let __assign_3 = (!tempRight : string) in (
+        (Obj.magic self : t).name <- __assign_3;
+        __assign_3
+      ));
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+        ignore (if ty2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (TyType.unknown ()) in (
+          tempRight1 := __assign_4;
+          __assign_4
+        ) else let __assign_5 = Obj.magic ty2 in (
+          tempRight1 := __assign_5;
+          __assign_5
+        ));
+        ignore (let __assign_6 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).ty <- __assign_6;
+          __assign_6
+        ));
+        ignore (let __assign_7 = Obj.magic identity2 in (
+          (Obj.magic self : t).identity <- __assign_7;
+          __assign_7
+        ));
+        let __assign_8 = Obj.magic kind2 in (
+          (Obj.magic self : t).kind <- __assign_8;
+          __assign_8
+        )
+      )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = ""; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
 let getType = fun self () -> (Obj.magic self : t).ty
 
-let setType = fun self (t : TyType.t) -> ignore (ignore (let __assign_3 = Obj.magic t in (
-  (Obj.magic self : t).ty <- __assign_3;
-  __assign_3
+let getIdentity = fun self () -> (Obj.magic self : t).identity
+
+let getKind = fun self () -> (Obj.magic self : t).kind
+
+let toBinding = fun self () -> TyLocalBinding.create (Obj.magic ((Obj.magic self : t).identity)) ((Obj.magic self : t).name : string) (Obj.magic ((Obj.magic self : t).ty)) (Obj.magic ((Obj.magic self : t).kind))
+
+let setType = fun self (t : TyType.t) -> ignore (ignore (let __assign_9 = Obj.magic t in (
+  (Obj.magic self : t).ty <- __assign_9;
+  __assign_9
 )))

@@ -3,7 +3,6 @@ package backend.source;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.GenIrProgram;
-import backend.source.SourceTargetCommon.SourceNativeTarget;
 
 /**
 	Dedicated PHP source-target entry module.
@@ -14,6 +13,6 @@ import backend.source.SourceTargetCommon.SourceNativeTarget;
 **/
 class PhpSourceTargetCore {
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
-		return SourceTargetCommon.emitTarget(Php, program, context);
+		return SourceTargetCommon.emitPhpTarget(program, context);
 	}
 }

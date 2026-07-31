@@ -142,7 +142,7 @@ Medium-term roadmap:
 Validation matrix for this boundary:
 
 ```bash
-haxe -cp packages/hxhx/src -cp packages/hxhx-core/src -cp packages/reflaxe.ocaml/src -cp packages/reflaxe.ocaml/std -main hxhx.Main --no-output -D hih_native_parser
+haxe -cp packages/hxhx/src -cp packages/hxhx-core/src -cp packages/reflaxe.ocaml/src -cp packages/reflaxe.ocaml/std -main hxhx.Main --no-output
 npm run -s test:hxhx:builtin-target-smoke
 ```
 

@@ -56,9 +56,9 @@ Locally, prefer using a pinned checkout at `vendor/haxe` (ignored by git) create
 
 ## Pipeline overview (Stage 2 → Stage 3)
 
-Stage 2 (today) provides:
+Stage 2 provides:
 
-- lexing + parsing (tiny subset) → `ParsedModule`
+- Haxe-authored lexing and parsing through `HxParser` → `ParsedModule`
 - module graph resolution (imports/classpaths) → `ResolvedModule`
 
 Stage 3 adds:
@@ -176,21 +176,24 @@ Even though Stage 3 does not *execute* macros, its architecture must prepare for
 
 This keeps macro integration from forcing a total refactor later.
 
-## Escape hatches (why we keep them)
+## Frontend ownership
 
-We keep **native OCaml hooks** in Stage 2 to make progress while still moving toward Haxe-in-Haxe:
+`HxParser` is the only product and bootstrap parser. Earlier builds could choose
+a handwritten OCaml lexer/parser and decode its summary back into Haxe. That
+duplicate path was retired after it interpreted valid source differently from
+the Haxe parser.
 
-- `native.NativeLexer` and `native.NativeParser` exist to validate the integration seam and to match upstream’s suggested
-  bootstrap strategy.
+This boundary is now fail-closed:
 
-Stage 3 should avoid adding a native OCaml typer hook unless it is strictly needed for velocity, because a native hook can
-easily become a permanent dependency and stall “real” bootstrapping.
+- valid syntax gaps become focused `HxParser` parity tests;
+- parser and typer behavior stays in Haxe-authored modules;
+- handwritten OCaml may provide narrow operating-system or runtime primitives,
+  but it must not decide what Haxe source means; and
+- no build define or environment flag may select a second semantic frontend.
 
-If we ever add a native hook, it must:
-
-- have a versioned protocol
-- be optional (feature flag / build option)
-- have tests that ensure Haxe and native paths agree on the supported subset
+`ParserStageScanHelpers` still supplements selected module-local declaration
+facts from the same source text. It is transitional recovery inside the one
+Haxe frontend, not permission to create another parser.
 
 ## Testing strategy (Stage 3)
 

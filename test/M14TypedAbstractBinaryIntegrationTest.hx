@@ -98,7 +98,57 @@ class M14TypedAbstractBinaryIntegrationTest {
 		return null;
 	}
 
+	static function inlineHelperShadowingTest():Void {
+		final source = [
+			"abstract Shadowed(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(A + B) public inline function add(amount:Int):Shadowed {",
+			"    { var amount:String = 'inner'; amount; }",
+			"    this += amount;",
+			"    return cast this;",
+			"  }",
+			"}",
+			"class Main { static function main() {",
+			"  var target:Shadowed = new Shadowed(2);",
+			"  var result:Shadowed = target + 3;",
+			"} }",
+		].join("\n");
+		final module = typedModule(source, "Main.hx");
+		var result = initializer(mainFunction(module), "result");
+		if (result.getTag() == TypedExprTag.Cast)
+			result = result.getExpressions()[0];
+		final expressions = result.getExpressions();
+		assertTrue(result.getTag() == TypedExprTag.Block
+			&& expressions.length >= 4, "shadowed binary helper did not become an explicit ordered block");
+		final argumentBindings = expressions[0].getLocalBindings();
+		final innerBindings = expressions[1].getLocalBindings();
+		assertTrue(expressions[0].getTag() == TypedExprTag.Temporary
+			&& argumentBindings.length == 1
+			&& argumentBindings[0].getType().getSemanticKey() == "primitive:Int",
+			"inline helper argument lost its exact temporary binding");
+		assertTrue(expressions[1].getTag() == TypedExprTag.Temporary
+			&& innerBindings.length == 1
+			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
+			"shadowing helper local lost its exact temporary binding");
+		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
+		assertTrue(implementationRevision.indexOf("typed-abstract-binary-v1") >= 0
+			&& implementationRevision.indexOf(argumentBindings[0].getCanonicalIdentity()) >= 0,
+			"typed-module implementation revision omitted the binary pass or generated binding identity");
+		final innerReadBindings = expressions[2].getLocalBindings();
+		assertTrue(expressions[2].getTag() == TypedExprTag.LocalRead
+			&& innerReadBindings.length == 1
+			&& innerReadBindings[0].getIdentity().equals(innerBindings[0].getIdentity()),
+			"nested helper read did not select the shadowing declaration");
+		final update = expressions[3];
+		final parameterReadBindings = update.getExpressions()[1].getLocalBindings();
+		assertTrue(update.getTag() == TypedExprTag.CompoundAssign
+			&& parameterReadBindings.length == 1
+			&& parameterReadBindings[0].getIdentity().equals(argumentBindings[0].getIdentity()),
+			"read after the nested helper block did not return to the exact parameter binding");
+	}
+
 	static function main():Void {
+		inlineHelperShadowingTest();
 		final source = [
 			"abstract Score(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",

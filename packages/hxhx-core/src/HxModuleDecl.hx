@@ -88,13 +88,13 @@ class HxModuleDecl {
 	}
 
 	/**
-		Whether this module was produced via native frontend header-only fallback.
+		Whether this module contains only declaration-header facts.
 
 		Why
-		- During bootstrap, the native OCaml frontend may fall back to parsing only
-		  package/import/class headers (when class bodies contain unsupported syntax).
-		- Tracking this explicitly lets Gate1 diagnostics avoid “silent success” and
-		  quantify progress as we implement more of the real parser.
+		- Best-effort parsing may preserve enough package/import/class information for
+		  diagnostics even when complete declaration bodies are unavailable.
+		- Tracking that incompleteness explicitly prevents downstream stages from
+		  treating a partial module as fully parsed.
 	**/
 	public static function getHeaderOnly(m:HxModuleDecl):Bool {
 		return m.headerOnly;

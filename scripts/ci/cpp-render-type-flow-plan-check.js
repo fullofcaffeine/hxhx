@@ -13,6 +13,7 @@ const docsReadmePath = 'docs/README.md'
 const packageJsonPath = 'package.json'
 const cppCorePath = 'packages/hxhx-core/src/backend/cpp/CppTargetCore.hx'
 const knownSignaturesPath = 'packages/hxhx-core/src/backend/cpp/CppKnownStdlibSignatures.hx'
+const traceContextPath = 'packages/hxhx-core/src/backend/cpp/CppTraceContext.hx'
 
 function fail(message) {
   console.error(`[cpp-render-type-flow-plan-check] ERROR: ${message}`)
@@ -33,12 +34,20 @@ function requireIncludes(filePath, text, snippet) {
   }
 }
 
+function requireCount(filePath, text, snippet, expected) {
+  const count = text.split(snippet).length - 1
+  if (count !== expected) {
+    fail(`${filePath} must include ${JSON.stringify(snippet)} exactly ${expected} time(s), found ${count}`)
+  }
+}
+
 function main() {
   const plan = readText(planPath)
   const docsReadme = readText(docsReadmePath)
   const packageJson = readText(packageJsonPath)
   const cppCore = readText(cppCorePath)
   const knownSignatures = readText(knownSignaturesPath)
+  const traceContext = readText(traceContextPath)
 
   for (const snippet of [
     'CPP_RENDER_TYPE_FLOW_PLAN:PASS',
@@ -61,18 +70,53 @@ function main() {
 
   for (const snippet of [
     'traceCppTimingsEnabled',
+    'traceCppDeepEnabled(context:CppTraceContext)',
+    'traceCppLambdaPhasesEnabled(context:CppTraceContext)',
+    'traceCppCallArgDetailPhasesEnabled(context:CppTraceContext)',
+    'traceCppHelperClassificationDetailsEnabled(context:CppTraceContext)',
     'traceCppScopeStmtTimingPhase',
     'render_helper_method_prepare_timing',
     'field_infer_',
     '"known"',
     '"receiver_type"',
-    'functionScopePrepCache',
-    'functionArgTypesCache',
-    'functionReturnTypesCache',
+    'functionAnalysisMemo',
+    'functionAnalysisMemoForLookup',
+    'traceContextForLookup',
+    'scope.traceContext',
     'knownStdlibSignatures().methodReturnCppType',
     'knownStdlibSignatures().methodParamCppTypes',
   ]) {
     requireIncludes(cppCorePath, cppCore, snippet)
+  }
+  for (const staleProcessField of [
+    'traceCppTimingsEnabledCache',
+    'traceCppTimingMethodFilterCache',
+    'traceCppTimingPhaseBuffer',
+    'traceCppDeepEnabledCache',
+    'traceCppLambdaPhasesEnabledCache',
+    'traceCppCallArgDetailPhasesEnabledCache',
+    'traceCppHelperClassificationDetailsEnabledCache',
+  ]) {
+    if (cppCore.includes(staleProcessField)) {
+      fail(`${cppCorePath} must not retain program timing state in process field ${staleProcessField}`)
+    }
+  }
+  if (cppCore.includes('function resetRequestState')) {
+    fail(`${cppCorePath} must not restore a C++ request-reset lifecycle after all mutable program state moved to program-owned contexts`)
+  }
+  requireCount(cppCorePath, cppCore, '{names: scope.classNames, byName: scope.classByName, all: scope.allClasses}', 1)
+
+  for (const snippet of [
+    'class CppTraceContext',
+    'public final timingsEnabled',
+    'public final timingMethodFilter',
+    'public final deepEnabled',
+    'public final lambdaPhasesEnabled',
+    'public final callArgDetailPhasesEnabled',
+    'public final helperClassificationDetailsEnabled',
+    'public var timingPhaseBuffer',
+  ]) {
+    requireIncludes(traceContextPath, traceContext, snippet)
   }
 
   for (const snippet of [

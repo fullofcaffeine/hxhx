@@ -22,21 +22,6 @@
 	- We grow coverage rung-by-rung while keeping acceptance fixtures runnable.
 **/
 class HxParser {
-	/**
-		Debug label for method-body parsing (native frontend seam).
-
-		Why
-		- When we parse raw method body slices via `parseFunctionBodyText`, any parse holes are
-		  reported as `body_parse_error` statements.
-		- During Gate bring-up, it is useful to know *which* method body hit the parse hole.
-
-		How
-		- `ParserStage.decodeMethodPayload` sets this to the method name immediately before
-		  calling `parseFunctionBodyText`, and resets it afterwards.
-		- Logging is gated by `HXHX_TRACE_BODY_STMT_PARSE_ERROR=1`.
-	**/
-	public static var debugBodyLabel:String = "";
-
 	final source:String;
 	final lex:HxLexer;
 	final structuralTryCatch:Bool;
@@ -222,9 +207,10 @@ class HxParser {
 		Parse a single expression from standalone source text.
 
 		Why
-		- The native OCaml frontend seam currently reports return expressions as raw text.
-		- Stage 3 wants to recover a small, structured expression tree (`a.b(c)`) from that
-		  text without implementing a full OCaml-side expression AST.
+		- Some Haxe-authored compiler stages retain an expression as an exact source slice
+		  before they need its structured form.
+		- Reusing the canonical Haxe lexer/parser keeps that recovery inside the same
+		  frontend that parses complete modules.
 
 		What
 		- Parses a tiny expression grammar:
@@ -236,13 +222,7 @@ class HxParser {
 		- Reuses the same lexer + `parseExpr` routine as module parsing, but stops at EOF.
 	**/
 	public static function parseExprText(source:String):HxExpr {
-		final normalized =
-			#if hxhx_stage0_no_source_normalize_extract
-			normalizeDenseEscapedQuotesInline(source);
-			#else
-			HxParserSourceNormalize.normalizeDenseEscapedQuotes(source);
-			#end
-		final p = new HxParser(normalized);
+		final p = new HxParser(source);
 		final e = p.parseExpr(() -> p.cur.kind.match(TEof));
 		return e;
 	}
@@ -254,13 +234,7 @@ class HxParser {
 		cannot be accepted merely because a valid expression prefix was parsed.
 	**/
 	public static function parseCompleteExprText(source:String):HxExpr {
-		final normalized =
-			#if hxhx_stage0_no_source_normalize_extract
-			normalizeDenseEscapedQuotesInline(source);
-			#else
-			HxParserSourceNormalize.normalizeDenseEscapedQuotes(source);
-			#end
-		final parser = new HxParser(normalized);
+		final parser = new HxParser(source);
 		final expression = parser.parseExpr(() -> parser.cur.kind.match(TEof));
 		if (!parser.cur.kind.match(TEof))
 			parser.fail("Unexpected trailing input after expression");
@@ -277,61 +251,20 @@ class HxParser {
 		passes without making `HxExpr` directly depend on `HxStmt`.
 	**/
 	public static function parseStructuralExprText(source:String):HxExpr {
-		final normalized =
-			#if hxhx_stage0_no_source_normalize_extract
-			normalizeDenseEscapedQuotesInline(source);
-			#else
-			HxParserSourceNormalize.normalizeDenseEscapedQuotes(source);
-			#end
-		final parser = new HxParser(normalized, true);
+		final parser = new HxParser(source, true);
 		final expression = parser.parseExpr(() -> parser.cur.kind.match(TEof));
 		if (!parser.cur.kind.match(TEof))
 			parser.fail("Unexpected trailing input after structural expression");
 		return expression;
 	}
 
-	#if hxhx_stage0_no_source_normalize_extract
-	/**
-		Inline fallback for stage0 A/B measurement only.
-
-		Why
-		- We use this define to compare extracted-helper vs in-class-helper compile graphs under the
-		  same stage0 profiler harness.
-		- This path is not intended as a long-term behavior branch; it exists to generate parity A/B
-		  evidence for `haxe.ocaml-a0pt.1.5`.
-	**/
-	static function normalizeDenseEscapedQuotesInline(source:String):String {
-		if (source == null || source.length == 0)
-			return source;
-		var normalized = source;
-		if (normalized.indexOf('"""') != -1) {
-			final q = '"';
-			final triple = q + q + q;
-			final escapedQuoteString = q + "\\" + q + q;
-			normalized = StringTools.replace(normalized, triple, escapedQuoteString);
-		}
-		normalized = normalizeDenseKeywordSpacingInline(normalized);
-		return normalized;
-	}
-
-	static function normalizeDenseKeywordSpacingInline(source:String):String {
-		if (source == null || source.length == 0)
-			return source;
-		final compactNewExpr = ~/(^|[^A-Za-z0-9_])new([A-Za-z_])/g;
-		return compactNewExpr.map(source, function(re:EReg):String {
-			return re.matched(1) + "new " + re.matched(2);
-		});
-	}
-	#end
-
 	/**
 		Parse a function body statement list from standalone source text.
 
 		Why
-		- The native OCaml frontend seam can report method bodies as raw source slices
-		  (`ast method_body`) without transmitting a full statement AST.
-		- Stage 3 bring-up wants to validate "full body" lowering (e.g. `trace("HELLO");`)
-		  while still using the native frontend for the rest of the module graph.
+		- Best-effort declaration recovery can retain method bodies as exact source slices.
+		- Later Haxe-authored stages need a structured statement list without creating a
+		  second parser or target-side semantic repair.
 
 		What
 		- Takes the raw text *inside* a function body (between `{` and `}`) and returns
@@ -355,9 +288,9 @@ class HxParser {
 		Parse a raw function-body slice and rebase statement positions to the original module.
 
 		Why
-		- Native frontend protocol bodies are transported as source slices. `parseFunctionBodyText`
-		  wraps those slices in synthetic braces, which makes every recovered statement position
-		  relative to the wrapper instead of the user's `.hx` file.
+		- Best-effort declaration recovery can retain bodies as source slices.
+		  `parseFunctionBodyText` wraps those slices in synthetic braces, which makes every
+		  recovered statement position relative to the wrapper instead of the user's `.hx` file.
 		- Diagnostics that rely on statement positions, such as ambiguous overload errors, must
 		  report the real call site to match upstream Haxe behavior.
 
@@ -4735,10 +4668,10 @@ class HxParser {
 	}
 
 	function parseRecoveredCaseFragmentStmt(pos:HxPos):HxStmt {
-		// Native frontend recovery can occasionally hand us a method-body slice that
-		// starts inside a switch case list. At top level this is not a real Haxe
-		// statement, so consume one case/default fragment as neutral recovery instead
-		// of emitting an EUnsupported(case...) that blocks backend burn-down.
+		// Best-effort declaration scanning can retain a method-body slice that starts
+		// inside a switch case list. At top level this is not a real Haxe statement,
+		// so consume one case/default fragment as neutral recovery instead of emitting
+		// an EUnsupported(case...) that blocks backend burn-down.
 		bump(); // `case` / `default`
 		while (!cur.kind.match(TColon) && !cur.kind.match(TEof) && !cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase))
 			&& !cur.kind.match(TKeyword(KDefault))) {
@@ -4799,7 +4732,7 @@ class HxParser {
 		// Like `parseFunctionBodyStatements`, but never throws.
 		//
 		// Why
-		// - The native frontend protocol transmits method bodies as raw source slices.
+		// - Best-effort recovery may parse method bodies from raw source slices.
 		// - Our statement/expression grammar is still incomplete; we want to recover as much
 		//   structure as possible without hard-failing the whole module.
 		//
@@ -4836,8 +4769,7 @@ class HxParser {
 			return StringTools.replace(StringTools.replace(text, "\n", " "), "\r", " ");
 		}
 		inline function bodyParseErrorDetail(errorText:String):String {
-			final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
-			return "body_parse_error fn=" + oneLine(lbl) + " tok=" + oneLine(curTokLabel()) + " err=" + oneLine(errorText);
+			return "body_parse_error fn=<unknown> tok=" + oneLine(curTokLabel()) + " err=" + oneLine(errorText);
 		}
 		while (true) {
 			switch (cur.kind) {
@@ -4867,8 +4799,7 @@ class HxParser {
 					} catch (e:HxParseError) {
 						if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
 							try {
-								final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
-								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel() + " err=" + e.message);
+								Sys.println("body_stmt_parse_error fn=<unknown> tok=" + curTokLabel() + " err=" + e.message);
 							} catch (_:haxe.io.Error) {} catch (_:String) {}
 						}
 						// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
@@ -4897,8 +4828,7 @@ class HxParser {
 					} catch (e:String) {
 						if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
 							try {
-								final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
-								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel() + " err=" + e);
+								Sys.println("body_stmt_parse_error fn=<unknown> tok=" + curTokLabel() + " err=" + e);
 							} catch (_:haxe.io.Error) {} catch (_:String) {}
 						}
 						// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
@@ -5278,13 +5208,17 @@ class HxParser {
 		final moduleFunctions = new Array<HxFunctionDecl>();
 		var pendingTypeMetadata = new Array<String>();
 		/**
-			Skip an abstract declaration that is rebuilt by `ParserStage`'s focused
-			abstract scanner. Consuming the complete declaration prevents its member
-			functions from being mistaken for module-level functions and merged into
-			the next ordinary class.
+			Skip one non-class type declaration that `ParserStage` rebuilds through
+			its focused Haxe scanners.
+
+			`parseModule` still delegates typedef, enum, and abstract declaration
+			details to those scanners. It must nevertheless consume the complete
+			declaration here. Otherwise nested members such as `final locale:String`
+			inside an anonymous typedef look like module-level fields, and enum or
+			abstract methods can be merged into the following ordinary class.
 		**/
-		function skipScannedAbstractDeclaration():Void {
-			bump(); // `abstract`
+		function skipScannedTypeDeclaration():Void {
+			bump(); // `typedef`, `enum`, or `abstract`
 			var bodyDepth = 0;
 			var parenDepth = 0;
 			var bracketDepth = 0;
@@ -5428,6 +5362,9 @@ class HxParser {
 					final isInterface = cur.kind.match(TIdent("interface"));
 					bump(); // 'class' / 'interface'
 					final className = readIdent("class name");
+					final classTypeParameters = readTypeParameterNamesFromCurrentAngles();
+					if (classTypeParameters.length > 0)
+						classMetadata.push("__hxhx_type_params=" + classTypeParameters.join(","));
 					var extendsPath = "";
 					final implementsPaths = new Array<String>();
 					var readingImplements = false;
@@ -5470,9 +5407,9 @@ class HxParser {
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths,
 						moduleMemberVisibility));
 				// `parseClassMembers` consumes the closing `}`.
-				case TIdent("abstract"):
+				case TIdent("typedef") | TIdent("enum") | TIdent("abstract"):
 					pendingTypeMetadata = [];
-					skipScannedAbstractDeclaration();
+					skipScannedTypeDeclaration();
 				case TKeyword(KFunction):
 					pendingTypeMetadata = [];
 					// Detect module-level `function main(...)` entrypoint.
@@ -5535,10 +5472,5 @@ class HxParser {
 			|| StringTools.startsWith(hint, "Rest<")
 			|| StringTools.startsWith(hint, "haxe.Rest<")
 			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
-	}
-
-	/** Clear the diagnostic label temporarily installed while parsing one body. **/
-	public static function resetRequestState():Void {
-		debugBodyLabel = "";
 	}
 }

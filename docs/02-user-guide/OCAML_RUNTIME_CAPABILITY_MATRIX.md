@@ -88,9 +88,6 @@ used for ordinary external OCaml libraries.
 | `HxHxCompilerServer` | yes | `tooling-only` | hxhx compiler server support module. |
 | `HxHxMacroModuleDynlink` | yes | `tooling-only` | Loads native macro modules for `hxhx`; never an application runtime module. |
 | `HxHxMacroModuleHost` | yes | `tooling-only` | Defines the native macro-module host boundary used by `hxhx`. |
-| `HxHxMacroRpc` | yes | `tooling-only` | hxhx macro-host RPC support module. |
-| `HxHxNativeLexer` | yes | `tooling-only` | hxhx native frontend support module. |
-| `HxHxNativeParser` | yes | `tooling-only` | hxhx native frontend support module. |
 | `HxInt` | yes | `metal-supported` | Int helpers; hot-path specialization tracked separately. |
 | `HxIterator` | yes | `metal-supported` | Iterator helpers for typed iteration patterns. |
 | `HxMap` | yes | `metal-supported` | Map helpers; metal-specialized paths may reduce usage later. |

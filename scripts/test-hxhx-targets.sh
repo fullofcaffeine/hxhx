@@ -831,13 +831,7 @@ class MultiStage3 {
 }
 HX
 
-  # Force the pure-Haxe parser for this helper-type regression block.
-  #
-  # Why
-  # - This block validates module-local helper type emission/linkability, not native parser coverage.
-  # - Native parser bring-up currently has an unrelated stdlib call-shape issue in `haxe.io.Bytes`
-  #   that can fail this block before helper-type assertions run.
-  out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   if [ -f "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml" ]; then
     if grep -q "let rec floatToI32 (f : float) : int = _floatToI32 ((Obj.magic 0))" "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml"; then
@@ -875,24 +869,11 @@ class TypeDeclStage3 {
 }
 HX
 
-  # Force the pure-Haxe parser for this typedef/abstract regression block.
-  #
-  # Why
-  # - This block validates module-local type declaration/provider emission.
-  # - Native parser bring-up currently has an unrelated stdlib call-shape issue in
-  #   `haxe.io.Bytes` that can fail before these assertions run.
-  out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls" -cp "$tmpdir/src" -main TypeDeclStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls" -cp "$tmpdir/src" -main TypeDeclStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Box.ml"
   test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
   grep -q "let fromInt" "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
-
-  echo "== Stage3 regression: module-local typedef/abstract declarations (forced pure parser)"
-  out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls_force" -cp "$tmpdir/src" -main TypeDeclStage3)"
-  echo "$out" | grep -q "^stage3=ok$"
-  test -f "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Box.ml"
-  test -f "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Flag.ml"
-  grep -q "let fromInt" "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Flag.ml"
 
   echo "== Stage3 regression: Sys.environment lowering (HxSys.environment)"
   cat >"$tmpdir/src/SysEnvStage3.hx" <<'HX'
@@ -958,7 +939,7 @@ HX
     exit 1
   fi
 
-  echo "== Stage3 regression: native frontend handles regex literals with quote chars"
+  echo "== Stage3 regression: Haxe frontend handles regex literals with quote chars"
   cat >"$tmpdir/src/RegexLiteralStage3.hx" <<'HX'
 package;
 
@@ -974,7 +955,7 @@ HX
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_regex_literal" -cp "$tmpdir/src" -main RegexLiteralStage3)"
   echo "$out" | grep -q "^stage3=ok$"
 
-  echo "== Stage3 regression: native frontend accepts keyword-named function declarations"
+  echo "== Stage3 regression: Haxe frontend accepts keyword-named function declarations"
   cat >"$tmpdir/src/KeywordAsStage3.hx" <<'HX'
 package;
 
@@ -1384,7 +1365,7 @@ private class Helper {
   public static final ANSWER = 42;
 }
 HX
-out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmphelper/src" -main Main --hxhx-out "$tmphelper/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmphelper/src" -main Main --hxhx-out "$tmphelper/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1412,7 +1393,7 @@ class Main {
   }
 }
 HX
-out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^ok$"
 echo "$out" | grep -q "^run=ok$"
@@ -1449,7 +1430,7 @@ class Main {
   }
 }
 HX
-out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
@@ -1485,7 +1466,7 @@ class Main {
   }
 }
 HX
-out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstaticfinal/src" -main Main --hxhx-out "$tmpstaticfinal/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstaticfinal/src" -main Main --hxhx-out "$tmpstaticfinal/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1522,7 +1503,7 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^sum="
 echo "$out" | grep -q "^run=ok$"
 
-echo "== Stage3 regression: non-static class fields survive native protocol"
+echo "== Stage3 regression: non-static class fields survive frontend parsing"
 tmpinstfield="$tmpdir/instance_field"
 mkdir -p "$tmpinstfield/src"
 cat >"$tmpinstfield/src/Main.hx" <<'HX'

@@ -14,6 +14,28 @@ const genIrProgramPath = 'packages/hxhx-core/src/backend/GenIrProgram.hx'
 const backendDispatchPath = 'packages/hxhx-core/src/backend/BackendDispatchBoundary.hx'
 const compilerDriverPath = 'packages/hxhx-core/src/CompilerDriver.hx'
 const nativeCompilerServerPath = 'packages/hxhx/src/hxhx/NativeCompilerServer.hx'
+const retiredFrontendFiles = [
+  'packages/hxhx-core/src/HxParserSourceNormalize.hx',
+  'packages/hxhx-core/src/ParserStageNativeDecode.hx',
+  'packages/hxhx-core/src/native/NativeLexer.hx',
+  'packages/hxhx-core/src/native/NativeParser.hx',
+  'packages/reflaxe.ocaml/std/runtime/HxHxNativeLexer.ml',
+  'packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml',
+]
+const retiredFrontendPatterns = [
+  {label: 'handwritten native lexer/parser module', pattern: /\bHxHxNative(?:Lexer|Parser)\b/},
+  {label: 'native parser protocol decoder', pattern: /\bParserStageNativeDecode\b/},
+  {label: 'protocol-era expression source rewrite helper', pattern: /\bHxParserSourceNormalize\b/},
+  {label: 'native parser build define', pattern: /\bhih_native_parser\b/},
+  {
+    label: 'protocol-era expression source rewrite switch',
+    pattern: /\b(?:HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT|hxhx_stage0_no_source_normalize_extract)\b/,
+  },
+  {
+    label: 'native parser selection switch',
+    pattern: /\b(?:HIH_FORCE_HX_PARSER|HXHX_NATIVE_FRONTEND_HEADER_ONLY|HXHX_STAGE0_NO_NATIVE_PARSER|HXHX_STAGE0_NO_HX_PARSER|HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT|hxhx_native_frontend)\b/,
+  },
+]
 
 const expectedAllowedFiles = {
   'backend-dispatch-reflection': [
@@ -30,6 +52,15 @@ const expectedAllowedFiles = {
   'compiler-server-socket-helper': [
     nativeCompilerServerPath,
     'packages/hxhx/src/hxhx/Stage3WaitServer.hx',
+  ],
+}
+
+const expectedRuntimeSourceFiles = {
+  'backend-dispatch-reflection': [],
+  'genir-dynamic-recovery': [],
+  'compiler-driver-ocaml-hint': [],
+  'compiler-server-socket-helper': [
+    'packages/reflaxe.ocaml/std/runtime/HxHxCompilerServer.ml',
   ],
 }
 
@@ -108,6 +139,41 @@ function listSourceFiles() {
   return output
     .split('\0')
     .filter(path => path.endsWith('.hx'))
+    .filter(path => fs.existsSync(path))
+    .sort()
+}
+
+function listOperationalFiles() {
+  const roots = [
+    'package.json',
+    'packages/hxhx/build.hxml',
+    'packages/hxhx-core/src',
+    'packages/hxhx/src',
+    'packages/hxhx/bootstrap_out',
+    'packages/hxhx-macro-host/bootstrap_out',
+    'packages/reflaxe.ocaml/src',
+    'packages/reflaxe.ocaml/std/runtime',
+    'scripts',
+    'test',
+    'workloads',
+  ]
+  const output = cp.execFileSync(
+    'git',
+    ['ls-files', '-co', '--exclude-standard', '-z', ...roots],
+    {encoding: 'utf8'}
+  )
+  return output
+    .split('\0')
+    .filter(Boolean)
+    .filter(path => fs.existsSync(path))
+    .filter(path => ![
+      'scripts/ci/bridge-boundary-check.js',
+      'scripts/ci/bridge-boundary-check-fixture-test.js',
+    ].includes(path))
+    .filter(path => (
+      path === 'package.json'
+      || /\.(?:hx|hxml|js|json|ml|py|sh)$/.test(path)
+    ))
     .sort()
 }
 
@@ -250,6 +316,10 @@ function validateManifest(manifest, sources, exists = fs.existsSync) {
     if (expected && !sameStrings(bridge.allowedHaxeFiles || [], expected)) {
       errors.push(`${label}.allowedHaxeFiles must be exactly: ${expected.join(', ')}`)
     }
+    const expectedRuntime = expectedRuntimeSourceFiles[bridge.id]
+    if (expectedRuntime && !sameStrings(bridge.runtimeSourceFiles || [], expectedRuntime)) {
+      errors.push(`${label}.runtimeSourceFiles must be exactly: ${expectedRuntime.join(', ') || '<none>'}`)
+    }
     for (const path of bridge.allowedHaxeFiles || []) {
       if (!sources.has(path)) errors.push(`${label} allowed Haxe file is missing from source scope: ${path}`)
     }
@@ -295,11 +365,36 @@ function validateSourceContracts(sources) {
   return errors
 }
 
+function validateRetiredFrontend(sources, exists = fs.existsSync) {
+  const errors = []
+  for (const path of retiredFrontendFiles) {
+    if (exists(path)) errors.push(`retired handwritten frontend file must stay deleted: ${path}`)
+  }
+  for (const [path, source] of sources) {
+    for (const rule of retiredFrontendPatterns) {
+      if (rule.pattern.test(source)) {
+        errors.push(`${rule.label} must stay retired, found in ${path}`)
+      }
+    }
+  }
+  for (const path of listOperationalFiles()) {
+    if (sources.has(path)) continue
+    const source = fs.readFileSync(path, 'utf8')
+    for (const rule of retiredFrontendPatterns) {
+      if (rule.pattern.test(source)) {
+        errors.push(`${rule.label} must stay retired, found in ${path}`)
+      }
+    }
+  }
+  return errors
+}
+
 function validateRepositoryState(sources, manifest, exists = fs.existsSync) {
   return [
     ...validateManifest(manifest, sources, exists),
     ...validateOccurrences(sources),
     ...validateSourceContracts(sources),
+    ...validateRetiredFrontend(sources, exists),
   ]
 }
 

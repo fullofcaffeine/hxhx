@@ -1,18 +1,18 @@
 package backend.cpp;
 
 typedef CppKnownStdlibSignatureServices = {
-	var sanitizeTypePath:String->String;
-	var typeBaseName:String->String;
-	var sanitizeIdentifier:String->String;
-	var cppTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->String;
-	var cppReturnTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->String;
-	var isStringIteratorHelper:String->Bool;
-	var isTypeResolverHelper:String->Bool;
-	var isXmlParserSupportClass:String->Null<CppRenderScope>->Null<CppClassLookup>->Bool;
-	var utestTestObjectCppType:Null<CppRenderScope>->Null<CppClassLookup>->String;
-	var lookupForScope:Null<CppRenderScope>->Null<CppClassLookup>->CppClassLookup;
-	var lookupClassForTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->Null<HxClassDecl>;
-	var renderedClassName:HxClassDecl->CppClassLookup->String;
+	final sanitizeTypePath:String->String;
+	final typeBaseName:String->String;
+	final sanitizeIdentifier:String->String;
+	final cppTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->String;
+	final cppReturnTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->String;
+	final isStringIteratorHelper:String->Bool;
+	final isTypeResolverHelper:String->Bool;
+	final isXmlParserSupportClass:String->Null<CppRenderScope>->Null<CppClassLookup>->Bool;
+	final utestTestObjectCppType:Null<CppRenderScope>->Null<CppClassLookup>->String;
+	final lookupForScope:Null<CppRenderScope>->Null<CppClassLookup>->CppClassLookup;
+	final lookupClassForTypeHint:String->Null<CppRenderScope>->Null<CppClassLookup>->Null<HxClassDecl>;
+	final renderedClassName:HxClassDecl->CppClassLookup->String;
 };
 
 /**

@@ -9,12 +9,16 @@
 class TypedCallResolution {
 	final declaration:Null<TyDeclarationInfo>;
 	final requiresOwnerQualification:Bool;
+	final extensionProvider:Null<TyNominalTypeId>;
 
-	public function new(?declaration:TyDeclarationInfo, requiresOwnerQualification:Bool = false) {
+	public function new(?declaration:TyDeclarationInfo, requiresOwnerQualification:Bool = false, ?extensionProvider:TyNominalTypeId) {
 		this.declaration = declaration;
 		this.requiresOwnerQualification = requiresOwnerQualification;
+		this.extensionProvider = extensionProvider;
 		if (requiresOwnerQualification && (declaration == null || !declaration.getIsStatic()))
 			throw "owner-qualified call resolution requires an exact static declaration";
+		if (extensionProvider != null && (declaration == null || !declaration.getIsStatic()))
+			throw "extension call resolution requires an exact static declaration";
 	}
 
 	public function getDeclaration():Null<TyDeclarationInfo>
@@ -22,4 +26,8 @@ class TypedCallResolution {
 
 	public function getRequiresOwnerQualification():Bool
 		return requiresOwnerQualification;
+
+	/** Type named by the winning `using` directive, when this is an extension call. **/
+	public function getExtensionProvider():Null<TyNominalTypeId>
+		return extensionProvider;
 }

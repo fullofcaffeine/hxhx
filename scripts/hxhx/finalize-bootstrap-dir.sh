@@ -354,36 +354,6 @@ patch_bootstrap_hxparser_uppercase_helper_call() {
   run_bootstrap_patch_helper patch-hxparser-uppercase-helper-call "$parser_path"
 }
 
-patch_bootstrap_native_parser_generic_arrow_constraints() {
-  local build_dir="$1"
-  local parser_path="$build_dir/runtime/HxHxNativeParser.ml"
-
-  if [ ! -f "$parser_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "Function type arrows inside generic constraints" "$parser_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-native-parser-generic-arrow-constraints "$parser_path"
-}
-
-patch_bootstrap_native_parser_expr_spacing() {
-  local build_dir="$1"
-  local parser_path="$build_dir/runtime/HxHxNativeParser.ml"
-
-  if [ ! -f "$parser_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'let append_token_text (b : Buffer.t) (text : string) : unit =' "$parser_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-native-parser-expr-spacing "$parser_path"
-}
-
 patch_bootstrap_emitter_typed_param_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -1032,8 +1002,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_hxparser_interpolated_exprs "$build_dir"
   patch_bootstrap_hxparser_generic_function_decl "$build_dir"
   patch_bootstrap_hxparser_uppercase_helper_call "$build_dir"
-  patch_bootstrap_native_parser_generic_arrow_constraints "$build_dir"
-  patch_bootstrap_native_parser_expr_spacing "$build_dir"
   patch_bootstrap_emitter_typed_param_fallback "$build_dir"
   patch_bootstrap_emitter_parsed_arg_type_overlay "$build_dir"
   patch_bootstrap_stage1_std_root_termination "$build_dir"

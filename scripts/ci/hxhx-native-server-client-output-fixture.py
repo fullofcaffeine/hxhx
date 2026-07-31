@@ -293,6 +293,18 @@ def main() -> int:
         'class SocketCompileMain { static function main() { Sys.println("socket-compile-ok"); } }\n',
         encoding="utf-8",
     )
+    static_initializer_api = classpath / "StaticInitializerApi.hx"
+    static_initializer_api.write_text(
+        "class StaticInitializerApi { public static function make():Int return 1; }\n",
+        encoding="utf-8",
+    )
+    (classpath / "StaticInitializerMain.hx").write_text(
+        "class StaticInitializerMain {"
+        " public static var value:Int = StaticInitializerApi.make();"
+        " static function main() { Sys.println(value); }"
+        " }\n",
+        encoding="utf-8",
+    )
     display_source = classpath / "DisplayMain.hx"
     out_dir = fixture_root / "out"
     artifact = out_dir / "main.js"
@@ -496,6 +508,134 @@ def main() -> int:
             require_success(second_run, "second socket-generated program")
             if second_run.stdout.strip() != "socket-compile-ok":
                 raise RuntimeError(f"unexpected second generated-program output: {second_run.stdout!r}")
+
+            static_first = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                ["-cp", str(classpath), "-main", "StaticInitializerMain"],
+            )
+            require_success(static_first, "static-initialization baseline")
+            request_ids.append(
+                require_baseline_report(
+                    static_first, "static-initialization baseline", "source-resolution-parser"
+                )
+            )
+            if report_int(static_first, "dependency_previous_snapshot", "static-initialization baseline") != 0:
+                raise RuntimeError("static-initialization baseline unexpectedly reused dependency history")
+            static_first_snapshot = report_text(
+                static_first, "dependency_snapshot", "static-initialization baseline"
+            )
+
+            static_initializer_api.write_text(
+                "class StaticInitializerApi { public static function make():Int return 2; }\n",
+                encoding="utf-8",
+            )
+            static_changed = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                ["-cp", str(classpath), "-main", "StaticInitializerMain"],
+            )
+            require_success(static_changed, "static-initialization provider body edit")
+            request_ids.append(
+                require_baseline_report(
+                    static_changed,
+                    "static-initialization provider body edit",
+                    "source-resolution-parser",
+                )
+            )
+            if report_int(
+                static_changed,
+                "dependency_public_changes",
+                "static-initialization provider body edit",
+            ) != 0:
+                raise RuntimeError("static-initialization provider body edit changed its public signature")
+            if report_int(
+                static_changed,
+                "dependency_implementation_changes",
+                "static-initialization provider body edit",
+            ) != 1:
+                raise RuntimeError("static-initialization provider body edit did not change one implementation")
+            if report_int(
+                static_changed,
+                "dependency_predicted_invalidations",
+                "static-initialization provider body edit",
+            ) != 2:
+                raise RuntimeError("static-initialization provider body edit did not reach its consumer")
+            static_changed_text = static_changed.stdout + static_changed.stderr
+            required_static_reason = (
+                "static-initialization:StaticInitializerMain->StaticInitializerApi:"
+                "initializer:StaticInitializerMain#static#value->"
+                "declaration:StaticInitializerApi#static:make()->primitive:Int#0@shared-typing"
+            )
+            if required_static_reason not in static_changed_text:
+                raise RuntimeError(
+                    "static-initialization provider body edit omitted its exact reason path: "
+                    f"{static_changed_text!r}"
+                )
+            static_changed_run = subprocess.run(
+                ["node", str(artifact)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            require_success(static_changed_run, "static-initialization changed program")
+            if static_changed_run.stdout.strip() != "2":
+                raise RuntimeError(
+                    f"static-initialization changed program returned {static_changed_run.stdout!r}"
+                )
+
+            static_initializer_api.write_text(
+                "class StaticInitializerApi { public static function make():Int return 1; }\n",
+                encoding="utf-8",
+            )
+            static_restored = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                ["-cp", str(classpath), "-main", "StaticInitializerMain"],
+            )
+            require_success(static_restored, "restored static-initialization baseline")
+            request_ids.append(
+                require_baseline_report(
+                    static_restored,
+                    "restored static-initialization baseline",
+                    "source-resolution-parser",
+                )
+            )
+            if (
+                report_text(
+                    static_restored,
+                    "dependency_snapshot",
+                    "restored static-initialization baseline",
+                )
+                != static_first_snapshot
+            ):
+                raise RuntimeError("restored static-initialization input did not reproduce snapshot A")
+
+            restored_ordinary = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                ["-cp", str(classpath), "-main", "SocketCompileMain"],
+            )
+            require_success(restored_ordinary, "ordinary compile after static-initialization sequence")
+            request_ids.append(
+                require_baseline_report(
+                    restored_ordinary,
+                    "ordinary compile after static-initialization sequence",
+                    "source-resolution-parser",
+                )
+            )
+            require_compiler_output_equivalent(
+                restored_ordinary,
+                direct_success,
+                "ordinary compile after static-initialization sequence",
+            )
+            if artifact.read_bytes() != direct_artifact_bytes:
+                raise RuntimeError("static-initialization sequence did not restore ordinary target bytes")
 
             for repeat_index in range(STABILITY_REQUEST_COUNT):
                 repeated = run_client(

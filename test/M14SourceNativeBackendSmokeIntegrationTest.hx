@@ -1,7 +1,8 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
 import backend.GenIrProgram;
-import backend.source.SourceTargetCommon.SourceNativeTarget;
+import backend.source.PhpLexicalRenderScope.PhpLexicalScopeKind;
+import backend.source.SourceNativeTarget;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -117,12 +118,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
-	static function protocolLine(key:String, payload:String):String {
-		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
-			"\t", "\\t");
-		return "ast " + key + " " + escaped.length + ":" + escaped;
-	}
-
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -147,6 +142,1061 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	/**
+		Add exact program declaration facts to legacy PHP smoke fixtures.
+
+		Most source-target smokes predate program-indexed typing and deliberately
+		use `TyperStage.typeModule`. Real compiler requests use
+		`typeResolvedModule`, so PHP production rendering now correctly rejects
+		those factless fixtures. This test-only adapter retypes only such legacy
+		fixtures through one shared nominal index. Retyping keeps the exact method
+		declaration, generic parameter types, local environment, and typed body
+		coherent; attaching declarations to an older permissive body would create
+		conflicting semantic facts.
+
+		Keeping the adapter at the PHP backend boundary avoids changing Java,
+		C#, Python, and Lua fixtures whose permissive bring-up behavior is not
+		part of the PHP render-session hard cut.
+	**/
+	static function withExactPhpDeclarationFacts(program:GenIrProgram):GenIrProgram {
+		final sourceModules = program.getTypedModules();
+		var needsRetyping = false;
+		for (module in sourceModules)
+			for (typedClass in module.getTypedClasses()) {
+				if (typedClass.getSemanticInfo() == null)
+					needsRetyping = true;
+				for (typedFunction in typedClass.getFunctions())
+					if (typedFunction.getDeclaration() == null)
+						needsRetyping = true;
+			}
+		if (!needsRetyping)
+			return program;
+		final resolvedModules = [
+			for (module in sourceModules)
+				new ResolvedModule(module.getSourceOrigin().sourceModulePath, module.getParsed().getFilePath(), module.getParsed(), module.getSourceOrigin(),
+					module.getConditionalCompilation(), module.getGeneratedDeclarations())
+		];
+		final index = TyperIndex.build(resolvedModules);
+		final exactModules = new Array<TypedModule>();
+		for (module in resolvedModules)
+			exactModules.push(TyperStage.typeResolvedModule(module, index, null, true));
+		final expanded = MacroStage.expandProgram(exactModules, []);
+		return new MacroExpandedProgram(expanded.getTypedModules(), program.macroMode, program.getGeneratedOcamlModules());
+	}
+
+	/** Return the production PHP backend behind the exact-fact test adapter. **/
+	static function exactPhpBackend():backend.IBackend {
+		final delegate = BackendRegistry.requireForTarget(backend.source.SourceNativeBackend.PHP_TARGET_ID);
+		return new backend.TargetCoreBackend(backend.source.SourceNativeBackend.phpDescriptor(),
+			(program, context) -> delegate.emit(withExactPhpDeclarationFacts(program), context));
+	}
+
+	static function assertPhpSyntaxUtilities():Void {
+		final quoted = backend.source.PhpSyntax.quoteString("slash\\ quote\" dollar$ newline\n return\r tab\t");
+		assertTrue(quoted == "\"slash\\\\ quote\\\" dollar\\$ newline\\n return\\r tab\\t\"",
+			"PHP string syntax should preserve the existing escape contract and prevent variable interpolation");
+
+		final entries = [
+			backend.source.PhpSyntax.assocEntry("z$key", "2"),
+			backend.source.PhpSyntax.assocEntry("a", "1"),
+		];
+		final expression = backend.source.PhpSyntax.assocArrayExpr(entries);
+		assertTrue(expression == "[\"a\" => 1, \"z\\$key\" => 2]", "PHP associative-array syntax should sort rendered entries deterministically");
+		assertTrue(entries[0] == "\"z\\$key\" => 2", "PHP associative-array sorting should not mutate the caller's input");
+
+		final lines = new Array<String>();
+		backend.source.PhpSyntax.appendStaticAssocMap(lines, "  ", "items", entries);
+		assertTrue(lines.join("\n") == ["  static $items = [", "    \"a\" => 1,", "    \"z\\$key\" => 2,", "  ];",].join("\n"),
+			"PHP static associative-map syntax should retain its exact indentation, order, commas, and terminator");
+	}
+
+	static function assertPhpNameUtilities():Void {
+		assertTrue(backend.source.SourceIdentifier.sanitize(null) == "Main", "the shared source identifier helper should preserve the null fallback");
+		assertTrue(backend.source.SourceIdentifier.sanitize("") == "Main", "the shared source identifier helper should preserve the empty fallback");
+		assertTrue(backend.source.SourceIdentifier.sanitize("a-b.c$d") == "a_b_c_d",
+			"the shared source identifier helper should replace only characters outside its ASCII contract");
+
+		assertTrue(backend.source.PhpName.typeIdentifier("CLASS") == "CLASS_", "PHP type identifiers should avoid reserved words case-insensitively");
+		assertTrue(backend.source.PhpName.typeIdentifier("Widget") == "Widget", "ordinary PHP type identifiers should remain unchanged");
+		assertTrue(backend.source.PhpName.valueIdentifier("_SERVER") == "_SERVER_", "PHP value identifiers should avoid predefined superglobal names");
+		assertTrue(backend.source.PhpName.valueIdentifier("_server") == "_server",
+			"PHP value identifiers should preserve case-sensitive non-superglobal names");
+		assertTrue(backend.source.PhpName.globalFunction("array-key-exists") == "array_key_exists",
+			"PHP global function names should use the shared identifier spelling");
+
+		assertTrue(backend.source.PhpName.typePath(null) == "Unknown", "an absent PHP type path should preserve the Unknown fallback");
+		assertTrue(backend.source.PhpName.typePath("std.php.Global") == "php\\Global_",
+			"PHP standard-library paths should drop the std prefix, preserve namespaces, and protect reserved segments");
+		assertTrue(backend.source.PhpName.typePath("haxe.io.Error") == "Error_", "the PHP error compatibility path should preserve its target spelling");
+		assertTrue(backend.source.PhpName.typePath("haxe.ds.StringMap") == "haxe\\ds\\StringMap",
+			"Haxe standard-library paths should retain PHP namespace segments");
+		assertTrue(backend.source.PhpName.typePath("project.model.Widget") == "Widget", "ordinary project paths should retain only their final type segment");
+	}
+
+	static function assertPhpTypedProjectionFailsClosed():Void {
+		final resolvedService = TyType.nominal(new TyNominalTypeId("model.Api"), [TyType.fromHintText("String")], "Service<String>");
+		assertTrue(resolvedService.getCanonicalDisplay() == "model.Api<String>",
+			"canonical semantic type display should use the resolved nominal identity instead of an import alias");
+		final nullableCallback = TyType.nullable(TyType.functionType([resolvedService], TyType.fromHintText("Bool")));
+		assertTrue(nullableCallback.getCanonicalDisplay() == "Null<(model.Api<String>)->Bool>",
+			"canonical semantic type display should preserve nullability, function shape, and resolved nominal arguments");
+		final anonymous = TyType.anonymous(["label", "service"], [TyType.fromHintText("String"), resolvedService]);
+		assertTrue(anonymous.getCanonicalDisplay() == "{label:String,service:model.Api<String>}",
+			"anonymous semantic type display should keep a deterministic field shape and canonical nested identities");
+
+		final mainFunction = new HxFunctionDecl("main", Public, true, [], "Void", [], "");
+		final typedMainFunction = new TypedFunction("Main", 0, mainFunction, null, null,
+			new TypedFunctionBody([], TypedBodyFingerprint.forStatements(HxFunctionDecl.getBody(mainFunction))));
+		final mainIdentity = typedMainFunction.getStableIdentity();
+		final localBinding = new TyLocalBinding(TyLocalId.forSourceDeclaration(mainIdentity, 0, Variable, "service"), "service", resolvedService, Variable);
+		final localProjection = new TypedBackendFunctionProjection(mainIdentity, CompilerTypedTreeRevision.functionBody(typedMainFunction), mainFunction,
+			new TypedBackendLocalCatalog([localBinding]));
+		final localFacts = new backend.source.PhpFunctionLocalFacts(localProjection, value -> value);
+		final firstTypeHints = localFacts.copyTypeHints();
+		assertTrue(firstTypeHints.get("service") == "model.Api<String>", "PHP local facts should expose the canonical type selected by shared typing");
+		firstTypeHints.set("service", "mutated");
+		assertTrue(localFacts.copyTypeHints().get("service") == "model.Api<String>",
+			"PHP local facts should return request-owned copies instead of exposing mutable typed state");
+		final nestedScopeTypes = localFacts.copyTypeHints();
+		@:privateAccess backend.source.SourceTargetCommon.phpSetInferredLocalTypeIfUnknown(nestedScopeTypes, "service", "");
+		assertTrue(nestedScopeTypes.get("service") == "model.Api<String>", "nested PHP scope setup should not erase an exact typed local");
+		nestedScopeTypes.set("unknownValue", "");
+		@:privateAccess backend.source.SourceTargetCommon.phpSetInferredLocalTypeIfUnknown(nestedScopeTypes, "unknownValue", "String");
+		assertTrue(nestedScopeTypes.get("unknownValue") == "String", "nested PHP scope setup should still fill a type that shared typing left unknown");
+
+		final mainClass = new HxClassDecl("Main", true, [mainFunction], []);
+		final declaration = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final fixture = new MacroExpandedProgram([typedSyntheticModule("Main.hx", declaration)], false, []);
+		final typed = fixture.getTypedModules()[0];
+		final projections = new backend.source.PhpTypedProgramProjection(fixture);
+		assertTrue(projections.getProgramRevision() == fixture.getTypedProgramRevision().getCanonicalIdentity(),
+			"the PHP projection should preserve the exact target-neutral program revision supplied by the typed owner");
+		final programFacts = projections.getProgramRenderFacts();
+		assertTrue(programFacts.getProgramRevision() == projections.getProgramRevision(),
+			"PHP program facts should bind to the exact revision carried by the PHP typed projection");
+		assertTrue(programFacts.getSchemaRevision() == "php-program-render-facts-v1",
+			"PHP program facts should expose their target-specific schema separately from the typed-program revision");
+		assertTrue(programFacts.isKnownType("Main"), "PHP program facts should include projected program types");
+		assertTrue(programFacts.findEmittedTypeName("Main") == "Main", "PHP program facts should expose the emitted spelling of an unambiguous type");
+		final mainModuleFacts = projections.getModuleRenderFacts("Main");
+		assertTrue(mainModuleFacts.getProgramRevision() == projections.getProgramRevision(),
+			"PHP module facts should bind to the exact typed-program revision supplied by the projection");
+		assertTrue(mainModuleFacts.getModuleIdentity() == "Main", "PHP module facts should preserve the exact source-module identity");
+		assertTrue(mainModuleFacts.getModuleRevision() == fixture.getTypedProgramRevision().getModules()[0].getCanonicalIdentity(),
+			"PHP module facts should bind to the matching merged typed-module revision");
+		assertTrue(mainModuleFacts.getSchemaRevision() == "php-module-render-facts-v2",
+			"PHP module facts should version target-specific module naming separately");
+		assertTrue(mainModuleFacts.findLocalTypeName("Main") == "Main", "PHP module facts should expose module-local emitted type spelling");
+		final syntheticClassProjection = projections.getModules()[0].projection.getClasses()[0];
+		var missingClassFactsMessage = "";
+		try {
+			syntheticClassProjection.requireSemanticFacts();
+		} catch (error) {
+			missingClassFactsMessage = Std.string(error);
+		}
+		assertContains(missingClassFactsMessage, "no exact semantic facts for Main",
+			"a bring-up class without a program semantic index should fail at the exact fact accessor instead of guessing from source shape");
+		final ownerClass = syntheticClassProjection.getDeclaration();
+		final missing = new HxFunctionDecl("missing", Public, true, [], "Void", [], "");
+		var missingMessage = "";
+		try {
+			projections.requireFunction(missing, ownerClass);
+		} catch (error) {
+			missingMessage = Std.string(error);
+		}
+		assertContains(missingMessage, "Main.Main.missing", "PHP projection misses should identify the exact source module, class, and function");
+
+		var duplicateMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([typed, typed], false, []));
+		} catch (error) {
+			duplicateMessage = Std.string(error);
+		}
+		assertContains(duplicateMessage, "Main.Main.main", "PHP duplicate projections should identify the exact source module, class, and function");
+
+		function classSemanticInfo(reverse:Bool):TyClassInfo {
+			final identity = new TyNominalTypeId("unit.Container.Helper");
+			final fields = new StringMap<TyFieldInfo>();
+			final countField = new TyFieldInfo(identity, "unit.Container", "count", TyType.fromHintText("Int"), false, true, false, false, true, false, "get",
+				"set");
+			final tokenField = new TyFieldInfo(identity, "unit.Container", "token", TyType.fromHintText("String"), true, false, true, true, true, true);
+			if (reverse) {
+				fields.set("token", tokenField);
+				fields.set("count", countField);
+			} else {
+				fields.set("count", countField);
+				fields.set("token", tokenField);
+			}
+			final firstSignature = new TyFunSig("choose", false, ["value"], [TyType.fromHintText("Int")], [false], [false], TyType.fromHintText("String"),
+				HxPos.unknown());
+			final secondSignature = new TyFunSig("choose", false, ["value", "extra"], [TyType.fromHintText("String"), TyType.fromHintText("Dynamic")],
+				[false, true], [false, true], TyType.fromHintText("String"), HxPos.unknown());
+			final firstSource = new HxFunctionDecl("choose", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false, null)], "String",
+				[SReturn(EString("int"), HxPos.unknown())], "");
+			final secondSource = new HxFunctionDecl("choose", Public, false, [
+				new HxFunctionArg("value", "String", NoDefault, false, false, null),
+				new HxFunctionArg("extra", "Dynamic", NoDefault, true, true, null)
+			], "String", [SReturn(EString("string"), HxPos.unknown())], "",
+				["inline", "noImportGlobal"]);
+			final firstDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"), identity, firstSignature, [],
+				firstSource, HxPos.unknown(), false, true, "unit.Container");
+			final secondDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:String:rest#0"), identity, secondSignature,
+				["inline", "noImportGlobal"], secondSource, HxPos.unknown(), true, true, "unit.Container");
+			final declarations = reverse ? [secondDeclaration, firstDeclaration] : [firstDeclaration, secondDeclaration];
+			return new TyClassInfo(identity, "Helper", "unit.Container", fields, new StringMap(), new StringMap(), new StringMap(), new StringMap(),
+				new StringMap(), declarations, Public, false, TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
+		}
+
+		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
+		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v5",
+			"typed backend class facts should version their target-neutral representation");
+		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
+			"typed backend class facts should preserve the exact secondary-type identity");
+		assertTrue(orderedClassFacts.getModuleIdentity() == "unit.Container",
+			"typed backend class facts should keep source-module identity separate from secondary-type identity");
+		assertTrue(orderedClassFacts.getSuperClassIdentity() == "unit.Container.Base",
+			"typed backend class facts should preserve the raw superclass node selected by typing");
+		assertTrue(orderedClassFacts.getSuperTypeIdentity() == "nominal:unit.Container.Base",
+			"typed backend class facts should preserve the exact resolved superclass");
+		assertTrue(orderedClassFacts.getCanonicalIdentity() == reversedClassFacts.getCanonicalIdentity(),
+			"typed backend class facts should not depend on field-map or declaration traversal order");
+		final classFieldFacts = orderedClassFacts.copyFields();
+		assertTrue(classFieldFacts.length == 2, "typed backend class facts should retain every declared semantic field");
+		assertTrue(classFieldFacts[0].canonicalIdentity == "unit.Container.Helper#instance#count",
+			"typed backend class fields should be sorted and keyed by exact declaration identity");
+		assertTrue(classFieldFacts[0].propertyGet == "get" && classFieldFacts[0].propertySet == "set",
+			"typed backend class fields should preserve exact Haxe property accessor modes");
+		assertTrue(classFieldFacts[1].isStatic && classFieldFacts[1].isFinal && classFieldFacts[1].isInline && classFieldFacts[1].hasInitializer
+			&& classFieldFacts[1].noImportGlobal,
+			"typed backend class fields should preserve semantic declaration flags");
+		final classMethodFacts = orderedClassFacts.copyMethods();
+		assertTrue(classMethodFacts.length == 2, "typed backend class facts should keep overload declarations distinct");
+		assertTrue(classMethodFacts[0].canonicalIdentity != classMethodFacts[1].canonicalIdentity,
+			"typed backend class overloads should retain distinct stable declaration identities");
+		final restMethod = classMethodFacts[1];
+		assertTrue(restMethod.arguments.length == 2 && restMethod.arguments[1].isOptional && restMethod.arguments[1].isRest && restMethod.isInline
+			&& restMethod.noImportGlobal,
+			"typed backend class methods should preserve semantic signature and policy facts");
+		classFieldFacts.resize(0);
+		classMethodFacts[1].arguments.resize(0);
+		assertTrue(orderedClassFacts.copyFields().length == 2, "mutating a copied field list should not change typed backend class facts");
+		assertTrue(orderedClassFacts.copyMethods()[1].arguments.length == 2,
+			"mutating copied nested method arguments should not change typed backend class facts");
+
+		final conflictInfo = classSemanticInfo(false);
+		final conflictDeclarations = conflictInfo.getDeclarations();
+		final conflictingSignature = new TyFunSig("different", true, [], [], [], [], TyType.fromHintText("Void"), HxPos.unknown());
+		conflictDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"),
+			new TyNominalTypeId("unit.Container.Helper"), conflictingSignature, [], new HxFunctionDecl("different", Public, true, [], "Void", [], ""),
+			HxPos.unknown(), false, true, "unit.Container"));
+		final conflictingInfo = new TyClassInfo(conflictInfo.getIdentity(), "Helper", "unit.Container", new StringMap(), new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), conflictDeclarations, Public, false);
+		var conflictingClassFactsMessage = "";
+		try {
+			new TypedBackendClassSemanticFacts(conflictingInfo, null);
+		} catch (error) {
+			conflictingClassFactsMessage = Std.string(error);
+		}
+		assertContains(conflictingClassFactsMessage, "conflicting method unit.Container.Helper#choose:Int#0",
+			"typed backend class facts should reject two semantic methods assigned to one declaration identity");
+
+		final foreignIdentity = new TyNominalTypeId("unit.Foreign");
+		final foreignFields = new StringMap<TyFieldInfo>();
+		foreignFields.set("value", new TyFieldInfo(foreignIdentity, "unit.Foreign", "value", TyType.fromHintText("Int"), false, true, false, false, false));
+		final foreignInfo = new TyClassInfo(new TyNominalTypeId("unit.Owner"), "Owner", "unit.Owner", foreignFields, new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), [], Public, false);
+		var foreignFieldMessage = "";
+		try {
+			new TypedBackendClassSemanticFacts(foreignInfo, null);
+		} catch (error) {
+			foreignFieldMessage = Std.string(error);
+		}
+		assertContains(foreignFieldMessage, "foreign field unit.Foreign#instance#value in unit.Owner",
+			"typed backend class facts should reject a field whose semantic owner differs from the enclosing class");
+
+		function emptyClassFacts(classIdentity:String, moduleIdentity:String, ?superType:TyType):TypedBackendClassSemanticFacts {
+			final shortName = classIdentity.indexOf(".") < 0 ? classIdentity : classIdentity.substr(classIdentity.lastIndexOf(".") + 1);
+			final info = new TyClassInfo(new TyNominalTypeId(classIdentity), shortName, moduleIdentity, new StringMap(), new StringMap(), new StringMap(),
+				new StringMap(), new StringMap(), new StringMap(), [], Public, false, superType);
+			return new TypedBackendClassSemanticFacts(info, superType);
+		}
+
+		final leftBaseType = TyType.nominal(new TyNominalTypeId("unit.Left.Base"), [TyType.fromHintText("String")]);
+		final leftBaseFacts = emptyClassFacts("unit.Left.Base", "unit.Left");
+		final rightBaseFacts = emptyClassFacts("unit.Right.Base", "unit.Right");
+		final childFacts = emptyClassFacts("unit.Child", "unit.Child", leftBaseType);
+		final orderedGraph = new TypedBackendClassGraph("typed-program-revision", [rightBaseFacts, childFacts, leftBaseFacts]);
+		final reversedGraph = new TypedBackendClassGraph("typed-program-revision", [leftBaseFacts, childFacts, rightBaseFacts]);
+		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v3",
+			"typed backend class graphs should version their target-neutral representation");
+		assertTrue(orderedGraph.getCanonicalIdentity() == reversedGraph.getCanonicalIdentity(),
+			"typed backend class graphs should not depend on module or class traversal order");
+		assertTrue(orderedGraph.getCanonicalIdentity() != new TypedBackendClassGraph("other-program-revision",
+			[rightBaseFacts, childFacts, leftBaseFacts]).getCanonicalIdentity(),
+			"typed backend class graph identity should include the exact typed-program revision");
+		final childNode = orderedGraph.findNode("unit.Child");
+		assertTrue(childNode != null && childNode.superClassIdentity == "unit.Left.Base",
+			"the exact child edge should select the correct same-short-name superclass node");
+		assertTrue(childNode.superTypeIdentity == "nominal:unit.Left.Base<primitive:String>"
+			&& childNode.superTypeDisplay == "unit.Left.Base<String>",
+			"the child edge should retain its applied generic superclass separately from the raw parent node");
+		final completeLineage = orderedGraph.requireLineage("unit.Child");
+		assertTrue(completeLineage.length == 2
+			&& completeLineage[0].classIdentity == "unit.Child"
+			&& completeLineage[1].classIdentity == "unit.Left.Base",
+			"strict lineage should follow exact child-to-root identities without selecting the other Base");
+		completeLineage.resize(0);
+		assertTrue(orderedGraph.requireLineage("unit.Child").length == 2, "mutating a returned lineage should not change the immutable class graph");
+
+		final mutableTypeArguments = [TyType.fromHintText("String")];
+		final immutableAppliedType = TyType.nominal(new TyNominalTypeId("unit.Generic"), mutableTypeArguments);
+		mutableTypeArguments.resize(0);
+		final returnedTypeArguments = immutableAppliedType.getTypeArguments();
+		returnedTypeArguments.resize(0);
+		assertTrue(immutableAppliedType.getTypeArguments().length == 1,
+			"published semantic types should defend both constructor inputs and returned type-argument arrays");
+
+		final genericBaseIdentity = new TyNominalTypeId("unit.GenericBase");
+		final genericBaseParameter = TyTypeParameterId.nominal(genericBaseIdentity, 0, "T");
+		final genericBaseParameterType = TyType.typeParameter(genericBaseParameter);
+		final structuralSubstitution = TyTypeSubstitution.bind([genericBaseParameter], [TyType.fromHintText("String")], "unit.GenericBase");
+		final specializedStructuralType = TyTypeSubstitution.apply(TyType.anonymous(["pending", "callback"], [
+			TyType.unresolved("Future", [genericBaseParameterType]),
+			TyType.nullable(TyType.functionType([genericBaseParameterType], TyType.nominal(new TyNominalTypeId("Array"), [genericBaseParameterType])))
+		]), structuralSubstitution);
+		assertTrue(specializedStructuralType.getCanonicalDisplay() == "{callback:Null<(String)->Array<String>>,pending:Future<String>}"
+			&& TyTypeSubstitution.parameterIdentities(specializedStructuralType).length == 0,
+			"structural substitution should cover anonymous fields, nullable functions, nominal results, and unresolved applications");
+		final genericBaseFields = new StringMap<TyFieldInfo>();
+		genericBaseFields.set("values",
+			new TyFieldInfo(genericBaseIdentity, "unit.GenericBase", "values", TyType.nominal(new TyNominalTypeId("Array"), [genericBaseParameterType]),
+				false, true, false, false, false));
+		final genericBaseDeclarations = new Array<TyDeclarationInfo>();
+		final classParameterSignature = new TyFunSig("take", false, ["value"], [genericBaseParameterType], [false], [false], genericBaseParameterType,
+			HxPos.unknown());
+		genericBaseDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.GenericBase#take#0"), genericBaseIdentity, classParameterSignature, [],
+			new HxFunctionDecl("take", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], ""), HxPos.unknown(), false,
+			true, "unit.GenericBase"));
+		final shadowParameter = TyTypeParameterId.method(genericBaseIdentity, false, "shadow", 0, 0, "T");
+		final shadowParameterType = TyType.typeParameter(shadowParameter);
+		final shadowSignature = new TyFunSig("shadow", false, ["value"], [shadowParameterType], [false], [false], shadowParameterType, HxPos.unknown());
+		genericBaseDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.GenericBase#shadow#0"), genericBaseIdentity, shadowSignature,
+			[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"],
+			new HxFunctionDecl("shadow", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], "",
+				[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"]),
+			HxPos.unknown(), false, true, "unit.GenericBase", false, [shadowParameter]));
+		final genericBaseInfo = new TyClassInfo(genericBaseIdentity, "GenericBase", "unit.GenericBase", genericBaseFields, new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), genericBaseDeclarations, Public, false, null, [genericBaseParameter]);
+		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null);
+
+		final genericMiddleIdentity = new TyNominalTypeId("unit.GenericMiddle");
+		final genericMiddleParameter = TyTypeParameterId.nominal(genericMiddleIdentity, 0, "U");
+		final genericMiddleSuper = TyType.nominal(genericBaseIdentity, [
+			TyType.nominal(new TyNominalTypeId("Array"), [TyType.typeParameter(genericMiddleParameter)])
+		]);
+		final genericMiddleInfo = new TyClassInfo(genericMiddleIdentity, "GenericMiddle", "unit.GenericMiddle", new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericMiddleSuper, [genericMiddleParameter]);
+		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper);
+
+		final genericChildIdentity = new TyNominalTypeId("unit.GenericChild");
+		final genericChildSuper = TyType.nominal(genericMiddleIdentity, [TyType.fromHintText("String")]);
+		final genericChildInfo = new TyClassInfo(genericChildIdentity, "GenericChild", "unit.GenericChild", new StringMap(), new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericChildSuper);
+		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper);
+		final unrelatedBaseIdentity = new TyNominalTypeId("other.GenericBase");
+		final unrelatedBaseParameter = TyTypeParameterId.nominal(unrelatedBaseIdentity, 0, "T");
+		final unrelatedBaseFacts = new TypedBackendClassSemanticFacts(new TyClassInfo(unrelatedBaseIdentity, "GenericBase", "other.GenericBase",
+			new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, null,
+			[unrelatedBaseParameter]),
+			null);
+
+		final specializedGraph = new TypedBackendClassGraph("generic-program-revision",
+			[unrelatedBaseFacts, genericBaseFacts, genericMiddleFacts, genericChildFacts]);
+		final specializedLineage = specializedGraph.requireSpecializedLineage("unit.GenericChild");
+		assertTrue(specializedLineage.length == 3
+			&& specializedLineage[1].bindings[0].typeIdentity == "primitive:String"
+			&& specializedLineage[2].bindings[0].typeIdentity == "nominal:Array<primitive:String>",
+			"generic lineage should compose exact child-to-parent bindings without selecting a same-short-name class");
+		final specializedBase = specializedLineage[2];
+		assertTrue(specializedBase.fields[0].typeIdentity == "nominal:Array<nominal:Array<primitive:String>>"
+			&& specializedBase.fields[0].typeDisplay == "Array<Array<String>>",
+			"multi-hop specialization should preserve nested structural field types");
+		final specializedMethodsByName = new StringMap<TypedBackendClassSemanticFacts.TypedBackendClassMethodFact>();
+		for (method in specializedBase.methods)
+			specializedMethodsByName.set(method.name, method);
+		final specializedTake = specializedMethodsByName.get("take");
+		final specializedShadow = specializedMethodsByName.get("shadow");
+		assertTrue(specializedTake != null
+			&& specializedTake.arguments[0].typeIdentity == "nominal:Array<primitive:String>"
+			&& specializedTake.returnTypeIdentity == "nominal:Array<primitive:String>",
+			"class-parameter method signatures should specialize through the exact applied superclass edge");
+		assertTrue(specializedShadow != null
+			&& specializedShadow.arguments[0].semanticType.getTypeParameterIdentity().equals(shadowParameter)
+			&& specializedShadow.returnSemanticType.getTypeParameterIdentity().equals(shadowParameter),
+			"a same-name method binder should remain distinct from and untouched by class substitution");
+		specializedLineage[2].fields.resize(0);
+		assertTrue(specializedGraph.requireSpecializedLineage("unit.GenericChild")[2].fields.length == 1,
+			"mutating returned specialized members should not change the immutable graph");
+		final appliedGenericBase = specializedGraph.requireSpecializedLineageForType(TyType.nominal(genericBaseIdentity,
+			[TyType.functionType([TyType.fromHintText("Int")], TyType.fromHintText("String"))]));
+		final appliedGenericFieldType = appliedGenericBase[0].fields[0].semanticType;
+		final appliedGenericFieldArguments = appliedGenericFieldType.getTypeArguments();
+		assertTrue(appliedGenericFieldArguments.length == 1
+			&& appliedGenericFieldArguments[0].isFunction()
+			&& appliedGenericBase[0].fields[0].typeIdentity == "nominal:Array<function:(primitive:Int)->primitive:String>",
+			"an exact applied receiver type should specialize generic fields before target member dispatch");
+
+		final missingGenericArgsInfo = new TyClassInfo(new TyNominalTypeId("unit.RawChild"), "RawChild", "unit.RawChild", new StringMap(), new StringMap(),
+			new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, TyType.nominal(genericBaseIdentity, []));
+		var genericArityMessage = "";
+		try {
+			new TypedBackendClassGraph("generic-program-revision", [
+				genericBaseFacts,
+				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType())
+			]).requireSpecializedLineage("unit.RawChild");
+		} catch (error) {
+			genericArityMessage = Std.string(error);
+		}
+		assertContains(genericArityMessage, "semantic type substitution arity mismatch for unit.RawChild -> unit.GenericBase",
+			"generic lineage should fail rather than leave a parent class parameter unbound");
+
+		final missingParentGraph = new TypedBackendClassGraph("typed-program-revision", [rightBaseFacts, childFacts]);
+		final missingLineage = missingParentGraph.traceLineage("unit.Child");
+		assertTrue(!missingLineage.complete
+			&& missingLineage.nodes.length == 1
+			&& missingLineage.missingParentIdentity == "unit.Left.Base",
+			"an absent exact parent node should remain distinguishable from a root class");
+		var missingParentMessage = "";
+		try {
+			missingParentGraph.requireLineage("unit.Child");
+		} catch (error) {
+			missingParentMessage = Std.string(error);
+		}
+		assertContains(missingParentMessage, "missing superclass unit.Left.Base while tracing unit.Child",
+			"strict lineage should fail at the first absent exact parent");
+
+		var conflictingGraphMessage = "";
+		try {
+			new TypedBackendClassGraph("typed-program-revision", [childFacts, emptyClassFacts("unit.Child", "unit.Child")]);
+		} catch (error) {
+			conflictingGraphMessage = Std.string(error);
+		}
+		assertContains(conflictingGraphMessage, "conflicting class unit.Child",
+			"the class graph should reject two different facts assigned to one exact class identity");
+
+		var selfInheritanceMessage = "";
+		try {
+			new TypedBackendClassGraph("typed-program-revision", [
+				emptyClassFacts("unit.Self", "unit.Self", TyType.nominal(new TyNominalTypeId("unit.Self"), []))
+			]);
+		} catch (error) {
+			selfInheritanceMessage = Std.string(error);
+		}
+		assertContains(selfInheritanceMessage, "self-inheritance for unit.Self", "the class graph should reject an exact self edge");
+
+		var cycleMessage = "";
+		try {
+			new TypedBackendClassGraph("typed-program-revision", [
+				emptyClassFacts("unit.CycleA", "unit.CycleA", TyType.nominal(new TyNominalTypeId("unit.CycleB"), [])),
+				emptyClassFacts("unit.CycleB", "unit.CycleB", TyType.nominal(new TyNominalTypeId("unit.CycleA"), []))
+			]);
+		} catch (error) {
+			cycleMessage = Std.string(error);
+		}
+		assertContains(cycleMessage, "inheritance cycle", "the class graph should reject a multi-node superclass cycle");
+
+		var unresolvedParentMessage = "";
+		try {
+			new TypedBackendClassGraph("typed-program-revision", [
+				emptyClassFacts("unit.UnresolvedChild", "unit.UnresolvedChild", TyType.unresolved("MissingBase", []))
+			]).traceLineage("unit.UnresolvedChild");
+		} catch (error) {
+			unresolvedParentMessage = Std.string(error);
+		}
+		assertContains(unresolvedParentMessage, "cannot identify nominal superclass node for unit.UnresolvedChild",
+			"lineage consumers should stop instead of parsing an unresolved superclass display");
+
+		final classFactsSource = [
+			"package unit;",
+			"class Foo {}",
+			"class Base {",
+			"  public var inherited:Int;",
+			"  public function new() {}",
+			"}",
+			"class Helper extends Base {",
+			"  public var count:Int = 1;",
+			"  public function choose(value:Int):String return Std.string(value);",
+			"}",
+		].join("\n");
+		final classFactsResolved = new ResolvedModule("unit.Container", "unit/Container.hx", ParserStage.parse(classFactsSource, "unit/Container.hx"));
+		final classFactsIndex = TyperIndex.build([classFactsResolved]);
+		final classFactsTyped = TyperStage.typeResolvedModule(classFactsResolved, classFactsIndex);
+		var projectedHelperFacts:Null<TypedBackendClassSemanticFacts> = null;
+		for (projectedClass in classFactsTyped.getBackendProjection().getClasses()) {
+			final facts = projectedClass.requireSemanticFacts();
+			if (facts.getClassIdentity() == "unit.Container.Helper")
+				projectedHelperFacts = facts;
+		}
+		assertTrue(projectedHelperFacts != null,
+			"the strict backend projection should carry semantic facts for a secondary class in a differently named module");
+		assertTrue(projectedHelperFacts.getModuleIdentity() == "unit.Container",
+			"the projected secondary class should preserve its exact source-module identity");
+		assertTrue(projectedHelperFacts.getSuperClassIdentity() == "unit.Container.Base",
+			"the projected secondary class should preserve the raw superclass node selected by typing");
+		assertTrue(projectedHelperFacts.getSuperTypeIdentity() == "nominal:unit.Container.Base",
+			"the projected secondary class should preserve the superclass selected by typing");
+		assertTrue(projectedHelperFacts.copyFields()[0].canonicalIdentity == "unit.Container.Helper#instance#count",
+			"the projected secondary class should expose its exact declared field identity");
+		final projectedClassProgram = new MacroExpandedProgram([classFactsTyped], false, []);
+		final projectedClassGraph = new backend.source.PhpTypedProgramProjection(projectedClassProgram).getClassGraph();
+		assertTrue(projectedClassGraph.getProgramRevision() == projectedClassProgram.getTypedProgramRevision().getCanonicalIdentity(),
+			"the observed class graph should bind to the exact typed-program revision carried by the PHP projection");
+		final projectedHelperLineage = projectedClassGraph.requireLineage("unit.Container.Helper");
+		assertTrue(projectedHelperLineage.length == 2 && projectedHelperLineage[1].classIdentity == "unit.Container.Base",
+			"the lazy PHP observation should expose the exact target-neutral superclass chain");
+
+		final planSource = [
+			"package unit;",
+			"class PlanBase<T> {",
+			"  public var values:Array<T>;",
+			"  public function new() {}",
+			"  public function take(value:T):T return value;",
+			"  public function shadow<T>(value:T):T return value;",
+			"}",
+		].join("\n");
+		final planMiddleSource = ["package unit;", "class PlanMiddle<U> extends PlanBase<Array<U>> {}",].join("\n");
+		final planChildSource = [
+			"package unit;",
+			"class PlanChild extends PlanMiddle<String> {",
+			'  public var label:String = "label";',
+			"  public function new() { super(); }",
+			"  public function run(value:String, ...rest:Int):String {",
+			"    var local = value;",
+			"    return label + local;",
+			"  }",
+			"}",
+		].join("\n");
+		final planBaseResolved = new ResolvedModule("unit.PlanBase", "unit/PlanBase.hx", ParserStage.parse(planSource, "unit/PlanBase.hx"));
+		final planMiddleResolved = new ResolvedModule("unit.PlanMiddle", "unit/PlanMiddle.hx", ParserStage.parse(planMiddleSource, "unit/PlanMiddle.hx"));
+		final planChildResolved = new ResolvedModule("unit.PlanChild", "unit/PlanChild.hx", ParserStage.parse(planChildSource, "unit/PlanChild.hx"));
+		final sameShortNameSource = [
+			"package other;",
+			"class Container { public function new() {} }",
+			"class PlanBase { public function new() {} }",
+		].join("\n");
+		final sameShortNameResolved = new ResolvedModule("other.Container", "other/Container.hx", ParserStage.parse(sameShortNameSource, "other/Container.hx"));
+		final planIndex = TyperIndex.build([planBaseResolved, planMiddleResolved, planChildResolved, sameShortNameResolved]);
+		final planBaseTyped = TyperStage.typeResolvedModule(planBaseResolved, planIndex);
+		final planMiddleTyped = TyperStage.typeResolvedModule(planMiddleResolved, planIndex);
+		final planChildTyped = TyperStage.typeResolvedModule(planChildResolved, planIndex);
+		final sameShortNameTyped = TyperStage.typeResolvedModule(sameShortNameResolved, planIndex);
+		final planProgram = new MacroExpandedProgram([sameShortNameTyped, planChildTyped, planBaseTyped, planMiddleTyped], false, []);
+		final planProjection = new backend.source.PhpTypedProgramProjection(planProgram);
+		var runDeclaration:Null<HxFunctionDecl> = null;
+		var runProjection:Null<TypedBackendFunctionProjection> = null;
+		var planChildFacts:Null<TypedBackendClassSemanticFacts> = null;
+		for (module in planProjection.getModules())
+			if (module.moduleIdentity == "unit.PlanChild")
+				for (projectedClass in module.projection.getClasses()) {
+					final facts = projectedClass.requireSemanticFacts();
+					planChildFacts = facts;
+					for (projectedFunction in projectedClass.getFunctions())
+						if (HxFunctionDecl.getName(projectedFunction.getDeclaration()) == "run") {
+							runDeclaration = projectedFunction.getDeclaration();
+							runProjection = projectedFunction;
+						}
+				}
+		assertTrue(runDeclaration != null && runProjection != null && planChildFacts != null,
+			"the typed PHP fixture should expose the exact PlanChild.run projection and class facts");
+		final functionPlan = planProjection.requireFunctionLoweringPlan(runDeclaration);
+		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v5",
+			"the PHP function plan should version target-specific selection separately");
+		assertTrue(functionPlan.getProgramRevision() == planProgram.getTypedProgramRevision().getCanonicalIdentity()
+			&& functionPlan.getModuleIdentity() == "unit.PlanChild"
+			&& functionPlan.getClassIdentity() == "unit.PlanChild"
+			&& functionPlan.getEmittedClassName() == "PlanChild",
+			"the PHP function plan should bind exact program, module, class, and emitted owner identities despite a same-short-name class");
+		assertTrue(functionPlan.getFunctionIdentity() == functionPlan.copyCurrentMethod().canonicalIdentity
+			&& functionPlan.getBodyRevision().length > 0
+			&& functionPlan.copyParameterBindingIdentities().length == 2,
+			"the PHP function plan should bind one exact method and sealed body revision");
+		final copiedParameterBindings = functionPlan.copyParameterBindingIdentities();
+		copiedParameterBindings.resize(0);
+		assertTrue(functionPlan.copyParameterBindingIdentities().length == 2,
+			"callers should not be able to mutate the function plan's ordered parameter identities");
+		final planFieldReads = functionPlan.copyFieldReads();
+		assertTrue(planFieldReads.length == 1
+			&& planFieldReads[0].canonicalIdentity == "unit.PlanChild#instance#label"
+			&& planFieldReads[0].typeIdentity == "primitive:String",
+			"the PHP function plan should preserve one exact bare-field owner and semantic type");
+		assertTrue(functionPlan.getCanonicalIdentity() == planProjection.requireFunctionLoweringPlan(runDeclaration).getCanonicalIdentity(),
+			"rebuilding an equivalent function plan should produce the same deterministic identity");
+		final valueSlotPlan = new backend.source.PhpFunctionLoweringPlan(planProjection.getProgramRenderFacts(),
+			planProjection.getModuleRenderFacts("unit.PlanChild"), planProjection.getClassGraph(), planChildFacts, true, runProjection);
+		assertTrue(valueSlotPlan.usesThisValueSlot() && valueSlotPlan.getCanonicalIdentity() != functionPlan.getCanonicalIdentity(),
+			"the PHP function plan should identity-bind the class-wide this-value representation");
+		final emptyProgramLookups:backend.source.PhpProgramBodyRenderer.PhpProgramLegacyRenderFacts = {
+			instanceMethodsByType: new haxe.ds.StringMap(),
+			instanceMethodArgumentsByType: new haxe.ds.StringMap(),
+			instanceFieldsByType: new haxe.ds.StringMap(),
+			instanceFieldTypeHintsByType: new haxe.ds.StringMap(),
+			dynamicMethodsByType: new haxe.ds.StringMap(),
+			staticMethodsByType: new haxe.ds.StringMap(),
+			staticOverloadsByType: new haxe.ds.StringMap(),
+			instanceOverloadsByType: new haxe.ds.StringMap(),
+			genericStaticFunctionsByType: new haxe.ds.StringMap(),
+			staticCallableFieldsByType: new haxe.ds.StringMap(),
+			classBaseTypes: new haxe.ds.StringMap(),
+			stringExtensionMethodsByClass: new haxe.ds.StringMap(),
+			enumConstructors: new haxe.ds.StringMap(),
+			ambiguousEnumConstructors: new haxe.ds.StringMap(),
+			enumConstructorsByEnum: new haxe.ds.StringMap(),
+			enumAbstractValues: new haxe.ds.StringMap(),
+			ambiguousEnumAbstractValues: new haxe.ds.StringMap()
+		};
+		final valueSlotProgramRenderer = new backend.source.PhpProgramBodyRenderer(planProjection.getProgramRenderFacts(), [
+			{
+				moduleIdentity: "unit.PlanChild",
+				facts: planProjection.getModuleRenderFacts("unit.PlanChild")
+			}
+		], planProjection.getClassGraph(), emptyProgramLookups);
+		final valueSlotRenderer = new backend.source.PhpFunctionBodyRenderer(valueSlotProgramRenderer, planProjection.getProgramRenderFacts(),
+			planProjection.getModuleRenderFacts("unit.PlanChild"), valueSlotPlan);
+		switch (backend.source.SourceFunctionRenderFrame.SourceFunctionRenderFrameTools.forPhpRenderer(valueSlotRenderer)) {
+			case PhpFunction(_, scope):
+				assertTrue(scope.usesThisValueSlot(), "the request-owned renderer should activate the sealed class-wide this-value representation");
+			case Program(_):
+				throw "the PHP function renderer should create a function frame";
+		}
+		var mismatchedPlanMessage = "";
+		try {
+			new backend.source.PhpFunctionLoweringPlan(planProjection.getProgramRenderFacts(), planProjection.getModuleRenderFacts("unit.PlanChild"),
+				new TypedBackendClassGraph("wrong-program-revision", [planChildFacts]), planChildFacts, false, runProjection);
+		} catch (error) {
+			mismatchedPlanMessage = Std.string(error);
+		}
+		assertContains(mismatchedPlanMessage, "mismatched typed-program revisions",
+			"the PHP function plan should reject facts assembled from different exact program revisions");
+
+		final plannedLineage = functionPlan.copySpecializedLineage();
+		assertTrue(plannedLineage.length == 3
+			&& plannedLineage[0].classIdentity == "unit.PlanChild"
+			&& plannedLineage[2].classIdentity == "unit.PlanBase",
+			"the PHP function plan should preserve exact child-to-root inheritance groups");
+		final plannedBase = plannedLineage[2];
+		assertTrue(plannedBase.fields[0].typeDisplay == "Array<Array<String>>",
+			"the PHP function plan should preserve multi-hop structural field specialization");
+		final plannedMethodsByName = new StringMap<TypedBackendClassSemanticFacts.TypedBackendClassMethodFact>();
+		for (method in plannedBase.methods)
+			plannedMethodsByName.set(method.name, method);
+		final plannedTake = plannedMethodsByName.get("take");
+		final plannedShadow = plannedMethodsByName.get("shadow");
+		assertTrue(plannedTake != null
+			&& plannedTake.arguments[0].typeDisplay == "Array<String>"
+			&& plannedTake.returnTypeDisplay == "Array<String>",
+			"the PHP function plan should preserve specialized inherited method arguments and results");
+		assertTrue(plannedShadow != null
+			&& plannedShadow.typeParameters.length == 1
+			&& plannedShadow.arguments[0].semanticType.getTypeParameterIdentity().equals(plannedShadow.typeParameters[0])
+			&& plannedShadow.returnSemanticType.getTypeParameterIdentity().equals(plannedShadow.typeParameters[0]),
+			"the PHP function plan should preserve a method binder that shadows a class binder");
+		plannedLineage[2].fields.resize(0);
+		assertTrue(functionPlan.copySpecializedLineage()[2].fields.length == 1, "callers should not be able to mutate the function plan's specialized lineage");
+
+		var valueTarget = "";
+		var restTarget = "";
+		var localTarget = "";
+		for (local in functionPlan.copyLocals())
+			switch (local.sourceName) {
+				case "value":
+					valueTarget = local.targetName;
+				case "rest":
+					restTarget = local.targetName;
+					assertTrue(local.isRestCarrier && local.targetTypeHint == "Array<RestValue>",
+						"the PHP function plan should retain the explicit target rest-array carrier");
+				case "local":
+					localTarget = local.targetName;
+				case _:
+			}
+		assertTrue(valueTarget.length > 0 && restTarget.length > 0 && localTarget.length > 0,
+			"the PHP function plan should carry exact parameter and nested local identities");
+		final rootScope = backend.source.PhpLexicalRenderScope.forFunction(functionPlan);
+		assertTrue(rootScope.findLocal(valueTarget) != null
+			&& rootScope.findLocal(restTarget) != null
+			&& rootScope.findLocal(localTarget) == null,
+			"the PHP function scope should activate exact parameters but not declarations whose lexical point has not been entered");
+		final blockScope = rootScope.derive(Block).withPlannedLocal(localTarget);
+		final siblingScope = rootScope.derive(Block);
+		assertTrue(blockScope.getDepth() == 1 && blockScope.findLocal(localTarget) != null && siblingScope.findLocal(localTarget) == null,
+			"activating a local in one block should not mutate its parent or sibling");
+		final syntheticScope = blockScope.withSyntheticLocal("__hxhx_tmp").withTargetTypeHint("__hxhx_tmp", "String");
+		assertTrue(syntheticScope.getDepth() == blockScope.getDepth()
+			&& syntheticScope.findLocal("__hxhx_tmp").targetTypeHint == "String"
+			&& blockScope.findLocal("__hxhx_tmp") == null,
+			"a target-synthetic local may receive a bounded type hint without mutating its parent");
+		var exactTypeReplacementMessage = "";
+		try {
+			rootScope.withTargetTypeHint(valueTarget, "Int");
+		} catch (error) {
+			exactTypeReplacementMessage = Std.string(error);
+		}
+		assertContains(exactTypeReplacementMessage, "cannot replace exact type String",
+			"the PHP function scope should reject a target hint that replaces an exact semantic type");
+		final lambdaScope = blockScope.derive(Lambda)
+			.withReferenceCapture(valueTarget)
+			.withOptionalLambdaArgument(valueTarget)
+			.withThisValueSlot(true)
+			.withThisCapture("__hxhx_this");
+		assertTrue(lambdaScope.copyReferenceCaptures().join("|") == valueTarget
+			&& lambdaScope.copyOptionalLambdaArguments().join("|") == valueTarget
+			&& lambdaScope.usesThisValueSlot()
+			&& lambdaScope.getThisCaptureName() == "__hxhx_this",
+			"lambda capture and this-carrier state should remain explicit on the derived scope");
+		final initializedScope = blockScope.withInitializer(localTarget, EString("planned"));
+		final copiedInitializers = initializedScope.copyInitializers();
+		copiedInitializers.remove(localTarget);
+		assertTrue(initializedScope.copyInitializers().exists(localTarget), "callers should not be able to mutate a lexical scope's initializer map");
+		assertTrue(rootScope.derive(Loop).getKind().match(Loop)
+			&& rootScope.derive(Catch).getKind().match(Catch)
+			&& rootScope.derive(SwitchCase).getKind().match(SwitchCase),
+			"loop, catch, and switch-case scopes should be independent explicit derivations");
+
+		final shadowSource = [
+			"package unit;",
+			"class ShadowBox<T> {",
+			"  public var stored:T;",
+			"  public function new(value:T) stored = value;",
+			"  public function echo<T>(value:T):T return value;",
+			"}"
+		].join("\n");
+		final shadowResolved = new ResolvedModule("unit.ShadowBox", "unit/ShadowBox.hx", ParserStage.parse(shadowSource, "unit/ShadowBox.hx"));
+		final shadowIndex = TyperIndex.build([shadowResolved]);
+		final shadowInfo = cast(shadowIndex.getByFullName("unit.ShadowBox"), TyClassInfo);
+		final shadowClassParameter = shadowInfo.getTypeParameterIds()[0];
+		final shadowDeclaration = [
+			for (declaration in shadowInfo.getDeclarations())
+				if (declaration.getSignature().getName() == "echo") declaration
+		][0];
+		final shadowMethodParameter = shadowDeclaration.getTypeParameterIds()[0];
+		final storedParameter = shadowInfo.fieldType("stored").getTypeParameterIdentity();
+		final argumentParameter = shadowDeclaration.getSignature().getArgs()[0].getTypeParameterIdentity();
+		final resultParameter = shadowDeclaration.getSignature().getReturnType().getTypeParameterIdentity();
+		assertTrue(shadowClassParameter != null && shadowMethodParameter != null && storedParameter != null && argumentParameter != null
+			&& resultParameter != null,
+			"semantic indexing should resolve every declared generic use to a binder identity (field="
+			+ shadowInfo.fieldType("stored").getSemanticKey()
+			+ ", argument="
+			+ shadowDeclaration.getSignature().getArgs()[0].getSemanticKey()
+				+ ", result="
+				+ shadowDeclaration.getSignature().getReturnType().getSemanticKey()
+				+ ")");
+		assertTrue(!shadowClassParameter.equals(shadowMethodParameter)
+			&& storedParameter.equals(shadowClassParameter)
+			&& argumentParameter.equals(shadowMethodParameter)
+			&& resultParameter.equals(shadowMethodParameter),
+			"semantic indexing should preserve method parameter shadowing through exact binder identities");
+
+		function namingProgram(reverse:Bool, renameSecondShared:Bool = false, omitSecond:Bool = false):MacroExpandedProgram {
+			final firstMain = new HxClassDecl("First", false);
+			final firstShared = new HxClassDecl("Shared", false, [], [], "", ["__hxhx_abstract"]);
+			final firstDecl = new HxModuleDecl("a", [], firstMain, [firstMain, firstShared], false, false);
+			final secondMain = new HxClassDecl("Second", false);
+			final secondShared = new HxClassDecl(renameSecondShared ? "Renamed" : "Shared", false, [], [], "", [], true);
+			final secondDecl = new HxModuleDecl("b", [], secondMain, [secondMain, secondShared], false, false);
+			final modules = [typedSyntheticModule("a/First.hx", firstDecl)];
+			if (!omitSecond)
+				modules.push(typedSyntheticModule("b/Second.hx", secondDecl));
+			if (reverse)
+				modules.reverse();
+			return new MacroExpandedProgram(modules, false, []);
+		}
+
+		function namingFixture(reverse:Bool, renameSecondShared:Bool = false, omitSecond:Bool = false):backend.source.PhpTypedProgramProjection
+			return new backend.source.PhpTypedProgramProjection(namingProgram(reverse, renameSecondShared, omitSecond));
+
+		function sortedBoolMapKeys(values:haxe.ds.StringMap<Bool>):Array<String> {
+			final keys = [for (key in values.keys()) key];
+			keys.sort((left, right) -> Reflect.compare(left, right));
+			return keys;
+		}
+
+		function sortedStringMapFacts(values:haxe.ds.StringMap<String>):Array<String> {
+			final keys = [for (key in values.keys()) key];
+			keys.sort((left, right) -> Reflect.compare(left, right));
+			return [for (key in keys) key + "=>" + values.get(key)];
+		}
+
+		final orderedNaming = namingFixture(false);
+		final reversedNaming = namingFixture(true);
+		final orderedFacts = orderedNaming.getProgramRenderFacts();
+		final reversedFacts = reversedNaming.getProgramRenderFacts();
+		assertTrue(orderedFacts.getCanonicalIdentity() == reversedFacts.getCanonicalIdentity(),
+			"equivalent PHP naming facts should not depend on module traversal or fresh allocation order");
+		assertTrue(orderedFacts.getProgramRevision() == reversedFacts.getProgramRevision(),
+			"equivalent reordered fixtures should retain one exact typed-program revision");
+		assertTrue(orderedFacts.isDuplicateTypeName("Shared"), "PHP program facts should mark an ambiguous short type spelling");
+		assertTrue(orderedFacts.findEmittedTypeName("Shared") == null, "an ambiguous PHP short type spelling should not silently select one module");
+		assertTrue(orderedFacts.findEmittedTypeName("a.Shared") == "First_Shared",
+			"the first secondary type should be disambiguated with its Haxe module name");
+		assertTrue(orderedFacts.findEmittedTypeName("b.Shared") == "Second_Shared",
+			"the second secondary type should be disambiguated with its Haxe module name");
+		assertTrue(orderedFacts.isAbstractType("a.Shared"), "PHP program facts should preserve explicit abstract membership");
+		assertTrue(orderedFacts.isInterfaceTypeName("Second_Shared"), "PHP program facts should preserve interface membership by emitted name");
+
+		final parityProgram = namingProgram(false, true);
+		final parityDecl = parityProgram.getTypedModules()[0].getBackendDeclaration();
+		final legacyKnownNames = @:privateAccess backend.source.SourceTargetCommon.phpProgramKnownTypeNameMap(parityProgram, parityDecl);
+		final legacyAbstractNames = @:privateAccess backend.source.SourceTargetCommon.phpProgramAbstractTypeNameMap(parityProgram, parityDecl);
+		final legacyDuplicateNames = @:privateAccess backend.source.SourceTargetCommon.phpProgramDuplicateTypeNameMap(parityProgram, parityDecl);
+		final legacyEmittedNames = @:privateAccess backend.source.SourceTargetCommon.phpProgramEmittedTypeNameMap(parityProgram, parityDecl);
+		final legacyInterfaceNames = @:privateAccess backend.source.SourceTargetCommon.phpProgramInterfaceTypeNameMap(parityProgram, parityDecl);
+		final parityFacts = new backend.source.PhpTypedProgramProjection(parityProgram).getProgramRenderFacts();
+		assertTrue(parityFacts.copyKnownTypeNames().join("|") == sortedBoolMapKeys(legacyKnownNames).join("|"),
+			"PHP program facts should reproduce every legacy known-type observation for an unambiguous projected program");
+		assertTrue(parityFacts.copyAbstractTypeNames().join("|") == sortedBoolMapKeys(legacyAbstractNames).join("|"),
+			"PHP program facts should reproduce every legacy abstract-type observation for an unambiguous projected program");
+		assertTrue(parityFacts.copyDuplicateTypeNames().join("|") == sortedBoolMapKeys(legacyDuplicateNames).join("|"),
+			"PHP program facts should reproduce every legacy duplicate-name observation for an unambiguous projected program");
+		assertTrue(parityFacts.copyInterfaceTypeNames().join("|") == sortedBoolMapKeys(legacyInterfaceNames).join("|"),
+			"PHP program facts should reproduce every legacy interface observation for an unambiguous projected program");
+		final parityEmittedFacts = [
+			for (fact in parityFacts.copyEmittedTypeNames())
+				fact.lookup + "=>" + fact.emitted
+		];
+		assertTrue(parityEmittedFacts.join("|") == sortedStringMapFacts(legacyEmittedNames).join("|"),
+			"PHP program facts should reproduce every legacy emitted-name observation for an unambiguous projected program");
+
+		final differentlyNamedMain = new HxClassDecl("Foo", false);
+		final differentlyNamedHelper = new HxClassDecl("Helper", false);
+		final differentlyNamedDecl = new HxModuleDecl("unit", [], differentlyNamedMain, [differentlyNamedMain, differentlyNamedHelper], false, false);
+		final differentlyNamedProgram = new MacroExpandedProgram([typedSyntheticModule("unit/Container.hx", differentlyNamedDecl)], false, []);
+		final differentlyNamedFacts = new backend.source.PhpTypedProgramProjection(differentlyNamedProgram).getProgramRenderFacts();
+		assertTrue(differentlyNamedFacts.findEmittedTypeName("unit.Container.Helper") == "Helper",
+			"PHP program facts should qualify a secondary type with its exact source-module identity");
+		assertTrue(differentlyNamedFacts.findEmittedTypeName("unit.Foo.Helper") == null,
+			"PHP program facts should not invent module identity from a differently named main class");
+		final differentlyNamedModuleFacts = new backend.source.PhpTypedProgramProjection(differentlyNamedProgram).getModuleRenderFacts("unit.Container");
+		assertTrue(differentlyNamedModuleFacts.findLocalTypeName("Foo") == "Foo",
+			"PHP module facts should keep the main class under its exact source-module identity");
+		assertTrue(differentlyNamedModuleFacts.findLocalTypeName("Helper") == "Helper",
+			"PHP module facts should keep secondary types under their exact source-module identity");
+
+		final copiedKnownNames = orderedFacts.copyKnownTypeNames();
+		copiedKnownNames.resize(0);
+		assertTrue(orderedFacts.isKnownType("a.Shared"), "mutating a copied known-type list should not change PHP program facts");
+		final copiedEmittedNames = orderedFacts.copyEmittedTypeNames();
+		copiedEmittedNames.resize(0);
+		assertTrue(orderedFacts.findEmittedTypeName("a.Shared") == "First_Shared", "mutating a copied emitted-name list should not change PHP program facts");
+
+		final removedFacts = namingFixture(false, false, true).getProgramRenderFacts();
+		final renamedFacts = namingFixture(false, true).getProgramRenderFacts();
+		assertTrue(orderedFacts.getCanonicalIdentity() != removedFacts.getCanonicalIdentity(),
+			"removing a projected type should change the PHP program-fact identity");
+		assertTrue(orderedFacts.getCanonicalIdentity() != renamedFacts.getCanonicalIdentity(),
+			"renaming a projected type should change the PHP program-fact identity");
+
+		final bytesAlias = HxModuleDirective.aliasImport("haxe.io.Bytes", "Data");
+		final bytesClass = new HxClassDecl("UsesBytes", false);
+		final bytesDecl = new HxModuleDecl("aliasing", [bytesAlias], bytesClass, [bytesClass], false, false);
+		final typedBytes = withResolvedDirectives(typedSyntheticModule("aliasing/UsesBytes.hx", bytesDecl), [
+			new TyModuleDirective(bytesAlias, TypeImport, [new TyNominalTypeId("haxe.io.Bytes")])
+		]);
+		final aliasProgram = new MacroExpandedProgram([typedBytes], false, []);
+		final aliasProjection = new backend.source.PhpTypedProgramProjection(aliasProgram);
+		final aliasFacts = aliasProjection.getModuleRenderFacts("aliasing.UsesBytes");
+		assertTrue(aliasFacts.findImportedTypeAlias("Data") == "\\haxe\\io\\Bytes",
+			"PHP module facts should derive runtime-support aliases from exact resolved import providers");
+		final legacyLocalTypeNames = @:privateAccess backend.source.SourceTargetCommon.phpModuleLocalTypeNameMap(bytesDecl);
+		final legacyTypeAliases = @:privateAccess backend.source.SourceTargetCommon.phpProgramTypeAliasMap(aliasProgram, bytesDecl);
+		final observedLocalTypeNames = [
+			for (fact in aliasFacts.copyLocalTypeNames())
+				fact.source + "=>" + fact.emitted
+		];
+		final observedTypeAliases = [
+			for (fact in aliasFacts.copyImportedTypeAliases())
+				fact.local + "=>" + fact.qualified
+		];
+		assertTrue(observedLocalTypeNames.join("|") == sortedStringMapFacts(legacyLocalTypeNames).join("|"),
+			"PHP module facts should reproduce the legacy local type-name table for one unambiguous module");
+		assertTrue(observedTypeAliases.join("|") == sortedStringMapFacts(legacyTypeAliases).join("|"),
+			"PHP module facts should reproduce the legacy type-alias table for one unambiguous module");
+		final copiedLocalTypeNames = aliasFacts.copyLocalTypeNames();
+		copiedLocalTypeNames.resize(0);
+		final copiedTypeAliases = aliasFacts.copyImportedTypeAliases();
+		copiedTypeAliases.resize(0);
+		assertTrue(aliasFacts.findLocalTypeName("UsesBytes") == "UsesBytes", "mutating copied local type facts should not change the PHP module record");
+		assertTrue(aliasFacts.findImportedTypeAlias("Data") == "\\haxe\\io\\Bytes", "mutating copied alias facts should not change the PHP module record");
+
+		final plainClass = new HxClassDecl("Plain", false);
+		final plainDecl = new HxModuleDecl("aliasing", [], plainClass, [plainClass], false, false);
+		final typedPlain = typedSyntheticModule("aliasing/Plain.hx", plainDecl);
+		final aliasIsolationProgram = new MacroExpandedProgram([typedBytes, typedPlain], false, []);
+		final aliasIsolationProjection = new backend.source.PhpTypedProgramProjection(aliasIsolationProgram);
+		assertTrue(aliasIsolationProjection.getModuleRenderFacts("aliasing.UsesBytes").findImportedTypeAlias("Data") == "\\haxe\\io\\Bytes",
+			"the importing module should retain its exact resolved PHP runtime alias");
+		assertTrue(aliasIsolationProjection.getModuleRenderFacts("aliasing.Plain").findImportedTypeAlias("Data") == null,
+			"a module that did not import a type should not inherit another module's PHP alias");
+		final legacyLeakedAliases = @:privateAccess backend.source.SourceTargetCommon.phpProgramTypeAliasMap(aliasIsolationProgram, plainDecl);
+		assertTrue(legacyLeakedAliases.get("Data") == "\\haxe\\io\\Bytes",
+			"the observation fixture should keep recording that the legacy program-wide map leaks another module's alias");
+
+		final reversedAliasProjection = new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([typedPlain, typedBytes], false, []));
+		assertTrue(aliasIsolationProjection.getModuleRenderFacts("aliasing.UsesBytes")
+			.getCanonicalIdentity() == reversedAliasProjection.getModuleRenderFacts("aliasing.UsesBytes")
+			.getCanonicalIdentity(),
+			"PHP module facts should not depend on typed-module traversal order");
+
+		final bytesInputAlias = HxModuleDirective.aliasImport("haxe.io.BytesInput", "Data");
+		final conflictingAliasClass = new HxClassDecl("ConflictingAlias", false);
+		final conflictingAliasDecl = new HxModuleDecl("aliasing", [bytesAlias, bytesInputAlias], conflictingAliasClass, [conflictingAliasClass], false, false);
+		final conflictingAliasTyped = withResolvedDirectives(typedSyntheticModule("aliasing/ConflictingAlias.hx", conflictingAliasDecl), [
+			new TyModuleDirective(bytesAlias, TypeImport, [new TyNominalTypeId("haxe.io.Bytes")]),
+			new TyModuleDirective(bytesInputAlias, TypeImport, [new TyNominalTypeId("haxe.io.BytesInput")])
+		]);
+		var conflictingAliasMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([conflictingAliasTyped], false,
+				[])).getModuleRenderFacts("aliasing.ConflictingAlias");
+		} catch (error) {
+			conflictingAliasMessage = Std.string(error);
+		}
+		assertContains(conflictingAliasMessage, "assign conflicting imported alias Data in aliasing.ConflictingAlias",
+			"PHP module facts should reject two resolved providers assigned to one local alias");
+
+		final conflictClass = new HxClassDecl("Conflict", false);
+		final conflictInterface = new HxClassDecl("Conflict", false, [], [], "", [], true);
+		final conflictDecl = new HxModuleDecl("same", [], conflictClass, [conflictClass], false, false);
+		final conflictInterfaceDecl = new HxModuleDecl("same", [], conflictInterface, [conflictInterface], false, false);
+		var projectedConflictMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([
+				typedSyntheticModule("same/Conflict.hx", conflictDecl),
+				typedSyntheticModule("same/Conflict.hx", conflictInterfaceDecl)
+			], false, [])).getProgramRenderFacts();
+		} catch (error) {
+			projectedConflictMessage = Std.string(error);
+		}
+		assertContains(projectedConflictMessage, "conflicting projected type same.Conflict",
+			"PHP program facts should reject contradictory facts for one exact projected type");
+
+		final collisionMain = new HxClassDecl("First", false);
+		final collisionSecondary = new HxClassDecl("Shared", false);
+		final collisionDecl = new HxModuleDecl("", [], collisionMain, [collisionMain, collisionSecondary], false, false);
+		final collidingPackageClass = new HxClassDecl("Shared", false);
+		final collidingPackageDecl = new HxModuleDecl("First", [], collidingPackageClass, [collidingPackageClass], false, false);
+		var emittedConflictMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([
+				typedSyntheticModule("First.hx", collisionDecl),
+				typedSyntheticModule("First/Shared.hx", collidingPackageDecl)
+			], false, [])).getProgramRenderFacts();
+		} catch (error) {
+			emittedConflictMessage = Std.string(error);
+		}
+		assertContains(emittedConflictMessage, "assign conflicting emitted names to First.Shared",
+			"PHP program facts should reject order-dependent emitted-name overwrites before rendering");
+
+		final firstSharedMain = new HxClassDecl("Shared", false);
+		final secondSharedMain = new HxClassDecl("Shared", false, [], [], "", [], true);
+		final firstSharedDecl = new HxModuleDecl("a", [], firstSharedMain, [firstSharedMain], false, false);
+		final secondSharedDecl = new HxModuleDecl("b", [], secondSharedMain, [secondSharedMain], false, false);
+		var reverseCollisionMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([
+				typedSyntheticModule("a/Shared.hx", firstSharedDecl),
+				typedSyntheticModule("b/Shared.hx", secondSharedDecl)
+			], false, [])).getProgramRenderFacts();
+		} catch (error) {
+			reverseCollisionMessage = Std.string(error);
+		}
+		assertContains(reverseCollisionMessage, "assign emitted type Shared to both a.Shared and b.Shared",
+			"PHP program facts should reject two exact types that flatten to one emitted PHP name");
+
+		final upperCaseClass = new HxClassDecl("CaseType", false);
+		final lowerCaseClass = new HxClassDecl("casetype", false);
+		final upperCaseDecl = new HxModuleDecl("a", [], upperCaseClass, [upperCaseClass], false, false);
+		final lowerCaseDecl = new HxModuleDecl("b", [], lowerCaseClass, [lowerCaseClass], false, false);
+		var caseInsensitiveCollisionMessage = "";
+		try {
+			new backend.source.PhpTypedProgramProjection(new MacroExpandedProgram([
+				typedSyntheticModule("a/CaseType.hx", upperCaseDecl),
+				typedSyntheticModule("b/casetype.hx", lowerCaseDecl)
+			], false, [])).getProgramRenderFacts();
+		} catch (error) {
+			caseInsensitiveCollisionMessage = Std.string(error);
+		}
+		assertContains(caseInsensitiveCollisionMessage, "assign emitted type casetype to both a.CaseType and b.casetype",
+			"PHP program facts should reject emitted class names that differ only by PHP-insensitive case");
+
+		final renderParsed = ParserStage.parse("class Main { public static function main():Void {} }", "Main.hx");
+		final renderTyped = TyperStage.typeModule(renderParsed);
+		final renderFixture = new MacroExpandedProgram([renderTyped], false, []);
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_projection_lifecycle_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final backend = exactPhpBackend();
+		final directRoot = Path.join([tmpRoot, "direct"]);
+		final repeatedRoot = Path.join([tmpRoot, "repeated"]);
+		final projectionFailureRoot = Path.join([tmpRoot, "projection-failure"]);
+		final supportFailureRoot = Path.join([tmpRoot, "support-failure"]);
+		final afterFailureRoot = Path.join([tmpRoot, "after-failure"]);
+		final changedRoot = Path.join([tmpRoot, "changed"]);
+		final returnedRoot = Path.join([tmpRoot, "returned"]);
+		final afterResetRoot = Path.join([tmpRoot, "after-reset"]);
+		backend.emit(renderFixture, new BackendContext(directRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(repeatedRoot, null, "Main", true, false, new StringMap<String>()));
+		final direct = File.getContent(Path.join([directRoot, "index.php"]));
+		final repeated = File.getContent(Path.join([repeatedRoot, "index.php"]));
+		assertTrue(repeated == direct, "a repeated PHP strict-projection request changed generated output");
+		var backendFailure = "";
+		try {
+			backend.emit(new MacroExpandedProgram([renderTyped, renderTyped], false, []),
+				new BackendContext(projectionFailureRoot, null, "Main", true, false, new StringMap<String>()));
+		} catch (error) {
+			backendFailure = Std.string(error);
+		}
+		assertContains(backendFailure, "Main.Main.main", "a failed PHP request should retain the exact duplicate projection identity");
+		var supportRenderFailure = "";
+		try {
+			backend.emit(phpSupportRenderFailureProgram(), new BackendContext(supportFailureRoot, null, "Main", true, false, new StringMap<String>()));
+		} catch (error) {
+			supportRenderFailure = Std.string(error);
+		}
+		assertContains(supportRenderFailure, "unsupported __php__ intrinsic arguments",
+			"a failed PHP support render should reach function rendering after the request-owned program renderer is sealed");
+		assertTrue(!FileSystem.exists(Path.join([supportFailureRoot, "index.php"])), "a failed PHP support render should not publish partial target bytes");
+		backend.emit(renderFixture, new BackendContext(afterFailureRoot, null, "Main", true, false, new StringMap<String>()));
+		final afterFailure = File.getContent(Path.join([afterFailureRoot, "index.php"]));
+		assertTrue(afterFailure == direct, "a failed PHP projection or support-render request changed the next generated output");
+		final changedParsed = ParserStage.parse('class Main { public static function main():Void { Sys.println("changed"); } }', "Main.hx");
+		final changedFixture = new MacroExpandedProgram([TyperStage.typeModule(changedParsed)], false, []);
+		backend.emit(changedFixture, new BackendContext(changedRoot, null, "Main", true, false, new StringMap<String>()));
+		final changed = File.getContent(Path.join([changedRoot, "index.php"]));
+		assertTrue(changed != direct && changed.indexOf('"changed"') >= 0, "the middle B request should produce distinct PHP before the A→B→A isolation check");
+		backend.emit(renderFixture, new BackendContext(returnedRoot, null, "Main", true, false, new StringMap<String>()));
+		final returned = File.getContent(Path.join([returnedRoot, "index.php"]));
+		assertTrue(returned == direct, "an A→B→A PHP sequence retained render state from the middle program");
+		CompilerRequestStaticState.reset();
+		backend.emit(renderFixture, new BackendContext(afterResetRoot, null, "Main", true, false, new StringMap<String>()));
+		final afterReset = File.getContent(Path.join([afterResetRoot, "index.php"]));
+		assertTrue(afterReset == direct, "request-state reset changed request-owned PHP rendering");
+		if (commandExists("php")) {
+			final directRun = commandOutput("php", [Path.join([directRoot, "index.php"])]);
+			final repeatedRun = commandOutput("php", [Path.join([repeatedRoot, "index.php"])]);
+			final afterFailureRun = commandOutput("php", [Path.join([afterFailureRoot, "index.php"])]);
+			final changedRun = commandOutput("php", [Path.join([changedRoot, "index.php"])]);
+			final returnedRun = commandOutput("php", [Path.join([returnedRoot, "index.php"])]);
+			final afterResetRun = commandOutput("php", [Path.join([afterResetRoot, "index.php"])]);
+			for (result in [directRun, repeatedRun, afterFailureRun, changedRun, returnedRun, afterResetRun])
+				assertTrue(result.code == 0, "PHP request lifecycle output should execute, stderr:\n" + result.stderr);
+			for (result in [repeatedRun, afterFailureRun, returnedRun, afterResetRun])
+				assertTrue(result.stdout == directRun.stdout && result.stderr == directRun.stderr,
+					"equivalent PHP request lifecycle outputs should retain direct runtime behavior");
+			assertTrue(changedRun.stdout == "changed\n", "the middle B request should execute its distinct PHP behavior");
+		}
+		deleteRecursive(tmpRoot);
 	}
 
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
@@ -178,6 +1228,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      Sys.println(\"loop\");",
 			"    } while (true);",
 			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	/**
+		Build a PHP program whose non-entry support class fails only while its
+		typed body is rendered.
+
+		Program/module facts and the request-owned program renderer are already
+		sealed by that point. The invalid intrinsic is deliberate: it proves an
+		exception inside support rendering cannot leak PHP lookup state into the
+		next request.
+	**/
+	static function phpSupportRenderFailureProgram():GenIrProgram {
+		final src = [
+			"class BrokenSupport {",
+			"  public static function fail():Void {",
+			"    untyped __php__(1);",
+			"  }",
+			"}",
+			"class Main {",
+			"  public static function main():Void {}",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
@@ -688,48 +1763,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	}
 
 	static function csScopedLocalBlockProgram():GenIrProgram {
-		final pos = HxPos.unknown();
-		final body:Array<HxStmt> = [
-			SBlock([
-				SVar("expected", "", EString("first"), pos),
-				SVar("result", "", EString("first"), pos)
-			], pos),
-			SBlock([
-				SVar("expected", "", EString("second"), pos),
-				SVar("result", "", EString("second"), pos)
-			], pos),
-			SBlock([SVar("n", "", EInt(1), pos)], pos),
-			SBlock([SVar("n", "", EInt(2), pos)], pos)
-		];
-		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
-		final mainClass = new HxClassDecl("Main", true, [mainFn]);
-		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
-		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    {",
+			"      var expected = \"first\";",
+			"      var result = \"first\";",
+			"    }",
+			"    {",
+			"      var expected = \"second\";",
+			"      var result = \"second\";",
+			"    }",
+			"    { var n = 1; }",
+			"    { var n = 2; }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
 	}
 
 	static function csDuplicateLocalShadowProgram():GenIrProgram {
-		final pos = HxPos.unknown();
-		function println(expr:HxExpr):HxStmt {
-			return SExpr(ECall(EField(EIdent("Sys"), "println"), [expr]), pos);
-		}
-		final body:Array<HxStmt> = [
-			SVar("expected", "", EString("first"), pos),
-			println(EIdent("expected")),
-			SVar("expected", "", EString("second"), pos),
-			println(EIdent("expected")),
-			SVar("result", "", EIdent("expected"), pos),
-			println(EIdent("result")),
-			SVar("result", "", EString("third"), pos),
-			println(EIdent("result")),
-			SVar("n", "", EInt(1), pos),
-			println(EIdent("n")),
-			SVar("n", "", EInt(2), pos),
-			println(EIdent("n"))
-		];
-		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
-		final mainClass = new HxClassDecl("Main", true, [mainFn]);
-		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
-		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var expected = \"first\";",
+			"    Sys.println(expected);",
+			"    var result = \"third\";",
+			"    Sys.println(result);",
+			"    var n = 1;",
+			"    Sys.println(n);",
+			"    {",
+			"      var expected = \"second\";",
+			"      Sys.println(expected);",
+			"      var result = expected;",
+			"      Sys.println(result);",
+			"      var n = 2;",
+			"      Sys.println(n);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
 	}
 
 	static function csRawIntrinsicAndSameClassStaticProgram():GenIrProgram {
@@ -863,7 +1941,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		return MacroStage.expandProgram([typed], []);
 	}
 
@@ -1504,9 +2583,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  NeverShowSuccessResults;",
 			"}",
 		].join("\n");
-		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "tests/unit/src/unit/Main.hx"));
-		final typedEnum = TyperStage.typeModule(ParserStage.parse(enumSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx"));
-		return MacroStage.expandProgram([typedMain, typedEnum], []);
+		final resolved = [
+			new ResolvedModule("unit.Main", "tests/unit/src/unit/Main.hx", ParserStage.parse(mainSrc, "tests/unit/src/unit/Main.hx")),
+			new ResolvedModule("utest.ui.common.HeaderDisplayMode", "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx",
+				ParserStage.parse(enumSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx")),
+		];
+		final index = TyperIndex.build(resolved);
+		return MacroStage.expandProgram([
+			for (module in resolved)
+				TyperStage.typeResolvedModule(module, index)
+		], []);
 	}
 
 	static function phpMacroTypeProgram():GenIrProgram {
@@ -1979,7 +3065,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function phpNativeProtocolNullableProbeProgram():GenIrProgram {
+	static function phpHaxeParserNullableProbeProgram():GenIrProgram {
 		final body = [
 			"final nullableBool:Null<Bool> = false;",
 			"final testNullBool = nullBool ?? nullableBool;",
@@ -1994,21 +3080,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}"
 		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "Main"),
-			"ast static_main 1",
-			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
-			protocolLine("method", "main|public|1||Void||||"),
-			protocolLine("method_body", "main\n" + body),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, src);
-		final typed = TyperStage.typeModule(new ParsedModule(src, decl, "Main.hx"));
+		final typed = TyperStage.typeModule(ParserStage.parse(src, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function phpNativeProtocolUpstreamNullCoalescingProbeProgram():GenIrProgram {
+	static function phpHaxeParserUpstreamNullCoalescingProbeProgram():GenIrProgram {
 		final body = [
 			"eq(true, 0 != 1 ?? 2);",
 			"var a = call() ?? \"default\";",
@@ -2051,31 +3127,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}"
 		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("package", "unit"),
-			protocolLine("class", "unit.TestNullCoalescing"),
-			"ast static_main 1",
-			protocolLine("field", ["nullInt", "private", "0", "Int", "null"].join("\n")),
-			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
-			protocolLine("field", ["nullFloat", "private", "0", "Float", "null"].join("\n")),
-			protocolLine("field", ["count", "private", "0", "Int", "0"].join("\n")),
-			protocolLine("method", "eq|public|0|a,b|Void|||a:Dynamic,b:Dynamic|"),
-			protocolLine("method_body", "eq\nif (a != b) throw \"expected \" + Std.string(a) + \" but it is \" + Std.string(b);"),
-			protocolLine("method", "f|public|0|value|Void|||value:Bool|"),
-			protocolLine("method_body", "f\nif (value) throw \"expected false\";"),
-			protocolLine("method", "t|public|0|value|Void|||value:Bool|"),
-			protocolLine("method_body", "t\nif (!value) throw \"expected true\";"),
-			protocolLine("method", "call|private|0||String||||"),
-			protocolLine("method_body", "call\ncount++;\nreturn \"_\";"),
-			protocolLine("method", "main|public|1||Void||||"),
-			protocolLine("method_body", "main\n"),
-			protocolLine("method", "test|public|0||Void||||"),
-			protocolLine("method_body", "test\n" + body),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final typed = TyperStage.typeModule(new ParsedModule(source, decl, "unit/TestNullCoalescing.hx"));
+		final typed = TyperStage.typeModule(ParserStage.parse(source, "unit/TestNullCoalescing.hx"));
 		return MacroStage.expandProgram([typed], []);
 	}
 
@@ -2097,11 +3149,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final source = [
 			"package unit;",
 			"class TestNullCoalescing {",
+			"  final nullInt:Null<Int> = null;",
 			"  final nullBool:Null<Bool> = null;",
 			"  function test() {",
 			"    final nullableBool:Null<Bool> = false;",
 			"    final testBool = this.nullBool ?? true;",
 			"    final testNullBool = this.nullBool ?? nullableBool;",
+			"    final s:Int = this.nullInt == null ? 2 : this.nullInt;",
 			"  }",
 			"}"
 		].join("\n");
@@ -2112,6 +3166,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(typedLocalDisplay(fn, "nullableBool") == "Null<Bool>", "typed local should preserve explicit Null<Bool> hint");
 		assertTrue(typedLocalDisplay(fn, "testBool") == "Bool", "null coalescing with non-null rhs should infer Bool");
 		assertTrue(typedLocalDisplay(fn, "testNullBool") == "Null<Bool>", "null coalescing with nullable rhs should infer Null<Bool>");
+		assertTrue(typedLocalDisplay(fn, "s") == "Int", "an explicit Int local should remain non-null after a null-refining ternary initializer");
 	}
 
 	static function phpTypedAsHelperProbeProgram():GenIrProgram {
@@ -2467,7 +3522,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
 		final mainClass = new HxClassDecl("Main", true, [mainFn]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
-		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		return MacroStage.expandProgram([TyperStage.typeModule(new ParsedModule("", mainDecl, "Main.hx"))], []);
 	}
 
 	static function phpLoopCaptureProgram():GenIrProgram {
@@ -2822,32 +3877,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function phpLoweredAbstractCastTypeErrorProbeProgram():GenIrProgram {
-		final pos = HxPos.unknown();
-		final badIntProbe:HxExpr = ECall(EIdent("typeError"), [ECall(ELambda([], ECall(ELambda(["i"], ENull), [EIdent("z")])), [])]);
-		final badStringProbe:HxExpr = ECall(EIdent("typeError"), [
-			ECall(ELambda(["z"], ECall(ELambda(["s"], ENull), [EIdent("z")])), [ENew("AbstractBase", [EInt(12)])])
-		]);
-		final badScopedStringProbe:HxExpr = ECall(EIdent("typeError"), [
-			ECall(ELambda([], ECall(ELambda(["s"], ENull), [ECall(EIdent("__hxhx_copy_value"), [EIdent("z__hx_scope_1")])])), [])
-		]);
-		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
-			SVar("z", "", ENull, pos),
-			SVar("z__hx_scope_1", "", ENull, pos),
-			SVar("badInt", "", badIntProbe, pos),
-			SVar("badString", "", badStringProbe, pos),
-			SVar("badScopedString", "", badScopedStringProbe, pos),
-			SVar("tester", "", ENew("TestHarness", []), pos),
-			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badInt")])]), pos),
-			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badString")])]), pos),
-			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badScopedString")])]), pos),
-			SExpr(ECall(EField(EIdent("tester"), "t"), [badScopedStringProbe]), pos)
-		], "");
-		final mainClass = new HxClassDecl("Main", true, [mainFn]);
-		final harnessFn = new HxFunctionDecl("t", HxVisibility.Public, false, [new HxFunctionArg("value", "Bool", NoDefault)], "Void", [], "");
-		final harnessClass = new HxClassDecl("TestHarness", false, [harnessFn]);
-		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass, harnessClass], false, false);
-		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	static function phpTypedAbstractCastTypeErrorProbeProgram():GenIrProgram {
+		final src = [
+			"class AbstractBase<T> {",
+			"  public var value:T;",
+			"  public function new(value:T) this.value = value;",
+			"}",
+			"class AbstractZ<T> {}",
+			"class TestHarness {",
+			"  public function new() {}",
+			"  public function t(value:Bool) {}",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var z:AbstractZ<String> = new AbstractBase(\"foo\");",
+			"    var badInt = typeError({ var i:Int = z; });",
+			"    var badString = typeError({ var z:AbstractZ<Int> = new AbstractBase(12); var s:String = z; });",
+			"    var badScopedString = typeError({ var z:AbstractZ<Int> = new AbstractBase(12); { var s:String = z; } });",
+			"    var tester = new TestHarness();",
+			"    Sys.println(Std.string(badInt));",
+			"    Sys.println(Std.string(badString));",
+			"    Sys.println(Std.string(badScopedString));",
+			"    tester.t(typeError({ var z:AbstractZ<Int> = new AbstractBase(12); var s:String = z; }));",
+			"  }",
+			"}",
+		].join("\n");
+		return MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(src, "Main.hx"))], []);
 	}
 
 	static function phpFollowWithAbstractsProbeProgram():GenIrProgram {
@@ -3024,8 +4079,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		]);
 		final pointDecl = new HxModuleDecl("", [], pointClass, [pointClass], false, false);
 		return MacroStage.expandProgram([
-			typedSyntheticModule("Main.hx", mainDecl),
-			typedSyntheticModule("Point.hx", pointDecl)
+			TyperStage.typeModule(new ParsedModule("", mainDecl, "Main.hx")),
+			TyperStage.typeModule(new ParsedModule("", pointDecl, "Point.hx"))
 		], []);
 	}
 
@@ -3140,7 +4195,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var point = new MyPoint3(1, 2, 3);",
-			"    var neg = -point;",
+			"    var neg:MyPoint3 = -point;",
 			"    Sys.println(Std.string(neg != point));",
 			"    Sys.println(Std.string(point));",
 			"    Sys.println(neg.toString());",
@@ -4808,7 +5863,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	}
 
 	static function phpSyntaxIntrinsicProgram():GenIrProgram {
-		final src = [
+		final mainSrc = [
 			"import php.Syntax;",
 			"import php.Boot;",
 			"class Dummy {}",
@@ -4827,9 +5882,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+		final syntaxSrc = [
+			"package php;",
+			"extern class Syntax {",
+			"  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;",
+			"  static function field(value:Dynamic, field:String):Dynamic;",
+			"  static function instanceof(value:Dynamic, type:Dynamic):Bool;",
+			"}",
+		].join("\n");
+		final bootSrc = [
+			"package php;",
+			"extern class Boot {",
+			"  static function castClass(value:Dynamic):Dynamic;",
+			"}",
+		].join("\n");
+		final resolved = [
+			new ResolvedModule("Main", "Main.hx", ParserStage.parse(mainSrc, "Main.hx")),
+			new ResolvedModule("php.Syntax", "php/Syntax.hx", ParserStage.parse(syntaxSrc, "php/Syntax.hx")),
+			new ResolvedModule("php.Boot", "php/Boot.hx", ParserStage.parse(bootSrc, "php/Boot.hx")),
+		];
+		final index = TyperIndex.build(resolved);
+		return MacroStage.expandProgram([
+			for (module in resolved)
+				TyperStage.typeResolvedModule(module, index)
+		], []);
 	}
 
 	static function phpSuperGlobalIntrinsicProgram():GenIrProgram {
@@ -7004,7 +8080,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function luaIssue9530StringMethodProgram():GenIrProgram {
 		final src = [
 			"class Main {",
-			"  static var f = \"field\";",
+			"  static var f:String = \"field\";",
 			"  static function main() {",
 			"    var sclass = new String(\"foo\");",
 			"    var scl = sclass.toUpperCase();",
@@ -7021,9 +8097,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(src, "Main.hx"));
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		return MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader, true)], []);
 	}
 
 	static function luaTraceLineProgram():GenIrProgram {
@@ -7438,7 +8516,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function javaFileSystemFullPathProgram(linkPath:String):GenIrProgram {
 		final escapedLink = StringTools.replace(linkPath, "\\", "\\\\");
-		final src = [
+		final mainSource = [
 			"import sys.FileSystem;",
 			"",
 			"class Main {",
@@ -7447,8 +8525,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
+		final fileSystemSource = [
+			"package sys;",
+			"extern class FileSystem {",
+			"  static public function fullPath(path:String):String;",
+			"}",
+		].join("\n");
+		final resolved = [
+			new ResolvedModule("Main", "Main.hx", ParserStage.parse(mainSource, "Main.hx")),
+			new ResolvedModule("sys.FileSystem", "sys/FileSystem.hx", ParserStage.parse(fileSystemSource, "sys/FileSystem.hx")),
+		];
+		final index = TyperIndex.build(resolved);
+		final typed = TyperStage.typeResolvedModule(resolved[0], index);
 		return MacroStage.expandProgram([typed], []);
 	}
 
@@ -7456,7 +8544,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget(targetId);
+		final backend = targetId == backend.source.SourceNativeBackend.PHP_TARGET_ID ? exactPhpBackend() : BackendRegistry.requireForTarget(targetId);
 		final defines = new StringMap<String>();
 		defines.set(label, "1");
 		final result = backend.emit(program(label), new BackendContext(tmpRoot, null, "Main", true, false, defines));
@@ -7760,10 +8848,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final entryContent = File.getContent(entrySourcePath);
 			assertContains(entryContent, "    {\n        var expected = \"first\";",
 				"C# scoped-local regression should wrap the first Haxe block in a C# block");
-			assertContains(entryContent, "    {\n        var expected = \"second\";",
-				"C# scoped-local regression should wrap the second Haxe block in a C# block");
+			assertContains(entryContent, "    {\n        var expected_1 = \"second\";",
+				"C# scoped-local regression should wrap the second Haxe block and preserve its distinct typed local identity");
 			assertContains(entryContent, "    {\n        var n = 1;", "C# scoped-local regression should wrap the first repeated numeric local in a C# block");
-			assertContains(entryContent, "    {\n        var n = 2;", "C# scoped-local regression should wrap the second repeated numeric local in a C# block");
+			assertContains(entryContent, "    {\n        var n_1 = 2;",
+				"C# scoped-local regression should wrap the second repeated numeric local and preserve its distinct typed identity");
 			assertNotContains(entryContent, "    var expected = \"first\";\n    var result = \"first\";\n    var expected = \"second\";",
 				"C# scoped-local regression should not flatten sibling Haxe blocks into one C# local scope");
 		} catch (e:Dynamic) {
@@ -7793,12 +8882,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final content = File.getContent(entrySourcePath);
 			assertContains(content, "var expected = \"first\";", "C# duplicate-local regression should keep the first declaration unsuffixed");
 			assertContains(content, "System.Console.WriteLine(expected);", "C# duplicate-local regression should read the first local before shadowing");
-			assertContains(content, "var expected__hx_scope_1 = \"second\";", "C# duplicate-local regression should suffix the second declaration");
-			assertContains(content, "System.Console.WriteLine(expected__hx_scope_1);", "C# duplicate-local regression should read the suffixed shadow local");
-			assertContains(content, "var result = expected__hx_scope_1;", "C# duplicate-local regression should bind later initializers to the latest shadow");
-			assertContains(content, "var result__hx_scope_1 = \"third\";", "C# duplicate-local regression should suffix repeated result declarations");
+			assertContains(content, "var expected_1 = \"second\";",
+				"C# duplicate-local regression should render the second declaration with its distinct typed local spelling");
+			assertContains(content, "System.Console.WriteLine(expected_1);", "C# duplicate-local regression should read the exact typed shadow local");
+			assertContains(content, "var result = \"third\";", "C# duplicate-local regression should keep the outer result declaration unsuffixed");
+			assertContains(content, "var result_1 = expected_1;",
+				"C# duplicate-local regression should bind the exact nested result identity to the exact expected shadow");
 			assertContains(content, "var n = 1;", "C# duplicate-local regression should keep the first numeric declaration unsuffixed");
-			assertContains(content, "var n__hx_scope_1 = 2;", "C# duplicate-local regression should suffix repeated numeric declarations");
+			assertContains(content, "var n_1 = 2;", "C# duplicate-local regression should preserve the second numeric local identity");
 			assertNotContains(content, "var expected = \"first\";\n    System.Console.WriteLine(expected);\n    var expected = \"second\";",
 				"C# duplicate-local regression should not emit duplicate declarations in one C# scope");
 		} catch (e:Dynamic) {
@@ -7978,8 +9069,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(entryContent, "new System.Func<object>(() => {", "C# binding switch expressions should lower to an expression lambda");
 			assertContains(entryContent, "var v = ((global::hxhx.__HxEnumValue)__hxhx_switch).__hx_params[0];",
 				"C# enum-extract switch expressions should declare extracted bindings before rendering the branch");
-			assertContains(entryContent, "global::A.A2(global::B.BB(__hxhx_postUpdateVar(ref v__hx_scope_1",
-				"C# nested enum switch branch should keep postfix old-value semantics");
+			assertContains(entryContent, "global::A.A2(global::B.BB(__hxhx_postUpdateVar(ref v_1",
+				"C# nested enum switch branch should keep postfix old-value semantics on the exact typed binding");
 			assertNotContains(entryContent, "v1 == \"A2\"", "C# enum-extract switch expressions should not compare enum values to raw strings");
 			assertNotContains(entryContent, "var v1 = A2(BB(12));", "C# enum constructor calls should not remain unqualified");
 		} catch (e:Dynamic) {
@@ -8574,7 +9665,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"C# callable locals should use an explicit delegate type instead of Mono-rejected var lambda inference");
 		assertContains(content, "new global::hxhx.__HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)",
 			"C# Sys.args should lower to the Haxe array wrapper so array helpers stay available");
-		assertContains(content, "runUtility(args.slice(0, 1));", "C# UtilityProcess calls should preserve slice-capable args forwarding");
+		final projectedArgsPattern = ~/var ([A-Za-z_][A-Za-z0-9_]*) = new global::hxhx.__HxArray\(__hxhx_cli_args/;
+		assertTrue(projectedArgsPattern.match(content), "C# UtilityProcess output should declare the exact projected Sys.args local");
+		final projectedArgs = projectedArgsPattern.matched(1);
+		assertContains(content, "runUtility(" + projectedArgs + ".slice(0, 1));", "C# UtilityProcess calls should reuse the exact projected Sys.args identity");
 		assertContains(content, "public __HxArray slice(object pos, object end = null)",
 			"C# array runtime wrapper should expose Haxe Array.slice for UtilityProcess forwarding");
 		assertContains(content, "public int Length", "C# array runtime wrapper should keep Length for lowered array pattern guards");
@@ -9517,7 +10611,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9578,7 +10672,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_postfix_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9626,7 +10720,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_class_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStaticClassAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9641,7 +10735,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9660,7 +10754,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_runtime_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSysArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9723,7 +10817,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9783,7 +10877,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9810,7 +10904,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9860,7 +10954,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_literal_type_tags_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMapLiteralTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9881,7 +10975,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_set_type_tags_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMapSetTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9910,7 +11004,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_hash_map_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpHashMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9929,7 +11023,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_serializer_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpHaxeSerializerRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -9992,7 +11086,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10010,7 +11104,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_point3_string_equality_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpPoint3StringEqualityRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10028,7 +11122,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_point3_unary_scale_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpPoint3UnaryScaleRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10054,7 +11148,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_list_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpLambdaListRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10074,7 +11168,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_stack_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpGenericStackRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10122,7 +11216,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10242,7 +11336,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10268,7 +11362,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_make_var_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpReflectMakeVarArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10308,7 +11402,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10346,7 +11440,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10365,7 +11459,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_property_access_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10375,7 +11469,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$box->set_x(10);", "PHP instance property writes should call generated setters");
 		assertContains(content, "$iface->get_x()", "PHP interface-typed property reads should call generated getters");
 		assertContains(content, "$iface->set_x(13);", "PHP interface-typed property writes should call generated setters");
-		assertContains(content, "$dup__hx_scope_1->get_x()", "PHP redeclared interface-typed property reads should keep getter lowering");
+		assertTrue(~/\$dup_[A-Za-z0-9_]+->get_x\(\)/.match(content),
+			"PHP redeclared interface-typed property reads should keep getter lowering under their distinct projected identity");
 		assertContains(content, "public function run()", "PHP support class method should be emitted for instance-property coverage");
 		assertContains(content, "PropBox::__init__();", "PHP static __init__ should run before generated main code");
 		assertContains(content, "PropBox::set_STAT_X(3);", "PHP static __init__ fallback should preserve setter assignments");
@@ -10393,7 +11488,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_package_static_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSamePackageQualifiedStaticProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10406,7 +11501,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_field_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpInstanceFieldMethodCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10419,7 +11514,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_test_helper_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpInheritedTestHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10434,7 +11529,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shadowed_test_helper_closure_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpShadowedTestHelperClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10444,159 +11539,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertNativeProtocolOptionalArgDecode():Void {
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "Test"),
-			"ast static_main 0",
-			protocolLine("method", "eq|private|0|a,b,?pos|Void|||a:Dynamic,b:Dynamic,?pos:haxe.PosInfos|"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
-		assertTrue(functions.length == 1, "native protocol should decode the optional-arg method");
-		final args = HxFunctionDecl.getArgs(functions[0]);
-		assertTrue(args.length == 3, "native protocol should preserve optional-arg arity");
-		assertTrue(HxFunctionArg.getName(args[2]) == "pos", "native protocol should strip optional marker from arg names");
-		assertTrue(HxFunctionArg.getIsOptional(args[2]), "native protocol should preserve optional argument metadata");
-		assertTrue(HxFunctionArg.getTypeHint(args[2]) == "haxe.PosInfos", "native protocol should preserve optional argument type hints");
-	}
-
-	static function assertNativeProtocolDefaultArgSourceDecode():Void {
-		final source = [
-			"class Runner {",
-			"  public function addCase(test:Dynamic, setup = \"setup\", teardown = \"teardown\", prefix = \"test\", ?pattern:Dynamic, setupAsync = \"setupAsync\", teardownAsync = \"teardownAsync\", ?nullableInt:Null<Int> = 5, ?nullableFloat:Null<Float> = 6) {}",
-			"}"
-		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "Runner"),
-			"ast static_main 0",
-			protocolLine("method",
-				"addCase|public|0|test,setup,teardown,prefix,?pattern,setupAsync,teardownAsync,nullableInt,nullableFloat|Void|||test:Dynamic,pattern:Dynamic,nullableInt:Null,nullableFloat:Null|"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
-		assertTrue(functions.length == 1, "native protocol should decode the source-backed addCase method");
-		final args = HxFunctionDecl.getArgs(functions[0]);
-		assertTrue(args.length == 9, "native protocol should preserve source-backed addCase arity");
-		assertTrue(HxFunctionArg.getIsOptional(args[1]), "native protocol should recover defaulted args as omittable from source");
-		assertTrue(HxFunctionArg.getDefaultValueText(args[1]) == "\"setup\"", "native protocol should recover the setup default text");
-		assertTrue(HxFunctionArg.getIsOptional(args[4]), "native protocol should preserve explicit optional args from payload/source");
-		assertTrue(HxFunctionArg.getDefaultValueText(args[5]) == "\"setupAsync\"", "native protocol should recover later defaults after optional args");
-		assertTrue(HxFunctionArg.getTypeHint(args[7]) == "Null<Int>", "native protocol should recover source generic Null<Int> over erased payload Null");
-		assertTrue(HxFunctionArg.getTypeHint(args[8]) == "Null<Float>", "native protocol should recover source generic Null<Float> over erased payload Null");
-	}
-
-	static function assertNativeProtocolConstructorDefaultArgSourceDecode():Void {
-		final source = [
-			"class Earlier {",
-			"  public function new() {}",
-			"}",
-			"class BaseConstrOpt {",
-			"  public function new(s:String = \"test\", i:Int = -5, b:Bool = true) {}",
-			"}"
-		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "BaseConstrOpt"),
-			"ast static_main 0",
-			protocolLine("method", "new|public|0|s,i,b|Void|||s:String,i:Int,b:Bool|"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
-		assertTrue(functions.length == 1, "native protocol should decode the source-backed constructor");
-		final args = HxFunctionDecl.getArgs(functions[0]);
-		assertTrue(args.length == 3, "native protocol should preserve constructor arity");
-		assertTrue(HxFunctionArg.getDefaultValueText(args[0]) == "\"test\"",
-			"native protocol should recover the matching constructor string default instead of the first constructor in the source");
-		assertTrue(HxFunctionArg.getDefaultValueText(args[1]) == "-5", "native protocol should recover the matching constructor int default");
-		assertTrue(HxFunctionArg.getDefaultValueText(args[2]) == "true", "native protocol should recover the matching constructor bool default");
-		final scannedClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, "Earlier");
-		var sawScannedStringDefault = false;
-		for (cls in scannedClasses) {
-			if (HxClassDecl.getName(cls) != "BaseConstrOpt")
-				continue;
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				if (HxFunctionDecl.getName(fn) != "new")
-					continue;
-				final scannedArgs = HxFunctionDecl.getArgs(fn);
-				sawScannedStringDefault = scannedArgs.length == 3 && HxFunctionArg.getDefaultValueText(scannedArgs[0]) == "\"test\"";
-			}
-		}
-		assertTrue(sawScannedStringDefault, "source helper scanner should preserve string defaults on constructors");
-	}
-
-	static function assertNativeProtocolSourceFieldNullHintDecode():Void {
-		final source = [
-			"package unit;",
-			"private class Earlier {}",
-			"class Main {",
-			"  final nullBool:Null<Bool> = null;",
-			"  static function main() {}",
-			"}"
-		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "unit.Main"),
-			"ast static_main 1",
-			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
-		assertTrue(fields.length == 1, "native protocol should decode the source-backed field");
-		assertTrue(HxFieldDecl.getName(fields[0]) == "nullBool", "native protocol should preserve the field name");
-		assertTrue(HxFieldDecl.getTypeHint(fields[0]) == "Null<Bool>", "native protocol should recover source generic Null<Bool> over erased payload Bool");
-	}
-
-	static function assertNativeProtocolDuplicateMethodBodiesDecodeByOccurrence():Void {
-		final source = [
-			"class Iterators {",
-			"  function next():String {",
-			"    return \"first\";",
-			"  }",
-			"  function next():{key:Int, value:String} {",
-			"    var val = item;",
-			"    return {value: val, key: idx++};",
-			"  }",
-			"}"
-		].join("\n");
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "Iterators"),
-			"ast static_main 0",
-			protocolLine("method", "next|private|0||String||||\"first\""),
-			protocolLine("method", "next|private|0||{key:Int,value:String}||||key"),
-			protocolLine("method_body", "next\nreturn \"first\";"),
-			protocolLine("method_body", "next\nvar val = item;\nreturn {value: val, key: idx++};"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
-		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
-		assertTrue(functions.length == 2, "native protocol should decode both duplicate method names");
-		switch (HxFunctionDecl.getBody(functions[1])) {
-			case [SVar("val", _, EIdent("item"), _), SReturn(EAnon(fieldNames, fieldValues), _)]:
-				assertTrue(fieldNames.length == 2, "duplicate method body should preserve anonymous return field count");
-				assertTrue(fieldNames[0] == "value", "duplicate method body should preserve value field");
-				assertTrue(fieldNames[1] == "key", "duplicate method body should preserve key field");
-				switch (fieldValues[1]) {
-					case EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("idx")):
-					case other:
-						throw "duplicate method body should preserve key post-increment, got " + Std.string(other);
-				}
-			case body:
-				throw "native protocol duplicate method body used the wrong body: " + Std.string(body);
-		}
-	}
-
 	static function assertPhpPlusSemantics():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_plus_semantics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpPlusSemanticsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10626,7 +11573,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dynamic_add_or_concat_null_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpDynamicAddOrConcatNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10659,7 +11606,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10681,7 +11628,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10710,7 +11657,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_string_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10768,7 +11715,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_enum_abstract_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStdEnumAbstractSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10786,7 +11733,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_fake_enum_abstract_switch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpFakeEnumAbstractSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10809,7 +11756,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_io_error_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStdIoErrorEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10818,6 +11765,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "Error_::$OutsideBounds = new __HxAnon", "PHP haxe.io.Error should initialize the OutsideBounds enum value");
 		assertContains(content, "Error_::$OutsideBounds", "PHP haxe.io.Error references should use the safe support carrier name");
 		assertNotContains(content, "Error::$OutsideBounds", "PHP haxe.io.Error references should not target PHP's built-in Error class");
+		assertNotContains(content, "class Unknown", "enum-only modules should not emit the parser's empty placeholder class");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.io.Error support should execute, stderr:\n" + run.stderr);
@@ -10830,7 +11778,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_io_error_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStdIoErrorRuntimeExceptionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10849,7 +11797,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpBitwisePrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10862,7 +11810,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_static_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSameClassStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10877,7 +11825,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_static_inline_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSameClassStaticInlineCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10897,7 +11845,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_function_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStaticFunctionFieldCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10917,7 +11865,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_equality_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10932,7 +11880,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_modulo_multiplication_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10947,7 +11895,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_float_modulo_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpFloatModuloProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10963,7 +11911,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_math_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMathRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -10994,7 +11942,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_math_random_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMathRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11012,7 +11960,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_random_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStdRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11032,7 +11980,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ternary_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11051,7 +11999,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_indexof_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStringIndexOfProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11106,7 +12054,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_method_closure_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStringMethodClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11138,7 +12086,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_tools_replace_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStringToolsReplaceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11158,7 +12106,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_from_char_code_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStringFromCharCodeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11174,7 +12122,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpWebProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11191,7 +12139,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11213,7 +12161,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_switch_guard_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMacroSwitchGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11248,7 +12196,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dollar_string_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpDollarStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11260,7 +12208,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_int64_literal_extension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11483,7 +12431,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11611,7 +12559,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11643,7 +12591,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_constructor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpArrayConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11661,7 +12609,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_operations_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpArrayOperationsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11706,7 +12654,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_native_assoc_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpNativeAssocArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11734,7 +12682,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_array_field_map_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSameClassArrayFieldMapProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11753,7 +12701,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_array_access_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpObjectArrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11776,7 +12724,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_type_name_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpReservedTypeNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11790,7 +12738,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_enum_ctor_get_name_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpReservedEnumCtorGetNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11809,7 +12757,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_duplicate_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpDuplicateStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11824,7 +12772,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_duplicate_method_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpDuplicateMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11839,7 +12787,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_value_name_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpReservedValueNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11854,7 +12802,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_nonconstant_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpNonConstantStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11867,7 +12815,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_postfix_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpArrayPostfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11879,7 +12827,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_cross_package_support_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpCrossPackageSupportClassProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11892,7 +12840,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_imported_haxelib_enum_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpImportedHaxelibEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11915,7 +12863,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -11945,7 +12893,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12023,32 +12971,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$restAt = function($a, $b, ...$r)", "PHP local Rest functions should lower the final parameter as variadic");
-		assertContains(content, "return __hxhx_array_get($r, 2);", "PHP local Rest body should keep Rest as an indexable array");
-		assertContains(content, "$restToArray = function($a, $b, ...$r)", "PHP local Rest toArray functions should lower the final parameter as variadic");
-		assertContains(content, "return $r;", "PHP Rest.toArray on native arrays should lower to identity");
+		assertTrue(~/\$restAt = function\(\$a[A-Za-z0-9_]*, \$b[A-Za-z0-9_]*, \.\.\.\$r[A-Za-z0-9_]*\)/.match(content),
+			"PHP local Rest functions should lower the exact projected final parameter as variadic");
+		assertTrue(~/return __hxhx_array_get\(\$r[A-Za-z0-9_]*, 2\);/.match(content),
+			"PHP local Rest body should keep the exact projected Rest parameter as an indexable array");
+		assertTrue(~/\$restToArray = function\(\$a[A-Za-z0-9_]*, \$b[A-Za-z0-9_]*, \.\.\.\$r[A-Za-z0-9_]*\)/.match(content),
+			"PHP local Rest toArray functions should lower the exact projected final parameter as variadic");
+		assertTrue(~/return \$r[A-Za-z0-9_]*;/.match(content), "PHP Rest.toArray on native arrays should lower to identity");
 		assertContains(content, "__hxhx_to_array($restReturn(1, 2, 5, 6))", "PHP Rest.toArray after Rest return should tolerate erased array-backed receivers");
-		assertContains(content, "(function() use ($r) {", "PHP Rest array comprehensions should capture the Rest array");
-		assertContains(content, "foreach (__hxhx_key_value_iter($r) as $__hx_kv_k_v)",
+		assertTrue(~/\(function\(\) use \(\$r[A-Za-z0-9_]*\) \{/.match(content), "PHP Rest array comprehensions should capture the exact projected Rest array");
+		assertTrue(~/foreach \(__hxhx_key_value_iter\(\$r[A-Za-z0-9_]*\) as \$__hx_kv_k_v\)/.match(content),
 			"PHP Rest key/value iteration should lower through the runtime key/value iterator");
-		assertContains(content, "__hxhx_rest_append($r, 9)", "PHP Rest.append on array-backed receivers should lower to a runtime helper");
-		assertContains(content, "__hxhx_rest_prepend($r, 0)", "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
-		assertContains(content, "return __hxhx_add_string($r);", "PHP Rest.toString on array-backed receivers should lower through Haxe stringification");
+		assertTrue(~/__hxhx_rest_append\(\$r[A-Za-z0-9_]*, 9\)/.match(content), "PHP Rest.append on array-backed receivers should lower to a runtime helper");
+		assertTrue(~/__hxhx_rest_prepend\(\$r[A-Za-z0-9_]*, 0\)/.match(content), "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
+		assertTrue(~/return __hxhx_add_string\(\$r[A-Za-z0-9_]*\);/.match(content),
+			"PHP Rest.toString on array-backed receivers should lower through Haxe stringification");
 		assertContains(content, "$restSpread(...array_values(__hxhx_to_array([7, 8, 9])))", "PHP array spread call arguments should lower to PHP splat syntax");
-		assertContains(content, "$restSpread(...array_values(__hxhx_to_array($r)))", "PHP Rest forwarding spread should splat array-backed Rest values");
+		assertTrue(~/\$restSpread\(\.\.\.array_values\(__hxhx_to_array\(\$r[A-Za-z0-9_]*\)\)\)/.match(content),
+			"PHP Rest forwarding spread should splat exact projected array-backed Rest values");
 		assertContains(content, "$restTyped = function(...$args)", "PHP local trailing Rest<T> parameters should lower as variadic");
 		assertContains(content, "return __hxhx_array_get($args, 2);", "PHP local Rest<T> bodies should see an array-backed rest parameter");
 		assertContains(content, "new Main(...array_values(__hxhx_to_array([10, 11])))", "PHP constructor spread arguments should lower to PHP splat syntax");
-		assertNotContains(content, "function($a, $b, $r)", "PHP local Rest functions should not emit Rest as a fixed ordinary parameter");
+		assertTrue(!~/function\(\$a[A-Za-z0-9_]*, \$b[A-Za-z0-9_]*, \$r[A-Za-z0-9_]*\)/.match(content),
+			"PHP local Rest functions should not emit exact projected Rest parameters as fixed ordinary parameters");
 		assertNotContains(content, "$__hxhx_for_key_value", "PHP Rest key/value iteration should not emit unresolved helper calls");
 		assertNotContains(content, "$__hxhx_spread", "PHP spread arguments should not emit unresolved synthetic spread calls");
-		assertNotContains(content, "$r->append", "PHP Rest.append should not dispatch as an object method on array-backed Rest values");
-		assertNotContains(content, "$r->prepend", "PHP Rest.prepend should not dispatch as an object method on array-backed Rest values");
-		assertNotContains(content, "$r->toString", "PHP Rest.toString should not dispatch as an object method on array-backed Rest values");
+		assertTrue(!~/\$r[A-Za-z0-9_]*->append/.match(content),
+			"PHP Rest.append should not dispatch as an object method on exact projected array-backed Rest values");
+		assertTrue(!~/\$r[A-Za-z0-9_]*->prepend/.match(content),
+			"PHP Rest.prepend should not dispatch as an object method on exact projected array-backed Rest values");
+		assertTrue(!~/\$r[A-Za-z0-9_]*->toString/.match(content),
+			"PHP Rest.toString should not dispatch as an object method on exact projected array-backed Rest values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
@@ -12079,7 +13036,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_try_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTryCatchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12096,7 +13053,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_thrown_value_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12531,7 +13488,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(shadowTmpRoot);
 		backend.emit(phpScopedLocalShadowProgram(), new BackendContext(shadowTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final shadowContent = File.getContent(Path.join([shadowTmpRoot, "index.php"]));
-		assertContains(shadowContent, "$x__hx_scope_", "PHP shadowed locals should be renamed away from the outer variable");
+		assertTrue(~/\$x_[A-Za-z0-9_]+ =/.match(shadowContent),
+			"PHP shadowed locals should use distinct projected identities instead of reusing the outer variable");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([shadowTmpRoot, "index.php"])]);
 			final expected = "hello\n\nhello\n0\nbranch\n0\nloop\n0\nmatched\n0\ncaught\n0\n";
@@ -12547,8 +13505,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final loopCaptureContent = File.getContent(Path.join([loopCaptureTmpRoot, "index.php"]));
 		assertContains(loopCaptureContent, "(function() use (&$funs, &$sum)",
 			"PHP loops that create ref-capturing closures should isolate per-iteration locals");
-		assertContains(loopCaptureContent, "(function() use (&$i, &$incs, &$total, &$decs)",
-			"PHP loops should isolate per-iteration mutable captures while preserving outer writes");
+		assertTrue(~/\(function\(\) use \(&\$i_[A-Za-z0-9_]+, &\$incs, &\$total, &\$decs\)/.match(loopCaptureContent),
+			"PHP loops should isolate the exact projected iteration identity while preserving outer writes");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([loopCaptureTmpRoot, "index.php"])]);
 			final expected = "1\n1\n1\n3\n1\n0\n0\n0\n2\n1\n1\n0\n3\n2\n2\n0\n";
@@ -12616,7 +13574,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12632,7 +13590,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_get_error_message_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpGetErrorMessageProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12663,7 +13621,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_expression_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeErrorExpressionProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12696,7 +13654,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_block_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeErrorBlockProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12711,7 +13669,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_cast_constraint_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpAbstractCastConstraintProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12729,23 +13687,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertPhpLoweredAbstractCastTypeErrorProbe():Void {
-		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lowered_abstract_cast_type_error_probe_" + Std.string(Date.now().getTime()));
+	static function assertPhpTypedAbstractCastTypeErrorProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_abstract_cast_type_error_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpLoweredAbstractCastTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactPhpBackend();
+		backend.emit(phpTypedAbstractCastTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$badInt = true;", "PHP typeError should fold lowered lambda Int abstract-cast probes");
-		assertContains(content, "$badString = true;", "PHP typeError should fold lowered lambda String abstract-cast probes");
-		assertContains(content, "$badScopedString = true;", "PHP typeError should fold scoped lowered lambda String abstract-cast probes");
+		assertContains(content, "$badInt = true;", "PHP typeError should fold typed Int abstract-cast probes");
+		assertContains(content, "$badString = true;", "PHP typeError should fold typed String abstract-cast probes");
+		assertContains(content, "$badScopedString = true;", "PHP typeError should fold scoped typed String abstract-cast probes");
 		assertContains(content, "$tester->t(true);", "PHP typeError should fold nested test-helper abstract-cast probes");
-		assertNotContains(content, "$typeError(", "PHP lowered abstract-cast probes should not emit runtime typeError calls");
+		assertNotContains(content, "$typeError(", "PHP typed abstract-cast probes should not emit runtime typeError calls");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
-			assertTrue(run.code == 0, "generated PHP lowered abstract-cast typeError probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\n", "generated PHP lowered abstract-cast typeError probe output mismatch, got:\n" + run.stdout);
+			assertTrue(run.code == 0, "generated PHP typed abstract-cast typeError probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\n", "generated PHP typed abstract-cast typeError probe output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -12754,7 +13712,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_as_helper_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypedAsHelperProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12773,7 +13731,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_nullable_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpHelperMacroNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12801,8 +13759,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_native_protocol_nullable_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpNativeProtocolNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactPhpBackend();
+		backend.emit(phpHaxeParserNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$localStillNullable = true;", "PHP native-protocol nullable probe should preserve nullable ?? nullable as nullable");
@@ -12819,8 +13777,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			+ Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpNativeProtocolUpstreamNullCoalescingProbeProgram(),
+		final backend = exactPhpBackend();
+		backend.emit(phpHaxeParserUpstreamNullCoalescingProbeProgram(),
 			new BackendContext(tmpRoot, null, "unit.TestNullCoalescing", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12831,7 +13789,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP upstream-shaped nullable ternary probe should fold nullable field ternaries as nullable");
 		if (commandExists("php")) {
 			final escapedPath = StringTools.replace(outputPath, "\\", "\\\\");
-			final run = commandOutput("php", ["-r", 'require "${escapedPath}"; (new unit_TestNullCoalescing())->test();']);
+			final run = commandOutput("php", ["-r", 'require "${escapedPath}"; (new TestNullCoalescing())->test();']);
 			assertTrue(run.code == 0, "generated PHP upstream-shaped null-coalescing probe should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "", "generated PHP upstream-shaped null-coalescing probe should not print output, got:\n" + run.stdout);
 		}
@@ -12842,7 +13800,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dynamic_missing_field_null_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpDynamicMissingFieldNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12864,7 +13822,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_follow_with_abstracts_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpFollowWithAbstractsProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12880,7 +13838,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_comprehension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpArrayComprehensionClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12898,7 +13856,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_this_postfix_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12954,7 +13912,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_template_wrap_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTemplateWrapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12971,7 +13929,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_this_closure_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpAbstractThisClosureCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -12992,7 +13950,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_callable_facade_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpAbstractCallableFacadeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13010,7 +13968,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_exposing_abstract_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpExposingAbstractArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13048,7 +14006,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_super_ctor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSuperConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13061,7 +14019,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_super_property_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSuperPropertyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13086,7 +14044,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_for_key_value_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13097,8 +14055,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		assertContains(content, "foreach (__hxhx_iter($expected) as $c) {", "PHP string value loops should lower through the runtime iterator helper");
-		assertContains(content, "foreach (__hxhx_key_value_iter($expected) as $__hx_kv_i_c) {",
-			"PHP string key/value loops should lower through the pair iterator helper");
+		assertTrue(~/foreach \(__hxhx_key_value_iter\(\$expected\) as \$__hx_kv_i_c[A-Za-z0-9_]*\) \{/.match(content),
+			"PHP string key/value loops should lower through the pair iterator helper with an exact projected temporary");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP key/value loop support should execute, stderr:\n" + run.stderr);
@@ -13266,7 +14224,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_map_lambda_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypedMapLiteralWithLambdaFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13435,7 +14393,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(lambdaImmediateCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13462,7 +14420,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13494,7 +14452,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_guarded_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13507,7 +14465,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_tuple_or_pattern_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTupleOrPatternCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13525,7 +14483,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_int_guard_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpEnumIntGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13543,7 +14501,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_class_switch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpClassSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13561,7 +14519,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_enum_ctor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpOptionalEnumCtorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13619,8 +14577,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
-		assertContains(content, "var args = new global::hxhx.__HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args);",
-			"C# Sys.args should lower to the Haxe array wrapper backed by the internal entrypoint args value");
+		assertTrue(~/var args[A-Za-z0-9_]* = new global::hxhx\.__HxArray\(__hxhx_cli_args == null \? new object\[\] \{ \} : __hxhx_cli_args\);/.match(content),
+			"C# Sys.args should lower the exact projected local to the Haxe array wrapper backed by the internal entrypoint args value");
 		assertNotContains(content, "var args = args;", "C# switch lowering should not redeclare the entrypoint args parameter");
 		assertContains(content, "if (args != null && args.Length == 1", "C# array switch statements should lower array length guards");
 		assertContains(content, "var code = int.Parse(System.Convert.ToString(args[0]));", "C# switch extractor patterns should bind Std.parseInt results");
@@ -13715,7 +14673,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13748,7 +14706,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_interface_casts_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpInterfaceCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13771,7 +14729,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_interface_casts_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpModuleLocalQualifiedInterfaceCastProgram(), new BackendContext(tmpRoot, null, "unit.MyClass", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13794,8 +14752,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_types_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpModuleLocalTypeCollisionProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final backend = exactPhpBackend();
+		final program = phpModuleLocalTypeCollisionProgram();
+		final facts = new backend.source.PhpTypedProgramProjection(withExactPhpDeclarationFacts(program)).getProgramRenderFacts();
+		assertTrue(facts.findEmittedTypeName("unit.Point") == null,
+			"PHP program facts should omit a package-local convenience alias shared by secondary types in different modules");
+		assertTrue(facts.findEmittedTypeName("unit.SupportOne.Point") == "SupportOne_Point",
+			"PHP program facts should retain the exact module-qualified name of the first secondary type");
+		assertTrue(facts.findEmittedTypeName("unit.UsesInterface.Point") == "UsesInterface_Point",
+			"PHP program facts should retain the exact module-qualified name of the second secondary type");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class SupportOne_Point", "PHP private helper classes should be emitted with their owner module to avoid collisions");
@@ -13816,7 +14782,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_dynamic_casts_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpArrayDynamicCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13834,7 +14800,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_value_casts_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpAbstractValueCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13851,7 +14817,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_syntax_intrinsics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpSyntaxIntrinsicProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13910,7 +14876,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_equality_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpNullEqualityProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13928,7 +14894,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpUserClassTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13959,7 +14925,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpEnumTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -13992,7 +14958,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_reflection_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14041,7 +15007,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_static_reflection_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpGenericStaticReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14076,7 +15042,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_static_text_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpGenericStaticReflectionIgnoresRawBodyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final content = File.getContent(Path.join([tmpRoot, "index.php"]));
 		assertNotContains(content, "public static function gf2_String_Int($label, $values)",
@@ -14126,7 +15092,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_overload_dispatch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpOverloadDispatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14154,7 +15120,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_constructible_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpGenericConstructibleProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14176,7 +15142,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_generic_null_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpTypeErrorGenericNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14194,7 +15160,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shift_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14254,7 +15220,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_coalescing_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14306,7 +15272,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_compile_time_macro_skip_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpCompileTimeOnlyMacroSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14339,7 +15305,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14394,7 +15360,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14429,7 +15395,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14458,7 +15424,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14490,7 +15456,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14527,7 +15493,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14588,7 +15554,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		final resources = [
 			{name: textName, data: haxe.io.Bytes.ofString("Héllo World !")},
 			{name: "re/s?!%[]))(\"'1.bin", data: haxe.io.Bytes.ofHex("48656c6c6f0021576f726c64")},
@@ -14642,7 +15608,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("/repo/std/DateTools.hx", dateToolsDecl)
 		], []);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14680,7 +15646,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("unit/DCEClass.hx", dceDecl)
 		], []);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14723,7 +15689,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("/repo/std/haxe/ds/StringMap.hx", stringMapDecl)
 		], []);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14770,7 +15736,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("TestReflect.hx", reflectDecl)
 		], []);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14815,7 +15781,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14850,12 +15816,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$test__hx_scope_1 = function()", "PHP duplicate local functions should receive scoped names");
-		assertContains(content, "return $test__hx_scope_1();", "PHP raw try/catch expressions should use renamed local function bindings");
+		assertContains(content, "$test = function()", "PHP should preserve the first local function's projected name");
+		assertContains(content, "$test_1 = function()", "PHP duplicate local functions should receive distinct projected names");
+		assertContains(content, "return $test();", "PHP first raw try/catch expression should use its exact local function binding");
+		assertContains(content, "return $test_1();", "PHP second raw try/catch expression should use its exact local function binding");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP scoped try/catch local functions should execute, stderr:\n" + run.stderr);
@@ -14879,7 +15847,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14929,7 +15897,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14938,7 +15906,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "$this->callback()", "PHP same-class function-typed fields should not emit method-call syntax");
 		assertNotContains(content, "__hxhx_call_field($this, \"unary\")",
 			"PHP typeError probes for function-typed fields should fold without evaluating invalid calls");
-		assertContains(content, "function($value = null)", "PHP optional function-typed field lambdas should emit nullable PHP parameters");
+		assertTrue(~/function\(\$value[A-Za-z0-9_]* = null\)/.match(content),
+			"PHP optional function-typed field lambdas should keep the default on the exact projected parameter");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP same-class function field calls should execute, stderr:\n" + run.stderr);
@@ -14952,7 +15921,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_before_required_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpOptionalBeforeRequiredFunctionFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -14983,7 +15952,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15017,7 +15986,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15070,7 +16039,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15115,7 +16084,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15134,7 +16103,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_inline_cast_self_return_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpInlineCastSelfReturnProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15155,7 +16124,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constrained_param_scanner_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpConstrainedParameterScannerFlowProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15196,7 +16165,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15238,7 +16207,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15331,7 +16300,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15343,6 +16312,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_index_of($array, $value)", "PHP arrays should index values through Haxe equality");
 		assertContains(content, "$p->bind(\"ok\")", "PHP instance methods named bind should not be mistaken for Haxe partial application");
 		assertContains(content, "public static function compareMethods($a, $b)", "PHP Reflect should expose compareMethods");
+		assertContains(content, "__hxhx_array_index_of($callbacks, $fn2)",
+			"PHP Array.indexOf should use the Haxe-equality-aware runtime helper selected from the exact local type");
 		assertNotContains(content, "__hxhx_bind($this->id, 3)", "PHP same-instance method values should not bind missing properties");
 		assertNotContains(content, "__hxhx_bind($p, \"ok\")", "PHP real bind methods should remain method calls");
 		if (commandExists("php")) {
@@ -15402,9 +16373,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 						scannedUsingUnrelatedBodyLength = fn.body.length;
 		assertTrue(scannedUsingUnrelatedBodyLength == 2, "Stage3 helper scanner should retain simple local-var plus return static helper bodies");
 		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15437,8 +16410,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static public function usingTest(s:String) return \"3\";",
 			"}",
 		].join("\n");
-		final mainTyped = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
-		final usingTyped = TyperStage.typeModule(ParserStage.parse(usingSrc, "UsingModule.hx"));
+		final resolvedModules = [
+			new ResolvedModule("Main", "Main.hx", ParserStage.parse(mainSrc, "Main.hx")),
+			new ResolvedModule("UsingModule", "UsingModule.hx", ParserStage.parse(usingSrc, "UsingModule.hx")),
+		];
+		final moduleIndex = TyperIndex.build(resolvedModules);
+		final mainTyped = TyperStage.typeResolvedModule(resolvedModules[0], moduleIndex);
+		final usingTyped = TyperStage.typeResolvedModule(resolvedModules[1], moduleIndex);
 		final moduleProgram = MacroStage.expandProgram([mainTyped, usingTyped], []);
 		backend.emit(moduleProgram, new BackendContext(moduleTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final moduleOutputPath = Path.join([moduleTmpRoot, "index.php"]);
@@ -15481,7 +16459,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15531,7 +16509,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15560,7 +16538,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15595,7 +16573,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15661,7 +16639,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.TestMisc", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15732,7 +16710,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15767,12 +16745,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$unit = Main::$unit;", "PHP same-name local initializers should read same-class static fields before shadowing");
-		assertNotContains(content, "$unit = $unit;", "PHP same-name local initializers should not read the uninitialized local");
+		assertContains(content, "$unit_1 = Main::$unit;",
+			"PHP same-name local initializers should read same-class static fields before activating the projected local");
+		assertNotContains(content, "$unit_1 = $unit_1;", "PHP same-name local initializers should not read the uninitialized projected local");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP same-name local/static field support should execute, stderr:\n" + run.stderr);
@@ -15786,7 +16765,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_local_static_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15817,7 +16796,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_map_comprehension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -15833,7 +16812,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_comprehension_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpMapComprehensionRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -16053,7 +17032,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -16082,7 +17061,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_match_extractor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpUnitMatchExtractorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -16097,7 +17076,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -16112,7 +17091,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_strict_scalar_switch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("php-native");
+		final backend = exactPhpBackend();
 		backend.emit(phpStrictScalarSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
@@ -16161,6 +17140,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	}
 
 	public static function runTargetChecks():Void {
+		assertPhpSyntaxUtilities();
+		assertPhpNameUtilities();
+		assertPhpTypedProjectionFailsClosed();
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
@@ -16268,11 +17250,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInstanceFieldMethodCall();
 		assertPhpInheritedTestHelperCall();
 		assertPhpShadowedTestHelperClosure();
-		assertNativeProtocolOptionalArgDecode();
-		assertNativeProtocolDefaultArgSourceDecode();
-		assertNativeProtocolConstructorDefaultArgSourceDecode();
-		assertNativeProtocolSourceFieldNullHintDecode();
-		assertNativeProtocolDuplicateMethodBodiesDecodeByOccurrence();
 		assertNullableLocalTypeInferenceForMacroTypeof();
 		assertPhpPlusSemantics();
 		assertPhpDynamicAddOrConcatNullSemantics();
@@ -16331,7 +17308,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeErrorExpressionProbe();
 		assertPhpTypeErrorBlockProbe();
 		assertPhpAbstractCastConstraint();
-		assertPhpLoweredAbstractCastTypeErrorProbe();
+		assertPhpTypedAbstractCastTypeErrorProbe();
 		assertPhpTypedAsHelperProbe();
 		assertPhpHelperMacroNullableProbe();
 		assertPhpNativeProtocolNullableProbe();

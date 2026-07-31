@@ -114,6 +114,56 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"program sealing did not inline the exact helper body declared in another module");
 	}
 
+	static function inlineHelperShadowingTest():Void {
+		final source = [
+			"abstract Shadowed(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(++A) public inline function advance():Shadowed {",
+			"    var value:Int = 1;",
+			"    { var value:String = 'inner'; value; }",
+			"    value += 1;",
+			"    this += value;",
+			"    return cast this;",
+			"  }",
+			"}",
+			"class Main { static function main() {",
+			"  var target:Shadowed = new Shadowed(2);",
+			"  var result:Shadowed = ++target;",
+			"} }",
+		].join("\n");
+		final module = typedModule(source, "Main.hx");
+		final result = inlineBlock(initializer(mainFunction(module), "result"));
+		final expressions = result.getExpressions();
+		assertTrue(result.getTag() == TypedExprTag.Block
+			&& expressions.length >= 5, "shadowed inline helper did not become an explicit ordered block");
+		final outerBindings = expressions[0].getLocalBindings();
+		final innerBindings = expressions[1].getLocalBindings();
+		assertTrue(expressions[0].getTag() == TypedExprTag.Temporary
+			&& outerBindings.length == 1
+			&& outerBindings[0].getType().getSemanticKey() == "primitive:Int",
+			"outer helper local lost its exact temporary binding");
+		assertTrue(expressions[1].getTag() == TypedExprTag.Temporary
+			&& innerBindings.length == 1
+			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
+			"inner helper local lost its exact temporary binding");
+		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
+		assertTrue(implementationRevision.indexOf("typed-abstract-unary-v1") >= 0
+			&& implementationRevision.indexOf(outerBindings[0].getCanonicalIdentity()) >= 0,
+			"typed-module implementation revision omitted the unary pass or generated binding identity");
+		assertTrue(!outerBindings[0].getIdentity().equals(innerBindings[0].getIdentity()), "shadowed helper locals received the same temporary identity");
+		final innerReadBindings = expressions[2].getLocalBindings();
+		assertTrue(expressions[2].getTag() == TypedExprTag.LocalRead
+			&& innerReadBindings.length == 1
+			&& innerReadBindings[0].getIdentity().equals(innerBindings[0].getIdentity()),
+			"read inside the nested helper block did not select the inner binding");
+		final outerUpdate = expressions[3];
+		final outerUpdateBindings = outerUpdate.getExpressions()[0].getLocalBindings();
+		assertTrue(outerUpdate.getTag() == TypedExprTag.CompoundAssign
+			&& outerUpdateBindings.length == 1
+			&& outerUpdateBindings[0].getIdentity().equals(outerBindings[0].getIdentity()),
+			"read after the nested helper block did not return to the outer binding");
+	}
+
 	static function main():Void {
 		final source = [
 			"class Carrier {",
@@ -298,6 +348,10 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"class Main { static function main() { var value:Missing = new Missing(1); var result = -value; } }",
 		].join("\n"), "No applicable abstract unary operator");
 		typingFailure([
+			"class Ordinary { public function new() {} }",
+			"class Main { static function main() { var value = new Ordinary(); var result = value++; } }",
+		].join("\n"), "Ordinary should be Int");
+		typingFailure([
 			"abstract Ambiguous(Int) {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(-A) public static function first(value:Ambiguous):Ambiguous return value;",
@@ -354,5 +408,6 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"class Main { static function main() { var result = ++StaticHolder.value; } }",
 		].join("\n"), "Static abstract property increment/decrement is not supported yet");
 		crossModuleInlineTest();
+		inlineHelperShadowingTest();
 	}
 }

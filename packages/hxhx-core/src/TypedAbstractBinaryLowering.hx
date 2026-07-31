@@ -19,21 +19,6 @@ private typedef TypedBinaryInlineBodyState = {
 	var returnedValue:Bool;
 };
 
-/** Supplies deterministic temporary names during one binary lowering pass. **/
-private class TypedBinaryLoweringCounter {
-	public var value(default, null):Int;
-
-	public function new() {
-		value = 0;
-	}
-
-	public function next():Int {
-		final current = value;
-		value++;
-		return current;
-	}
-}
-
 /**
 	Eliminates bound abstract binary operations from shared typed bodies.
 
@@ -53,11 +38,6 @@ class TypedAbstractBinaryLowering {
 
 	static function helperKey(declaration:TyDeclarationInfo):String
 		return declaration.getIdentity().getCanonicalKey();
-
-	static function freshName(prefix:String, counter:TypedBinaryLoweringCounter):String {
-		final value = counter.next();
-		return "__hxhx_abstract_binary_" + prefix + "_" + value;
-	}
 
 	static function convert(expression:TypedExpr, expected:TyType, filePath:String, declaration:TyDeclarationInfo):TypedExpr {
 		final actual = expression.getType();
@@ -79,16 +59,18 @@ class TypedAbstractBinaryLowering {
 			expression.getPosition());
 	}
 
-	static function orderedValues(left:TypedExpr, right:TypedExpr, counter:TypedBinaryLoweringCounter):TypedOrderedBinaryValues {
-		final leftName = freshName("left", counter);
-		final rightName = freshName("right", counter);
+	static function orderedValues(left:TypedExpr, right:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedOrderedBinaryValues {
+		final leftBinding = allocator.allocate("left", left.getType());
+		final rightBinding = allocator.allocate("right", right.getType());
+		final leftName = leftBinding.getSourceName();
+		final rightName = rightBinding.getSourceName();
 		return {
 			prefix: [
-				TypedExpr.temporary(leftName, left.getType().getDisplay(), left, voidType(), left.getPosition()),
-				TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition())
+				TypedExpr.temporary(leftName, left.getType().getDisplay(), left, voidType(), left.getPosition(), leftBinding),
+				TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition(), rightBinding)
 			],
-			left: TypedExpr.localRead(leftName, left.getType(), left.getPosition()),
-			right: TypedExpr.localRead(rightName, right.getType(), right.getPosition())
+			left: TypedExpr.localRead(leftName, left.getType(), left.getPosition(), leftBinding),
+			right: TypedExpr.localRead(rightName, right.getType(), right.getPosition(), rightBinding)
 		};
 	}
 
@@ -114,7 +96,7 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function propertyPlaceFor(target:TypedExpr, index:TyperIndex, filePath:String, position:HxPos,
-			counter:TypedBinaryLoweringCounter):Null<TypedBinaryPlace> {
+			allocator:TyCompilerTemporaryAllocator):Null<TypedBinaryPlace> {
 		if (target.getTag() != TypedExprTag.FieldRead)
 			return null;
 		final texts = target.getTexts();
@@ -144,12 +126,13 @@ class TypedAbstractBinaryLowering {
 				+ "."
 				+ texts[0]);
 
-		final receiverName = freshName("property_receiver", counter);
+		final receiverBinding = allocator.allocate("property_receiver", receiver.getType());
+		final receiverName = receiverBinding.getSourceName();
 		final prefix = [
-			TypedExpr.temporary(receiverName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition())
+			TypedExpr.temporary(receiverName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition(), receiverBinding)
 		];
 		function receiverRead():TypedExpr
-			return TypedExpr.localRead(receiverName, receiver.getType(), receiver.getPosition());
+			return TypedExpr.localRead(receiverName, receiver.getType(), receiver.getPosition(), receiverBinding);
 		function accessorCall(declaration:TyDeclarationInfo, arguments:Array<TypedExpr>, resultType:TyType):TypedExpr {
 			final callee = TypedExpr.fieldRead(receiverRead(), declaration.getSignature().getName(), TyType.unknown(), target.getPosition());
 			return TypedExpr.call(callee, arguments, declaration, resultType, target.getPosition());
@@ -165,10 +148,10 @@ class TypedAbstractBinaryLowering {
 		};
 	}
 
-	static function placeFor(target:TypedExpr, index:TyperIndex, filePath:String, position:HxPos, counter:TypedBinaryLoweringCounter):TypedBinaryPlace {
+	static function placeFor(target:TypedExpr, index:TyperIndex, filePath:String, position:HxPos, allocator:TyCompilerTemporaryAllocator):TypedBinaryPlace {
 		if (target.getTag() == TypedExprTag.LocalRead || target.getTag() == TypedExprTag.NameRead)
 			return directPlace(target);
-		final property = propertyPlaceFor(target, index, filePath, position, counter);
+		final property = propertyPlaceFor(target, index, filePath, position, allocator);
 		if (property != null)
 			return property;
 		return switch (target.getTag()) {
@@ -176,12 +159,13 @@ class TypedAbstractBinaryLowering {
 				final texts = target.getTexts();
 				final children = target.getExpressions();
 				final receiver = children[0];
-				final receiverName = freshName("receiver", counter);
+				final receiverBinding = allocator.allocate("receiver", receiver.getType());
+				final receiverName = receiverBinding.getSourceName();
 				final prefix = [
-					TypedExpr.temporary(receiverName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition())
+					TypedExpr.temporary(receiverName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition(), receiverBinding)
 				];
 				function field(type:TyType):TypedExpr {
-					final receiverRead = TypedExpr.localRead(receiverName, receiver.getType(), receiver.getPosition());
+					final receiverRead = TypedExpr.localRead(receiverName, receiver.getType(), receiver.getPosition(), receiverBinding);
 					return TypedExpr.fieldRead(receiverRead, texts[0], type, target.getPosition(), target.getFieldInfo());
 				}
 				{
@@ -193,15 +177,17 @@ class TypedAbstractBinaryLowering {
 				final children = target.getExpressions();
 				final array = children[0];
 				final arrayIndex = children[1];
-				final arrayName = freshName("array", counter);
-				final indexName = freshName("index", counter);
+				final arrayBinding = allocator.allocate("array", array.getType());
+				final indexBinding = allocator.allocate("index", arrayIndex.getType());
+				final arrayName = arrayBinding.getSourceName();
+				final indexName = indexBinding.getSourceName();
 				final prefix = [
-					TypedExpr.temporary(arrayName, array.getType().getDisplay(), array, voidType(), array.getPosition()),
-					TypedExpr.temporary(indexName, arrayIndex.getType().getDisplay(), arrayIndex, voidType(), arrayIndex.getPosition())
+					TypedExpr.temporary(arrayName, array.getType().getDisplay(), array, voidType(), array.getPosition(), arrayBinding),
+					TypedExpr.temporary(indexName, arrayIndex.getType().getDisplay(), arrayIndex, voidType(), arrayIndex.getPosition(), indexBinding)
 				];
 				function access(type:TyType):TypedExpr {
-					return TypedExpr.arrayAccess(TypedExpr.localRead(arrayName, array.getType(), array.getPosition()),
-						TypedExpr.localRead(indexName, arrayIndex.getType(), arrayIndex.getPosition()), type, target.getPosition());
+					return TypedExpr.arrayAccess(TypedExpr.localRead(arrayName, array.getType(), array.getPosition(), arrayBinding),
+						TypedExpr.localRead(indexName, arrayIndex.getType(), arrayIndex.getPosition(), indexBinding), type, target.getPosition());
 				}
 				{
 					prefix: prefix,
@@ -220,10 +206,10 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function staticCall(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, counter);
+		final ordered = orderedValues(left, right, allocator);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		final ownerName = owner == null ? declaration.getOwner().getCanonicalName() : owner.getShortName();
 		final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), left.getPosition());
@@ -235,10 +221,10 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function instanceCall(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, counter);
+		final ordered = orderedValues(left, right, allocator);
 		final callArgs = callArguments(binding, ordered.left, ordered.right);
 		// callArguments has already restored declaration order after any
 		// commutative source reversal. An instance declaration always receives its
@@ -274,10 +260,10 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function nativeBodylessValue(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, counter);
+		final ordered = orderedValues(left, right, allocator);
 		final arguments = callArguments(binding, ordered.left, ordered.right);
 		final carrierLeft = carrierValue(arguments[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(arguments[1], info.getRightType(), index);
@@ -292,17 +278,20 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function fallbackWriteback(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), counter);
+		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final currentName = freshName("current", counter);
-		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition()));
-		final rightName = freshName("right", counter);
-		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition()));
-		final currentRead = TypedExpr.localRead(currentName, left.getType(), left.getPosition());
-		final rightRead = TypedExpr.localRead(rightName, right.getType(), right.getPosition());
+		final currentBinding = allocator.allocate("current", left.getType());
+		final currentName = currentBinding.getSourceName();
+		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition(),
+			currentBinding));
+		final rightBinding = allocator.allocate("right", right.getType());
+		final rightName = rightBinding.getSourceName();
+		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition(), rightBinding));
+		final currentRead = TypedExpr.localRead(currentName, left.getType(), left.getPosition(), currentBinding);
+		final rightRead = TypedExpr.localRead(rightName, right.getType(), right.getPosition(), rightBinding);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		final ownerName = owner == null ? declaration.getOwner().getCanonicalName() : owner.getShortName();
 		final callArgs = callArguments(binding, currentRead, rightRead);
@@ -316,33 +305,37 @@ class TypedAbstractBinaryLowering {
 			final callee = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), TyType.unknown(), left.getPosition());
 			TypedExpr.call(callee, [argument], declaration, info.getResultType(), left.getPosition());
 		};
-		final resultName = freshName("result", counter);
+		final resultBinding = allocator.allocate("result", left.getType());
+		final resultName = resultBinding.getSourceName();
 		final resultConversion = binding.getResultConversion();
 		if (resultConversion == null)
 			throw "abstract compound fallback lost its selected result conversion";
 		final resultValue = resultConversion.apply(semanticResult(call, info.getResultType()));
-		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), resultValue, voidType(), left.getPosition()));
-		final resultRead = TypedExpr.localRead(resultName, left.getType(), left.getPosition());
+		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), resultValue, voidType(), left.getPosition(), resultBinding));
+		final resultRead = TypedExpr.localRead(resultName, left.getType(), left.getPosition(), resultBinding);
 		expressions.push(place.write(resultRead));
 		expressions.push(resultRead);
 		return TypedExpr.block(expressions, left.getType(), left.getPosition());
 	}
 
 	static function nativeBodylessCompound(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
 		final baseOp = HxBinaryOperatorTools.baseOperator(binding.getSourceOperator());
 		if (baseOp == null)
-			return nativeBodylessValue(binding, left, right, index, filePath, counter);
-		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), counter);
+			return nativeBodylessValue(binding, left, right, index, filePath, allocator);
+		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final currentName = freshName("native_current", counter);
-		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition()));
-		final rightName = freshName("native_right", counter);
-		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition()));
-		final callArgs = callArguments(binding, TypedExpr.localRead(currentName, left.getType(), left.getPosition()),
-			TypedExpr.localRead(rightName, right.getType(), right.getPosition()));
+		final currentBinding = allocator.allocate("native_current", left.getType());
+		final currentName = currentBinding.getSourceName();
+		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition(),
+			currentBinding));
+		final rightBinding = allocator.allocate("native_right", right.getType());
+		final rightName = rightBinding.getSourceName();
+		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition(), rightBinding));
+		final callArgs = callArguments(binding, TypedExpr.localRead(currentName, left.getType(), left.getPosition(), currentBinding),
+			TypedExpr.localRead(rightName, right.getType(), right.getPosition(), rightBinding));
 		final carrierLeft = carrierValue(callArgs[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(callArgs[1], info.getRightType(), index);
 		final resultCarrier = carrierType(info.getResultType(), index);
@@ -353,25 +346,29 @@ class TypedAbstractBinaryLowering {
 		if (resultConversion == null)
 			throw "bodyless abstract compound fallback lost its selected result conversion";
 		final semanticValue = resultConversion.apply(semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType()));
-		final resultName = freshName("native_result", counter);
-		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), semanticValue, voidType(), left.getPosition()));
-		final resultRead = TypedExpr.localRead(resultName, left.getType(), left.getPosition());
+		final resultBinding = allocator.allocate("native_result", left.getType());
+		final resultName = resultBinding.getSourceName();
+		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), semanticValue, voidType(), left.getPosition(), resultBinding));
+		final resultRead = TypedExpr.localRead(resultName, left.getType(), left.getPosition(), resultBinding);
 		expressions.push(place.write(resultRead));
 		expressions.push(resultRead);
 		return TypedExpr.block(expressions, left.getType(), left.getPosition());
 	}
 
 	static function substituteExpression(expression:TypedExpr, place:TypedBinaryPlace, parameters:StringMap<TypedExpr>,
-			renamedLocals:StringMap<String>):TypedExpr {
+			renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
 		final children = expression.getExpressions();
 		return switch (expression.getTag()) {
 			case ThisValue:
 				place.read(expression.getType());
 			case LocalRead:
-				final texts = expression.getTexts();
-				final renamed = renamedLocals.get(texts[0]);
-				if (renamed != null) TypedExpr.localRead(renamed, expression.getType(), expression.getPosition()); else {
-					final parameter = parameters.get(texts[0]);
+				final sourceBindings = expression.getLocalBindings();
+				if (sourceBindings.length != 1)
+					throw "inline abstract binary helper local read lost its exact source binding";
+				final sourceIdentity = sourceBindings[0].getIdentity().getCanonicalKey();
+				final renamed = renamedLocals.get(sourceIdentity);
+				if (renamed != null) TypedExpr.localRead(renamed.getSourceName(), expression.getType(), expression.getPosition(), renamed); else {
+					final parameter = parameters.get(sourceIdentity);
 					parameter == null ? expression : parameter;
 				}
 			case Assign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
@@ -389,29 +386,33 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedBinaryPlace, parameters:StringMap<TypedExpr>,
-			renamedLocals:StringMap<String>, state:TypedBinaryInlineBodyState, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter, declaration:TyDeclarationInfo):Void {
+			renamedLocals:StringMap<TyLocalBinding>, state:TypedBinaryInlineBodyState, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
+			allocator:TyCompilerTemporaryAllocator, declaration:TyDeclarationInfo):Void {
 		for (statement in statements) {
 			if (state.returned)
 				return;
 			final expressions = statement.getExpressions();
 			switch (statement.getTag()) {
 				case Block:
-					lowerInlineStatements(statement.getStatements(), place, parameters, renamedLocals, state, helpers, index, filePath, counter, declaration);
+					lowerInlineStatements(statement.getStatements(), place, parameters, renamedLocals, state, helpers, index, filePath, allocator, declaration);
 				case Var:
 					final names = statement.getNames();
-					final renamed = freshName(names[0], counter);
+					final sourceBindings = statement.getLocalBindings();
+					if (sourceBindings.length != 1)
+						throw "inline abstract binary helper declaration lost its exact source binding";
 					final initializer = expressions.length == 0 ? TypedExpr.nullValue(TyType.unknown(),
 						statement.getPosition()) : lowerExpression(substituteExpression(expressions[0], place, parameters, renamedLocals), helpers, index,
-							filePath, counter);
-					renamedLocals.set(names[0], renamed);
-					state.expressions.push(TypedExpr.temporary(renamed, names.length > 1 ? names[1] : "", initializer, voidType(), statement.getPosition()));
+							filePath, allocator);
+					final renamed = allocator.allocate(names[0], initializer.getType());
+					renamedLocals.set(sourceBindings[0].getIdentity().getCanonicalKey(), renamed);
+					state.expressions.push(TypedExpr.temporary(renamed.getSourceName(), names.length > 1 ? names[1] : "", initializer, voidType(),
+						statement.getPosition(), renamed));
 				case Expression:
 					state.expressions.push(lowerExpression(substituteExpression(expressions[0], place, parameters, renamedLocals), helpers, index, filePath,
-						counter));
+						allocator));
 				case Return:
 					state.expressions.push(lowerExpression(substituteExpression(expressions[0], place, parameters, renamedLocals), helpers, index, filePath,
-						counter));
+						allocator));
 					state.returned = true;
 					state.returnedValue = true;
 				case ReturnVoid:
@@ -427,7 +428,7 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function inlineCall(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex,
-			filePath:String, counter:TypedBinaryLoweringCounter):TypedExpr {
+			filePath:String, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
 		final helper = helpers.get(helperKey(declaration));
@@ -449,30 +450,35 @@ class TypedAbstractBinaryLowering {
 
 		final receiver = binding.getReverseArguments() ? right : left;
 		final argument = binding.getReverseArguments() ? left : right;
-		final place = placeFor(receiver, index, filePath, receiver.getPosition() == null ? HxPos.unknown() : receiver.getPosition(), counter);
+		final place = placeFor(receiver, index, filePath, receiver.getPosition() == null ? HxPos.unknown() : receiver.getPosition(), allocator);
 		final prefix = new Array<TypedExpr>();
-		final argumentName = freshName("argument", counter);
 		final argumentConversion = binding.getReverseArguments() ? binding.getSourceLeftConversion() : binding.getSourceRightConversion();
 		final expectedArgumentType = argumentConversion.getExpectedType();
 		final convertedArgument = argumentConversion.apply(argument);
+		final argumentBinding = allocator.allocate("argument", expectedArgumentType);
+		final argumentName = argumentBinding.getSourceName();
 		if (binding.getReverseArguments()) {
-			prefix.push(TypedExpr.temporary(argumentName, expectedArgumentType.getDisplay(), convertedArgument, voidType(), argument.getPosition()));
+			prefix.push(TypedExpr.temporary(argumentName, expectedArgumentType.getDisplay(), convertedArgument, voidType(), argument.getPosition(),
+				argumentBinding));
 			for (entry in place.prefix)
 				prefix.push(entry);
 		} else {
 			for (entry in place.prefix)
 				prefix.push(entry);
-			prefix.push(TypedExpr.temporary(argumentName, expectedArgumentType.getDisplay(), convertedArgument, voidType(), argument.getPosition()));
+			prefix.push(TypedExpr.temporary(argumentName, expectedArgumentType.getDisplay(), convertedArgument, voidType(), argument.getPosition(),
+				argumentBinding));
 		}
 		final parameterNames = declaration.getSignature().getArgNames();
-		if (parameterNames.length != 1)
+		final helperParameters = helperEnvironment == null ? [] : helperEnvironment.getParams();
+		if (parameterNames.length != 1 || helperParameters.length != 1)
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Inline abstract binary helper lost its explicit parameter: " + declaration.getIdentity().getCanonicalKey());
 		final parameters = new StringMap<TypedExpr>();
-		parameters.set(parameterNames[0], TypedExpr.localRead(argumentName, expectedArgumentType, argument.getPosition()));
+		parameters.set(helperParameters[0].getIdentity().getCanonicalKey(),
+			TypedExpr.localRead(argumentName, expectedArgumentType, argument.getPosition(), argumentBinding));
 		final state:TypedBinaryInlineBodyState = {expressions: prefix, returned: false, returnedValue: false};
-		lowerInlineStatements(helper.getBody().getStatements(), place, parameters, new StringMap<String>(), state, helpers, index, filePath, counter,
-			declaration);
+		lowerInlineStatements(helper.getBody().getStatements(), place, parameters, new StringMap<TyLocalBinding>(), state, helpers, index, filePath,
+			allocator, declaration);
 		if (!resultType.isVoid() && !state.returnedValue)
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Inline abstract binary helper did not produce its declared result: " + declaration.getIdentity().getCanonicalKey());
@@ -483,10 +489,10 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function lowerExpression(expression:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedExpr {
+			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final loweredChildren = [
 			for (child in expression.getExpressions())
-				lowerExpression(child, helpers, index, filePath, counter)
+				lowerExpression(child, helpers, index, filePath, allocator)
 		];
 		final rebuilt = expression.withExpressions(loweredChildren);
 		if (rebuilt.getTag() != TypedExprTag.Binary && rebuilt.getTag() != TypedExprTag.CompoundAssign)
@@ -501,27 +507,27 @@ class TypedAbstractBinaryLowering {
 		if (selected == null)
 			return rebuilt;
 		if (selected.getRequiresWriteback())
-			return fallbackWriteback(selected, left, right, index, filePath, counter);
+			return fallbackWriteback(selected, left, right, index, filePath, allocator);
 		final declaration = selected.getOperatorInfo().getDeclaration();
 		if (!declaration.getHasBody())
 			return HxBinaryOperatorTools.isCompoundAssignment(selected.getSourceOperator()) ? nativeBodylessCompound(selected, left, right, index, filePath,
-				counter) : nativeBodylessValue(selected, left, right, index, filePath, counter);
+				allocator) : nativeBodylessValue(selected, left, right, index, filePath, allocator);
 		if (declaration.getIsStatic())
-			return staticCall(selected, left, right, index, filePath, counter);
+			return staticCall(selected, left, right, index, filePath, allocator);
 		if (!declaration.getIsInline())
-			return instanceCall(selected, left, right, filePath, counter);
-		return inlineCall(selected, left, right, helpers, index, filePath, counter);
+			return instanceCall(selected, left, right, filePath, allocator);
+		return inlineCall(selected, left, right, helpers, index, filePath, allocator);
 	}
 
 	static function lowerStatement(statement:TypedStmt, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
-			counter:TypedBinaryLoweringCounter):TypedStmt {
+			allocator:TyCompilerTemporaryAllocator):TypedStmt {
 		final expressions = [
 			for (expression in statement.getExpressions())
-				lowerExpression(expression, helpers, index, filePath, counter)
+				lowerExpression(expression, helpers, index, filePath, allocator)
 		];
 		final statements = [
 			for (child in statement.getStatements())
-				lowerStatement(child, helpers, index, filePath, counter)
+				lowerStatement(child, helpers, index, filePath, allocator)
 		];
 		return statement.withChildren(expressions, statements);
 	}
@@ -585,15 +591,16 @@ class TypedAbstractBinaryLowering {
 	static function lowerClassesWithHelpers(classes:Array<TypedClass>, index:TyperIndex, filePath:String, helpers:StringMap<TypedFunction>):Array<TypedClass> {
 		if (classes == null || index == null)
 			return classes == null ? [] : classes.copy();
-		final counter = new TypedBinaryLoweringCounter();
 		final lowered = [
 			for (typedClass in classes)
 				typedClass.withFunctions([
 					for (typedFunction in typedClass.getFunctions()) {
 						final body = typedFunction.getBody();
+						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-binary-v1",
+							"__hxhx_abstract_binary_");
 						final statements = [
 							for (statement in body.getStatements())
-								lowerStatement(statement, helpers, index, filePath, counter)
+								lowerStatement(statement, helpers, index, filePath, allocator)
 						];
 						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()));
 					}

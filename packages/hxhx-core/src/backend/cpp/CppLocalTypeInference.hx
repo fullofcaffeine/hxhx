@@ -3,32 +3,32 @@ package backend.cpp;
 import haxe.ds.StringMap;
 
 typedef CppLocalTypeInferenceApi = {
-	var copyStringMap:StringMap<String>->StringMap<String>;
-	var copyIntMap:StringMap<Int>->StringMap<Int>;
-	var sanitizeIdentifier:String->String;
-	var sanitizeTypePath:String->String;
-	var typeBaseName:String->String;
-	var isInferredMapClassName:String->Bool;
-	var exprCppType:(HxExpr, CppRenderScope) -> String;
-	var inferExprCppType:(HxExpr, CppRenderScope) -> String;
-	var isStringLike:HxExpr->Bool;
-	var isDynamicLikeTypeHint:String->Bool;
-	var dynamicLocalAssignedType:(HxExpr, CppRenderScope) -> String;
-	var anonStructName:(Array<String>, Array<HxExpr>, CppRenderScope) -> String;
-	var inferredLambdaCppFunctionType:(Array<String>, HxExpr, Array<String>, CppRenderScope) -> String;
-	var closureCallableArgType:(HxExpr, CppRenderScope) -> String;
-	var localCppName:(String, CppRenderScope) -> String;
-	var declareLocalName:(String, CppRenderScope) -> String;
-	var cppLocalTypeHint:(String, Null<HxExpr>, CppRenderScope) -> String;
-	var cppTypeHint:(String, CppRenderScope) -> String;
-	var staticReceiverClassName:(HxExpr, CppRenderScope) -> Null<String>;
-	var isEnumCarrierClassName:(String, CppRenderScope) -> Bool;
-	var hasStaticEnumConstructorMethod:(String, String, CppRenderScope) -> Bool;
-	var hasStaticEnumMetadataField:(String, String, CppRenderScope) -> Bool;
-	var arrowMapLiteralCppType:(HxExpr, CppRenderScope) -> String;
-	var iterableElementType:(HxExpr, CppRenderScope) -> String;
-	var keyValueLoopTypes:(HxExpr, CppRenderScope) -> Array<String>;
-	var withScopedLocal:(CppRenderScope, String, String, Void->Void) -> Void;
+	final copyStringMap:StringMap<String>->StringMap<String>;
+	final copyIntMap:StringMap<Int>->StringMap<Int>;
+	final sanitizeIdentifier:String->String;
+	final sanitizeTypePath:String->String;
+	final typeBaseName:String->String;
+	final isInferredMapClassName:String->Bool;
+	final exprCppType:(HxExpr, CppRenderScope) -> String;
+	final inferExprCppType:(HxExpr, CppRenderScope) -> String;
+	final isStringLike:HxExpr->Bool;
+	final isDynamicLikeTypeHint:String->Bool;
+	final dynamicLocalAssignedType:(HxExpr, CppRenderScope) -> String;
+	final anonStructName:(Array<String>, Array<HxExpr>, CppRenderScope) -> String;
+	final inferredLambdaCppFunctionType:(Array<String>, HxExpr, Array<String>, CppRenderScope) -> String;
+	final closureCallableArgType:(HxExpr, CppRenderScope) -> String;
+	final localCppName:(String, CppRenderScope) -> String;
+	final declareLocalName:(String, CppRenderScope) -> String;
+	final cppLocalTypeHint:(String, Null<HxExpr>, CppRenderScope) -> String;
+	final cppTypeHint:(String, CppRenderScope) -> String;
+	final staticReceiverClassName:(HxExpr, CppRenderScope) -> Null<String>;
+	final isEnumCarrierClassName:(String, CppRenderScope) -> Bool;
+	final hasStaticEnumConstructorMethod:(String, String, CppRenderScope) -> Bool;
+	final hasStaticEnumMetadataField:(String, String, CppRenderScope) -> Bool;
+	final arrowMapLiteralCppType:(HxExpr, CppRenderScope) -> String;
+	final iterableElementType:(HxExpr, CppRenderScope) -> String;
+	final keyValueLoopTypes:(HxExpr, CppRenderScope) -> Array<String>;
+	final withScopedLocal:(CppRenderScope, String, String, Void->Void) -> Void;
 }
 
 /**

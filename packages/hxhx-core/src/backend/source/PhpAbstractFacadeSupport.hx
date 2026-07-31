@@ -2,6 +2,11 @@ package backend.source;
 
 typedef PhpNameNormalizer = String->String;
 
+typedef PhpFacadeFunction = {
+	final ownerClass:HxClassDecl;
+	final declaration:HxFunctionDecl;
+};
+
 /**
 	Helpers for PHP abstract facade support in the source-native backend.
 
@@ -29,11 +34,14 @@ class PhpAbstractFacadeSupport {
 	static inline final UNDERLYING_PREFIX = "__hxhx_abstract_underlying=";
 
 	public static function classFunctionsWithFacadeMethods(cls:HxClassDecl, className:String, scanClasses:Array<HxClassDecl>,
-			normalizeTypePath:PhpNameNormalizer, normalizeMemberName:PhpNameNormalizer):Array<HxFunctionDecl> {
-		final out = HxClassDecl.getFunctions(cls).copy();
+			normalizeTypePath:PhpNameNormalizer, normalizeMemberName:PhpNameNormalizer):Array<PhpFacadeFunction> {
+		final out = [
+			for (declaration in HxClassDecl.getFunctions(cls))
+				{ownerClass: cls, declaration: declaration}
+		];
 		final seen = new Map<String, Bool>();
-		for (fn in out)
-			seen.set(normalizeMemberName(HxFunctionDecl.getName(fn)), true);
+		for (entry in out)
+			seen.set(normalizeMemberName(HxFunctionDecl.getName(entry.declaration)), true);
 		if (scanClasses == null)
 			return out;
 		for (facade in scanClasses) {
@@ -49,7 +57,7 @@ class PhpAbstractFacadeSupport {
 				if (seen.exists(methodName))
 					continue;
 				seen.set(methodName, true);
-				out.push(fn);
+				out.push({ownerClass: facade, declaration: fn});
 			}
 		}
 		return out;

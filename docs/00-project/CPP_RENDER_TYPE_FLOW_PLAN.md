@@ -26,11 +26,13 @@ The Cpp backend currently resolves overlapping facts in several render paths:
   `callableOrSameOwnerReturnCppType` re-enters the same receiver and method
   lookup facts.
 - local preparation in `prepareFunctionScope` owns staged local/arg override
-  inference, cache application, and late function signature inference through
-  `functionScopePrepCache`, `functionArgTypesCache`, and
-  `functionReturnTypesCache`. Cheap syntax-only preconditions that are proven
-  safe, such as bind-callable evidence checks, live outside the main emitter so
-  no-op inference guards do not add more traversal logic to `CppTargetCore`.
+  inference, cache application, and late function signature inference.
+  Completed preparation and its recursion guard now live in the
+  program-owned `CppFunctionAnalysisMemo`, together with inferred argument and
+  return signatures and their mutual-recursion guard. Cheap syntax-only
+  preconditions that are proven safe, such as bind-callable evidence checks,
+  live outside the main emitter so no-op inference guards do not add more
+  traversal logic to `CppTargetCore`.
 - string/value conversion helpers such as `valueExprForExpectedType`,
   `stringExpr`, `isCppStringExpr`, and `eqComparableArgExpr` repeatedly probe
   `exprCppType` and `inferExprCppType` while rendering the same expression.
@@ -71,8 +73,10 @@ small enough to prove behavior unchanged with focused Cpp smoke coverage.
 - extra timing labels or summary scripts for existing Cpp trace output;
 - helper classification and body-pressure accounting;
 - call/field plan extraction that preserves existing generated output;
-- cache-key cleanup for existing `functionScopePrepCache`,
-  `functionArgTypesCache`, and `functionReturnTypesCache`;
+- cache-key cleanup inside the program-owned `CppFunctionAnalysisMemo`;
+- nested render scopes must reuse `lookupForScope(scope)` instead of rebuilding
+  partial lookup records, so all scopes for one program see the same class
+  metadata and request-owned memo state;
 - syntax guards for prep local-inference phases when the guard is conservative,
   focused on one proven no-op seam, and covered by direct predicate tests;
 - focused tests that compare generated source or runtime output before and
@@ -6729,3 +6733,57 @@ original repo-owned work. `thinking:xhigh` was not crossed, and GPT or Oracle
 review was deliberately skipped because the exact erased constructor,
 declared parameter type, existing generic-factory override seam, upstream
 behavior, and unrelated generic controls identify a bounded target-owned fix.
+
+## 2026-07-24 Program-Owned C++ Timing Diagnostics
+
+Repeated native-server requests no longer share the detailed C++ timing switch,
+method filter, or nested line buffer through process-global fields. Before this
+cutover, request A could initialize those fields from its environment and
+request B depended on an explicit reset before it could observe different
+settings. A nested timing failure also restored one process-wide buffer rather
+than state owned by the program being rendered.
+
+Each C++ program lookup now owns one `CppTraceContext`. The context snapshots
+whether detailed timings are enabled and which `Owner.method` is selected.
+Every derived render scope shares that same context, and buffered timing
+callbacks temporarily replace and then restore only that program's ordered
+line sink. A second program can therefore use different timing settings without
+resetting or mutating the first program.
+
+The focused timing fixture proves the before/after boundary directly: it
+creates two lookups under different environment values, verifies independent
+snapshots, preserves exact traced and untraced C++ output, retains timing-line
+order, and restores the buffer after both string and `haxe.Exception` failures.
+The local-declaration benchmark supplies an explicit context so performance
+attribution no longer reaches into private process caches.
+
+This first slice deliberately left four diagnostic-mode probes—deep tracing,
+lambda phases, call-argument detail, and helper-classification detail—on the
+older request-reset path because they have different output paths and do not
+share the timing buffer lifecycle.
+
+## 2026-07-24 Complete Program-Owned C++ Trace State
+
+The remaining four probes now join the detailed timing switch and method
+filter in `CppTraceContext`. When a C++ program lookup is created, it takes one
+snapshot of all six trace settings. Anonymous-structure collection, field and
+constructor rendering, method preparation, statement tracing, lambda tracing,
+call-argument detail, and helper classification all read that same program
+context.
+
+The practical result is that two programs can be rendered under different
+diagnostic settings in one process without a reset between them. The focused
+test changes every trace environment value between two lookup constructions
+and proves that the first lookup keeps all settings disabled while the second
+keeps all settings enabled. Generated C++ remains unchanged because these
+settings only select diagnostic output.
+
+`CppTargetCore.resetRequestState()` has consequently been removed. The only
+process-wide fields left in the C++ target are two immutable-by-contract
+analysis service tables whose functions receive the current program, lookup,
+or scope as arguments. `CompilerRequestStaticState` no longer owns C++ cleanup,
+and the request-state audit and C++ architecture guard reject restoration of
+the retired process trace fields.
+
+This cutover removes a request-lifecycle obligation; it does not admit typed
+module reuse, change strict C++ readiness, or change README Goals status.

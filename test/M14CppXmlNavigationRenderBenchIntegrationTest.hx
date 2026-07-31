@@ -138,7 +138,7 @@ class M14CppXmlNavigationRenderBenchIntegrationTest {
 	}
 
 	static function renderMethod(sample:CppXmlNavigationRenderFixture, name:String):String {
-		@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
+		sample.scope.functionAnalysisMemo.functionPreparations.clear();
 		return @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(sample.methods.get(name), sample.owner, sample.lookup).join("\n");
 	}
 

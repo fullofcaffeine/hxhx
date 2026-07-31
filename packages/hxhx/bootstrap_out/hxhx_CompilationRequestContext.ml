@@ -103,6 +103,8 @@ let create = fun requestId2 bufferOutput isServerRequest2 sourceProvider2 depend
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestContext"; requestId = 0; output = Obj.magic (HxRuntime.hx_null); isServerRequest = false; sourceProvider = Obj.magic (HxRuntime.hx_null); dependencyRequest = Obj.magic (HxRuntime.hx_null); cleanupActions = Obj.magic (HxRuntime.hx_null); startedAtSeconds = 0.; phaseElapsedSeconds = Obj.magic (HxRuntime.hx_null); phaseOrder = Obj.magic (HxRuntime.hx_null); closed = false; cleanupSucceeded = false; baselineReportEnabled = false; deadlineAtSeconds = HxRuntime.hx_null; cancellationReason = Obj.magic (HxRuntime.hx_null); cancellationStage = Obj.magic (HxRuntime.hx_null); cancellationReported = false; outputTransaction = Obj.magic (HxRuntime.hx_null); stagedEmitResult = Obj.magic (HxRuntime.hx_null); activePhase = ""; activePhaseStartedAtSeconds = 0. } : t)
 
+let dependencyObservationEnabled = fun self () -> (Obj.magic self : t).dependencyRequest != Obj.magic (HxRuntime.hx_null)
+
 let enableBaselineReport = fun self () -> ignore (ignore ((
   ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request context is already closed") ["Dynamic"; "String"]) else ());
   let __assign_26 = true in (
@@ -128,9 +130,9 @@ let isClosed = fun self () -> (Obj.magic self : t).closed
 
 let ensureOpen = fun self () -> ignore (ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request context is already closed") ["Dynamic"; "String"]) else ()))
 
-let recordDependencySnapshot = fun self (modules : TypedModule.t HxArray.t) (index : TyperIndex.t) -> ignore (ignore ((
+let recordDependencySnapshot = fun self (modules : TypedModule.t HxArray.t) (index : TyperIndex.t) (backendId : string) (defines : string HxMap.string_map) (macroFileDependencies : CompilerMacroFileDependencyObservation.t HxMap.string_map) -> ignore (ignore ((
   ignore (ensureOpen (Obj.magic self) ());
-  if (Obj.magic self : t).dependencyRequest != Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationServerDependencyRequest.record (Obj.magic ((Obj.magic self : t).dependencyRequest)) (Obj.magic (CompilerDependencyCollector.collect (Obj.magic modules) (Obj.magic index)))) else ()
+  if (Obj.magic self : t).dependencyRequest != Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationServerDependencyRequest.record (Obj.magic ((Obj.magic self : t).dependencyRequest)) (Obj.magic (CompilerDependencyCollector.collect (Obj.magic modules) (Obj.magic index) (Obj.magic (CompilerProgramConfigurationObservation.fromTargetAndDefines (backendId : string) (Obj.magic defines))) (Obj.magic macroFileDependencies)))) else ()
 )))
 
 let requireDependencySnapshot = fun self () -> ignore (ignore ((
@@ -268,7 +270,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
               ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_95 = Obj.magic (let __arr_96 = HxArray.create () in __arr_96) in (
                 tempArray := __assign_95;
                 __assign_95
-              ) else let __assign_97 = Obj.magic (CompilerDependencyComparison.getSourceOriginChanges (Obj.magic dependencyComparison) ()) in (
+              ) else let __assign_97 = Obj.magic (CompilerDependencyComparison.getProgramConfigurationChanges (Obj.magic dependencyComparison) ()) in (
                 tempArray := __assign_97;
                 __assign_97
               ));
@@ -276,7 +278,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
                 ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_98 = Obj.magic (let __arr_99 = HxArray.create () in __arr_99) in (
                   tempArray1 := __assign_98;
                   __assign_98
-                ) else let __assign_100 = Obj.magic (CompilerDependencyComparison.getConditionalCompilationChanges (Obj.magic dependencyComparison) ()) in (
+                ) else let __assign_100 = Obj.magic (CompilerDependencyComparison.getSourceOriginChanges (Obj.magic dependencyComparison) ()) in (
                   tempArray1 := __assign_100;
                   __assign_100
                 ));
@@ -284,7 +286,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
                   ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_101 = Obj.magic (let __arr_102 = HxArray.create () in __arr_102) in (
                     tempArray2 := __assign_101;
                     __assign_101
-                  ) else let __assign_103 = Obj.magic (CompilerDependencyComparison.getGeneratedDeclarationChanges (Obj.magic dependencyComparison) ()) in (
+                  ) else let __assign_103 = Obj.magic (CompilerDependencyComparison.getConditionalCompilationChanges (Obj.magic dependencyComparison) ()) in (
                     tempArray2 := __assign_103;
                     __assign_103
                   ));
@@ -292,7 +294,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
                     ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_104 = Obj.magic (let __arr_105 = HxArray.create () in __arr_105) in (
                       tempArray3 := __assign_104;
                       __assign_104
-                    ) else let __assign_106 = Obj.magic (CompilerDependencyComparison.getPublicInterfaceChanges (Obj.magic dependencyComparison) ()) in (
+                    ) else let __assign_106 = Obj.magic (CompilerDependencyComparison.getGeneratedDeclarationChanges (Obj.magic dependencyComparison) ()) in (
                       tempArray3 := __assign_106;
                       __assign_106
                     ));
@@ -300,92 +302,118 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
                       ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_107 = Obj.magic (let __arr_108 = HxArray.create () in __arr_108) in (
                         tempArray4 := __assign_107;
                         __assign_107
-                      ) else let __assign_109 = Obj.magic (CompilerDependencyComparison.getImplementationChanges (Obj.magic dependencyComparison) ()) in (
+                      ) else let __assign_109 = Obj.magic (CompilerDependencyComparison.getMacroFileDependencyChanges (Obj.magic dependencyComparison) ()) in (
                         tempArray4 := __assign_109;
                         __assign_109
                       ));
-                      let tempArray5 = ref (Obj.magic (HxRuntime.hx_null) : CompilerDependencyInvalidation.t HxArray.t) in (
+                      let tempArray5 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
                         ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_110 = Obj.magic (let __arr_111 = HxArray.create () in __arr_111) in (
                           tempArray5 := __assign_110;
                           __assign_110
-                        ) else let __assign_112 = Obj.magic (CompilerDependencyComparison.getInvalidations (Obj.magic dependencyComparison) ()) in (
+                        ) else let __assign_112 = Obj.magic (CompilerDependencyComparison.getPublicInterfaceChanges (Obj.magic dependencyComparison) ()) in (
                           tempArray5 := __assign_112;
                           __assign_112
                         ));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_source_origin_changes=" ^ string_of_int (HxArray.length (!tempArray)) : string));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_conditional_compilation_changes=" ^ string_of_int (HxArray.length (!tempArray1)) : string));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_generated_declaration_changes=" ^ string_of_int (HxArray.length (!tempArray2)) : string));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_public_changes=" ^ string_of_int (HxArray.length (!tempArray3)) : string));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_implementation_changes=" ^ string_of_int (HxArray.length (!tempArray4)) : string));
-                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_predicted_invalidations=" ^ string_of_int (HxArray.length (!tempArray5)) : string));
-                        let _g = ref 0 in let _g1 = HxArray.length (!tempArray5) in (
-                          ignore (while !_g < _g1 do ignore (let index = let __old_113 = !_g in let __new_114 = HxInt.add __old_113 1 in (
-                            ignore (_g := __new_114);
-                            __old_113
-                          ) in let invalidation = Obj.magic (HxArray.get (Obj.magic (!tempArray5)) index) in (
-                            ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.dependency_invalidation[" ^ string_of_int index) ^ "].module=") ^ HxString.toStdString ((Obj.magic invalidation : CompilerDependencyInvalidation.t).modulePath) : string));
-                            Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.dependency_invalidation[" ^ string_of_int index) ^ "].reason=") ^ HxString.toStdString (HxArray.join ((Obj.magic invalidation : CompilerDependencyInvalidation.t).reasonPath) " -> " (fun x -> x)) : string)
-                          )) done);
-                          let missReasons = Obj.magic (CompilerSourceProviderReport.sortedMissReasons (Obj.magic sourceReport) ()) in (
-                            ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cache_miss_reason_count=" ^ string_of_int (HxArray.length missReasons) : string));
-                            let _g = ref 0 in let _g1 = HxArray.length missReasons in (
-                              ignore (while !_g < _g1 do ignore (let index = let __old_115 = !_g in let __new_116 = HxInt.add __old_115 1 in (
-                                ignore (_g := __new_116);
-                                __old_115
-                              ) in let reason = (HxArray.get (Obj.magic missReasons) index : string) in (
-                                ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.cache_miss_reason[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString reason : string));
-                                Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.cache_miss_reason[" ^ string_of_int index) ^ "].count=") ^ string_of_int (CompilerSourceProviderReport.missReasonCount (Obj.magic sourceReport) (reason : string)) : string)
-                              )) done);
-                              let tempString4 = ref ("" : string) in (
-                                ignore (if isCancelled (Obj.magic self) () then let __assign_117 = ("1" : string) in (
-                                  tempString4 := __assign_117;
-                                  __assign_117
-                                ) else let __assign_118 = ("0" : string) in (
-                                  tempString4 := __assign_118;
-                                  __assign_118
-                                ));
-                                ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancelled=" ^ HxString.toStdString (!tempString4) : string));
-                                ignore (if (Obj.magic self : t).cancellationReason != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                  ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_reason=" ^ HxString.toStdString ((Obj.magic self : t).cancellationReason) : string));
-                                  Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_stage=" ^ HxString.toStdString ((Obj.magic self : t).cancellationStage) : string)
-                                )) else ());
-                                let tempString5 = ref ("" : string) in (
-                                  ignore (if (Obj.magic self : t).outputTransaction == Obj.magic (HxRuntime.hx_null) then let __assign_119 = ("not_started" : string) in (
-                                    tempString5 := __assign_119;
-                                    __assign_119
-                                  ) else let __assign_120 = (Hxhx_CompilationRequestOutputTransaction.status (Obj.magic ((Obj.magic self : t).outputTransaction)) () : string) in (
-                                    tempString5 := __assign_120;
-                                    __assign_120
-                                  ));
-                                  ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.output_transaction=" ^ HxString.toStdString (!tempString5) : string));
-                                  let tempString6 = ref ("" : string) in (
-                                    ignore (if (Obj.magic self : t).cleanupSucceeded then let __assign_121 = ("ok" : string) in (
-                                      tempString6 := __assign_121;
-                                      __assign_121
-                                    ) else let __assign_122 = ("failed" : string) in (
-                                      tempString6 := __assign_122;
-                                      __assign_122
-                                    ));
-                                    ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cleanup=" ^ HxString.toStdString (!tempString6) : string));
-                                    ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.phase_count=" ^ string_of_int (HxArray.length ((Obj.magic self : t).phaseOrder)) : string));
-                                    let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).phaseOrder) in (
-                                      ignore (while !_g < _g1 do ignore (let index = let __old_123 = !_g in let __new_124 = HxInt.add __old_123 1 in (
-                                        ignore (_g := __new_124);
-                                        __old_123
-                                      ) in let phase = (HxArray.get (Obj.magic ((Obj.magic self : t).phaseOrder)) index : string) in let seconds = HxMap.get_string ((Obj.magic self : t).phaseElapsedSeconds) phase in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
-                                        ignore (if seconds == HxRuntime.hx_null then let __assign_125 = Obj.magic (Obj.repr 0.0) in (
-                                          tempMaybeNumber := __assign_125;
-                                          __assign_125
-                                        ) else let __assign_126 = Obj.magic seconds in (
-                                          tempMaybeNumber := __assign_126;
-                                          __assign_126
+                        let tempArray6 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+                          ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_113 = Obj.magic (let __arr_114 = HxArray.create () in __arr_114) in (
+                            tempArray6 := __assign_113;
+                            __assign_113
+                          ) else let __assign_115 = Obj.magic (CompilerDependencyComparison.getImplementationChanges (Obj.magic dependencyComparison) ()) in (
+                            tempArray6 := __assign_115;
+                            __assign_115
+                          ));
+                          let tempArray7 = ref (Obj.magic (HxRuntime.hx_null) : CompilerDependencyInvalidation.t HxArray.t) in (
+                            ignore (if dependencyComparison == Obj.magic (HxRuntime.hx_null) then let __assign_116 = Obj.magic (let __arr_117 = HxArray.create () in __arr_117) in (
+                              tempArray7 := __assign_116;
+                              __assign_116
+                            ) else let __assign_118 = Obj.magic (CompilerDependencyComparison.getInvalidations (Obj.magic dependencyComparison) ()) in (
+                              tempArray7 := __assign_118;
+                              __assign_118
+                            ));
+                            ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_program_configuration_changes=" ^ string_of_int (HxArray.length (!tempArray)) : string));
+                            let _g = ref 0 in let _g1 = HxArray.length (!tempArray) in (
+                              ignore (while !_g < _g1 do ignore (let index = let __old_119 = !_g in let __new_120 = HxInt.add __old_119 1 in (
+                                ignore (_g := __new_120);
+                                __old_119
+                              ) in Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.dependency_program_configuration_change[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) index) : string)) done);
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_source_origin_changes=" ^ string_of_int (HxArray.length (!tempArray1)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_conditional_compilation_changes=" ^ string_of_int (HxArray.length (!tempArray2)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_generated_declaration_changes=" ^ string_of_int (HxArray.length (!tempArray3)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_macro_file_changes=" ^ string_of_int (HxArray.length (!tempArray4)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_public_changes=" ^ string_of_int (HxArray.length (!tempArray5)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_implementation_changes=" ^ string_of_int (HxArray.length (!tempArray6)) : string));
+                              ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.dependency_predicted_invalidations=" ^ string_of_int (HxArray.length (!tempArray7)) : string));
+                              let _g = ref 0 in let _g1 = HxArray.length (!tempArray7) in (
+                                ignore (while !_g < _g1 do ignore (let index = let __old_121 = !_g in let __new_122 = HxInt.add __old_121 1 in (
+                                  ignore (_g := __new_122);
+                                  __old_121
+                                ) in let invalidation = Obj.magic (HxArray.get (Obj.magic (!tempArray7)) index) in (
+                                  ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.dependency_invalidation[" ^ string_of_int index) ^ "].module=") ^ HxString.toStdString ((Obj.magic invalidation : CompilerDependencyInvalidation.t).modulePath) : string));
+                                  Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.dependency_invalidation[" ^ string_of_int index) ^ "].reason=") ^ HxString.toStdString (HxArray.join ((Obj.magic invalidation : CompilerDependencyInvalidation.t).reasonPath) " -> " (fun x -> x)) : string)
+                                )) done);
+                                let missReasons = Obj.magic (CompilerSourceProviderReport.sortedMissReasons (Obj.magic sourceReport) ()) in (
+                                  ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cache_miss_reason_count=" ^ string_of_int (HxArray.length missReasons) : string));
+                                  let _g = ref 0 in let _g1 = HxArray.length missReasons in (
+                                    ignore (while !_g < _g1 do ignore (let index = let __old_123 = !_g in let __new_124 = HxInt.add __old_123 1 in (
+                                      ignore (_g := __new_124);
+                                      __old_123
+                                    ) in let reason = (HxArray.get (Obj.magic missReasons) index : string) in (
+                                      ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.cache_miss_reason[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString reason : string));
+                                      Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.cache_miss_reason[" ^ string_of_int index) ^ "].count=") ^ string_of_int (CompilerSourceProviderReport.missReasonCount (Obj.magic sourceReport) (reason : string)) : string)
+                                    )) done);
+                                    let tempString4 = ref ("" : string) in (
+                                      ignore (if isCancelled (Obj.magic self) () then let __assign_125 = ("1" : string) in (
+                                        tempString4 := __assign_125;
+                                        __assign_125
+                                      ) else let __assign_126 = ("0" : string) in (
+                                        tempString4 := __assign_126;
+                                        __assign_126
+                                      ));
+                                      ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancelled=" ^ HxString.toStdString (!tempString4) : string));
+                                      ignore (if (Obj.magic self : t).cancellationReason != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_reason=" ^ HxString.toStdString ((Obj.magic self : t).cancellationReason) : string));
+                                        Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_stage=" ^ HxString.toStdString ((Obj.magic self : t).cancellationStage) : string)
+                                      )) else ());
+                                      let tempString5 = ref ("" : string) in (
+                                        ignore (if (Obj.magic self : t).outputTransaction == Obj.magic (HxRuntime.hx_null) then let __assign_127 = ("not_started" : string) in (
+                                          tempString5 := __assign_127;
+                                          __assign_127
+                                        ) else let __assign_128 = (Hxhx_CompilationRequestOutputTransaction.status (Obj.magic ((Obj.magic self : t).outputTransaction)) () : string) in (
+                                          tempString5 := __assign_128;
+                                          __assign_128
                                         ));
-                                        let phaseMs = int_of_float (Math.max (float_of_int 0) ((let __nullable_float_127 = Obj.magic (!tempMaybeNumber) in if __nullable_float_127 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_127) *. float_of_int 1000)) in (
-                                          ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString phase : string));
-                                          Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].elapsed_ms=") ^ string_of_int phaseMs : string)
+                                        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.output_transaction=" ^ HxString.toStdString (!tempString5) : string));
+                                        let tempString6 = ref ("" : string) in (
+                                          ignore (if (Obj.magic self : t).cleanupSucceeded then let __assign_129 = ("ok" : string) in (
+                                            tempString6 := __assign_129;
+                                            __assign_129
+                                          ) else let __assign_130 = ("failed" : string) in (
+                                            tempString6 := __assign_130;
+                                            __assign_130
+                                          ));
+                                          ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cleanup=" ^ HxString.toStdString (!tempString6) : string));
+                                          ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.phase_count=" ^ string_of_int (HxArray.length ((Obj.magic self : t).phaseOrder)) : string));
+                                          let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).phaseOrder) in (
+                                            ignore (while !_g < _g1 do ignore (let index = let __old_131 = !_g in let __new_132 = HxInt.add __old_131 1 in (
+                                              ignore (_g := __new_132);
+                                              __old_131
+                                            ) in let phase = (HxArray.get (Obj.magic ((Obj.magic self : t).phaseOrder)) index : string) in let seconds = HxMap.get_string ((Obj.magic self : t).phaseElapsedSeconds) phase in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
+                                              ignore (if seconds == HxRuntime.hx_null then let __assign_133 = Obj.magic (Obj.repr 0.0) in (
+                                                tempMaybeNumber := __assign_133;
+                                                __assign_133
+                                              ) else let __assign_134 = Obj.magic seconds in (
+                                                tempMaybeNumber := __assign_134;
+                                                __assign_134
+                                              ));
+                                              let phaseMs = int_of_float (Math.max (float_of_int 0) ((let __nullable_float_135 = Obj.magic (!tempMaybeNumber) in if __nullable_float_135 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_135) *. float_of_int 1000)) in (
+                                                ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString phase : string));
+                                                Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].elapsed_ms=") ^ string_of_int phaseMs : string)
+                                              )
+                                            )) done);
+                                            Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.elapsed_ms=" ^ string_of_int elapsedMs : string)
+                                          )
                                         )
-                                      )) done);
-                                      Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.elapsed_ms=" ^ string_of_int elapsedMs : string)
+                                      )
                                     )
                                   )
                                 )
@@ -410,11 +438,11 @@ let direct = fun () -> create 0 false false (Obj.magic (HxRuntime.hx_null)) (Obj
 
 let server = fun requestId2 sourceProvider2 dependencyRequest2 -> create requestId2 true true (Obj.magic sourceProvider2) (Obj.magic dependencyRequest2)
 
-let normalizeLabel = fun value -> try let __fallback_result_129 = (
+let normalizeLabel = fun value -> try let __fallback_result_137 = (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   HxArray.join (HxString.split (HxArray.join (HxString.split (StringTools.trim (value : string)) "\r") " " (fun x -> x)) "\n") " " (fun x -> x)
-) in Obj.magic __fallback_result_129 with
-  | HxRuntime.Hx_return __ret_128 -> Obj.obj __ret_128
+) in Obj.magic __fallback_result_137 with
+  | HxRuntime.Hx_return __ret_136 -> Obj.obj __ret_136
 
 let requestCancellation = fun self (reason : string) -> ignore (ignore (try (
   ignore (ensureOpen (Obj.magic self) ());

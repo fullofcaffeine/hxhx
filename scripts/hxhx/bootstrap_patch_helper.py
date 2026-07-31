@@ -343,98 +343,6 @@ def cmd_patch_hxparser_uppercase_helper_call(argv: list[str]) -> None:
     write_text(path_str, replaced)
 
 
-def cmd_patch_native_parser_generic_arrow_constraints(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-native-parser-generic-arrow-constraints <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    old = """      while !depth_a > 0 do
-        match cur () with
-        | Eof p -> raise (Parse_error (p, "unterminated angle bracket group"))
-        | Sym ('<', _) ->
-            depth_a := !depth_a + 1;
-            bump ()
-        | Sym ('>', _) ->
-            depth_a := !depth_a - 1;
-            bump ()
-        | _ -> bump ()
-      done"""
-
-    new = """      while !depth_a > 0 do
-        match cur () with
-        | Eof p -> raise (Parse_error (p, "unterminated angle bracket group"))
-        | Sym ('-', _) when token_eq_sym (peek 1) '>' ->
-            (* Function type arrows inside generic constraints, e.g.
-                 Constructible<String -> Void>
-               must not consume the generic depth. *)
-            bump ();
-            bump ()
-        | Sym ('<', _) ->
-            depth_a := !depth_a + 1;
-            bump ()
-        | Sym ('>', _) ->
-            depth_a := !depth_a - 1;
-            bump ()
-        | _ -> bump ()
-      done"""
-
-    if old not in src:
-        fail("build-hxhx: failed to locate bootstrap native parser generic-arrow anchor\n")
-    write_text(path_str, src.replace(old, new, 1))
-
-
-def cmd_patch_native_parser_expr_spacing(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-native-parser-expr-spacing <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    helper_anchor = """let starts_with (s : string) (prefix : string) : bool =
-  let sl = Stdlib.String.length s in
-  let pl = Stdlib.String.length prefix in
-  sl >= pl && Stdlib.String.sub s 0 pl = prefix
-"""
-    helper_insert = """let starts_with (s : string) (prefix : string) : bool =
-  let sl = Stdlib.String.length s in
-  let pl = Stdlib.String.length prefix in
-  sl >= pl && Stdlib.String.sub s 0 pl = prefix
-
-let is_word_char (c : char) : bool =
-  match c with
-  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
-  | _ -> false
-
-let append_token_text (b : Buffer.t) (text : string) : unit =
-  if text <> "" then (
-    if Buffer.length b > 0 then (
-      let prev = Buffer.nth b (Buffer.length b - 1) in
-      let next = Stdlib.String.get text 0 in
-      let prev_needs_space =
-        is_word_char prev || prev = ')' || prev = ']' || prev = '}' || prev = '"'
-      in
-      let next_needs_space = is_word_char next || next = '"' || next = '~' in
-      let prev_forbids_space =
-        prev = '.' || prev = ':' || prev = '(' || prev = '[' || prev = '{' || prev = ','
-      in
-      if prev_needs_space && next_needs_space && not prev_forbids_space then
-        Buffer.add_char b ' ');
-    Buffer.add_string b text)
-"""
-    if "let append_token_text (b : Buffer.t) (text : string) : unit =" not in src:
-        if helper_anchor not in src:
-            fail("build-hxhx: failed to locate bootstrap native parser expr-spacing helper anchor\n")
-        src = src.replace(helper_anchor, helper_insert, 1)
-
-    old = "Buffer.add_string parts (tok_to_text tok);"
-    new = "append_token_text parts (tok_to_text tok);"
-    count = src.count(old)
-    if count < 3:
-        fail("build-hxhx: failed to locate bootstrap native parser expr-spacing append anchors\n")
-    src = src.replace(old, new)
-    write_text(path_str, src)
-
-
 def cmd_patch_emitter_typed_param_fallback(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-emitter-typed-param-fallback <path>\n")
@@ -4278,8 +4186,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-hxparser-interpolated-exprs": cmd_patch_hxparser_interpolated_exprs,
     "patch-hxparser-generic-function-decl": cmd_patch_hxparser_generic_function_decl,
     "patch-hxparser-uppercase-helper-call": cmd_patch_hxparser_uppercase_helper_call,
-    "patch-native-parser-generic-arrow-constraints": cmd_patch_native_parser_generic_arrow_constraints,
-    "patch-native-parser-expr-spacing": cmd_patch_native_parser_expr_spacing,
     "patch-emitter-typed-param-fallback": cmd_patch_emitter_typed_param_fallback,
     "patch-emitter-parsed-arg-type-overlay": cmd_patch_emitter_parsed_arg_type_overlay,
     "patch-emitter-preapplied-sig-fallback": cmd_patch_emitter_preapplied_sig_fallback,

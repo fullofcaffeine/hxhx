@@ -13,6 +13,15 @@ typedef CppRenderScope = {
 	var allClasses:Array<HxClassDecl>;
 	@:optional var classLookup:CppClassLookup;
 
+	/** Declared-type results owned by this scope's one program render. **/
+	var declaredTypeMemo:CppDeclaredTypeMemo;
+
+	/** Recursive function-analysis state owned by this scope's program render. **/
+	var functionAnalysisMemo:CppFunctionAnalysisMemo;
+
+	/** Timing configuration and nested diagnostic buffer for this program render. **/
+	var traceContext:CppTraceContext;
+
 	/** Immutable class-graph inheritance results reused throughout one render scope. **/
 	var classInheritanceCache:haxe.ds.StringMap<Bool>;
 

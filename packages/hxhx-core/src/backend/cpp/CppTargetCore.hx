@@ -33,15 +33,6 @@ typedef CppConstructorFieldInitializer = {
 	var arg:String;
 }
 
-typedef CppFunctionScopePrep = {
-	var argTypeOverrides:haxe.ds.StringMap<String>;
-	var localTypeOverrides:haxe.ds.StringMap<String>;
-	var argLocalTypes:haxe.ds.StringMap<String>;
-	var argLocalTypeHints:haxe.ds.StringMap<String>;
-	var argLocalNames:haxe.ds.StringMap<String>;
-	var argLocalNameCounts:haxe.ds.StringMap<Int>;
-}
-
 typedef CppStructuredStringMapInit = {
 	var local:String;
 	var keys:Array<HxExpr>;
@@ -138,10 +129,10 @@ class CppTargetCore {
 	}
 
 	static function knownStdlibSignatures():CppKnownStdlibSignatures {
-		var signatures = cachedKnownStdlibSignatures;
+		var signatures = processKnownStdlibSignatures;
 		if (signatures == null) {
 			signatures = new CppKnownStdlibSignatures(knownStdlibSignatureServices());
-			cachedKnownStdlibSignatures = signatures;
+			processKnownStdlibSignatures = signatures;
 		}
 		return signatures;
 	}
@@ -184,7 +175,7 @@ class CppTargetCore {
 			representation: function(cls, lookup) return primitiveAbstractRepresentation(cls, lookup),
 			lookupForScope: function(scope) return lookupForScope(scope),
 			valueForExpectedType: function(expression, expectedType, scope) return valueExprForExpectedType(expression, expectedType, scope),
-			inferredArgumentTypes: function(fn, owner, classes, allClasses) return inferredFunctionArgCppTypes(fn, owner, classes, allClasses),
+			inferredArgumentTypes: function(fn, owner, scope) return inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope)),
 			renderCallArguments: function(parameters, arguments, scope,
 					parameterTypes) return renderFunctionCallArgs(parameters, arguments, scope, parameterTypes),
 			inlineBody: function(receiver, fn, scope) return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope),
@@ -212,24 +203,17 @@ class CppTargetCore {
 		};
 	}
 
-	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
-	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
-	static var erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
-	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
-	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
-	static var functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
-	static var fieldCppTypeCache = new haxe.ds.StringMap<String>();
-	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
-	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
-	static var traceCppDeepEnabledCache = -1;
-	static var traceCppTimingsEnabledCache = -1;
-	static var traceCppLambdaPhasesEnabledCache = -1;
-	static var traceCppCallArgDetailPhasesEnabledCache = -1;
-	static var traceCppHelperClassificationDetailsEnabledCache = -1;
-	static var traceCppTimingMethodFilterCache:Null<String> = null;
-	static var traceCppTimingPhaseBuffer:Null<Array<String>> = null;
-	static var cachedLocalTypeInferenceApi:Null<CppLocalTypeInference.CppLocalTypeInferenceApi> = null;
-	static var cachedKnownStdlibSignatures:Null<CppKnownStdlibSignatures> = null;
+	/**
+		Lazily initialized process services for C++ analysis.
+
+		These objects contain only stable function references. Every semantic input
+		continues to arrive through method arguments such as the current render scope
+		and class lookup, so the objects retain no compiler-request data or reset
+		obligation.
+	**/
+	static var processLocalTypeInferenceApi:Null<CppLocalTypeInference.CppLocalTypeInferenceApi> = null;
+
+	static var processKnownStdlibSignatures:Null<CppKnownStdlibSignatures> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -288,31 +272,43 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
-	static function traceCppDeepEnabled():Bool {
-		if (traceCppDeepEnabledCache < 0)
-			traceCppDeepEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_DEEP") ? 1 : 0;
-		return traceCppDeepEnabledCache == 1;
+	static function traceCppDeepEnabled(context:CppTraceContext):Bool {
+		return context != null && context.deepEnabled;
 	}
 
-	static function traceCppDeepPhase(label:String):Void {
-		if (traceCppDeepEnabled())
+	static function traceCppDeepPhase(context:CppTraceContext, label:String):Void {
+		if (traceCppDeepEnabled(context))
 			Sys.println("cpp_target_phase=" + label);
 	}
 
-	static function traceCppTimingsEnabled():Bool {
-		if (traceCppTimingsEnabledCache < 0)
-			traceCppTimingsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_TIMINGS") ? 1 : 0;
-		return traceCppTimingsEnabledCache == 1;
+	static function traceContextFromEnvironment():CppTraceContext {
+		final rawFilter = Sys.getEnv("HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER");
+		return new CppTraceContext(envFlagEnabled("HXHX_TRACE_STAGE3_CPP_TIMINGS"), rawFilter == null ? "" : rawFilter,
+			envFlagEnabled("HXHX_TRACE_STAGE3_CPP_DEEP"), envFlagEnabled("HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES"),
+			envFlagEnabled("HXHX_TRACE_STAGE3_CPP_CALL_ARG_DETAIL_PHASES"), envFlagEnabled("HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS"));
 	}
 
-	static function traceCppTimingPhase(label:String):Void {
-		if (!traceCppTimingsEnabled())
+	static function traceContextForLookup(classLookup:CppClassLookup):CppTraceContext {
+		var context = classLookup.traceContext;
+		if (context == null) {
+			context = traceContextFromEnvironment();
+			classLookup.traceContext = context;
+		}
+		return context;
+	}
+
+	static function traceCppTimingsEnabled(context:CppTraceContext):Bool {
+		return context != null && context.timingsEnabled;
+	}
+
+	static function traceCppTimingPhase(context:CppTraceContext, label:String):Void {
+		if (!traceCppTimingsEnabled(context))
 			return;
 		final line = "cpp_target_phase=" + label;
-		if (traceCppTimingPhaseBuffer == null) {
+		if (context.timingPhaseBuffer == null) {
 			Sys.println(line);
 		} else {
-			traceCppTimingPhaseBuffer.push(line);
+			context.timingPhaseBuffer.push(line);
 		}
 	}
 
@@ -324,22 +320,22 @@ class CppTargetCore {
 		statement, method, or class render timings. An exceptional render still
 		flushes any diagnostics recorded before rethrowing the original error.
 	**/
-	static function measureWithBufferedCppTimingPhases(body:Void->Void):{elapsed:Float, phases:Array<String>} {
-		final priorBuffer = traceCppTimingPhaseBuffer;
+	static function measureWithBufferedCppTimingPhases(context:CppTraceContext, body:Void->Void):{elapsed:Float, phases:Array<String>} {
+		final priorBuffer = context.timingPhaseBuffer;
 		final phases = new Array<String>();
-		traceCppTimingPhaseBuffer = phases;
+		context.timingPhaseBuffer = phases;
 		final startTime = Sys.time();
 		try {
 			body();
 			final elapsed = Sys.time() - startTime;
-			traceCppTimingPhaseBuffer = priorBuffer;
+			context.timingPhaseBuffer = priorBuffer;
 			return {elapsed: elapsed, phases: phases};
 		} catch (error:haxe.Exception) {
-			traceCppTimingPhaseBuffer = priorBuffer;
+			context.timingPhaseBuffer = priorBuffer;
 			flushCppTimingPhases(phases);
 			throw error;
 		} catch (error:String) {
-			traceCppTimingPhaseBuffer = priorBuffer;
+			context.timingPhaseBuffer = priorBuffer;
 			flushCppTimingPhases(phases);
 			throw error;
 		}
@@ -351,41 +347,31 @@ class CppTargetCore {
 			Sys.println(line);
 	}
 
-	static function traceCppLambdaPhasesEnabled():Bool {
-		if (traceCppLambdaPhasesEnabledCache < 0)
-			traceCppLambdaPhasesEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES") ? 1 : 0;
-		return traceCppLambdaPhasesEnabledCache == 1;
+	static function traceCppLambdaPhasesEnabled(context:CppTraceContext):Bool {
+		return context != null && context.lambdaPhasesEnabled;
 	}
 
-	static function traceCppCallArgDetailPhasesEnabled():Bool {
-		if (traceCppCallArgDetailPhasesEnabledCache < 0)
-			traceCppCallArgDetailPhasesEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_CALL_ARG_DETAIL_PHASES") ? 1 : 0;
-		return traceCppCallArgDetailPhasesEnabledCache == 1;
+	static function traceCppCallArgDetailPhasesEnabled(context:CppTraceContext):Bool {
+		return context != null && context.callArgDetailPhasesEnabled;
 	}
 
-	static function traceCppHelperClassificationDetailsEnabled():Bool {
-		if (traceCppHelperClassificationDetailsEnabledCache < 0)
-			traceCppHelperClassificationDetailsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS") ? 1 : 0;
-		return traceCppHelperClassificationDetailsEnabledCache == 1;
+	static function traceCppHelperClassificationDetailsEnabled(context:CppTraceContext):Bool {
+		return context != null && context.helperClassificationDetailsEnabled;
 	}
 
-	static function traceCppHelperClassificationDetailPhase(label:String):Void {
-		if (traceCppHelperClassificationDetailsEnabled())
+	static function traceCppHelperClassificationDetailPhase(context:CppTraceContext, label:String):Void {
+		if (traceCppHelperClassificationDetailsEnabled(context))
 			Sys.println("cpp_target_phase=" + label);
 	}
 
-	static function traceCppTimingMethodFilter():String {
-		if (traceCppTimingMethodFilterCache == null) {
-			final raw = Sys.getEnv("HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER");
-			traceCppTimingMethodFilterCache = raw == null ? "" : StringTools.trim(raw);
-		}
-		return traceCppTimingMethodFilterCache;
+	static function traceCppTimingMethodFilter(context:CppTraceContext):String {
+		return context == null ? "" : context.timingMethodFilter;
 	}
 
-	static function traceCppMethodStmtTimingsEnabled(ownerName:String, methodName:String):Bool {
-		if (!traceCppTimingsEnabled())
+	static function traceCppMethodStmtTimingsEnabled(context:CppTraceContext, ownerName:String, methodName:String):Bool {
+		if (!traceCppTimingsEnabled(context))
 			return false;
-		final filter = traceCppTimingMethodFilter();
+		final filter = traceCppTimingMethodFilter(context);
 		if (filter.length == 0)
 			return false;
 		final owner = sanitizeTypePath(typeBaseName(ownerName == null ? "" : ownerName));
@@ -397,23 +383,30 @@ class CppTargetCore {
 		return scope != null
 			&& scope.traceOwnerName != null
 			&& scope.traceMethodName != null
-			&& traceCppMethodStmtTimingsEnabled(scope.traceOwnerName, scope.traceMethodName);
+			&& traceCppMethodStmtTimingsEnabled(scope.traceContext, scope.traceOwnerName, scope.traceMethodName);
 	}
 
 	static function traceCppLambdaPhaseTimingEnabled(?scope:CppRenderScope):Bool {
-		return traceCppLambdaPhasesEnabled() && traceCppScopeStmtTimingEnabled(scope);
+		return scope != null && traceCppLambdaPhasesEnabled(scope.traceContext) && traceCppScopeStmtTimingEnabled(scope);
 	}
 
 	static function traceCppCallArgDetailPhaseTimingEnabled(?scope:CppRenderScope):Bool {
-		return traceCppCallArgDetailPhasesEnabled() && traceCppScopeStmtTimingEnabled(scope);
+		return scope != null && traceCppCallArgDetailPhasesEnabled(scope.traceContext) && traceCppScopeStmtTimingEnabled(scope);
 	}
 
 	static function traceCppScopeStmtTimingPhase(scope:CppRenderScope, label:String):Void {
 		if (!traceCppScopeStmtTimingEnabled(scope))
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
-		traceCppTimingPhase("render_helper_expr_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName) + " index="
-			+ Std.string(index) + " " + label);
+		traceCppTimingPhase(scope.traceContext,
+			"render_helper_expr_timing owner="
+			+ scope.traceOwnerName
+			+ " name="
+			+ sanitizeIdentifier(scope.traceMethodName)
+			+ " index="
+			+ Std.string(index)
+			+ " "
+			+ label);
 	}
 
 	/** Record opt-in typed-lambda render phases for the currently filtered helper statement. **/
@@ -421,8 +414,19 @@ class CppTargetCore {
 		if (!traceCppLambdaPhaseTimingEnabled(scope))
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
-		traceCppTimingPhase("render_helper_lambda_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
-			+ " index=" + Std.string(index) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " args=" + Std.string(argCount)
+		traceCppTimingPhase(scope.traceContext,
+			"render_helper_lambda_phase_timing owner="
+			+ scope.traceOwnerName
+			+ " name="
+			+ sanitizeIdentifier(scope.traceMethodName)
+			+ " index="
+			+ Std.string(index)
+			+ " phase="
+			+ phase
+			+ " seconds="
+			+ Std.string(elapsed)
+			+ " args="
+			+ Std.string(argCount)
 			+ (detail.length == 0 ? "" : " " + detail));
 	}
 
@@ -436,10 +440,29 @@ class CppTargetCore {
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
 		final paramName = param == null ? "" : sanitizeIdentifier(HxFunctionArg.getName(param));
-		traceCppTimingPhase("render_helper_call_arg_render_phase_timing owner=" + scope.traceOwnerName + " name="
-			+ sanitizeIdentifier(scope.traceMethodName) + " index=" + Std.string(index) + " kind=" + exprKind(arg) + " phase=" + phase + " seconds="
-			+ Std.string(elapsed) + " param=" + paramName + " declared_type=" + traceCppTypeToken(declaredType) + " expected_type="
-			+ traceCppTypeToken(expectedType) + " value_type=" + traceCppTypeToken(valueType) + " actual_type=" + traceCppTypeToken(actualType)
+		traceCppTimingPhase(scope.traceContext,
+			"render_helper_call_arg_render_phase_timing owner="
+			+ scope.traceOwnerName
+			+ " name="
+			+ sanitizeIdentifier(scope.traceMethodName)
+			+ " index="
+			+ Std.string(index)
+			+ " kind="
+			+ exprKind(arg)
+			+ " phase="
+			+ phase
+			+ " seconds="
+			+ Std.string(elapsed)
+			+ " param="
+			+ paramName
+			+ " declared_type="
+			+ traceCppTypeToken(declaredType)
+			+ " expected_type="
+			+ traceCppTypeToken(expectedType)
+			+ " value_type="
+			+ traceCppTypeToken(valueType)
+			+ " actual_type="
+			+ traceCppTypeToken(actualType)
 			+ (detail.length == 0 ? "" : " " + detail));
 	}
 
@@ -449,11 +472,29 @@ class CppTargetCore {
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
 		final expected = traceCppTypeToken(expectedType);
-		traceCppTimingPhase("render_helper_callable_arg_expr_phase_timing owner=" + scope.traceOwnerName + " name="
-			+ sanitizeIdentifier(scope.traceMethodName) + " index=" + Std.string(index) + " kind=" + exprKind(expr) + " phase=" + phase + " seconds="
-			+ Std.string(elapsed) + " expected_type=" + expected + " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides="
-			+ Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides))
-			+ " local_types=" + Std.string(countStringMap(scope.localTypes)));
+		traceCppTimingPhase(scope.traceContext,
+			"render_helper_callable_arg_expr_phase_timing owner="
+			+ scope.traceOwnerName
+			+ " name="
+			+ sanitizeIdentifier(scope.traceMethodName)
+			+ " index="
+			+ Std.string(index)
+			+ " kind="
+			+ exprKind(expr)
+			+ " phase="
+			+ phase
+			+ " seconds="
+			+ Std.string(elapsed)
+			+ " expected_type="
+			+ expected
+			+ " candidates="
+			+ Std.string(countStringMap(candidates))
+			+ " arg_overrides="
+			+ Std.string(countStringMap(scope.argTypeOverrides))
+			+ " local_overrides="
+			+ Std.string(countStringMap(scope.localTypeOverrides))
+			+ " local_types="
+			+ Std.string(countStringMap(scope.localTypes)));
 	}
 
 	static function traceForwardedCallPhase(scope:CppRenderScope, callee:HxExpr, phase:String, elapsed:Float, candidates:haxe.ds.StringMap<Bool>,
@@ -468,17 +509,44 @@ class CppTargetCore {
 		var paramCount = 0;
 		if (params != null)
 			paramCount = params.length;
-		traceCppTimingPhase("render_helper_forwarded_call_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
-			+ " index=" + Std.string(index) + " callee=" + exprKind(callee) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " args="
-			+ Std.string(argCount) + " params=" + Std.string(paramCount) + " param_index=" + Std.string(paramIndex) + " arg_index=" + Std.string(argIndex)
-			+ " param=" + sanitizeIdentifier(paramName) + " arg_kind=" + argKind + " candidates=" + Std.string(countStringMap(candidates))
-			+ " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides="
-			+ Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
+		traceCppTimingPhase(scope.traceContext,
+			"render_helper_forwarded_call_phase_timing owner="
+			+ scope.traceOwnerName
+			+ " name="
+			+ sanitizeIdentifier(scope.traceMethodName)
+			+ " index="
+			+ Std.string(index)
+			+ " callee="
+			+ exprKind(callee)
+			+ " phase="
+			+ phase
+			+ " seconds="
+			+ Std.string(elapsed)
+			+ " args="
+			+ Std.string(argCount)
+			+ " params="
+			+ Std.string(paramCount)
+			+ " param_index="
+			+ Std.string(paramIndex)
+			+ " arg_index="
+			+ Std.string(argIndex)
+			+ " param="
+			+ sanitizeIdentifier(paramName)
+			+ " arg_kind="
+			+ argKind
+			+ " candidates="
+			+ Std.string(countStringMap(candidates))
+			+ " arg_overrides="
+			+ Std.string(countStringMap(scope.argTypeOverrides))
+			+ " local_overrides="
+			+ Std.string(countStringMap(scope.localTypeOverrides))
+			+ " local_types="
+			+ Std.string(countStringMap(scope.localTypes))
 			+ (detail.length == 0 ? "" : " " + detail));
 	}
 
-	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
-		if (!traceCppDeepEnabled())
+	static function traceCppMemberPhase(context:CppTraceContext, className:String, kind:String, memberName:String, stage:String):Void {
+		if (!traceCppDeepEnabled(context))
 			return;
 		traceCppPhase(kind + " class=" + className + " member=" + sanitizeIdentifier(memberName) + " stage=" + stage);
 	}
@@ -524,13 +592,6 @@ class CppTargetCore {
 
 	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl},
 			resources:Array<backend.BackendResource>):String {
-		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
-		functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
-		fieldCppTypeCache = new haxe.ds.StringMap<String>();
-		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
-		functionReturnTypesCache = new haxe.ds.StringMap<String>();
-		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
-		traceCppTimingMethodFilterCache = null;
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
 		traceCppPhase("render_enter main=" + className + " typed_modules=" + typedModules.length);
@@ -640,6 +701,7 @@ class CppTargetCore {
 	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup, ?classesToScan:Array<HxClassDecl>):Array<CppAnonStruct> {
 		final out = new Array<CppAnonStruct>();
 		final seen = new haxe.ds.StringMap<Bool>();
+		final traceContext = traceContextForLookup(classLookup);
 		var typeHintTraceCount = 0;
 		var typeHintTraceSuppressed = false;
 		traceCppPhase("anon_collect_enter typed_modules="
@@ -647,14 +709,14 @@ class CppTargetCore {
 			+ " scan_classes="
 			+ (classesToScan == null ? "all" : Std.string(classesToScan.length)));
 		function traceAnonTypeHint(hint:String):Void {
-			if (!traceCppDeepEnabled())
+			if (!traceCppDeepEnabled(traceContext))
 				return;
 			if (typeHintTraceCount < 1000) {
 				typeHintTraceCount++;
-				traceCppDeepPhase("anon_collect_type_hint hint=" + traceCppSnippet(hint));
+				traceCppDeepPhase(traceContext, "anon_collect_type_hint hint=" + traceCppSnippet(hint));
 			} else if (!typeHintTraceSuppressed) {
 				typeHintTraceSuppressed = true;
-				traceCppDeepPhase("anon_collect_type_hint_suppressed limit=1000");
+				traceCppDeepPhase(traceContext, "anon_collect_type_hint_suppressed limit=1000");
 			}
 		}
 		function addStruct(struct:CppAnonStruct):Void {
@@ -984,18 +1046,18 @@ class CppTargetCore {
 			if (collectedClassCount % 25 == 0)
 				traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
 					+ " structs=" + out.length);
-			traceCppDeepPhase("anon_collect_class_begin name=" + className);
+			traceCppDeepPhase(traceContext, "anon_collect_class_begin name=" + className);
 			final fieldScope = renderScope(cls, classLookup, "void");
 			for (field in HxClassDecl.getFields(cls)) {
 				final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
-				traceCppDeepPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
+				traceCppDeepPhase(traceContext, "anon_collect_field_begin class=" + className + " name=" + fieldName);
 				addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
 				final init = HxFieldDecl.getInit(field);
 				if (includeParsedBodies && init != null)
 					addExpr(init, fieldScope);
 				else if (init != null)
 					skippedFieldInitCount++;
-				traceCppDeepPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
+				traceCppDeepPhase(traceContext, "anon_collect_field_end class=" + className + " name=" + fieldName);
 			}
 			for (fn in HxClassDecl.getFunctions(cls)) {
 				final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
@@ -1003,7 +1065,7 @@ class CppTargetCore {
 				if (collectedFunctionCount % 250 == 0)
 					traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
 						+ " fn=" + fnName + " structs=" + out.length);
-				traceCppDeepPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
+				traceCppDeepPhase(traceContext, "anon_collect_fn_begin class=" + className + " name=" + fnName);
 				final scope = renderScope(cls, classLookup, "auto");
 				prepareAnonCollectFunctionScope(scope, fn);
 				addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
@@ -1027,9 +1089,9 @@ class CppTargetCore {
 				} else {
 					omittedFunctionBodyCount++;
 				}
-				traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
+				traceCppDeepPhase(traceContext, "anon_collect_fn_end class=" + className + " name=" + fnName);
 			}
-			traceCppDeepPhase("anon_collect_class_end name=" + className);
+			traceCppDeepPhase(traceContext, "anon_collect_class_end name=" + className);
 		}
 		if (classesToScan != null) {
 			for (cls in classesToScan)
@@ -1259,7 +1321,7 @@ class CppTargetCore {
 				final owner = fn == null ? null : ownerForKnownCall(expr, scope);
 				if (fn == null || owner == null) ""; else {
 					final returnType = cppFunctionReturnType(fn, owner, lookupForScope(scope));
-					final argTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+					final argTypes = inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope));
 					final staticOwner = staticReceiverClassName(receiver, scope);
 					final typedArgs = staticOwner == null ? instantiateGenericClassParamTypes(sanitizeTypePath(HxClassDecl.getName(owner)),
 						exprCppType(receiver, scope), argTypes, scope) : argTypes;
@@ -1508,6 +1570,9 @@ class CppTargetCore {
 		final packagePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final sourcePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final helperRenderKindByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
+		final declaredTypeMemo = new CppDeclaredTypeMemo();
+		final functionAnalysisMemo = new CppFunctionAnalysisMemo();
+		final traceContext = traceContextFromEnvironment();
 		final classInfos = new Array<{cls:HxClassDecl, packagePath:String, sourcePath:String}>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getBackendDeclaration();
@@ -1544,6 +1609,9 @@ class CppTargetCore {
 		return {
 			names: names,
 			byName: byName,
+			declaredTypeMemo: declaredTypeMemo,
+			functionAnalysisMemo: functionAnalysisMemo,
+			traceContext: traceContext,
 			all: all,
 			renderedNames: renderedNames,
 			classInfos: classInfos,
@@ -1700,9 +1768,10 @@ class CppTargetCore {
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
 		traceHelperRenderKindCounts("render_helper_classes_classification", orderedHelpers, classLookup);
 		traceHelperRenderKindDetails("render_helper_classes_classification", orderedHelpers, classLookup);
+		final traceContext = traceContextForLookup(classLookup);
 		for (cls in orderedHelpers) {
 			final helperName = renderedClassName(cls, classLookup);
-			final timingEnabled = traceCppTimingsEnabled();
+			final timingEnabled = traceCppTimingsEnabled(traceContext);
 			if (!timingEnabled) {
 				traceCppPhase("render_helper_class_begin name=" + helperName);
 				final rendered = renderHelperClass(cls, classLookup);
@@ -1712,13 +1781,14 @@ class CppTargetCore {
 			}
 			traceCppPhase("render_helper_class_begin name=" + helperName);
 			var rendered:Array<String> = null;
-			final measured = measureWithBufferedCppTimingPhases(() -> {
+			final measured = measureWithBufferedCppTimingPhases(traceContext, () -> {
 				rendered = renderHelperClass(cls, classLookup);
 				out.push(rendered);
 			});
 			flushCppTimingPhases(measured.phases);
 			traceCppPhase("render_helper_class_end name=" + helperName);
-			traceCppTimingPhase("render_helper_class_timing name="
+			traceCppTimingPhase(traceContext,
+				"render_helper_class_timing name="
 				+ helperName
 				+ " seconds="
 				+ Std.string(measured.elapsed)
@@ -1951,11 +2021,12 @@ class CppTargetCore {
 	}
 
 	static function traceHelperRenderKindDetails(label:String, helpers:Array<HxClassDecl>, classLookup:CppClassLookup):Void {
-		if (!traceCppHelperClassificationDetailsEnabled())
+		final traceContext = traceContextForLookup(classLookup);
+		if (!traceCppHelperClassificationDetailsEnabled(traceContext))
 			return;
 		var index = 0;
 		for (cls in helpers) {
-			traceCppHelperClassificationDetailPhase(helperRenderKindDetailLine(label, index, cls, classLookup));
+			traceCppHelperClassificationDetailPhase(traceContext, helperRenderKindDetailLine(label, index, cls, classLookup));
 			index++;
 		}
 	}
@@ -2524,7 +2595,7 @@ class CppTargetCore {
 			return;
 		final owner = scope.classByName.get(ownerType);
 		final paramTypes = owner == null ? null : instantiateGenericClassParamTypes(ownerType, receiverType,
-			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses), scope);
+			inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope)), scope);
 		addFunctionParamClassReferenceDependencies(HxFunctionDecl.getArgs(fn), args, paramTypes, add, scope);
 	}
 
@@ -2703,27 +2774,34 @@ class CppTargetCore {
 				|| shouldAssignInheritedDynamicFunctionSlot(fn, cls, classLookup))
 				continue;
 			final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-			final timingEnabled = traceCppTimingsEnabled();
+			final timingEnabled = traceCppTimingsEnabled(scope.traceContext);
 			final startTime = timingEnabled ? Sys.time() : 0.0;
 			final methodLines = renderHelperMethod(fn, cls, classLookup);
 			for (line in methodLines)
 				out.push(line);
 			if (timingEnabled) {
 				final elapsed = Sys.time() - startTime;
-				traceCppTimingPhase("render_helper_method_timing owner=" + className + " name=" + methodName + " seconds=" + Std.string(elapsed) + " lines="
+				traceCppTimingPhase(scope.traceContext,
+					"render_helper_method_timing owner="
+					+ className
+					+ " name="
+					+ methodName
+					+ " seconds="
+					+ Std.string(elapsed)
+					+ " lines="
 					+ methodLines.length);
 			}
 		}
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = HxFieldDecl.getName(field);
-			traceCppMemberPhase(className, "render_helper_field", fieldName, "begin");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_field", fieldName, "begin");
 			final init = HxFieldDecl.getInit(field);
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
 				final knownFieldInit = knownStdlibFieldInitExpr(className, fieldName, init, typeName, scope);
 				final rhs = knownFieldInit == null ? renderFieldInitExpr(init, typeName, scope) : knownFieldInit;
 				out.push("  inline static " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
-				traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
+				traceCppMemberPhase(scope.traceContext, className, "render_helper_field", fieldName, "end");
 				continue;
 			}
 			final genericField = isGenericTypeParamHint(HxFieldDecl.getTypeHint(field), cls);
@@ -2733,7 +2811,7 @@ class CppTargetCore {
 				final rhs = renderFieldInitExpr(init, typeName, scope);
 				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 			}
-			traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_field", fieldName, "end");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (shouldRenderOwnDynamicFunctionStorage(fn, cls, classLookup))
@@ -2747,9 +2825,9 @@ class CppTargetCore {
 			for (line in renderImplicitConstructors(className, baseType, scope))
 				out.push(line);
 		} else {
-			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "begin");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "begin");
 			prepareFunctionScope(scope, ctor);
-			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_prepare");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_prepare");
 			out.push("  "
 				+ className
 				+ "("
@@ -2757,13 +2835,13 @@ class CppTargetCore {
 				+ ")"
 				+ constructorInitializerList(ctor, scope)
 				+ " {");
-			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_signature");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_signature");
 			for (line in renderInheritedDynamicFunctionSlotAssignments(cls, classLookup, scope, "    "))
 				out.push(line);
 			for (line in renderStmts(constructorBodyWithoutInitializerStmts(ctor, scope), "    ", scope))
 				out.push(line);
 			out.push("  }");
-			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "end");
+			traceCppMemberPhase(scope.traceContext, className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "end");
 		}
 		out.push("};");
 		if (!CppAbstractProjection.isEligible(cls, typeParams))
@@ -2908,7 +2986,7 @@ class CppTargetCore {
 		final baseCtor = findConstructor(baseCls);
 		if (baseCtor == null)
 			return renderImplicitConstructorLines("  " + className + "() : " + baseType + "()", dynamicAssignments);
-		final baseScope = renderScope(baseCls, {names: scope.classNames, byName: scope.classByName}, "void");
+		final baseScope = renderScope(baseCls, lookupForScope(scope), "void");
 		prepareFunctionScope(baseScope, baseCtor);
 		final args = HxFunctionDecl.getArgs(baseCtor);
 		final argNames = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
@@ -4105,15 +4183,16 @@ class CppTargetCore {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
-		final cacheKey = explicit.length > 0 ? fieldCppTypeCacheKey(className, field, explicit, init, scope) : "";
+		final cache = scope == null ? null : scope.declaredTypeMemo.fieldTypesByShape;
+		final cacheKey = cache != null && explicit.length > 0 ? fieldCppTypeCacheKey(className, field, explicit, init, scope) : "";
 		if (cacheKey.length > 0) {
-			final cached = fieldCppTypeCache.get(cacheKey);
+			final cached = cache.get(cacheKey);
 			if (cached != null)
 				return cached;
 		}
 		function cacheFieldType(typeName:String):String {
 			if (cacheKey.length > 0)
-				fieldCppTypeCache.set(cacheKey, typeName);
+				cache.set(cacheKey, typeName);
 			return typeName;
 		}
 		if (owner == "EntryPoint" && field == "pending")
@@ -4693,6 +4772,13 @@ class CppTargetCore {
 	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
 		final typeParams = genericClassTemplateParams(cls);
 		final typeParamCppNames = new haxe.ds.StringMap<String>();
+		var declaredTypeMemo = classLookup.declaredTypeMemo;
+		if (declaredTypeMemo == null) {
+			declaredTypeMemo = new CppDeclaredTypeMemo();
+			classLookup.declaredTypeMemo = declaredTypeMemo;
+		}
+		final functionAnalysisMemo = functionAnalysisMemoForLookup(classLookup);
+		final traceContext = traceContextForLookup(classLookup);
 		for (param in typeParams) {
 			final clean = sanitizeIdentifier(param);
 			if (clean.length > 0)
@@ -4704,6 +4790,9 @@ class CppTargetCore {
 			classByName: classLookup.byName,
 			allClasses: classLookup.all == null ? [] : classLookup.all,
 			classLookup: classLookup,
+			declaredTypeMemo: declaredTypeMemo,
+			functionAnalysisMemo: functionAnalysisMemo,
+			traceContext: traceContext,
 			classInheritanceCache: new haxe.ds.StringMap<Bool>(),
 			methodOwnerCache: new haxe.ds.StringMap<HxClassDecl>(),
 			missingMethodOwnerCache: new haxe.ds.StringMap<Bool>(),
@@ -4723,6 +4812,22 @@ class CppTargetCore {
 			returnType: returnType,
 			returnOnlyTypeParamAuto: false
 		};
+	}
+
+	/**
+		Return the recursive-analysis owner for one program lookup.
+
+		Full program lookups create the memo eagerly. Small focused fixtures may
+		construct a lookup directly, so this helper attaches the same lifetime before
+		any signature or body analysis begins.
+	**/
+	static function functionAnalysisMemoForLookup(classLookup:CppClassLookup):CppFunctionAnalysisMemo {
+		var memo = classLookup.functionAnalysisMemo;
+		if (memo == null) {
+			memo = new CppFunctionAnalysisMemo();
+			classLookup.functionAnalysisMemo = memo;
+		}
+		return memo;
 	}
 
 	static function registerFunctionArgs(scope:CppRenderScope, args:Array<HxFunctionArg>):Void {
@@ -4792,17 +4897,36 @@ class CppTargetCore {
 			return;
 		final prepOwnerName = scope.owner == null ? "" : HxClassDecl.getName(scope.owner);
 		final prepMethodName = HxFunctionDecl.getName(fn);
-		final prepTimingEnabled = traceCppMethodStmtTimingsEnabled(prepOwnerName, prepMethodName);
+		final prepTimingEnabled = traceCppMethodStmtTimingsEnabled(scope.traceContext, prepOwnerName, prepMethodName);
 		final prepStartTime = prepTimingEnabled ? Sys.time() : 0.0;
 		function tracePrepPhase(phase:String, elapsed:Float):Void {
-			traceCppTimingPhase("render_helper_method_prepare_timing owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
-				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " seconds=" + Std.string(elapsed));
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_method_prepare_timing owner="
+				+ sanitizeTypePath(typeBaseName(prepOwnerName))
+				+ " name="
+				+ sanitizeIdentifier(prepMethodName)
+				+ " phase="
+				+ phase
+				+ " seconds="
+				+ Std.string(elapsed));
 		}
 		function tracePrepCounts(phase:String):Void {
-			traceCppTimingPhase("render_helper_method_prepare_counts owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
-				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
-				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
-				+ " arg_override_values=" + summarizeStringValueMap(scope.argTypeOverrides) + " local_override_values="
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_method_prepare_counts owner="
+				+ sanitizeTypePath(typeBaseName(prepOwnerName))
+				+ " name="
+				+ sanitizeIdentifier(prepMethodName)
+				+ " phase="
+				+ phase
+				+ " arg_overrides="
+				+ Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides="
+				+ Std.string(countStringMap(scope.localTypeOverrides))
+				+ " local_types="
+				+ Std.string(countStringMap(scope.localTypes))
+				+ " arg_override_values="
+				+ summarizeStringValueMap(scope.argTypeOverrides)
+				+ " local_override_values="
 				+ summarizeStringValueMap(scope.localTypeOverrides));
 		}
 		function runPrepPhase(phase:String, body:Void->Void):Void {
@@ -4820,8 +4944,9 @@ class CppTargetCore {
 				&& !functionReturnsOnlyNull(fn);
 		});
 		runPrepPhase("type_params", () -> applyFunctionTypeParams(scope, fn));
+		final memo = scope.functionAnalysisMemo;
 		final key = functionSignatureKeyForScope(scope, fn);
-		final cached = functionScopePrepCache.get(key);
+		final cached = memo.functionPreparations.get(key);
 		if (cached != null) {
 			runPrepPhase("cache_apply", () -> applyFunctionScopePrep(scope, cached));
 			runPrepPhase("register_args", () -> applyCachedFunctionArgRegistration(scope, cached));
@@ -4829,13 +4954,13 @@ class CppTargetCore {
 				tracePrepPhase("total_cache_hit", Sys.time() - prepStartTime);
 			return;
 		}
-		if (functionScopePrepStack.exists(key)) {
+		if (memo.functionPreparationsInProgress.exists(key)) {
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
 			if (prepTimingEnabled)
 				tracePrepPhase("total_recursive", Sys.time() - prepStartTime);
 			return;
 		}
-		functionScopePrepStack.set(key, true);
+		memo.functionPreparationsInProgress.set(key, true);
 		try {
 			runPrepPhase("known_arg_types", () -> applyKnownStdlibFunctionArgOverrides(scope, fn));
 			runPrepPhase("property_setter_arg", () -> applyPropertySetterArgTypeOverride(scope, fn));
@@ -4880,14 +5005,14 @@ class CppTargetCore {
 			});
 			runPrepPhase("infer_return_locals", () -> inferReturnLocalTypeOverrides(scope, fn));
 		} catch (e:haxe.Exception) {
-			functionScopePrepStack.remove(key);
+			memo.functionPreparationsInProgress.remove(key);
 			throw e;
 		} catch (e:String) {
-			functionScopePrepStack.remove(key);
+			memo.functionPreparationsInProgress.remove(key);
 			throw e;
 		}
-		runPrepPhase("cache_store", () -> functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope, HxFunctionDecl.getArgs(fn))));
-		functionScopePrepStack.remove(key);
+		runPrepPhase("cache_store", () -> memo.functionPreparations.set(key, snapshotFunctionScopePrep(scope, HxFunctionDecl.getArgs(fn))));
+		memo.functionPreparationsInProgress.remove(key);
 		if (prepTimingEnabled)
 			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
 	}
@@ -5196,12 +5321,13 @@ class CppTargetCore {
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final ownerName = sanitizeTypePath(HxClassDecl.getName(owner));
 		final methodName = HxFunctionDecl.getName(fn);
+		final traceContext = traceContextForLookup(classLookup);
 		function returnTraced(stage:String, lines:Array<String>):Array<String> {
-			traceCppMemberPhase(ownerName, "render_helper_method", methodName, stage);
-			traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
+			traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, stage);
+			traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, "end");
 			return lines;
 		}
-		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "begin");
+		traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, "begin");
 		if (isRttiMetaHelper(fn, owner))
 			return returnTraced("special_rtti_meta", renderRttiMetaHelper(fn, owner, classLookup));
 		if (isAssertPolymorphicStringifyHelper(fn, owner))
@@ -5293,26 +5419,27 @@ class CppTargetCore {
 		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
-		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_prepare");
+		traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, "after_prepare");
 		final out = new Array<String>();
 		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
 		if (methodTypeParams.length > 0)
 			out.push("  " + genericTemplatePrefix(methodTypeParams));
 		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
-		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_signature");
+		traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, "after_signature");
 		final macroOnlyBodyNeedsStub = !functionBodyContributesRuntimeCpp(packagePathForRenderedClass(owner, classLookup), owner, fn)
 			&& returnType != CppMacroExpr.CPP_TYPE;
-		final body = if (macroOnlyBodyNeedsStub) ["    " + functionFallthroughReturnStmt(scope)]; else if (traceCppMethodStmtTimingsEnabled(ownerName,
+		final body = if (macroOnlyBodyNeedsStub) ["    " + functionFallthroughReturnStmt(scope)]; else if (traceCppMethodStmtTimingsEnabled(scope.traceContext,
+			ownerName,
 			methodName)) renderTimedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
-				scope); else if (traceCppDeepEnabled()) renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
+				scope); else if (traceCppDeepEnabled(traceContext)) renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
 			scope); else renderHelperFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope);
 		for (line in body)
 			out.push(line);
 		out.push("  }");
 		for (line in renderDceReflectionHelperStringOverload(fn, scope, returnType))
 			out.push(line);
-		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
+		traceCppMemberPhase(traceContext, ownerName, "render_helper_method", methodName, "end");
 		return out;
 	}
 
@@ -7283,9 +7410,10 @@ class CppTargetCore {
 		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
 		final overrideType = effectiveCppFunctionArgOverrideType(scope, argName, explicit, rawOverrideType);
 		final canCache = explicit.length > 0 || (overrideType != null && overrideType.length > 0);
-		final cacheKey = canCache ? functionArgDeclaredTypeCacheKey(arg, scope, argName, explicit, overrideType) : "";
+		final cache = scope == null ? null : scope.declaredTypeMemo.functionArgTypesByShape;
+		final cacheKey = cache != null && canCache ? functionArgDeclaredTypeCacheKey(arg, scope, argName, explicit, overrideType) : "";
 		if (cacheKey.length > 0) {
-			final cached = functionArgDeclaredTypeCache.get(cacheKey);
+			final cached = cache.get(cacheKey);
 			if (cached != null)
 				return cached;
 		}
@@ -7296,7 +7424,7 @@ class CppTargetCore {
 			&& !isCppReferenceType(typeName)
 			&& !isCppOptionalType(typeName) ? "std::optional<" + typeName + ">" : typeName;
 		if (cacheKey.length > 0)
-			functionArgDeclaredTypeCache.set(cacheKey, rendered);
+			cache.set(cacheKey, rendered);
 		return rendered;
 	}
 
@@ -7363,27 +7491,75 @@ class CppTargetCore {
 		final candidates = new haxe.ds.StringMap<Bool>();
 		final ownerName = scope.owner == null ? "" : HxClassDecl.getName(scope.owner);
 		final methodName = HxFunctionDecl.getName(fn);
-		final timingEnabled = traceCppMethodStmtTimingsEnabled(ownerName, methodName);
+		final timingEnabled = traceCppMethodStmtTimingsEnabled(scope.traceContext, ownerName, methodName);
 		function traceCallableArgPhase(phase:String, elapsed:Float):Void {
-			traceCppTimingPhase("render_helper_callable_arg_infer_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
-				+ sanitizeIdentifier(methodName) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " candidates="
-				+ Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides="
-				+ Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
-				+ " candidate_values=" + summarizeBoolValueMap(candidates) + " arg_override_values=" + summarizeStringValueMap(scope.argTypeOverrides)
-				+ " local_override_values=" + summarizeStringValueMap(scope.localTypeOverrides));
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_callable_arg_infer_timing owner="
+				+ sanitizeTypePath(typeBaseName(ownerName))
+				+ " name="
+				+ sanitizeIdentifier(methodName)
+				+ " phase="
+				+ phase
+				+ " seconds="
+				+ Std.string(elapsed)
+				+ " candidates="
+				+ Std.string(countStringMap(candidates))
+				+ " arg_overrides="
+				+ Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides="
+				+ Std.string(countStringMap(scope.localTypeOverrides))
+				+ " local_types="
+				+ Std.string(countStringMap(scope.localTypes))
+				+ " candidate_values="
+				+ summarizeBoolValueMap(candidates)
+				+ " arg_override_values="
+				+ summarizeStringValueMap(scope.argTypeOverrides)
+				+ " local_override_values="
+				+ summarizeStringValueMap(scope.localTypeOverrides));
 		}
 		function traceCallableArgStmt(index:Int, stmt:HxStmt, elapsed:Float):Void {
-			traceCppTimingPhase("render_helper_callable_arg_stmt_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
-				+ sanitizeIdentifier(methodName) + " index=" + Std.string(index) + " kind=" + stmtKind(stmt) + " seconds=" + Std.string(elapsed)
-				+ " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
-				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes)));
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_callable_arg_stmt_timing owner="
+				+ sanitizeTypePath(typeBaseName(ownerName))
+				+ " name="
+				+ sanitizeIdentifier(methodName)
+				+ " index="
+				+ Std.string(index)
+				+ " kind="
+				+ stmtKind(stmt)
+				+ " seconds="
+				+ Std.string(elapsed)
+				+ " candidates="
+				+ Std.string(countStringMap(candidates))
+				+ " arg_overrides="
+				+ Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides="
+				+ Std.string(countStringMap(scope.localTypeOverrides))
+				+ " local_types="
+				+ Std.string(countStringMap(scope.localTypes)));
 		}
 		function traceCallableArgStmtPhase(index:Int, stmt:HxStmt, phase:String, elapsed:Float):Void {
-			traceCppTimingPhase("render_helper_callable_arg_stmt_phase_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
-				+ sanitizeIdentifier(methodName) + " index=" + Std.string(index) + " kind=" + stmtKind(stmt) + " phase=" + phase + " seconds="
-				+ Std.string(elapsed) + " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides="
-				+ Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides))
-				+ " local_types=" + Std.string(countStringMap(scope.localTypes)));
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_callable_arg_stmt_phase_timing owner="
+				+ sanitizeTypePath(typeBaseName(ownerName))
+				+ " name="
+				+ sanitizeIdentifier(methodName)
+				+ " index="
+				+ Std.string(index)
+				+ " kind="
+				+ stmtKind(stmt)
+				+ " phase="
+				+ phase
+				+ " seconds="
+				+ Std.string(elapsed)
+				+ " candidates="
+				+ Std.string(countStringMap(candidates))
+				+ " arg_overrides="
+				+ Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides="
+				+ Std.string(countStringMap(scope.localTypeOverrides))
+				+ " local_types="
+				+ Std.string(countStringMap(scope.localTypes)));
 		}
 		function runCallableArgPhase(phase:String, body:Void->Void):Void {
 			if (!timingEnabled) {
@@ -8137,8 +8313,8 @@ class CppTargetCore {
 	}
 
 	static function localTypeInferenceApi():CppLocalTypeInference.CppLocalTypeInferenceApi {
-		if (cachedLocalTypeInferenceApi != null)
-			return cachedLocalTypeInferenceApi;
+		if (processLocalTypeInferenceApi != null)
+			return processLocalTypeInferenceApi;
 		final api:CppLocalTypeInference.CppLocalTypeInferenceApi = {
 			copyStringMap: copyStringMap,
 			copyIntMap: copyIntMap,
@@ -8167,7 +8343,7 @@ class CppTargetCore {
 			keyValueLoopTypes: keyValueLoopTypes,
 			withScopedLocal: withScopedLocal
 		};
-		cachedLocalTypeInferenceApi = api;
+		processLocalTypeInferenceApi = api;
 		return api;
 	}
 
@@ -10050,7 +10226,7 @@ class CppTargetCore {
 		final fn = knownCallDecl(callee, scope);
 		if (fn == null)
 			return null;
-		return inferredFunctionArgCppTypes(fn, ownerForKnownCall(callee, scope), scope.classByName, scope.allClasses);
+		return inferredFunctionArgCppTypes(fn, ownerForKnownCall(callee, scope), lookupForScope(scope));
 	}
 
 	static function knownCallDecl(callee:HxExpr, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -10280,9 +10456,9 @@ class CppTargetCore {
 		if (returnType != "void" && stmts.length == 1) {
 			switch (stmts[0]) {
 				case SExpr(expr, _):
-					traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn begin");
+					traceCppMemberPhase(scope.traceContext, ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn begin");
 					final out = [indent + returnStmtForExpr(expr, scope)];
-					traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn end");
+					traceCppMemberPhase(scope.traceContext, ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn end");
 					return out;
 				case _:
 			}
@@ -10291,10 +10467,10 @@ class CppTargetCore {
 		for (i in 0...stmts.length) {
 			final stmt = stmts[i];
 			final kind = stmtKind(stmt);
-			traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " begin");
+			traceCppMemberPhase(scope.traceContext, ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " begin");
 			for (line in renderStmt(stmt, indent, scope))
 				out.push(line);
-			traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " end");
+			traceCppMemberPhase(scope.traceContext, ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " end");
 		}
 		return appendFunctionFallthroughReturn(out, stmts, indent, scope);
 	}
@@ -10313,8 +10489,15 @@ class CppTargetCore {
 					final startTime = Sys.time();
 					final out = [indent + returnStmtForExpr(expr, scope)];
 					final elapsed = Sys.time() - startTime;
-					traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName)
-						+ " index=0 kind=SExprReturn seconds=" + Std.string(elapsed) + " lines=" + out.length);
+					traceCppTimingPhase(scope.traceContext,
+						"render_helper_stmt_timing owner="
+						+ ownerName
+						+ " name="
+						+ sanitizeIdentifier(methodName)
+						+ " index=0 kind=SExprReturn seconds="
+						+ Std.string(elapsed)
+						+ " lines="
+						+ out.length);
 					scope.traceOwnerName = priorTraceOwner;
 					scope.traceMethodName = priorTraceMethod;
 					scope.traceStmtIndex = priorTraceStmtIndex;
@@ -10332,8 +10515,19 @@ class CppTargetCore {
 			for (line in renderStmt(stmt, indent, scope))
 				out.push(line);
 			final elapsed = Sys.time() - startTime;
-			traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName) + " index=" + i + " kind=" + kind
-				+ " seconds=" + Std.string(elapsed) + " lines=" + (out.length - before));
+			traceCppTimingPhase(scope.traceContext,
+				"render_helper_stmt_timing owner="
+				+ ownerName
+				+ " name="
+				+ sanitizeIdentifier(methodName)
+				+ " index="
+				+ i
+				+ " kind="
+				+ kind
+				+ " seconds="
+				+ Std.string(elapsed)
+				+ " lines="
+				+ (out.length - before));
 		}
 		appendFunctionFallthroughReturn(out, stmts, indent, scope);
 		scope.traceOwnerName = priorTraceOwner;
@@ -10787,10 +10981,26 @@ class CppTargetCore {
 			out.push(indent + "  }");
 			if (timingEnabled) {
 				final elapsed = Sys.time() - branchStart;
-				traceCppTimingPhase("render_helper_switch_branch_timing owner=" + scope.traceOwnerName + " name="
-					+ sanitizeIdentifier(scope.traceMethodName) + " stmt_index=" + Std.string(scope.traceStmtIndex) + " branch_index=" + Std.string(i)
-					+ " pattern=" + switchPatternKind(pattern) + " seconds=" + Std.string(elapsed) + " cond_seconds=" + Std.string(condElapsed)
-					+ " binding_seconds=" + Std.string(bindingElapsed) + " body_seconds=" + Std.string(bodyElapsed) + " body_lines="
+				traceCppTimingPhase(scope.traceContext,
+					"render_helper_switch_branch_timing owner="
+					+ scope.traceOwnerName
+					+ " name="
+					+ sanitizeIdentifier(scope.traceMethodName)
+					+ " stmt_index="
+					+ Std.string(scope.traceStmtIndex)
+					+ " branch_index="
+					+ Std.string(i)
+					+ " pattern="
+					+ switchPatternKind(pattern)
+					+ " seconds="
+					+ Std.string(elapsed)
+					+ " cond_seconds="
+					+ Std.string(condElapsed)
+					+ " binding_seconds="
+					+ Std.string(bindingElapsed)
+					+ " body_seconds="
+					+ Std.string(bodyElapsed)
+					+ " body_lines="
 					+ Std.string(out.length - before));
 			}
 			emitted++;
@@ -10812,10 +11022,23 @@ class CppTargetCore {
 			out.push(indent + "  }");
 			if (timingEnabled) {
 				final elapsed = Sys.time() - branchStart;
-				traceCppTimingPhase("render_helper_switch_branch_timing owner=" + scope.traceOwnerName + " name="
-					+ sanitizeIdentifier(scope.traceMethodName) + " stmt_index=" + Std.string(scope.traceStmtIndex) + " branch_index=default pattern="
-					+ switchPatternKind(defaultPattern) + " seconds=" + Std.string(elapsed) + " cond_seconds=0 binding_seconds=" + Std.string(bindingElapsed)
-					+ " body_seconds=" + Std.string(bodyElapsed) + " body_lines=" + Std.string(out.length - before));
+				traceCppTimingPhase(scope.traceContext,
+					"render_helper_switch_branch_timing owner="
+					+ scope.traceOwnerName
+					+ " name="
+					+ sanitizeIdentifier(scope.traceMethodName)
+					+ " stmt_index="
+					+ Std.string(scope.traceStmtIndex)
+					+ " branch_index=default pattern="
+					+ switchPatternKind(defaultPattern)
+					+ " seconds="
+					+ Std.string(elapsed)
+					+ " cond_seconds=0 binding_seconds="
+					+ Std.string(bindingElapsed)
+					+ " body_seconds="
+					+ Std.string(bodyElapsed)
+					+ " body_lines="
+					+ Std.string(out.length - before));
 			}
 		}
 		out.push(indent + "}");
@@ -13423,13 +13646,14 @@ class CppTargetCore {
 		final params = HxFunctionDecl.getArgs(fn);
 		if (params.length == 0)
 			return false;
-		final methodScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName}, HxFunctionDecl.getReturnTypeHint(fn));
+		final lookup = lookupForScope(scope);
+		final methodScope = renderScope(owner, lookup, HxFunctionDecl.getReturnTypeHint(fn));
 		prepareFunctionScope(methodScope, fn);
 		if (cppFunctionArgType(params[0], methodScope) != "std::string")
 			return false;
 		if (isUnserializerStringExtensionMethod(fn, owner))
 			return true;
-		return cppFunctionReturnType(fn, owner, {names: scope.classNames, byName: scope.classByName}) == "std::string";
+		return cppFunctionReturnType(fn, owner, lookup) == "std::string";
 	}
 
 	static function isUnserializerStringExtensionMethod(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -13635,7 +13859,7 @@ class CppTargetCore {
 				+ Std.string(supportParamTypes.length));
 		final inferArgTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final inferredArgTypes = if (supportParamTypes.length > 0) supportParamTypes; else if (fn != null && owner != null) inferredFunctionArgCppTypes(fn,
-			owner, scope.classByName, scope.allClasses); else null;
+			owner, lookupForScope(scope)); else null;
 		var inferredArgTypeCount = 0;
 		if (inferredArgTypes != null)
 			inferredArgTypeCount = inferredArgTypes.length;
@@ -13806,7 +14030,7 @@ class CppTargetCore {
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
 		if (fn == null || owner == null || scope == null)
 			return null;
-		final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+		final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope));
 		final specialization = sameOwnerGenericCallSpecialization(fn, owner, args, expectedType, scope, inferredParamTypes);
 		final explicitTypes = genericCallTypeArgs(specialization);
 		if (explicitTypes.length == 0)
@@ -13819,7 +14043,7 @@ class CppTargetCore {
 	static function sameOwnerGenericCallTypeArgs(fn:HxFunctionDecl, owner:HxClassDecl, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):String {
 		final inferredParamTypes = fn == null
 			|| owner == null
-			|| scope == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+			|| scope == null ? null : inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope));
 		return genericCallTypeArgs(sameOwnerGenericCallSpecialization(fn, owner, args, expectedType, scope, inferredParamTypes));
 	}
 
@@ -13836,9 +14060,10 @@ class CppTargetCore {
 		final typeParams = genericFunctionTypeParams(fn);
 		if (typeParams.length == 0)
 			return null;
-		final callScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName, all: scope.allClasses}, "auto");
+		final lookup = lookupForScope(scope);
+		final callScope = renderScope(owner, lookup, "auto");
 		applyFunctionTypeParams(callScope, fn);
-		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), callScope, {names: scope.classNames, byName: scope.classByName});
+		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), callScope, lookup);
 		final emitted = emittedFunctionTypeParams(fn, returnType, callScope);
 		if (emitted.length == 0)
 			return null;
@@ -14934,7 +15159,7 @@ class CppTargetCore {
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
 		final owner = scope == null ? null : scope.classByName.get(className);
-		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope));
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
@@ -14961,7 +15186,7 @@ class CppTargetCore {
 			return renderSimpleCallArgs(args, scope);
 		final owner = scope == null ? null : scope.classByName.get(className);
 		final paramTypes = owner == null ? null : instantiateGenericClassParamTypes(className, receiverCppType,
-			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses), scope);
+			inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope)), scope);
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
@@ -16216,7 +16441,7 @@ class CppTargetCore {
 		if (cls == null)
 			return "";
 		final fn = classMethodDeclIn(cls, method, false);
-		return fn == null ? "" : inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope));
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, cls, lookupForScope(scope));
 	}
 
 	static function primitiveBackedAbstractClassForReceiverMethod(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<HxClassDecl> {
@@ -16265,7 +16490,7 @@ class CppTargetCore {
 		if (cls == null)
 			return null;
 		final fn = classMethodDeclIn(cls, "toString", false);
-		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope)) != "std::string")
+		if (fn == null || inferredFunctionReturnCppType(fn, cls, lookupForScope(scope)) != "std::string")
 			return null;
 		return primitiveBackedAbstractToStringBodyExpr(expr, fn, scope);
 	}
@@ -16292,7 +16517,7 @@ class CppTargetCore {
 			return null;
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final fn = classMethodDecl(className, "toString", false, scope);
-		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope)) != "std::string")
+		if (fn == null || inferredFunctionReturnCppType(fn, cls, lookupForScope(scope)) != "std::string")
 			return null;
 		return renderExpr(expr, scope) + "->toString()";
 	}
@@ -16472,7 +16697,7 @@ class CppTargetCore {
 		final cls = scope.classByName.exists(baseClassName) ? scope.classByName.get(baseClassName) : scope.classByName.get(className);
 		if (cls == null)
 			return "";
-		final ownerScope = renderScope(cls, {names: scope.classNames, byName: scope.classByName}, scope.returnType);
+		final ownerScope = renderScope(cls, lookupForScope(scope), scope.returnType);
 		final fieldType = classFieldCppType(baseClassName, fieldName, ownerScope);
 		return instantiateGenericClassFieldType(baseClassName, receiverCppType, fieldType, ownerScope);
 	}
@@ -16530,8 +16755,7 @@ class CppTargetCore {
 		final owner = scope == null ? null : scope.classByName.get(ownerName);
 		if (owner != null && isUtestResultAggregationHelper(fn, owner))
 			return utestResultAggregationReturnType(ownerName, method);
-		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn),
-			scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope));
+		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) : inferredFunctionReturnCppType(fn, owner, lookupForScope(scope));
 	}
 
 	static function inheritedClassMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
@@ -16582,7 +16806,7 @@ class CppTargetCore {
 	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
 		final owner = currentOrInheritedOwnerMethodOwner(methodName, scope);
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, methodName);
-		return fn == null ? "" : inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope));
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, owner, lookupForScope(scope));
 	}
 
 	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -16700,7 +16924,7 @@ class CppTargetCore {
 		if (scope != null && genericArrayConstraintElementParam(fn, returnParam).length > 0) {
 			final owner = currentOrInheritedOwnerMethodOwner(HxFunctionDecl.getName(fn), scope);
 			if (owner != null) {
-				final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+				final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, lookupForScope(scope));
 				final specialization = sameOwnerGenericCallSpecialization(fn, owner, args, "", scope, inferredParamTypes);
 				if (specialization != null) {
 					final index = rawTypeParamIndex(specialization.rawTypeParams, returnParam);
@@ -19457,7 +19681,7 @@ class CppTargetCore {
 		return switch (left) {
 			case EThis:
 				final underlying = abstractUnderlyingTypeHint(scope.owner);
-				underlying == null ? "" : cppTypeHint(underlying, scope, {names: scope.classNames, byName: scope.classByName});
+				underlying == null ? "" : cppTypeHint(underlying, scope, lookupForScope(scope));
 			case _:
 				"";
 		}
@@ -21120,7 +21344,7 @@ class CppTargetCore {
 		if (fn == null)
 			return false;
 		return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) == "void"
-			|| inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope)) == "void";
+			|| inferredFunctionReturnCppType(fn, owner, lookupForScope(scope)) == "void";
 	}
 
 	static function knownVoidSequenceCall(expr:HxExpr):Bool {
@@ -22722,8 +22946,7 @@ class CppTargetCore {
 			return null;
 		if (!CppTypeModel.mayNameStructuralTypedefValueCppType(typeName))
 			return null;
-		final cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeName, scope,
-			{names: scope.classNames, byName: scope.classByName, all: scope.allClasses});
+		final cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeName, scope, lookupForScope(scope));
 		if (cls == null || HxClassDecl.getFields(cls).length == 0)
 			return null;
 		return cls;
@@ -24485,22 +24708,36 @@ class CppTargetCore {
 	static function functionReturnsErasedDynamicValue(fn:HxFunctionDecl, ?scope:CppRenderScope):Bool {
 		if (fn == null)
 			return false;
+		final memo = scope == null ? null : scope.functionAnalysisMemo;
 		final key = functionSignatureKeyForScope(scope, fn);
-		if (erasedDynamicReturnCache.exists(key))
-			return erasedDynamicReturnCache.get(key);
-		if (erasedDynamicReturnStack.exists(key))
+		if (memo != null && memo.erasedDynamicReturnResults.exists(key))
+			return memo.erasedDynamicReturnResults.get(key);
+		if (memo != null && memo.erasedDynamicReturnScansInProgress.exists(key))
 			return false;
-		erasedDynamicReturnStack.set(key, true);
+		if (memo != null)
+			memo.erasedDynamicReturnScansInProgress.set(key, true);
 		var found = false;
 		final erasedLocals = new haxe.ds.StringMap<Bool>();
-		for (stmt in HxFunctionDecl.getBody(fn)) {
-			if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals)) {
-				found = true;
-				break;
+		try {
+			for (stmt in HxFunctionDecl.getBody(fn)) {
+				if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals)) {
+					found = true;
+					break;
+				}
 			}
+		} catch (e:haxe.Exception) {
+			if (memo != null)
+				memo.erasedDynamicReturnScansInProgress.remove(key);
+			throw e;
+		} catch (e:String) {
+			if (memo != null)
+				memo.erasedDynamicReturnScansInProgress.remove(key);
+			throw e;
 		}
-		erasedDynamicReturnStack.remove(key);
-		erasedDynamicReturnCache.set(key, found);
+		if (memo != null) {
+			memo.erasedDynamicReturnScansInProgress.remove(key);
+			memo.erasedDynamicReturnResults.set(key, found);
+		}
 		return found;
 	}
 
@@ -24607,12 +24844,12 @@ class CppTargetCore {
 		final owner = scope.classByName.get(ownerName);
 		if (owner == null)
 			return false;
-		final memberScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName}, "std::any");
+		final memberScope = renderScope(owner, lookupForScope(scope), "std::any");
 		return functionReturnsErasedDynamicValue(fn, memberScope);
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
-		return inferredFunctionReturnCppType(fn, owner, classLookup.byName, classLookup);
+		return inferredFunctionReturnCppType(fn, owner, classLookup);
 	}
 
 	/**
@@ -24666,47 +24903,46 @@ class CppTargetCore {
 		return inheritedBaseMethodSignatureReturnType(fn, base, classLookup);
 	}
 
-	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>,
-			?classLookup:CppClassLookup):String {
+	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
-		final returnLookup = classLookup == null ? {names: classNamesFromByName(classByName), byName: classByName} : classLookup;
-		final cacheKey = functionDeclCacheKey(owner, fn, returnLookup);
-		final cached = functionReturnTypesCache.get(cacheKey);
+		final memo = functionAnalysisMemoForLookup(classLookup);
+		final cacheKey = functionDeclCacheKey(owner, fn, classLookup);
+		final cached = memo.functionReturnTypes.get(cacheKey);
 		if (cached != null)
 			return cached;
 		function cacheReturn(typeName:String):String {
-			functionReturnTypesCache.set(cacheKey, typeName);
+			memo.functionReturnTypes.set(cacheKey, typeName);
 			return typeName;
 		}
 		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
 			return cacheReturn(knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName}));
+				{names: new haxe.ds.StringMap<Bool>(), byName: classLookup.byName}));
 		if (ownerName == "Exception") {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+				{names: new haxe.ds.StringMap<Bool>(), byName: classLookup.byName});
 			if (knownReturn.length > 0)
 				return cacheReturn(knownReturn);
 		}
 		if (isStringIteratorHelper(ownerName))
 			return cacheReturn(knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName}));
+				{names: new haxe.ds.StringMap<Bool>(), byName: classLookup.byName}));
 		if (ownerName == "EReg") {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+				{names: new haxe.ds.StringMap<Bool>(), byName: classLookup.byName});
 			if (knownReturn.length > 0)
 				return cacheReturn(knownReturn);
 		}
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
 			return cacheReturn("std::string");
-		final returnScope = renderScope(owner, returnLookup, "auto");
+		final returnScope = renderScope(owner, classLookup, "auto");
 		if (raw.length == 0) {
-			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, returnLookup);
+			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, classLookup);
 			if (knownReturn.length > 0)
 				return cacheReturn(knownReturn);
 		}
 		if (raw.length == 0 || isDynamicLikeTypeHint(raw)) {
-			final setterReturn = propertySetterFieldCppType(fn, owner, returnScope, returnLookup);
+			final setterReturn = propertySetterFieldCppType(fn, owner, returnScope, classLookup);
 			if (setterReturn.length > 0)
 				return cacheReturn(setterReturn);
 		}
@@ -24716,28 +24952,36 @@ class CppTargetCore {
 			applyFunctionTypeParams(returnScope, fn);
 			if (functionReturnTypeParamShouldUseAuto(raw, fn))
 				return cacheReturn(functionReturnsOnlyNull(fn) ? "std::nullptr_t" : "auto");
-			final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, returnScope, returnLookup);
+			final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, returnScope, classLookup);
 			if (abstractReturn.length > 0)
 				return cacheReturn(abstractReturn);
-			return cacheReturn(cppReturnTypeHint(raw, returnScope, returnLookup));
+			return cacheReturn(cppReturnTypeHint(raw, returnScope, classLookup));
 		}
 		if (functionReturnsLambda(fn))
 			return cacheReturn("auto");
-		final key = functionSignatureKey(owner, fn, returnLookup);
-		if (inferredSignatureStack.exists(key))
+		final key = functionSignatureKey(owner, fn, classLookup);
+		if (memo.inferredSignaturesInProgress.exists(key))
 			return "";
-		inferredSignatureStack.set(key, true);
-		final scope = renderScope(owner, returnLookup, "auto");
-		prepareFunctionScope(scope, fn);
-		for (stmt in HxFunctionDecl.getBody(fn)) {
-			final inferred = inferReturnTypeFromStmt(stmt, scope);
-			if (inferred.length > 0) {
-				inferredSignatureStack.remove(key);
-				return cacheReturn(inferred);
+		memo.inferredSignaturesInProgress.set(key, true);
+		try {
+			final scope = renderScope(owner, classLookup, "auto");
+			prepareFunctionScope(scope, fn);
+			for (stmt in HxFunctionDecl.getBody(fn)) {
+				final inferred = inferReturnTypeFromStmt(stmt, scope);
+				if (inferred.length > 0) {
+					memo.inferredSignaturesInProgress.remove(key);
+					return cacheReturn(inferred);
+				}
 			}
+		} catch (e:haxe.Exception) {
+			memo.inferredSignaturesInProgress.remove(key);
+			throw e;
+		} catch (e:String) {
+			memo.inferredSignaturesInProgress.remove(key);
+			throw e;
 		}
-		inferredSignatureStack.remove(key);
-		return cacheReturn(functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, returnLookup) : "void");
+		memo.inferredSignaturesInProgress.remove(key);
+		return cacheReturn(functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, classLookup) : "void");
 	}
 
 	static function abstractUnderlyingReturnCppType(rawReturnHint:String, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
@@ -24860,26 +25104,34 @@ class CppTargetCore {
 		return CppAbstractRepresentation.classBackedCastForExpectedType(expr, expectedType, scope, abstractRepresentationServices());
 	}
 
-	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>,
-			?allClasses:Array<HxClassDecl>):Array<String> {
+	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
-		final lookup = {names: classNamesFromByName(classByName), byName: classByName, all: allClasses == null ? [] : allClasses};
-		final cacheKey = functionArgTypesCacheKey(owner, fn, lookup);
-		final cached = functionArgTypesCache.get(cacheKey);
+		final memo = functionAnalysisMemoForLookup(classLookup);
+		final cacheKey = functionArgTypesCacheKey(owner, fn, classLookup);
+		final cached = memo.functionArgumentTypes.get(cacheKey);
 		if (cached != null)
 			return cached.copy();
-		final returnScope = renderScope(owner, lookup, "auto");
+		final returnScope = renderScope(owner, classLookup, "auto");
 		applyFunctionTypeParams(returnScope, fn);
-		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope, lookup) : "auto";
-		final key = functionSignatureKey(owner, fn, lookup);
-		if (inferredSignatureStack.exists(key))
+		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope, classLookup) : "auto";
+		final key = functionSignatureKey(owner, fn, classLookup);
+		if (memo.inferredSignaturesInProgress.exists(key))
 			return [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgBaseType(arg, null)];
-		inferredSignatureStack.set(key, true);
-		final scope = renderScope(owner, lookup, returnType);
-		prepareFunctionScope(scope, fn);
-		final types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
-		inferredSignatureStack.remove(key);
-		functionArgTypesCache.set(cacheKey, types.copy());
+		memo.inferredSignaturesInProgress.set(key, true);
+		var types = new Array<String>();
+		try {
+			final scope = renderScope(owner, classLookup, returnType);
+			prepareFunctionScope(scope, fn);
+			types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
+		} catch (e:haxe.Exception) {
+			memo.inferredSignaturesInProgress.remove(key);
+			throw e;
+		} catch (e:String) {
+			memo.inferredSignaturesInProgress.remove(key);
+			throw e;
+		}
+		memo.inferredSignaturesInProgress.remove(key);
+		memo.functionArgumentTypes.set(cacheKey, types.copy());
 		return types;
 	}
 
@@ -24908,14 +25160,6 @@ class CppTargetCore {
 	static function functionSignatureKey(owner:HxClassDecl, fn:HxFunctionDecl, ?classLookup:CppClassLookup):String {
 		final ownerName = owner == null ? "" : renderedClassName(owner, classLookup);
 		return ownerName + "." + sanitizeIdentifier(HxFunctionDecl.getName(fn));
-	}
-
-	static function classNamesFromByName(classByName:haxe.ds.StringMap<HxClassDecl>):haxe.ds.StringMap<Bool> {
-		final names = new haxe.ds.StringMap<Bool>();
-		if (classByName != null)
-			for (name in classByName.keys())
-				names.set(name, true);
-		return names;
 	}
 
 	/**
@@ -25268,34 +25512,5 @@ class CppTargetCore {
 			return "std::string";
 		final fieldType = cppTypeHint(raw, scope, classLookup);
 		return isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType;
-	}
-
-	/**
-		Discard C++ lowering work that belongs to one compiler request.
-
-		The maps below speed up repeated questions while rendering one program. Their
-		keys do not yet include a stable program revision, so keeping them for the next
-		server request would be an unsafe semantic cache. Trace-option memoization is
-		also cleared so each request observes its own environment consistently.
-	**/
-	public static function resetRequestState():Void {
-		inferredSignatureStack.clear();
-		erasedDynamicReturnStack.clear();
-		functionScopePrepStack.clear();
-		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
-		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
-		functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
-		fieldCppTypeCache = new haxe.ds.StringMap<String>();
-		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
-		functionReturnTypesCache = new haxe.ds.StringMap<String>();
-		traceCppDeepEnabledCache = -1;
-		traceCppTimingsEnabledCache = -1;
-		traceCppLambdaPhasesEnabledCache = -1;
-		traceCppCallArgDetailPhasesEnabledCache = -1;
-		traceCppHelperClassificationDetailsEnabledCache = -1;
-		traceCppTimingMethodFilterCache = null;
-		traceCppTimingPhaseBuffer = null;
-		cachedLocalTypeInferenceApi = null;
-		cachedKnownStdlibSignatures = null;
 	}
 }

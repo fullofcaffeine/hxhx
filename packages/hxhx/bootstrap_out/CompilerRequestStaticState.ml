@@ -13,9 +13,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerRequestS
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerRequestStaticState" } : t)
 
-let reset = fun () -> ignore ((
-  ignore (HxParser.resetRequestState ());
-  ignore (EmitterStage.resetRequestState ());
-  ignore (Backend_cpp_CppTargetCore.resetRequestState ());
-  Backend_source_SourceTargetCommon.resetRequestState ()
-))
+let reset = fun () -> ignore (EmitterStage.resetRequestState ())

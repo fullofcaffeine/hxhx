@@ -85,62 +85,6 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(snapshot.indexOf("skipBalancedAngles (Obj.magic self) ()") >= 0, "bootstrap parser snapshot must skip method type parameter groups");
 	}
 
-	static function assertBootstrapNativeParserKeepsNestedTypeHintCommas():Void {
-		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
-		final snapshot = readOptional(snapshotPath);
-		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
-		assertTrue(snapshot.indexOf("let type_hint_top_level () =") >= 0, "bootstrap native parser snapshot must track nested type hints");
-		assertTrue(snapshot.indexOf("Sym (',', _)") >= 0 && snapshot.indexOf("type_hint_top_level ()") >= 0,
-			"bootstrap native parser snapshot must only split top-level parameter commas");
-		assertTrue(snapshot.indexOf("Sym ('<', _) when !reading_type") >= 0, "bootstrap native parser snapshot must track generic type hint angle depth");
-	}
-
-	static function assertNativeParserKeepsFunctionArrowsInsideGenericConstraints():Void {
-		for (path in [
-			"packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml",
-			"packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml"
-		]) {
-			final source = readOptional(path);
-			assertTrue(source != null, "missing native parser implementation at " + path);
-			assertTrue(source.indexOf("Function type arrows inside generic constraints") >= 0,
-				path + " must keep the function arrow inside Constructible<String -> Void> from closing the method generic list");
-			assertTrue(source.indexOf("Sym ('-', _) when token_eq_sym (peek 1) '>'") >= 0,
-				path + " must consume a function arrow without changing generic angle depth");
-		}
-	}
-
-	static function assertBootstrapNativeParserAllowsKeywordPathSegments():Void {
-		final sourcePath = "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml";
-		final source = readOptional(sourcePath);
-		assertTrue(source != null, "missing native parser source at " + sourcePath);
-		assertTrue(source.indexOf("let read_path_ident () : string =") >= 0, "native parser source must distinguish path identifiers");
-		assertTrue(source.indexOf('"macro"') >= 0, "native parser source must accept macro as a path segment");
-		assertTrue(source.indexOf('"extern"') >= 0, "native parser source must accept extern as a path segment");
-
-		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
-		final snapshot = readOptional(snapshotPath);
-		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
-		assertTrue(snapshot.indexOf("let read_path_ident () : string =") >= 0, "bootstrap native parser snapshot must distinguish path identifiers");
-		assertTrue(snapshot.indexOf('"macro"') >= 0, "bootstrap native parser snapshot must accept macro as a path segment");
-		assertTrue(snapshot.indexOf('"extern"') >= 0, "bootstrap native parser snapshot must accept extern as a path segment");
-	}
-
-	static function assertBootstrapNativeParserEscapesStringTokenText():Void {
-		final sourcePath = "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml";
-		final source = readOptional(sourcePath);
-		assertTrue(source != null, "missing native parser source at " + sourcePath);
-		assertTrue(source.indexOf("let escape_haxe_string_literal") >= 0, "native parser source must escape string token text");
-		assertTrue(source.indexOf('String (s, _) -> "\\"" ^ escape_haxe_string_literal s ^ "\\""') >= 0,
-			"native parser source must re-render string tokens as escaped Haxe string literals");
-
-		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
-		final snapshot = readOptional(snapshotPath);
-		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
-		assertTrue(snapshot.indexOf("let escape_haxe_string_literal") >= 0, "bootstrap native parser snapshot must escape string token text");
-		assertTrue(snapshot.indexOf('String (s, _) -> "\\"" ^ escape_haxe_string_literal s ^ "\\""') >= 0,
-			"bootstrap native parser snapshot must re-render string tokens as escaped Haxe string literals");
-	}
-
 	static function assertParsedGenericMethods(decl:HxModuleDecl, sourceLabel:String):Void {
 		final cls = findClass(decl, "GenericMethods");
 
@@ -226,24 +170,6 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertListKeyValueIteratorNextShape(scannedNext, "ParserStageScanHelpers");
 	}
 
-	static function assertNativeDecodeStripsUntypedReturnModifier():Void {
-		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("__init__|private|1||Void untyped||||", "untyped {}", -1,
-			"class Math { static function __init__():Void untyped {} }");
-		assertEqString(HxFunctionDecl.getReturnTypeHint(fn), "Void", "native decode should not merge trailing untyped into the return type");
-		final sourceFallback = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||||||", "untyped { return null; }", -1,
-			"class BytesBuffer { public function getBytes():Bytes untyped { return null; } }");
-		assertEqString(HxFunctionDecl.getReturnTypeHint(sourceFallback), "Bytes",
-			"native decode source return recovery should strip the trailing untyped modifier");
-		final compactPayload = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||Bytesuntyped||||", "untyped { return null; }",
-			-1, "class BytesBuffer { public function getBytes():Bytes untyped { return null; } }");
-		assertEqString(HxFunctionDecl.getReturnTypeHint(compactPayload), "Bytes",
-			"native decode should prefer source return recovery when the payload compacted a trailing untyped modifier");
-		final suffixPayload = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||Bytesuntyped||||", "{ return null; }", -1,
-			"class BytesuntypedOwner { public function getBytes():Bytesuntyped { return null; } }");
-		assertEqString(HxFunctionDecl.getReturnTypeHint(suffixPayload), "Bytesuntyped",
-			"native decode should preserve payload/source return type names that only end with untyped");
-	}
-
 	static function assertParserStripsUntypedReturnModifier():Void {
 		final decl = ParserStage.parse("class BytesBuffer { public function getBytes():Bytes untyped { return null; } }", "BytesBuffer.hx").getDecl();
 		final bytesBuffer = findClass(decl, "BytesBuffer");
@@ -276,127 +202,10 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 			"scanned helpers should preserve return type names that only end with untyped");
 	}
 
-	static function assertNativeDecodeRecoversSourceFunctionHintFromStringFallback():Void {
-		final source = [
-			"class LambdaLike {",
-			"  public static function mapi<A,B>(it:Iterable<A>, f:(index:Int, item:A) -> B):Array<B> {",
-			"    return [for (x in it) f(0, x)];",
-			"  }",
-			"}"
-		].join("\n");
-		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("mapi|public|1|it,f|Array<B>|||it:Iterable<A>,f:String|",
-			"return [for (x in it) f(0, x)];", source.indexOf("return [for"), source);
-		final fArg = HxFunctionDecl.getArgs(fn)[1];
-		assertEqString(HxFunctionArg.getTypeHint(fArg), "(index:Int, item:A) -> B",
-			"native decode should recover source callback hints when the native protocol uses String as an erased fallback");
-	}
-
-	static function assertNativeDecodeRecoversConstrainedGenericArgsFromSource():Void {
-		final source = [
-			"class GenericReflection {",
-			"  @:generic static function gf3 < A:haxe.Constraints.Constructible<String -> Void>, B:Array<A> > (a:A, b:B) {",
-			"    var clone = new A(\"foo\");",
-			"    b.push(clone);",
-			"    return b;",
-			"  }",
-			"}"
-		].join("\n");
-		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("gf3|private|1||||||",
-			"var clone = new A(\"foo\");\nb.push(clone);\nreturn b;", source.indexOf("var clone"), source);
-		assertEqInt(HxFunctionDecl.getArgs(fn).length, 2, "native decode constrained gf3 arg count");
-		assertEqString(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]), "a", "native decode constrained gf3 arg 0 name");
-		assertEqString(HxFunctionArg.getTypeHint(HxFunctionDecl.getArgs(fn)[0]), "A", "native decode constrained gf3 arg 0 type");
-		assertEqString(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[1]), "b", "native decode constrained gf3 arg 1 name");
-		assertEqString(HxFunctionArg.getTypeHint(HxFunctionDecl.getArgs(fn)[1]), "B", "native decode constrained gf3 arg 1 type");
-		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_params=A,B") >= 0,
-			"native decode constrained gf3 type params should come from the source signature");
-		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_constraint=A:haxe.Constraints.Constructible<String->Void>") >= 0,
-			"native decode should preserve the Constructible constraint for A");
-		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_constraint=B:Array<A>") >= 0,
-			"native decode should preserve the relation between B and Array<A>");
-	}
-
-	static function assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction():Void {
-		final source = [
-			"class InputLike {",
-			"  public function readByte():Int {",
-			"    return throw new haxe.exceptions.NotImplementedException();",
-			"  }",
-			"  public function readBytes(s:Bytes, pos:Int, len:Int):Int {",
-			"    return readByte();",
-			"  }",
-			"}"
-		].join("\n");
-		final body = "return throw new haxe.exceptions.NotImplementedException();";
-		final bodyStart = source.indexOf("return throw");
-		final nativeDecodeFn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("readByte|public|0||Int||||", body, bodyStart, source);
-		assertEqInt(HxFunctionDecl.getArgs(nativeDecodeFn)
-			.length, 0, "native decode should not recover readBytes args for the prefix-named readByte function");
-		final readBytesFn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("readBytes|public|0|s,pos,len|Int|||s:Bytes,pos:Int,len:Int|",
-			"return readByte();", source.indexOf("return readByte"), source);
-		assertEqInt(HxFunctionDecl.getArgs(readBytesFn).length, 3, "native decode should still recover the readBytes arg list");
-	}
-
-	static function assertNativeDecodePreservesReturnMacroArgument():Void {
-		final source = [
-			"class TestStrict {",
-			"  function get_str():String {",
-			"    shouldFail(return (null : Null<String>));",
-			"  }",
-			"}",
-		].join("\n");
-		final body = "shouldFail(return (null : Null<String>));";
-		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("get_str|private|0||String||||", body, source.indexOf(body), source);
-		switch (HxFunctionDecl.getBody(fn)) {
-			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(ECast(ENull, "Null<String>"))]), _)]:
-			case body:
-				fail("native decode lost the return, cast, or null inside the macro argument: " + Std.string(body));
-		}
-	}
-
-	static function assertNativeDecodePreservesVariableDeclarationMacroArgument():Void {
-		final source = [
-			"class TestStrict {",
-			"  function check():Void {",
-			"    shouldFail(var value:String = nullable);",
-			"  }",
-			"}",
-		].join("\n");
-		final body = "shouldFail(var value:String = nullable);";
-		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("check|private|0||Void||||", body, source.indexOf(body), source);
-		switch (HxFunctionDecl.getBody(fn)) {
-			case [
-				SExpr(ECall(EIdent("shouldFail"), [EVars([EVariableDeclaration(name, typeHint, initializer, position, _, _)])]), _)
-			]:
-				if (name != "value" || typeHint != "String" || position.getLine() != 3 || position.getColumn() != 20)
-					fail("native decode changed the variable declaration fields or source position: "
-						+ position.getLine()
-						+ ":"
-						+ position.getColumn());
-				switch (initializer) {
-					case EIdent("nullable"):
-					case _:
-						fail("native decode lost the variable declaration initializer");
-				}
-			case body:
-				fail("native decode lost the variable declaration inside the macro argument: " + Std.string(body));
-		}
-	}
-
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
-		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
-		assertNativeParserKeepsFunctionArrowsInsideGenericConstraints();
-		assertBootstrapNativeParserAllowsKeywordPathSegments();
-		assertBootstrapNativeParserEscapesStringTokenText();
-		assertNativeDecodeStripsUntypedReturnModifier();
 		assertParserStripsUntypedReturnModifier();
 		assertScannedHelpersStripUntypedReturnModifier();
-		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
-		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
-		assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction();
-		assertNativeDecodePreservesReturnMacroArgument();
-		assertNativeDecodePreservesVariableDeclarationMacroArgument();
 		assertScannedGenericNamedFunctionArg();
 		assertScannedHelpersPreserveConstrainedGenericRelations();
 

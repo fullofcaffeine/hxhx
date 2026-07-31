@@ -39,7 +39,7 @@ private typedef RoutePlan = {
 	Long-term:
 	- The delegation path is removed and `hxhx` becomes the real compiler.
 	- In the meantime, we gradually grow Stage 1 capabilities behind explicit flags
-	  (e.g. parsing via the native frontend seam).
+	  while keeping compiler semantics in the Haxe-authored frontend.
 **/
 class Main {
 	static inline final COMPAT_HAXE_VERSION:String = "4.3.7";
@@ -94,7 +94,7 @@ class Main {
 		Sys.println("  --hxhx-customization <id>            enable explicit Stage3 customization");
 		Sys.println("  --hxhx-no-emit                       typecheck only in Stage3 lane");
 		Sys.println("  --hxhx-no-run                        emit/build without execution");
-		Sys.println("  --hxhx-parse <File.hx>               parse a file via native parser seam");
+		Sys.println("  --hxhx-parse <File.hx>               parse a file with the Haxe-authored frontend");
 		Sys.println("  --hxhx-selftest                      run internal selftest");
 		Sys.println("");
 		Sys.println("Plugin commands:");

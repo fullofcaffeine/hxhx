@@ -13,7 +13,6 @@ let init () : unit =
   ignore (HxType.class_ "HxModuleDirective");
   ignore (HxType.class_ "HxParseError");
   ignore (HxType.class_ "HxParser");
-  ignore (HxType.class_ "HxParserSourceNormalize");
   ignore (HxType.class_ "HxPos");
   ignore (HxType.class_ "HxToken");
   ignore (HxType.class_ "HxUnaryOperatorTools");
@@ -859,9 +858,6 @@ let init () : unit =
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (HxParser.create a0 a1)
   );
-  HxType.register_class_ctor "HxParserSourceNormalize" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (HxParserSourceNormalize.create ())
-  );
   HxType.register_class_ctor "HxPos" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'index' for HxPos" in
@@ -1040,7 +1036,6 @@ let init () : unit =
   HxType.register_class_empty_ctor "HxModuleDirective" (fun () -> Obj.repr (HxModuleDirective.__empty ()));
   HxType.register_class_empty_ctor "HxParseError" (fun () -> Obj.repr (HxParseError.__empty ()));
   HxType.register_class_empty_ctor "HxParser" (fun () -> Obj.repr (HxParser.__empty ()));
-  HxType.register_class_empty_ctor "HxParserSourceNormalize" (fun () -> Obj.repr (HxParserSourceNormalize.__empty ()));
   HxType.register_class_empty_ctor "HxPos" (fun () -> Obj.repr (HxPos.__empty ()));
   HxType.register_class_empty_ctor "HxToken" (fun () -> Obj.repr (HxToken.__empty ()));
   HxType.register_class_empty_ctor "HxUnaryOperatorTools" (fun () -> Obj.repr (HxUnaryOperatorTools.__empty ()));
@@ -1109,9 +1104,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "HxParseError" [];
   HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "applyDefaultedLambdaArgs"; "blockExprFromStmts"; "blockExprShouldStayOpaque"; "braceStartsAnonLiteral"; "bump"; "capturedReturnStringLiteral"; "consumeBalancedBracesForExpr"; "consumeBalancedParensForExpr"; "consumeBinop"; "consumePreprocessorLine"; "consumeUntilIndex"; "cur"; "currentIndex"; "expect"; "fail"; "hasAttachedMetadataArgs"; "intLiteralExpr"; "isClassMemberBoundary"; "isIntCompareGuardOp"; "isLikelyExtractorPatternStart"; "isLocalFunctionInitExpr"; "isLocalStaticVarDecl"; "isOtherChar"; "isSemicolonlessFieldInitializer"; "isSemicolonlessStatementBoundary"; "isValidLambdaArgName"; "lambdaArgNameEnd"; "lambdaBodyExprFromStmts"; "lex"; "localFunctionArgTypeHintNeedsBackend"; "nextIsAdjacentDot"; "nextIsAdjacentOther"; "parseAnonExpr"; "parseAnonExprAfterOpen"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseBraceExpr"; "parseCallArg"; "parseClassMembers"; "parseDoWhileExpr"; "parseExpr"; "parseExpressionVariableDeclarations"; "parseForExprRaw"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseFunctionExpr"; "parseIfExpr"; "parseInterpolatedStringExpr"; "parseLambdaArgInfo"; "parseLambdaArgName"; "parseLocalFunctionStmt"; "parseMacroClassQuoteExpr"; "parseMacroExprSwitchPattern"; "parseMacroQuoteExpr"; "parseMacroQuoteIfPayload"; "parseMacroQuotePayload"; "parseMacroReificationExpr"; "parseMacroTypeSwitchPattern"; "parseMetadataText"; "parseModule"; "parsePostfixExpr"; "parsePostfixSuffix"; "parsePrimaryExpr"; "parseRecoveredCaseFragmentStmt"; "parseReturnStmt"; "parseStmt"; "parseStmtInto"; "parseStructuralTryCatchExpr"; "parseSwitchExpr"; "parseSwitchPattern"; "parseSwitchPatternAtom"; "parseSwitchPatternCaseGroup"; "parseSwitchPatternOr"; "parseTryCatchExpr"; "parseUnaryExpr"; "parseVarDecls"; "parseVarStmt"; "parseWhileExpr"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "posIndex"; "readAnonFieldName"; "readBalancedParenBodyText"; "readConstructorTypePath"; "readDottedPath"; "readFunctionReturnTypeHint"; "readHeaderTypePath"; "readIdent"; "readImportPath"; "readMetadataHead"; "readPostfixFieldName"; "readPropertyAccessorText"; "readTypeHintText"; "readTypeParameterNamesFromCurrentAngles"; "skipBalancedAngles"; "skipBalancedBraces"; "skipBalancedParens"; "skipHeaderTypeParameters"; "sliceSource"; "source"; "structuralTryCatch"; "switchCaseExprFromStmts"; "switchParsedIntGuard"; "switchPatternWithGuard"; "syncToStmtEnd"; "syncToStmtEndUntil"; "tryParseInlineNekoElseThrowStmt"; "tryParseSwitchExtractorPattern"; "tryReadArrowLambdaExpr"; "tryReadParenthesizedLambdaArgs"; "unsupportedKeywordDetail" ];
-  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "declsCanEndBeforeIdentifier"; "isAssignmentBinop"; "isRestTypeHintText"; "isRightAssoc"; "isUpperStart"; "keywordText"; "markTraceExpressionLine"; "normalizeInlineJsConditionalMarkers"; "normalizeInlineNekoElseConditionalMarkers"; "normalizeInlineStdClassSwitchConditionalMarkers"; "normalizeInlineStdCppLengthConditionalMarkers"; "normalizeInlineStdHxSerializeConditionalMarkers"; "offsetFunctionBodyColumns"; "offsetFunctionBodyExprColumns"; "offsetFunctionBodyPosColumn"; "offsetFunctionBodyStmtColumns"; "parseCompleteExprText"; "parseExprText"; "parseFunctionBodyText"; "parseFunctionBodyTextAt"; "parseStructuralExprText"; "rebaseFunctionBodyExpr"; "rebaseFunctionBodyExprValue"; "rebaseFunctionBodyPos"; "rebaseFunctionBodyStmt"; "resetRequestState"; "sourcePosAt"; "tokenCanStartStatement" ];
-  HxType.register_class_instance_fields "HxParserSourceNormalize" [];
-  HxType.register_class_static_fields "HxParserSourceNormalize" [ "normalizeDenseEscapedQuotes"; "normalizeDenseKeywordSpacing" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "declsCanEndBeforeIdentifier"; "isAssignmentBinop"; "isRestTypeHintText"; "isRightAssoc"; "isUpperStart"; "keywordText"; "markTraceExpressionLine"; "normalizeInlineJsConditionalMarkers"; "normalizeInlineNekoElseConditionalMarkers"; "normalizeInlineStdClassSwitchConditionalMarkers"; "normalizeInlineStdCppLengthConditionalMarkers"; "normalizeInlineStdHxSerializeConditionalMarkers"; "offsetFunctionBodyColumns"; "offsetFunctionBodyExprColumns"; "offsetFunctionBodyPosColumn"; "offsetFunctionBodyStmtColumns"; "parseCompleteExprText"; "parseExprText"; "parseFunctionBodyText"; "parseFunctionBodyTextAt"; "parseStructuralExprText"; "rebaseFunctionBodyExpr"; "rebaseFunctionBodyExprValue"; "rebaseFunctionBodyPos"; "rebaseFunctionBodyStmt"; "sourcePosAt"; "tokenCanStartStatement" ];
   HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
   HxType.register_class_static_fields "HxPos" [ "unknown" ];
   HxType.register_class_instance_fields "HxToken" [ "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
@@ -1225,7 +1218,6 @@ let init () : unit =
   HxType.register_class_tags "HxModuleDirective" [ "HxModuleDirective" ];
   HxType.register_class_tags "HxParseError" [ "HxParseError" ];
   HxType.register_class_tags "HxParser" [ "HxParser" ];
-  HxType.register_class_tags "HxParserSourceNormalize" [ "HxParserSourceNormalize" ];
   HxType.register_class_tags "HxPos" [ "HxPos" ];
   HxType.register_class_tags "HxToken" [ "HxToken" ];
   HxType.register_class_tags "HxUnaryOperatorTools" [ "HxUnaryOperatorTools" ];

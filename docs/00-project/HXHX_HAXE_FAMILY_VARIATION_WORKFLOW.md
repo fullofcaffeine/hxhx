@@ -1,6 +1,6 @@
 # hxhx Haxe-Family Variation Workflow
 
-Last prepared: 2026-07-04
+Last prepared: 2026-07-24
 Status: planning workflow for `haxe.ocaml-vary.6`; no supported user platform claim
 
 Related docs:
@@ -21,6 +21,12 @@ backend plugin, or diagnostic customization can express the change. A variation
 is for a named compiler product or profile with intentional behavior differences,
 separate claims, separate tests, and explicit activation.
 
+One product goal is to let `hxhx` evolve the language faster than vanilla Haxe
+without breaking vanilla programs. New syntax may enlarge the accepted language,
+but source already accepted by a supported upstream baseline must retain its
+behavior. Every extension therefore needs both baseline-protection evidence and
+its own `hxhx` behavior evidence.
+
 The baseline rule stays intact:
 
 > The stock `hxhx` release remains Haxe `4.3.7`-compatible by default. A
@@ -39,6 +45,7 @@ Use this order before deciding to create a variation:
 | Add a report or project policy after typing | Explicit hxhx customization | Usually no |
 | Bundle target/runtime defaults for one product | Named profile or customization bundle | Maybe |
 | Change accepted syntax | Variation |
+| Accept a different source language such as TypeScript | Optional frontend/plugin research | Separate product |
 | Change name lookup, typing, unification, or macro lifecycle ordering | Variation |
 | Ship a compiler with different compatibility promises | Variation |
 | Explore Reflaxe-shaped compiler-core ownership | Research first, then possibly variation |
@@ -47,6 +54,41 @@ If the behavior can be removed and the baseline compiler still behaves exactly
 the same, start with a plugin or customization. If the behavior changes what the
 language accepts, how it types, or what compatibility means, use a named
 variation.
+
+### Reference syntax experiment
+
+The first planned syntax experiment is object-field shorthand:
+
+```haxe
+var callee = resolve();
+var call = {callee};
+```
+
+The selected `hxhx` language profile would treat this as
+`{callee: callee}`. This is a useful small test because the intended behavior is
+simple, but the compiler boundary is not: upstream-compatible macros and typed
+transforms run only after source has parsed, so they cannot accept this new
+grammar without an earlier structured extension seam.
+
+When this post-Full1 work starts, use the example to compare ordinary macros,
+typed transforms, pre-parse token/syntax transforms, parser extensions, and
+built-in profile syntax. Ask GPT-5.6 Sol Oracle to brainstorm and independently
+review the seam before implementation. The review is architecture advice;
+focused executable fixtures and baseline-protection gates remain authoritative.
+
+Also evaluate a deterministic `dehxhxify` source translator. For this example,
+it would emit `{callee: callee}` so an upstream Haxe toolchain can consume the
+translated source. The translator must report unsupported extensions and prove
+the behavior of supported translations; it must not be presented as upstream
+Haxe accepting the original `hxhx` source.
+
+Do not confuse this conservative Haxe-superset work with an optional
+TypeScript-compatible frontend. `hxhx` additions should remain recognizably
+Haxe. A future `ts2hx` frontend/plugin may have more freedom and target broad or
+eventual full TypeScript source compatibility, but it is a separately activated
+product whose TS-specific parser and semantic policy stay outside baseline
+compiler core. That post-production-1.0 research is tracked by
+`haxe_ocaml-h5jta.3`.
 
 ## Variation Charter
 
@@ -63,6 +105,8 @@ The charter must include:
 - provenance plan;
 - validation plan;
 - release-claim wording.
+- translation policy: whether a standard-Haxe form exists, what fidelity is
+  promised, and how unsupported constructs fail.
 
 The compatibility statement is the important part. A variation may be
 Haxe-family, but it is not the baseline Haxe `4.3.7` replacement unless it passes
@@ -144,6 +188,8 @@ Baseline protection evidence proves the stock compiler still behaves as Haxe
 Variation behavior evidence proves the selected product:
 
 - focused repo-owned fixtures for each intentional behavior difference;
+- expanded-form equivalence fixtures when an `hxhx` syntax feature is specified
+  as shorthand for ordinary Haxe;
 - black-box upstream Haxe runs only as behavior oracle, not source material;
 - stage0-forbidden runs when the variation claims native/non-delegating support;
 - macro-host tests when macro lifecycle behavior is part of the claim;
@@ -209,7 +255,12 @@ point is to make intentional differences visible and testable.
 7. Add variation behavior evidence.
 8. Record provenance, stage0, release-claim, and README/North Star decisions.
 9. Add CI tripwires once the activation surface is stable.
-10. Keep the stock `hxhx` default unchanged.
+10. Keep the baseline Haxe-compatibility profile unchanged. If a future product
+    makes a superset profile the ordinary `hxhx` selection, record that as an
+    explicit product decision without weakening the baseline profile or its
+    evidence.
+11. For parser-level extensions, disposition the focused Oracle seam review
+    before implementation and test any standard-Haxe translation separately.
 
 ## Current Status
 

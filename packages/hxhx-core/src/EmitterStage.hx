@@ -3194,7 +3194,7 @@ class EmitterStage {
 				}
 				// Stage3 stdlib bring-up guard:
 				// - `haxe.io.Bytes.readString(pos, len)` lowers to `getString(pos, len)`.
-				// - Native parser recovery can miss the implicit receiver/optional encoding argument.
+				// - The current typed call facts can miss the implicit receiver/optional encoding argument.
 				// - Emit the receiver-aware form directly to avoid OCaml partial application.
 				if (c == "getString" && args.length == 2) {
 					return c
@@ -3207,7 +3207,7 @@ class EmitterStage {
 				}
 				// Stage3 stdlib bring-up guard:
 				// - `haxe.io.Bytes.getDouble/getFloat/getInt64` call `getInt32(pos)` in instance context.
-				// - Native parser recovery can lose the implicit receiver for the unqualified helper call.
+				// - The current typed call facts can lose the implicit receiver for the unqualified helper call.
 				// - Emit the receiver-aware call form directly to avoid OCaml partial applications.
 				if (c == "getInt32" && args.length == 1) {
 					return c
@@ -3570,7 +3570,7 @@ class EmitterStage {
 						// Stage3 stdlib bring-up: `haxe.io.Bytes.readString(pos, len)` calls
 						// `getString(pos, len)` while `getString` has receiver + optional encoding.
 						//
-						// Native parser recovery can miss the implicit receiver/optional insertion
+						// The current typed call facts can miss the implicit receiver/optional insertion
 						// for this unqualified call shape, yielding partial application at OCaml link-time.
 						// Normalize to the receiver-aware call form here.
 						if (c == "getString" && stage3HasThisBinding(tyByIdentRaw) && fullArgs.length == 2) {

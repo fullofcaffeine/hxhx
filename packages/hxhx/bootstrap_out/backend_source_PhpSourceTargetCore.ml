@@ -13,4 +13,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpSourceTargetCore" } : t)
 
-let emit = fun program context -> Backend_source_SourceTargetCommon.emitTarget (Obj.magic (Backend_source_SourceTargetCommon.Php)) (Obj.magic program) (Obj.magic context)
+let emit = fun program context -> Backend_source_SourceTargetCommon.emitPhpTarget (Obj.magic program) (Obj.magic context)

@@ -74,12 +74,11 @@ class HxModuleDirective {
 	}
 
 	/**
-		Validate the identifier subset accepted by the current native frontend lexer.
+		Validate the identifier subset accepted by the bootstrap Haxe lexer.
 
-		Protocol records are produced after parsing, so this is a corruption guard,
-		not a second parser. It deliberately matches the bootstrap lexer's current
-		ASCII identifier grammar and rejects spaces, separators, operators, and
-		leading digits instead of letting malformed wire data reach typing.
+		This is an integrity guard, not a second parser. It deliberately matches the
+		current ASCII identifier grammar and rejects spaces, separators, operators,
+		and leading digits before malformed directive facts reach typing.
 	**/
 	static function isBootstrapIdentifier(value:String):Bool {
 		if (value == null || value.length == 0)

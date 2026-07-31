@@ -985,103 +985,6 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/TestMain.hx");
 	}
 
-	static function protocolLine(key:String, payload:String):String {
-		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
-			"\t", "\\t");
-		return "ast " + key + " " + escaped.length + ":" + escaped;
-	}
-
-	static function assertNativeStaticFinalDecode():Void {
-		final plainField = "HX_CTOR\npublic\n1\n\n";
-		final staticFinal = "HX_CTOR\npublic\n1\n\n\"_hx_constructor\"";
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "Main"),
-			"ast static_main 1",
-			protocolLine("field", plainField),
-			protocolLine("static_final", staticFinal),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
-		assertTrue(fields.length == 1, "native static_final should replace duplicate plain field records");
-		final field = fields[0];
-		assertTrue(HxFieldDecl.getIsFinal(field), "native static_final should decode as a final field");
-		assertTrue(HxFieldDecl.getInitText(field) == "\"_hx_constructor\"", "native static_final should retain initializer text");
-		switch (HxFieldDecl.getInit(field)) {
-			case HxExpr.EString(v):
-				assertTrue(v == "_hx_constructor", "native static_final should parse string initializers");
-			case _:
-				throw "native static_final should decode a string initializer expression";
-		}
-	}
-
-	static function assertNativeSwitchFieldInitializerDecode():Void {
-		final init = 'switch(Sys.systemName()){case "Windows":["","/","\\\\"];case _:["","/"];} public function setup(){}';
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "TestFileSystem"),
-			"ast static_main 0",
-			protocolLine("field", "tailingSlashes\npublic\n0\n\n" + init),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
-		assertTrue(fields.length == 1, "native switch field initializer should decode one field");
-		final field = fields[0];
-		assertTrue(HxFieldDecl.getInitText(field).indexOf("public function setup") < 0, "native switch field initializer should trim following class members");
-		switch (HxFieldDecl.getInit(field)) {
-			case HxExpr.ESwitch(HxExpr.ECall(HxExpr.EField(HxExpr.EIdent("Sys"), "systemName"), []), patterns, exprs):
-				assertTrue(patterns.length == 2, "native switch field initializer should preserve cases");
-				assertTrue(exprs.length == 2, "native switch field initializer should preserve branch values");
-			case HxExpr.EUnsupported(raw):
-				throw "native switch field initializer parsed as unsupported: " + raw;
-			case _:
-				throw "native switch field initializer should decode as switch expression";
-		}
-	}
-
-	static function assertNativeUntypedCastFieldInitializerDecode():Void {
-		final encoded = [
-			"hxhx_frontend_v=3",
-			protocolLine("class", "StringTools"),
-			"ast static_main 0",
-			protocolLine("field", "winMetaCharacters\nprivate\n1\n\ncast haxe.SysTools.winMetaCharacters"),
-			"ok"
-		].join("\n");
-		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
-		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
-		assertTrue(fields.length == 1, "native untyped-cast initializer should decode one field");
-		switch (HxFieldDecl.getInit(fields[0])) {
-			case HxExpr.ECast(HxExpr.EField(HxExpr.EField(HxExpr.EIdent(root), owner), field), typeHint):
-				assertTrue(root == "haxe", "native untyped cast should preserve the haxe package root");
-				assertTrue(owner == "SysTools", "native untyped cast should preserve the owning class");
-				assertTrue(field == "winMetaCharacters", "native untyped cast should preserve the selected field");
-				assertTrue(typeHint == "", "native untyped cast should not invent a target type");
-			case HxExpr.EField(HxExpr.EField(HxExpr.EIdent("casthaxe"), _), _):
-				throw "native untyped cast must not join the cast keyword into a fake `casthaxe` identifier";
-			case _:
-				throw "native untyped-cast initializer should decode as an explicit cast around the field access";
-		}
-	}
-
-	static function assertNativeSourceNullableHintPreference():Void {
-		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "Null<Bool>"),
-			"native protocol decode should prefer source Null<Bool> over erased Bool");
-		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("StdTypes.Null", "StdTypes.Null<Bool>"),
-			"native protocol decode should preserve explicit StdTypes.Null<T> hints");
-		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Function", "(index:Int, item:String) -> String"),
-			"native protocol decode should prefer source function hints over erased Function");
-		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Dynamic", "String -> Array<String>"),
-			"native protocol decode should prefer source function hints over erased Dynamic");
-		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("B", "(index:Int, item:A) -> B"),
-			"native protocol decode should prefer source function hints over erased generic type variables");
-		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "String"),
-			"native protocol decode should not treat unrelated source hints as more specific");
-		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("String", "String -> Array<String>"),
-			"native protocol decode should not replace concrete non-function hints with source function hints");
-	}
-
 	static function assertScannedHelperClassInheritance():Void {
 		final source = [
 			"class Base {}",
@@ -1285,10 +1188,6 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function main():Void {
-		assertNativeStaticFinalDecode();
-		assertNativeSwitchFieldInitializerDecode();
-		assertNativeUntypedCastFieldInitializerDecode();
-		assertNativeSourceNullableHintPreference();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperOperationFields();
 		assertScannedHelperAbstractExpressionBody();
