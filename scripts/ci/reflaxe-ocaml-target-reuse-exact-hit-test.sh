@@ -429,6 +429,7 @@ if [[ "$("${HAXE_BIN:-haxe}" -version)" == 4.* ]]; then
 	compile_expected_miss
 	compile_expected_miss
 	node "$MATRIX_HELPER" verify-rtti-ineligible-phase-pair \
+		"$PHASE_REPORT_DIR/request-000002.json" \
 		"$PHASE_REPORT_DIR/request-000003.json" \
 		"$PHASE_REPORT_DIR/request-000004.json"
 	assert_runtime "exact target replay"

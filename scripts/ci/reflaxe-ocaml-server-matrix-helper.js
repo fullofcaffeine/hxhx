@@ -119,7 +119,8 @@ function verifyReusePhasePair(coldPath, warmPath) {
  * unchanged server requests. Both compilations must therefore report the same
  * explicit safety reason while using their current typed input.
  */
-function verifyRttiIneligiblePhasePair(firstPath, secondPath) {
+function verifyRttiIneligiblePhasePair(baselinePath, firstPath, secondPath) {
+	const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'))
 	const reports = [
 		['first', JSON.parse(fs.readFileSync(firstPath, 'utf8'))],
 		['second', JSON.parse(fs.readFileSync(secondPath, 'utf8'))],
@@ -148,11 +149,21 @@ function verifyRttiIneligiblePhasePair(firstPath, secondPath) {
 	}
 	const first = reports[0][1]
 	const second = reports[1][1]
-	if (second?.macroRealm?.requestSequence !== first?.macroRealm?.requestSequence + 1
+	if (baseline?.outcome !== 'exact-hit'
+		|| first?.macroRealm?.requestSequence !== baseline?.macroRealm?.requestSequence + 1
+		|| second?.macroRealm?.requestSequence !== first?.macroRealm?.requestSequence + 1
+		|| first?.macroRealm?.identityRevision !== baseline?.macroRealm?.identityRevision
 		|| second?.macroRealm?.identityRevision !== first?.macroRealm?.identityRevision
 		|| second?.macroRealm?.survivedPriorRequest !== true
-		|| second?.catalog?.ineligibleRequests !== first?.catalog?.ineligibleRequests + 1) {
-		fail('repeated RTTI requests did not preserve one macro realm and record both ineligible compilations')
+		|| first?.catalog?.ineligibleRequests !== baseline?.catalog?.ineligibleRequests + 1
+		|| second?.catalog?.ineligibleRequests !== first?.catalog?.ineligibleRequests + 1
+		|| first?.catalog?.admissions !== baseline?.catalog?.admissions
+		|| second?.catalog?.admissions !== baseline?.catalog?.admissions
+		|| first?.catalog?.entryCount !== baseline?.catalog?.entryCount
+		|| second?.catalog?.entryCount !== baseline?.catalog?.entryCount
+		|| first?.catalog?.payloadBytes !== baseline?.catalog?.payloadBytes
+		|| second?.catalog?.payloadBytes !== baseline?.catalog?.payloadBytes) {
+		fail('repeated RTTI requests did not preserve one macro realm and leave the reusable catalog unchanged')
 	}
 }
 
@@ -179,8 +190,8 @@ switch (command) {
 		verifyReusePhasePair(args[0], args[1])
 		break
 	case 'verify-rtti-ineligible-phase-pair':
-		if (args.length !== 2) fail('verify-rtti-ineligible-phase-pair needs: first-report second-report')
-		verifyRttiIneligiblePhasePair(args[0], args[1])
+		if (args.length !== 3) fail('verify-rtti-ineligible-phase-pair needs: baseline-report first-report second-report')
+		verifyRttiIneligiblePhasePair(args[0], args[1], args[2])
 		break
 	default:
 		fail(`unknown command: ${command || '<missing>'}`)
