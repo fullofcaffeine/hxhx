@@ -318,10 +318,10 @@ let createStagingPath = fun self (preferredParent : string) (index : int) -> let
   stagedPath
 )
 
-let createRoot = fun self (finalPath : string) (index : int) -> let __anon_91 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_91 "finalPath" (Obj.repr finalPath));
-  ignore (HxAnon.set __anon_91 "stagedPath" (Obj.repr (createStagingPath (Obj.magic self) (let __call_arg_0_92 = finalPath in normalizedParent __call_arg_0_92 : string) index)));
-  __anon_91
+let createRoot = fun self (finalPath : string) (index : int) -> let __anonymous_value_91 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_91 "finalPath" (Obj.repr finalPath));
+  ignore (HxAnon.set __anonymous_value_91 "stagedPath" (Obj.repr (createStagingPath (Obj.magic self) (let __call_arg_0_92 = finalPath in normalizedParent __call_arg_0_92 : string) index)));
+  __anonymous_value_91
 )
 
 let create = fun requestId2 outDir backendOutputDir outputFileHint -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputTransaction"; requestId = 0; directoryRoots = Obj.magic (HxRuntime.hx_null); fileBundleRoot = Obj.magic (HxRuntime.hx_null); outputPathsValue = Obj.magic (HxRuntime.hx_null); retainedBackups = Obj.magic (HxRuntime.hx_null); state = HxString.hx_null_string } : t) in (
@@ -371,10 +371,10 @@ let create = fun requestId2 outDir backendOutputDir outputFileHint -> let self =
           let bundle = ref (HxRuntime.hx_null : Obj.t) in (
             ignore (if finalOutputFileHint != Obj.magic (HxRuntime.hx_null) then ignore (let containingRoot = findContainingRoot (Obj.magic self) (finalOutputFileHint : string) in (
               ignore (if containingRoot != Obj.magic (HxRuntime.hx_null) && HxString.equals (comparisonPath (finalOutputFileHint : string)) (let __call_arg_0_17 = Obj.obj (HxAnon.get containingRoot "finalPath") in comparisonPath __call_arg_0_17) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("compiler output file conflicts with output directory: " ^ HxString.toStdString finalOutputFileHint)) ["Dynamic"]) else ());
-              if containingRoot == Obj.magic (HxRuntime.hx_null) then ignore (let finalParent = (normalizedParent (finalOutputFileHint : string) : string) in let stagedContainer = (createStagingPath (Obj.magic self) (finalParent : string) (!rootIndex) : string) in let __assign_18 = Obj.magic (let __anon_19 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_19 "finalPath" (Obj.repr finalParent));
-                ignore (HxAnon.set __anon_19 "stagedPath" (Obj.repr stagedContainer));
-                __anon_19
+              if containingRoot == Obj.magic (HxRuntime.hx_null) then ignore (let finalParent = (normalizedParent (finalOutputFileHint : string) : string) in let stagedContainer = (createStagingPath (Obj.magic self) (finalParent : string) (!rootIndex) : string) in let __assign_18 = Obj.magic (let __anonymous_value_19 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_19 "finalPath" (Obj.repr finalParent));
+                ignore (HxAnon.set __anonymous_value_19 "stagedPath" (Obj.repr stagedContainer));
+                __anonymous_value_19
               )) in (
                 bundle := __assign_18;
                 __assign_18
@@ -409,13 +409,13 @@ let publication = fun self (stagedPath : string) (finalPath : string) (index : i
   ignore (HxArray.push __arr_101 (let __call_arg_0_102 = finalPath in normalizedParent __call_arg_0_102));
   ignore (HxArray.push __arr_101 (((((".hxhx-server-backup-" ^ HxString.toStdString hx_PROCESS_TOKEN) ^ "-") ^ string_of_int ((Obj.magic self : t).requestId)) ^ "-") ^ string_of_int index));
   __arr_101
-))) : string) in let __anon_103 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_103 "finalPath" (Obj.repr finalPath));
-  ignore (HxAnon.set __anon_103 "stagedPath" (Obj.repr stagedPath));
-  ignore (HxAnon.set __anon_103 "backupPath" (Obj.repr backupPath));
-  ignore (HxAnon.set __anon_103 "backedUp" (HxRuntime.box_bool false));
-  ignore (HxAnon.set __anon_103 "published" (HxRuntime.box_bool false));
-  __anon_103
+))) : string) in let __anonymous_value_103 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_103 "finalPath" (Obj.repr finalPath));
+  ignore (HxAnon.set __anonymous_value_103 "stagedPath" (Obj.repr stagedPath));
+  ignore (HxAnon.set __anonymous_value_103 "backupPath" (Obj.repr backupPath));
+  ignore (HxAnon.set __anonymous_value_103 "backedUp" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anonymous_value_103 "published" (HxRuntime.box_bool false));
+  __anonymous_value_103
 )
 
 let collectPublications = fun self () -> let publications = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).directoryRoots) in (

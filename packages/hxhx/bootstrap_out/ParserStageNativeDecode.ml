@@ -117,11 +117,11 @@ let skipToFieldBoundary = fun (source : string) (start : int) -> (try let pos = 
   | HxRuntime.Hx_return __ret_108 -> (Obj.obj __ret_108 : int) : int)
 
 let scanFieldTypeHintAfterVar = fun source start -> try let __fallback_result_91 = let pos = ref start in let nameTok = ParserStageScanHelpers.scanNextToken (source : string) (!pos) in (
-  ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get nameTok "isIdent")) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_79 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_79 "name" (Obj.repr ""));
-    ignore (HxAnon.set __anon_79 "typeHint" (Obj.repr ""));
-    ignore (HxAnon.set __anon_79 "nextPos" (Obj.repr (!pos)));
-    __anon_79
+  ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get nameTok "isIdent")) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_79 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_79 "name" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_79 "typeHint" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_79 "nextPos" (Obj.repr (!pos)));
+    __anonymous_value_79
   )))) else ());
   let name = (Obj.obj (HxAnon.get nameTok "text") : string) in (
     ignore (let __assign_80 = Obj.obj (HxAnon.get nameTok "nextPos") in (
@@ -153,11 +153,11 @@ let scanFieldTypeHintAfterVar = fun source start -> try let __fallback_result_91
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let __anon_87 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_87 "name" (Obj.repr name));
-        ignore (HxAnon.set __anon_87 "typeHint" (Obj.repr (!typeHint)));
-        ignore (HxAnon.set __anon_87 "nextPos" (Obj.repr (let __call_arg_0_88 = source in let __call_arg_1_89 = !pos in skipToFieldBoundary __call_arg_0_88 __call_arg_1_89)));
-        __anon_87
+      let __anonymous_value_87 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_87 "name" (Obj.repr name));
+        ignore (HxAnon.set __anonymous_value_87 "typeHint" (Obj.repr (!typeHint)));
+        ignore (HxAnon.set __anonymous_value_87 "nextPos" (Obj.repr (let __call_arg_0_88 = source in let __call_arg_1_89 = !pos in skipToFieldBoundary __call_arg_0_88 __call_arg_1_89)));
+        __anonymous_value_87
       )
     )
   )
@@ -600,12 +600,12 @@ let parseSourceSignatureArgs = fun text -> let out = Obj.magic (HxArray.create (
                   tempString2 := __assign_265;
                   __assign_265
                 ));
-                let defaultText = !tempString2 in HxArray.push out (let __anon_266 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_266 "name" (Obj.repr argName));
-                  ignore (HxAnon.set __anon_266 "isOptional" (HxRuntime.box_bool (!isOptional || HxString.length defaultText > 0)));
-                  ignore (HxAnon.set __anon_266 "typeHint" (Obj.repr typeHint));
-                  ignore (HxAnon.set __anon_266 "defaultText" (Obj.repr defaultText));
-                  __anon_266
+                let defaultText = !tempString2 in HxArray.push out (let __anonymous_value_266 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_266 "name" (Obj.repr argName));
+                  ignore (HxAnon.set __anonymous_value_266 "isOptional" (HxRuntime.box_bool (!isOptional || HxString.length defaultText > 0)));
+                  ignore (HxAnon.set __anonymous_value_266 "typeHint" (Obj.repr typeHint));
+                  ignore (HxAnon.set __anonymous_value_266 "defaultText" (Obj.repr defaultText));
+                  __anonymous_value_266
                 ))
               )
             )
@@ -1050,10 +1050,10 @@ let parseRegexLiteral = fun source -> try let __fallback_result_572 = (
             __old_566
           )
         )) done);
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_568 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_568 "pattern" (Obj.repr pattern));
-          ignore (HxAnon.set __anon_568 "flags" (Obj.repr flags));
-          __anon_568
+        raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_568 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_568 "pattern" (Obj.repr pattern));
+          ignore (HxAnon.set __anonymous_value_568 "flags" (Obj.repr flags));
+          __anonymous_value_568
         ))))
       )) else ());
       let __old_569 = !index in let __new_570 = HxInt.add __old_569 1 in (

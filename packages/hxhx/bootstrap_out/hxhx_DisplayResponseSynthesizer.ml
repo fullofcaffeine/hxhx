@@ -47,25 +47,25 @@ let parseStrictInt = fun (text : string) -> (try (
   | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : int) : int)
 
 let parseDisplayRequestQuery = fun displayRequest -> try let __fallback_result_27 = (
-  ignore (if displayRequest == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr (let __anon_14 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_14 "sourcePath" (Obj.repr ""));
-    ignore (HxAnon.set __anon_14 "cursorOffset" (Obj.repr (-1)));
-    ignore (HxAnon.set __anon_14 "mode" (Obj.repr ""));
-    __anon_14
+  ignore (if displayRequest == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_14 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_14 "sourcePath" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_14 "cursorOffset" (Obj.repr (-1)));
+    ignore (HxAnon.set __anonymous_value_14 "mode" (Obj.repr ""));
+    __anonymous_value_14
   )))) else ());
   let trimmed = let __call_arg_0_15 = displayRequest in StringTools.trim __call_arg_0_15 in (
-    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_16 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_16 "sourcePath" (Obj.repr ""));
-      ignore (HxAnon.set __anon_16 "cursorOffset" (Obj.repr (-1)));
-      ignore (HxAnon.set __anon_16 "mode" (Obj.repr ""));
-      __anon_16
+    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_16 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_16 "sourcePath" (Obj.repr ""));
+      ignore (HxAnon.set __anonymous_value_16 "cursorOffset" (Obj.repr (-1)));
+      ignore (HxAnon.set __anonymous_value_16 "mode" (Obj.repr ""));
+      __anonymous_value_16
     )))) else ());
     let at = HxString.indexOf trimmed "@" 0 in (
-      ignore (if at = -1 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_17 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_17 "sourcePath" (Obj.repr trimmed));
-        ignore (HxAnon.set __anon_17 "cursorOffset" (Obj.repr (-1)));
-        ignore (HxAnon.set __anon_17 "mode" (Obj.repr ""));
-        __anon_17
+      ignore (if at = -1 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_17 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_17 "sourcePath" (Obj.repr trimmed));
+        ignore (HxAnon.set __anonymous_value_17 "cursorOffset" (Obj.repr (-1)));
+        ignore (HxAnon.set __anonymous_value_17 "mode" (Obj.repr ""));
+        __anonymous_value_17
       )))) else ());
       let sourcePath = (HxString.substr trimmed 0 at : string) in let tail = (HxString.substr trimmed (HxInt.add at 1) (-1) : string) in let secondAt = HxString.indexOf tail "@" 0 in let cursorOffset = ref (-1) in let mode = ref ("" : string) in (
         ignore (if secondAt = -1 then ignore (let cursor = let __call_arg_0_18 = tail in parseStrictInt __call_arg_0_18 in if cursor >= 0 then ignore (let __assign_19 = cursor in (
@@ -87,11 +87,11 @@ let parseDisplayRequestQuery = fun displayRequest -> try let __fallback_result_2
           mode := __assign_24;
           __assign_24
         ))));
-        let __anon_25 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_25 "sourcePath" (Obj.repr sourcePath));
-          ignore (HxAnon.set __anon_25 "cursorOffset" (Obj.repr (!cursorOffset)));
-          ignore (HxAnon.set __anon_25 "mode" (Obj.repr (!mode)));
-          __anon_25
+        let __anonymous_value_25 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_25 "sourcePath" (Obj.repr sourcePath));
+          ignore (HxAnon.set __anonymous_value_25 "cursorOffset" (Obj.repr (!cursorOffset)));
+          ignore (HxAnon.set __anonymous_value_25 "mode" (Obj.repr (!mode)));
+          __anonymous_value_25
         )
       )
     )
@@ -186,12 +186,12 @@ let tokenizeDisplaySource = fun source -> try let __fallback_result_72 = let out
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        ignore (HxArray.push out (let __anon_63 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_63 "text" (Obj.repr (HxString.substr source start (HxInt.sub (!index) start))));
-          ignore (HxAnon.set __anon_63 "start" (Obj.repr start));
-          ignore (HxAnon.set __anon_63 "end" (Obj.repr (!index)));
-          ignore (HxAnon.set __anon_63 "isIdent" (HxRuntime.box_bool false));
-          __anon_63
+        ignore (HxArray.push out (let __anonymous_value_63 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_63 "text" (Obj.repr (HxString.substr source start (HxInt.sub (!index) start))));
+          ignore (HxAnon.set __anonymous_value_63 "start" (Obj.repr start));
+          ignore (HxAnon.set __anonymous_value_63 "end" (Obj.repr (!index)));
+          ignore (HxAnon.set __anonymous_value_63 "isIdent" (HxRuntime.box_bool false));
+          __anonymous_value_63
         )));
         raise (HxRuntime.Hx_continue)
       )) else ());
@@ -212,21 +212,21 @@ let tokenizeDisplaySource = fun source -> try let __fallback_result_72 = let out
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
-          ignore (HxArray.push out (let __anon_68 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_68 "text" (Obj.repr (HxString.substr source start (HxInt.sub (!index) start))));
-            ignore (HxAnon.set __anon_68 "start" (Obj.repr start));
-            ignore (HxAnon.set __anon_68 "end" (Obj.repr (!index)));
-            ignore (HxAnon.set __anon_68 "isIdent" (HxRuntime.box_bool true));
-            __anon_68
+          ignore (HxArray.push out (let __anonymous_value_68 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_68 "text" (Obj.repr (HxString.substr source start (HxInt.sub (!index) start))));
+            ignore (HxAnon.set __anonymous_value_68 "start" (Obj.repr start));
+            ignore (HxAnon.set __anonymous_value_68 "end" (Obj.repr (!index)));
+            ignore (HxAnon.set __anonymous_value_68 "isIdent" (HxRuntime.box_bool true));
+            __anonymous_value_68
           )));
           raise (HxRuntime.Hx_continue)
         )) else ());
-        ignore (HxArray.push out (let __anon_69 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_69 "text" (Obj.repr (HxString.fromCharCode (let __nullable_int_70 = code in if __nullable_int_70 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_70))));
-          ignore (HxAnon.set __anon_69 "start" (Obj.repr (!index)));
-          ignore (HxAnon.set __anon_69 "end" (Obj.repr (HxInt.add (!index) 1)));
-          ignore (HxAnon.set __anon_69 "isIdent" (HxRuntime.box_bool false));
-          __anon_69
+        ignore (HxArray.push out (let __anonymous_value_69 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_69 "text" (Obj.repr (HxString.fromCharCode (let __nullable_int_70 = code in if __nullable_int_70 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_70))));
+          ignore (HxAnon.set __anonymous_value_69 "start" (Obj.repr (!index)));
+          ignore (HxAnon.set __anonymous_value_69 "end" (Obj.repr (HxInt.add (!index) 1)));
+          ignore (HxAnon.set __anonymous_value_69 "isIdent" (HxRuntime.box_bool false));
+          __anonymous_value_69
         )));
         index := HxInt.add (!index) 1
       )
@@ -599,10 +599,10 @@ let synthesizeExprOfStructCompletion = fun (displayRequest : string) (displaySou
                 ignore (if Obj.obj (HxAnon.get token "start") >= Obj.obj (HxAnon.get query "cursorOffset") then raise (HxRuntime.Hx_break) else ());
                 let _g2 = (Obj.obj (HxAnon.get token "text") : string) in match _g2 with
                   | ")" -> ignore (if HxArray.length stack > 0 && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic stack) (HxInt.sub (HxArray.length stack) 1)) "symbol")) "(" then ignore (HxArray.pop stack ()) else ())
-                  | "(" | "[" | "{" -> ignore (HxArray.push stack (let __anon_151 = HxAnon.create () in (
-                    ignore (HxAnon.set __anon_151 "symbol" (Obj.repr (Obj.obj (HxAnon.get token "text"))));
-                    ignore (HxAnon.set __anon_151 "tokenIndex" (Obj.repr tokenIndex));
-                    __anon_151
+                  | "(" | "[" | "{" -> ignore (HxArray.push stack (let __anonymous_value_151 = HxAnon.create () in (
+                    ignore (HxAnon.set __anonymous_value_151 "symbol" (Obj.repr (Obj.obj (HxAnon.get token "text"))));
+                    ignore (HxAnon.set __anonymous_value_151 "tokenIndex" (Obj.repr tokenIndex));
+                    __anonymous_value_151
                   )))
                   | "]" -> ignore (if HxArray.length stack > 0 && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic stack) (HxInt.sub (HxArray.length stack) 1)) "symbol")) "[" then ignore (HxArray.pop stack ()) else ())
                   | "}" -> ignore (if HxArray.length stack > 0 && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic stack) (HxInt.sub (HxArray.length stack) 1)) "symbol")) "{" then ignore (HxArray.pop stack ()) else ())

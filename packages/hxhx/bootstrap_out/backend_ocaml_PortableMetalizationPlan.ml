@@ -232,10 +232,10 @@ let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let
           tempNumber1 := __assign_38;
           __assign_38
         ));
-        HxArray.push excludedByCode (let __anon_40 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_40 "code" (Obj.repr code));
-          ignore (HxAnon.set __anon_40 "count" (Obj.repr (!tempNumber1)));
-          __anon_40
+        HxArray.push excludedByCode (let __anonymous_value_40 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_40 "code" (Obj.repr code));
+          ignore (HxAnon.set __anonymous_value_40 "count" (Obj.repr (!tempNumber1)));
+          __anonymous_value_40
         ))
       )
     )) done);
@@ -251,12 +251,12 @@ let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let
         ignore (HxAnon.set __anon_43 "schemaVersion" (Obj.repr 1));
         ignore (HxAnon.set __anon_43 "profile" (Obj.repr ((Obj.magic self : t).profile)));
         ignore (HxAnon.set __anon_43 "plannerMode" (Obj.repr (!tempString1)));
-        ignore (HxAnon.set __anon_43 "summary" (let __anon_44 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_44 "totalRegions" (Obj.repr (HxArray.length ((Obj.magic self : t).orderedSeeds))));
-          ignore (HxAnon.set __anon_44 "autoMetalizedRegions" (Obj.repr (!autoMetalizedCount)));
-          ignore (HxAnon.set __anon_44 "excludedRegions" (Obj.repr (!excludedCount)));
-          ignore (HxAnon.set __anon_44 "usedMetalStyleRegions" (Obj.repr (!usedMetalStyleCount)));
-          __anon_44
+        ignore (HxAnon.set __anon_43 "summary" (let __anonymous_value_44 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_44 "totalRegions" (Obj.repr (HxArray.length ((Obj.magic self : t).orderedSeeds))));
+          ignore (HxAnon.set __anonymous_value_44 "autoMetalizedRegions" (Obj.repr (!autoMetalizedCount)));
+          ignore (HxAnon.set __anonymous_value_44 "excludedRegions" (Obj.repr (!excludedCount)));
+          ignore (HxAnon.set __anonymous_value_44 "usedMetalStyleRegions" (Obj.repr (!usedMetalStyleCount)));
+          __anonymous_value_44
         )));
         ignore (HxAnon.set __anon_43 "excludedByCode" (Obj.repr excludedByCode));
         ignore (HxAnon.set __anon_43 "regions" (Obj.repr regions));

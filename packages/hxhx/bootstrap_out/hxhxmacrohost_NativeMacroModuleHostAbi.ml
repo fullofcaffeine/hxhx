@@ -100,10 +100,10 @@ let requireToken = fun (value : string) (field : string) (sourceLabel : string) 
 let decodeRow = fun line lineNumber sourceLabel -> let idx = HxString.indexOf line "\t" 0 in (
   ignore (if idx <= 0 || HxInt.add idx (HxString.length "\t") >= HxString.length line then ignore (let __call_arg_0_26 = sourceLabel in let __call_arg_1_27 = ("invalid registration row at line " ^ string_of_int lineNumber) ^ " (expected pluginId<TAB>expr)" in fail __call_arg_0_26 __call_arg_1_27) else ());
   ignore (if HxString.indexOf line "\t" (HxInt.add idx (HxString.length "\t")) >= 0 then ignore (let __call_arg_0_28 = sourceLabel in let __call_arg_1_29 = ("invalid registration row at line " ^ string_of_int lineNumber) ^ " (too many separators)" in fail __call_arg_0_28 __call_arg_1_29) else ());
-  let pluginId = let __call_arg_0_30 = HxString.substr line 0 idx in let __call_arg_1_31 = "pluginId" in let __call_arg_2_32 = sourceLabel in requireToken __call_arg_0_30 __call_arg_1_31 __call_arg_2_32 in let expr = let __call_arg_0_33 = HxString.substr line (HxInt.add idx (HxString.length "\t")) (-1) in let __call_arg_1_34 = "expr" in let __call_arg_2_35 = sourceLabel in requireToken __call_arg_0_33 __call_arg_1_34 __call_arg_2_35 in let __anon_36 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_36 "pluginId" (Obj.repr pluginId));
-    ignore (HxAnon.set __anon_36 "expr" (Obj.repr expr));
-    __anon_36
+  let pluginId = let __call_arg_0_30 = HxString.substr line 0 idx in let __call_arg_1_31 = "pluginId" in let __call_arg_2_32 = sourceLabel in requireToken __call_arg_0_30 __call_arg_1_31 __call_arg_2_32 in let expr = let __call_arg_0_33 = HxString.substr line (HxInt.add idx (HxString.length "\t")) (-1) in let __call_arg_1_34 = "expr" in let __call_arg_2_35 = sourceLabel in requireToken __call_arg_0_33 __call_arg_1_34 __call_arg_2_35 in let __anonymous_value_36 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_36 "pluginId" (Obj.repr pluginId));
+    ignore (HxAnon.set __anonymous_value_36 "expr" (Obj.repr expr));
+    __anonymous_value_36
   )
 )
 

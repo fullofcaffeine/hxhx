@@ -4691,10 +4691,10 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
   ignore (if let __call_callee_3016 = stop in __call_callee_3016 () then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
     ignore (let _g = Obj.magic ((Obj.magic ((Obj.magic self : t).cur) : HxToken.t).kind) in match _g with
-      | HxTokenKind.TIdent _p0 -> let _g2 = (_p0 : string) in let name = (_g2 : string) in if HxString.equals name "is" then let __assign_3018 = Obj.magic (let __anon_3019 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_3019 "op" (Obj.repr "is"));
-        ignore (HxAnon.set __anon_3019 "len" (Obj.repr 1));
-        __anon_3019
+      | HxTokenKind.TIdent _p0 -> let _g2 = (_p0 : string) in let name = (_g2 : string) in if HxString.equals name "is" then let __assign_3018 = Obj.magic (let __anonymous_value_3019 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_3019 "op" (Obj.repr "is"));
+        ignore (HxAnon.set __anonymous_value_3019 "len" (Obj.repr 1));
+        __anonymous_value_3019
       )) in (
         tempResult := __assign_3018;
         __assign_3018
@@ -4738,10 +4738,10 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3026
             )
           ));
-          if !tempBool then let __assign_3027 = Obj.magic (let __anon_3028 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3028 "op" (Obj.repr "!="));
-            ignore (HxAnon.set __anon_3028 "len" (Obj.repr 2));
-            __anon_3028
+          if !tempBool then let __assign_3027 = Obj.magic (let __anonymous_value_3028 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3028 "op" (Obj.repr "!="));
+            ignore (HxAnon.set __anonymous_value_3028 "len" (Obj.repr 2));
+            __anonymous_value_3028
           )) in (
             tempResult := __assign_3027;
             __assign_3027
@@ -4785,17 +4785,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3034
             )
           ));
-          if !tempBool1 then let __assign_3035 = Obj.magic (let __anon_3036 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3036 "op" (Obj.repr "%="));
-            ignore (HxAnon.set __anon_3036 "len" (Obj.repr 2));
-            __anon_3036
+          if !tempBool1 then let __assign_3035 = Obj.magic (let __anonymous_value_3036 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3036 "op" (Obj.repr "%="));
+            ignore (HxAnon.set __anonymous_value_3036 "len" (Obj.repr 2));
+            __anonymous_value_3036
           )) in (
             tempResult := __assign_3035;
             __assign_3035
-          ) else let __assign_3037 = Obj.magic (let __anon_3038 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3038 "op" (Obj.repr "%"));
-            ignore (HxAnon.set __anon_3038 "len" (Obj.repr 1));
-            __anon_3038
+          ) else let __assign_3037 = Obj.magic (let __anonymous_value_3038 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3038 "op" (Obj.repr "%"));
+            ignore (HxAnon.set __anonymous_value_3038 "len" (Obj.repr 1));
+            __anonymous_value_3038
           )) in (
             tempResult := __assign_3037;
             __assign_3037
@@ -4836,10 +4836,10 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3043
             )
           ));
-          if !tempBool2 then let __assign_3044 = Obj.magic (let __anon_3045 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3045 "op" (Obj.repr "&&"));
-            ignore (HxAnon.set __anon_3045 "len" (Obj.repr 2));
-            __anon_3045
+          if !tempBool2 then let __assign_3044 = Obj.magic (let __anonymous_value_3045 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3045 "op" (Obj.repr "&&"));
+            ignore (HxAnon.set __anonymous_value_3045 "len" (Obj.repr 2));
+            __anonymous_value_3045
           )) in (
             tempResult := __assign_3044;
             __assign_3044
@@ -4878,17 +4878,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3050
               )
             ));
-            if !tempBool3 then let __assign_3051 = Obj.magic (let __anon_3052 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3052 "op" (Obj.repr "&="));
-              ignore (HxAnon.set __anon_3052 "len" (Obj.repr 2));
-              __anon_3052
+            if !tempBool3 then let __assign_3051 = Obj.magic (let __anonymous_value_3052 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3052 "op" (Obj.repr "&="));
+              ignore (HxAnon.set __anonymous_value_3052 "len" (Obj.repr 2));
+              __anonymous_value_3052
             )) in (
               tempResult := __assign_3051;
               __assign_3051
-            ) else let __assign_3053 = Obj.magic (let __anon_3054 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3054 "op" (Obj.repr "&"));
-              ignore (HxAnon.set __anon_3054 "len" (Obj.repr 1));
-              __anon_3054
+            ) else let __assign_3053 = Obj.magic (let __anonymous_value_3054 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3054 "op" (Obj.repr "&"));
+              ignore (HxAnon.set __anonymous_value_3054 "len" (Obj.repr 1));
+              __anonymous_value_3054
             )) in (
               tempResult := __assign_3053;
               __assign_3053
@@ -4930,17 +4930,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3059
             )
           ));
-          if !tempBool4 then let __assign_3060 = Obj.magic (let __anon_3061 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3061 "op" (Obj.repr "*="));
-            ignore (HxAnon.set __anon_3061 "len" (Obj.repr 2));
-            __anon_3061
+          if !tempBool4 then let __assign_3060 = Obj.magic (let __anonymous_value_3061 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3061 "op" (Obj.repr "*="));
+            ignore (HxAnon.set __anonymous_value_3061 "len" (Obj.repr 2));
+            __anonymous_value_3061
           )) in (
             tempResult := __assign_3060;
             __assign_3060
-          ) else let __assign_3062 = Obj.magic (let __anon_3063 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3063 "op" (Obj.repr "*"));
-            ignore (HxAnon.set __anon_3063 "len" (Obj.repr 1));
-            __anon_3063
+          ) else let __assign_3062 = Obj.magic (let __anonymous_value_3063 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3063 "op" (Obj.repr "*"));
+            ignore (HxAnon.set __anonymous_value_3063 "len" (Obj.repr 1));
+            __anonymous_value_3063
           )) in (
             tempResult := __assign_3062;
             __assign_3062
@@ -4981,17 +4981,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3068
             )
           ));
-          if !tempBool5 then let __assign_3069 = Obj.magic (let __anon_3070 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3070 "op" (Obj.repr "+="));
-            ignore (HxAnon.set __anon_3070 "len" (Obj.repr 2));
-            __anon_3070
+          if !tempBool5 then let __assign_3069 = Obj.magic (let __anonymous_value_3070 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3070 "op" (Obj.repr "+="));
+            ignore (HxAnon.set __anonymous_value_3070 "len" (Obj.repr 2));
+            __anonymous_value_3070
           )) in (
             tempResult := __assign_3069;
             __assign_3069
-          ) else let __assign_3071 = Obj.magic (let __anon_3072 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3072 "op" (Obj.repr "+"));
-            ignore (HxAnon.set __anon_3072 "len" (Obj.repr 1));
-            __anon_3072
+          ) else let __assign_3071 = Obj.magic (let __anonymous_value_3072 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3072 "op" (Obj.repr "+"));
+            ignore (HxAnon.set __anonymous_value_3072 "len" (Obj.repr 1));
+            __anonymous_value_3072
           )) in (
             tempResult := __assign_3071;
             __assign_3071
@@ -5032,17 +5032,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3077
             )
           ));
-          if !tempBool6 then let __assign_3078 = Obj.magic (let __anon_3079 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3079 "op" (Obj.repr "-="));
-            ignore (HxAnon.set __anon_3079 "len" (Obj.repr 2));
-            __anon_3079
+          if !tempBool6 then let __assign_3078 = Obj.magic (let __anonymous_value_3079 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3079 "op" (Obj.repr "-="));
+            ignore (HxAnon.set __anonymous_value_3079 "len" (Obj.repr 2));
+            __anonymous_value_3079
           )) in (
             tempResult := __assign_3078;
             __assign_3078
-          ) else let __assign_3080 = Obj.magic (let __anon_3081 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3081 "op" (Obj.repr "-"));
-            ignore (HxAnon.set __anon_3081 "len" (Obj.repr 1));
-            __anon_3081
+          ) else let __assign_3080 = Obj.magic (let __anonymous_value_3081 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3081 "op" (Obj.repr "-"));
+            ignore (HxAnon.set __anonymous_value_3081 "len" (Obj.repr 1));
+            __anonymous_value_3081
           )) in (
             tempResult := __assign_3080;
             __assign_3080
@@ -5083,17 +5083,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3086
             )
           ));
-          if !tempBool7 then let __assign_3087 = Obj.magic (let __anon_3088 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3088 "op" (Obj.repr "/="));
-            ignore (HxAnon.set __anon_3088 "len" (Obj.repr 2));
-            __anon_3088
+          if !tempBool7 then let __assign_3087 = Obj.magic (let __anonymous_value_3088 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3088 "op" (Obj.repr "/="));
+            ignore (HxAnon.set __anonymous_value_3088 "len" (Obj.repr 2));
+            __anonymous_value_3088
           )) in (
             tempResult := __assign_3087;
             __assign_3087
-          ) else let __assign_3089 = Obj.magic (let __anon_3090 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3090 "op" (Obj.repr "/"));
-            ignore (HxAnon.set __anon_3090 "len" (Obj.repr 1));
-            __anon_3090
+          ) else let __assign_3089 = Obj.magic (let __anonymous_value_3090 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3090 "op" (Obj.repr "/"));
+            ignore (HxAnon.set __anonymous_value_3090 "len" (Obj.repr 1));
+            __anonymous_value_3090
           )) in (
             tempResult := __assign_3089;
             __assign_3089
@@ -5173,17 +5173,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3101
               )
             ));
-            if !tempBool9 then let __assign_3102 = Obj.magic (let __anon_3103 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3103 "op" (Obj.repr "<<="));
-              ignore (HxAnon.set __anon_3103 "len" (Obj.repr 3));
-              __anon_3103
+            if !tempBool9 then let __assign_3102 = Obj.magic (let __anonymous_value_3103 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3103 "op" (Obj.repr "<<="));
+              ignore (HxAnon.set __anonymous_value_3103 "len" (Obj.repr 3));
+              __anonymous_value_3103
             )) in (
               tempResult := __assign_3102;
               __assign_3102
-            ) else let __assign_3104 = Obj.magic (let __anon_3105 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3105 "op" (Obj.repr "<<"));
-              ignore (HxAnon.set __anon_3105 "len" (Obj.repr 2));
-              __anon_3105
+            ) else let __assign_3104 = Obj.magic (let __anonymous_value_3105 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3105 "op" (Obj.repr "<<"));
+              ignore (HxAnon.set __anonymous_value_3105 "len" (Obj.repr 2));
+              __anonymous_value_3105
             )) in (
               tempResult := __assign_3104;
               __assign_3104
@@ -5223,17 +5223,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3110
               )
             ));
-            if !tempBool10 then let __assign_3111 = Obj.magic (let __anon_3112 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3112 "op" (Obj.repr "<="));
-              ignore (HxAnon.set __anon_3112 "len" (Obj.repr 2));
-              __anon_3112
+            if !tempBool10 then let __assign_3111 = Obj.magic (let __anonymous_value_3112 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3112 "op" (Obj.repr "<="));
+              ignore (HxAnon.set __anonymous_value_3112 "len" (Obj.repr 2));
+              __anonymous_value_3112
             )) in (
               tempResult := __assign_3111;
               __assign_3111
-            ) else let __assign_3113 = Obj.magic (let __anon_3114 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3114 "op" (Obj.repr "<"));
-              ignore (HxAnon.set __anon_3114 "len" (Obj.repr 1));
-              __anon_3114
+            ) else let __assign_3113 = Obj.magic (let __anonymous_value_3114 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3114 "op" (Obj.repr "<"));
+              ignore (HxAnon.set __anonymous_value_3114 "len" (Obj.repr 1));
+              __anonymous_value_3114
             )) in (
               tempResult := __assign_3113;
               __assign_3113
@@ -5275,17 +5275,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3119
             )
           ));
-          if !tempBool11 then let __assign_3120 = Obj.magic (let __anon_3121 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3121 "op" (Obj.repr "=="));
-            ignore (HxAnon.set __anon_3121 "len" (Obj.repr 2));
-            __anon_3121
+          if !tempBool11 then let __assign_3120 = Obj.magic (let __anonymous_value_3121 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3121 "op" (Obj.repr "=="));
+            ignore (HxAnon.set __anonymous_value_3121 "len" (Obj.repr 2));
+            __anonymous_value_3121
           )) in (
             tempResult := __assign_3120;
             __assign_3120
-          ) else let __assign_3122 = Obj.magic (let __anon_3123 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3123 "op" (Obj.repr "="));
-            ignore (HxAnon.set __anon_3123 "len" (Obj.repr 1));
-            __anon_3123
+          ) else let __assign_3122 = Obj.magic (let __anonymous_value_3123 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3123 "op" (Obj.repr "="));
+            ignore (HxAnon.set __anonymous_value_3123 "len" (Obj.repr 1));
+            __anonymous_value_3123
           )) in (
             tempResult := __assign_3122;
             __assign_3122
@@ -5408,17 +5408,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                   __assign_3141
                 )
               ));
-              if !tempBool14 then let __assign_3142 = Obj.magic (let __anon_3143 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_3143 "op" (Obj.repr ">>>="));
-                ignore (HxAnon.set __anon_3143 "len" (Obj.repr 4));
-                __anon_3143
+              if !tempBool14 then let __assign_3142 = Obj.magic (let __anonymous_value_3143 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_3143 "op" (Obj.repr ">>>="));
+                ignore (HxAnon.set __anonymous_value_3143 "len" (Obj.repr 4));
+                __anonymous_value_3143
               )) in (
                 tempResult := __assign_3142;
                 __assign_3142
-              ) else let __assign_3144 = Obj.magic (let __anon_3145 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_3145 "op" (Obj.repr ">>>"));
-                ignore (HxAnon.set __anon_3145 "len" (Obj.repr 3));
-                __anon_3145
+              ) else let __assign_3144 = Obj.magic (let __anonymous_value_3145 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_3145 "op" (Obj.repr ">>>"));
+                ignore (HxAnon.set __anonymous_value_3145 "len" (Obj.repr 3));
+                __anonymous_value_3145
               )) in (
                 tempResult := __assign_3144;
                 __assign_3144
@@ -5462,17 +5462,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                   __assign_3151
                 )
               ));
-              if !tempBool15 then let __assign_3152 = Obj.magic (let __anon_3153 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_3153 "op" (Obj.repr ">>="));
-                ignore (HxAnon.set __anon_3153 "len" (Obj.repr 3));
-                __anon_3153
+              if !tempBool15 then let __assign_3152 = Obj.magic (let __anonymous_value_3153 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_3153 "op" (Obj.repr ">>="));
+                ignore (HxAnon.set __anonymous_value_3153 "len" (Obj.repr 3));
+                __anonymous_value_3153
               )) in (
                 tempResult := __assign_3152;
                 __assign_3152
-              ) else let __assign_3154 = Obj.magic (let __anon_3155 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_3155 "op" (Obj.repr ">>"));
-                ignore (HxAnon.set __anon_3155 "len" (Obj.repr 2));
-                __anon_3155
+              ) else let __assign_3154 = Obj.magic (let __anonymous_value_3155 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_3155 "op" (Obj.repr ">>"));
+                ignore (HxAnon.set __anonymous_value_3155 "len" (Obj.repr 2));
+                __anonymous_value_3155
               )) in (
                 tempResult := __assign_3154;
                 __assign_3154
@@ -5513,17 +5513,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3160
               )
             ));
-            if !tempBool16 then let __assign_3161 = Obj.magic (let __anon_3162 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3162 "op" (Obj.repr ">="));
-              ignore (HxAnon.set __anon_3162 "len" (Obj.repr 2));
-              __anon_3162
+            if !tempBool16 then let __assign_3161 = Obj.magic (let __anonymous_value_3162 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3162 "op" (Obj.repr ">="));
+              ignore (HxAnon.set __anonymous_value_3162 "len" (Obj.repr 2));
+              __anonymous_value_3162
             )) in (
               tempResult := __assign_3161;
               __assign_3161
-            ) else let __assign_3163 = Obj.magic (let __anon_3164 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3164 "op" (Obj.repr ">"));
-              ignore (HxAnon.set __anon_3164 "len" (Obj.repr 1));
-              __anon_3164
+            ) else let __assign_3163 = Obj.magic (let __anonymous_value_3164 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3164 "op" (Obj.repr ">"));
+              ignore (HxAnon.set __anonymous_value_3164 "len" (Obj.repr 1));
+              __anonymous_value_3164
             )) in (
               tempResult := __assign_3163;
               __assign_3163
@@ -5604,17 +5604,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3175
               )
             ));
-            if !tempBool18 then let __assign_3176 = Obj.magic (let __anon_3177 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3177 "op" (Obj.repr "??="));
-              ignore (HxAnon.set __anon_3177 "len" (Obj.repr 3));
-              __anon_3177
+            if !tempBool18 then let __assign_3176 = Obj.magic (let __anonymous_value_3177 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3177 "op" (Obj.repr "??="));
+              ignore (HxAnon.set __anonymous_value_3177 "len" (Obj.repr 3));
+              __anonymous_value_3177
             )) in (
               tempResult := __assign_3176;
               __assign_3176
-            ) else let __assign_3178 = Obj.magic (let __anon_3179 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3179 "op" (Obj.repr "??"));
-              ignore (HxAnon.set __anon_3179 "len" (Obj.repr 2));
-              __anon_3179
+            ) else let __assign_3178 = Obj.magic (let __anonymous_value_3179 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3179 "op" (Obj.repr "??"));
+              ignore (HxAnon.set __anonymous_value_3179 "len" (Obj.repr 2));
+              __anonymous_value_3179
             )) in (
               tempResult := __assign_3178;
               __assign_3178
@@ -5659,17 +5659,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3185
             )
           ));
-          if !tempBool19 then let __assign_3186 = Obj.magic (let __anon_3187 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3187 "op" (Obj.repr "^="));
-            ignore (HxAnon.set __anon_3187 "len" (Obj.repr 2));
-            __anon_3187
+          if !tempBool19 then let __assign_3186 = Obj.magic (let __anonymous_value_3187 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3187 "op" (Obj.repr "^="));
+            ignore (HxAnon.set __anonymous_value_3187 "len" (Obj.repr 2));
+            __anonymous_value_3187
           )) in (
             tempResult := __assign_3186;
             __assign_3186
-          ) else let __assign_3188 = Obj.magic (let __anon_3189 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3189 "op" (Obj.repr "^"));
-            ignore (HxAnon.set __anon_3189 "len" (Obj.repr 1));
-            __anon_3189
+          ) else let __assign_3188 = Obj.magic (let __anonymous_value_3189 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3189 "op" (Obj.repr "^"));
+            ignore (HxAnon.set __anonymous_value_3189 "len" (Obj.repr 1));
+            __anonymous_value_3189
           )) in (
             tempResult := __assign_3188;
             __assign_3188
@@ -5710,10 +5710,10 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
               __assign_3194
             )
           ));
-          if !tempBool20 then let __assign_3195 = Obj.magic (let __anon_3196 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_3196 "op" (Obj.repr "||"));
-            ignore (HxAnon.set __anon_3196 "len" (Obj.repr 2));
-            __anon_3196
+          if !tempBool20 then let __assign_3195 = Obj.magic (let __anonymous_value_3196 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_3196 "op" (Obj.repr "||"));
+            ignore (HxAnon.set __anonymous_value_3196 "len" (Obj.repr 2));
+            __anonymous_value_3196
           )) in (
             tempResult := __assign_3195;
             __assign_3195
@@ -5752,17 +5752,17 @@ let peekBinop = fun self (stop : unit -> bool) -> try let __fallback_result_3207
                 __assign_3201
               )
             ));
-            if !tempBool21 then let __assign_3202 = Obj.magic (let __anon_3203 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3203 "op" (Obj.repr "|="));
-              ignore (HxAnon.set __anon_3203 "len" (Obj.repr 2));
-              __anon_3203
+            if !tempBool21 then let __assign_3202 = Obj.magic (let __anonymous_value_3203 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3203 "op" (Obj.repr "|="));
+              ignore (HxAnon.set __anonymous_value_3203 "len" (Obj.repr 2));
+              __anonymous_value_3203
             )) in (
               tempResult := __assign_3202;
               __assign_3202
-            ) else let __assign_3204 = Obj.magic (let __anon_3205 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_3205 "op" (Obj.repr "|"));
-              ignore (HxAnon.set __anon_3205 "len" (Obj.repr 1));
-              __anon_3205
+            ) else let __assign_3204 = Obj.magic (let __anonymous_value_3205 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_3205 "op" (Obj.repr "|"));
+              ignore (HxAnon.set __anonymous_value_3205 "len" (Obj.repr 1));
+              __anonymous_value_3205
             )) in (
               tempResult := __assign_3204;
               __assign_3204
@@ -7578,10 +7578,10 @@ let readMetadataHead = fun self () -> let metaName = ref ("" : string) in let te
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    let __anon_128 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_128 "name" (Obj.repr (!metaName)));
-      ignore (HxAnon.set __anon_128 "endIndex" (Obj.repr (!endIndex)));
-      __anon_128
+    let __anonymous_value_128 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_128 "name" (Obj.repr (!metaName)));
+      ignore (HxAnon.set __anonymous_value_128 "endIndex" (Obj.repr (!endIndex)));
+      __anonymous_value_128
     )
   )
 )

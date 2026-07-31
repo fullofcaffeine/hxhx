@@ -206,10 +206,10 @@ let fromGenericText = fun text -> try let __fallback_result_19 = let out = Obj.m
           let name = let __call_arg_0_13 = !tempString1 in typeParamName __call_arg_0_13 in (
             ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_continue) else ());
             ignore (HxArray.push names name);
-            if colon >= 0 then ignore (let typeHint = let __call_arg_0_14 = HxString.substr segment (HxInt.add colon 1) (-1) in compactTypeHint __call_arg_0_14 in if HxString.length typeHint > 0 then ignore (HxArray.push constraints__local (let __anon_15 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_15 "name" (Obj.repr name));
-              ignore (HxAnon.set __anon_15 "typeHint" (Obj.repr typeHint));
-              __anon_15
+            if colon >= 0 then ignore (let typeHint = let __call_arg_0_14 = HxString.substr segment (HxInt.add colon 1) (-1) in compactTypeHint __call_arg_0_14 in if HxString.length typeHint > 0 then ignore (HxArray.push constraints__local (let __anonymous_value_15 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_15 "name" (Obj.repr name));
+              ignore (HxAnon.set __anonymous_value_15 "typeHint" (Obj.repr typeHint));
+              __anonymous_value_15
             ))) else ()) else ()
           )
         )

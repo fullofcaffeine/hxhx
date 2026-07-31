@@ -14,11 +14,11 @@ let capabilities__impl = fun (self : t) () -> let __obj_4 = (Obj.magic self : t)
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> let __obj_5 = (Obj.magic self : t).delegate in (Obj.magic __obj_5 : Backend_TargetCoreBackend.t).emit (Obj.magic __obj_5) (Obj.magic program) (Obj.magic context)
 
-let capabilitiesStatic = fun () -> let __anon_12 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_12 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_12 "supportsBuildExecutable" (HxRuntime.box_bool false));
-  ignore (HxAnon.set __anon_12 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_12
+let capabilitiesStatic = fun () -> let __anonymous_value_12 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_12 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_12 "supportsBuildExecutable" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anonymous_value_12 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_12
 )
 
 let descriptor = fun () -> let __anon_6 = HxAnon.create () in (

@@ -250,12 +250,12 @@ let readScope = fun sourceFile -> try let __fallback_result_93 = let imports = O
                   tempNumber1 := __assign_68;
                   __assign_68
                 ));
-                HxArray.push usings (let __anon_69 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_69 "path" (Obj.repr (HxArray.join names "." (fun x -> x))));
-                  ignore (HxAnon.set __anon_69 "file" (Obj.repr sourceFile));
-                  ignore (HxAnon.set __anon_69 "min" (Obj.repr (!tempNumber)));
-                  ignore (HxAnon.set __anon_69 "max" (Obj.repr (!tempNumber1)));
-                  __anon_69
+                HxArray.push usings (let __anonymous_value_69 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_69 "path" (Obj.repr (HxArray.join names "." (fun x -> x))));
+                  ignore (HxAnon.set __anonymous_value_69 "file" (Obj.repr sourceFile));
+                  ignore (HxAnon.set __anonymous_value_69 "min" (Obj.repr (!tempNumber)));
+                  ignore (HxAnon.set __anonymous_value_69 "max" (Obj.repr (!tempNumber1)));
+                  __anonymous_value_69
                 ))
               )
             )) else ignore (let tempString = ref (HxString.hx_null_string : string) in (
@@ -285,14 +285,14 @@ let readScope = fun sourceFile -> try let __fallback_result_93 = let imports = O
                     tempNumber3 := __assign_76;
                     __assign_76
                   ));
-                  HxArray.push imports (let __anon_77 = HxAnon.create () in (
-                    ignore (HxAnon.set __anon_77 "path" (Obj.repr (HxArray.join names "." (fun x -> x))));
-                    ignore (HxAnon.set __anon_77 "mode" (Obj.repr (!tempString)));
-                    ignore (HxAnon.set __anon_77 "alias" (Obj.repr (!alias)));
-                    ignore (HxAnon.set __anon_77 "file" (Obj.repr sourceFile));
-                    ignore (HxAnon.set __anon_77 "min" (Obj.repr (!tempNumber2)));
-                    ignore (HxAnon.set __anon_77 "max" (Obj.repr (!tempNumber3)));
-                    __anon_77
+                  HxArray.push imports (let __anonymous_value_77 = HxAnon.create () in (
+                    ignore (HxAnon.set __anonymous_value_77 "path" (Obj.repr (HxArray.join names "." (fun x -> x))));
+                    ignore (HxAnon.set __anonymous_value_77 "mode" (Obj.repr (!tempString)));
+                    ignore (HxAnon.set __anonymous_value_77 "alias" (Obj.repr (!alias)));
+                    ignore (HxAnon.set __anonymous_value_77 "file" (Obj.repr sourceFile));
+                    ignore (HxAnon.set __anonymous_value_77 "min" (Obj.repr (!tempNumber2)));
+                    ignore (HxAnon.set __anonymous_value_77 "max" (Obj.repr (!tempNumber3)));
+                    __anonymous_value_77
                   ))
                 )
               )

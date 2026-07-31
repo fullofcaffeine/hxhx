@@ -172,13 +172,13 @@ let encodeParsedModule = fun pm -> let decl = Obj.magic (ParsedModule.getDecl (O
           ignore (_g3 := __new_5);
           __new_5
         ));
-        HxArray.push _g2 (let __anon_6 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_6 "name" (Obj.repr (HxFunctionArg.getName (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "isOptional" (HxRuntime.box_bool (HxFunctionArg.getIsOptional (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "isRest" (HxRuntime.box_bool (HxFunctionArg.getIsRest (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "typeHint" (Obj.repr (HxFunctionArg.getTypeHint (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "defaultValueText" (Obj.repr (HxFunctionArg.getDefaultValueText (Obj.magic arg))));
-          __anon_6
+        HxArray.push _g2 (let __anonymous_value_6 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_6 "name" (Obj.repr (HxFunctionArg.getName (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "isOptional" (HxRuntime.box_bool (HxFunctionArg.getIsOptional (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "isRest" (HxRuntime.box_bool (HxFunctionArg.getIsRest (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "typeHint" (Obj.repr (HxFunctionArg.getTypeHint (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "defaultValueText" (Obj.repr (HxFunctionArg.getDefaultValueText (Obj.magic arg))));
+          __anonymous_value_6
         ))
       )) done);
       ignore (let __assign_7 = Obj.magic _g2 in (

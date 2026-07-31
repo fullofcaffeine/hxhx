@@ -23,12 +23,12 @@ let writeByte__impl = fun (self : t) (c : int) -> ignore ((
   ignore self;
   (
     ignore c;
-    ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_3 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_3 "fileName" (Obj.repr "haxe/io/Output.hx"));
-      ignore (HxAnon.set __anon_3 "lineNumber" (Obj.repr 41));
-      ignore (HxAnon.set __anon_3 "className" (Obj.repr "haxe.io.Output"));
-      ignore (HxAnon.set __anon_3 "methodName" (Obj.repr "writeByte"));
-      __anon_3
+    ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anonymous_value_3 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_3 "fileName" (Obj.repr "haxe/io/Output.hx"));
+      ignore (HxAnon.set __anonymous_value_3 "lineNumber" (Obj.repr 41));
+      ignore (HxAnon.set __anonymous_value_3 "className" (Obj.repr "haxe.io.Output"));
+      ignore (HxAnon.set __anonymous_value_3 "methodName" (Obj.repr "writeByte"));
+      __anonymous_value_3
     )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"])
   )
 ))

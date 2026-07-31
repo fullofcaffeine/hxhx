@@ -972,10 +972,10 @@ let structuralTypeHintFields = fun typeHint -> try let __fallback_result_636 = l
         ));
         let colon = let __call_arg_0_631 = part in topLevelColonIndex __call_arg_0_631 in (
           ignore (if colon < 0 then raise (HxRuntime.Hx_continue) else ());
-          let name = let __call_arg_0_632 = HxString.substring part 0 colon in normalizeStructuralFieldName __call_arg_0_632 in let fieldTypeHint = let __call_arg_0_633 = HxString.substr part (HxInt.add colon 1) (-1) in StringTools.trim __call_arg_0_633 in if HxString.length name > 0 && HxString.length fieldTypeHint > 0 then ignore (HxArray.push fields (let __anon_634 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_634 "name" (Obj.repr name));
-            ignore (HxAnon.set __anon_634 "typeHint" (Obj.repr fieldTypeHint));
-            __anon_634
+          let name = let __call_arg_0_632 = HxString.substring part 0 colon in normalizeStructuralFieldName __call_arg_0_632 in let fieldTypeHint = let __call_arg_0_633 = HxString.substr part (HxInt.add colon 1) (-1) in StringTools.trim __call_arg_0_633 in if HxString.length name > 0 && HxString.length fieldTypeHint > 0 then ignore (HxArray.push fields (let __anonymous_value_634 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_634 "name" (Obj.repr name));
+            ignore (HxAnon.set __anonymous_value_634 "typeHint" (Obj.repr fieldTypeHint));
+            __anonymous_value_634
           ))) else ()
         )
       )) with

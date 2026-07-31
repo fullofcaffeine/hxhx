@@ -31,10 +31,10 @@ let copyBindings = fun bindings -> let out = Obj.magic (HxArray.create ()) in (
       ignore (_g := __new_105);
       __new_105
     ));
-    HxArray.push out (let __anon_106 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_106 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
-      ignore (HxAnon.set __anon_106 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
-      __anon_106
+    HxArray.push out (let __anonymous_value_106 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_106 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
+      ignore (HxAnon.set __anonymous_value_106 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
+      __anonymous_value_106
     ))
   )) done) else ());
   out
@@ -142,10 +142,10 @@ let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxR
       __assign_24
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let bindings = Obj.magic (copyBindings (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) in (
-      ignore (HxArray.push bindings (let __anon_25 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_25 "name" (Obj.repr name));
-        ignore (HxAnon.set __anon_25 "expr" (Obj.repr scrutineeVar));
-        __anon_25
+      ignore (HxArray.push bindings (let __anonymous_value_25 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_25 "name" (Obj.repr name));
+        ignore (HxAnon.set __anonymous_value_25 "expr" (Obj.repr scrutineeVar));
+        __anonymous_value_25
       )));
       let __assign_26 = Obj.magic (let __anon_27 = HxAnon.create () in (
         ignore (HxAnon.set __anon_27 "cond" (Obj.repr (Obj.obj (HxAnon.get lowered "cond"))));
@@ -220,10 +220,10 @@ let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxR
     | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_43 = Obj.magic (let __anon_44 = HxAnon.create () in (
       ignore (HxAnon.set __anon_44 "cond" (Obj.repr "true"));
       ignore (HxAnon.set __anon_44 "bindings" (Obj.repr (let __arr_45 = HxArray.create () in (
-        ignore (HxArray.push __arr_45 (let __anon_46 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_46 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_46 "expr" (Obj.repr scrutineeVar));
-          __anon_46
+        ignore (HxArray.push __arr_45 (let __anonymous_value_46 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_46 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_46 "expr" (Obj.repr scrutineeVar));
+          __anonymous_value_46
         )));
         __arr_45
       ))));

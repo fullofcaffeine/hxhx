@@ -488,11 +488,11 @@ let parse = fun content sourceLabel -> let tempString = ref (HxString.hx_null_st
             ignore (HxAnon.set __anon_140 "targetIds" (Obj.repr (requireStringArray (requireField (Obj.repr backendObj) ("targetIds" : string) ("backend.targetIds" : string) (source : string)) ("backend.targetIds" : string) (source : string))));
             __anon_140
           )));
-          ignore (HxAnon.set __anon_130 "requires" (let __anon_144 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_144 "abiVersion" (Obj.repr (let __call_arg_0_145 = requireField (Obj.repr requiresObj) ("abiVersion" : string) ("requires.abiVersion" : string) (source : string) in let __call_arg_1_146 = "requires.abiVersion" in let __call_arg_2_147 = source in requireInt __call_arg_0_145 __call_arg_1_146 __call_arg_2_147)));
-            ignore (HxAnon.set __anon_144 "genIrVersion" (Obj.repr (let __call_arg_0_148 = requireField (Obj.repr requiresObj) ("genIrVersion" : string) ("requires.genIrVersion" : string) (source : string) in let __call_arg_1_149 = "requires.genIrVersion" in let __call_arg_2_150 = source in requireInt __call_arg_0_148 __call_arg_1_149 __call_arg_2_150)));
-            ignore (HxAnon.set __anon_144 "macroApiVersion" (Obj.repr (let __call_arg_0_151 = requireField (Obj.repr requiresObj) ("macroApiVersion" : string) ("requires.macroApiVersion" : string) (source : string) in let __call_arg_1_152 = "requires.macroApiVersion" in let __call_arg_2_153 = source in requireInt __call_arg_0_151 __call_arg_1_152 __call_arg_2_153)));
-            __anon_144
+          ignore (HxAnon.set __anon_130 "requires" (let __anonymous_value_144 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_144 "abiVersion" (Obj.repr (let __call_arg_0_145 = requireField (Obj.repr requiresObj) ("abiVersion" : string) ("requires.abiVersion" : string) (source : string) in let __call_arg_1_146 = "requires.abiVersion" in let __call_arg_2_147 = source in requireInt __call_arg_0_145 __call_arg_1_146 __call_arg_2_147)));
+            ignore (HxAnon.set __anonymous_value_144 "genIrVersion" (Obj.repr (let __call_arg_0_148 = requireField (Obj.repr requiresObj) ("genIrVersion" : string) ("requires.genIrVersion" : string) (source : string) in let __call_arg_1_149 = "requires.genIrVersion" in let __call_arg_2_150 = source in requireInt __call_arg_0_148 __call_arg_1_149 __call_arg_2_150)));
+            ignore (HxAnon.set __anonymous_value_144 "macroApiVersion" (Obj.repr (let __call_arg_0_151 = requireField (Obj.repr requiresObj) ("macroApiVersion" : string) ("requires.macroApiVersion" : string) (source : string) in let __call_arg_1_152 = "requires.macroApiVersion" in let __call_arg_2_153 = source in requireInt __call_arg_0_151 __call_arg_1_152 __call_arg_2_153)));
+            __anonymous_value_144
           )));
           __anon_130
         ) in let validationError = (validate manifest : string) in (

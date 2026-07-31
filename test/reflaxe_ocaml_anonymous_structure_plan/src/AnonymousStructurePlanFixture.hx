@@ -286,15 +286,23 @@ class AnonymousStructurePlanFixture {
 		assertTrue(plan.structures().length == 1 && plan.operations().length == 4,
 			'the switch-case literal should have one structure, one create, and three initializers, received ${plan.structures().length}/${plan.operations().length}');
 		var literalCount = 0;
+		var firstLiteral:Null<TypedExpr> = null;
 		function visit(expression:TypedExpr):Void {
 			if (OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(expression)) {
 				literalCount++;
+				if (firstLiteral == null)
+					firstLiteral = expression;
 				plan.requireLiteral(expression, registry);
 			}
 			TypedExprTools.iter(expression, visit);
 		}
 		visit(body);
 		assertTrue(literalCount == 1, 'the switch-case fixture should expose one admitted literal, received $literalCount');
+		final literal = firstLiteral;
+		if (literal == null)
+			throw "the switch-case fixture should retain its admitted literal for corruption testing";
+		final missingTypedIndex = new OcamlAnonymousStructurePlan(plan.structures(), plan.operations());
+		expectFailure("switch-case literal without its typed index", "missing-literal", () -> missingTypedIndex.requireLiteral(literal, registry));
 	}
 
 	/** Returns direct anonymous reads and writes from one typed function body. */

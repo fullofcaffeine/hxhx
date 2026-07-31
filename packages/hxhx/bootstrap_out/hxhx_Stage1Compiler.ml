@@ -933,11 +933,11 @@ let stage1resolver_resolveMain = fun classPaths main cwd -> try let __fallback_r
       )) pkgParts) (let __arr_21 = HxArray.create () in (
         ignore (HxArray.push __arr_21 (HxString.toStdString className ^ ".hx"));
         __arr_21
-      )))) : string) in if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_22 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_22 "path" (Obj.repr candidate));
-        ignore (HxAnon.set __anon_22 "packagePath" (Obj.repr pkg));
-        ignore (HxAnon.set __anon_22 "className" (Obj.repr className));
-        __anon_22
+      )))) : string) in if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_22 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_22 "path" (Obj.repr candidate));
+        ignore (HxAnon.set __anonymous_value_22 "packagePath" (Obj.repr pkg));
+        ignore (HxAnon.set __anonymous_value_22 "className" (Obj.repr className));
+        __anonymous_value_22
       )))) else ()
     )) done);
     let value = Obj.repr ("hxhx(stage1): could not find main module for -main " ^ HxString.toStdString main) in (
@@ -972,11 +972,11 @@ let stage1resolver_resolveModule = fun classPaths modulePath cwd -> try let __fa
         ignore (HxArray.push __arr_34 (HxString.toStdString leafName ^ ".hx"));
         __arr_34
       )))) : string) in (
-        ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_35 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_35 "path" (Obj.repr candidate));
-          ignore (HxAnon.set __anon_35 "packagePath" (Obj.repr pkg));
-          ignore (HxAnon.set __anon_35 "className" (Obj.repr leafName));
-          __anon_35
+        ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_35 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_35 "path" (Obj.repr candidate));
+          ignore (HxAnon.set __anonymous_value_35 "packagePath" (Obj.repr pkg));
+          ignore (HxAnon.set __anonymous_value_35 "className" (Obj.repr leafName));
+          __anonymous_value_35
         )))) else ());
         if HxArray.length parts >= 2 then ignore (let modName = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 2) : string) in let pkgParts = Obj.magic (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 2)) in let pkg = (HxArray.join pkgParts "." (fun x -> x) : string) in let candidate = (Haxe_io_Path.join (Obj.magic (HxArray.concat (HxArray.concat (let __arr_36 = HxArray.create () in (
           ignore (HxArray.push __arr_36 base);
@@ -984,11 +984,11 @@ let stage1resolver_resolveModule = fun classPaths modulePath cwd -> try let __fa
         )) pkgParts) (let __arr_37 = HxArray.create () in (
           ignore (HxArray.push __arr_37 (HxString.toStdString modName ^ ".hx"));
           __arr_37
-        )))) : string) in if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_38 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_38 "path" (Obj.repr candidate));
-          ignore (HxAnon.set __anon_38 "packagePath" (Obj.repr pkg));
-          ignore (HxAnon.set __anon_38 "className" (Obj.repr modName));
-          __anon_38
+        )))) : string) in if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_38 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_38 "path" (Obj.repr candidate));
+          ignore (HxAnon.set __anonymous_value_38 "packagePath" (Obj.repr pkg));
+          ignore (HxAnon.set __anonymous_value_38 "className" (Obj.repr modName));
+          __anonymous_value_38
         )))) else ()) else ()
       )
     )) done);

@@ -547,10 +547,10 @@ let callRange = fun filePath pos -> try let __fallback_result_215 = let tempNumb
       __assign_202
     ));
     let line = let __call_arg_0_203 = filePath in let __call_arg_1_204 = !tempNumber1 in sourceLine __call_arg_0_203 __call_arg_1_204 in (
-      ignore (if HxString.length line = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_205 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_205 "start" (Obj.repr start));
-        ignore (HxAnon.set __anon_205 "end" (Obj.repr start));
-        __anon_205
+      ignore (if HxString.length line = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_205 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_205 "start" (Obj.repr start));
+        ignore (HxAnon.set __anonymous_value_205 "end" (Obj.repr start));
+        __anonymous_value_205
       )))) else ());
       let tempNumber2 = ref (0 : int) in (
         ignore (if start > 0 then let __assign_206 = start in (
@@ -575,10 +575,10 @@ let callRange = fun filePath pos -> try let __fallback_result_215 = let tempNumb
                 hx_end := __assign_212;
                 __assign_212
               )) else ());
-              let __anon_213 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_213 "start" (Obj.repr start));
-                ignore (HxAnon.set __anon_213 "end" (Obj.repr (!hx_end)));
-                __anon_213
+              let __anonymous_value_213 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_213 "start" (Obj.repr start));
+                ignore (HxAnon.set __anonymous_value_213 "end" (Obj.repr (!hx_end)));
+                __anonymous_value_213
               )
             )
           )
@@ -606,10 +606,10 @@ let declarationLineRange = fun filePath pos -> try let __fallback_result_227 = l
       __assign_219
     ));
     let line = let __call_arg_0_220 = filePath in let __call_arg_1_221 = !tempNumber1 in sourceLine __call_arg_0_220 __call_arg_1_221 in (
-      ignore (if HxString.length line = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_222 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_222 "start" (Obj.repr start));
-        ignore (HxAnon.set __anon_222 "end" (Obj.repr start));
-        __anon_222
+      ignore (if HxString.length line = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_222 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_222 "start" (Obj.repr start));
+        ignore (HxAnon.set __anonymous_value_222 "end" (Obj.repr start));
+        __anonymous_value_222
       )))) else ());
       let tempNumber2 = ref (0 : int) in (
         ignore (if HxString.length line < start then let __assign_223 = start in (
@@ -619,10 +619,10 @@ let declarationLineRange = fun filePath pos -> try let __fallback_result_227 = l
           tempNumber2 := __assign_224;
           __assign_224
         ));
-        let hx_end = !tempNumber2 in let __anon_225 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_225 "start" (Obj.repr start));
-          ignore (HxAnon.set __anon_225 "end" (Obj.repr hx_end));
-          __anon_225
+        let hx_end = !tempNumber2 in let __anonymous_value_225 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_225 "start" (Obj.repr start));
+          ignore (HxAnon.set __anonymous_value_225 "end" (Obj.repr hx_end));
+          __anonymous_value_225
         )
       )
     )
@@ -649,10 +649,10 @@ let functionNameRange = fun filePath name pos -> let tempNumber = ref (0 : int) 
       tempNumber1 := __assign_234;
       __assign_234
     ));
-    let start = !tempNumber1 in let __anon_235 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_235 "start" (Obj.repr start));
-      ignore (HxAnon.set __anon_235 "end" (Obj.repr (HxInt.add start (HxString.length name))));
-      __anon_235
+    let start = !tempNumber1 in let __anonymous_value_235 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_235 "start" (Obj.repr start));
+      ignore (HxAnon.set __anonymous_value_235 "end" (Obj.repr (HxInt.add start (HxString.length name))));
+      __anonymous_value_235
     )
   )
 )

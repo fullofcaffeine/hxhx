@@ -119,13 +119,13 @@ let collectFunctionRegions = fun program -> let regions = Obj.magic (HxArray.cre
           ignore (_g4 := __new_28);
           __new_28
         ));
-        let functionName = let __call_arg_0_29 = HxFunctionDecl.getName (Obj.magic fn) in normalizeFunctionName __call_arg_0_29 in let context = let __call_arg_0_30 = className in let __call_arg_1_31 = functionName in contextName __call_arg_0_30 __call_arg_1_31 in HxArray.push regions (let __anon_32 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_32 "regionKey" (Obj.repr (let __call_arg_0_33 = filePath in let __call_arg_1_34 = context in regionKeyFromContext __call_arg_0_33 __call_arg_1_34)));
-          ignore (HxAnon.set __anon_32 "filePath" (Obj.repr filePath));
-          ignore (HxAnon.set __anon_32 "className" (Obj.repr className));
-          ignore (HxAnon.set __anon_32 "functionName" (Obj.repr functionName));
-          ignore (HxAnon.set __anon_32 "context" (Obj.repr context));
-          __anon_32
+        let functionName = let __call_arg_0_29 = HxFunctionDecl.getName (Obj.magic fn) in normalizeFunctionName __call_arg_0_29 in let context = let __call_arg_0_30 = className in let __call_arg_1_31 = functionName in contextName __call_arg_0_30 __call_arg_1_31 in HxArray.push regions (let __anonymous_value_32 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_32 "regionKey" (Obj.repr (let __call_arg_0_33 = filePath in let __call_arg_1_34 = context in regionKeyFromContext __call_arg_0_33 __call_arg_1_34)));
+          ignore (HxAnon.set __anonymous_value_32 "filePath" (Obj.repr filePath));
+          ignore (HxAnon.set __anonymous_value_32 "className" (Obj.repr className));
+          ignore (HxAnon.set __anonymous_value_32 "functionName" (Obj.repr functionName));
+          ignore (HxAnon.set __anonymous_value_32 "context" (Obj.repr context));
+          __anonymous_value_32
         ))
       )) done
     )) done
@@ -153,10 +153,10 @@ let appendExclusion = fun exclusions code reason -> ignore (try ignore (let norm
     ));
     if HxString.equals (Obj.obj (HxAnon.get existing "code")) normalizedCode && HxString.equals (Obj.obj (HxAnon.get existing "reason")) normalizedReason then raise (HxRuntime.Hx_return (Obj.repr ())) else ()
   )) done);
-  HxArray.push exclusions (let __anon_39 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_39 "code" (Obj.repr normalizedCode));
-    ignore (HxAnon.set __anon_39 "reason" (Obj.repr normalizedReason));
-    __anon_39
+  HxArray.push exclusions (let __anonymous_value_39 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_39 "code" (Obj.repr normalizedCode));
+    ignore (HxAnon.set __anonymous_value_39 "reason" (Obj.repr normalizedReason));
+    __anonymous_value_39
   ))
 )) with
   | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40)

@@ -413,10 +413,10 @@ let registerModuleDependency = fun (modulePath : string) (externFile : string) -
         ));
         if HxString.equals (Obj.obj (HxAnon.get entry "modulePath")) mp && HxString.equals (Obj.obj (HxAnon.get entry "externFile")) ef then raise (HxRuntime.Hx_return_void) else ()
       )) done);
-      HxArray.push moduleDependencies (let __anon_85 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_85 "modulePath" (Obj.repr mp));
-        ignore (HxAnon.set __anon_85 "externFile" (Obj.repr ef));
-        __anon_85
+      HxArray.push moduleDependencies (let __anonymous_value_85 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_85 "modulePath" (Obj.repr mp));
+        ignore (HxAnon.set __anonymous_value_85 "externFile" (Obj.repr ef));
+        __anonymous_value_85
       ))
     )
   )
@@ -429,10 +429,10 @@ let listModuleDependencies = fun () -> let out = Obj.magic (HxArray.create ()) i
       ignore (_g := __new_88);
       __new_88
     ));
-    HxArray.push out (let __anon_89 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_89 "modulePath" (Obj.repr (Obj.obj (HxAnon.get entry "modulePath"))));
-      ignore (HxAnon.set __anon_89 "externFile" (Obj.repr (Obj.obj (HxAnon.get entry "externFile"))));
-      __anon_89
+    HxArray.push out (let __anonymous_value_89 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_89 "modulePath" (Obj.repr (Obj.obj (HxAnon.get entry "modulePath"))));
+      ignore (HxAnon.set __anonymous_value_89 "externFile" (Obj.repr (Obj.obj (HxAnon.get entry "externFile"))));
+      __anonymous_value_89
     ))
   )) done);
   out
@@ -466,13 +466,13 @@ let registerGlobalMetadata = fun (pathFilter : string) (metadata : string) (recu
           ));
           if HxString.equals (Obj.obj (HxAnon.get entry "pathFilter")) pf && HxString.equals (Obj.obj (HxAnon.get entry "metadata")) md && HxRuntime.unbox_bool_or_obj (HxAnon.get entry "recursive") = recursive && HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toTypes") = toTypes && HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toFields") = toFields then raise (HxRuntime.Hx_return_void) else ()
         )) done);
-        HxArray.push globalMetadataRules (let __anon_98 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_98 "pathFilter" (Obj.repr pf));
-          ignore (HxAnon.set __anon_98 "metadata" (Obj.repr md));
-          ignore (HxAnon.set __anon_98 "recursive" (HxRuntime.box_bool recursive));
-          ignore (HxAnon.set __anon_98 "toTypes" (HxRuntime.box_bool toTypes));
-          ignore (HxAnon.set __anon_98 "toFields" (HxRuntime.box_bool toFields));
-          __anon_98
+        HxArray.push globalMetadataRules (let __anonymous_value_98 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_98 "pathFilter" (Obj.repr pf));
+          ignore (HxAnon.set __anonymous_value_98 "metadata" (Obj.repr md));
+          ignore (HxAnon.set __anonymous_value_98 "recursive" (HxRuntime.box_bool recursive));
+          ignore (HxAnon.set __anonymous_value_98 "toTypes" (HxRuntime.box_bool toTypes));
+          ignore (HxAnon.set __anonymous_value_98 "toFields" (HxRuntime.box_bool toFields));
+          __anonymous_value_98
         ))
       )
     )
@@ -486,13 +486,13 @@ let listGlobalMetadataRules = fun () -> let out = Obj.magic (HxArray.create ()) 
       ignore (_g := __new_101);
       __new_101
     ));
-    HxArray.push out (let __anon_102 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_102 "pathFilter" (Obj.repr (Obj.obj (HxAnon.get entry "pathFilter"))));
-      ignore (HxAnon.set __anon_102 "metadata" (Obj.repr (Obj.obj (HxAnon.get entry "metadata"))));
-      ignore (HxAnon.set __anon_102 "recursive" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "recursive"))));
-      ignore (HxAnon.set __anon_102 "toTypes" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toTypes"))));
-      ignore (HxAnon.set __anon_102 "toFields" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toFields"))));
-      __anon_102
+    HxArray.push out (let __anonymous_value_102 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_102 "pathFilter" (Obj.repr (Obj.obj (HxAnon.get entry "pathFilter"))));
+      ignore (HxAnon.set __anonymous_value_102 "metadata" (Obj.repr (Obj.obj (HxAnon.get entry "metadata"))));
+      ignore (HxAnon.set __anonymous_value_102 "recursive" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "recursive"))));
+      ignore (HxAnon.set __anonymous_value_102 "toTypes" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toTypes"))));
+      ignore (HxAnon.set __anonymous_value_102 "toFields" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get entry "toFields"))));
+      __anonymous_value_102
     ))
   )) done);
   out
@@ -563,11 +563,11 @@ let registerCustomMetadata = fun (metadata : string) (doc : string) (source : st
             tempMaybeString := __assign_139;
             __assign_139
           ));
-          HxArray.push customMetadataEntries (let __anon_141 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_141 "metadata" (Obj.repr md));
-            ignore (HxAnon.set __anon_141 "doc" (Obj.repr (!tempString1)));
-            ignore (HxAnon.set __anon_141 "source" (Obj.repr (!tempMaybeString)));
-            __anon_141
+          HxArray.push customMetadataEntries (let __anonymous_value_141 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_141 "metadata" (Obj.repr md));
+            ignore (HxAnon.set __anonymous_value_141 "doc" (Obj.repr (!tempString1)));
+            ignore (HxAnon.set __anonymous_value_141 "source" (Obj.repr (!tempMaybeString)));
+            __anonymous_value_141
           ))
         )
       )
@@ -582,11 +582,11 @@ let listCustomMetadataEntries = fun () -> let out = Obj.magic (HxArray.create ()
       ignore (_g := __new_144);
       __new_144
     ));
-    HxArray.push out (let __anon_145 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_145 "metadata" (Obj.repr (Obj.obj (HxAnon.get entry "metadata"))));
-      ignore (HxAnon.set __anon_145 "doc" (Obj.repr (Obj.obj (HxAnon.get entry "doc"))));
-      ignore (HxAnon.set __anon_145 "source" (Obj.repr (Obj.obj (HxAnon.get entry "source"))));
-      __anon_145
+    HxArray.push out (let __anonymous_value_145 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_145 "metadata" (Obj.repr (Obj.obj (HxAnon.get entry "metadata"))));
+      ignore (HxAnon.set __anonymous_value_145 "doc" (Obj.repr (Obj.obj (HxAnon.get entry "doc"))));
+      ignore (HxAnon.set __anonymous_value_145 "source" (Obj.repr (Obj.obj (HxAnon.get entry "source"))));
+      __anonymous_value_145
     ))
   )) done);
   out
@@ -857,11 +857,11 @@ let listMessages = fun () -> let _g = Obj.magic (let __arr_236 = HxArray.create 
     HxArray.push _g (let __anon_239 = HxAnon.create () in (
       ignore (HxAnon.set __anon_239 "kind" (Obj.repr (Obj.obj (HxAnon.get message "kind"))));
       ignore (HxAnon.set __anon_239 "msg" (Obj.repr (Obj.obj (HxAnon.get message "msg"))));
-      ignore (HxAnon.set __anon_239 "pos" (let __anon_240 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_240 "file" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "file"))));
-        ignore (HxAnon.set __anon_240 "min" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "min"))));
-        ignore (HxAnon.set __anon_240 "max" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "max"))));
-        __anon_240
+      ignore (HxAnon.set __anon_239 "pos" (let __anonymous_value_240 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_240 "file" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "file"))));
+        ignore (HxAnon.set __anonymous_value_240 "min" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "min"))));
+        ignore (HxAnon.set __anonymous_value_240 "max" (Obj.repr (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get message "pos")) "max"))));
+        __anonymous_value_240
       )));
       __anon_239
     ))
@@ -907,11 +907,11 @@ let replaceMessages = fun nextMessages -> ignore (try ignore ((
             HxArray.push messages (let __anon_250 = HxAnon.create () in (
               ignore (HxAnon.set __anon_250 "kind" (Obj.repr trimmedKind));
               ignore (HxAnon.set __anon_250 "msg" (Obj.repr (Obj.obj (HxAnon.get message "msg"))));
-              ignore (HxAnon.set __anon_250 "pos" (let __anon_251 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_251 "file" (Obj.repr (!tempString)));
-                ignore (HxAnon.set __anon_251 "min" (Obj.repr (!tempNumber)));
-                ignore (HxAnon.set __anon_251 "max" (Obj.repr (!tempNumber1)));
-                __anon_251
+              ignore (HxAnon.set __anon_250 "pos" (let __anonymous_value_251 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_251 "file" (Obj.repr (!tempString)));
+                ignore (HxAnon.set __anonymous_value_251 "min" (Obj.repr (!tempNumber)));
+                ignore (HxAnon.set __anonymous_value_251 "max" (Obj.repr (!tempNumber1)));
+                __anonymous_value_251
               )));
               __anon_250
             ))
@@ -1030,11 +1030,11 @@ let setCurrentPos = fun pos -> ignore (try ignore ((
           tempNumber1 := __assign_166;
           __assign_166
         ));
-        let __assign_167 = let __anon_168 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_168 "file" (Obj.repr (!tempString)));
-          ignore (HxAnon.set __anon_168 "min" (Obj.repr (!tempNumber)));
-          ignore (HxAnon.set __anon_168 "max" (Obj.repr (!tempNumber1)));
-          __anon_168
+        let __assign_167 = let __anonymous_value_168 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_168 "file" (Obj.repr (!tempString)));
+          ignore (HxAnon.set __anonymous_value_168 "min" (Obj.repr (!tempNumber)));
+          ignore (HxAnon.set __anonymous_value_168 "max" (Obj.repr (!tempNumber1)));
+          __anonymous_value_168
         ) in (
           explicitCurrentPos := __assign_167;
           __assign_167
@@ -1053,24 +1053,24 @@ let clearCurrentPos = fun () -> ignore (let __assign_170 = HxRuntime.hx_null in 
 let getCurrentPos = fun () -> try let __fallback_result_219 = (
   ignore (if !explicitCurrentPos != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (!explicitCurrentPos))) else ());
   let buildFile = let __call_arg_0_210 = "HXHX_BUILD_FILE" in definedValue __call_arg_0_210 in (
-    ignore (if HxString.length buildFile > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_211 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_211 "file" (Obj.repr buildFile));
-      ignore (HxAnon.set __anon_211 "min" (Obj.repr 0));
-      ignore (HxAnon.set __anon_211 "max" (Obj.repr 0));
-      __anon_211
+    ignore (if HxString.length buildFile > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_211 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_211 "file" (Obj.repr buildFile));
+      ignore (HxAnon.set __anonymous_value_211 "min" (Obj.repr 0));
+      ignore (HxAnon.set __anonymous_value_211 "max" (Obj.repr 0));
+      __anonymous_value_211
     )))) else ());
     let buildModule = let __call_arg_0_212 = "HXHX_BUILD_MODULE" in definedValue __call_arg_0_212 in (
-      ignore (if HxString.length buildModule > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_213 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_213 "file" (Obj.repr (HxString.toStdString (let __call_arg_0_214 = buildModule in let __call_arg_1_215 = "." in let __call_arg_2_216 = "/" in StringTools.replace __call_arg_0_214 __call_arg_1_215 __call_arg_2_216) ^ ".hx")));
-        ignore (HxAnon.set __anon_213 "min" (Obj.repr 0));
-        ignore (HxAnon.set __anon_213 "max" (Obj.repr 0));
-        __anon_213
+      ignore (if HxString.length buildModule > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_213 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_213 "file" (Obj.repr (HxString.toStdString (let __call_arg_0_214 = buildModule in let __call_arg_1_215 = "." in let __call_arg_2_216 = "/" in StringTools.replace __call_arg_0_214 __call_arg_1_215 __call_arg_2_216) ^ ".hx")));
+        ignore (HxAnon.set __anonymous_value_213 "min" (Obj.repr 0));
+        ignore (HxAnon.set __anonymous_value_213 "max" (Obj.repr 0));
+        __anonymous_value_213
       )))) else ());
-      let __anon_217 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_217 "file" (Obj.repr "<macro>"));
-        ignore (HxAnon.set __anon_217 "min" (Obj.repr 0));
-        ignore (HxAnon.set __anon_217 "max" (Obj.repr 0));
-        __anon_217
+      let __anonymous_value_217 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_217 "file" (Obj.repr "<macro>"));
+        ignore (HxAnon.set __anonymous_value_217 "min" (Obj.repr 0));
+        ignore (HxAnon.set __anonymous_value_217 "max" (Obj.repr 0));
+        __anonymous_value_217
       )
     )
   )
@@ -1123,11 +1123,11 @@ let addMessage = fun kind msg pos -> ignore (try ignore (let tempString = ref (H
                 tempNumber1 := __assign_231;
                 __assign_231
               ));
-              let __assign_232 = Obj.magic (let __anon_233 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_233 "file" (Obj.repr (!tempString2)));
-                ignore (HxAnon.set __anon_233 "min" (Obj.repr (!tempNumber)));
-                ignore (HxAnon.set __anon_233 "max" (Obj.repr (!tempNumber1)));
-                __anon_233
+              let __assign_232 = Obj.magic (let __anonymous_value_233 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_233 "file" (Obj.repr (!tempString2)));
+                ignore (HxAnon.set __anonymous_value_233 "min" (Obj.repr (!tempNumber)));
+                ignore (HxAnon.set __anonymous_value_233 "max" (Obj.repr (!tempNumber1)));
+                __anonymous_value_233
               )) in (
                 tempMacroPositionInfo := __assign_232;
                 __assign_232

@@ -83,10 +83,10 @@ let parseSafePythonScriptCommand = fun command -> try let __fallback_result_83 =
     ignore (if not (HxString.equals runner "python3") && not (HxString.equals runner "python") && not (HxString.equals runner "pypy3") then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
     let script = (HxArray.get (Obj.magic words) 1 : string) in (
       ignore (if HxString.length script = 0 || HxString.indexOf script ";" 0 >= 0 || HxString.indexOf script "&&" 0 >= 0 || HxString.indexOf script "|" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-      let __anon_81 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_81 "command" (Obj.repr runner));
-        ignore (HxAnon.set __anon_81 "script" (Obj.repr script));
-        __anon_81
+      let __anonymous_value_81 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_81 "command" (Obj.repr runner));
+        ignore (HxAnon.set __anonymous_value_81 "script" (Obj.repr script));
+        __anonymous_value_81
       )
     )
   )
@@ -131,10 +131,10 @@ let parseSafeHaxelibDevCommand = fun command -> try let __fallback_result_103 = 
   let lib = (HxArray.get (Obj.magic words) 2 : string) in let path = (HxArray.get (Obj.magic words) 3 : string) in (
     ignore (if not (let __call_arg_0_95 = lib in isSafeCommandWord __call_arg_0_95) || not (let __call_arg_0_96 = path in isSafeCommandWord __call_arg_0_96) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
     ignore (if (let __call_arg_0_97 = lib in let __call_arg_1_98 = "-" in StringTools.startsWith __call_arg_0_97 __call_arg_1_98) || (let __call_arg_0_99 = path in let __call_arg_1_100 = "-" in StringTools.startsWith __call_arg_0_99 __call_arg_1_100) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-    let __anon_101 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_101 "lib" (Obj.repr lib));
-      ignore (HxAnon.set __anon_101 "path" (Obj.repr path));
-      __anon_101
+    let __anonymous_value_101 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_101 "lib" (Obj.repr lib));
+      ignore (HxAnon.set __anonymous_value_101 "path" (Obj.repr path));
+      __anonymous_value_101
     )
   )
 ) in Obj.magic __fallback_result_103 with

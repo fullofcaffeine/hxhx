@@ -160,25 +160,25 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.S
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceTargetCommon" } : t)
 
-let capabilitiesStatic = fun () -> let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_1 "supportsBuildExecutable" (HxRuntime.box_bool false));
-  ignore (HxAnon.set __anon_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_1
+let capabilitiesStatic = fun () -> let __anonymous_value_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_1 "supportsBuildExecutable" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anonymous_value_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_1
 )
 
-let javaCapabilities = fun () -> let __anon_2 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_2 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_2 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_2
+let javaCapabilities = fun () -> let __anonymous_value_2 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_2 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_2 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_2
 )
 
-let csCapabilities = fun () -> let __anon_3 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_3 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_3 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_3 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_3
+let csCapabilities = fun () -> let __anonymous_value_3 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_3 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_3 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_3 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_3
 )
 
 let descriptor = fun targetId implId description hostCap -> let __anon_4 = HxAnon.create () in (
@@ -5061,10 +5061,10 @@ let phpFunctionTypeArityRange = fun typeHint -> try let __fallback_result_3259 =
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let __anon_3257 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_3257 "min" (Obj.repr (!min)));
-        ignore (HxAnon.set __anon_3257 "max" (Obj.repr (!max)));
-        __anon_3257
+      let __anonymous_value_3257 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_3257 "min" (Obj.repr (!min)));
+        ignore (HxAnon.set __anonymous_value_3257 "max" (Obj.repr (!max)));
+        __anonymous_value_3257
       )
     )
   )
@@ -8739,10 +8739,10 @@ let mergeSourceSwitchOrBindings = fun target alternatives -> try let __fallback_
                 __assign_6217
               )
             )) done);
-            HxArray.push out (let __anon_6218 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_6218 "name" (Obj.repr name));
-              ignore (HxAnon.set __anon_6218 "expr" (Obj.repr (!expr)));
-              __anon_6218
+            HxArray.push out (let __anonymous_value_6218 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_6218 "name" (Obj.repr name));
+              ignore (HxAnon.set __anonymous_value_6218 "expr" (Obj.repr (!expr)));
+              __anonymous_value_6218
             ))
           )
         )) done);
@@ -8759,10 +8759,10 @@ let copySourceSwitchBindings = fun bindings -> let out = Obj.magic (HxArray.crea
       ignore (_g := __new_6226);
       __new_6226
     ));
-    HxArray.push out (let __anon_6227 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_6227 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
-      ignore (HxAnon.set __anon_6227 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
-      __anon_6227
+    HxArray.push out (let __anonymous_value_6227 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_6227 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
+      ignore (HxAnon.set __anonymous_value_6227 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
+      __anonymous_value_6227
     ))
   )) done) else ());
   out
@@ -14748,40 +14748,40 @@ let emitCsImportStubs = fun program sourceDir sourcePaths seen noRoot -> let noR
 ))
 
 let emitCsStandardStubs = fun sourceDir sourcePaths seen noRoot -> let noRoot = if Obj.repr noRoot == HxRuntime.hx_null then false else noRoot in ignore (let stubs = Obj.magic (let __arr_236 = HxArray.create () in (
-  ignore (HxArray.push __arr_236 (let __anon_237 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_237 "packagePath" (Obj.repr ""));
-    ignore (HxAnon.set __anon_237 "className" (Obj.repr "Sys"));
-    __anon_237
+  ignore (HxArray.push __arr_236 (let __anonymous_value_237 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_237 "packagePath" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_237 "className" (Obj.repr "Sys"));
+    __anonymous_value_237
   )));
-  ignore (HxArray.push __arr_236 (let __anon_238 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_238 "packagePath" (Obj.repr ""));
-    ignore (HxAnon.set __anon_238 "className" (Obj.repr "Reflect"));
-    __anon_238
+  ignore (HxArray.push __arr_236 (let __anonymous_value_238 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_238 "packagePath" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_238 "className" (Obj.repr "Reflect"));
+    __anonymous_value_238
   )));
-  ignore (HxArray.push __arr_236 (let __anon_239 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_239 "packagePath" (Obj.repr "cs"));
-    ignore (HxAnon.set __anon_239 "className" (Obj.repr "Lib"));
-    __anon_239
+  ignore (HxArray.push __arr_236 (let __anonymous_value_239 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_239 "packagePath" (Obj.repr "cs"));
+    ignore (HxAnon.set __anonymous_value_239 "className" (Obj.repr "Lib"));
+    __anonymous_value_239
   )));
-  ignore (HxArray.push __arr_236 (let __anon_240 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_240 "packagePath" (Obj.repr "haxe"));
-    ignore (HxAnon.set __anon_240 "className" (Obj.repr "Serializer"));
-    __anon_240
+  ignore (HxArray.push __arr_236 (let __anonymous_value_240 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_240 "packagePath" (Obj.repr "haxe"));
+    ignore (HxAnon.set __anonymous_value_240 "className" (Obj.repr "Serializer"));
+    __anonymous_value_240
   )));
-  ignore (HxArray.push __arr_236 (let __anon_241 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_241 "packagePath" (Obj.repr "haxe.io"));
-    ignore (HxAnon.set __anon_241 "className" (Obj.repr "Path"));
-    __anon_241
+  ignore (HxArray.push __arr_236 (let __anonymous_value_241 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_241 "packagePath" (Obj.repr "haxe.io"));
+    ignore (HxAnon.set __anonymous_value_241 "className" (Obj.repr "Path"));
+    __anonymous_value_241
   )));
-  ignore (HxArray.push __arr_236 (let __anon_242 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_242 "packagePath" (Obj.repr "sys"));
-    ignore (HxAnon.set __anon_242 "className" (Obj.repr "FileSystem"));
-    __anon_242
+  ignore (HxArray.push __arr_236 (let __anonymous_value_242 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_242 "packagePath" (Obj.repr "sys"));
+    ignore (HxAnon.set __anonymous_value_242 "className" (Obj.repr "FileSystem"));
+    __anonymous_value_242
   )));
-  ignore (HxArray.push __arr_236 (let __anon_243 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_243 "packagePath" (Obj.repr "sys.io"));
-    ignore (HxAnon.set __anon_243 "className" (Obj.repr "File"));
-    __anon_243
+  ignore (HxArray.push __arr_236 (let __anonymous_value_243 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_243 "packagePath" (Obj.repr "sys.io"));
+    ignore (HxAnon.set __anonymous_value_243 "className" (Obj.repr "File"));
+    __anonymous_value_243
   )));
   __arr_236
 )) in let _g = ref 0 in try while !_g < HxArray.length stubs do try ignore (let stub = HxArray.get (Obj.magic stubs) (!_g) in (
@@ -16536,10 +16536,10 @@ let addJavaEntryBodyDirectCall = fun out name arity -> ignore (try ignore (let _
     ));
     if HxString.equals (Obj.obj (HxAnon.get call "name")) name && Obj.obj (HxAnon.get call "arity") = arity then raise (HxRuntime.Hx_return (Obj.repr ())) else ()
   )) done);
-  HxArray.push out (let __anon_7178 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_7178 "name" (Obj.repr name));
-    ignore (HxAnon.set __anon_7178 "arity" (Obj.repr arity));
-    __anon_7178
+  HxArray.push out (let __anonymous_value_7178 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_7178 "name" (Obj.repr name));
+    ignore (HxAnon.set __anonymous_value_7178 "arity" (Obj.repr arity));
+    __anonymous_value_7178
   ))
 )) with
   | HxRuntime.Hx_return __ret_7179 -> Obj.obj __ret_7179)
@@ -18728,11 +18728,11 @@ let phpProgramEnumConstructorMap = fun program decl -> let out = Obj.magic (HxMa
           ));
           let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
             ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || (let __call_arg_0_7865 = name in let __call_arg_1_7866 = "__hx_" in StringTools.startsWith __call_arg_0_7865 __call_arg_1_7866) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7867 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7867 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7867 "ctorName" (Obj.repr (let __call_arg_0_7868 = name in sanitizeTypeName __call_arg_0_7868)));
-              ignore (HxAnon.set __anon_7867 "hasArgs" (HxRuntime.box_bool false));
-              __anon_7867
+            addRef (let __anonymous_value_7867 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7867 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7867 "ctorName" (Obj.repr (let __call_arg_0_7868 = name in sanitizeTypeName __call_arg_0_7868)));
+              ignore (HxAnon.set __anonymous_value_7867 "hasArgs" (HxRuntime.box_bool false));
+              __anonymous_value_7867
             )) preferLocal
           )
         )) with
@@ -18745,11 +18745,11 @@ let phpProgramEnumConstructorMap = fun program decl -> let out = Obj.magic (HxMa
           ));
           let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
             ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || (let __call_arg_0_7871 = name in let __call_arg_1_7872 = "__hx_" in StringTools.startsWith __call_arg_0_7871 __call_arg_1_7872) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7873 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7873 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7873 "ctorName" (Obj.repr (let __call_arg_0_7874 = name in sanitizeTypeName __call_arg_0_7874)));
-              ignore (HxAnon.set __anon_7873 "hasArgs" (HxRuntime.box_bool true));
-              __anon_7873
+            addRef (let __anonymous_value_7873 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7873 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7873 "ctorName" (Obj.repr (let __call_arg_0_7874 = name in sanitizeTypeName __call_arg_0_7874)));
+              ignore (HxAnon.set __anonymous_value_7873 "hasArgs" (HxRuntime.box_bool true));
+              __anonymous_value_7873
             )) preferLocal
           )
         )) with
@@ -18817,11 +18817,11 @@ let csProgramEnumConstructorMap = fun program decl -> let out = Obj.magic (HxMap
           ));
           let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
             ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || (let __call_arg_0_7886 = name in let __call_arg_1_7887 = "__hx_" in StringTools.startsWith __call_arg_0_7886 __call_arg_1_7887) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7888 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7888 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7888 "ctorName" (Obj.repr (let __call_arg_0_7889 = name in sanitizeCsIdentifier __call_arg_0_7889)));
-              ignore (HxAnon.set __anon_7888 "hasArgs" (HxRuntime.box_bool false));
-              __anon_7888
+            addRef (let __anonymous_value_7888 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7888 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7888 "ctorName" (Obj.repr (let __call_arg_0_7889 = name in sanitizeCsIdentifier __call_arg_0_7889)));
+              ignore (HxAnon.set __anonymous_value_7888 "hasArgs" (HxRuntime.box_bool false));
+              __anonymous_value_7888
             )) preferLocal
           )
         )) with
@@ -18834,11 +18834,11 @@ let csProgramEnumConstructorMap = fun program decl -> let out = Obj.magic (HxMap
           ));
           let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
             ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || (let __call_arg_0_7892 = name in let __call_arg_1_7893 = "__hx_" in StringTools.startsWith __call_arg_0_7892 __call_arg_1_7893) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7894 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7894 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7894 "ctorName" (Obj.repr (let __call_arg_0_7895 = name in sanitizeCsIdentifier __call_arg_0_7895)));
-              ignore (HxAnon.set __anon_7894 "hasArgs" (HxRuntime.box_bool true));
-              __anon_7894
+            addRef (let __anonymous_value_7894 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7894 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7894 "ctorName" (Obj.repr (let __call_arg_0_7895 = name in sanitizeCsIdentifier __call_arg_0_7895)));
+              ignore (HxAnon.set __anonymous_value_7894 "hasArgs" (HxRuntime.box_bool true));
+              __anonymous_value_7894
             )) preferLocal
           )
         )) with
@@ -18893,11 +18893,11 @@ let phpModuleLocalEnumConstructorMap = fun moduleDecl -> try let __fallback_resu
               ));
               let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
                 ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || (let __call_arg_0_7905 = name in let __call_arg_1_7906 = "__hx_" in StringTools.startsWith __call_arg_0_7905 __call_arg_1_7906) then raise (HxRuntime.Hx_continue) else ());
-                let key = let __call_arg_0_7907 = name in sanitizeTypeName __call_arg_0_7907 in let value = let __anon_7908 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_7908 "enumName" (Obj.repr enumName));
-                  ignore (HxAnon.set __anon_7908 "ctorName" (Obj.repr (let __call_arg_0_7909 = name in sanitizeTypeName __call_arg_0_7909)));
-                  ignore (HxAnon.set __anon_7908 "hasArgs" (HxRuntime.box_bool false));
-                  __anon_7908
+                let key = let __call_arg_0_7907 = name in sanitizeTypeName __call_arg_0_7907 in let value = let __anonymous_value_7908 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_7908 "enumName" (Obj.repr enumName));
+                  ignore (HxAnon.set __anonymous_value_7908 "ctorName" (Obj.repr (let __call_arg_0_7909 = name in sanitizeTypeName __call_arg_0_7909)));
+                  ignore (HxAnon.set __anonymous_value_7908 "hasArgs" (HxRuntime.box_bool false));
+                  __anonymous_value_7908
                 ) in HxMap.set_string (Obj.magic out) (key : string) value
               )
             )) with
@@ -18910,11 +18910,11 @@ let phpModuleLocalEnumConstructorMap = fun moduleDecl -> try let __fallback_resu
               ));
               let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
                 ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || (let __call_arg_0_7912 = name in let __call_arg_1_7913 = "__hx_" in StringTools.startsWith __call_arg_0_7912 __call_arg_1_7913) then raise (HxRuntime.Hx_continue) else ());
-                let key = let __call_arg_0_7914 = name in sanitizeTypeName __call_arg_0_7914 in let value = let __anon_7915 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_7915 "enumName" (Obj.repr enumName));
-                  ignore (HxAnon.set __anon_7915 "ctorName" (Obj.repr (let __call_arg_0_7916 = name in sanitizeTypeName __call_arg_0_7916)));
-                  ignore (HxAnon.set __anon_7915 "hasArgs" (HxRuntime.box_bool true));
-                  __anon_7915
+                let key = let __call_arg_0_7914 = name in sanitizeTypeName __call_arg_0_7914 in let value = let __anonymous_value_7915 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_7915 "enumName" (Obj.repr enumName));
+                  ignore (HxAnon.set __anonymous_value_7915 "ctorName" (Obj.repr (let __call_arg_0_7916 = name in sanitizeTypeName __call_arg_0_7916)));
+                  ignore (HxAnon.set __anonymous_value_7915 "hasArgs" (HxRuntime.box_bool true));
+                  __anonymous_value_7915
                 ) in HxMap.set_string (Obj.magic out) (key : string) value
               )
             )) with
@@ -18961,11 +18961,11 @@ let phpProgramEnumConstructorsByEnumMap = fun program decl -> let out = Obj.magi
           ));
           let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
             ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || (let __call_arg_0_7927 = name in let __call_arg_1_7928 = "__hx_" in StringTools.startsWith __call_arg_0_7927 __call_arg_1_7928) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7929 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7929 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7929 "ctorName" (Obj.repr (let __call_arg_0_7930 = name in sanitizeTypeName __call_arg_0_7930)));
-              ignore (HxAnon.set __anon_7929 "hasArgs" (HxRuntime.box_bool false));
-              __anon_7929
+            addRef (let __anonymous_value_7929 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7929 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7929 "ctorName" (Obj.repr (let __call_arg_0_7930 = name in sanitizeTypeName __call_arg_0_7930)));
+              ignore (HxAnon.set __anonymous_value_7929 "hasArgs" (HxRuntime.box_bool false));
+              __anonymous_value_7929
             ))
           )
         )) with
@@ -18978,11 +18978,11 @@ let phpProgramEnumConstructorsByEnumMap = fun program decl -> let out = Obj.magi
           ));
           let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
             ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || (let __call_arg_0_7933 = name in let __call_arg_1_7934 = "__hx_" in StringTools.startsWith __call_arg_0_7933 __call_arg_1_7934) then raise (HxRuntime.Hx_continue) else ());
-            addRef (let __anon_7935 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_7935 "enumName" (Obj.repr enumName));
-              ignore (HxAnon.set __anon_7935 "ctorName" (Obj.repr (let __call_arg_0_7936 = name in sanitizeTypeName __call_arg_0_7936)));
-              ignore (HxAnon.set __anon_7935 "hasArgs" (HxRuntime.box_bool true));
-              __anon_7935
+            addRef (let __anonymous_value_7935 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_7935 "enumName" (Obj.repr enumName));
+              ignore (HxAnon.set __anonymous_value_7935 "ctorName" (Obj.repr (let __call_arg_0_7936 = name in sanitizeTypeName __call_arg_0_7936)));
+              ignore (HxAnon.set __anonymous_value_7935 "hasArgs" (HxRuntime.box_bool true));
+              __anonymous_value_7935
             ))
           )
         )) with
@@ -19057,10 +19057,10 @@ let phpProgramEnumAbstractValueMap = fun program decl -> let out = Obj.magic (Hx
         ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_continue) else ());
         let fieldName = let __call_arg_0_7952 = HxFieldDecl.getName (Obj.magic field) in sanitizeTypeName __call_arg_0_7952 in (
           ignore (if HxString.length fieldName = 0 || (let __call_arg_0_7953 = fieldName in let __call_arg_1_7954 = "__hx_" in StringTools.startsWith __call_arg_0_7953 __call_arg_1_7954) then raise (HxRuntime.Hx_continue) else ());
-          addRef (let __anon_7955 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_7955 "typeName" (Obj.repr typeName));
-            ignore (HxAnon.set __anon_7955 "fieldName" (Obj.repr fieldName));
-            __anon_7955
+          addRef (let __anonymous_value_7955 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_7955 "typeName" (Obj.repr typeName));
+            ignore (HxAnon.set __anonymous_value_7955 "fieldName" (Obj.repr fieldName));
+            __anonymous_value_7955
           )) preferLocal
         )
       )) with
@@ -38441,10 +38441,10 @@ and lowerSourceSwitchPattern = fun target pattern scrutinee -> let tempResult = 
       __assign_6049
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let lowered = lowerSourceSwitchPattern (Obj.magic target) (Obj.magic inner) (scrutinee : string) in let bindings = Obj.magic (copySourceSwitchBindings (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) in (
-      ignore (HxArray.push bindings (let __anon_6050 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_6050 "name" (Obj.repr name));
-        ignore (HxAnon.set __anon_6050 "expr" (Obj.repr scrutinee));
-        __anon_6050
+      ignore (HxArray.push bindings (let __anonymous_value_6050 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_6050 "name" (Obj.repr name));
+        ignore (HxAnon.set __anonymous_value_6050 "expr" (Obj.repr scrutinee));
+        __anonymous_value_6050
       )));
       let __assign_6051 = Obj.magic (let __anon_6052 = HxAnon.create () in (
         ignore (HxAnon.set __anon_6052 "cond" (Obj.repr (Obj.obj (HxAnon.get lowered "cond"))));
@@ -38514,10 +38514,10 @@ and lowerSourceSwitchPattern = fun target pattern scrutinee -> let tempResult = 
     | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_6067 = Obj.magic (let __anon_6068 = HxAnon.create () in (
       ignore (HxAnon.set __anon_6068 "cond" (Obj.repr (trueLiteral (Obj.magic target))));
       ignore (HxAnon.set __anon_6068 "bindings" (Obj.repr (let __arr_6069 = HxArray.create () in (
-        ignore (HxArray.push __arr_6069 (let __anon_6070 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_6070 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_6070 "expr" (Obj.repr scrutinee));
-          __anon_6070
+        ignore (HxArray.push __arr_6069 (let __anonymous_value_6070 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_6070 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_6070 "expr" (Obj.repr scrutinee));
+          __anonymous_value_6070
         )));
         __arr_6069
       ))));

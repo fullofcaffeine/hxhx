@@ -273,13 +273,13 @@ let parseJavaNoEmitMethodLine = fun raw line -> try let __fallback_result_144 = 
       ignore (if hx_open < 0 || close < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
       let name = let __call_arg_0_140 = HxString.substring raw nameStart hx_open in StringTools.trim __call_arg_0_140 in (
         ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-        let args = let __call_arg_0_141 = HxString.substring raw (HxInt.add hx_open 1) close in compactArgs __call_arg_0_141 in let column = HxInt.add nameStart 1 in let __anon_142 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_142 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_142 "signature" (Obj.repr (((HxString.toStdString name ^ "(") ^ HxString.toStdString args) ^ ")")));
-          ignore (HxAnon.set __anon_142 "line" (Obj.repr line));
-          ignore (HxAnon.set __anon_142 "column" (Obj.repr column));
-          ignore (HxAnon.set __anon_142 "endColumn" (Obj.repr (HxInt.add column (HxString.length name))));
-          __anon_142
+        let args = let __call_arg_0_141 = HxString.substring raw (HxInt.add hx_open 1) close in compactArgs __call_arg_0_141 in let column = HxInt.add nameStart 1 in let __anonymous_value_142 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_142 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_142 "signature" (Obj.repr (((HxString.toStdString name ^ "(") ^ HxString.toStdString args) ^ ")")));
+          ignore (HxAnon.set __anonymous_value_142 "line" (Obj.repr line));
+          ignore (HxAnon.set __anonymous_value_142 "column" (Obj.repr column));
+          ignore (HxAnon.set __anonymous_value_142 "endColumn" (Obj.repr (HxInt.add column (HxString.length name))));
+          __anonymous_value_142
         )
       )
     )
@@ -346,15 +346,15 @@ let javaNoEmitOverloadInfo = fun fn sourceLines -> let pos = Obj.magic (HxFuncti
       tempString := __assign_51;
       __assign_51
     ));
-    let rawLine = !tempString in let __anon_52 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_52 "name" (Obj.repr (HxFunctionDecl.getName (Obj.magic fn))));
-      ignore (HxAnon.set __anon_52 "rawSig" (Obj.repr (javaRawOverloadSignature (Obj.magic fn))));
-      ignore (HxAnon.set __anon_52 "erasedSig" (Obj.repr (javaErasedOverloadSignature (Obj.magic fn))));
-      ignore (HxAnon.set __anon_52 "line" (Obj.repr line));
-      ignore (HxAnon.set __anon_52 "endLine" (Obj.repr (functionDeclarationEndLine (Obj.magic sourceLines) line)));
-      ignore (HxAnon.set __anon_52 "column" (Obj.repr (overloadDeclarationColumn (rawLine : string) (Obj.magic pos))));
-      ignore (HxAnon.set __anon_52 "endColumn" (Obj.repr (HxInt.add (HxString.length rawLine) 1)));
-      __anon_52
+    let rawLine = !tempString in let __anonymous_value_52 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_52 "name" (Obj.repr (HxFunctionDecl.getName (Obj.magic fn))));
+      ignore (HxAnon.set __anonymous_value_52 "rawSig" (Obj.repr (javaRawOverloadSignature (Obj.magic fn))));
+      ignore (HxAnon.set __anonymous_value_52 "erasedSig" (Obj.repr (javaErasedOverloadSignature (Obj.magic fn))));
+      ignore (HxAnon.set __anonymous_value_52 "line" (Obj.repr line));
+      ignore (HxAnon.set __anonymous_value_52 "endLine" (Obj.repr (functionDeclarationEndLine (Obj.magic sourceLines) line)));
+      ignore (HxAnon.set __anonymous_value_52 "column" (Obj.repr (overloadDeclarationColumn (rawLine : string) (Obj.magic pos))));
+      ignore (HxAnon.set __anonymous_value_52 "endColumn" (Obj.repr (HxInt.add (HxString.length rawLine) 1)));
+      __anonymous_value_52
     )
   )
 )
@@ -761,10 +761,10 @@ let sourcePosition = fun source index -> let line = ref 1 in let lineStart = ref
       )) else ());
       i := HxInt.add (!i) 1
     )) done);
-    let __anon_197 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_197 "line" (Obj.repr (!line)));
-      ignore (HxAnon.set __anon_197 "column" (Obj.repr (HxInt.sub safeIndex (!lineStart))));
-      __anon_197
+    let __anonymous_value_197 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_197 "line" (Obj.repr (!line)));
+      ignore (HxAnon.set __anonymous_value_197 "column" (Obj.repr (HxInt.sub safeIndex (!lineStart))));
+      __anonymous_value_197
     )
   )
 )

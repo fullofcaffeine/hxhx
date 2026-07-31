@@ -4499,10 +4499,10 @@ let parseRawStringLiteralAt = fun text offset -> try let __fallback_result_34214
         )) else ignore (if HxString.equals c "\\" then ignore (let __assign_34209 = true in (
           escaping := __assign_34209;
           __assign_34209
-        )) else ignore (if HxString.equals c quote then raise (HxRuntime.Hx_return (Obj.repr (let __anon_34210 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_34210 "value" (Obj.repr (!value)));
-          ignore (HxAnon.set __anon_34210 "nextIndex" (Obj.repr (HxInt.add (!i) 1)));
-          __anon_34210
+        )) else ignore (if HxString.equals c quote then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_34210 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_34210 "value" (Obj.repr (!value)));
+          ignore (HxAnon.set __anonymous_value_34210 "nextIndex" (Obj.repr (HxInt.add (!i) 1)));
+          __anonymous_value_34210
         )))) else ignore (value := HxString.toStdString (!value) ^ HxString.toStdString c))));
         let __old_34211 = !i in let __new_34212 = HxInt.add __old_34211 1 in (
           ignore (i := __new_34212);
@@ -8572,11 +8572,11 @@ let parseSimpleCallCatchValueRaw = fun (raw : string) -> (let compact = let __ca
 ) : string)
 
 let parseArrayJoinCatchStringRaw = fun raw -> let compact = let __call_arg_0_34125 = raw in compactRawText __call_arg_0_34125 in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\.join\\(\"([^\"]*)\"\\);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_34126 = Obj.magic (let __anon_34127 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_34127 "receiver" (Obj.repr (let __call_arg_0_34128 = EReg.matched (Obj.magic pattern) 1 in sanitizeIdentifier __call_arg_0_34128)));
-    ignore (HxAnon.set __anon_34127 "separator" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
-    ignore (HxAnon.set __anon_34127 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_34127
+  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_34126 = Obj.magic (let __anonymous_value_34127 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_34127 "receiver" (Obj.repr (let __call_arg_0_34128 = EReg.matched (Obj.magic pattern) 1 in sanitizeIdentifier __call_arg_0_34128)));
+    ignore (HxAnon.set __anonymous_value_34127 "separator" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
+    ignore (HxAnon.set __anonymous_value_34127 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
+    __anonymous_value_34127
   )) in (
     tempResult := __assign_34126;
     __assign_34126
@@ -8588,11 +8588,11 @@ let parseArrayJoinCatchStringRaw = fun raw -> let compact = let __call_arg_0_341
 )
 
 let parseFieldReadCatchStringRaw = fun raw -> let compact = let __call_arg_0_34130 = raw in compactRawText __call_arg_0_34130 in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_34131 = Obj.magic (let __anon_34132 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_34132 "receiver" (Obj.repr (let __call_arg_0_34133 = EReg.matched (Obj.magic pattern) 1 in sanitizeIdentifier __call_arg_0_34133)));
-    ignore (HxAnon.set __anon_34132 "field" (Obj.repr (let __call_arg_0_34134 = EReg.matched (Obj.magic pattern) 2 in sanitizeIdentifier __call_arg_0_34134)));
-    ignore (HxAnon.set __anon_34132 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_34132
+  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_34131 = Obj.magic (let __anonymous_value_34132 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_34132 "receiver" (Obj.repr (let __call_arg_0_34133 = EReg.matched (Obj.magic pattern) 1 in sanitizeIdentifier __call_arg_0_34133)));
+    ignore (HxAnon.set __anonymous_value_34132 "field" (Obj.repr (let __call_arg_0_34134 = EReg.matched (Obj.magic pattern) 2 in sanitizeIdentifier __call_arg_0_34134)));
+    ignore (HxAnon.set __anonymous_value_34132 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
+    __anonymous_value_34132
   )) in (
     tempResult := __assign_34131;
     __assign_34131
@@ -8604,28 +8604,28 @@ let parseFieldReadCatchStringRaw = fun raw -> let compact = let __call_arg_0_341
 )
 
 let parseTryStringProbeRaw = fun raw -> try let __fallback_result_34146 = let compact = let __call_arg_0_34136 = raw in compactRawText __call_arg_0_34136 in let classNamePattern = Obj.magic (EReg.create ("^try\\{Type\\.getClassName\\(([A-Za-z_][A-Za-z0-9_]*)\\);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in (
-  ignore (if EReg.hx_match (Obj.magic classNamePattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_34137 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_34137 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34138 = EReg.matched (Obj.magic classNamePattern) 1 in sanitizeIdentifier __call_arg_0_34138)) ^ ")")));
-    ignore (HxAnon.set __anon_34137 "fallback" (Obj.repr (EReg.matched (Obj.magic classNamePattern) 3)));
-    __anon_34137
+  ignore (if EReg.hx_match (Obj.magic classNamePattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_34137 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_34137 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34138 = EReg.matched (Obj.magic classNamePattern) 1 in sanitizeIdentifier __call_arg_0_34138)) ^ ")")));
+    ignore (HxAnon.set __anonymous_value_34137 "fallback" (Obj.repr (EReg.matched (Obj.magic classNamePattern) 3)));
+    __anonymous_value_34137
   )))) else ());
   let enumNamePattern = Obj.magic (EReg.create ("^try\\{Type\\.getEnumName\\(([A-Za-z_][A-Za-z0-9_]*)\\);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in (
-    ignore (if EReg.hx_match (Obj.magic enumNamePattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_34139 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_34139 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34140 = EReg.matched (Obj.magic enumNamePattern) 1 in sanitizeIdentifier __call_arg_0_34140)) ^ ")")));
-      ignore (HxAnon.set __anon_34139 "fallback" (Obj.repr (EReg.matched (Obj.magic enumNamePattern) 3)));
-      __anon_34139
+    ignore (if EReg.hx_match (Obj.magic enumNamePattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_34139 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_34139 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34140 = EReg.matched (Obj.magic enumNamePattern) 1 in sanitizeIdentifier __call_arg_0_34140)) ^ ")")));
+      ignore (HxAnon.set __anonymous_value_34139 "fallback" (Obj.repr (EReg.matched (Obj.magic enumNamePattern) 3)));
+      __anonymous_value_34139
     )))) else ());
     let typeofPattern = Obj.magic (EReg.create ("^try\\{Std\\.string\\(Type\\.typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\)\\);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in (
-      ignore (if EReg.hx_match (Obj.magic typeofPattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_34141 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_34141 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34142 = EReg.matched (Obj.magic typeofPattern) 1 in sanitizeIdentifier __call_arg_0_34142)) ^ ")")));
-        ignore (HxAnon.set __anon_34141 "fallback" (Obj.repr (EReg.matched (Obj.magic typeofPattern) 3)));
-        __anon_34141
+      ignore (if EReg.hx_match (Obj.magic typeofPattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_34141 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_34141 "expr" (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (let __call_arg_0_34142 = EReg.matched (Obj.magic typeofPattern) 1 in sanitizeIdentifier __call_arg_0_34142)) ^ ")")));
+        ignore (HxAnon.set __anonymous_value_34141 "fallback" (Obj.repr (EReg.matched (Obj.magic typeofPattern) 3)));
+        __anonymous_value_34141
       )))) else ());
       let stdStringPattern = Obj.magic (EReg.create ("^try\\{Std\\.string\\(([A-Za-z_][A-Za-z0-9_]*)\\);\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in (
-        ignore (if EReg.hx_match (Obj.magic stdStringPattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_34143 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_34143 "expr" (Obj.repr (("std::string(" ^ HxString.toStdString (let __call_arg_0_34144 = EReg.matched (Obj.magic stdStringPattern) 1 in sanitizeIdentifier __call_arg_0_34144)) ^ ")")));
-          ignore (HxAnon.set __anon_34143 "fallback" (Obj.repr (EReg.matched (Obj.magic stdStringPattern) 3)));
-          __anon_34143
+        ignore (if EReg.hx_match (Obj.magic stdStringPattern) (compact : string) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_34143 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_34143 "expr" (Obj.repr (("std::string(" ^ HxString.toStdString (let __call_arg_0_34144 = EReg.matched (Obj.magic stdStringPattern) 1 in sanitizeIdentifier __call_arg_0_34144)) ^ ")")));
+          ignore (HxAnon.set __anonymous_value_34143 "fallback" (Obj.repr (EReg.matched (Obj.magic stdStringPattern) 3)));
+          __anonymous_value_34143
         )))) else ());
         Obj.magic (HxRuntime.hx_null)
       )
@@ -18127,12 +18127,12 @@ let helperRenderKindCounts = fun helpers classLookup -> let fullBody = ref 0 in 
         __assign_914
       ))
   )) done);
-  let __anon_915 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_915 "fullBody" (Obj.repr (!fullBody)));
-    ignore (HxAnon.set __anon_915 "declarationOnly" (Obj.repr (!declarationOnly)));
-    ignore (HxAnon.set __anon_915 "runtimeModule" (Obj.repr (!runtimeModule)));
-    ignore (HxAnon.set __anon_915 "unsupportedDiagnostic" (Obj.repr (!unsupportedDiagnostic)));
-    __anon_915
+  let __anonymous_value_915 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_915 "fullBody" (Obj.repr (!fullBody)));
+    ignore (HxAnon.set __anonymous_value_915 "declarationOnly" (Obj.repr (!declarationOnly)));
+    ignore (HxAnon.set __anonymous_value_915 "runtimeModule" (Obj.repr (!runtimeModule)));
+    ignore (HxAnon.set __anonymous_value_915 "unsupportedDiagnostic" (Obj.repr (!unsupportedDiagnostic)));
+    __anonymous_value_915
   )
 )
 
@@ -18305,11 +18305,11 @@ let enumRuntimeConstructorEntries = fun cls classLookup -> let names = Obj.magic
           ignore (_g1 := __new_37494);
           __new_37494
         ));
-        HxArray.push _g (let __anon_37495 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_37495 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_37495 "index" (Obj.repr (enumConstructorIndex (rendered : string) (name : string) scope)));
-          ignore (HxAnon.set __anon_37495 "hasPayload" (HxRuntime.box_bool (enumConstructorHasPayload (Obj.magic cls) (name : string))));
-          __anon_37495
+        HxArray.push _g (let __anonymous_value_37495 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_37495 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_37495 "index" (Obj.repr (enumConstructorIndex (rendered : string) (name : string) scope)));
+          ignore (HxAnon.set __anonymous_value_37495 "hasPayload" (HxRuntime.box_bool (enumConstructorHasPayload (Obj.magic cls) (name : string))));
+          __anonymous_value_37495
         ))
       )) done);
       let tempArray = Obj.magic _g in let out = Obj.magic tempArray in (
@@ -55560,10 +55560,10 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
         tempString := __assign_14000;
         __assign_14000
       ));
-      let __assign_14001 = Obj.magic (let __anon_14002 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_14002 "rendered" (Obj.repr (!tempString)));
-        ignore (HxAnon.set __anon_14002 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool false));
-        __anon_14002
+      let __assign_14001 = Obj.magic (let __anonymous_value_14002 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_14002 "rendered" (Obj.repr (!tempString)));
+        ignore (HxAnon.set __anonymous_value_14002 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool false));
+        __anonymous_value_14002
       )) in (
         tempResult := __assign_14001;
         __assign_14001
@@ -55577,10 +55577,10 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
         tempString1 := __assign_14004;
         __assign_14004
       ));
-      let __assign_14005 = Obj.magic (let __anon_14006 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_14006 "rendered" (Obj.repr (!tempString1)));
-        ignore (HxAnon.set __anon_14006 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool false));
-        __anon_14006
+      let __assign_14005 = Obj.magic (let __anonymous_value_14006 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_14006 "rendered" (Obj.repr (!tempString1)));
+        ignore (HxAnon.set __anonymous_value_14006 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool false));
+        __anonymous_value_14006
       )) in (
         tempResult := __assign_14005;
         __assign_14005
@@ -55717,10 +55717,10 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
         tempString2 := __assign_14015;
         __assign_14015
       ));
-      let __assign_14016 = Obj.magic (let __anon_14017 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_14017 "rendered" (Obj.repr (!tempString2)));
-        ignore (HxAnon.set __anon_14017 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool true));
-        __anon_14017
+      let __assign_14016 = Obj.magic (let __anonymous_value_14017 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_14017 "rendered" (Obj.repr (!tempString2)));
+        ignore (HxAnon.set __anonymous_value_14017 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool true));
+        __anonymous_value_14017
       )) in (
         tempResult := __assign_14016;
         __assign_14016
@@ -55752,10 +55752,10 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
         tempString3 := __assign_14025;
         __assign_14025
       ));
-      let __assign_14026 = Obj.magic (let __anon_14027 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_14027 "rendered" (Obj.repr (!tempString3)));
-        ignore (HxAnon.set __anon_14027 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get directLeft "hasTypedLocalERegSplitJoin") || HxRuntime.unbox_bool_or_obj (HxAnon.get directRight "hasTypedLocalERegSplitJoin"))));
-        __anon_14027
+      let __assign_14026 = Obj.magic (let __anonymous_value_14027 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_14027 "rendered" (Obj.repr (!tempString3)));
+        ignore (HxAnon.set __anonymous_value_14027 "hasTypedLocalERegSplitJoin" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get directLeft "hasTypedLocalERegSplitJoin") || HxRuntime.unbox_bool_or_obj (HxAnon.get directRight "hasTypedLocalERegSplitJoin"))));
+        __anonymous_value_14027
       )) in (
         tempResult := __assign_14026;
         __assign_14026
@@ -56494,11 +56494,11 @@ and iteratorAccessForLambdaIterable = fun iterable scope -> try let __fallback_r
   let iteratorAccess = iteratorAccessForIterable (Obj.magic iterable) scope in (
     ignore (if iteratorAccess != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr iteratorAccess)) else ());
     let typeName = (exprCppType (Obj.magic iterable) scope : string) in let mapValue = let __call_arg_0_14257 = typeName in mapValueCppType __call_arg_0_14257 in (
-      ignore (if HxString.length mapValue > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_14258 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_14258 "expr" (Obj.repr (HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ "->iterator()")));
-        ignore (HxAnon.set __anon_14258 "cppType" (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString mapValue) ^ ">>")));
-        ignore (HxAnon.set __anon_14258 "elementType" (Obj.repr mapValue));
-        __anon_14258
+      ignore (if HxString.length mapValue > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_14258 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_14258 "expr" (Obj.repr (HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ "->iterator()")));
+        ignore (HxAnon.set __anonymous_value_14258 "cppType" (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString mapValue) ^ ">>")));
+        ignore (HxAnon.set __anonymous_value_14258 "elementType" (Obj.repr mapValue));
+        __anonymous_value_14258
       )))) else ());
       ignore (if let __call_arg_0_14259 = typeName in isCppVectorType __call_arg_0_14259 then ignore (let elementType = let __call_arg_0_14260 = typeName in cppVectorElementType __call_arg_0_14260 in let tempString = ref (HxString.hx_null_string : string) in (
         ignore (if HxString.length elementType > 0 then let __assign_14261 = elementType in (
@@ -56508,11 +56508,11 @@ and iteratorAccessForLambdaIterable = fun iterable scope -> try let __fallback_r
           tempString := __assign_14262;
           __assign_14262
         ));
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_14263 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_14263 "expr" (Obj.repr (("__hxhx_vector_iterator_of(" ^ HxString.toStdString (renderExpr (Obj.magic iterable) scope)) ^ ")")));
-          ignore (HxAnon.set __anon_14263 "cppType" (Obj.repr (let __call_arg_0_14264 = typeName in iteratorCppTypeForVector __call_arg_0_14264)));
-          ignore (HxAnon.set __anon_14263 "elementType" (Obj.repr (!tempString)));
-          __anon_14263
+        raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_14263 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_14263 "expr" (Obj.repr (("__hxhx_vector_iterator_of(" ^ HxString.toStdString (renderExpr (Obj.magic iterable) scope)) ^ ")")));
+          ignore (HxAnon.set __anonymous_value_14263 "cppType" (Obj.repr (let __call_arg_0_14264 = typeName in iteratorCppTypeForVector __call_arg_0_14264)));
+          ignore (HxAnon.set __anonymous_value_14263 "elementType" (Obj.repr (!tempString)));
+          __anonymous_value_14263
         ))))
       )) else ());
       Obj.magic (HxRuntime.hx_null)
@@ -56577,11 +56577,11 @@ and lambdaArrayStructuralIteratorExpr = fun iterable scope -> try let __fallback
             tempString := __assign_14273;
             __assign_14273
           ));
-          raise (HxRuntime.Hx_return (Obj.repr (let __anon_14274 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_14274 "expr" (Obj.repr (iteratorProviderCallExpr (Obj.magic provider) scope)));
-            ignore (HxAnon.set __anon_14274 "cppType" (Obj.repr (!tempString)));
-            ignore (HxAnon.set __anon_14274 "elementType" (Obj.repr elementType));
-            __anon_14274
+          raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_14274 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_14274 "expr" (Obj.repr (iteratorProviderCallExpr (Obj.magic provider) scope)));
+            ignore (HxAnon.set __anonymous_value_14274 "cppType" (Obj.repr (!tempString)));
+            ignore (HxAnon.set __anonymous_value_14274 "elementType" (Obj.repr elementType));
+            __anonymous_value_14274
           ))))
         )
       )
@@ -138795,27 +138795,27 @@ and iterableElementType = fun iterable scope -> try let __fallback_result_36494 
   | HxRuntime.Hx_return __ret_36493 -> Obj.obj __ret_36493
 and iteratorProtocolElementType = fun iterable scope -> iteratorElementTypeForIterable (Obj.magic iterable) scope
 and iteratorAccessForIterable = fun iterable scope -> try let __fallback_result_36506 = let typeName = (exprCppType (Obj.magic iterable) scope : string) in let iteratorElement = let __call_arg_0_36495 = typeName in cppIteratorElementType __call_arg_0_36495 in (
-  ignore (if HxString.length iteratorElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_36496 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_36496 "expr" (Obj.repr (renderExpr (Obj.magic iterable) scope)));
-    ignore (HxAnon.set __anon_36496 "cppType" (Obj.repr typeName));
-    ignore (HxAnon.set __anon_36496 "elementType" (Obj.repr iteratorElement));
-    __anon_36496
+  ignore (if HxString.length iteratorElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_36496 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_36496 "expr" (Obj.repr (renderExpr (Obj.magic iterable) scope)));
+    ignore (HxAnon.set __anonymous_value_36496 "cppType" (Obj.repr typeName));
+    ignore (HxAnon.set __anonymous_value_36496 "elementType" (Obj.repr iteratorElement));
+    __anonymous_value_36496
   )))) else ());
   let listElement = let __call_arg_0_36497 = typeName in listElementCppType __call_arg_0_36497 in (
-    ignore (if HxString.length listElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_36498 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_36498 "expr" (Obj.repr (HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ "->iterator()")));
-      ignore (HxAnon.set __anon_36498 "cppType" (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString listElement) ^ ">>")));
-      ignore (HxAnon.set __anon_36498 "elementType" (Obj.repr listElement));
-      __anon_36498
+    ignore (if HxString.length listElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_36498 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_36498 "expr" (Obj.repr (HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ "->iterator()")));
+      ignore (HxAnon.set __anonymous_value_36498 "cppType" (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString listElement) ^ ">>")));
+      ignore (HxAnon.set __anonymous_value_36498 "elementType" (Obj.repr listElement));
+      __anonymous_value_36498
     )))) else ());
     let className = (classNameFromCppExprType (typeName : string) scope : string) in (
       ignore (if className == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
       let iteratorType = (classMethodCppReturnType (className : string) ("iterator" : string) false scope : string) in let iteratorMethodElement = let __call_arg_0_36499 = iteratorType in cppIteratorElementType __call_arg_0_36499 in (
-        ignore (if HxString.length iteratorMethodElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_36500 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_36500 "expr" (Obj.repr ((HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ HxString.toStdString (let __call_arg_0_36501 = typeName in fieldAccessOpForCppType __call_arg_0_36501)) ^ "iterator()")));
-          ignore (HxAnon.set __anon_36500 "cppType" (Obj.repr iteratorType));
-          ignore (HxAnon.set __anon_36500 "elementType" (Obj.repr iteratorMethodElement));
-          __anon_36500
+        ignore (if HxString.length iteratorMethodElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_36500 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_36500 "expr" (Obj.repr ((HxString.toStdString (renderExpr (Obj.magic iterable) scope) ^ HxString.toStdString (let __call_arg_0_36501 = typeName in fieldAccessOpForCppType __call_arg_0_36501)) ^ "iterator()")));
+          ignore (HxAnon.set __anonymous_value_36500 "cppType" (Obj.repr iteratorType));
+          ignore (HxAnon.set __anonymous_value_36500 "elementType" (Obj.repr iteratorMethodElement));
+          __anonymous_value_36500
         )))) else ());
         ignore (if not (classHasInstanceMethod (className : string) ("hasNext" : string) scope) || not (classHasInstanceMethod (className : string) ("next" : string) scope) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
         let nextType = (classMethodCppReturnType (className : string) ("next" : string) false scope : string) in let tempString = ref (HxString.hx_null_string : string) in (
@@ -138826,11 +138826,11 @@ and iteratorAccessForIterable = fun iterable scope -> try let __fallback_result_
             tempString := __assign_36503;
             __assign_36503
           ));
-          let __anon_36504 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_36504 "expr" (Obj.repr (renderExpr (Obj.magic iterable) scope)));
-            ignore (HxAnon.set __anon_36504 "cppType" (Obj.repr typeName));
-            ignore (HxAnon.set __anon_36504 "elementType" (Obj.repr (!tempString)));
-            __anon_36504
+          let __anonymous_value_36504 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_36504 "expr" (Obj.repr (renderExpr (Obj.magic iterable) scope)));
+            ignore (HxAnon.set __anonymous_value_36504 "cppType" (Obj.repr typeName));
+            ignore (HxAnon.set __anonymous_value_36504 "elementType" (Obj.repr (!tempString)));
+            __anonymous_value_36504
           )
         )
       )
@@ -141920,10 +141920,10 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
       | HxExpr.EBreak _ -> 34
       | HxExpr.EContinue _ -> 35) = 8 then let _g7 = (match _g4 with
       | HxExpr.EIdent __enum_param_3020 -> __enum_param_3020
-      | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g7 : string) in let fieldName = (_g6 : string) in if constructorHasField scope (fieldName : string) && constructorHasArg (Obj.magic ctor) (argName : string) then let __assign_3021 = Obj.magic (let __anon_3022 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_3022 "field" (Obj.repr (let __call_arg_0_3023 = fieldName in sanitizeIdentifier __call_arg_0_3023)));
-      ignore (HxAnon.set __anon_3022 "arg" (Obj.repr (constructorFieldInitializerArg (fieldName : string) (argName : string) (Obj.magic ctor) scope)));
-      __anon_3022
+      | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g7 : string) in let fieldName = (_g6 : string) in if constructorHasField scope (fieldName : string) && constructorHasArg (Obj.magic ctor) (argName : string) then let __assign_3021 = Obj.magic (let __anonymous_value_3022 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_3022 "field" (Obj.repr (let __call_arg_0_3023 = fieldName in sanitizeIdentifier __call_arg_0_3023)));
+      ignore (HxAnon.set __anonymous_value_3022 "arg" (Obj.repr (constructorFieldInitializerArg (fieldName : string) (argName : string) (Obj.magic ctor) scope)));
+      __anonymous_value_3022
     )) in (
       tempResult := __assign_3021;
       __assign_3021

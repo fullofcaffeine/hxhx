@@ -979,10 +979,10 @@ let countUnsupportedExprsInFunction = fun fn -> let count = ref 0 in let _g = re
   !count
 )
 
-let newUnsupportedTraceCounters = fun () -> let __anon_302 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_302 "rawCount" (Obj.repr 0));
-  ignore (HxAnon.set __anon_302 "fnCount" (Obj.repr 0));
-  __anon_302
+let newUnsupportedTraceCounters = fun () -> let __anonymous_value_302 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_302 "rawCount" (Obj.repr 0));
+  ignore (HxAnon.set __anonymous_value_302 "fnCount" (Obj.repr 0));
+  __anonymous_value_302
 )
 
 let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex traceUnsupported counters output -> try let __fallback_result_312 = let unsupportedInFile = countUnsupportedExprsInModule (Obj.magic pm) in (

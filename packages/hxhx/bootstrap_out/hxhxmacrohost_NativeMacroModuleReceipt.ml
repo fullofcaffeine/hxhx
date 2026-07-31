@@ -86,7 +86,7 @@ let decodeExpressions = fun value -> let raw = ref (Obj.magic (HxRuntime.hx_null
   )
 )
 
-let loadFromEnvironment = fun artifactKind -> try let __fallback_result_109 = let configuredPath = (HxSys.getEnv ("HXHX_NATIVE_MACRO_MODULE_RECEIPT" : string) : string) in (
+let loadFromEnvironment = fun artifactKind -> try let __fallback_result_111 = let configuredPath = (HxSys.getEnv ("HXHX_NATIVE_MACRO_MODULE_RECEIPT" : string) : string) in (
   ignore (if configuredPath == HxString.hx_null_string || HxString.length (let __call_arg_0_43 = configuredPath in StringTools.trim __call_arg_0_43) = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let selectedPath = let __call_arg_0_44 = let __call_arg_0_45 = configuredPath in StringTools.trim __call_arg_0_45 in Haxe_io_Path.normalize __call_arg_0_44 in (
     ignore (if not (HxFileSystem.exists (selectedPath : string)) || HxFileSystem.isDirectory (selectedPath : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_46 = "file not found: " ^ HxString.toStdString selectedPath in failureMessage __call_arg_0_46)) ["Dynamic"]) else ());
@@ -111,34 +111,34 @@ let loadFromEnvironment = fun artifactKind -> try let __fallback_result_109 = le
         ignore (if decoded == Obj.magic (HxRuntime.hx_null) || HxType.isOfType decoded (HxType.class_ "String") || (let __isBool_55 = decoded in if __isBool_55 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_55) || (let __isInt_56 = decoded in if __isInt_56 == HxRuntime.hx_null then false else Obj.is_int __isInt_56 && not (HxRuntime.is_boxed_bool __isInt_56)) || (let __isFloat_57 = decoded in if __isFloat_57 == HxRuntime.hx_null then false else Obj.is_int __isFloat_57 && not (HxRuntime.is_boxed_bool __isFloat_57) || Obj.tag __isFloat_57 = Obj.double_tag) || HxType.isOfType decoded (HxType.class_ "Array") || HxType.isOfType decoded (HxType.class_ "hxhx.CompilerJsonArray") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_58 = "receipt JSON must be an object" in failureMessage __call_arg_0_58)) ["Dynamic"]) else ());
         let schema = let __call_arg_0_59 = let __call_arg_0_60 = decoded in let __call_arg_1_61 = "schema" in requiredField __call_arg_0_60 __call_arg_1_61 in let __call_arg_1_62 = "schema" in requiredString __call_arg_0_59 __call_arg_1_62 in (
           ignore (if not (HxString.equals schema "hxhx.native-macro-module.v1") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_63 = ((("unsupported schema `" ^ HxString.toStdString schema) ^ "` (expected `") ^ "hxhx.native-macro-module.v1") ^ "`)" in failureMessage __call_arg_0_63)) ["Dynamic"]) else ());
-          let candidateCommit = let __call_arg_0_64 = let __call_arg_0_65 = decoded in let __call_arg_1_66 = "candidateCommit" in requiredField __call_arg_0_65 __call_arg_1_66 in let __call_arg_1_67 = "candidateCommit" in requiredString __call_arg_0_64 __call_arg_1_67 in let expectedCandidate = (requiredString (Obj.repr (HxSys.getEnv ("HXHX_CANDIDATE_COMMIT" : string))) ("HXHX_CANDIDATE_COMMIT" : string) : string) in (
-            ignore (if not (HxString.equals candidateCommit expectedCandidate) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_68 = ((("candidate mismatch: receipt has `" ^ HxString.toStdString candidateCommit) ^ "`, current compiler expects `") ^ HxString.toStdString expectedCandidate) ^ "`" in failureMessage __call_arg_0_68)) ["Dynamic"]) else ());
-            let pluginId = let __call_arg_0_69 = let __call_arg_0_70 = decoded in let __call_arg_1_71 = "pluginId" in requiredField __call_arg_0_70 __call_arg_1_71 in let __call_arg_1_72 = "pluginId" in requiredString __call_arg_0_69 __call_arg_1_72 in let abiVersion = let __call_arg_0_73 = let __call_arg_0_74 = decoded in let __call_arg_1_75 = "abiVersion" in requiredField __call_arg_0_74 __call_arg_1_75 in let __call_arg_1_76 = "abiVersion" in requiredInt __call_arg_0_73 __call_arg_1_76 in (
-              ignore (if abiVersion <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_77 = (("abiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int abiVersion in failureMessage __call_arg_0_77)) ["Dynamic"]) else ());
-              let macroApiVersion = let __call_arg_0_78 = let __call_arg_0_79 = decoded in let __call_arg_1_80 = "macroApiVersion" in requiredField __call_arg_0_79 __call_arg_1_80 in let __call_arg_1_81 = "macroApiVersion" in requiredInt __call_arg_0_78 __call_arg_1_81 in (
-                ignore (if macroApiVersion <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_82 = (("macroApiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int macroApiVersion in failureMessage __call_arg_0_82)) ["Dynamic"]) else ());
-                let expressions = Obj.magic (decodeExpressions (let __call_arg_0_83 = decoded in let __call_arg_1_84 = "expressions" in requiredField __call_arg_0_83 __call_arg_1_84)) in let tempString = ref (HxString.hx_null_string : string) in (
-                  ignore (if artifactKind == HxString.hx_null_string then let __assign_85 = ("" : string) in (
-                    tempString := __assign_85;
-                    __assign_85
-                  ) else let __assign_86 = (artifactKind : string) in (
-                    tempString := __assign_86;
-                    __assign_86
+          let candidateCommit = let __call_arg_0_64 = let __call_arg_0_65 = decoded in let __call_arg_1_66 = "candidateCommit" in requiredField __call_arg_0_65 __call_arg_1_66 in let __call_arg_1_67 = "candidateCommit" in requiredString __call_arg_0_64 __call_arg_1_67 in let expectedCandidate = let __call_arg_0_68 = Obj.repr (HxSys.getEnv ("HXHX_CANDIDATE_COMMIT" : string)) in let __call_arg_1_69 = "HXHX_CANDIDATE_COMMIT" in requiredString __call_arg_0_68 __call_arg_1_69 in (
+            ignore (if not (HxString.equals candidateCommit expectedCandidate) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_70 = ((("candidate mismatch: receipt has `" ^ HxString.toStdString candidateCommit) ^ "`, current compiler expects `") ^ HxString.toStdString expectedCandidate) ^ "`" in failureMessage __call_arg_0_70)) ["Dynamic"]) else ());
+            let pluginId = let __call_arg_0_71 = let __call_arg_0_72 = decoded in let __call_arg_1_73 = "pluginId" in requiredField __call_arg_0_72 __call_arg_1_73 in let __call_arg_1_74 = "pluginId" in requiredString __call_arg_0_71 __call_arg_1_74 in let abiVersion = let __call_arg_0_75 = let __call_arg_0_76 = decoded in let __call_arg_1_77 = "abiVersion" in requiredField __call_arg_0_76 __call_arg_1_77 in let __call_arg_1_78 = "abiVersion" in requiredInt __call_arg_0_75 __call_arg_1_78 in (
+              ignore (if abiVersion <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_79 = (("abiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int abiVersion in failureMessage __call_arg_0_79)) ["Dynamic"]) else ());
+              let macroApiVersion = let __call_arg_0_80 = let __call_arg_0_81 = decoded in let __call_arg_1_82 = "macroApiVersion" in requiredField __call_arg_0_81 __call_arg_1_82 in let __call_arg_1_83 = "macroApiVersion" in requiredInt __call_arg_0_80 __call_arg_1_83 in (
+                ignore (if macroApiVersion <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_84 = (("macroApiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int macroApiVersion in failureMessage __call_arg_0_84)) ["Dynamic"]) else ());
+                let expressions = Obj.magic (decodeExpressions (let __call_arg_0_85 = decoded in let __call_arg_1_86 = "expressions" in requiredField __call_arg_0_85 __call_arg_1_86)) in let tempString = ref (HxString.hx_null_string : string) in (
+                  ignore (if artifactKind == HxString.hx_null_string then let __assign_87 = ("" : string) in (
+                    tempString := __assign_87;
+                    __assign_87
+                  ) else let __assign_88 = (artifactKind : string) in (
+                    tempString := __assign_88;
+                    __assign_88
                   ));
-                  let selectedArtifactKind = let __call_arg_0_87 = !tempString in StringTools.trim __call_arg_0_87 in (
-                    ignore (if not (HxString.equals selectedArtifactKind "native") && not (HxString.equals selectedArtifactKind "bytecode") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_88 = ("unsupported artifact kind `" ^ HxString.toStdString selectedArtifactKind) ^ "`" in failureMessage __call_arg_0_88)) ["Dynamic"]) else ());
-                    let artifacts = let __call_arg_0_89 = decoded in let __call_arg_1_90 = "artifacts" in requiredField __call_arg_0_89 __call_arg_1_90 in let artifact = let __call_arg_0_91 = artifacts in let __call_arg_1_92 = selectedArtifactKind in requiredField __call_arg_0_91 __call_arg_1_92 in let artifactField = "artifacts." ^ HxString.toStdString selectedArtifactKind in let artifactRelativePath = let __call_arg_0_93 = let __call_arg_0_94 = artifact in let __call_arg_1_95 = "path" in requiredField __call_arg_0_94 __call_arg_1_95 in let __call_arg_1_96 = HxString.toStdString artifactField ^ ".path" in requiredString __call_arg_0_93 __call_arg_1_96 in let expectedDigest = let __call_arg_0_97 = let __call_arg_0_98 = let __call_arg_0_99 = artifact in let __call_arg_1_100 = "sha256" in requiredField __call_arg_0_99 __call_arg_1_100 in let __call_arg_1_101 = HxString.toStdString artifactField ^ ".sha256" in requiredString __call_arg_0_98 __call_arg_1_101 in normalizeDigest __call_arg_0_97 in let artifactPath = let __call_arg_0_102 = receiptPath in let __call_arg_1_103 = artifactRelativePath in resolveContainedArtifact __call_arg_0_102 __call_arg_1_103 in (
-                      ignore (if not (HxFileSystem.exists (artifactPath : string)) || HxFileSystem.isDirectory (artifactPath : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_104 = "artifact file not found: " ^ HxString.toStdString artifactPath in failureMessage __call_arg_0_104)) ["Dynamic"]) else ());
-                      let actualDigest = (HxString.toLowerCase (let __bytes_receiver_105 = Haxe_crypto_Sha256.make (Obj.magic (HxBytes.ofData (HxFile.getBytes (artifactPath : string)) ())) in HxBytes.toHex __bytes_receiver_105 ()) () : string) in (
-                        ignore (if not (HxString.equals actualDigest expectedDigest) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_106 = (("artifact SHA-256 mismatch: expected " ^ HxString.toStdString expectedDigest) ^ ", got ") ^ HxString.toStdString actualDigest in failureMessage __call_arg_0_106)) ["Dynamic"]) else ());
-                        let __anon_107 = HxAnon.create () in (
-                          ignore (HxAnon.set __anon_107 "candidateCommit" (Obj.repr candidateCommit));
-                          ignore (HxAnon.set __anon_107 "pluginId" (Obj.repr pluginId));
-                          ignore (HxAnon.set __anon_107 "expressions" (Obj.repr expressions));
-                          ignore (HxAnon.set __anon_107 "artifactKind" (Obj.repr selectedArtifactKind));
-                          ignore (HxAnon.set __anon_107 "artifactPath" (Obj.repr artifactPath));
-                          ignore (HxAnon.set __anon_107 "artifactSha256" (Obj.repr actualDigest));
-                          __anon_107
+                  let selectedArtifactKind = let __call_arg_0_89 = !tempString in StringTools.trim __call_arg_0_89 in (
+                    ignore (if not (HxString.equals selectedArtifactKind "native") && not (HxString.equals selectedArtifactKind "bytecode") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_90 = ("unsupported artifact kind `" ^ HxString.toStdString selectedArtifactKind) ^ "`" in failureMessage __call_arg_0_90)) ["Dynamic"]) else ());
+                    let artifacts = let __call_arg_0_91 = decoded in let __call_arg_1_92 = "artifacts" in requiredField __call_arg_0_91 __call_arg_1_92 in let artifact = let __call_arg_0_93 = artifacts in let __call_arg_1_94 = selectedArtifactKind in requiredField __call_arg_0_93 __call_arg_1_94 in let artifactField = "artifacts." ^ HxString.toStdString selectedArtifactKind in let artifactRelativePath = let __call_arg_0_95 = let __call_arg_0_96 = artifact in let __call_arg_1_97 = "path" in requiredField __call_arg_0_96 __call_arg_1_97 in let __call_arg_1_98 = HxString.toStdString artifactField ^ ".path" in requiredString __call_arg_0_95 __call_arg_1_98 in let expectedDigest = let __call_arg_0_99 = let __call_arg_0_100 = let __call_arg_0_101 = artifact in let __call_arg_1_102 = "sha256" in requiredField __call_arg_0_101 __call_arg_1_102 in let __call_arg_1_103 = HxString.toStdString artifactField ^ ".sha256" in requiredString __call_arg_0_100 __call_arg_1_103 in normalizeDigest __call_arg_0_99 in let artifactPath = let __call_arg_0_104 = receiptPath in let __call_arg_1_105 = artifactRelativePath in resolveContainedArtifact __call_arg_0_104 __call_arg_1_105 in (
+                      ignore (if not (HxFileSystem.exists (artifactPath : string)) || HxFileSystem.isDirectory (artifactPath : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_106 = "artifact file not found: " ^ HxString.toStdString artifactPath in failureMessage __call_arg_0_106)) ["Dynamic"]) else ());
+                      let actualDigest = (HxString.toLowerCase (let __bytes_receiver_107 = Haxe_crypto_Sha256.make (Obj.magic (HxBytes.ofData (HxFile.getBytes (artifactPath : string)) ())) in HxBytes.toHex __bytes_receiver_107 ()) () : string) in (
+                        ignore (if not (HxString.equals actualDigest expectedDigest) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_108 = (("artifact SHA-256 mismatch: expected " ^ HxString.toStdString expectedDigest) ^ ", got ") ^ HxString.toStdString actualDigest in failureMessage __call_arg_0_108)) ["Dynamic"]) else ());
+                        let __anon_109 = HxAnon.create () in (
+                          ignore (HxAnon.set __anon_109 "candidateCommit" (Obj.repr candidateCommit));
+                          ignore (HxAnon.set __anon_109 "pluginId" (Obj.repr pluginId));
+                          ignore (HxAnon.set __anon_109 "expressions" (Obj.repr expressions));
+                          ignore (HxAnon.set __anon_109 "artifactKind" (Obj.repr selectedArtifactKind));
+                          ignore (HxAnon.set __anon_109 "artifactPath" (Obj.repr artifactPath));
+                          ignore (HxAnon.set __anon_109 "artifactSha256" (Obj.repr actualDigest));
+                          __anon_109
                         )
                       )
                     )
@@ -151,5 +151,5 @@ let loadFromEnvironment = fun artifactKind -> try let __fallback_result_109 = le
       )
     )
   )
-) in Obj.magic __fallback_result_109 with
-  | HxRuntime.Hx_return __ret_108 -> Obj.magic __ret_108
+) in Obj.magic __fallback_result_111 with
+  | HxRuntime.Hx_return __ret_110 -> Obj.magic __ret_110

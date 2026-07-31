@@ -1081,10 +1081,10 @@ let runOne = fun args requestContext -> try let __fallback_result_239 = let requ
                                                                               ignore (_g := __new_206);
                                                                               __new_206
                                                                             ));
-                                                                            HxArray.push generated (let __anon_207 = HxAnon.create () in (
-                                                                              ignore (HxAnon.set __anon_207 "name" (Obj.repr name));
-                                                                              ignore (HxAnon.set __anon_207 "source" (Obj.repr (let __call_arg_0_208 = name in Hxhx_macro_MacroState.getOcamlModuleSource __call_arg_0_208)));
-                                                                              __anon_207
+                                                                            HxArray.push generated (let __anonymous_value_207 = HxAnon.create () in (
+                                                                              ignore (HxAnon.set __anonymous_value_207 "name" (Obj.repr name));
+                                                                              ignore (HxAnon.set __anonymous_value_207 "source" (Obj.repr (let __call_arg_0_208 = name in Hxhx_macro_MacroState.getOcamlModuleSource __call_arg_0_208)));
+                                                                              __anonymous_value_207
                                                                             ))
                                                                           )) done);
                                                                           ignore (if let __call_arg_0_209 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_209 then ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ((("stage3_driver=before_expand typed_modules=" ^ string_of_int (HxArray.length typedModules)) ^ " generated_modules=") ^ string_of_int (HxArray.length generated) : string)) else ());

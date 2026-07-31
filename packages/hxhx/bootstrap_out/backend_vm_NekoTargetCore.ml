@@ -979,12 +979,12 @@ let parseSysPutEnvBoolTryRaw = fun raw -> try let __fallback_result_765 = let co
                 ignore (if not (let __call_arg_0_760 = afterTrace in let __call_arg_1_761 = ";}" in StringTools.endsWith __call_arg_0_760 __call_arg_1_761) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
                 let fallback = (HxString.substr afterTrace 0 (HxInt.sub (HxString.length afterTrace) 2) : string) in (
                   ignore (if not (HxString.equals fallback "true") && not (HxString.equals fallback "false") then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-                  let __anon_762 = HxAnon.create () in (
-                    ignore (HxAnon.set __anon_762 "name" (Obj.repr name));
-                    ignore (HxAnon.set __anon_762 "envValue" (Obj.repr (let __call_arg_0_763 = value in sanitizeNekoValueExpr __call_arg_0_763)));
-                    ignore (HxAnon.set __anon_762 "success" (Obj.repr success));
-                    ignore (HxAnon.set __anon_762 "fallback" (Obj.repr fallback));
-                    __anon_762
+                  let __anonymous_value_762 = HxAnon.create () in (
+                    ignore (HxAnon.set __anonymous_value_762 "name" (Obj.repr name));
+                    ignore (HxAnon.set __anonymous_value_762 "envValue" (Obj.repr (let __call_arg_0_763 = value in sanitizeNekoValueExpr __call_arg_0_763)));
+                    ignore (HxAnon.set __anonymous_value_762 "success" (Obj.repr success));
+                    ignore (HxAnon.set __anonymous_value_762 "fallback" (Obj.repr fallback));
+                    __anonymous_value_762
                   )
                 )
               )
@@ -2154,11 +2154,11 @@ let safeIdent = fun (name : string) -> (try (
 
 let parseBytesSubTryRaw = fun raw -> try let __fallback_result_674 = let compact = let __call_arg_0_660 = let __call_arg_0_661 = let __call_arg_0_662 = raw in let __call_arg_1_663 = " " in let __call_arg_2_664 = "" in StringTools.replace __call_arg_0_662 __call_arg_1_663 __call_arg_2_664 in let __call_arg_1_665 = "\n" in let __call_arg_2_666 = "" in StringTools.replace __call_arg_0_661 __call_arg_1_665 __call_arg_2_666 in let __call_arg_1_667 = "\t" in let __call_arg_2_668 = "" in StringTools.replace __call_arg_0_660 __call_arg_1_667 __call_arg_2_668 in let pattern = Obj.magic (EReg.create ("^try\\{newBytes\\(([^,{}()]+),untyped__dollar__ssub\\(([^,{}()]+),([^,{}()]+),([^,{}()]+)\\)\\);\\}catch\\([^)]*\\)\\{throwError\\.OutsideBounds;\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_669 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_669 "len" (Obj.repr (let __call_arg_0_670 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_670)));
-    ignore (HxAnon.set __anon_669 "bytes" (Obj.repr (let __call_arg_0_671 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_671)));
-    ignore (HxAnon.set __anon_669 "pos" (Obj.repr (let __call_arg_0_672 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_672)));
-    __anon_669
+  let __anonymous_value_669 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_669 "len" (Obj.repr (let __call_arg_0_670 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_670)));
+    ignore (HxAnon.set __anonymous_value_669 "bytes" (Obj.repr (let __call_arg_0_671 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_671)));
+    ignore (HxAnon.set __anonymous_value_669 "pos" (Obj.repr (let __call_arg_0_672 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_672)));
+    __anonymous_value_669
   )
 ) in Obj.magic __fallback_result_674 with
   | HxRuntime.Hx_return __ret_673 -> Obj.magic __ret_673
@@ -2567,11 +2567,11 @@ let rec collectStmtRefs = fun context stmt addConstructor addStatic -> ignore (m
 
 let parseStringSubTryRaw = fun raw -> try let __fallback_result_689 = let compact = let __call_arg_0_675 = let __call_arg_0_676 = let __call_arg_0_677 = raw in let __call_arg_1_678 = " " in let __call_arg_2_679 = "" in StringTools.replace __call_arg_0_677 __call_arg_1_678 __call_arg_2_679 in let __call_arg_1_680 = "\n" in let __call_arg_2_681 = "" in StringTools.replace __call_arg_0_676 __call_arg_1_680 __call_arg_2_681 in let __call_arg_1_682 = "\t" in let __call_arg_2_683 = "" in StringTools.replace __call_arg_0_675 __call_arg_1_682 __call_arg_2_683 in let pattern = Obj.magic (EReg.create ("^try\\{newString\\(untyped__dollar__ssub\\(([^,{}()]+),([^,{}()]+),([^,{}()]+)\\)\\);\\}catch\\([^)]*\\)\\{throwError\\.OutsideBounds;\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_684 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_684 "len" (Obj.repr (let __call_arg_0_685 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_685)));
-    ignore (HxAnon.set __anon_684 "bytes" (Obj.repr (let __call_arg_0_686 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_686)));
-    ignore (HxAnon.set __anon_684 "pos" (Obj.repr (let __call_arg_0_687 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_687)));
-    __anon_684
+  let __anonymous_value_684 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_684 "len" (Obj.repr (let __call_arg_0_685 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_685)));
+    ignore (HxAnon.set __anonymous_value_684 "bytes" (Obj.repr (let __call_arg_0_686 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_686)));
+    ignore (HxAnon.set __anonymous_value_684 "pos" (Obj.repr (let __call_arg_0_687 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_687)));
+    __anonymous_value_684
   )
 ) in Obj.magic __fallback_result_689 with
   | HxRuntime.Hx_return __ret_688 -> Obj.magic __ret_688
@@ -2589,35 +2589,35 @@ let parseSimpleCallCatchValueRaw = fun (raw : string) -> (let compact = let __ca
 
 let parseFieldReadCatchStringRaw = fun raw -> try let __fallback_result_715 = let compact = let __call_arg_0_702 = let __call_arg_0_703 = let __call_arg_0_704 = raw in let __call_arg_1_705 = " " in let __call_arg_2_706 = "" in StringTools.replace __call_arg_0_704 __call_arg_1_705 __call_arg_2_706 in let __call_arg_1_707 = "\n" in let __call_arg_2_708 = "" in StringTools.replace __call_arg_0_703 __call_arg_1_707 __call_arg_2_708 in let __call_arg_1_709 = "\t" in let __call_arg_2_710 = "" in StringTools.replace __call_arg_0_702 __call_arg_1_709 __call_arg_2_710 in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*);\\}catch\\(e:[^)]+\\)\\{\"([^\"]*)\";\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_711 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_711 "receiver" (Obj.repr (let __call_arg_0_712 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_712)));
-    ignore (HxAnon.set __anon_711 "field" (Obj.repr (let __call_arg_0_713 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_713)));
-    ignore (HxAnon.set __anon_711 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 3)));
-    __anon_711
+  let __anonymous_value_711 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_711 "receiver" (Obj.repr (let __call_arg_0_712 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_712)));
+    ignore (HxAnon.set __anonymous_value_711 "field" (Obj.repr (let __call_arg_0_713 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_713)));
+    ignore (HxAnon.set __anonymous_value_711 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 3)));
+    __anonymous_value_711
   )
 ) in Obj.magic __fallback_result_715 with
   | HxRuntime.Hx_return __ret_714 -> Obj.magic __ret_714
 
 let parseMethodCallCatchStringRaw = fun raw -> try let __fallback_result_729 = let compact = let __call_arg_0_716 = let __call_arg_0_717 = let __call_arg_0_718 = raw in let __call_arg_1_719 = " " in let __call_arg_2_720 = "" in StringTools.replace __call_arg_0_718 __call_arg_1_719 __call_arg_2_720 in let __call_arg_1_721 = "\n" in let __call_arg_2_722 = "" in StringTools.replace __call_arg_0_717 __call_arg_1_721 __call_arg_2_722 in let __call_arg_1_723 = "\t" in let __call_arg_2_724 = "" in StringTools.replace __call_arg_0_716 __call_arg_1_723 __call_arg_2_724 in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\(\"([^\"]*)\"\\);\\}catch\\(e:[^)]+\\)\\{\"([^\"]*)\";\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_725 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_725 "receiver" (Obj.repr (let __call_arg_0_726 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_726)));
-    ignore (HxAnon.set __anon_725 "method" (Obj.repr (let __call_arg_0_727 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_727)));
-    ignore (HxAnon.set __anon_725 "arg" (Obj.repr (EReg.matched (Obj.magic pattern) 3)));
-    ignore (HxAnon.set __anon_725 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_725
+  let __anonymous_value_725 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_725 "receiver" (Obj.repr (let __call_arg_0_726 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_726)));
+    ignore (HxAnon.set __anonymous_value_725 "method" (Obj.repr (let __call_arg_0_727 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_727)));
+    ignore (HxAnon.set __anonymous_value_725 "arg" (Obj.repr (EReg.matched (Obj.magic pattern) 3)));
+    ignore (HxAnon.set __anonymous_value_725 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
+    __anonymous_value_725
   )
 ) in Obj.magic __fallback_result_729 with
   | HxRuntime.Hx_return __ret_728 -> Obj.magic __ret_728
 
 let parseNestedMethodCallCatchStringRaw = fun raw -> try let __fallback_result_744 = let compact = let __call_arg_0_730 = let __call_arg_0_731 = let __call_arg_0_732 = raw in let __call_arg_1_733 = " " in let __call_arg_2_734 = "" in StringTools.replace __call_arg_0_732 __call_arg_1_733 __call_arg_2_734 in let __call_arg_1_735 = "\n" in let __call_arg_2_736 = "" in StringTools.replace __call_arg_0_731 __call_arg_1_735 __call_arg_2_736 in let __call_arg_1_737 = "\t" in let __call_arg_2_738 = "" in StringTools.replace __call_arg_0_730 __call_arg_1_737 __call_arg_2_738 in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\);\\}catch\\(e:[^)]+\\)\\{\"([^\"]*)\";\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_739 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_739 "receiver" (Obj.repr (let __call_arg_0_740 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_740)));
-    ignore (HxAnon.set __anon_739 "field" (Obj.repr (let __call_arg_0_741 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_741)));
-    ignore (HxAnon.set __anon_739 "method" (Obj.repr (let __call_arg_0_742 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_742)));
-    ignore (HxAnon.set __anon_739 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_739
+  let __anonymous_value_739 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_739 "receiver" (Obj.repr (let __call_arg_0_740 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_740)));
+    ignore (HxAnon.set __anonymous_value_739 "field" (Obj.repr (let __call_arg_0_741 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_741)));
+    ignore (HxAnon.set __anonymous_value_739 "method" (Obj.repr (let __call_arg_0_742 = EReg.matched (Obj.magic pattern) 3 in safeIdent __call_arg_0_742)));
+    ignore (HxAnon.set __anonymous_value_739 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
+    __anonymous_value_739
   )
 ) in Obj.magic __fallback_result_744 with
   | HxRuntime.Hx_return __ret_743 -> Obj.magic __ret_743
@@ -2636,25 +2636,25 @@ let parseHxcppAndroidPlatformMinTryRaw = fun (raw : string) -> (let compact = le
 let parseOpaqueObjectLocalRaw = fun raw -> try let __fallback_result_795 = let compact = let __call_arg_0_778 = let __call_arg_0_779 = let __call_arg_0_780 = raw in let __call_arg_1_781 = " " in let __call_arg_2_782 = "" in StringTools.replace __call_arg_0_780 __call_arg_1_781 __call_arg_2_782 in let __call_arg_1_783 = "\n" in let __call_arg_2_784 = "" in StringTools.replace __call_arg_0_779 __call_arg_1_783 __call_arg_2_784 in let __call_arg_1_785 = "\t" in let __call_arg_2_786 = "" in StringTools.replace __call_arg_0_778 __call_arg_1_785 __call_arg_2_786 in let twoFieldPattern = Obj.magic (EReg.create ("^opaque_block_expr:\\{var([A-Za-z_][A-Za-z0-9_]*):\\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\\}=\\{([A-Za-z_][A-Za-z0-9_]*):(\"[^\"]*\"|-?[0-9.]+),([A-Za-z_][A-Za-z0-9_]*):(\"[^\"]*\"|-?[0-9.]+)\\};\\}$" : string) ("" : string)) in (
   ignore (if EReg.hx_match (Obj.magic twoFieldPattern) (compact : string) then ignore ((
     ignore (if not (HxString.equals (EReg.matched (Obj.magic twoFieldPattern) 2) (EReg.matched (Obj.magic twoFieldPattern) 3)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-    raise (HxRuntime.Hx_return (Obj.repr (let __anon_787 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_787 "local" (Obj.repr (let __call_arg_0_788 = EReg.matched (Obj.magic twoFieldPattern) 1 in safeIdent __call_arg_0_788)));
-      ignore (HxAnon.set __anon_787 "field" (Obj.repr (let __call_arg_0_789 = EReg.matched (Obj.magic twoFieldPattern) 2 in safeIdent __call_arg_0_789)));
-      ignore (HxAnon.set __anon_787 "value" (Obj.repr (EReg.matched (Obj.magic twoFieldPattern) 4)));
-      ignore (HxAnon.set __anon_787 "extraField" (Obj.repr (let __call_arg_0_790 = EReg.matched (Obj.magic twoFieldPattern) 5 in safeIdent __call_arg_0_790)));
-      ignore (HxAnon.set __anon_787 "extraValue" (Obj.repr (EReg.matched (Obj.magic twoFieldPattern) 6)));
-      __anon_787
+    raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_787 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_787 "local" (Obj.repr (let __call_arg_0_788 = EReg.matched (Obj.magic twoFieldPattern) 1 in safeIdent __call_arg_0_788)));
+      ignore (HxAnon.set __anonymous_value_787 "field" (Obj.repr (let __call_arg_0_789 = EReg.matched (Obj.magic twoFieldPattern) 2 in safeIdent __call_arg_0_789)));
+      ignore (HxAnon.set __anonymous_value_787 "value" (Obj.repr (EReg.matched (Obj.magic twoFieldPattern) 4)));
+      ignore (HxAnon.set __anonymous_value_787 "extraField" (Obj.repr (let __call_arg_0_790 = EReg.matched (Obj.magic twoFieldPattern) 5 in safeIdent __call_arg_0_790)));
+      ignore (HxAnon.set __anonymous_value_787 "extraValue" (Obj.repr (EReg.matched (Obj.magic twoFieldPattern) 6)));
+      __anonymous_value_787
     ))))
   )) else ());
   let pattern = Obj.magic (EReg.create ("^opaque_block_expr:\\{var([A-Za-z_][A-Za-z0-9_]*):\\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\\}=\\{([A-Za-z_][A-Za-z0-9_]*):(\"[^\"]*\"|-?[0-9.]+)\\};\\}$" : string) ("" : string)) in (
     ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
     ignore (if not (HxString.equals (EReg.matched (Obj.magic pattern) 2) (EReg.matched (Obj.magic pattern) 3)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-    let __anon_791 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_791 "local" (Obj.repr (let __call_arg_0_792 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_792)));
-      ignore (HxAnon.set __anon_791 "field" (Obj.repr (let __call_arg_0_793 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_793)));
-      ignore (HxAnon.set __anon_791 "value" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-      ignore (HxAnon.set __anon_791 "extraField" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      ignore (HxAnon.set __anon_791 "extraValue" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      __anon_791
+    let __anonymous_value_791 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_791 "local" (Obj.repr (let __call_arg_0_792 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_792)));
+      ignore (HxAnon.set __anonymous_value_791 "field" (Obj.repr (let __call_arg_0_793 = EReg.matched (Obj.magic pattern) 2 in safeIdent __call_arg_0_793)));
+      ignore (HxAnon.set __anonymous_value_791 "value" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
+      ignore (HxAnon.set __anonymous_value_791 "extraField" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      ignore (HxAnon.set __anonymous_value_791 "extraValue" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      __anonymous_value_791
     )
   )
 ) in Obj.magic __fallback_result_795 with
@@ -2673,10 +2673,10 @@ let parseOpaqueTypedLocalRefRaw = fun (raw : string) -> (let compact = let __cal
 
 let parseOpaqueTypedLocalInitRaw = fun raw -> try let __fallback_result_820 = let compact = let __call_arg_0_808 = let __call_arg_0_809 = let __call_arg_0_810 = raw in let __call_arg_1_811 = " " in let __call_arg_2_812 = "" in StringTools.replace __call_arg_0_810 __call_arg_1_811 __call_arg_2_812 in let __call_arg_1_813 = "\n" in let __call_arg_2_814 = "" in StringTools.replace __call_arg_0_809 __call_arg_1_813 __call_arg_2_814 in let __call_arg_1_815 = "\t" in let __call_arg_2_816 = "" in StringTools.replace __call_arg_0_808 __call_arg_1_815 __call_arg_2_816 in let pattern = Obj.magic (EReg.create ("^opaque_block_expr:\\{var([A-Za-z_][A-Za-z0-9_]*):[^=;{}]+=([A-Za-z_][A-Za-z0-9_]*|\"[^\"]*\"|-?[0-9.]+);\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_817 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_817 "local" (Obj.repr (let __call_arg_0_818 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_818)));
-    ignore (HxAnon.set __anon_817 "value" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
-    __anon_817
+  let __anonymous_value_817 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_817 "local" (Obj.repr (let __call_arg_0_818 = EReg.matched (Obj.magic pattern) 1 in safeIdent __call_arg_0_818)));
+    ignore (HxAnon.set __anonymous_value_817 "value" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
+    __anonymous_value_817
   )
 ) in Obj.magic __fallback_result_820 with
   | HxRuntime.Hx_return __ret_819 -> Obj.magic __ret_819
@@ -3075,10 +3075,10 @@ let rec lowerNekoSwitchPattern = fun pattern scrutinee -> let tempResult = ref (
       __assign_945
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let lowered = lowerNekoSwitchPattern (Obj.magic inner) (scrutinee : string) in let bindings = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get lowered "bindings"))) in (
-      ignore (HxArray.push bindings (let __anon_946 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_946 "name" (Obj.repr name));
-        ignore (HxAnon.set __anon_946 "expr" (Obj.repr scrutinee));
-        __anon_946
+      ignore (HxArray.push bindings (let __anonymous_value_946 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_946 "name" (Obj.repr name));
+        ignore (HxAnon.set __anonymous_value_946 "expr" (Obj.repr scrutinee));
+        __anonymous_value_946
       )));
       let __assign_947 = Obj.magic (let __anon_948 = HxAnon.create () in (
         ignore (HxAnon.set __anon_948 "cond" (Obj.repr (Obj.obj (HxAnon.get lowered "cond"))));
@@ -3152,10 +3152,10 @@ let rec lowerNekoSwitchPattern = fun pattern scrutinee -> let tempResult = ref (
     | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_963 = Obj.magic (let __anon_964 = HxAnon.create () in (
       ignore (HxAnon.set __anon_964 "cond" (Obj.repr "true"));
       ignore (HxAnon.set __anon_964 "bindings" (Obj.repr (let __arr_965 = HxArray.create () in (
-        ignore (HxArray.push __arr_965 (let __anon_966 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_966 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_966 "expr" (Obj.repr scrutinee));
-          __anon_966
+        ignore (HxArray.push __arr_965 (let __anonymous_value_966 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_966 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_966 "expr" (Obj.repr scrutinee));
+          __anonymous_value_966
         )));
         __arr_965
       ))));
@@ -7454,11 +7454,11 @@ let renderSplitProgram = fun program context entryPath -> let modules = Obj.magi
         ignore (HxArray.push __arr_51 (HxString.toStdString base ^ "_symbols.neko"));
         __arr_51
       ))) : string) in let symbolsLoadName = let __call_arg_0_52 = symbolsPath in moduleLoadName __call_arg_0_52 in let support = Obj.magic (HxArray.create ()) in (
-        ignore (HxArray.push support (let __anon_53 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_53 "kind" (Obj.repr "symbols"));
-          ignore (HxAnon.set __anon_53 "path" (Obj.repr symbolsPath));
-          ignore (HxAnon.set __anon_53 "source" (Obj.repr "// Generated by hxhx native Neko backend MVP symbol table\n$exports.symbols = $new(null);\n"));
-          __anon_53
+        ignore (HxArray.push support (let __anonymous_value_53 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_53 "kind" (Obj.repr "symbols"));
+          ignore (HxAnon.set __anonymous_value_53 "path" (Obj.repr symbolsPath));
+          ignore (HxAnon.set __anonymous_value_53 "source" (Obj.repr "// Generated by hxhx native Neko backend MVP symbol table\n$exports.symbols = $new(null);\n"));
+          __anonymous_value_53
         )));
         let chunkIndex = ref 0 in let constructorIndex = ref 0 in (
           ignore (while !constructorIndex < HxArray.length (Obj.obj (HxAnon.get reachable "constructors")) do ignore (let hx_end = let __call_arg_0_54 = HxInt.add (!constructorIndex) 40 in let __call_arg_1_55 = HxArray.length (Obj.obj (HxAnon.get reachable "constructors")) in minInt __call_arg_0_54 __call_arg_1_55 in let chunkPath = (Haxe_io_Path.join (Obj.magic (let __arr_56 = HxArray.create () in (
@@ -7470,11 +7470,11 @@ let renderSplitProgram = fun program context entryPath -> let modules = Obj.magi
               ignore (_g := __new_58);
               __old_57
             ) in renderConstructorFactory (Obj.magic out) emitContext (HxArray.get (Obj.magic (Obj.obj (HxAnon.get reachable "constructors"))) i)) done);
-            ignore (HxArray.push support (let __anon_59 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_59 "kind" (Obj.repr ("chunk" ^ string_of_int (!chunkIndex))));
-              ignore (HxAnon.set __anon_59 "path" (Obj.repr chunkPath));
-              ignore (HxAnon.set __anon_59 "source" (Obj.repr (HxArray.join out "\n" (fun x -> x))));
-              __anon_59
+            ignore (HxArray.push support (let __anonymous_value_59 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_59 "kind" (Obj.repr ("chunk" ^ string_of_int (!chunkIndex))));
+              ignore (HxAnon.set __anonymous_value_59 "path" (Obj.repr chunkPath));
+              ignore (HxAnon.set __anonymous_value_59 "source" (Obj.repr (HxArray.join out "\n" (fun x -> x))));
+              __anonymous_value_59
             )));
             ignore (let __assign_60 = hx_end in (
               constructorIndex := __assign_60;
@@ -7495,11 +7495,11 @@ let renderSplitProgram = fun program context entryPath -> let modules = Obj.magi
                 ignore (_g := __new_67);
                 __old_66
               ) in let ref = HxArray.get (Obj.magic (Obj.obj (HxAnon.get reachable "staticFunctions"))) i in renderFunction (Obj.magic out) emitContext (Obj.obj (HxAnon.get ref "info")) (Obj.magic (Obj.obj (HxAnon.get ref "fn")))) done);
-              ignore (HxArray.push support (let __anon_68 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_68 "kind" (Obj.repr ("chunk" ^ string_of_int (!chunkIndex))));
-                ignore (HxAnon.set __anon_68 "path" (Obj.repr chunkPath));
-                ignore (HxAnon.set __anon_68 "source" (Obj.repr (HxArray.join out "\n" (fun x -> x))));
-                __anon_68
+              ignore (HxArray.push support (let __anonymous_value_68 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_68 "kind" (Obj.repr ("chunk" ^ string_of_int (!chunkIndex))));
+                ignore (HxAnon.set __anonymous_value_68 "path" (Obj.repr chunkPath));
+                ignore (HxAnon.set __anonymous_value_68 "source" (Obj.repr (HxArray.join out "\n" (fun x -> x))));
+                __anonymous_value_68
               )));
               ignore (let __assign_69 = hx_end in (
                 functionIndex := __assign_69;

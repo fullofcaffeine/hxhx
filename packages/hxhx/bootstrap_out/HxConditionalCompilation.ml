@@ -1025,11 +1025,11 @@ let filterInlineConditionals = fun line evaluate -> try let __fallback_result_13
                   __assign_85
                 )
               )) else ());
-              ignore (HxArray.push branches (let __anon_86 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_86 "cond" (Obj.repr (!branchCond)));
-                ignore (HxAnon.set __anon_86 "start" (Obj.repr (!payloadStart)));
-                ignore (HxAnon.set __anon_86 "end" (Obj.repr (!next)));
-                __anon_86
+              ignore (HxArray.push branches (let __anonymous_value_86 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_86 "cond" (Obj.repr (!branchCond)));
+                ignore (HxAnon.set __anonymous_value_86 "start" (Obj.repr (!payloadStart)));
+                ignore (HxAnon.set __anonymous_value_86 "end" (Obj.repr (!next)));
+                __anonymous_value_86
               )));
               if !next = idxEnd then ignore (let __assign_87 = true in (
                 hx_done := __assign_87;
@@ -1070,11 +1070,11 @@ let filterInlineConditionals = fun line evaluate -> try let __fallback_result_13
                   __assign_100
                 )
               )) else ignore ((
-                ignore (HxArray.push branches (let __anon_101 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_101 "cond" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-                  ignore (HxAnon.set __anon_101 "start" (Obj.repr (HxInt.add (!next) 5)));
-                  ignore (HxAnon.set __anon_101 "end" (Obj.repr idxEnd));
-                  __anon_101
+                ignore (HxArray.push branches (let __anonymous_value_101 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_101 "cond" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+                  ignore (HxAnon.set __anonymous_value_101 "start" (Obj.repr (HxInt.add (!next) 5)));
+                  ignore (HxAnon.set __anonymous_value_101 "end" (Obj.repr idxEnd));
+                  __anonymous_value_101
                 )));
                 let __assign_102 = true in (
                   hx_done := __assign_102;
@@ -1269,36 +1269,36 @@ let parseDirectiveLine = fun line -> try let __fallback_result_222 = (
       | HxRuntime.Hx_break -> ());
     let rest = (HxString.substr line (!i) (-1) : string) in let restNoComment = let __call_arg_0_207 = rest in stripLineCommentOutsideStrings __call_arg_0_207 in (
       ignore (if HxString.indexOf restNoComment "#end" 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-      ignore (if HxString.indexOf restNoComment "#" 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_208 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_208 "kind" (Obj.repr "opaque"));
-        ignore (HxAnon.set __anon_208 "expr" (Obj.repr ""));
-        __anon_208
+      ignore (if HxString.indexOf restNoComment "#" 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_208 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_208 "kind" (Obj.repr "opaque"));
+        ignore (HxAnon.set __anonymous_value_208 "expr" (Obj.repr ""));
+        __anonymous_value_208
       )))) else ());
       let trimmed = let __call_arg_0_209 = restNoComment in StringTools.trim __call_arg_0_209 in (
-        ignore (if let __call_arg_0_210 = trimmed in let __call_arg_1_211 = "if " in StringTools.startsWith __call_arg_0_210 __call_arg_1_211 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_212 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_212 "kind" (Obj.repr "if"));
-          ignore (HxAnon.set __anon_212 "expr" (Obj.repr (let __call_arg_0_213 = HxString.substr trimmed 3 (-1) in StringTools.trim __call_arg_0_213)));
-          __anon_212
+        ignore (if let __call_arg_0_210 = trimmed in let __call_arg_1_211 = "if " in StringTools.startsWith __call_arg_0_210 __call_arg_1_211 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_212 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_212 "kind" (Obj.repr "if"));
+          ignore (HxAnon.set __anonymous_value_212 "expr" (Obj.repr (let __call_arg_0_213 = HxString.substr trimmed 3 (-1) in StringTools.trim __call_arg_0_213)));
+          __anonymous_value_212
         )))) else ());
-        ignore (if let __call_arg_0_214 = trimmed in let __call_arg_1_215 = "elseif " in StringTools.startsWith __call_arg_0_214 __call_arg_1_215 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_216 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_216 "kind" (Obj.repr "elseif"));
-          ignore (HxAnon.set __anon_216 "expr" (Obj.repr (let __call_arg_0_217 = HxString.substr trimmed 7 (-1) in StringTools.trim __call_arg_0_217)));
-          __anon_216
+        ignore (if let __call_arg_0_214 = trimmed in let __call_arg_1_215 = "elseif " in StringTools.startsWith __call_arg_0_214 __call_arg_1_215 then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_216 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_216 "kind" (Obj.repr "elseif"));
+          ignore (HxAnon.set __anonymous_value_216 "expr" (Obj.repr (let __call_arg_0_217 = HxString.substr trimmed 7 (-1) in StringTools.trim __call_arg_0_217)));
+          __anonymous_value_216
         )))) else ());
-        ignore (if HxString.equals trimmed "else" then raise (HxRuntime.Hx_return (Obj.repr (let __anon_218 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_218 "kind" (Obj.repr "else"));
-          ignore (HxAnon.set __anon_218 "expr" (Obj.repr ""));
-          __anon_218
+        ignore (if HxString.equals trimmed "else" then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_218 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_218 "kind" (Obj.repr "else"));
+          ignore (HxAnon.set __anonymous_value_218 "expr" (Obj.repr ""));
+          __anonymous_value_218
         )))) else ());
-        ignore (if HxString.equals trimmed "end;" then raise (HxRuntime.Hx_return (Obj.repr (let __anon_219 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_219 "kind" (Obj.repr "end"));
-          ignore (HxAnon.set __anon_219 "expr" (Obj.repr ";"));
-          __anon_219
+        ignore (if HxString.equals trimmed "end;" then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_219 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_219 "kind" (Obj.repr "end"));
+          ignore (HxAnon.set __anonymous_value_219 "expr" (Obj.repr ";"));
+          __anonymous_value_219
         )))) else ());
-        ignore (if HxString.equals trimmed "end" then raise (HxRuntime.Hx_return (Obj.repr (let __anon_220 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_220 "kind" (Obj.repr "end"));
-          ignore (HxAnon.set __anon_220 "expr" (Obj.repr ""));
-          __anon_220
+        ignore (if HxString.equals trimmed "end" then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_220 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_220 "kind" (Obj.repr "end"));
+          ignore (HxAnon.set __anonymous_value_220 "expr" (Obj.repr ""));
+          __anonymous_value_220
         )))) else ());
         Obj.magic (HxRuntime.hx_null)
       )
@@ -1396,11 +1396,11 @@ let filterSourceInternal = fun source defines observeInputs -> try let __fallbac
                 let __assign_33 = top in HxArray.set (Obj.magic stack) (HxInt.sub (HxArray.length stack) 1) __assign_33
               )))
               | "end" -> ignore (if HxArray.length stack > 0 then ignore (HxArray.pop stack ()) else ())
-              | "if" -> ignore (let cond = outerActive && (let __call_callee_34 = evaluate in let __call_arg_0_35 = Obj.obj (HxAnon.get directive "expr") in __call_callee_34 __call_arg_0_35) in HxArray.push stack (let __anon_36 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_36 "parentActive" (HxRuntime.box_bool outerActive));
-                ignore (HxAnon.set __anon_36 "branchActive" (HxRuntime.box_bool cond));
-                ignore (HxAnon.set __anon_36 "seenTrue" (HxRuntime.box_bool cond));
-                __anon_36
+              | "if" -> ignore (let cond = outerActive && (let __call_callee_34 = evaluate in let __call_arg_0_35 = Obj.obj (HxAnon.get directive "expr") in __call_callee_34 __call_arg_0_35) in HxArray.push stack (let __anonymous_value_36 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_36 "parentActive" (HxRuntime.box_bool outerActive));
+                ignore (HxAnon.set __anonymous_value_36 "branchActive" (HxRuntime.box_bool cond));
+                ignore (HxAnon.set __anonymous_value_36 "seenTrue" (HxRuntime.box_bool cond));
+                __anonymous_value_36
               )))
               | _ -> ignore ());
             ignore (let __assign_37 = true in (

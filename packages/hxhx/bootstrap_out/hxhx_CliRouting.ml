@@ -179,13 +179,13 @@ let scanStandardTargetFlags = fun args -> let hasJs = ref false in let hasNonJs 
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let __anon_47 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_47 "hasJs" (HxRuntime.box_bool (!hasJs)));
-    ignore (HxAnon.set __anon_47 "hasNonJs" (HxRuntime.box_bool (!hasNonJs)));
-    ignore (HxAnon.set __anon_47 "hasLegacy" (HxRuntime.box_bool (!hasLegacy)));
-    ignore (HxAnon.set __anon_47 "hasRun" (HxRuntime.box_bool (!hasRun)));
-    ignore (HxAnon.set __anon_47 "missingValueFlag" (Obj.repr (!missingValueFlag)));
-    __anon_47
+  let __anonymous_value_47 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_47 "hasJs" (HxRuntime.box_bool (!hasJs)));
+    ignore (HxAnon.set __anonymous_value_47 "hasNonJs" (HxRuntime.box_bool (!hasNonJs)));
+    ignore (HxAnon.set __anonymous_value_47 "hasLegacy" (HxRuntime.box_bool (!hasLegacy)));
+    ignore (HxAnon.set __anonymous_value_47 "hasRun" (HxRuntime.box_bool (!hasRun)));
+    ignore (HxAnon.set __anonymous_value_47 "missingValueFlag" (Obj.repr (!missingValueFlag)));
+    __anonymous_value_47
   )
 )
 
@@ -301,40 +301,40 @@ let hasNonSourceStandardTargetFlag = fun args target -> try let __fallback_resul
   | HxRuntime.Hx_return __ret_70 -> Obj.obj __ret_70
 
 let sourceTargetCandidates = fun () -> let __arr_72 = HxArray.create () in (
-  ignore (HxArray.push __arr_72 (let __anon_73 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_73 "target" (Obj.repr "python"));
-    ignore (HxAnon.set __anon_73 "lane" (Obj.repr "native-python"));
-    ignore (HxAnon.set __anon_73 "backendId" (Obj.repr "python-native"));
-    ignore (HxAnon.set __anon_73 "defineName" (Obj.repr "python"));
-    __anon_73
+  ignore (HxArray.push __arr_72 (let __anonymous_value_73 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_73 "target" (Obj.repr "python"));
+    ignore (HxAnon.set __anonymous_value_73 "lane" (Obj.repr "native-python"));
+    ignore (HxAnon.set __anonymous_value_73 "backendId" (Obj.repr "python-native"));
+    ignore (HxAnon.set __anonymous_value_73 "defineName" (Obj.repr "python"));
+    __anonymous_value_73
   )));
-  ignore (HxArray.push __arr_72 (let __anon_74 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_74 "target" (Obj.repr "java"));
-    ignore (HxAnon.set __anon_74 "lane" (Obj.repr "native-java"));
-    ignore (HxAnon.set __anon_74 "backendId" (Obj.repr "java-native"));
-    ignore (HxAnon.set __anon_74 "defineName" (Obj.repr "java"));
-    __anon_74
+  ignore (HxArray.push __arr_72 (let __anonymous_value_74 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_74 "target" (Obj.repr "java"));
+    ignore (HxAnon.set __anonymous_value_74 "lane" (Obj.repr "native-java"));
+    ignore (HxAnon.set __anonymous_value_74 "backendId" (Obj.repr "java-native"));
+    ignore (HxAnon.set __anonymous_value_74 "defineName" (Obj.repr "java"));
+    __anonymous_value_74
   )));
-  ignore (HxArray.push __arr_72 (let __anon_75 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_75 "target" (Obj.repr "cs"));
-    ignore (HxAnon.set __anon_75 "lane" (Obj.repr "native-cs"));
-    ignore (HxAnon.set __anon_75 "backendId" (Obj.repr "cs-native"));
-    ignore (HxAnon.set __anon_75 "defineName" (Obj.repr "cs"));
-    __anon_75
+  ignore (HxArray.push __arr_72 (let __anonymous_value_75 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_75 "target" (Obj.repr "cs"));
+    ignore (HxAnon.set __anonymous_value_75 "lane" (Obj.repr "native-cs"));
+    ignore (HxAnon.set __anonymous_value_75 "backendId" (Obj.repr "cs-native"));
+    ignore (HxAnon.set __anonymous_value_75 "defineName" (Obj.repr "cs"));
+    __anonymous_value_75
   )));
-  ignore (HxArray.push __arr_72 (let __anon_76 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_76 "target" (Obj.repr "php"));
-    ignore (HxAnon.set __anon_76 "lane" (Obj.repr "native-php"));
-    ignore (HxAnon.set __anon_76 "backendId" (Obj.repr "php-native"));
-    ignore (HxAnon.set __anon_76 "defineName" (Obj.repr "php"));
-    __anon_76
+  ignore (HxArray.push __arr_72 (let __anonymous_value_76 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_76 "target" (Obj.repr "php"));
+    ignore (HxAnon.set __anonymous_value_76 "lane" (Obj.repr "native-php"));
+    ignore (HxAnon.set __anonymous_value_76 "backendId" (Obj.repr "php-native"));
+    ignore (HxAnon.set __anonymous_value_76 "defineName" (Obj.repr "php"));
+    __anonymous_value_76
   )));
-  ignore (HxArray.push __arr_72 (let __anon_77 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_77 "target" (Obj.repr "lua"));
-    ignore (HxAnon.set __anon_77 "lane" (Obj.repr "native-lua"));
-    ignore (HxAnon.set __anon_77 "backendId" (Obj.repr "lua-native"));
-    ignore (HxAnon.set __anon_77 "defineName" (Obj.repr "lua"));
-    __anon_77
+  ignore (HxArray.push __arr_72 (let __anonymous_value_77 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_77 "target" (Obj.repr "lua"));
+    ignore (HxAnon.set __anonymous_value_77 "lane" (Obj.repr "native-lua"));
+    ignore (HxAnon.set __anonymous_value_77 "backendId" (Obj.repr "lua-native"));
+    ignore (HxAnon.set __anonymous_value_77 "defineName" (Obj.repr "lua"));
+    __anonymous_value_77
   )));
   __arr_72
 )
@@ -345,12 +345,12 @@ let pureSourceTarget = fun args -> try let __fallback_result_82 = let candidates
       ignore (_g := __new_79);
       __new_79
     ));
-    if hasSourceTargetFlag (Obj.magic args) (Obj.obj (HxAnon.get candidate "target") : string) && not (hasNonSourceStandardTargetFlag (Obj.magic args) (Obj.obj (HxAnon.get candidate "target") : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_80 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_80 "target" (Obj.repr (Obj.obj (HxAnon.get candidate "target"))));
-      ignore (HxAnon.set __anon_80 "lane" (Obj.repr (Obj.obj (HxAnon.get candidate "lane"))));
-      ignore (HxAnon.set __anon_80 "backendId" (Obj.repr (Obj.obj (HxAnon.get candidate "backendId"))));
-      ignore (HxAnon.set __anon_80 "defineName" (Obj.repr (Obj.obj (HxAnon.get candidate "defineName"))));
-      __anon_80
+    if hasSourceTargetFlag (Obj.magic args) (Obj.obj (HxAnon.get candidate "target") : string) && not (hasNonSourceStandardTargetFlag (Obj.magic args) (Obj.obj (HxAnon.get candidate "target") : string)) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_80 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_80 "target" (Obj.repr (Obj.obj (HxAnon.get candidate "target"))));
+      ignore (HxAnon.set __anonymous_value_80 "lane" (Obj.repr (Obj.obj (HxAnon.get candidate "lane"))));
+      ignore (HxAnon.set __anonymous_value_80 "backendId" (Obj.repr (Obj.obj (HxAnon.get candidate "backendId"))));
+      ignore (HxAnon.set __anonymous_value_80 "defineName" (Obj.repr (Obj.obj (HxAnon.get candidate "defineName"))));
+      __anonymous_value_80
     )))) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
@@ -545,12 +545,12 @@ let sourceTargetForUnits = fun units -> try let __fallback_result_87 = (
           ignore (_g := __new_84);
           __new_84
         ));
-        if canRouteMixedUnitsAsNativeSource (Obj.magic units) candidate then raise (HxRuntime.Hx_return (Obj.repr (let __anon_85 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_85 "target" (Obj.repr (Obj.obj (HxAnon.get candidate "target"))));
-          ignore (HxAnon.set __anon_85 "lane" (Obj.repr (Obj.obj (HxAnon.get candidate "lane"))));
-          ignore (HxAnon.set __anon_85 "backendId" (Obj.repr (Obj.obj (HxAnon.get candidate "backendId"))));
-          ignore (HxAnon.set __anon_85 "defineName" (Obj.repr (Obj.obj (HxAnon.get candidate "defineName"))));
-          __anon_85
+        if canRouteMixedUnitsAsNativeSource (Obj.magic units) candidate then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_85 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_85 "target" (Obj.repr (Obj.obj (HxAnon.get candidate "target"))));
+          ignore (HxAnon.set __anonymous_value_85 "lane" (Obj.repr (Obj.obj (HxAnon.get candidate "lane"))));
+          ignore (HxAnon.set __anonymous_value_85 "backendId" (Obj.repr (Obj.obj (HxAnon.get candidate "backendId"))));
+          ignore (HxAnon.set __anonymous_value_85 "defineName" (Obj.repr (Obj.obj (HxAnon.get candidate "defineName"))));
+          __anonymous_value_85
         )))) else ()
       )) done);
       Obj.magic (HxRuntime.hx_null)

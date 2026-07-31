@@ -32,11 +32,11 @@ let traceEnabled = fun () -> try let __fallback_result_11 = let raw = (HxSys.get
 ) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let capabilitiesStatic = fun () -> let __anon_15 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_15 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_15 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_15 "supportsCustomOutputFile" (HxRuntime.box_bool false));
-  __anon_15
+let capabilitiesStatic = fun () -> let __anonymous_value_15 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_15 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_15 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_15 "supportsCustomOutputFile" (HxRuntime.box_bool false));
+  __anonymous_value_15
 )
 
 let descriptor = fun () -> let __anon_12 = HxAnon.create () in (

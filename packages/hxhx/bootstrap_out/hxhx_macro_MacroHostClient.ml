@@ -787,11 +787,11 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (ignore (t
             tempNumber1 := __assign_360;
             __assign_360
           ));
-          ignore (Hxhx_macro_MacroState.addMessage (kind : string) (msg : string) (let __anon_362 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_362 "file" (Obj.repr (!tempString5)));
-            ignore (HxAnon.set __anon_362 "min" (Obj.repr (!tempNumber)));
-            ignore (HxAnon.set __anon_362 "max" (Obj.repr (!tempNumber1)));
-            __anon_362
+          ignore (Hxhx_macro_MacroState.addMessage (kind : string) (msg : string) (let __anonymous_value_362 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_362 "file" (Obj.repr (!tempString5)));
+            ignore (HxAnon.set __anonymous_value_362 "min" (Obj.repr (!tempNumber)));
+            ignore (HxAnon.set __anonymous_value_362 "max" (Obj.repr (!tempNumber1)));
+            __anonymous_value_362
           )));
           let id2 = let __nullable_int_363 = id in if __nullable_int_363 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_363 in let tail2 = let __call_arg_0_364 = "v" in let __call_arg_1_365 = "ok" in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_364 __call_arg_1_365 in (
             ignore (let __obj_366 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_366 : Haxe_io_Output.t).writeString (Obj.magic __obj_366) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
@@ -1224,11 +1224,11 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (ignore (t
                       HxArray.push next (let __anon_727 = HxAnon.create () in (
                         ignore (HxAnon.set __anon_727 "kind" (Obj.repr (HxMap.get_string (Obj.magic parts2) ("k" ^ string_of_int i : string))));
                         ignore (HxAnon.set __anon_727 "msg" (Obj.repr (HxMap.get_string (Obj.magic parts2) ("m" ^ string_of_int i : string))));
-                        ignore (HxAnon.set __anon_727 "pos" (let __anon_728 = HxAnon.create () in (
-                          ignore (HxAnon.set __anon_728 "file" (Obj.repr (!tempString18)));
-                          ignore (HxAnon.set __anon_728 "min" (Obj.repr (!tempNumber2)));
-                          ignore (HxAnon.set __anon_728 "max" (Obj.repr (!tempNumber3)));
-                          __anon_728
+                        ignore (HxAnon.set __anon_727 "pos" (let __anonymous_value_728 = HxAnon.create () in (
+                          ignore (HxAnon.set __anonymous_value_728 "file" (Obj.repr (!tempString18)));
+                          ignore (HxAnon.set __anonymous_value_728 "min" (Obj.repr (!tempNumber2)));
+                          ignore (HxAnon.set __anonymous_value_728 "max" (Obj.repr (!tempNumber3)));
+                          __anonymous_value_728
                         )));
                         __anon_727
                       ))

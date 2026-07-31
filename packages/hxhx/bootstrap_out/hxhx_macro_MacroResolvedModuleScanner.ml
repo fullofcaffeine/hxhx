@@ -129,10 +129,10 @@ let scanResolvedTypeStaticFields = fun path typeName kind -> try let __fallback_
           ignore (try while !max > !min do try ignore (let c = HxString.charCodeAt rawLine (HxInt.sub (!max) 1) in if (let __nullable_27 = c in if __nullable_27 == HxRuntime.hx_null then false else Obj.obj __nullable_27 = 10) || (let __nullable_28 = c in if __nullable_28 == HxRuntime.hx_null then false else Obj.obj __nullable_28 = 13) then ignore (max := HxInt.sub (!max) 1) else raise (HxRuntime.Hx_break)) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
-          let __anon_29 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_29 "min" (Obj.repr (HxInt.add start (!min))));
-            ignore (HxAnon.set __anon_29 "max" (Obj.repr (HxInt.add start (!max))));
-            __anon_29
+          let __anonymous_value_29 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_29 "min" (Obj.repr (HxInt.add start (!min))));
+            ignore (HxAnon.set __anonymous_value_29 "max" (Obj.repr (HxInt.add start (!max))));
+            __anonymous_value_29
           )
         )
       ) in let stripLineComments = fun text -> try let __fallback_result_34 = let inString = ref false in let quote = ref ("" : string) in let i = ref 0 in (
@@ -297,11 +297,11 @@ let scanResolvedTypeStaticFields = fun path typeName kind -> try let __fallback_
                     typeText := __assign_72;
                     __assign_72
                   )) else ()) else ());
-                  HxArray.push out (let __anon_73 = HxAnon.create () in (
-                    ignore (HxAnon.set __anon_73 "name" (Obj.repr name));
-                    ignore (HxAnon.set __anon_73 "opt" (HxRuntime.box_bool (!optional)));
-                    ignore (HxAnon.set __anon_73 "typeText" (Obj.repr (!typeText)));
-                    __anon_73
+                  HxArray.push out (let __anonymous_value_73 = HxAnon.create () in (
+                    ignore (HxAnon.set __anonymous_value_73 "name" (Obj.repr name));
+                    ignore (HxAnon.set __anonymous_value_73 "opt" (HxRuntime.box_bool (!optional)));
+                    ignore (HxAnon.set __anonymous_value_73 "typeText" (Obj.repr (!typeText)));
+                    __anonymous_value_73
                   ))
                 )
               )
@@ -1056,10 +1056,10 @@ let scanResolvedModuleTypeSpans = fun path -> try let __fallback_result_570 = le
       ignore (try while !max > !min do try ignore (let c = HxString.charCodeAt rawLine (HxInt.sub (!max) 1) in if (let __nullable_532 = c in if __nullable_532 == HxRuntime.hx_null then false else Obj.obj __nullable_532 = 10) || (let __nullable_533 = c in if __nullable_533 == HxRuntime.hx_null then false else Obj.obj __nullable_533 = 13) then ignore (max := HxInt.sub (!max) 1) else raise (HxRuntime.Hx_break)) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let __anon_534 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_534 "min" (Obj.repr (HxInt.add start (!min))));
-        ignore (HxAnon.set __anon_534 "max" (Obj.repr (HxInt.add start (!max))));
-        __anon_534
+      let __anonymous_value_534 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_534 "min" (Obj.repr (HxInt.add start (!min))));
+        ignore (HxAnon.set __anonymous_value_534 "max" (Obj.repr (HxInt.add start (!max))));
+        __anonymous_value_534
       )
     )
   ) in let record = fun name span -> ignore (try ignore (let tempString = ref (HxString.hx_null_string : string) in (
@@ -1072,11 +1072,11 @@ let scanResolvedModuleTypeSpans = fun path -> try let __fallback_result_570 = le
     ));
     let trimmed = !tempString in (
       ignore (if HxString.length trimmed = 0 || HxMap.exists_string (Obj.magic out) (trimmed : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-      let value = let __anon_538 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_538 "file" (Obj.repr path));
-        ignore (HxAnon.set __anon_538 "min" (Obj.repr (Obj.obj (HxAnon.get span "min"))));
-        ignore (HxAnon.set __anon_538 "max" (Obj.repr (Obj.obj (HxAnon.get span "max"))));
-        __anon_538
+      let value = let __anonymous_value_538 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_538 "file" (Obj.repr path));
+        ignore (HxAnon.set __anonymous_value_538 "min" (Obj.repr (Obj.obj (HxAnon.get span "min"))));
+        ignore (HxAnon.set __anonymous_value_538 "max" (Obj.repr (Obj.obj (HxAnon.get span "max"))));
+        __anonymous_value_538
       ) in HxMap.set_string (Obj.magic out) (trimmed : string) value
     )
   )) with
@@ -1223,11 +1223,11 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                 ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_196 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                   tempMaybeStruct := __assign_196;
                   __assign_196
-                ) else let __assign_197 = Obj.magic (let __anon_198 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_198 "file" (Obj.repr path));
-                  ignore (HxAnon.set __anon_198 "min" (Obj.repr 0));
-                  ignore (HxAnon.set __anon_198 "max" (Obj.repr 0));
-                  __anon_198
+                ) else let __assign_197 = Obj.magic (let __anonymous_value_198 = HxAnon.create () in (
+                  ignore (HxAnon.set __anonymous_value_198 "file" (Obj.repr path));
+                  ignore (HxAnon.set __anonymous_value_198 "min" (Obj.repr 0));
+                  ignore (HxAnon.set __anonymous_value_198 "max" (Obj.repr 0));
+                  __anonymous_value_198
                 )) in (
                   tempMaybeStruct := __assign_197;
                   __assign_197
@@ -1290,11 +1290,11 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                   ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_211 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                     tempMaybeStruct1 := __assign_211;
                     __assign_211
-                  ) else let __assign_212 = Obj.magic (let __anon_213 = HxAnon.create () in (
-                    ignore (HxAnon.set __anon_213 "file" (Obj.repr path));
-                    ignore (HxAnon.set __anon_213 "min" (Obj.repr 0));
-                    ignore (HxAnon.set __anon_213 "max" (Obj.repr 0));
-                    __anon_213
+                  ) else let __assign_212 = Obj.magic (let __anonymous_value_213 = HxAnon.create () in (
+                    ignore (HxAnon.set __anonymous_value_213 "file" (Obj.repr path));
+                    ignore (HxAnon.set __anonymous_value_213 "min" (Obj.repr 0));
+                    ignore (HxAnon.set __anonymous_value_213 "max" (Obj.repr 0));
+                    __anonymous_value_213
                   )) in (
                     tempMaybeStruct1 := __assign_212;
                     __assign_212
@@ -1357,11 +1357,11 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                     ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_226 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                       tempMaybeStruct2 := __assign_226;
                       __assign_226
-                    ) else let __assign_227 = Obj.magic (let __anon_228 = HxAnon.create () in (
-                      ignore (HxAnon.set __anon_228 "file" (Obj.repr path));
-                      ignore (HxAnon.set __anon_228 "min" (Obj.repr 0));
-                      ignore (HxAnon.set __anon_228 "max" (Obj.repr 0));
-                      __anon_228
+                    ) else let __assign_227 = Obj.magic (let __anonymous_value_228 = HxAnon.create () in (
+                      ignore (HxAnon.set __anonymous_value_228 "file" (Obj.repr path));
+                      ignore (HxAnon.set __anonymous_value_228 "min" (Obj.repr 0));
+                      ignore (HxAnon.set __anonymous_value_228 "max" (Obj.repr 0));
+                      __anonymous_value_228
                     )) in (
                       tempMaybeStruct2 := __assign_227;
                       __assign_227
@@ -1423,11 +1423,11 @@ let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallba
                     ignore (if HxMap.exists_string (Obj.magic typeSpans) (trimmed : string) then let __assign_241 = Obj.magic (HxMap.get_string (Obj.magic typeSpans) (trimmed : string)) in (
                       tempMaybeStruct3 := __assign_241;
                       __assign_241
-                    ) else let __assign_242 = Obj.magic (let __anon_243 = HxAnon.create () in (
-                      ignore (HxAnon.set __anon_243 "file" (Obj.repr path));
-                      ignore (HxAnon.set __anon_243 "min" (Obj.repr 0));
-                      ignore (HxAnon.set __anon_243 "max" (Obj.repr 0));
-                      __anon_243
+                    ) else let __assign_242 = Obj.magic (let __anonymous_value_243 = HxAnon.create () in (
+                      ignore (HxAnon.set __anonymous_value_243 "file" (Obj.repr path));
+                      ignore (HxAnon.set __anonymous_value_243 "min" (Obj.repr 0));
+                      ignore (HxAnon.set __anonymous_value_243 "max" (Obj.repr 0));
+                      __anonymous_value_243
                     )) in (
                       tempMaybeStruct3 := __assign_242;
                       __assign_242
@@ -1705,11 +1705,11 @@ let scanResolvedModuleFields = fun path -> try let __fallback_result_706 = let o
                 typeText := __assign_614;
                 __assign_614
               )) else ()) else ());
-              HxArray.push out2 (let __anon_615 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_615 "name" (Obj.repr name));
-                ignore (HxAnon.set __anon_615 "opt" (HxRuntime.box_bool (!optional)));
-                ignore (HxAnon.set __anon_615 "typeText" (Obj.repr (!typeText)));
-                __anon_615
+              HxArray.push out2 (let __anonymous_value_615 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_615 "name" (Obj.repr name));
+                ignore (HxAnon.set __anonymous_value_615 "opt" (HxRuntime.box_bool (!optional)));
+                ignore (HxAnon.set __anonymous_value_615 "typeText" (Obj.repr (!typeText)));
+                __anonymous_value_615
               ))
             )
           )
@@ -1761,10 +1761,10 @@ let scanResolvedModuleFields = fun path -> try let __fallback_result_706 = let o
       ignore (try while !max > !min do try ignore (let c = HxString.charCodeAt rawLine (HxInt.sub (!max) 1) in if (let __nullable_636 = c in if __nullable_636 == HxRuntime.hx_null then false else Obj.obj __nullable_636 = 10) || (let __nullable_637 = c in if __nullable_637 == HxRuntime.hx_null then false else Obj.obj __nullable_637 = 13) then ignore (max := HxInt.sub (!max) 1) else raise (HxRuntime.Hx_break)) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let __anon_638 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_638 "min" (Obj.repr (HxInt.add start (!min))));
-        ignore (HxAnon.set __anon_638 "max" (Obj.repr (HxInt.add start (!max))));
-        __anon_638
+      let __anonymous_value_638 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_638 "min" (Obj.repr (HxInt.add start (!min))));
+        ignore (HxAnon.set __anonymous_value_638 "max" (Obj.repr (HxInt.add start (!max))));
+        __anonymous_value_638
       )
     )
   ) in let push = fun kind name span initExpr args returnTypeText -> ignore (try ignore (let tempString = ref (HxString.hx_null_string : string) in (
@@ -1943,10 +1943,10 @@ let scanResolvedModuleImports = fun path -> try let __fallback_result_774 = let 
           let localName = (!tempString1 : string) in let key = (HxString.toStdString trimmedPath ^ "=>") ^ HxString.toStdString localName in (
             ignore (if HxMap.exists_string (Obj.magic seen) (key : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
             ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
-            HxArray.push out (let __anon_724 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_724 "path" (Obj.repr trimmedPath));
-              ignore (HxAnon.set __anon_724 "localName" (Obj.repr localName));
-              __anon_724
+            HxArray.push out (let __anonymous_value_724 = HxAnon.create () in (
+              ignore (HxAnon.set __anonymous_value_724 "path" (Obj.repr trimmedPath));
+              ignore (HxAnon.set __anonymous_value_724 "localName" (Obj.repr localName));
+              __anonymous_value_724
             ))
           )
         )

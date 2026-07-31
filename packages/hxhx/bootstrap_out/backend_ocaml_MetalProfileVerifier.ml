@@ -172,16 +172,16 @@ let addViolation = fun violations filePath className fnName pos code construct r
         tempString := __assign_83;
         __assign_83
       ));
-      HxArray.push violations (let __anon_84 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_84 "filePath" (Obj.repr (!tempString)));
-        ignore (HxAnon.set __anon_84 "line" (Obj.repr line));
-        ignore (HxAnon.set __anon_84 "column" (Obj.repr column));
-        ignore (HxAnon.set __anon_84 "code" (Obj.repr code));
-        ignore (HxAnon.set __anon_84 "construct" (Obj.repr construct));
-        ignore (HxAnon.set __anon_84 "context" (Obj.repr (let __call_arg_0_85 = className in let __call_arg_1_86 = fnName in formatContext __call_arg_0_85 __call_arg_1_86)));
-        ignore (HxAnon.set __anon_84 "reason" (Obj.repr reason));
-        ignore (HxAnon.set __anon_84 "migrationHint" (Obj.repr migrationHint));
-        __anon_84
+      HxArray.push violations (let __anonymous_value_84 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_84 "filePath" (Obj.repr (!tempString)));
+        ignore (HxAnon.set __anonymous_value_84 "line" (Obj.repr line));
+        ignore (HxAnon.set __anonymous_value_84 "column" (Obj.repr column));
+        ignore (HxAnon.set __anonymous_value_84 "code" (Obj.repr code));
+        ignore (HxAnon.set __anonymous_value_84 "construct" (Obj.repr construct));
+        ignore (HxAnon.set __anonymous_value_84 "context" (Obj.repr (let __call_arg_0_85 = className in let __call_arg_1_86 = fnName in formatContext __call_arg_0_85 __call_arg_1_86)));
+        ignore (HxAnon.set __anonymous_value_84 "reason" (Obj.repr reason));
+        ignore (HxAnon.set __anonymous_value_84 "migrationHint" (Obj.repr migrationHint));
+        __anonymous_value_84
       ))
     )
   )
@@ -539,13 +539,13 @@ let collectViolationSummaries = fun program -> let summaries = Obj.magic (HxArra
       ignore (_g := __new_2);
       __new_2
     ));
-    HxArray.push summaries (let __anon_3 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_3 "filePath" (Obj.repr (Obj.obj (HxAnon.get violation "filePath"))));
-      ignore (HxAnon.set __anon_3 "context" (Obj.repr (Obj.obj (HxAnon.get violation "context"))));
-      ignore (HxAnon.set __anon_3 "code" (Obj.repr (Obj.obj (HxAnon.get violation "code"))));
-      ignore (HxAnon.set __anon_3 "construct" (Obj.repr (Obj.obj (HxAnon.get violation "construct"))));
-      ignore (HxAnon.set __anon_3 "reason" (Obj.repr (Obj.obj (HxAnon.get violation "reason"))));
-      __anon_3
+    HxArray.push summaries (let __anonymous_value_3 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_3 "filePath" (Obj.repr (Obj.obj (HxAnon.get violation "filePath"))));
+      ignore (HxAnon.set __anonymous_value_3 "context" (Obj.repr (Obj.obj (HxAnon.get violation "context"))));
+      ignore (HxAnon.set __anonymous_value_3 "code" (Obj.repr (Obj.obj (HxAnon.get violation "code"))));
+      ignore (HxAnon.set __anonymous_value_3 "construct" (Obj.repr (Obj.obj (HxAnon.get violation "construct"))));
+      ignore (HxAnon.set __anonymous_value_3 "reason" (Obj.repr (Obj.obj (HxAnon.get violation "reason"))));
+      __anonymous_value_3
     ))
   )) done);
   summaries

@@ -13,11 +13,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppN
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppNativeBackend" } : t)
 
-let capabilities = fun () -> let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_1 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_1
+let capabilities = fun () -> let __anonymous_value_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_1 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_1
 )
 
 let descriptor = fun () -> let __anon_2 = HxAnon.create () in (
