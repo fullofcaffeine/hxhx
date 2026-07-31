@@ -19,8 +19,11 @@ const runtime = readReport('ocaml_runtime_requirement_report.json')
 const generated = fs.readFileSync(path.join(fixtureRoot, 'out', 'Main.ml'), 'utf8')
 
 const conversions = lowering.containerElementConversions
+assert.equal(lowering.schemaVersion, 50)
 assert.equal(conversions.length, 2, 'the two enum values entering Array<Dynamic> should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 1])
+assert.deepEqual(conversions.map(entry => entry.containerOrdinal), [0, 0],
+	'the two elements should share the first structural array occurrence')
 assert.deepEqual(lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id),
 	'the independent typed-body inventory should require exactly the two sealed conversions')
 
@@ -85,7 +88,7 @@ function inspect(outputDirectory) {
 const inspection = inspect(path.join(fixtureRoot, 'out'))
 assert.equal(inspection.status, 0, `public inspection rejected the valid container plan: ${inspection.stdout}${inspection.stderr}`)
 const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 29)
+assert.equal(inspectionReport.schemaVersion, 30)
 assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
 assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
 
@@ -146,6 +149,9 @@ try {
 		conversion.source.min += 1
 		conversion.unsafeOperation.source.min += 1
 		operation.source.min += 1
+	})
+	expectLoweringRejection('a stale container structural ordinal', /does not match its retained function/, report => {
+		report.containerElementConversions[0].containerOrdinal += 1
 	})
 	expectLoweringRejection('a corrupt container carrier', /invalid exact enum-to-Dynamic array contract/, report => {
 		report.containerElementConversions[0].inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'

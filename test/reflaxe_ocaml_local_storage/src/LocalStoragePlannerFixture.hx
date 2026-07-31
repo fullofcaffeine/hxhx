@@ -2,6 +2,7 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
+import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
@@ -70,6 +71,15 @@ class LocalStoragePlannerFixture {
 			conversion.unsafeOperation.conversionId = id;
 			conversion.unsafeOperation.id = id + ":unsafe:" + conversion.unsafeOperation.operation;
 		}
+	}
+
+	/** Rebuilds one deliberately changed container conversion's stable IDs. */
+	static function reidentifyContainerConversion(conversion:Dynamic, binding:OcamlFunctionPlanBinding):Void {
+		final id = OcamlContainerElementPlan.occurrenceId(binding, conversion.role, conversion.containerSource, conversion.source,
+			conversion.containerOrdinal, conversion.elementIndex);
+		conversion.id = id;
+		conversion.unsafeOperation.conversionId = id;
+		conversion.unsafeOperation.id = id + ":unsafe:" + conversion.unsafeOperation.operation;
 	}
 
 	static function plan(source:Expr):OcamlLocalStoragePlan {
@@ -824,6 +834,11 @@ class LocalStoragePlannerFixture {
 			() -> new OcamlContainerElementPlan([firstArrayConversion], dynamicArrayRequiredIds));
 		expectFailure("array element conversion absent from required inventory", "unexpected-conversion",
 			() -> new OcamlContainerElementPlan([firstArrayConversion], []));
+		final duplicateStructuralSlot = copyPlanRecord(dynamicArrayConversions[1]);
+		duplicateStructuralSlot.elementIndex = firstArrayConversion.elementIndex;
+		reidentifyContainerConversion(duplicateStructuralSlot, dynamicArrayBinding);
+		expectFailure("two conversions occupying one structural array slot", "duplicate-structural-slot",
+			() -> new OcamlContainerElementPlan([firstArrayConversion, cast duplicateStructuralSlot]));
 		final wrongArrayCarrier = copyPlanRecord(firstArrayConversion);
 		wrongArrayCarrier.inputCarrierTypeId = OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum";
 		wrongArrayCarrier.unsafeOperation.inputCarrierTypeId = wrongArrayCarrier.inputCarrierTypeId;
@@ -843,6 +858,52 @@ class LocalStoragePlannerFixture {
 			pipelineRevision: dynamicArrayBinding.pipelineRevision
 		};
 		expectFailure("stale array element binding", "stale-binding", () -> dynamicArrayPlan.requirePlanBinding(staleArrayBinding));
+		final duplicatePositionArrays = Context.typeExpr(macro {
+			final first:Array<Dynamic> = [LocalDynamicEnum.Idle];
+			final second:Array<Dynamic> = [LocalDynamicEnum.Payload(12)];
+			first.length + second.length;
+		});
+		final duplicatePositionArrayNodes:Array<TypedExpr> = [];
+		function collectArrayNodes(current:TypedExpr):Void {
+			switch (current.expr) {
+				case TArrayDecl(_):
+					duplicatePositionArrayNodes.push(current);
+					TypedExprTools.iter(current, collectArrayNodes);
+				case _:
+					TypedExprTools.iter(current, collectArrayNodes);
+			}
+		}
+		collectArrayNodes(duplicatePositionArrays);
+		assertTrue(duplicatePositionArrayNodes.length == 2, "the duplicated-position regression should contain exactly two array literals");
+		duplicatePositionArrayNodes[1].pos = duplicatePositionArrayNodes[0].pos;
+		final firstDuplicateItems = switch (duplicatePositionArrayNodes[0].expr) {
+			case TArrayDecl(items): items;
+			case _: [];
+		};
+		final secondDuplicateItems = switch (duplicatePositionArrayNodes[1].expr) {
+			case TArrayDecl(items): items;
+			case _: [];
+		};
+		secondDuplicateItems[0].pos = firstDuplicateItems[0].pos;
+		final duplicatePositionBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|duplicate-position-dynamic-enum-arrays",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:duplicate-position-dynamic-enum-arrays-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final duplicatePositionPlan = OcamlContainerElementPlanner.planExpression(duplicatePositionArrays, duplicatePositionBinding);
+		final duplicatePositionDecisions = duplicatePositionPlan.decisions();
+		final duplicatePositionOrdinals = duplicatePositionDecisions.map(decision -> decision.containerOrdinal);
+		duplicatePositionOrdinals.sort((left, right) -> left - right);
+		assertTrue(duplicatePositionDecisions.length == 2
+			&& duplicatePositionDecisions[0].id != duplicatePositionDecisions[1].id
+			&& duplicatePositionDecisions[0].containerSource.min == duplicatePositionDecisions[1].containerSource.min
+			&& duplicatePositionDecisions[0].containerSource.max == duplicatePositionDecisions[1].containerSource.max
+			&& duplicatePositionDecisions[0].source.min == duplicatePositionDecisions[1].source.min
+			&& duplicatePositionDecisions[0].source.max == duplicatePositionDecisions[1].source.max
+			&& duplicatePositionOrdinals.join(",") == "0,1",
+			"two macro-generated arrays with identical source positions must keep distinct deterministic structural ordinals");
+		OcamlContainerElementPlanner.requireCompleteness(duplicatePositionArrays, duplicatePositionBinding, duplicatePositionPlan);
 		final excludedDynamicArrayInput = Context.typeExpr(macro {
 			final seed = LocalDynamicEnum.Idle;
 			final factory = () -> LocalDynamicEnum.Payload(9);

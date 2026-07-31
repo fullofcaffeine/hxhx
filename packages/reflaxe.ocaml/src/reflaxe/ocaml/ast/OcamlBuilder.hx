@@ -65,7 +65,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
-import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementRole;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementLookup;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -1140,17 +1140,16 @@ class OcamlBuilder {
 		final plan = currentContainerElementPlan;
 		if (plan == null)
 			return containerElementInvariant("sealed function reached array syntax without its container-element plan", container.pos);
-		final containerSource = OcamlLoweredOrigin.sourceSpan(container.pos);
-		final itemSource = OcamlLoweredOrigin.sourceSpan(item.pos);
-		final conversion = plan.conversionFor(binding, containerSource, itemSource, elementIndex);
-		if (conversion == null) {
-			if (plan.requiresConversionFor(binding, containerSource, itemSource, elementIndex)) {
-				final occurrenceId = OcamlContainerElementPlan.occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource,
-					itemSource, elementIndex);
-				return containerElementInvariant('required array element occurrence "$occurrenceId" has no sealed conversion decision', item.pos);
-			}
-			return buildExpr(item);
-		}
+		final conversion = switch (plan.syntaxLookup(container, elementIndex)) {
+			case Unknown:
+				return containerElementInvariant("typed array element is absent from the sealed request-local syntax lookup", item.pos);
+			case Excluded:
+				return buildExpr(item);
+			case Required(id, null):
+				return containerElementInvariant('required array element occurrence "$id" has no sealed conversion decision', item.pos);
+			case Required(_, conversion):
+				conversion;
+		};
 		final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
 		if (identity == null
 			|| identity.semanticTypeId != conversion.inputSemanticTypeId

@@ -29,7 +29,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 49
+if (report.schemaVersion !== 50
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15') {
 	fail('unexpected Dynamic throw report schema or control model')
 }
@@ -121,7 +121,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const dynamicThrows = report.lowering.controls.filter(item =>
 	item.payload?.inputSemanticTypeId === 'Dynamic')
-if (report.schemaVersion !== 29
+if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| dynamicThrows.length !== 2
 	|| dynamicThrows.some(item =>

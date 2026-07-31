@@ -89,7 +89,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 29,
+			schemaVersion: 30,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -370,8 +370,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 49) {
-						throw 'Unsupported lowering report schema $version; expected 49.';
+					if (version != 50) {
+						throw 'Unsupported lowering report schema $version; expected 50.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1924,6 +1924,7 @@ class ReflaxeOcamlInspection {
 					sourceFile: requiredString(source, "file"),
 					sourceMin: requiredInt(source, "min"),
 					sourceMax: requiredInt(source, "max"),
+					containerOrdinal: requiredInt(entry, "containerOrdinal"),
 					elementIndex: requiredInt(entry, "elementIndex"),
 					inputSemanticTypeId: requiredString(entry, "inputSemanticTypeId"),
 					inputCarrierTypeId: requiredString(entry, "inputCarrierTypeId"),
@@ -1942,6 +1943,7 @@ class ReflaxeOcamlInspection {
 				};
 				if (seen.exists(result.id)) throw 'Container-element conversion report contains duplicate identity "${result.id}".';
 				if (result.role != "array-literal-dynamic-element"
+					|| result.containerOrdinal < 0
 					|| result.elementIndex < 0
 					|| result.containerSourceFile != result.sourceFile
 					|| result.containerSourceMin < 0
@@ -1965,12 +1967,32 @@ class ReflaxeOcamlInspection {
 				}
 				final canonicalId = containerElementOccurrenceId(result);
 				if (result.id != canonicalId)
-					throw 'Container-element conversion "${result.id}" does not match its retained function, revisions, role, sources, and element index; expected "$canonicalId".';
+					throw 'Container-element conversion "${result.id}" does not match its retained function, revisions, role, sources, array ordinal, and element index; expected "$canonicalId".';
 				seen.set(result.id, true);
 				result;
 			}
 		];
 		conversions.sort((left, right) -> compareStrings(left.id, right.id));
+		final containerSourceByOrdinal:Map<String, String> = [];
+		final occupiedSlots:Map<String, Bool> = [];
+		for (conversion in conversions) {
+			final ordinal = [
+				conversion.functionId,
+				conversion.programRevision,
+				conversion.bodyRevision,
+				conversion.pipelineRevision,
+				Std.string(conversion.containerOrdinal)
+			].join("|");
+			final containerSource = '${conversion.containerSourceFile}:${conversion.containerSourceMin}:${conversion.containerSourceMax}';
+			final previousSource = containerSourceByOrdinal.get(ordinal);
+			if (previousSource != null && previousSource != containerSource)
+				throw 'Container-element structural ordinal "$ordinal" names both "$previousSource" and "$containerSource".';
+			containerSourceByOrdinal.set(ordinal, containerSource);
+			final slot = '$ordinal:${conversion.elementIndex}';
+			if (occupiedSlots.exists(slot))
+				throw 'Container-element structural slot "$slot" occurs more than once.';
+			occupiedSlots.set(slot, true);
+		}
 		final conversionIds = conversions.map(conversion -> conversion.id);
 		if (conversionIds.join("\n") != requiredConversionIds.join("\n"))
 			throw 'Required container-element conversion inventory [${requiredConversionIds.join(",")}] does not match sealed conversions [${conversionIds.join(",")}].';
@@ -1990,6 +2012,7 @@ class ReflaxeOcamlInspection {
 			conversion.sourceFile,
 			Std.string(conversion.sourceMin),
 			Std.string(conversion.sourceMax),
+			Std.string(conversion.containerOrdinal),
 			Std.string(conversion.elementIndex)
 		].join("\n")).substr(0, 32);
 	}

@@ -31,7 +31,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 49
+if (report.schemaVersion !== 50
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15') {
 	fail('unexpected enum throw report schema or control model')
 }
@@ -120,7 +120,7 @@ const sourceFile = 'external-source/src/Main.hx'
 const controls = report.lowering.controls.filter(item =>
 	item.sourceFile === sourceFile
 	&& item.payload?.conversion === 'box-enum-throw-carrier')
-if (report.schemaVersion !== 29
+if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| controls.length !== 3
 	|| controls.some(item =>

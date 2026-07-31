@@ -319,6 +319,7 @@ typedef InspectionContainerElementConversion = {
 	final sourceFile:String;
 	final sourceMin:Int;
 	final sourceMax:Int;
+	final containerOrdinal:Int;
 	final elementIndex:Int;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;

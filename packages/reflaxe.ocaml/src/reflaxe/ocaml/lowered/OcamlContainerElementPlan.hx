@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import haxe.ds.ObjectMap;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
@@ -17,12 +18,27 @@ enum abstract OcamlContainerElementRole(String) from String to String {
 	final ArrayLiteralDynamicElement = "array-literal-dynamic-element";
 }
 
+/**
+	Describes how syntax should treat one exact typed array element.
+
+	`Unknown` means the typed expression is not part of the body that was
+	planned and must stop compilation. `Excluded` means the planner deliberately
+	left the element on the ordinary expression path. `Required` carries the
+	stable occurrence identity and its sealed conversion.
+**/
+enum OcamlContainerElementLookup {
+	Unknown;
+	Excluded;
+	Required(id:String, conversion:Null<OcamlContainerElementDecision>);
+}
+
 /** One immutable enum-to-Dynamic conversion selected for an array literal element. */
 typedef OcamlContainerElementDecision = {
 	final id:String;
 	final role:OcamlContainerElementRole;
 	final containerSource:OcamlLoweredSourceSpan;
 	final source:OcamlLoweredSourceSpan;
+	final containerOrdinal:Int;
 	final elementIndex:Int;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;
@@ -54,6 +70,8 @@ class OcamlContainerElementPlan {
 	final orderedRequiredConversionIds:Array<String>;
 	final decisionsById:Map<String, OcamlContainerElementDecision> = [];
 	final requiredConversionById:Map<String, Bool> = [];
+	final requiredIdByContainer:ObjectMap<TypedExpr, Array<Null<String>>>;
+	final syntaxLookupPrepared:Bool;
 
 	public final count:Int;
 	public final requiredConversionCount:Int;
@@ -69,9 +87,12 @@ class OcamlContainerElementPlan {
 		unrecorded legacy case. Tests that construct a plan directly may omit the
 		argument, in which case their supplied decisions define the inventory.
 	**/
-	public function new(decisions:Array<OcamlContainerElementDecision>, ?requiredConversionIds:Array<String>) {
+	public function new(decisions:Array<OcamlContainerElementDecision>, ?requiredConversionIds:Array<String>,
+			?requiredIdByContainer:ObjectMap<TypedExpr, Array<Null<String>>>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		this.requiredIdByContainer = requiredIdByContainer == null ? new ObjectMap() : requiredIdByContainer;
+		syntaxLookupPrepared = requiredIdByContainer != null;
 		orderedRequiredConversionIds = requiredConversionIds == null ? orderedDecisions.map(decision -> decision.id) : requiredConversionIds.copy();
 		orderedRequiredConversionIds.sort(Reflect.compare);
 		for (id in orderedRequiredConversionIds) {
@@ -89,10 +110,13 @@ class OcamlContainerElementPlan {
 				throw 'reflaxe.ocaml [ocaml-container-element:unexpected-conversion]: occurrence "${decision.id}" has a decision but is not in the independently observed required inventory';
 			decisionsById.set(decision.id, decision);
 		}
+		requireStructuralOrdinalConsistency();
 		for (id in orderedRequiredConversionIds) {
 			if (!decisionsById.exists(id))
 				throw 'reflaxe.ocaml [ocaml-container-element:missing-required-conversion]: required occurrence "$id" has no sealed conversion decision';
 		}
+		if (syntaxLookupPrepared)
+			requireSyntaxLookupCompleteness();
 		count = orderedDecisions.length;
 		requiredConversionCount = orderedRequiredConversionIds.length;
 		requiredConversionRevision = "sha256:" + Sha256.encode(haxe.Json.stringify(orderedRequiredConversionIds));
@@ -108,12 +132,14 @@ class OcamlContainerElementPlan {
 	/**
 		Builds the deterministic identity shared by typed planning and syntax.
 
-		The enclosing array span and zero-based item index distinguish two elements
-		even when a macro gives them the same source span. Function, program, body,
-		and pipeline revisions prevent reuse after any owning input changes.
+		`containerOrdinal` is the zero-based pre-order position of the array
+		literal in the final typed function body. It distinguishes macro-generated
+		arrays even when they share source positions. The source spans remain useful
+		provenance, while function, program, body, and pipeline revisions prevent
+		reuse after any owning input changes.
 	**/
 	public static function occurrenceId(binding:OcamlFunctionPlanBinding, role:OcamlContainerElementRole, containerSource:OcamlLoweredSourceSpan,
-			source:OcamlLoweredSourceSpan, elementIndex:Int):String {
+			source:OcamlLoweredSourceSpan, containerOrdinal:Int, elementIndex:Int):String {
 		return "container-element-conversion:" + Sha256.encode([
 			binding.functionId,
 			binding.programRevision,
@@ -126,6 +152,7 @@ class OcamlContainerElementPlan {
 			source.file,
 			Std.string(source.min),
 			Std.string(source.max),
+			Std.string(containerOrdinal),
 			Std.string(elementIndex)
 		].join("\n")).substr(0, 32);
 	}
@@ -143,19 +170,24 @@ class OcamlContainerElementPlan {
 		}
 	}
 
-	/** Resolves one exact array element without exposing the plan's backing map. */
-	public function conversionFor(binding:OcamlFunctionPlanBinding, containerSource:OcamlLoweredSourceSpan, source:OcamlLoweredSourceSpan,
-			elementIndex:Int):Null<OcamlContainerElementDecision> {
-		final id = occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource, source, elementIndex);
-		final decision = decisionsById.get(id);
-		return decision == null ? null : copyDecision(decision);
-	}
+	/**
+		Resolves one exact request-local array element for syntax generation.
 
-	/** Reports whether the independent typed-body inventory requires this occurrence. */
-	public function requiresConversionFor(binding:OcamlFunctionPlanBinding, containerSource:OcamlLoweredSourceSpan, source:OcamlLoweredSourceSpan,
-			elementIndex:Int):Bool {
-		final id = occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource, source, elementIndex);
-		return requiredConversionById.exists(id);
+		The object-keyed lookup is deliberately request-local and is never part of
+		a cache payload. The returned identity is the stable ordinal-based value
+		used by reports and revisions.
+	**/
+	public function syntaxLookup(container:TypedExpr, elementIndex:Int):OcamlContainerElementLookup {
+		if (!syntaxLookupPrepared || !requiredIdByContainer.exists(container))
+			return Unknown;
+		final entries = requiredIdByContainer.get(container);
+		if (entries == null || elementIndex < 0 || elementIndex >= entries.length)
+			return Unknown;
+		final id = entries[elementIndex];
+		if (id == null)
+			return Excluded;
+		final decision = decisionsById.get(id);
+		return Required(id, decision == null ? null : copyDecision(decision));
 	}
 
 	/** Returns the independent required occurrence inventory in stable order. */
@@ -178,8 +210,46 @@ class OcamlContainerElementPlan {
 		return orderedDecisions.map(decision -> copyUnsafeOperation(decision.unsafeOperation));
 	}
 
+	function requireSyntaxLookupCompleteness():Void {
+		final lookupIds:Array<String> = [];
+		final seen:Map<String, Bool> = [];
+		for (container in requiredIdByContainer.keys()) {
+			final entries = requiredIdByContainer.get(container);
+			if (entries == null)
+				throw "reflaxe.ocaml [ocaml-container-element:invalid-syntax-lookup]: a typed array has no element disposition list";
+			for (id in entries) {
+				if (id == null)
+					continue;
+				if (seen.exists(id))
+					throw 'reflaxe.ocaml [ocaml-container-element:duplicate-syntax-lookup]: required occurrence "$id" is assigned to more than one typed array element';
+				seen.set(id, true);
+				lookupIds.push(id);
+			}
+		}
+		lookupIds.sort(Reflect.compare);
+		if (lookupIds.join("\n") != orderedRequiredConversionIds.join("\n"))
+			throw 'reflaxe.ocaml [ocaml-container-element:syntax-lookup-mismatch]: typed array lookup [${lookupIds.join(",")}] does not match required inventory [${orderedRequiredConversionIds.join(",")}]';
+	}
+
+	function requireStructuralOrdinalConsistency():Void {
+		final containerSourceByOrdinal:Map<Int, String> = [];
+		final occupiedSlots:Map<String, Bool> = [];
+		for (decision in orderedDecisions) {
+			final containerSource = '${decision.containerSource.file}:${decision.containerSource.min}:${decision.containerSource.max}';
+			final previousSource = containerSourceByOrdinal.get(decision.containerOrdinal);
+			if (previousSource != null && previousSource != containerSource)
+				throw 'reflaxe.ocaml [ocaml-container-element:ordinal-source-conflict]: structural array ordinal ${decision.containerOrdinal} names both "$previousSource" and "$containerSource"';
+			containerSourceByOrdinal.set(decision.containerOrdinal, containerSource);
+			final slot = '${decision.containerOrdinal}:${decision.elementIndex}';
+			if (occupiedSlots.exists(slot))
+				throw 'reflaxe.ocaml [ocaml-container-element:duplicate-structural-slot]: array element slot "$slot" has more than one conversion';
+			occupiedSlots.set(slot, true);
+		}
+	}
+
 	static function requireDecision(decision:OcamlContainerElementDecision):Void {
 		if (decision.role != OcamlContainerElementRole.ArrayLiteralDynamicElement
+			|| decision.containerOrdinal < 0
 			|| decision.elementIndex < 0
 			|| decision.reason.length == 0
 			|| decision.proofId.length == 0
@@ -218,10 +288,10 @@ class OcamlContainerElementPlan {
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
-		}, decision.role, decision.containerSource, decision.source,
-			decision.elementIndex);
+		}, decision.role, decision.containerSource,
+			decision.source, decision.containerOrdinal, decision.elementIndex);
 		if (decision.id != expected)
-			throw 'reflaxe.ocaml [ocaml-container-element:noncanonical-identity]: occurrence "${decision.id}" does not match its retained function, revisions, role, sources, and element index; expected "$expected"';
+			throw 'reflaxe.ocaml [ocaml-container-element:noncanonical-identity]: occurrence "${decision.id}" does not match its retained function, revisions, role, sources, array ordinal, and element index; expected "$expected"';
 	}
 
 	static function requireUnsafeOperation(decision:OcamlContainerElementDecision):Void {
@@ -266,6 +336,7 @@ class OcamlContainerElementPlan {
 			decision.source.file,
 			Std.string(decision.source.min),
 			Std.string(decision.source.max),
+			Std.string(decision.containerOrdinal),
 			Std.string(decision.elementIndex),
 			decision.inputSemanticTypeId,
 			decision.inputCarrierTypeId,
@@ -290,6 +361,7 @@ class OcamlContainerElementPlan {
 			role: decision.role,
 			containerSource: copySource(decision.containerSource),
 			source: copySource(decision.source),
+			containerOrdinal: decision.containerOrdinal,
 			elementIndex: decision.elementIndex,
 			inputSemanticTypeId: decision.inputSemanticTypeId,
 			inputCarrierTypeId: decision.inputCarrierTypeId,
@@ -348,62 +420,67 @@ class OcamlContainerElementPlan {
 class OcamlContainerElementPlanner {
 	public static function planExpression(expression:TypedExpr, binding:OcamlFunctionPlanBinding):OcamlContainerElementPlan {
 		final decisions:Array<OcamlContainerElementDecision> = [];
+		var arrayOrdinal = 0;
 
 		function visit(current:TypedExpr):Void {
 			switch (current.expr) {
-				case TArrayDecl(items) if (isExactDynamicArray(current.t)):
-					final containerSource = OcamlLoweredOrigin.sourceSpan(current.pos);
-					for (elementIndex in 0...items.length) {
-						final item = items[elementIndex];
-						final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
-						if (identity == null)
-							continue;
-						final source = OcamlLoweredOrigin.sourceSpan(item.pos);
-						final role = OcamlContainerElementRole.ArrayLiteralDynamicElement;
-						final id = OcamlContainerElementPlan.occurrenceId(binding, role, containerSource, source, elementIndex);
-						final reason = "One exact Haxe enum constructor enters an Array<Dynamic> literal slot and must retain its enum identity.";
-						final proofId = "dynamic-array-element-box-exact-enum-v1";
-						final proofClaim = "The typed array element is one directly written ordinary Haxe enum constructor. HxEnum.box_if_needed records its fully qualified enum name before the native OCaml variant enters the Dynamic Obj.t element carrier.";
-						final profiles = ["metal", "portable"];
-						final unsafeOperation:OcamlUnsafeOperationRecord = {
-							id: id + ":unsafe:" + (OcamlUnsafeOperationKind.BoxExactEnumToDynamic : String),
-							conversionId: id,
-							operation: OcamlUnsafeOperationKind.BoxExactEnumToDynamic,
-							source: source,
-							inputSemanticTypeId: identity.semanticTypeId,
-							inputCarrierTypeId: identity.carrierTypeId,
-							outputSemanticTypeId: "Dynamic",
-							outputCarrierTypeId: OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
-							reason: reason,
-							proofId: proofId,
-							proofClaim: proofClaim,
-							profileEligibility: profiles,
-							functionId: binding.functionId,
-							programRevision: binding.programRevision,
-							bodyRevision: binding.bodyRevision,
-							pipelineRevision: binding.pipelineRevision
-						};
-						decisions.push({
-							id: id,
-							role: role,
-							containerSource: containerSource,
-							source: source,
-							elementIndex: elementIndex,
-							inputSemanticTypeId: identity.semanticTypeId,
-							inputCarrierTypeId: identity.carrierTypeId,
-							outputSemanticTypeId: "Dynamic",
-							outputCarrierTypeId: OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
-							conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic,
-							reason: reason,
-							proofId: proofId,
-							proofClaim: proofClaim,
-							profileEligibility: profiles,
-							functionId: binding.functionId,
-							programRevision: binding.programRevision,
-							bodyRevision: binding.bodyRevision,
-							pipelineRevision: binding.pipelineRevision,
-							unsafeOperation: unsafeOperation
-						});
+				case TArrayDecl(items):
+					final currentArrayOrdinal = arrayOrdinal++;
+					if (isExactDynamicArray(current.t)) {
+						final containerSource = OcamlLoweredOrigin.sourceSpan(current.pos);
+						for (elementIndex in 0...items.length) {
+							final item = items[elementIndex];
+							final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
+							if (identity == null)
+								continue;
+							final source = OcamlLoweredOrigin.sourceSpan(item.pos);
+							final role = OcamlContainerElementRole.ArrayLiteralDynamicElement;
+							final id = OcamlContainerElementPlan.occurrenceId(binding, role, containerSource, source, currentArrayOrdinal, elementIndex);
+							final reason = "One exact Haxe enum constructor enters an Array<Dynamic> literal slot and must retain its enum identity.";
+							final proofId = "dynamic-array-element-box-exact-enum-v1";
+							final proofClaim = "The typed array element is one directly written ordinary Haxe enum constructor. HxEnum.box_if_needed records its fully qualified enum name before the native OCaml variant enters the Dynamic Obj.t element carrier.";
+							final profiles = ["metal", "portable"];
+							final unsafeOperation:OcamlUnsafeOperationRecord = {
+								id: id + ":unsafe:" + (OcamlUnsafeOperationKind.BoxExactEnumToDynamic : String),
+								conversionId: id,
+								operation: OcamlUnsafeOperationKind.BoxExactEnumToDynamic,
+								source: source,
+								inputSemanticTypeId: identity.semanticTypeId,
+								inputCarrierTypeId: identity.carrierTypeId,
+								outputSemanticTypeId: "Dynamic",
+								outputCarrierTypeId: OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
+								reason: reason,
+								proofId: proofId,
+								proofClaim: proofClaim,
+								profileEligibility: profiles,
+								functionId: binding.functionId,
+								programRevision: binding.programRevision,
+								bodyRevision: binding.bodyRevision,
+								pipelineRevision: binding.pipelineRevision
+							};
+							decisions.push({
+								id: id,
+								role: role,
+								containerSource: containerSource,
+								source: source,
+								containerOrdinal: currentArrayOrdinal,
+								elementIndex: elementIndex,
+								inputSemanticTypeId: identity.semanticTypeId,
+								inputCarrierTypeId: identity.carrierTypeId,
+								outputSemanticTypeId: "Dynamic",
+								outputCarrierTypeId: OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
+								conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic,
+								reason: reason,
+								proofId: proofId,
+								proofClaim: proofClaim,
+								profileEligibility: profiles,
+								functionId: binding.functionId,
+								programRevision: binding.programRevision,
+								bodyRevision: binding.bodyRevision,
+								pipelineRevision: binding.pipelineRevision,
+								unsafeOperation: unsafeOperation
+							});
+						}
 					}
 					TypedExprTools.iter(current, visit);
 				case _:
@@ -412,7 +489,8 @@ class OcamlContainerElementPlanner {
 		}
 
 		visit(expression);
-		return new OcamlContainerElementPlan(decisions, requiredConversionIdsForExpression(expression, binding));
+		final observation = requiredConversionObservation(expression, binding);
+		return new OcamlContainerElementPlan(decisions, observation.ids, observation.requiredIdByContainer);
 	}
 
 	/**
@@ -423,7 +501,8 @@ class OcamlContainerElementPlanner {
 		so a planner omission becomes an internal compiler error before syntax.
 	**/
 	public static function requireCompleteness(expression:TypedExpr, binding:OcamlFunctionPlanBinding, plan:OcamlContainerElementPlan):Void {
-		final observed = requiredConversionIdsForExpression(expression, binding);
+		final observation = requiredConversionObservation(expression, binding);
+		final observed = observation.ids;
 		final sealed = plan.requiredConversionIds();
 		if (observed.join("\n") != sealed.join("\n")) {
 			throw 'reflaxe.ocaml [ocaml-container-element:required-inventory-mismatch]: fresh typed-body observation found [${observed.join(",")}], but the sealed plan requires [${sealed.join(",")}]';
@@ -432,23 +511,53 @@ class OcamlContainerElementPlanner {
 			if (!plan.hasDecision(id))
 				throw 'reflaxe.ocaml [ocaml-container-element:missing-required-conversion]: required occurrence "$id" has no sealed conversion decision';
 		}
+		for (container in observation.requiredIdByContainer.keys()) {
+			final entries = observation.requiredIdByContainer.get(container);
+			if (entries == null)
+				throw "reflaxe.ocaml [ocaml-container-element:invalid-required-observation]: a typed array has no element disposition list";
+			for (elementIndex in 0...entries.length) {
+				final expected = entries[elementIndex];
+				switch (plan.syntaxLookup(container, elementIndex)) {
+					case Excluded if (expected == null):
+					case Required(actual, conversion) if (expected != null && actual == expected && conversion != null):
+					case Unknown:
+						throw 'reflaxe.ocaml [ocaml-container-element:missing-syntax-lookup]: typed array element $elementIndex has no request-local plan lookup';
+					case _:
+						throw 'reflaxe.ocaml [ocaml-container-element:syntax-lookup-mismatch]: typed array element $elementIndex does not match required occurrence "$expected"';
+				}
+			}
+		}
 	}
 
-	static function requiredConversionIdsForExpression(expression:TypedExpr, binding:OcamlFunctionPlanBinding):Array<String> {
+	static function requiredConversionObservation(expression:TypedExpr, binding:OcamlFunctionPlanBinding):{
+		ids:Array<String>,
+		requiredIdByContainer:ObjectMap<TypedExpr, Array<Null<String>>>
+	} {
 		final ids:Array<String> = [];
+		final requiredIdByContainer:ObjectMap<TypedExpr, Array<Null<String>>> = new ObjectMap();
+		var arrayOrdinal = 0;
 
 		function visit(current:TypedExpr):Void {
 			switch (current.expr) {
-				case TArrayDecl(items) if (isExactDynamicArray(current.t)):
-					final containerSource = OcamlLoweredOrigin.sourceSpan(current.pos);
+				case TArrayDecl(items):
+					final currentArrayOrdinal = arrayOrdinal++;
+					final requiredIds:Array<Null<String>> = [];
+					final exactDynamicArray = isExactDynamicArray(current.t);
+					final containerSource = exactDynamicArray ? OcamlLoweredOrigin.sourceSpan(current.pos) : null;
 					for (elementIndex in 0...items.length) {
 						final item = items[elementIndex];
-						if (OcamlEnumDynamicCarrier.fromDirectValue(item) == null)
+						final identity = exactDynamicArray ? OcamlEnumDynamicCarrier.fromDirectValue(item) : null;
+						if (identity == null || containerSource == null) {
+							requiredIds.push(null);
 							continue;
+						}
 						final source = OcamlLoweredOrigin.sourceSpan(item.pos);
-						ids.push(OcamlContainerElementPlan.occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource,
-							source, elementIndex));
+						final id = OcamlContainerElementPlan.occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource,
+							source, currentArrayOrdinal, elementIndex);
+						requiredIds.push(id);
+						ids.push(id);
 					}
+					requiredIdByContainer.set(current, requiredIds);
 					TypedExprTools.iter(current, visit);
 				case _:
 					TypedExprTools.iter(current, visit);
@@ -457,7 +566,10 @@ class OcamlContainerElementPlanner {
 
 		visit(expression);
 		ids.sort(Reflect.compare);
-		return ids;
+		return {
+			ids: ids,
+			requiredIdByContainer: requiredIdByContainer
+		};
 	}
 
 	static function isExactDynamicArray(type:Type):Bool {

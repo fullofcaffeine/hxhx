@@ -18,7 +18,7 @@ const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
 const generatedTypeRegistry = fs.readFileSync('out/HxTypeRegistry.ml', 'utf8')
 const repositoryRoot = path.resolve(__dirname, '../../../..')
 
-assert.equal(report.schemaVersion, 49)
+assert.equal(report.schemaVersion, 50)
 assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v18')
 assert.equal(
 	report.representationScope,

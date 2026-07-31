@@ -4504,7 +4504,7 @@
     }
   ],
   "runtimeRequirementCount": 46,
-  "schemaVersion": 49,
+  "schemaVersion": 50,
   "unsafeOperationCount": 21,
   "unsafeOperationRevision": "sha256:2459ba7c85ca6947c29650fac12932fa9639e873dcce95dd59899c5ed9ae2032",
   "callableBoundaryCount": 24,
