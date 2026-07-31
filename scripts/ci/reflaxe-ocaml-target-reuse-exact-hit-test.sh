@@ -424,6 +424,22 @@ if [[ "$first_executable_digest" != "$second_executable_digest" ]]; then
 fi
 assert_runtime "exact target replay"
 
+if [[ "$("${HAXE_BIN:-haxe}" -version)" == 4.* ]]; then
+	node "$MATRIX_HELPER" replace "$PROJECT_DIR/src/Main.hx" 'class Main {' $'@:rtti\nclass Main {'
+	compile_expected_miss
+	compile_expected_miss
+	node "$MATRIX_HELPER" verify-rtti-ineligible-phase-pair \
+		"$PHASE_REPORT_DIR/request-000003.json" \
+		"$PHASE_REPORT_DIR/request-000004.json"
+	assert_runtime "exact target replay"
+	node "$MATRIX_HELPER" replace "$PROJECT_DIR/src/Main.hx" $'@:rtti\nclass Main {' 'class Main {'
+	compile_expected_hit
+	if [[ "$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")" != "$first_digest" ]]; then
+		echo "reflaxe.ocaml did not recover the original exact-hit result after the RTTI safety probe" >&2
+		exit 1
+	fi
+fi
+
 node "$MATRIX_HELPER" replace "$PROJECT_DIR/src/Main.hx" 'Sys.println("exact target replay");' 'Sys.println("edited exact target replay");'
 compile_expected_miss
 edited_digest="$(node "$MATRIX_HELPER" tree-digest "$PROJECT_DIR/$OUTPUT_NAME")"

@@ -111,6 +111,51 @@ function verifyReusePhasePair(coldPath, warmPath) {
 	}
 }
 
+/**
+ * Proves that two repeated Haxe 4 RTTI requests compiled normally instead of
+ * looking up or admitting a generated-source cache entry.
+ *
+ * Haxe 4 can change its compiler-generated RTTI string between otherwise
+ * unchanged server requests. Both compilations must therefore report the same
+ * explicit safety reason while using their current typed input.
+ */
+function verifyRttiIneligiblePhasePair(firstPath, secondPath) {
+	const reports = [
+		['first', JSON.parse(fs.readFileSync(firstPath, 'utf8'))],
+		['second', JSON.parse(fs.readFileSync(secondPath, 'utf8'))],
+	]
+	const expectedBlocker = 'reflaxe:source-authority:haxe4-compiler-generated-rtti-warm-input-unstable'
+	for (const [name, report] of reports) {
+		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 2) {
+			fail(`${name} RTTI target-reuse phase report has the wrong model or schema`)
+		}
+		if (report.outcome !== 'compiled-miss'
+			|| report?.targetRequest?.eligible !== false
+			|| typeof report.targetRequest.revision !== 'string'
+			|| report.targetRequest.revision.length === 0
+			|| !report.targetRequest.blockers.includes(expectedBlocker)
+			|| report?.work?.semanticCompilerRan !== true
+			|| report.work.missPreparationRan !== true
+			|| report.work.lookupRan !== false
+			|| report.work.replaySucceeded !== false
+			|| report.work.payloadBytes !== null) {
+			fail(`${name} RTTI request did not compile normally with exact replay disabled: ${JSON.stringify({
+				outcome: report?.outcome,
+				targetRequest: report?.targetRequest,
+				work: report?.work,
+			})}`)
+		}
+	}
+	const first = reports[0][1]
+	const second = reports[1][1]
+	if (second?.macroRealm?.requestSequence !== first?.macroRealm?.requestSequence + 1
+		|| second?.macroRealm?.identityRevision !== first?.macroRealm?.identityRevision
+		|| second?.macroRealm?.survivedPriorRequest !== true
+		|| second?.catalog?.ineligibleRequests !== first?.catalog?.ineligibleRequests + 1) {
+		fail('repeated RTTI requests did not preserve one macro realm and record both ineligible compilations')
+	}
+}
+
 const [command, ...args] = process.argv.slice(2)
 switch (command) {
 	case 'replace':
@@ -132,6 +177,10 @@ switch (command) {
 	case 'verify-reuse-phase-pair':
 		if (args.length !== 2) fail('verify-reuse-phase-pair needs: cold-report warm-report')
 		verifyReusePhasePair(args[0], args[1])
+		break
+	case 'verify-rtti-ineligible-phase-pair':
+		if (args.length !== 2) fail('verify-rtti-ineligible-phase-pair needs: first-report second-report')
+		verifyRttiIneligiblePhasePair(args[0], args[1])
 		break
 	default:
 		fail(`unknown command: ${command || '<missing>'}`)

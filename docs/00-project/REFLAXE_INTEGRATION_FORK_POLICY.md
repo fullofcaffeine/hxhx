@@ -240,17 +240,31 @@ The fork then added target-neutral lifecycle and scalability repairs:
   least-recently-used eviction, reset, quarantine, and redacted counters. It
   does not yet authorize a target cache hit.
 
-As of 2026-07-29, upstream `SomeRanDev/reflaxe` remains at
+As of 2026-07-31, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `d6085dfb815e6675efb8dd49e495c8c809396949`, published on branch
+candidate fork commit `105957964cdfe958f3f14bfee64b395e69dd253f`, published on branch
 `hxhx-agent/target-reuse-fingerprint`, with
 path-independent content digest
-`3ae4cb3f50740b2351acfd5f84eab15245cea2931221cba37226faef72ed89f8`.
-The last repository-validated rollback pin remains PR #17 commit
-`1433334fdf22582fa129725982d8d7fa5547da18` with digest
-`ae510fcf1580594b9789ab532c3ab6c00cc839e979f447c7624a1b0ba89c0602`;
+`3bc59e3304d5fa5486bd2b26098c809192c2d68def1ba648c84ad0df93611020`.
+The last repository-validated rollback pin is
+`e833fec65203964d40287483e6f951d6bbaf949d` with digest
+`58cc28d20249b7f9d64b4090e41d4dd1fc2da8103f25b21311b9532564e36712`;
 restoring both values together is the bounded rollback.
+
+Fork PR #19 makes Haxe 4.3.7's all-null abstract resolve-hook placeholder an
+explicit fingerprint fact. A missing hook, the exact host placeholder, and a
+normal field now produce different identities. Any partially populated field,
+or the placeholder in an operator/cast slot, blocks target reuse instead of
+authorizing an incomplete key. The fingerprint schema advanced so cache entries
+made before this distinction cannot match the new interpretation.
+
+Fork PR #20 handles a separate Haxe 4 compiler-server limitation. A class
+annotated with `@:rtti` can receive a different compiler-generated `__rtti`
+string on a repeated unchanged request. Because that string changes generated
+target files, Reflaxe now marks the request ineligible for exact target replay
+and reports the specific source-authority blocker. Compilation still proceeds
+normally; only reuse of an older generated bundle is forbidden.
 
 PR #17 removes a package-only lifecycle race. Repository-local builds loaded
 the Reflaxe framework before the OCaml target, but installed Haxelib builds
