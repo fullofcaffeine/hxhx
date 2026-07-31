@@ -19,6 +19,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlNominalRepresentationProof;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionContainerElementConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
@@ -58,7 +59,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v61";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v62";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -88,7 +89,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 27,
+			schemaVersion: 28,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -112,6 +113,7 @@ class ReflaxeOcamlInspection {
 				anonymousStructureCount: lowering.anonymousStructures.length,
 				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
 				localConversionCount: lowering.localConversions.length,
+				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
@@ -159,6 +161,7 @@ class ReflaxeOcamlInspection {
 				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
 			}
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
+			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
 			for (operation in report.lowering.unsafeOperations) {
 				lines.push('  - ${operation.sourceFile} bytes ${operation.sourceMin}-${operation.sourceMax} ${operation.operation}: ${operation.inputSemanticTypeId}/${operation.inputCarrierTypeId} -> ${operation.outputSemanticTypeId}/${operation.outputCarrierTypeId}');
@@ -341,6 +344,8 @@ class ReflaxeOcamlInspection {
 					anonymousStructureOperations: [],
 					localConversionRevision: null,
 					localConversions: [],
+					containerElementConversionRevision: null,
+					containerElementConversions: [],
 					unsafeOperationCompleteness: null,
 					unsafeOperationRevision: null,
 					unsafeOperations: [],
@@ -363,8 +368,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 47) {
-						throw 'Unsupported lowering report schema $version; expected 47.';
+					if (version != 48) {
+						throw 'Unsupported lowering report schema $version; expected 48.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -380,14 +385,15 @@ class ReflaxeOcamlInspection {
 					final representation = inspectRepresentations(value, path, version, plans);
 					final anonymousStructures = ReflaxeOcamlAnonymousStructureInspection.inspect(value, representation);
 					final localConversions = inspectLocalConversions(value);
-					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
+					final containerElementConversions = inspectContainerElementConversions(value);
+					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
 					final controlTargets = inspectControlTargets(value);
 					final controls = inspectControls(value, representation, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
-						anonymousStructures.operations, callInventory.calls, controls);
+						containerElementConversions, anonymousStructures.operations, callInventory.calls, controls);
 					{
 						status: "present",
 						required: required,
@@ -402,6 +408,8 @@ class ReflaxeOcamlInspection {
 						anonymousStructureOperations: anonymousStructures.operations,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
+						containerElementConversionRevision: requiredSha256Revision(value, "containerElementConversionRevision"),
+						containerElementConversions: containerElementConversions,
 						unsafeOperationCompleteness: requiredString(value, "unsafeOperationCompleteness"),
 						unsafeOperationRevision: requiredSha256Revision(value, "unsafeOperationRevision"),
 						unsafeOperations: unsafeOperations,
@@ -417,7 +425,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -1817,7 +1825,7 @@ class ReflaxeOcamlInspection {
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
 				final canonicalId = localConversionOccurrenceId(result);
-				if (result.pipelineRevision != "ocaml-function-plans-v61"
+				if (result.pipelineRevision != "ocaml-function-plans-v62"
 					|| result.id != canonicalId)
 					throw 'Local conversion "${result.id}" does not match its retained function, revisions, local, role, and source; expected "$canonicalId".';
 				if (result.conversion == "box-exact-enum-to-dynamic") {
@@ -1855,17 +1863,106 @@ class ReflaxeOcamlInspection {
 		].join("\n")).substr(0, 32);
 	}
 
-	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
+	static function inspectContainerElementConversions(value:Dynamic):Array<InspectionContainerElementConversion> {
+		if (requiredString(value, "containerElementConversionModel") != "typed-ocaml-container-element-conversions-v1")
+			throw "Unsupported container-element conversion report model.";
+		final raw = requiredArray(value, "containerElementConversions");
+		if (raw.length != requiredInt(value, "containerElementConversionCount"))
+			throw "Container-element conversion count does not match its inventory.";
+		final seen:Map<String, Bool> = [];
+		final conversions = [
+			for (entry in raw) {
+				final containerSource = requiredObject(entry, "containerSource");
+				final source = requiredObject(entry, "source");
+				final unsafe = requiredObject(entry, "unsafeOperation");
+				final result:InspectionContainerElementConversion = {
+					id: requiredString(entry, "id"),
+					role: requiredString(entry, "role"),
+					containerSourceFile: requiredString(containerSource, "file"),
+					containerSourceMin: requiredInt(containerSource, "min"),
+					containerSourceMax: requiredInt(containerSource, "max"),
+					sourceFile: requiredString(source, "file"),
+					sourceMin: requiredInt(source, "min"),
+					sourceMax: requiredInt(source, "max"),
+					elementIndex: requiredInt(entry, "elementIndex"),
+					inputSemanticTypeId: requiredString(entry, "inputSemanticTypeId"),
+					inputCarrierTypeId: requiredString(entry, "inputCarrierTypeId"),
+					outputSemanticTypeId: requiredString(entry, "outputSemanticTypeId"),
+					outputCarrierTypeId: requiredString(entry, "outputCarrierTypeId"),
+					conversion: requiredString(entry, "conversion"),
+					reason: requiredString(entry, "reason"),
+					proofId: requiredString(entry, "proofId"),
+					proofClaim: requiredString(entry, "proofClaim"),
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					functionId: requiredString(entry, "functionId"),
+					programRevision: requiredString(entry, "programRevision"),
+					bodyRevision: requiredString(entry, "bodyRevision"),
+					pipelineRevision: requiredString(entry, "pipelineRevision"),
+					unsafeOperationId: requiredString(unsafe, "id")
+				};
+				if (seen.exists(result.id)) throw 'Container-element conversion report contains duplicate identity "${result.id}".';
+				if (result.role != "array-literal-dynamic-element"
+					|| result.elementIndex < 0
+					|| result.containerSourceFile != result.sourceFile
+					|| result.containerSourceMin < 0
+					|| result.containerSourceMax < result.containerSourceMin
+					|| result.sourceMin < 0
+					|| result.sourceMax < result.sourceMin
+					|| result.inputSemanticTypeId.length == 0
+					|| result.inputCarrierTypeId != "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId
+					|| result.outputSemanticTypeId != "Dynamic"
+					|| result.outputCarrierTypeId != "Obj.t"
+					|| result.conversion != "box-exact-enum-to-dynamic"
+					|| result.proofId != "dynamic-array-element-box-exact-enum-v1"
+					|| result.profileEligibility.length == 0
+					|| result.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION) {
+					throw 'Container-element conversion "${result.id}" has an invalid exact enum-to-Dynamic array contract.';
+				}
+				final canonicalId = containerElementOccurrenceId(result);
+				if (result.id != canonicalId)
+					throw 'Container-element conversion "${result.id}" does not match its retained function, revisions, role, sources, and element index; expected "$canonicalId".';
+				seen.set(result.id, true);
+				result;
+			}
+		];
+		conversions.sort((left, right) -> compareStrings(left.id, right.id));
+		return conversions;
+	}
+
+	static function containerElementOccurrenceId(conversion:InspectionContainerElementConversion):String {
+		return "container-element-conversion:" + Sha256.encode([
+			conversion.functionId,
+			conversion.programRevision,
+			conversion.bodyRevision,
+			conversion.pipelineRevision,
+			conversion.role,
+			conversion.containerSourceFile,
+			Std.string(conversion.containerSourceMin),
+			Std.string(conversion.containerSourceMax),
+			conversion.sourceFile,
+			Std.string(conversion.sourceMin),
+			Std.string(conversion.sourceMax),
+			Std.string(conversion.elementIndex)
+		].join("\n")).substr(0, 32);
+	}
+
+	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>,
+			containerElementConversions:Array<InspectionContainerElementConversion>):Array<InspectionUnsafeOperation> {
 		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
 			throw "Unsupported unsafe-operation report model.";
-		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-slices")
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices")
 			throw "Unsupported unsafe-operation completeness claim.";
 		final raw = requiredArray(value, "unsafeOperations");
 		if (raw.length != requiredInt(value, "unsafeOperationCount"))
 			throw "Unsafe-operation count does not match its inventory.";
-		final conversionById:Map<String, InspectionLocalConversion> = [];
+		final conversionById:Map<String, Dynamic> = [];
 		for (conversion in conversions)
 			conversionById.set(conversion.id, conversion);
+		for (conversion in containerElementConversions) {
+			if (conversionById.exists(conversion.id))
+				throw 'Unsafe-operation owner identity "${conversion.id}" occurs in both local and container-element conversions.';
+			conversionById.set(conversion.id, conversion);
+		}
 		final seen:Map<String, Bool> = [];
 		final operations = [
 			for (entry in raw) {
@@ -1890,9 +1987,9 @@ class ReflaxeOcamlInspection {
 					bodyRevision: requiredString(entry, "bodyRevision"),
 					pipelineRevision: requiredString(entry, "pipelineRevision")
 				};
-				final conversion = conversionById.get(result.conversionId);
+				final conversion:Dynamic = conversionById.get(result.conversionId);
 				if (conversion == null
-					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed local conversion.';
+					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed conversion.';
 				if (conversion.conversion == "box-exact-enum-to-dynamic"
 					&& (result.id != conversion.id + ":unsafe:box-exact-enum-to-dynamic"
 						|| result.operation != "box-exact-enum-to-dynamic"
@@ -1922,6 +2019,9 @@ class ReflaxeOcamlInspection {
 		for (conversion in conversions)
 			if (conversion.unsafeOperationId != null && !seen.exists(conversion.unsafeOperationId))
 				throw 'Local conversion "${conversion.id}" refers to a missing unsafe operation.';
+		for (conversion in containerElementConversions)
+			if (!seen.exists(conversion.unsafeOperationId))
+				throw 'Container-element conversion "${conversion.id}" refers to a missing unsafe operation.';
 		operations.sort((left, right) -> compareStrings(left.id, right.id));
 		return operations;
 	}
@@ -2056,8 +2156,8 @@ class ReflaxeOcamlInspection {
 	}
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
-			localConversions:Array<InspectionLocalConversion>, anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>,
-			controls:Array<InspectionControl>):Int {
+			localConversions:Array<InspectionLocalConversion>, containerElementConversions:Array<InspectionContainerElementConversion>,
+			anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -2128,6 +2228,32 @@ class ReflaxeOcamlInspection {
 				|| roots[0] != "HxEnum"
 				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
 				throw 'Enum-to-Dynamic conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (conversion in containerElementConversions) {
+			final requirementId = conversion.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Container-element conversion "${conversion.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != conversion.id
+				|| requiredString(source, "file") != conversion.sourceFile
+				|| requiredInt(source, "min") != conversion.sourceMin
+				|| requiredInt(source, "max") != conversion.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != conversion.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != conversion.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
+				throw 'Container-element conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
 			}
 			referenced.set(requirementId, true);
 		}
@@ -2590,6 +2716,8 @@ class ReflaxeOcamlInspection {
 			anonymousStructureOperations: [],
 			localConversionRevision: null,
 			localConversions: [],
+			containerElementConversionRevision: null,
+			containerElementConversions: [],
 			unsafeOperationCompleteness: null,
 			unsafeOperationRevision: null,
 			unsafeOperations: [],

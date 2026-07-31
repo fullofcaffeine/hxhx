@@ -15,6 +15,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
@@ -45,7 +46,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 47;
+	public static inline final SCHEMA_VERSION = 48;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -118,8 +119,9 @@ class OcamlLoweringReportWriter {
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
 			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
-			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
+			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
+			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -317,6 +319,8 @@ class OcamlLoweringReportWriter {
 		}
 		final sortedLocalConversions = localConversions.copy();
 		sortedLocalConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final sortedContainerElementConversions = containerElementConversions.copy();
+		sortedContainerElementConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
 			if (requirementById.exists(requirement.id))
@@ -360,6 +364,15 @@ class OcamlLoweringReportWriter {
 				throw 'Enum-to-Dynamic conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
 			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
 				throw 'Enum-to-Dynamic conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
+			includedRequirementIds.set(expected.id, true);
+		}
+		for (conversion in sortedContainerElementConversions) {
+			final expected = OcamlEnumRuntimeRequirementRecorder.containerElementRequirement(conversion);
+			final recorded = requirementById.get(expected.id);
+			if (recorded == null)
+				throw 'Enum container-element conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
+			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+				throw 'Enum container-element conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (control in sortedControls) {
@@ -419,9 +432,17 @@ class OcamlLoweringReportWriter {
 			if (conversion.unsafeOperation != null && conversion.unsafeOperation.id != operation.id)
 				throw 'Local conversion "${conversion.id}" names unsafe proof "${conversion.unsafeOperation.id}", but the ledger contains "${operation.id}".';
 		}
-		if (sortedUnsafeOperations.length != sortedLocalConversions.filter(conversion -> conversion.unsafeOperation != null).length)
-			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local conversion.";
+		for (conversion in sortedContainerElementConversions) {
+			final operation = unsafeByConversionId.get(conversion.id);
+			if (operation == null || conversion.unsafeOperation.id != operation.id)
+				throw 'Container-element conversion "${conversion.id}" does not own its recorded unsafe proof.';
+		}
+		final expectedUnsafeOperationCount = sortedLocalConversions.filter(conversion -> conversion.unsafeOperation != null).length
+			+ sortedContainerElementConversions.length;
+		if (sortedUnsafeOperations.length != expectedUnsafeOperationCount)
+			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local or container-element conversion.";
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
+		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
 		final canonicalCalls = haxe.Json.stringify({
 			calls: sortedCalls,
@@ -452,8 +473,12 @@ class OcamlLoweringReportWriter {
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
+			containerElementConversionModel: "typed-ocaml-container-element-conversions-v1",
+			containerElementConversionRevision: "sha256:" + Sha256.encode(canonicalContainerElementConversions),
+			containerElementConversionCount: sortedContainerElementConversions.length,
+			containerElementConversions: sortedContainerElementConversions,
 			unsafeOperationModel: "proof-backed-admitted-unsafe-operations-v1",
-			unsafeOperationCompleteness: "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-slices",
+			unsafeOperationCompleteness: "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,

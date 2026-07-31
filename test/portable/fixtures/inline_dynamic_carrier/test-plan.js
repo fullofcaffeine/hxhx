@@ -25,7 +25,7 @@ assert.equal(
 	'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14',
 )
 assert.equal(report.localConversionModel, 'typed-ocaml-local-carrier-conversions-v3')
-assert.equal(report.unsafeOperationCompleteness, 'exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-slices')
+assert.equal(report.unsafeOperationCompleteness, 'exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices')
 
 const dynamicRepresentations = report.representations.filter((representation) => representation.semanticTypeId === 'Dynamic')
 assert.equal(dynamicRepresentations.length, 1, 'Dynamic must have one selected representation')
@@ -92,7 +92,7 @@ for (const operation of dynamicUnsafeOperations) {
 	assert(expectedProof, `Unexpected Dynamic unsafe operation ${operation.operation}`)
 	assert.equal(operation.proofId, expectedProof)
 	assert.equal(operation.outputCarrierTypeId, 'Obj.t')
-	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v61')
+	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v62')
 }
 
 const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
@@ -100,7 +100,7 @@ const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
 )
 assert.equal(dynamicCallableBoundaries.length, 2)
 for (const boundary of dynamicCallableBoundaries) {
-	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v61')
+	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v62')
 	assert.equal(boundary.arguments.length, 1)
 	assert.deepEqual(boundary.arguments[0], {
 		parameterOptional: false,

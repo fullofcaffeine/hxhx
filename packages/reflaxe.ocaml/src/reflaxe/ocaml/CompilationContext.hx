@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -527,6 +528,17 @@ class CompilationContext {
 	**/
 	public function recordEnumDynamicLocalRuntimeRequirement(decision:OcamlLocalConversionDecision):Void {
 		OcamlEnumRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed enum array element needs `HxEnum`.
+
+		The container plan already owns the exact array slot, enum identity, and
+		boxing operation. Packaging receives that typed reason without inspecting
+		the generated `HxArray.push` expression.
+	**/
+	public function recordEnumDynamicContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.recordContainerElement(runtimeRequirements, decision);
 	}
 
 	/**

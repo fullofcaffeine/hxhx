@@ -49,3 +49,4 @@ cp "$RUNTIME" "$FIRST_RUNTIME"
 haxe build.hxml
 cmp "$FIRST_REGISTRY" "$REGISTRY"
 cmp "$FIRST_RUNTIME" "$RUNTIME"
+node verify-container-plan.js

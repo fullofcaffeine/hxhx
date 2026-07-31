@@ -10,6 +10,8 @@ import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
@@ -104,8 +106,9 @@ class OcamlFunctionPlanSealer {
 		if (data.expr == null) {
 			final controls = OcamlControlPlan.notAdmitted(binding);
 			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
-				new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
-				new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary, new OcamlAnonymousStructurePlan([], []));
+				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
+				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary,
+				new OcamlAnonymousStructurePlan([], []));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
@@ -113,6 +116,8 @@ class OcamlFunctionPlanSealer {
 		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
 			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
 		localRepresentations.requirePlanBinding(binding);
+		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
+		containerElements.requirePlanBinding(binding);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
@@ -165,6 +170,8 @@ class OcamlFunctionPlanSealer {
 			if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
 				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
 		}
+		for (conversion in containerElements.decisions())
+			context.recordEnumDynamicContainerRuntimeRequirement(conversion);
 		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
 		for (call in calls.decisions()) {
 			if (call.standardIMapTarget != null)
@@ -191,8 +198,8 @@ class OcamlFunctionPlanSealer {
 		bytesReads.requireRepresentations(representations);
 		for (decision in bytesReads.decisions())
 			context.recordBytesReadRuntimeRequirements(decision);
-		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, bytesAccesses, bytesMutations, bytesProducers, bytesReads, calls,
-			controls, callableBoundary, constructionBoundary, anonymousStructures);
+		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
+			bytesReads, calls, controls, callableBoundary, constructionBoundary, anonymousStructures);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);

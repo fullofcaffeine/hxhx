@@ -23,6 +23,7 @@ import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlFlowFacts;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -1264,8 +1265,8 @@ class CallPlanFixture {
 			?construction:Null<OcamlCallableBoundaryPlan>):Void {
 		final localIdentities = LexicalLocalIdentityPlan.build(owner.functionId, null);
 		registry.sealFunction(owner, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities), new OcamlLocalRepresentationPlan([]),
-			new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), calls,
-			OcamlControlPlan.notAdmitted(owner), callable, construction);
+			new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
+			new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable, construction);
 	}
 
 	/** Returns one real typed method body for the syntax-handoff lifecycle test. */
@@ -1301,8 +1302,8 @@ class CallPlanFixture {
 		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities),
-			new OcamlLocalRepresentationPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
-			new OcamlBytesReadPlan([]), new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
+			new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
+			new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
 
 		FunctionBodyRevision.resetDigestCallCount();
 		final syntaxInput = registry.functionSyntaxInputFor(data);

@@ -309,6 +309,33 @@ typedef InspectionLocalConversion = {
 	final unsafeOperationId:Null<String>;
 }
 
+/** One typed array element whose enum identity is preserved before Dynamic storage. **/
+typedef InspectionContainerElementConversion = {
+	final id:String;
+	final role:String;
+	final containerSourceFile:String;
+	final containerSourceMin:Int;
+	final containerSourceMax:Int;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final elementIndex:Int;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final conversion:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+	final unsafeOperationId:String;
+}
+
 /** One admitted unsafe carrier operation and the proof that owns it. **/
 typedef InspectionUnsafeOperation = {
 	final id:String;
@@ -584,6 +611,8 @@ typedef InspectionLowering = {
 	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
+	final containerElementConversionRevision:Null<String>;
+	final containerElementConversions:Array<InspectionContainerElementConversion>;
 	final unsafeOperationCompleteness:Null<String>;
 	final unsafeOperationRevision:Null<String>;
 	final unsafeOperations:Array<InspectionUnsafeOperation>;
@@ -623,6 +652,7 @@ typedef InspectionSummary = {
 	final anonymousStructureCount:Int;
 	final anonymousStructureOperationCount:Int;
 	final localConversionCount:Int;
+	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;
 	final callCount:Int;
 	final callableBoundaryCount:Int;

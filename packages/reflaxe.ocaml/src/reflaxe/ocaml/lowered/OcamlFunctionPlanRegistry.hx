@@ -14,6 +14,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
@@ -50,6 +52,7 @@ typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
+	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
@@ -113,7 +116,7 @@ private typedef OcamlSealedFunctionRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v61";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -400,9 +403,9 @@ class OcamlFunctionPlanRegistry {
 
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan, localStorage:OcamlLocalStoragePlan,
-			localRepresentations:OcamlLocalRepresentationPlan, bytesAccesses:OcamlBytesAccessPlan, bytesMutations:OcamlBytesMutationPlan,
-			bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan, controls:OcamlControlPlan,
-			callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
+			localRepresentations:OcamlLocalRepresentationPlan, containerElements:OcamlContainerElementPlan, bytesAccesses:OcamlBytesAccessPlan,
+			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan,
+			controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
 			?anonymousStructures:OcamlAnonymousStructurePlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
@@ -413,6 +416,7 @@ class OcamlFunctionPlanRegistry {
 		bytesProducers.requirePlanBinding(binding);
 		bytesReads.requirePlanBinding(binding);
 		localRepresentations.requirePlanBinding(binding);
+		containerElements.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -433,6 +437,7 @@ class OcamlFunctionPlanRegistry {
 				binding: binding,
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
+				containerElements: containerElements,
 				anonymousStructures: sealedAnonymousStructures,
 				bytesAccesses: bytesAccesses,
 				bytesMutations: bytesMutations,
@@ -741,7 +746,23 @@ class OcamlFunctionPlanRegistry {
 		return conversions;
 	}
 
-	/** Returns the proof-backed unsafe operations owned by sealed local plans. */
+	/** Returns every sealed container-element conversion in deterministic identity order. */
+	public function containerElementConversions():Array<OcamlContainerElementDecision> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final conversions:Array<OcamlContainerElementDecision> = [];
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed != null) {
+				for (conversion in sealed.plan.containerElements.decisions())
+					conversions.push(conversion);
+			}
+		}
+		conversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return conversions;
+	}
+
+	/** Returns proof-backed unsafe operations owned by local and container plans. */
 	public function unsafeOperations():Array<OcamlUnsafeOperationRecord> {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
@@ -750,6 +771,8 @@ class OcamlFunctionPlanRegistry {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed != null) {
 				for (operation in sealed.plan.localRepresentations.unsafeOperations())
+					operations.push(operation);
+				for (operation in sealed.plan.containerElements.unsafeOperations())
 					operations.push(operation);
 			}
 		}

@@ -64,6 +64,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -144,6 +145,7 @@ class OcamlBuilder {
 	// shared-cell versus immutable-rebinding decision.
 	var currentLocalStoragePlan:Null<OcamlLocalStoragePlan> = null;
 	var currentLocalRepresentationPlan:Null<OcamlLocalRepresentationPlan> = null;
+	var currentContainerElementPlan:Null<OcamlContainerElementPlan> = null;
 	// The current request's host-ID adapter is deliberately separate from the
 	// sealed plans, which retain only reusable lexical identities.
 	var currentLocalIdentities:Null<LexicalLocalIdentityPlan> = null;
@@ -201,6 +203,14 @@ class OcamlBuilder {
 
 	function localStorageInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-lowering:local-storage-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	function containerElementInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-lowering:container-element-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -1111,6 +1121,41 @@ class OcamlBuilder {
 				expression.pos);
 		}
 		return conversion;
+	}
+
+	/**
+		Builds one array element using its sealed carrier conversion, when present.
+
+		A missing decision means this element remains outside the first admitted
+		slice. A present decision is validated against the final typed constructor
+		before syntax applies the recorded enum name; syntax never invents that
+		name from an OCaml tag or rendered expression.
+	**/
+	function buildArrayLiteralElement(container:TypedExpr, item:TypedExpr, elementIndex:Int):OcamlExpr {
+		final binding = currentFunctionPlanBinding;
+		if (binding == null)
+			return buildExpr(item);
+		final plan = currentContainerElementPlan;
+		if (plan == null)
+			return containerElementInvariant("sealed function reached array syntax without its container-element plan", container.pos);
+		final containerSource = OcamlLoweredOrigin.sourceSpan(container.pos);
+		final itemSource = OcamlLoweredOrigin.sourceSpan(item.pos);
+		final conversion = plan.conversionFor(binding, containerSource, itemSource, elementIndex);
+		if (conversion == null)
+			return buildExpr(item);
+		final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
+		if (identity == null
+			|| identity.semanticTypeId != conversion.inputSemanticTypeId
+			|| identity.carrierTypeId != conversion.inputCarrierTypeId) {
+			return
+				containerElementInvariant('array element occurrence "${conversion.id}" no longer matches its sealed ${conversion.inputSemanticTypeId} constructor carrier',
+					item.pos);
+		}
+		final nativeVariant = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(item)]);
+		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(OcamlEnumDynamicCarrier.RUNTIME_MODULE), OcamlEnumDynamicCarrier.RUNTIME_OPERATION), [
+			OcamlExpr.EConst(OcamlConst.CString(conversion.inputSemanticTypeId)),
+			nativeVariant
+		]);
 	}
 
 	/** Returns the typed carrier entering an exact `Null<Int>` local write. */
@@ -4421,9 +4466,11 @@ class OcamlBuilder {
 				final tmp = freshTmp("arr");
 				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 				final seq:Array<OcamlExpr> = [];
-				for (item in items) {
+				for (elementIndex in 0...items.length) {
+					final item = items[elementIndex];
 					seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [OcamlExpr.EIdent(tmp), buildExpr(item)])
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
+							[OcamlExpr.EIdent(tmp), buildArrayLiteralElement(e, item, elementIndex)])
 					]));
 				}
 				seq.push(OcamlExpr.EIdent(tmp));
@@ -7502,9 +7549,11 @@ class OcamlBuilder {
 
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalRepresentationPlan = currentLocalRepresentationPlan;
+		final previousContainerElementPlan = currentContainerElementPlan;
 		final previousLocalIdentities = currentLocalIdentities;
 		currentLocalStoragePlan = storagePlan;
 		currentLocalRepresentationPlan = localRepresentationPlan;
+		currentContainerElementPlan = functionPlan.containerElements;
 		currentLocalIdentities = localIdentities;
 		for (a in args) {
 			final stableId = stableLocalId(a.id, bodyExpr.pos);
@@ -7617,6 +7666,7 @@ class OcamlBuilder {
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
+		currentContainerElementPlan = previousContainerElementPlan;
 		currentLocalIdentities = previousLocalIdentities;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;

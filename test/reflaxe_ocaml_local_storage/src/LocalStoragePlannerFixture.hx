@@ -3,6 +3,8 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
@@ -711,7 +713,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v61"
+			pipelineRevision: "ocaml-function-plans-v62"
 		};
 		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
 		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
@@ -753,7 +755,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-enum-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-enum-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v61"
+			pipelineRevision: "ocaml-function-plans-v62"
 		};
 		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
 		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
@@ -780,6 +782,58 @@ class LocalStoragePlannerFixture {
 				&& requirement.subject.id == "LocalDynamicEnum",
 				"the runtime requirement should trace HxEnum back to the exact sealed source conversion");
 		}
+		final dynamicArrayInput = Context.typeExpr(macro {
+			final values:Array<Dynamic> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
+			values;
+		});
+		final dynamicArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-enum-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-enum-array-elements-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final dynamicArrayPlan = OcamlContainerElementPlanner.planExpression(dynamicArrayInput, dynamicArrayBinding);
+		final dynamicArrayConversions = dynamicArrayPlan.decisions();
+		assertTrue(dynamicArrayConversions.length == 2 && dynamicArrayPlan.unsafeOperations().length == 2,
+			"constant and payload enum constructors should each seal one Array<Dynamic> element conversion");
+		final dynamicArrayIndices = dynamicArrayConversions.map(conversion -> conversion.elementIndex);
+		dynamicArrayIndices.sort((left, right) -> left - right);
+		assertTrue(dynamicArrayIndices.join(",") == "0,1", "the two decisions should retain distinct zero-based array element indices");
+		for (conversion in dynamicArrayConversions) {
+			assertTrue(conversion.inputSemanticTypeId == "LocalDynamicEnum"
+				&& conversion.inputCarrierTypeId == OcamlEnumDynamicCarrier.CARRIER_MODEL + ":LocalDynamicEnum"
+				&& conversion.outputSemanticTypeId == "Dynamic"
+				&& conversion.outputCarrierTypeId == OcamlEnumDynamicCarrier.DYNAMIC_CARRIER
+				&& conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic,
+				"an Array<Dynamic> element decision should retain its exact slot, enum identity, native carrier, and Dynamic output");
+			final requirement = OcamlEnumRuntimeRequirementRecorder.containerElementRequirement(conversion);
+			assertTrue(requirement.id == OcamlEnumDynamicCarrier.runtimeRequirementId(conversion.id)
+				&& requirement.subject.id == "LocalDynamicEnum"
+				&& requirement.rootModules.join(",") == OcamlEnumDynamicCarrier.RUNTIME_MODULE,
+				"an enum array-element decision should publish one source-owned HxEnum runtime requirement");
+		}
+		final firstArrayConversion = dynamicArrayConversions[0];
+		expectFailure("duplicate array element conversion", "duplicate-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion, firstArrayConversion]));
+		final wrongArrayCarrier = copyPlanRecord(firstArrayConversion);
+		wrongArrayCarrier.inputCarrierTypeId = OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum";
+		wrongArrayCarrier.unsafeOperation.inputCarrierTypeId = wrongArrayCarrier.inputCarrierTypeId;
+		expectFailure("wrong array enum carrier", "wrong-dynamic-carrier", () -> new OcamlContainerElementPlan([cast wrongArrayCarrier]));
+		final staleArraySource = copyPlanRecord(firstArrayConversion);
+		staleArraySource.source.min += 1;
+		staleArraySource.unsafeOperation.source.min += 1;
+		expectFailure("coherently changed array element source with its old ID", "noncanonical-identity",
+			() -> new OcamlContainerElementPlan([cast staleArraySource]));
+		final brokenArrayProof = copyPlanRecord(firstArrayConversion);
+		brokenArrayProof.unsafeOperation.proofId = "wrong-proof";
+		expectFailure("mismatched array unsafe proof", "unsafe-proof-mismatch", () -> new OcamlContainerElementPlan([cast brokenArrayProof]));
+		final staleArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: dynamicArrayBinding.functionId,
+			programRevision: dynamicArrayBinding.programRevision,
+			bodyRevision: "body:other-array-elements",
+			pipelineRevision: dynamicArrayBinding.pipelineRevision
+		};
+		expectFailure("stale array element binding", "stale-binding", () -> dynamicArrayPlan.requirePlanBinding(staleArrayBinding));
 		final indirectDynamicEnumInput = Context.typeExpr(macro {
 			final seed = LocalDynamicEnum.Idle;
 			final fromLocal:Dynamic = seed;
@@ -791,7 +845,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|indirect-dynamic-enum",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:indirect-dynamic-enum-v1",
-			pipelineRevision: "ocaml-function-plans-v61"
+			pipelineRevision: "ocaml-function-plans-v62"
 		});
 		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& indirectDynamicEnumPlan.conversions().length == 0,
@@ -844,7 +898,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|uninitialized-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:uninitialized-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v61"
+			pipelineRevision: "ocaml-function-plans-v62"
 		});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -858,7 +912,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|reassigned-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:reassigned-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v61"
+			pipelineRevision: "ocaml-function-plans-v62"
 		});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,

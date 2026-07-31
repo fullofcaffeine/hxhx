@@ -2,6 +2,9 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementRole;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
@@ -65,6 +68,41 @@ class OcamlEnumRuntimeRequirementRecorder {
 	/** Adds the admitted enum conversion to the request-owned runtime ledger. */
 	public static function record(ledger:OcamlRuntimeRequirementLedger, conversion:OcamlLocalConversionDecision):Void {
 		ledger.record(requirement(conversion));
+	}
+
+	/** Builds the runtime reason owned by one `Array<Dynamic>` element conversion. */
+	public static function containerElementRequirement(decision:OcamlContainerElementDecision):OcamlRuntimeRequirement {
+		// Reconstructing a one-entry plan reuses the same fail-closed contract as
+		// function sealing and catches a forged report or request handoff.
+		new OcamlContainerElementPlan([decision]);
+		if (decision.role != OcamlContainerElementRole.ArrayLiteralDynamicElement
+			|| decision.conversion != OcamlLocalCarrierConversion.BoxExactEnumToDynamic
+			|| decision.outputSemanticTypeId != "Dynamic"
+			|| decision.outputCarrierTypeId != OcamlEnumDynamicCarrier.DYNAMIC_CARRIER) {
+			throw 'reflaxe.ocaml [ocaml-enum:wrong-runtime-container-element]: conversion "${decision.id}" is not an exact enum-to-Dynamic array element';
+		}
+		return {
+			id: OcamlEnumDynamicCarrier.runtimeRequirementId(decision.id),
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: OcamlEnumDynamicCarrier.RUNTIME_CAPABILITY,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: decision.inputSemanticTypeId
+			},
+			implementationFeature: OcamlEnumDynamicCarrier.RUNTIME_FEATURE,
+			rootModules: [OcamlEnumDynamicCarrier.RUNTIME_MODULE],
+			profileEligibility: decision.profileEligibility,
+			explanation: 'The sealed Array<Dynamic> element converts ${decision.inputSemanticTypeId} from its native OCaml variant into Dynamic by calling ${OcamlEnumDynamicCarrier.RUNTIME_MODULE}.${OcamlEnumDynamicCarrier.RUNTIME_OPERATION}; this preserves its enum identity and payload after array storage.'
+		};
+	}
+
+	/** Adds one admitted enum array element to the request-owned runtime ledger. */
+	public static function recordContainerElement(ledger:OcamlRuntimeRequirementLedger, decision:OcamlContainerElementDecision):Void {
+		ledger.record(containerElementRequirement(decision));
 	}
 
 	/**

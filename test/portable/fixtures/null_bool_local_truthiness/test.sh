@@ -42,11 +42,11 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 48
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14'
 	|| report.localConversionModel !== 'typed-ocaml-local-carrier-conversions-v3'
 	|| report.unsafeOperationModel !== 'proof-backed-admitted-unsafe-operations-v1'
-	|| report.unsafeOperationCompleteness !== 'exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-slices') {
+	|| report.unsafeOperationCompleteness !== 'exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices') {
 	fail('unexpected schema, representation scope, or proof-ledger model')
 }
 const nullBoolDomains = new Set(report.representations
