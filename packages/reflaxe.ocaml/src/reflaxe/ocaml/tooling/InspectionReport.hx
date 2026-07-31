@@ -611,6 +611,8 @@ typedef InspectionLowering = {
 	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
+	final containerElementRequiredConversionRevision:Null<String>;
+	final containerElementRequiredConversionIds:Array<String>;
 	final containerElementConversionRevision:Null<String>;
 	final containerElementConversions:Array<InspectionContainerElementConversion>;
 	final unsafeOperationCompleteness:Null<String>;

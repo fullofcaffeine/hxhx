@@ -75,7 +75,7 @@ try {
 	const appInspect = runCli(['inspect', '--project', appRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(appInspect.status, 0, appInspect.stderr || appInspect.stdout)
 	const appInspection = JSON.parse(appInspect.stdout)
-	assert.strictEqual(appInspection.schemaVersion, 28)
+	assert.strictEqual(appInspection.schemaVersion, 29)
 	assert.strictEqual(appInspection.summary.valid, true)
 	assert.strictEqual(appInspection.artifactManifest.status, 'present')
 	assert.strictEqual(appInspection.artifactManifest.completeForSourceBundle, true)

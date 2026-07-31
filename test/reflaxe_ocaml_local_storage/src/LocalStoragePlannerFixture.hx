@@ -794,8 +794,13 @@ class LocalStoragePlannerFixture {
 		};
 		final dynamicArrayPlan = OcamlContainerElementPlanner.planExpression(dynamicArrayInput, dynamicArrayBinding);
 		final dynamicArrayConversions = dynamicArrayPlan.decisions();
+		final dynamicArrayRequiredIds = dynamicArrayPlan.requiredConversionIds();
 		assertTrue(dynamicArrayConversions.length == 2 && dynamicArrayPlan.unsafeOperations().length == 2,
 			"constant and payload enum constructors should each seal one Array<Dynamic> element conversion");
+		assertTrue(dynamicArrayRequiredIds.length == 2
+			&& dynamicArrayRequiredIds.join(",") == dynamicArrayConversions.map(conversion -> conversion.id).join(","),
+			"the independent typed-body inventory should require exactly the two sealed conversions");
+		OcamlContainerElementPlanner.requireCompleteness(dynamicArrayInput, dynamicArrayBinding, dynamicArrayPlan);
 		final dynamicArrayIndices = dynamicArrayConversions.map(conversion -> conversion.elementIndex);
 		dynamicArrayIndices.sort((left, right) -> left - right);
 		assertTrue(dynamicArrayIndices.join(",") == "0,1", "the two decisions should retain distinct zero-based array element indices");
@@ -814,7 +819,11 @@ class LocalStoragePlannerFixture {
 		}
 		final firstArrayConversion = dynamicArrayConversions[0];
 		expectFailure("duplicate array element conversion", "duplicate-conversion",
-			() -> new OcamlContainerElementPlan([firstArrayConversion, firstArrayConversion]));
+			() -> new OcamlContainerElementPlan([firstArrayConversion, firstArrayConversion], [firstArrayConversion.id]));
+		expectFailure("required array element without a conversion", "missing-required-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion], dynamicArrayRequiredIds));
+		expectFailure("array element conversion absent from required inventory", "unexpected-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion], []));
 		final wrongArrayCarrier = copyPlanRecord(firstArrayConversion);
 		wrongArrayCarrier.inputCarrierTypeId = OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum";
 		wrongArrayCarrier.unsafeOperation.inputCarrierTypeId = wrongArrayCarrier.inputCarrierTypeId;
@@ -834,6 +843,28 @@ class LocalStoragePlannerFixture {
 			pipelineRevision: dynamicArrayBinding.pipelineRevision
 		};
 		expectFailure("stale array element binding", "stale-binding", () -> dynamicArrayPlan.requirePlanBinding(staleArrayBinding));
+		final excludedDynamicArrayInput = Context.typeExpr(macro {
+			final seed = LocalDynamicEnum.Idle;
+			final factory = () -> LocalDynamicEnum.Payload(9);
+			final holder = {value: LocalDynamicEnum.Payload(10)};
+			final nullable:Null<LocalDynamicEnum> = LocalDynamicEnum.Idle;
+			final localRead:Array<Dynamic> = [seed];
+			final callResult:Array<Dynamic> = [factory()];
+			final fieldRead:Array<Dynamic> = [holder.value];
+			final nullableRead:Array<Dynamic> = [nullable];
+			final exactEnumArray:Array<LocalDynamicEnum> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
+			[localRead, callResult, fieldRead, nullableRead, cast exactEnumArray];
+		});
+		final excludedDynamicArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|excluded-dynamic-enum-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:excluded-dynamic-enum-array-elements-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final excludedDynamicArrayPlan = OcamlContainerElementPlanner.planExpression(excludedDynamicArrayInput, excludedDynamicArrayBinding);
+		assertTrue(excludedDynamicArrayPlan.decisions().length == 0 && excludedDynamicArrayPlan.requiredConversionIds().length == 0,
+			"enum local reads, call results, field reads, nullable values, and exact enum arrays must remain outside the direct-constructor Array<Dynamic> slice");
+		OcamlContainerElementPlanner.requireCompleteness(excludedDynamicArrayInput, excludedDynamicArrayBinding, excludedDynamicArrayPlan);
 		final indirectDynamicEnumInput = Context.typeExpr(macro {
 			final seed = LocalDynamicEnum.Idle;
 			final fromLocal:Dynamic = seed;

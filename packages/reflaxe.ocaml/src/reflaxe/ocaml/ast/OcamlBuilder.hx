@@ -65,6 +65,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementRole;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
@@ -1126,10 +1127,11 @@ class OcamlBuilder {
 	/**
 		Builds one array element using its sealed carrier conversion, when present.
 
-		A missing decision means this element remains outside the first admitted
-		slice. A present decision is validated against the final typed constructor
-		before syntax applies the recorded enum name; syntax never invents that
-		name from an OCaml tag or rendered expression.
+		The independent required-occurrence inventory distinguishes an intentionally
+		excluded element from a missing decision. A required occurrence without its
+		sealed conversion is an internal compiler error; an excluded element follows
+		the ordinary expression path. Syntax never invents an enum name from an OCaml
+		tag or rendered expression.
 	**/
 	function buildArrayLiteralElement(container:TypedExpr, item:TypedExpr, elementIndex:Int):OcamlExpr {
 		final binding = currentFunctionPlanBinding;
@@ -1141,8 +1143,14 @@ class OcamlBuilder {
 		final containerSource = OcamlLoweredOrigin.sourceSpan(container.pos);
 		final itemSource = OcamlLoweredOrigin.sourceSpan(item.pos);
 		final conversion = plan.conversionFor(binding, containerSource, itemSource, elementIndex);
-		if (conversion == null)
+		if (conversion == null) {
+			if (plan.requiresConversionFor(binding, containerSource, itemSource, elementIndex)) {
+				final occurrenceId = OcamlContainerElementPlan.occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource,
+					itemSource, elementIndex);
+				return containerElementInvariant('required array element occurrence "$occurrenceId" has no sealed conversion decision', item.pos);
+			}
 			return buildExpr(item);
+		}
 		final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
 		if (identity == null
 			|| identity.semanticTypeId != conversion.inputSemanticTypeId

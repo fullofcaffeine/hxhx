@@ -62,7 +62,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 48
+if (report.schemaVersion !== 49
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -182,7 +182,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_REPORT" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 28
+if (report.schemaVersion !== 29
 	|| !report.summary?.valid
 	|| report.summary.anonymousStructureCount !== report.lowering?.anonymousStructures?.length
 	|| report.summary.anonymousStructureOperationCount !== report.lowering?.anonymousStructureOperations?.length

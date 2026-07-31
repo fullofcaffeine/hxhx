@@ -46,7 +46,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 48;
+	public static inline final SCHEMA_VERSION = 49;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -119,9 +119,9 @@ class OcamlLoweringReportWriter {
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
 			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
-			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
-			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
-			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			containerElementRequiredConversionIds:Array<String>, containerElementConversions:Array<OcamlContainerElementDecision>,
+			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -321,6 +321,28 @@ class OcamlLoweringReportWriter {
 		sortedLocalConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final sortedContainerElementConversions = containerElementConversions.copy();
 		sortedContainerElementConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final sortedContainerElementRequiredConversionIds = containerElementRequiredConversionIds.copy();
+		sortedContainerElementRequiredConversionIds.sort(Reflect.compare);
+		final requiredContainerElementConversionById:Map<String, Bool> = [];
+		for (id in sortedContainerElementRequiredConversionIds) {
+			if (id.length == 0)
+				throw "Container-element required conversion inventory contains an empty identity.";
+			if (requiredContainerElementConversionById.exists(id))
+				throw 'Container-element required conversion identity "$id" occurs more than once.';
+			requiredContainerElementConversionById.set(id, true);
+		}
+		final containerElementConversionById:Map<String, Bool> = [];
+		for (conversion in sortedContainerElementConversions) {
+			if (containerElementConversionById.exists(conversion.id))
+				throw 'Container-element conversion identity "${conversion.id}" occurs more than once.';
+			if (!requiredContainerElementConversionById.exists(conversion.id))
+				throw 'Container-element conversion "${conversion.id}" is absent from the required occurrence inventory.';
+			containerElementConversionById.set(conversion.id, true);
+		}
+		for (id in sortedContainerElementRequiredConversionIds) {
+			if (!containerElementConversionById.exists(id))
+				throw 'Required container-element occurrence "$id" has no sealed conversion.';
+		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
 		for (requirement in requirements) {
 			if (requirementById.exists(requirement.id))
@@ -442,6 +464,7 @@ class OcamlLoweringReportWriter {
 		if (sortedUnsafeOperations.length != expectedUnsafeOperationCount)
 			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local or container-element conversion.";
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
+		final canonicalContainerElementRequiredConversionIds = haxe.Json.stringify(sortedContainerElementRequiredConversionIds);
 		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
 		final canonicalCalls = haxe.Json.stringify({
@@ -474,6 +497,10 @@ class OcamlLoweringReportWriter {
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
 			containerElementConversionModel: "typed-ocaml-container-element-conversions-v1",
+			containerElementRequiredConversionModel: "typed-ocaml-required-container-element-conversions-v1",
+			containerElementRequiredConversionRevision: "sha256:" + Sha256.encode(canonicalContainerElementRequiredConversionIds),
+			containerElementRequiredConversionCount: sortedContainerElementRequiredConversionIds.length,
+			containerElementRequiredConversionIds: sortedContainerElementRequiredConversionIds,
 			containerElementConversionRevision: "sha256:" + Sha256.encode(canonicalContainerElementConversions),
 			containerElementConversionCount: sortedContainerElementConversions.length,
 			containerElementConversions: sortedContainerElementConversions,

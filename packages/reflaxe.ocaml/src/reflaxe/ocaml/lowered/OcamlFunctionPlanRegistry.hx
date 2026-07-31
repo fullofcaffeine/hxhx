@@ -762,6 +762,33 @@ class OcamlFunctionPlanRegistry {
 		return conversions;
 	}
 
+	/**
+		Returns the independently observed array elements that require conversion.
+
+		The lowering report publishes this inventory separately from the decisions,
+		so release tooling can detect a conversion that disappeared together with
+		its unsafe-operation and runtime-requirement records.
+	**/
+	public function containerElementRequiredConversionIds():Array<String> {
+		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
+		functionIds.sort(Reflect.compare);
+		final required:Array<String> = [];
+		final seen:StringMap<Bool> = new StringMap();
+		for (functionId in functionIds) {
+			final sealed = sealedFunctions.get(functionId);
+			if (sealed == null)
+				continue;
+			for (id in sealed.plan.containerElements.requiredConversionIds()) {
+				if (seen.exists(id))
+					throw 'reflaxe.ocaml [ocaml-container-element:duplicate-required-conversion]: occurrence "$id" is required by more than one sealed function';
+				seen.set(id, true);
+				required.push(id);
+			}
+		}
+		required.sort(Reflect.compare);
+		return required;
+	}
+
 	/** Returns proof-backed unsafe operations owned by local and container plans. */
 	public function unsafeOperations():Array<OcamlUnsafeOperationRecord> {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];

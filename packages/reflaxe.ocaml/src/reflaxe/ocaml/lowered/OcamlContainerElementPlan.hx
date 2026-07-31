@@ -51,24 +51,58 @@ typedef OcamlContainerElementDecision = {
 **/
 class OcamlContainerElementPlan {
 	final orderedDecisions:Array<OcamlContainerElementDecision>;
+	final orderedRequiredConversionIds:Array<String>;
 	final decisionsById:Map<String, OcamlContainerElementDecision> = [];
+	final requiredConversionById:Map<String, Bool> = [];
 
 	public final count:Int;
+	public final requiredConversionCount:Int;
+	public final requiredConversionRevision:String;
 	public final unsafeOperationCount:Int;
 	public final revision:String;
 
-	public function new(decisions:Array<OcamlContainerElementDecision>) {
+	/**
+		Seals both the required occurrence inventory and its conversion decisions.
+
+		`requiredConversionIds` comes from a separate typed-body observation. Its
+		presence prevents an accidentally omitted conversion from becoming an
+		unrecorded legacy case. Tests that construct a plan directly may omit the
+		argument, in which case their supplied decisions define the inventory.
+	**/
+	public function new(decisions:Array<OcamlContainerElementDecision>, ?requiredConversionIds:Array<String>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		orderedRequiredConversionIds = requiredConversionIds == null ? orderedDecisions.map(decision -> decision.id) : requiredConversionIds.copy();
+		orderedRequiredConversionIds.sort(Reflect.compare);
+		for (id in orderedRequiredConversionIds) {
+			if (id.length == 0)
+				throw "reflaxe.ocaml [ocaml-container-element:invalid-required-conversion]: a required occurrence identity is empty";
+			if (requiredConversionById.exists(id))
+				throw 'reflaxe.ocaml [ocaml-container-element:duplicate-required-conversion]: occurrence "$id" is required more than once';
+			requiredConversionById.set(id, true);
+		}
 		for (decision in orderedDecisions) {
 			requireDecision(decision);
 			if (decisionsById.exists(decision.id))
 				throw 'reflaxe.ocaml [ocaml-container-element:duplicate-conversion]: occurrence "${decision.id}" is sealed more than once';
+			if (!requiredConversionById.exists(decision.id))
+				throw 'reflaxe.ocaml [ocaml-container-element:unexpected-conversion]: occurrence "${decision.id}" has a decision but is not in the independently observed required inventory';
 			decisionsById.set(decision.id, decision);
 		}
+		for (id in orderedRequiredConversionIds) {
+			if (!decisionsById.exists(id))
+				throw 'reflaxe.ocaml [ocaml-container-element:missing-required-conversion]: required occurrence "$id" has no sealed conversion decision';
+		}
 		count = orderedDecisions.length;
+		requiredConversionCount = orderedRequiredConversionIds.length;
+		requiredConversionRevision = "sha256:" + Sha256.encode(haxe.Json.stringify(orderedRequiredConversionIds));
 		unsafeOperationCount = orderedDecisions.length;
-		revision = "sha256:" + Sha256.encode(orderedDecisions.map(fingerprint).join("\n"));
+		revision = "sha256:" + Sha256.encode([
+			"required",
+			orderedRequiredConversionIds.join("\n"),
+			"decisions",
+			orderedDecisions.map(fingerprint).join("\n")
+		].join("\n"));
 	}
 
 	/**
@@ -115,6 +149,23 @@ class OcamlContainerElementPlan {
 		final id = occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource, source, elementIndex);
 		final decision = decisionsById.get(id);
 		return decision == null ? null : copyDecision(decision);
+	}
+
+	/** Reports whether the independent typed-body inventory requires this occurrence. */
+	public function requiresConversionFor(binding:OcamlFunctionPlanBinding, containerSource:OcamlLoweredSourceSpan, source:OcamlLoweredSourceSpan,
+			elementIndex:Int):Bool {
+		final id = occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource, source, elementIndex);
+		return requiredConversionById.exists(id);
+	}
+
+	/** Returns the independent required occurrence inventory in stable order. */
+	public function requiredConversionIds():Array<String> {
+		return orderedRequiredConversionIds.copy();
+	}
+
+	/** Checks one stable occurrence without copying the decision payload. */
+	public function hasDecision(id:String):Bool {
+		return decisionsById.exists(id);
 	}
 
 	/** Returns defensive copies in deterministic identity order. */
@@ -361,7 +412,52 @@ class OcamlContainerElementPlanner {
 		}
 
 		visit(expression);
-		return new OcamlContainerElementPlan(decisions);
+		return new OcamlContainerElementPlan(decisions, requiredConversionIdsForExpression(expression, binding));
+	}
+
+	/**
+		Checks a sealed plan against a fresh observation of the final typed body.
+
+		This pass does not trust the decision list or the inventory stored beside
+		it. It walks the typed Haxe expression again and requires exact agreement,
+		so a planner omission becomes an internal compiler error before syntax.
+	**/
+	public static function requireCompleteness(expression:TypedExpr, binding:OcamlFunctionPlanBinding, plan:OcamlContainerElementPlan):Void {
+		final observed = requiredConversionIdsForExpression(expression, binding);
+		final sealed = plan.requiredConversionIds();
+		if (observed.join("\n") != sealed.join("\n")) {
+			throw 'reflaxe.ocaml [ocaml-container-element:required-inventory-mismatch]: fresh typed-body observation found [${observed.join(",")}], but the sealed plan requires [${sealed.join(",")}]';
+		}
+		for (id in observed) {
+			if (!plan.hasDecision(id))
+				throw 'reflaxe.ocaml [ocaml-container-element:missing-required-conversion]: required occurrence "$id" has no sealed conversion decision';
+		}
+	}
+
+	static function requiredConversionIdsForExpression(expression:TypedExpr, binding:OcamlFunctionPlanBinding):Array<String> {
+		final ids:Array<String> = [];
+
+		function visit(current:TypedExpr):Void {
+			switch (current.expr) {
+				case TArrayDecl(items) if (isExactDynamicArray(current.t)):
+					final containerSource = OcamlLoweredOrigin.sourceSpan(current.pos);
+					for (elementIndex in 0...items.length) {
+						final item = items[elementIndex];
+						if (OcamlEnumDynamicCarrier.fromDirectValue(item) == null)
+							continue;
+						final source = OcamlLoweredOrigin.sourceSpan(item.pos);
+						ids.push(OcamlContainerElementPlan.occurrenceId(binding, OcamlContainerElementRole.ArrayLiteralDynamicElement, containerSource,
+							source, elementIndex));
+					}
+					TypedExprTools.iter(current, visit);
+				case _:
+					TypedExprTools.iter(current, visit);
+			}
+		}
+
+		visit(expression);
+		ids.sort(Reflect.compare);
+		return ids;
 	}
 
 	static function isExactDynamicArray(type:Type):Bool {

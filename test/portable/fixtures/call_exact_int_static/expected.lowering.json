@@ -3334,6 +3334,7 @@
       "outputCarrierTypeId": "Obj.t"
     }
   ],
+  "containerElementRequiredConversionCount": 0,
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 1,
   "controlCatches": [
@@ -10763,7 +10764,7 @@
     }
   ],
   "runtimeRequirementCount": 32,
-  "schemaVersion": 48,
+  "schemaVersion": 49,
   "unsafeOperationCount": 82,
   "unsafeOperationRevision": "sha256:ec26186b25f1219537863abb72c51246bc6733dcefcb52d5f65add27bc23edc9",
   "callableBoundaryCount": 62,
@@ -10771,10 +10772,12 @@
   "containerElementConversionModel": "typed-ocaml-container-element-conversions-v1",
   "staticStorageRevision": "sha256:a02a9fdb60e3f14a89406e9d6284c01895eb0ffb33ba763e9a3d5044d6cdcc8d",
   "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v15",
+  "containerElementRequiredConversionIds": [],
   "controlTargetRevision": "sha256:b4fa5c9187f2cc71c76eecbbd14988b6243508393317ff7ca27539ae47133afa",
   "callModel": "typed-ocaml-directional-call-boundary-v18",
   "containerElementConversions": [],
   "localConversionModel": "typed-ocaml-local-carrier-conversions-v3",
+  "containerElementRequiredConversionRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "representations": [
     {
       "carrierTypeId": "t",
@@ -22168,5 +22171,6 @@
   "plans": [],
   "containerElementConversionRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "anonymousStructureCount": 2,
-  "controlTargetModel": "typed-ocaml-lexical-loop-target-v1"
+  "controlTargetModel": "typed-ocaml-lexical-loop-target-v1",
+  "containerElementRequiredConversionModel": "typed-ocaml-required-container-element-conversions-v1"
 }

@@ -21,6 +21,8 @@ const generated = fs.readFileSync(path.join(fixtureRoot, 'out', 'Main.ml'), 'utf
 const conversions = lowering.containerElementConversions
 assert.equal(conversions.length, 2, 'the two enum values entering Array<Dynamic> should each have one sealed conversion')
 assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 1])
+assert.deepEqual(lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id),
+	'the independent typed-body inventory should require exactly the two sealed conversions')
 
 for (const conversion of conversions) {
 	assert.equal(conversion.role, 'array-literal-dynamic-element')
@@ -83,8 +85,9 @@ function inspect(outputDirectory) {
 const inspection = inspect(path.join(fixtureRoot, 'out'))
 assert.equal(inspection.status, 0, `public inspection rejected the valid container plan: ${inspection.stdout}${inspection.stderr}`)
 const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 28)
+assert.equal(inspectionReport.schemaVersion, 29)
 assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
+assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
 
 const tamperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-enum-container-tamper-'))
 const tamperOut = path.join(tamperRoot, 'out')
@@ -110,16 +113,28 @@ try {
 		const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 		mutate(report)
 		fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
+		const recompute = childProcess.spawnSync('haxe', [
+			'-cp', path.join(repoRoot, 'scripts/ci'),
+			'--run', 'RecomputeLoweringContainerRevisions',
+			reportPath
+		], {
+			cwd: repoRoot,
+			encoding: 'utf8'
+		})
+		assert.equal(recompute.status, 0,
+			`could not refresh lowering section revisions for ${label}: ${recompute.stdout}${recompute.stderr}`)
 		const result = inspect(tamperOut)
 		assert.notEqual(result.status, 0, `public inspection accepted ${label}`)
 		assert.match(result.stdout + result.stderr, pattern)
 	}
 
-	expectLoweringRejection('a missing container conversion', /unreferenced runtime requirement/, report => {
+	expectLoweringRejection('a completely omitted required container conversion', /required container-element conversion inventory.*does not match/i, report => {
 		const removed = report.containerElementConversions.shift()
 		report.containerElementConversionCount = report.containerElementConversions.length
 		report.unsafeOperations = report.unsafeOperations.filter(entry => entry.conversionId !== removed.id)
 		report.unsafeOperationCount = report.unsafeOperations.length
+		report.runtimeRequirements = report.runtimeRequirements.filter(entry => entry.decisionId !== removed.id)
+		report.runtimeRequirementCount = report.runtimeRequirements.length
 	})
 	expectLoweringRejection('a duplicated container conversion', /duplicate identity/, report => {
 		report.containerElementConversions.push(report.containerElementConversions[0])
@@ -134,6 +149,12 @@ try {
 	})
 	expectLoweringRejection('a corrupt container carrier', /invalid exact enum-to-Dynamic array contract/, report => {
 		report.containerElementConversions[0].inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'
+	})
+	expectLoweringRejection('an empty container conversion reason', /invalid exact enum-to-Dynamic array contract/, report => {
+		report.containerElementConversions[0].reason = ''
+	})
+	expectLoweringRejection('an empty container conversion proof claim', /invalid exact enum-to-Dynamic array contract/, report => {
+		report.containerElementConversions[0].proofClaim = ''
 	})
 	expectLoweringRejection('a container conversion without its HxEnum requirement', /refers to missing runtime requirement/, report => {
 		const conversion = report.containerElementConversions[0]
