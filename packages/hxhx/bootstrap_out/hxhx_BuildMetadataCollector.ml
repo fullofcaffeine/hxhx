@@ -13,9 +13,9 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.BuildMetada
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.BuildMetadataCollector" } : t)
 
-let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out = Obj.magic (HxArray.create ()) in (
-  ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
-  let lex = Obj.magic (HxLexer.create (source : string)) in let t = ref (Obj.magic (HxLexer.next (Obj.magic lex) ())) in (
+let findBuildMacroExprs = fun source -> try let __fallback_result_19 = let out = Obj.magic (HxArray.create ()) in (
+  ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+  let lex = HxLexer.create (source : string) in let t = ref (Obj.magic (HxLexer.next (Obj.magic lex) ())) in (
     ignore (try while true do try ignore ((
       ignore (let _g = Obj.magic (HxToken.getKind (Obj.magic (!t)) ()) in match _g with
         | HxTokenKind.TEof -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out)))
@@ -184,19 +184,19 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
               )) with
                 | HxRuntime.Hx_continue -> () done with
                 | HxRuntime.Hx_break -> ());
-              let tempString = ref ("" : string) in let value = (HxString.substring source startIndex (!endIndex) : string) in (
-                ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_13 = ("" : string) in (
+              let tempString = ref (HxString.hx_null_string : string) in let value = (HxString.substring source startIndex (!endIndex) : string) in (
+                ignore (if value == HxString.hx_null_string then let __assign_13 = "" in (
                   tempString := __assign_13;
                   __assign_13
-                ) else let __assign_14 = (StringTools.trim (value : string) : string) in (
+                ) else let __assign_14 = let __call_arg_0_15 = value in StringTools.trim __call_arg_0_15 in (
                   tempString := __assign_14;
                   __assign_14
                 ));
-                let expr = (!tempString : string) in (
+                let expr = !tempString in (
                   ignore (if HxString.length expr > 0 then ignore (HxArray.push out expr) else ());
-                  ignore (let __assign_15 = Obj.magic (HxLexer.next (Obj.magic lex) ()) in (
-                    t := __assign_15;
-                    __assign_15
+                  ignore (let __assign_16 = Obj.magic (HxLexer.next (Obj.magic lex) ()) in (
+                    t := __assign_16;
+                    __assign_16
                   ));
                   raise (HxRuntime.Hx_continue)
                 )
@@ -205,91 +205,93 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
           )
         )) else ignore ())
         | _ -> ignore ());
-      let __assign_16 = Obj.magic (HxLexer.next (Obj.magic lex) ()) in (
-        t := __assign_16;
-        __assign_16
+      let __assign_17 = Obj.magic (HxLexer.next (Obj.magic lex) ()) in (
+        t := __assign_17;
+        __assign_17
       )
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
     out
   )
-) in Obj.magic __fallback_result_18 with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+) in Obj.magic __fallback_result_19 with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let matchesMetadataPathFilter = fun modulePath pathFilter recursive -> try let __fallback_result_36 = let tempString = ref ("" : string) in (
-  ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_29 = ("" : string) in (
-    tempString := __assign_29;
-    __assign_29
-  ) else if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
-    tempString := __assign_30;
-    __assign_30
-  ) else let __assign_31 = (StringTools.trim (modulePath : string) : string) in (
-    tempString := __assign_31;
-    __assign_31
+let matchesMetadataPathFilter = fun (modulePath : string) (pathFilter : string) (recursive : bool) -> (try let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if modulePath == HxString.hx_null_string then let __assign_35 = "" in (
+    tempString := __assign_35;
+    __assign_35
+  ) else if modulePath == HxString.hx_null_string then let __assign_36 = "" in (
+    tempString := __assign_36;
+    __assign_36
+  ) else let __assign_37 = let __call_arg_0_38 = modulePath in StringTools.trim __call_arg_0_38 in (
+    tempString := __assign_37;
+    __assign_37
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if pathFilter == Obj.magic (HxRuntime.hx_null) then let __assign_32 = ("" : string) in (
-      tempString1 := __assign_32;
-      __assign_32
-    ) else if pathFilter == Obj.magic (HxRuntime.hx_null) then let __assign_33 = ("" : string) in (
-      tempString1 := __assign_33;
-      __assign_33
-    ) else let __assign_34 = (StringTools.trim (pathFilter : string) : string) in (
-      tempString1 := __assign_34;
-      __assign_34
+  let moduleName = !tempString in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if pathFilter == HxString.hx_null_string then let __assign_39 = "" in (
+      tempString1 := __assign_39;
+      __assign_39
+    ) else if pathFilter == HxString.hx_null_string then let __assign_40 = "" in (
+      tempString1 := __assign_40;
+      __assign_40
+    ) else let __assign_41 = let __call_arg_0_42 = pathFilter in StringTools.trim __call_arg_0_42 in (
+      tempString1 := __assign_41;
+      __assign_41
     ));
-    ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    ignore (if HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-    ignore (if recursive then raise (HxRuntime.Hx_return (Obj.repr (HxString.equals (!tempString) (!tempString1) || StringTools.startsWith (!tempString : string) (HxString.toStdString (!tempString1) ^ "." : string)))) else ());
-    HxString.equals (!tempString) (!tempString1)
+    let filter = !tempString1 in (
+      ignore (if HxString.length moduleName = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+      ignore (if HxString.length filter = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      ignore (if recursive then raise (HxRuntime.Hx_return (Obj.repr (HxString.equals moduleName filter || (let __call_arg_0_43 = moduleName in let __call_arg_1_44 = HxString.toStdString filter ^ "." in StringTools.startsWith __call_arg_0_43 __call_arg_1_44)))) else ());
+      HxString.equals moduleName filter
+    )
   )
-) in Obj.magic __fallback_result_36 with
-  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
+) with
+  | HxRuntime.Hx_return __ret_45 -> (Obj.obj __ret_45 : bool) : bool)
 
 let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (findBuildMacroExprs (source : string)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
-      ignore (_g := __new_20);
-      __new_20
+    ignore (let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
+      ignore (_g := __new_21);
+      __new_21
     ));
-    if expr == Obj.magic (HxRuntime.hx_null) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString = ref ("" : string) in (
-      ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_21 = ("" : string) in (
-        tempString := __assign_21;
-        __assign_21
-      ) else let __assign_22 = (StringTools.trim (expr : string) : string) in (
+    if expr == HxString.hx_null_string then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if expr == HxString.hx_null_string then let __assign_22 = "" in (
         tempString := __assign_22;
         __assign_22
+      ) else let __assign_23 = let __call_arg_0_24 = expr in StringTools.trim __call_arg_0_24 in (
+        tempString := __assign_23;
+        __assign_23
       ));
-      let normalized = (!tempString : string) in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-        ignore (HxMap.set_string seen normalized true);
+      let normalized = !tempString in if HxString.length normalized = 0 || HxMap.exists_string (Obj.magic seen) (normalized : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+        ignore (HxMap.set_string (Obj.magic seen) (normalized : string) true);
         HxArray.push out normalized
       ))
     ))
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listGlobalMetadataRules ()) in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let rule = HxArray.get (Obj.magic _g1) (!_g) in (
-      ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
-        ignore (_g := __new_24);
-        __new_24
+      ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+        ignore (_g := __new_26);
+        __new_26
       ));
       ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "toTypes")) then raise (HxRuntime.Hx_continue) else ());
-      ignore (if not (matchesMetadataPathFilter (modulePath : string) (Obj.obj (HxAnon.get rule "pathFilter") : string) (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "recursive"))) then raise (HxRuntime.Hx_continue) else ());
+      ignore (if not (let __call_arg_0_27 = modulePath in let __call_arg_1_28 = Obj.obj (HxAnon.get rule "pathFilter") in let __call_arg_2_29 = HxRuntime.unbox_bool_or_obj (HxAnon.get rule "recursive") in matchesMetadataPathFilter __call_arg_0_27 __call_arg_1_28 __call_arg_2_29) then raise (HxRuntime.Hx_continue) else ());
       let _g2 = ref 0 in let _g3 = Obj.magic (findBuildMacroExprs (Obj.obj (HxAnon.get rule "metadata") : string)) in while !_g2 < HxArray.length _g3 do ignore (let expr = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-        ignore (let __old_25 = !_g2 in let __new_26 = HxInt.add __old_25 1 in (
-          ignore (_g2 := __new_26);
-          __new_26
+        ignore (let __old_30 = !_g2 in let __new_31 = HxInt.add __old_30 1 in (
+          ignore (_g2 := __new_31);
+          __new_31
         ));
-        if expr == Obj.magic (HxRuntime.hx_null) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString1 = ref ("" : string) in (
-          ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_27 = ("" : string) in (
-            tempString1 := __assign_27;
-            __assign_27
-          ) else let __assign_28 = (StringTools.trim (expr : string) : string) in (
-            tempString1 := __assign_28;
-            __assign_28
+        if expr == HxString.hx_null_string then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString1 = ref (HxString.hx_null_string : string) in (
+          ignore (if expr == HxString.hx_null_string then let __assign_32 = "" in (
+            tempString1 := __assign_32;
+            __assign_32
+          ) else let __assign_33 = let __call_arg_0_34 = expr in StringTools.trim __call_arg_0_34 in (
+            tempString1 := __assign_33;
+            __assign_33
           ));
-          let normalized = (!tempString1 : string) in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-            ignore (HxMap.set_string seen normalized true);
+          let normalized = !tempString1 in if HxString.length normalized = 0 || HxMap.exists_string (Obj.magic seen) (normalized : string) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+            ignore (HxMap.set_string (Obj.magic seen) (normalized : string) true);
             HxArray.push out normalized
           ))
         ))
@@ -301,13 +303,13 @@ let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArr
   )
 )
 
-let trim = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_37 = ("" : string) in (
-    tempResult := __assign_37;
-    __assign_37
-  ) else let __assign_38 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_38;
-    __assign_38
+let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_46 = "" in (
+    tempResult := __assign_46;
+    __assign_46
+  ) else let __assign_47 = let __call_arg_0_48 = value in StringTools.trim __call_arg_0_48 in (
+    tempResult := __assign_47;
+    __assign_47
   ));
   !tempResult
 )

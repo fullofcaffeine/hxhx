@@ -5,6 +5,12 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -23,14 +29,27 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final INT32_ADD = "haxe-int32-add";
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
+	public static inline final STRING_NULL_SENTINEL = "haxe-string-null-sentinel";
 	public static inline final CORE_RUNTIME = "compiler-core-runtime";
 	public static inline final TYPE_REGISTRY = "compiler-type-registry";
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
+	public static inline final TYPE_REGISTRY_DYNAMIC_STRING = "compiler-type-registry-dynamic-string";
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
+	public static inline final HAXE_PROCESS = "haxe-process";
+	public static inline final HAXE_FILE = "haxe-file";
+	public static inline final HAXE_FILE_STREAM = "haxe-file-stream";
+	public static inline final HAXE_THREAD = "haxe-thread";
+	public static inline final HAXE_FILE_SYSTEM = "haxe-file-system";
+	public static inline final HAXE_SYSTEM = "haxe-system";
+	public static inline final HAXE_MAP = "haxe-map";
+	public static inline final HAXE_ITERATOR = "haxe-iterator";
+	public static inline final HAXE_ARRAY = "haxe-array";
+	public static inline final HAXE_STRING_TEXT = "haxe-string-text";
+	public static inline final HAXE_DYNAMIC_TEXT = "haxe-dynamic-text";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -64,30 +83,142 @@ class OcamlRuntimeRequirementLedger {
 	**/
 	public function recordPlacePlan(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
-		for (requirementId in requirementIds) {
-			final expectedPrefix = originId + ":runtime:";
-			if (!requirementId.startsWith(expectedPrefix))
-				throw 'Place runtime requirement "$requirementId" is not scoped to origin "$originId".';
-			final capability = requirementId.substr(expectedPrefix.length);
-			final implementation = placeImplementation(capability);
-			record({
-				id: requirementId,
+		for (requirementId in requirementIds)
+			record(requirementForPlaceCapability(decisionId, originId, originId, source, semanticTypeId, requirementId));
+	}
+
+	/**
+		Builds one checked runtime reason for field, array, or similar place work.
+
+		`originId` scopes the requirement identity to the sealed lowering
+		decision. `sourceId` names the Haxe occurrence shown to a report reader.
+		Keeping both explicit lets another sealed model reuse Haxe Int32
+		arithmetic without copying the module-selection policy.
+	**/
+	public static function requirementForPlaceCapability(decisionId:String, originId:String, sourceId:String, source:OcamlLoweredSourceSpan,
+			semanticTypeId:String, requirementId:String):OcamlRuntimeRequirement {
+		final expectedPrefix = originId + ":runtime:";
+		if (!requirementId.startsWith(expectedPrefix))
+			throw 'Place runtime requirement "$requirementId" is not scoped to origin "$originId".';
+		final capability = requirementId.substr(expectedPrefix.length);
+		final implementation = placeImplementation(capability);
+		return normalize({
+			id: requirementId,
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: sourceId,
+			source: source,
+			semanticCapability: capability,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decisionId,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: semanticTypeId
+			},
+			implementationFeature: implementation.feature,
+			rootModules: [implementation.module],
+			profileEligibility: ["metal", "portable"],
+			explanation: implementation.explanation
+		});
+	}
+
+	/**
+		Returns the complete runtime explanations selected by one standard `IMap`
+		call before OCaml syntax.
+	**/
+	public static function requirementsForStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStandardIMapCallTarget):Array<OcamlRuntimeRequirement> {
+		OcamlStandardIMapCallContract.require(target);
+		final stableCallId = required(callId, "standard IMap call identity");
+		if (source.file.length == 0 || source.min < 0 || source.max < source.min)
+			throw 'Standard IMap call "$stableCallId" has an invalid source occurrence.';
+		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
+			throw 'Standard IMap call "$stableCallId" has an unsupported profile inventory.';
+		final requirementIds = OcamlStandardIMapCallContract.runtimeRequirementIds(stableCallId, target);
+		final out:Array<OcamlRuntimeRequirement> = [];
+		for (index in 0...target.runtimeCapabilities.length) {
+			final capability = target.runtimeCapabilities[index];
+			final implementation = standardIMapImplementation(capability);
+			out.push(normalize({
+				id: requirementIds[index],
 				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
-				sourceId: originId,
+				sourceId: stableCallId,
 				source: source,
 				semanticCapability: capability,
 				cause: OcamlRuntimeRequirementCause.LoweringDecision,
-				decisionId: decisionId,
+				decisionId: stableCallId,
 				subject: {
 					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
-					id: semanticTypeId
+					id: target.receiverSemanticTypeId
 				},
 				implementationFeature: implementation.feature,
 				rootModules: [implementation.module],
-				profileEligibility: ["metal", "portable"],
+				profileEligibility: profileEligibility,
 				explanation: implementation.explanation
-			});
+			}));
 		}
+		return out;
+	}
+
+	/** Records every runtime dependency selected by one sealed standard `IMap` call. **/
+	public function recordStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStandardIMapCallTarget):Void {
+		for (requirement in requirementsForStandardIMapCall(callId, source, profileEligibility, target))
+			record(requirement);
+	}
+
+	/**
+		Returns the closed runtime requirements implied by one sealed program
+		representation.
+
+		The first admitted family is exact Haxe `String`. Its OCaml `string`
+		carrier can preserve Haxe null only through the canonical value owned by
+		`HxString`, so every selected domain records that dependency before
+		packaging. Other representation families remain outside this slice.
+	**/
+	public static function requirementsForRepresentationDecision(decision:OcamlRepresentationDecision):Array<OcamlRuntimeRequirement> {
+		if (decision == null)
+			throw "OCaml runtime requirement representation decision must not be null.";
+		final selectsExactStringSentinel = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			|| decision.proof.id == "nullable-string-runtime-sentinel-carrier-v1";
+		if (!selectsExactStringSentinel)
+			return [];
+		if (decision.semanticTypeId != "String"
+			|| decision.carrierTypeId != "string"
+			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableStringCarrier
+			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel
+			|| decision.proof.id != "nullable-string-runtime-sentinel-carrier-v1") {
+			throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
+		}
+		return [
+			normalize({
+				id: decision.id + ":runtime:" + STRING_NULL_SENTINEL,
+				sourceKind: OcamlRuntimeRequirementSourceKind.RepresentationDecision,
+				sourceId: decision.id + "@" + decision.revision,
+				source: {
+					file: "compiler-decision/representation/" + decision.domain,
+					min: 0,
+					max: 0
+				},
+				semanticCapability: STRING_NULL_SENTINEL,
+				cause: OcamlRuntimeRequirementCause.RepresentationDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: "String"
+				},
+				implementationFeature: "haxe-string-null-sentinel-v1",
+				rootModules: ["HxString"],
+				profileEligibility: decision.profileEligibility,
+				explanation: "The sealed exact Haxe String carrier uses HxString.hx_null_string to preserve the canonical Haxe null sentinel; this requirement does not claim ownership of other HxString operations."
+			})
+		];
+	}
+
+	/** Records every runtime dependency implied by one sealed representation. **/
+	public function recordRepresentationDecision(decision:OcamlRepresentationDecision):Void {
+		for (requirement in requirementsForRepresentationDecision(decision))
+			record(requirement);
 	}
 
 	/** Records one helper required by compiler-generated output or packaging policy. **/
@@ -193,6 +324,43 @@ class OcamlRuntimeRequirementLedger {
 				};
 			case _:
 				throw 'Unknown place runtime capability "$capability".';
+		}
+	}
+
+	static function standardIMapImplementation(capability:String):{feature:String, module:String, explanation:String} {
+		return switch (capability) {
+			case HAXE_MAP:
+				{
+					feature: "haxe-map-v1",
+					module: "HxMap",
+					explanation: "The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver."
+				};
+			case HAXE_ITERATOR:
+				{
+					feature: "haxe-iterator-v1",
+					module: "HxIterator",
+					explanation: "The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract."
+				};
+			case HAXE_ARRAY:
+				{
+					feature: "haxe-array-v1",
+					module: "HxArray",
+					explanation: "The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator."
+				};
+			case HAXE_STRING_TEXT:
+				{
+					feature: "haxe-string-text-v1",
+					module: "HxString",
+					explanation: "The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text."
+				};
+			case HAXE_DYNAMIC_TEXT:
+				{
+					feature: "haxe-dynamic-text-v1",
+					module: "HxDynamic",
+					explanation: "The sealed standard IMap text adapter uses HxDynamic for the typed fallback that formats a non-primitive key or value through registered Haxe runtime string behavior."
+				};
+			case _:
+				throw 'Unknown standard IMap runtime capability "$capability".';
 		}
 	}
 
@@ -318,6 +486,18 @@ class OcamlRuntimeRequirementLedger {
 					module: "HxRuntime",
 					explanation: "Reflection constructors use the checked runtime conversion when a dynamically supplied argument must become a Haxe Bool."
 				};
+			case TYPE_REGISTRY_DYNAMIC_STRING:
+				{
+					id: "compiler:generated:HxTypeRegistry:dynamic-string",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:register-dynamic-stringifiers",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-dynamic-class-string-v1",
+					module: "HxDynamic",
+					explanation: "Generated classes with an exact zero-argument String toString method register one typed adapter with the shared Dynamic runtime."
+				};
 			case _:
 				throw 'Unknown compiler runtime capability "$capability".';
 		}
@@ -343,6 +523,54 @@ class OcamlRuntimeRequirementLedger {
 					module: "HxFPHelper",
 					explanation: "The typed Haxe floating-point facade uses HxFPHelper to convert Float values to and from their exact 32-bit or 64-bit representations."
 				};
+			case HAXE_PROCESS:
+				{
+					feature: "haxe-process-v1",
+					module: "HxProcess",
+					explanation: "The typed Haxe process facade uses HxProcess to spawn and control child processes and to exchange bytes, lines, and strings through their standard streams."
+				};
+			case HAXE_FILE:
+				{
+					feature: "haxe-file-v1",
+					module: "HxFile",
+					explanation: "The typed Haxe file facade uses HxFile to read, write, and copy whole file contents with exact String and BytesData carriers."
+				};
+			case HAXE_FILE_STREAM:
+				{
+					feature: "haxe-file-stream-v1",
+					module: "HxFileStream",
+					explanation: "The typed Haxe file-stream facades use HxFileStream to open, read, write, seek, flush, query, and close file channels."
+				};
+			case HAXE_THREAD:
+				{
+					feature: "haxe-thread-v1",
+					module: "HxThread",
+					explanation: "The typed Haxe thread facades use HxThread for synchronization, message passing, deques, thread-local storage, and event-loop attachment."
+				};
+			case HAXE_FILE_SYSTEM:
+				{
+					feature: "haxe-file-system-v1",
+					module: "HxFileSystem",
+					explanation: "The typed Haxe filesystem facade uses HxFileSystem for path inspection, directory operations, metadata, rename, and deletion."
+				};
+			case HAXE_SYSTEM:
+				{
+					feature: "haxe-system-v1",
+					module: "HxSys",
+					explanation: "Typed Haxe Sys declarations use HxSys for process arguments, environment access, command execution, timing, working-directory operations, host identity, program paths, process exit, and character input."
+				};
+			case HAXE_MAP:
+				{
+					feature: "haxe-map-v1",
+					module: "HxMap",
+					explanation: "Typed Haxe StringMap, IntMap, and ObjectMap declarations use HxMap for checked mutable storage with the selected string, integer, or identity-key representation."
+				};
+			case HAXE_ITERATOR:
+				{
+					feature: "haxe-iterator-v1",
+					module: "HxIterator",
+					explanation: "Typed Haxe iterator-producing declarations use HxIterator to preserve the structural hasNext and next carrier over a target runtime array."
+				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';
 		}
@@ -352,6 +580,7 @@ class OcamlRuntimeRequirementLedger {
 			id:String):OcamlRuntimeRequirementSubjectKind {
 		final valid = switch (sourceKind) {
 			case HaxeExpression: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
+			case RepresentationDecision: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
 			case CompilerInfrastructure: kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule || kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
 			case Configuration: kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
 			case NativeBoundary: kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary;

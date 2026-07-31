@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable identity : TyDeclarationId.t; mutable owner : TyNominalTypeId.t; mutable signature : TyFunSig.t; mutable metadata : string HxArray.t; mutable sourceDeclaration : HxFunctionDecl.t; mutable position : HxPos.t; mutable isInline : bool; mutable isPublic : bool; mutable modulePath : string; mutable isEnumConstructor : bool; mutable typeParameters : TyTypeParameterId.t HxArray.t }
 
-let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 position2 isInline2 isPublic2 modulePath2 isEnumConstructor2 typeParameters2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic (HxRuntime.hx_null); owner = Obj.magic (HxRuntime.hx_null); signature = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); sourceDeclaration = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); isInline = false; isPublic = false; modulePath = ""; isEnumConstructor = false; typeParameters = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 position2 isInline2 isPublic2 modulePath2 isEnumConstructor2 typeParameters2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic (HxRuntime.hx_null); owner = Obj.magic (HxRuntime.hx_null); signature = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); sourceDeclaration = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (let isEnumConstructor2 = if Obj.repr isEnumConstructor2 == HxRuntime.hx_null then false else isEnumConstructor2 in ignore ((
     ignore (let __assign_1 = Obj.magic identity2 in (
       (Obj.magic self : t).identity <- __assign_1;
@@ -48,44 +48,44 @@ let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 positi
           (Obj.magic self : t).position <- __assign_11;
           __assign_11
         ));
-        ignore (let __assign_12 = isInline2 in (
-          (Obj.magic self : t).isInline <- __assign_12;
-          __assign_12
+        ignore (let __place_receiver_12 = self in let __place_rhs_13 = isInline2 in (
+          (__place_receiver_12 : t).isInline <- __place_rhs_13;
+          __place_rhs_13
         ));
-        ignore (let __assign_13 = isPublic2 in (
-          (Obj.magic self : t).isPublic <- __assign_13;
-          __assign_13
+        ignore (let __place_receiver_14 = self in let __place_rhs_15 = isPublic2 in (
+          (__place_receiver_14 : t).isPublic <- __place_rhs_15;
+          __place_rhs_15
         ));
-        let tempRight2 = ref ("" : string) in (
-          ignore (if modulePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
-            tempRight2 := __assign_14;
-            __assign_14
-          ) else let __assign_15 = (StringTools.trim (modulePath2 : string) : string) in (
-            tempRight2 := __assign_15;
-            __assign_15
-          ));
-          ignore (let __assign_16 = (!tempRight2 : string) in (
-            (Obj.magic self : t).modulePath <- __assign_16;
+        let tempRight2 = ref (HxString.hx_null_string : string) in (
+          ignore (if modulePath2 == HxString.hx_null_string then let __assign_16 = "" in (
+            tempRight2 := __assign_16;
             __assign_16
-          ));
-          ignore (let __assign_17 = isEnumConstructor2 in (
-            (Obj.magic self : t).isEnumConstructor <- __assign_17;
+          ) else let __assign_17 = let __call_arg_0_18 = modulePath2 in StringTools.trim __call_arg_0_18 in (
+            tempRight2 := __assign_17;
             __assign_17
           ));
+          ignore (let __assign_19 = (!tempRight2 : string) in (
+            (Obj.magic self : t).modulePath <- __assign_19;
+            __assign_19
+          ));
+          ignore (let __place_receiver_20 = self in let __place_rhs_21 = isEnumConstructor2 in (
+            (__place_receiver_20 : t).isEnumConstructor <- __place_rhs_21;
+            __place_rhs_21
+          ));
           let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : TyTypeParameterId.t HxArray.t) in (
-            ignore (if typeParameters2 == Obj.magic (HxRuntime.hx_null) then let __assign_18 = Obj.magic (let __arr_19 = HxArray.create () in __arr_19) in (
-              tempRight3 := __assign_18;
-              __assign_18
-            ) else let __assign_20 = Obj.magic (HxArray.copy typeParameters2) in (
-              tempRight3 := __assign_20;
-              __assign_20
+            ignore (if typeParameters2 == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (let __arr_23 = HxArray.create () in __arr_23) in (
+              tempRight3 := __assign_22;
+              __assign_22
+            ) else let __assign_24 = Obj.magic (HxArray.copy typeParameters2) in (
+              tempRight3 := __assign_24;
+              __assign_24
             ));
-            ignore (let __assign_21 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).typeParameters <- __assign_21;
-              __assign_21
+            ignore (let __assign_25 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).typeParameters <- __assign_25;
+              __assign_25
             ));
-            ignore (if HxString.length ((Obj.magic self : t).modulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed declaration information requires a module identity") ["Dynamic"; "String"]) else ());
-            if isEnumConstructor2 && not (TyFunSig.getIsStatic (Obj.magic signature2) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor declaration must be static") ["Dynamic"; "String"]) else ()
+            ignore (if HxString.length ((Obj.magic self : t).modulePath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed declaration information requires a module identity") ["Dynamic"]) else ());
+            if isEnumConstructor2 && not (TyFunSig.getIsStatic (Obj.magic signature2) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor declaration must be static") ["Dynamic"]) else ()
           )
         )
       )
@@ -94,7 +94,7 @@ let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 positi
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic (HxRuntime.hx_null); owner = Obj.magic (HxRuntime.hx_null); signature = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); sourceDeclaration = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); isInline = false; isPublic = false; modulePath = ""; isEnumConstructor = false; typeParameters = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic (HxRuntime.hx_null); owner = Obj.magic (HxRuntime.hx_null); signature = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); sourceDeclaration = Obj.magic (HxRuntime.hx_null); position = Obj.magic (HxRuntime.hx_null); isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getIdentity = fun self () -> (Obj.magic self : t).identity
 
@@ -112,32 +112,32 @@ let getIsStatic = fun self () -> TyFunSig.getIsStatic (Obj.magic ((Obj.magic sel
 
 let getIsInline = fun self () -> (Obj.magic self : t).isInline
 
-let getIsDynamic = fun self () -> try let __fallback_result_28 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
+let getIsDynamic = fun self () -> try let __fallback_result_37 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_22 = !_g in let __new_23 = HxInt.add __old_22 1 in (
-      ignore (_g := __new_23);
-      __new_23
+    ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+      ignore (_g := __new_27);
+      __new_27
     ));
-    let tempString = ref ("" : string) in (
-      ignore (if entry == Obj.magic (HxRuntime.hx_null) then let __assign_24 = ("" : string) in (
-        tempString := __assign_24;
-        __assign_24
-      ) else let __assign_25 = (StringTools.trim (entry : string) : string) in (
-        tempString := __assign_25;
-        __assign_25
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if entry == HxString.hx_null_string then let __assign_28 = "" in (
+        tempString := __assign_28;
+        __assign_28
+      ) else let __assign_29 = let __call_arg_0_30 = entry in StringTools.trim __call_arg_0_30 in (
+        tempString := __assign_29;
+        __assign_29
       ));
       let clean = ref (!tempString : string) in (
-        ignore (while StringTools.startsWith (!clean : string) ("@" : string) || StringTools.startsWith (!clean : string) (":" : string) do ignore (let __assign_26 = (HxString.substr (!clean) 1 (-1) : string) in (
-          clean := __assign_26;
-          __assign_26
+        ignore (while (let __call_arg_0_31 = !clean in let __call_arg_1_32 = "@" in StringTools.startsWith __call_arg_0_31 __call_arg_1_32) || (let __call_arg_0_33 = !clean in let __call_arg_1_34 = ":" in StringTools.startsWith __call_arg_0_33 __call_arg_1_34) do ignore (let __assign_35 = (HxString.substr (!clean) 1 (-1) : string) in (
+          clean := __assign_35;
+          __assign_35
         )) done);
         if HxString.equals (!clean) "dynamic" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
       )
     )
   )) done);
   false
-) in Obj.magic __fallback_result_28 with
-  | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
+) in Obj.magic __fallback_result_37 with
+  | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36
 
 let getIsPublic = fun self () -> (Obj.magic self : t).isPublic
 
@@ -145,40 +145,40 @@ let getModulePath = fun self () -> (Obj.magic self : t).modulePath
 
 let getIsEnumConstructor = fun self () -> (Obj.magic self : t).isEnumConstructor
 
-let getNoImportGlobal = fun self () -> try let __fallback_result_35 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
+let getNoImportGlobal = fun self () -> try let __fallback_result_49 = let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).metadata) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
-      ignore (_g := __new_30);
-      __new_30
+    ignore (let __old_38 = !_g in let __new_39 = HxInt.add __old_38 1 in (
+      ignore (_g := __new_39);
+      __new_39
     ));
-    let tempString = ref ("" : string) in (
-      ignore (if entry == Obj.magic (HxRuntime.hx_null) then let __assign_31 = ("" : string) in (
-        tempString := __assign_31;
-        __assign_31
-      ) else let __assign_32 = (StringTools.trim (entry : string) : string) in (
-        tempString := __assign_32;
-        __assign_32
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if entry == HxString.hx_null_string then let __assign_40 = "" in (
+        tempString := __assign_40;
+        __assign_40
+      ) else let __assign_41 = let __call_arg_0_42 = entry in StringTools.trim __call_arg_0_42 in (
+        tempString := __assign_41;
+        __assign_41
       ));
       let clean = ref (!tempString : string) in (
-        ignore (while StringTools.startsWith (!clean : string) ("@" : string) || StringTools.startsWith (!clean : string) (":" : string) do ignore (let __assign_33 = (HxString.substr (!clean) 1 (-1) : string) in (
-          clean := __assign_33;
-          __assign_33
+        ignore (while (let __call_arg_0_43 = !clean in let __call_arg_1_44 = "@" in StringTools.startsWith __call_arg_0_43 __call_arg_1_44) || (let __call_arg_0_45 = !clean in let __call_arg_1_46 = ":" in StringTools.startsWith __call_arg_0_45 __call_arg_1_46) do ignore (let __assign_47 = (HxString.substr (!clean) 1 (-1) : string) in (
+          clean := __assign_47;
+          __assign_47
         )) done);
         if HxString.equals (!clean) "noImportGlobal" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
       )
     )
   )) done);
   false
-) in Obj.magic __fallback_result_35 with
-  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34
+) in Obj.magic __fallback_result_49 with
+  | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48
 
 let getHasBody = fun self () -> HxFunctionDecl.getHasBody (Obj.magic ((Obj.magic self : t).sourceDeclaration))
 
-let getTypeParameters = fun self () -> let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).typeParameters) in (
+let getTypeParameters = fun self () -> let _g = Obj.magic (let __arr_50 = HxArray.create () in __arr_50) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).typeParameters) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-    ignore (let __old_37 = !_g1 in let __new_38 = HxInt.add __old_37 1 in (
-      ignore (_g1 := __new_38);
-      __new_38
+    ignore (let __old_51 = !_g1 in let __new_52 = HxInt.add __old_51 1 in (
+      ignore (_g1 := __new_52);
+      __new_52
     ));
     HxArray.push _g (TyTypeParameterId.getName (Obj.magic parameter) ())
   )) done);

@@ -25,11 +25,11 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_
 
 let get_length = fun this1 -> HxArray.length this1
 
-let parseFileLine = fun line -> try let __fallback_result_13 = let fileNeedle = ("file \"" : string) in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
+let parseFileLine = fun line -> try let __fallback_result_13 = let fileNeedle = "file \"" in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
   ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let fileStart = HxInt.add fileStart0 (HxString.length fileNeedle) in let fileEnd = HxString.indexOf line "\"" fileStart in (
     ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-    let file = (HxString.substr line fileStart (HxInt.sub fileEnd fileStart) : string) in let lineNeedle = ("line " : string) in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (
+    let file = (HxString.substr line fileStart (HxInt.sub fileEnd fileStart) : string) in let lineNeedle = "line " in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (
       ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
       let i = HxInt.add lineStart0 (HxString.length lineNeedle) in let j = ref i in (
         ignore (try while !j < HxString.length line do try ignore (let c = HxString.charCodeAt line (!j) in (
@@ -50,10 +50,10 @@ let parseFileLine = fun line -> try let __fallback_result_13 = let fileNeedle = 
             ln := __assign_9;
             __assign_9
           )) done);
-          let __anon_11 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_11 "file" (Obj.repr file));
-            ignore (HxAnon.set __anon_11 "line" (Obj.repr (!ln)));
-            __anon_11
+          let __anonymous_value_11 = HxAnon.create () in (
+            ignore (HxAnon.set __anonymous_value_11 "file" (Obj.repr file));
+            ignore (HxAnon.set __anonymous_value_11 "line" (Obj.repr (!ln)));
+            __anonymous_value_11
           )
         )
       )

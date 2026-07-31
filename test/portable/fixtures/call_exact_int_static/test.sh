@@ -133,7 +133,7 @@ if grep -Eq 'ZeroArgCalls\.(exactCount|exactFlag|nullableCount|nullableFlag)([^ 
 	echo "A zero-argument source call must not lower to a bare OCaml function value" >&2
 	exit 1
 fi
-if ! grep -Eq '^let nullableFlag = fun \(\) -> \(Obj\.repr \(\(' "$zero_source"; then
+if ! grep -Eq '^let nullableFlag = fun \(\) -> \(Obj\.repr \(' "$zero_source"; then
 	echo "The raw Bool result must cross the sealed Null<Bool> callable carrier exactly once" >&2
 	exit 1
 fi
@@ -188,16 +188,63 @@ if ! grep -Eq 'let __call_arg_0_[0-9]+ = voidIntSource \(\) in let __call_arg_1_
 	echo "The positive-arity Void call must evaluate and bind every argument before invocation" >&2
 	exit 1
 fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = "source:" in let __call_arg_1_[0-9]+ = checkedMessage in recordCheckedString __call_arg_0_[0-9]+ __call_arg_1_[0-9]+' "$main_source"; then
+	echo "A checked Null<String> expression must preserve the sealed String carrier at a required String call boundary" >&2
+	exit 1
+fi
+checked_result_source="$(sed -n '/^let checkedResult =/,/^let checkedArgument =/p' "$main_source")"
+if [ "$(printf '%s\n' "$checked_result_source" | grep -c 'HxRuntime.nullable_int_unwrap')" -ne 1 ]; then
+	echo "The checked Null<Int> result must unwrap exactly once on normal fall-through" >&2
+	exit 1
+fi
+if ! printf '%s\n' "$checked_result_source" | grep -Fq 'raise (HxRuntime.Hx_return (Obj.repr fallback))'; then
+	echo "The exact Int early return must keep its sealed private return-control path" >&2
+	exit 1
+fi
+if printf '%s\n' "$checked_result_source" | grep -Fq 'Obj.magic'; then
+	echo "The checked Null<Int> result must not use Obj.magic recovery" >&2
+	exit 1
+fi
+if ! grep -Eq 'let __call_arg_0_[0-9]+ = HxRuntime\.nullable_int_unwrap checkedArgumentValue in checkedArgument __call_arg_0_[0-9]+' "$main_source"; then
+	echo "A checked Null<Int> argument must unwrap exactly once before the required Int call boundary" >&2
+	exit 1
+fi
+if grep -Eq 'checkedArgument \(HxRuntime\.nullable_int_unwrap|HxRuntime\.nullable_int_unwrap \(HxRuntime\.nullable_int_unwrap checkedArgumentValue\)' "$main_source"; then
+	echo "The checked Null<Int> argument must use the sealed bind-then-invoke schedule without a duplicate unwrap" >&2
+	exit 1
+fi
+dynamic_result_source="$(sed -n '/^let requiredDynamicInt =/,/^let allPathNullable =/p' "$main_source")"
+if [ "$(printf '%s\n' "$dynamic_result_source" | grep -c 'HxRuntime.nullable_int_unwrap')" -ne 1 ]; then
+	echo "A typed Int result outside the complete call matrix must check its refined Null<Int> carrier exactly once" >&2
+	exit 1
+fi
+if printf '%s\n' "$dynamic_result_source" | grep -Fq 'Obj.magic'; then
+	echo "The typed Int result fallback must not recover its carrier through Obj.magic" >&2
+	exit 1
+fi
+all_path_source="$(sed -n '/^let allPathNullable =/,/^let main =/p' "$main_source")"
+if [ "$(printf '%s\n' "$all_path_source" | grep -c 'raise (HxRuntime.Hx_return')" -ne 3 ]; then
+	echo "Every all-path nullable branch must use its sealed private return signal" >&2
+	exit 1
+fi
+if ! printf '%s\n' "$all_path_source" | grep -Eq 'HxRuntime\.Hx_return __ret_[0-9]+ -> [(]__ret_[0-9]+ : Obj[.]t[)]'; then
+	echo "The all-path nullable function must recover the declared Obj.t carrier at its boundary" >&2
+	exit 1
+fi
+if printf '%s\n' "$all_path_source" | grep -Fq 'Obj.magic'; then
+	echo "The all-path nullable function must not invent a fall-through value with Obj.magic" >&2
+	exit 1
+fi
 
 negative_log="$(mktemp)"
 rm -rf negative-out
 if haxe negative.hxml >"$negative_log" 2>&1; then
-	echo "An early Bool return unexpectedly bypassed the sealed result-control boundary" >&2
+	echo "An incompatible Dynamic return unexpectedly joined the sealed Bool-to-Null<Bool> return family" >&2
 	rm -f "$negative_log"
 	exit 1
 fi
-if ! grep -Fq '[ocaml-call:result-control-unsealed]' "$negative_log"; then
-	echo "The rejected early result conversion did not report its stable ownership diagnostic" >&2
+if ! grep -Fq '[ocaml-call:unsupported-definition-result]' "$negative_log"; then
+	echo "The rejected mixed return family did not report its stable ownership diagnostic" >&2
 	cat "$negative_log" >&2
 	rm -f "$negative_log"
 	exit 1
@@ -208,6 +255,26 @@ if [ -f negative-out/ResultControlRejected.ml ]; then
 	exit 1
 fi
 rm -f "$negative_log"
+
+all_path_negative_log="$(mktemp)"
+rm -rf all-path-negative-out
+if haxe all-path-negative.hxml >"$all_path_negative_log" 2>&1; then
+	echo "A mixed return/throw function unexpectedly claimed the return-only all-path control slice" >&2
+	rm -f "$all_path_negative_log"
+	exit 1
+fi
+if ! grep -Fq '[ocaml-call:result-control-unsealed]' "$all_path_negative_log"; then
+	echo "The rejected mixed transfer did not report its stable control-ownership diagnostic" >&2
+	cat "$all_path_negative_log" >&2
+	rm -f "$all_path_negative_log"
+	exit 1
+fi
+if [ -f all-path-negative-out/AllPathResultControlRejected.ml ]; then
+	echo "The rejected mixed transfer reached OCaml syntax output" >&2
+	rm -f "$all_path_negative_log"
+	exit 1
+fi
+rm -f "$all_path_negative_log"
 
 optional_negative_log="$(mktemp)"
 rm -rf optional-negative-out
@@ -254,7 +321,7 @@ rm -f "$void_negative_log"
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 23 || report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
+if (report.schemaVersion !== 50 || report.callModel !== 'typed-ocaml-directional-call-boundary-v18') {
 	throw new Error('the lowering report does not expose the directional call-boundary schema')
 }
 function isIdentity(value, semanticTypeId, carrierTypeId) {
@@ -312,8 +379,9 @@ function verifyCalls(fieldName, arity, proofId, expectedCount) {
 	}
 }
 const signatureProofId = 'direct-static-representation-signature-v3'
-if (report.calls.some(call => call.proofId !== signatureProofId)
-	|| report.callableBoundaries.some(boundary => boundary.proofId !== signatureProofId)) {
+if (report.calls.some(call => call.kind === 'direct-static-haxe-method' && call.proofId !== signatureProofId)
+	|| report.callableBoundaries.some(boundary =>
+		boundary.kind === 'direct-static-haxe-method' && boundary.proofId !== signatureProofId)) {
 	throw new Error('an admitted direct-static call retained a legacy per-family proof')
 }
 const fixtureTypeNames = new Set(['Arithmetic', 'NullableCalls', 'BoolCalls', 'MixedCalls', 'ZeroArgCalls', 'OptionalCalls', 'VoidCalls'])
@@ -332,7 +400,7 @@ for (const owner of [...report.calls, ...report.callableBoundaries].filter(owner
 		throw new Error(`non-optional call owner ${owner.id} changed parameter optionality`)
 	}
 }
-for (const call of report.calls) {
+for (const call of report.calls.filter(item => item.kind === 'direct-static-haxe-method')) {
 	let sourceArgumentIndex = 0
 	for (let index = 0; index < call.arguments.length; index++) {
 		const argument = call.arguments[index]
@@ -357,6 +425,136 @@ for (const call of report.calls) {
 }
 verifyCalls('increment', 1, signatureProofId, 1)
 verifyCalls('add', 2, signatureProofId, 2)
+const checkedStringCalls = report.calls?.filter(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'recordCheckedString'
+) ?? []
+if (checkedStringCalls.length !== 1
+	|| checkedStringCalls[0].arguments?.length !== 2
+	|| !checkedStringCalls[0].arguments.every(argument => isIdentity(argument, 'String', 'string'))
+	|| checkedStringCalls[0].resultKind !== 'effect-only-void') {
+	throw new Error('the lowering report did not seal the checked Null<String> argument on the shared String carrier')
+}
+const checkedResultBoundary = report.callableBoundaries?.find(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'checkedResult'
+)
+const checkedResultCalls = report.calls?.filter(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'checkedResult'
+) ?? []
+const checkedResultControls = report.controls?.filter(
+	item => item.targetId === checkedResultBoundary?.functionId && item.kind === 'return'
+) ?? []
+const checkedResult = checkedResultBoundary?.result
+if (!checkedResultBoundary
+	|| checkedResultBoundary.arguments?.length !== 2
+	|| !isIdentity(checkedResultBoundary.arguments[0], 'Null<Int>', 'Obj.t')
+	|| !isIdentity(checkedResultBoundary.arguments[1], 'Int', 'int')
+	|| checkedResult?.index !== -1
+	|| checkedResult.parameterOptional !== false
+	|| checkedResult.inputSemanticTypeId !== 'Null<Int>'
+	|| checkedResult.inputCarrierTypeId !== 'Obj.t'
+	|| checkedResult.inputRepresentationId !== 'representation:Null<Int>:internal-value'
+	|| checkedResult.outputSemanticTypeId !== 'Int'
+	|| checkedResult.outputCarrierTypeId !== 'int'
+	|| checkedResult.outputRepresentationId !== 'representation:Int:internal-value'
+	|| checkedResult.conversion !== 'checked-unbox-nullable-int'
+	|| checkedResult.proofId !== 'nullable-int-call-checked-unbox-v1'
+	|| typeof checkedResultBoundary.bodyRevision !== 'string'
+	|| typeof checkedResultBoundary.programRevision !== 'string'
+	|| checkedResultBoundary.pipelineRevision !== 'ocaml-function-plans-v62') {
+	throw new Error('the callable boundary did not seal the checked Null<Int>-to-Int result crossing')
+}
+if (checkedResultCalls.length !== 2 || checkedResultCalls.some(call =>
+	!isIdentity(call.result, 'Int', 'int')
+	|| call.arguments?.length !== 2
+	|| call.arguments[0]?.conversion !== 'preserve-nullable-int-carrier'
+	|| !isIdentity(call.arguments[1], 'Int', 'int')
+	|| call.source?.file !== 'src/Main.hx'
+	|| !Number.isInteger(call.source?.min)
+	|| !Number.isInteger(call.source?.max)
+	|| call.evaluationSchedule?.length !== 3
+	|| call.evaluationSchedule[2]?.kind !== 'invoke-callee')) {
+	throw new Error('checkedResult call occurrences did not preserve their declared Int result and source-bound schedule')
+}
+if (checkedResultControls.length !== 1
+	|| checkedResultControls[0].payload?.inputSemanticTypeId !== 'Int'
+	|| checkedResultControls[0].payload?.outputSemanticTypeId !== 'Int'
+	|| checkedResultControls[0].payload?.conversion !== 'box-and-recover-exact-value') {
+	throw new Error('the earlier exact Int return did not retain its independent private control plan')
+}
+const checkedArgumentBoundary = report.callableBoundaries?.find(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'checkedArgument'
+)
+const checkedArgumentCalls = report.calls?.filter(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'checkedArgument'
+) ?? []
+const checkedArgument = checkedArgumentCalls[0]?.arguments?.[0]
+if (!checkedArgumentBoundary
+	|| checkedArgumentCalls.length !== 1
+	|| !isIdentity(checkedArgumentBoundary.arguments?.[0], 'Int', 'int')
+	|| !isIdentity(checkedArgumentBoundary.result, 'Int', 'int')
+	|| checkedArgument?.index !== 0
+	|| checkedArgument.parameterOptional !== false
+	|| checkedArgument.inputSemanticTypeId !== 'Null<Int>'
+	|| checkedArgument.inputCarrierTypeId !== 'Obj.t'
+	|| checkedArgument.inputRepresentationId !== 'representation:Null<Int>:internal-value'
+	|| checkedArgument.outputSemanticTypeId !== 'Int'
+	|| checkedArgument.outputCarrierTypeId !== 'int'
+	|| checkedArgument.outputRepresentationId !== 'representation:Int:internal-value'
+	|| checkedArgument.conversion !== 'checked-unbox-nullable-int'
+	|| checkedArgument.proofId !== 'nullable-int-call-checked-unbox-v1'
+	|| !isIdentity(checkedArgumentCalls[0].result, 'Int', 'int')
+	|| checkedArgumentCalls[0].source?.file !== 'src/Main.hx'
+	|| checkedArgumentCalls[0].evaluationSchedule?.[0]?.kind !== 'materialize-argument'
+	|| checkedArgumentCalls[0].evaluationSchedule?.[1]?.kind !== 'invoke-callee') {
+	throw new Error('the required Int argument did not seal one checked Null<Int>-to-Int call crossing')
+}
+const allPathBoundary = report.callableBoundaries?.find(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'allPathNullable'
+)
+const allPathCalls = report.calls?.filter(
+	item => item.sourceTypeName === 'Main' && item.sourceFieldName === 'allPathNullable'
+) ?? []
+const allPathControls = report.controls?.filter(
+	item => item.targetId === allPathBoundary?.functionId && item.kind === 'return'
+) ?? []
+if (!allPathBoundary
+	|| allPathBoundary.arguments?.length !== 1
+	|| !isIdentity(allPathBoundary.arguments[0], 'String', 'string')
+	|| !isIdentity(allPathBoundary.result, 'Null<Int>', 'Obj.t')
+	|| !allPathBoundary.reason?.includes('Every path in its final typed body exits through sealed return control')
+	|| allPathBoundary.pipelineRevision !== 'ocaml-function-plans-v62'
+	|| typeof allPathBoundary.bodyRevision !== 'string'
+	|| typeof allPathBoundary.programRevision !== 'string') {
+	throw new Error('the all-path nullable function did not retain one declared callable result boundary')
+}
+if (allPathCalls.length !== 3 || allPathCalls.some(call =>
+	call.arguments?.length !== 1
+	|| !isIdentity(call.arguments[0], 'String', 'string')
+	|| !isIdentity(call.result, 'Null<Int>', 'Obj.t')
+	|| call.evaluationSchedule?.length !== 2
+	|| call.evaluationSchedule[0]?.kind !== 'materialize-argument'
+	|| call.evaluationSchedule[1]?.kind !== 'invoke-callee')) {
+	throw new Error('the all-path nullable call occurrences disagreed with their declared boundary')
+}
+const exactAllPathControls = allPathControls.filter(control =>
+	control.payload?.inputSemanticTypeId === 'Int'
+	&& control.payload?.inputCarrierTypeId === 'int'
+	&& control.payload?.outputSemanticTypeId === 'Null<Int>'
+	&& control.payload?.outputCarrierTypeId === 'Obj.t'
+	&& control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
+	&& control.payload?.proofId === 'exact-int-to-nullable-early-return-control-v1'
+)
+const nullAllPathControls = allPathControls.filter(control =>
+	control.payload?.inputSemanticTypeId === 'Null<Int>'
+	&& control.payload?.inputCarrierTypeId === 'Obj.t'
+	&& control.payload?.outputSemanticTypeId === 'Null<Int>'
+	&& control.payload?.outputCarrierTypeId === 'Obj.t'
+	&& control.payload?.conversion === 'preserve-nullable-carrier'
+	&& control.payload?.proofId === 'exact-nullable-carrier-early-return-control-v1'
+)
+if (allPathControls.length !== 3 || exactAllPathControls.length !== 2 || nullAllPathControls.length !== 1) {
+	throw new Error('the all-path nullable function did not seal every explicit return payload')
+}
 function verifyZeroCall(fieldName, semanticTypeId, carrierTypeId, boundaryResult = null) {
 	const calls = report.calls?.filter(item => item.sourceTypeName === 'ZeroArgCalls' && item.sourceFieldName === fieldName) ?? []
 	const boundary = report.callableBoundaries?.find(
@@ -700,9 +898,13 @@ function verifyVoidCall(fieldName, arity) {
 }
 verifyVoidCall('noArguments', 0)
 verifyVoidCall('withArguments', 3)
-if (report.calls.some(item => item.sourceTypeName === 'Counter')
-	|| report.callableBoundaries.some(item => item.sourceTypeName === 'Counter')) {
-	throw new Error('an instance method entered the first direct-static call kind')
+const instanceOwners = [...report.calls, ...report.callableBoundaries].filter(item =>
+	item.sourceTypeName === 'Counter')
+if (instanceOwners.length !== 2
+	|| instanceOwners.some(item =>
+		item.kind !== 'direct-instance-haxe-method'
+		|| item.receiver?.outputSemanticTypeId !== 'Counter')) {
+	throw new Error('the Counter instance method did not enter only the sealed direct-instance call kind')
 }
 NODE
 

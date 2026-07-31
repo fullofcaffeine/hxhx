@@ -6,55 +6,55 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable consumerModule : string; mutable providerModule : string; mutable phase : CompilerDependencyPhase.compilerdependencyphase; mutable kind : CompilerDependencyKind.compilerdependencykind; mutable factIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = ""; providerModule = ""; phase = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); factIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); factIdentity = HxString.hx_null_string } : t)
 
-let canonicalKey = fun self () -> CompilerCacheIdentity.encode (Obj.magic (let __arr_6 = HxArray.create () in (
-  ignore (HxArray.push __arr_6 "compiler-dependency-edge-v2");
-  ignore (HxArray.push __arr_6 ((Obj.magic self : t).consumerModule));
-  ignore (HxArray.push __arr_6 ((Obj.magic self : t).providerModule));
-  ignore (HxArray.push __arr_6 (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic self : t).phase))));
-  ignore (HxArray.push __arr_6 (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic self : t).kind))));
-  ignore (HxArray.push __arr_6 ((Obj.magic self : t).factIdentity));
-  __arr_6
+let canonicalKey = fun self () -> CompilerCacheIdentity.encode (Obj.magic (let __arr_9 = HxArray.create () in (
+  ignore (HxArray.push __arr_9 "compiler-dependency-edge-v2");
+  ignore (HxArray.push __arr_9 ((Obj.magic self : t).consumerModule));
+  ignore (HxArray.push __arr_9 ((Obj.magic self : t).providerModule));
+  ignore (HxArray.push __arr_9 (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic self : t).phase))));
+  ignore (HxArray.push __arr_9 (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic self : t).kind))));
+  ignore (HxArray.push __arr_9 ((Obj.magic self : t).factIdentity));
+  __arr_9
 )))
 
 let describe = fun self () -> ((((((((HxString.toStdString ((Obj.magic self : t).consumerModule) ^ " uses ") ^ HxString.toStdString ((Obj.magic self : t).providerModule)) ^ " (") ^ HxString.toStdString (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic self : t).phase)))) ^ "/") ^ HxString.toStdString (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic self : t).kind)))) ^ ": ") ^ HxString.toStdString ((Obj.magic self : t).factIdentity)) ^ ")"
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
-    tempResult := __assign_7;
-    __assign_7
-  ) else let __assign_8 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_8;
-    __assign_8
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_10 = "" in (
+    tempResult := __assign_10;
+    __assign_10
+  ) else let __assign_11 = let __call_arg_0_12 = value in StringTools.trim __call_arg_0_12 in (
+    tempResult := __assign_11;
+    __assign_11
   ));
   !tempResult
-)
+) : string)
 
-let create = fun consumerModule2 providerModule2 phase2 kind2 factIdentity2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = ""; providerModule = ""; phase = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); factIdentity = "" } : t) in (
+let create = fun consumerModule2 providerModule2 phase2 kind2 factIdentity2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); factIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (normalize (consumerModule2 : string) : string) in (
+    ignore (let __assign_1 = (let __call_arg_0_2 = consumerModule2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).consumerModule <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = (normalize (providerModule2 : string) : string) in (
-      (Obj.magic self : t).providerModule <- __assign_2;
-      __assign_2
-    ));
-    ignore (let __assign_3 = Obj.magic phase2 in (
-      (Obj.magic self : t).phase <- __assign_3;
+    ignore (let __assign_3 = (let __call_arg_0_4 = providerModule2 in normalize __call_arg_0_4 : string) in (
+      (Obj.magic self : t).providerModule <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = Obj.magic kind2 in (
-      (Obj.magic self : t).kind <- __assign_4;
-      __assign_4
-    ));
-    ignore (let __assign_5 = (normalize (factIdentity2 : string) : string) in (
-      (Obj.magic self : t).factIdentity <- __assign_5;
+    ignore (let __assign_5 = Obj.magic phase2 in (
+      (Obj.magic self : t).phase <- __assign_5;
       __assign_5
     ));
-    ignore (if HxString.length ((Obj.magic self : t).consumerModule) = 0 || HxString.length ((Obj.magic self : t).providerModule) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency edges require consumer and provider module identities") ["Dynamic"; "String"]) else ());
-    if HxString.length ((Obj.magic self : t).factIdentity) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency edges require a fact identity") ["Dynamic"; "String"]) else ()
+    ignore (let __assign_6 = Obj.magic kind2 in (
+      (Obj.magic self : t).kind <- __assign_6;
+      __assign_6
+    ));
+    ignore (let __assign_7 = (let __call_arg_0_8 = factIdentity2 in normalize __call_arg_0_8 : string) in (
+      (Obj.magic self : t).factIdentity <- __assign_7;
+      __assign_7
+    ));
+    ignore (if HxString.length ((Obj.magic self : t).consumerModule) = 0 || HxString.length ((Obj.magic self : t).providerModule) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency edges require consumer and provider module identities") ["Dynamic"]) else ());
+    if HxString.length ((Obj.magic self : t).factIdentity) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency edges require a fact identity") ["Dynamic"]) else ()
   )));
   self
 )

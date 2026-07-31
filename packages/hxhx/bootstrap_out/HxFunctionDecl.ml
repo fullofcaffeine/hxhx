@@ -6,16 +6,16 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisibility.hxvisibility; mutable isStatic : bool; mutable args : HxFunctionArg.t HxArray.t; mutable returnTypeHint : string; mutable body : HxStmt.hxstmt HxArray.t; mutable returnStringLiteral : string; mutable metadata : string HxArray.t; mutable pos : HxPos.t; mutable endPos : HxPos.t; mutable bodyText : string; mutable hasBody : bool }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = ""; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = ""; hasBody = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = HxString.hx_null_string; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = HxString.hx_null_string; hasBody = false } : t)
 
 let getFirstReturnExpr = fun self () -> (
   ignore self;
   let find = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t -> Obj.t) in (
-    ignore (let __assign_25 = Obj.magic (fun stmts -> try let __fallback_result_37 = let _g = ref 0 in (
+    ignore (let __assign_28 = Obj.magic (fun stmts -> try let __fallback_result_40 = let _g = ref 0 in (
       ignore (while !_g < HxArray.length stmts do ignore (let s = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
-        ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
-          ignore (_g := __new_27);
-          __new_27
+        ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
+          ignore (_g := __new_30);
+          __new_30
         ));
         match s with
           | HxStmt.SBlock (_p0, _p1) -> ignore (let _g2 = Obj.magic _p0 in (
@@ -25,50 +25,50 @@ let getFirstReturnExpr = fun self () -> (
           | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
             ignore _p3;
             ignore _g2;
-            let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g3) in let r1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_28 = HxArray.create () in (
-              ignore (HxArray.push __arr_28 thenBranch);
-              __arr_28
+            let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g3) in let r1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_31 = HxArray.create () in (
+              ignore (HxArray.push __arr_31 thenBranch);
+              __arr_31
             ))))) in (
               ignore (if r1 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" r1)))) else ());
-              if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let r2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_29 = HxArray.create () in (
-                ignore (HxArray.push __arr_29 elseBranch);
-                __arr_29
+              if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let r2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_32 = HxArray.create () in (
+                ignore (HxArray.push __arr_32 elseBranch);
+                __arr_32
               ))))) in if r2 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" r2)))) else ()) else ()
             )
           ))
           | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
             ignore _p2;
             ignore _g2;
-            let body2 = Obj.magic _g1 in let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_30 = HxArray.create () in (
-              ignore (HxArray.push __arr_30 body2);
-              __arr_30
+            let body2 = Obj.magic _g1 in let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_33 = HxArray.create () in (
+              ignore (HxArray.push __arr_33 body2);
+              __arr_33
             ))))) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" r)))) else ()
           ))
           | HxStmt.SDoWhile (_p0, _p1, _p2) -> ignore (let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
             ignore _p2;
             let body2 = Obj.magic _g2 in (
               ignore _g1;
-              let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_31 = HxArray.create () in (
-                ignore (HxArray.push __arr_31 body2);
-                __arr_31
+              let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_34 = HxArray.create () in (
+                ignore (HxArray.push __arr_34 body2);
+                __arr_34
               ))))) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" r)))) else ()
             )
           ))
           | HxStmt.STry (_p0, _p1, _p2) -> ignore (let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
             ignore _p2;
-            let tryBody = Obj.magic _g2 in let catches = Obj.magic _g1 in let rt = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_32 = HxArray.create () in (
-              ignore (HxArray.push __arr_32 tryBody);
-              __arr_32
+            let tryBody = Obj.magic _g2 in let catches = Obj.magic _g1 in let rt = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_35 = HxArray.create () in (
+              ignore (HxArray.push __arr_35 tryBody);
+              __arr_35
             ))))) in (
               ignore (if rt != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" rt)))) else ());
               let _g4 = ref 0 in while !_g4 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g4) in (
-                ignore (let __old_33 = !_g4 in let __new_34 = HxInt.add __old_33 1 in (
-                  ignore (_g4 := __new_34);
-                  __new_34
+                ignore (let __old_36 = !_g4 in let __new_37 = HxInt.add __old_36 1 in (
+                  ignore (_g4 := __new_37);
+                  __new_37
                 ));
-                let rc = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_35 = HxArray.create () in (
-                  ignore (HxArray.push __arr_35 (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body"))));
-                  __arr_35
+                let rc = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic (let __arr_38 = HxArray.create () in (
+                  ignore (HxArray.push __arr_38 (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body"))));
+                  __arr_38
                 ))))) in if rc != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" rc)))) else ()
               )) done
             )
@@ -97,36 +97,36 @@ let getFirstReturnExpr = fun self () -> (
           | _ -> ignore ()
       )) done);
       Obj.magic (HxRuntime.hx_null)
-    ) in Obj.magic __fallback_result_37 with
-      | HxRuntime.Hx_return __ret_36 -> Obj.magic __ret_36) in (
-      find := __assign_25;
-      __assign_25
+    ) in Obj.magic __fallback_result_40 with
+      | HxRuntime.Hx_return __ret_39 -> Obj.magic __ret_39) in (
+      find := __assign_28;
+      __assign_28
     ));
     let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (Obj.magic ((Obj.magic self : t).body)))) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
-      ignore (if r == Obj.magic (HxRuntime.hx_null) then let __assign_38 = Obj.magic (HxExpr.EUnsupported ("<no-return>" : string)) in (
-        tempResult := __assign_38;
-        __assign_38
-      ) else let __assign_39 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" r) in (
-        tempResult := __assign_39;
-        __assign_39
+      ignore (if r == Obj.magic (HxRuntime.hx_null) then let __assign_41 = Obj.magic (HxExpr.EUnsupported ("<no-return>" : string)) in (
+        tempResult := __assign_41;
+        __assign_41
+      ) else let __assign_42 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" r) in (
+        tempResult := __assign_42;
+        __assign_42
       ));
       !tempResult
     )
   )
 )
 
-let normalizeReturnTypeHint = fun typeHint -> let tempString = ref ("" : string) in (
-  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_40 = ("" : string) in (
-    tempString := __assign_40;
-    __assign_40
-  ) else let __assign_41 = (typeHint : string) in (
-    tempString := __assign_41;
-    __assign_41
+let normalizeReturnTypeHint = fun (typeHint : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if typeHint == HxString.hx_null_string then let __assign_43 = ("" : string) in (
+    tempString := __assign_43;
+    __assign_43
+  ) else let __assign_44 = (typeHint : string) in (
+    tempString := __assign_44;
+    __assign_44
   ));
-  let text = (StringTools.trim (!tempString : string) : string) in EReg.replace (Obj.magic (EReg.create ("[\r\n\t ]+untyped$" : string) ("" : string))) (text : string) ("" : string)
-)
+  let text = let __call_arg_0_45 = !tempString in StringTools.trim __call_arg_0_45 in EReg.replace (Obj.magic (EReg.create ("[\r\n\t ]+untyped$" : string) ("" : string))) (text : string) ("" : string)
+) : string)
 
-let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 hasBody2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = ""; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = ""; hasBody = false } : t) in (
+let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 hasBody2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = HxString.hx_null_string; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = HxString.hx_null_string; hasBody = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -136,85 +136,85 @@ let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnS
       (Obj.magic self : t).visibility <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = isStatic2 in (
-      (Obj.magic self : t).isStatic <- __assign_3;
-      __assign_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = isStatic2 in (
+      (__place_receiver_3 : t).isStatic <- __place_rhs_4;
+      __place_rhs_4
     ));
-    ignore (let __assign_4 = Obj.magic args2 in (
-      (Obj.magic self : t).args <- __assign_4;
-      __assign_4
-    ));
-    ignore (let __assign_5 = (normalizeReturnTypeHint (returnTypeHint2 : string) : string) in (
-      (Obj.magic self : t).returnTypeHint <- __assign_5;
+    ignore (let __assign_5 = Obj.magic args2 in (
+      (Obj.magic self : t).args <- __assign_5;
       __assign_5
     ));
-    ignore (let __assign_6 = Obj.magic body2 in (
-      (Obj.magic self : t).body <- __assign_6;
+    ignore (let __assign_6 = (let __call_arg_0_7 = returnTypeHint2 in normalizeReturnTypeHint __call_arg_0_7 : string) in (
+      (Obj.magic self : t).returnTypeHint <- __assign_6;
       __assign_6
     ));
-    ignore (let __assign_7 = (returnStringLiteral2 : string) in (
-      (Obj.magic self : t).returnStringLiteral <- __assign_7;
-      __assign_7
+    ignore (let __assign_8 = Obj.magic body2 in (
+      (Obj.magic self : t).body <- __assign_8;
+      __assign_8
+    ));
+    ignore (let __assign_9 = (returnStringLiteral2 : string) in (
+      (Obj.magic self : t).returnStringLiteral <- __assign_9;
+      __assign_9
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
-        tempRight := __assign_8;
-        __assign_8
-      ) else let __assign_10 = Obj.magic metadata2 in (
+      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (let __arr_11 = HxArray.create () in __arr_11) in (
         tempRight := __assign_10;
         __assign_10
+      ) else let __assign_12 = Obj.magic metadata2 in (
+        tempRight := __assign_12;
+        __assign_12
       ));
-      ignore (let __assign_11 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).metadata <- __assign_11;
-        __assign_11
+      ignore (let __assign_13 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).metadata <- __assign_13;
+        __assign_13
       ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-        ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (HxPos.unknown ()) in (
-          tempRight1 := __assign_12;
-          __assign_12
-        ) else let __assign_13 = Obj.magic pos2 in (
-          tempRight1 := __assign_13;
-          __assign_13
-        ));
-        ignore (let __assign_14 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).pos <- __assign_14;
+        ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (HxPos.unknown ()) in (
+          tempRight1 := __assign_14;
           __assign_14
+        ) else let __assign_15 = Obj.magic pos2 in (
+          tempRight1 := __assign_15;
+          __assign_15
+        ));
+        ignore (let __assign_16 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).pos <- __assign_16;
+          __assign_16
         ));
         let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-          ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic ((Obj.magic self : t).pos) in (
-            tempRight2 := __assign_15;
-            __assign_15
-          ) else let __assign_16 = Obj.magic endPos2 in (
-            tempRight2 := __assign_16;
-            __assign_16
-          ));
-          ignore (let __assign_17 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).endPos <- __assign_17;
+          ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_17 = Obj.magic ((Obj.magic self : t).pos) in (
+            tempRight2 := __assign_17;
             __assign_17
+          ) else let __assign_18 = Obj.magic endPos2 in (
+            tempRight2 := __assign_18;
+            __assign_18
           ));
-          let tempRight3 = ref ("" : string) in (
-            ignore (if bodyText2 == Obj.magic (HxRuntime.hx_null) then let __assign_18 = ("" : string) in (
-              tempRight3 := __assign_18;
-              __assign_18
-            ) else let __assign_19 = (bodyText2 : string) in (
-              tempRight3 := __assign_19;
-              __assign_19
-            ));
-            ignore (let __assign_20 = (!tempRight3 : string) in (
-              (Obj.magic self : t).bodyText <- __assign_20;
+          ignore (let __assign_19 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).endPos <- __assign_19;
+            __assign_19
+          ));
+          let tempRight3 = ref (HxString.hx_null_string : string) in (
+            ignore (if bodyText2 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
+              tempRight3 := __assign_20;
               __assign_20
+            ) else let __assign_21 = (bodyText2 : string) in (
+              tempRight3 := __assign_21;
+              __assign_21
+            ));
+            ignore (let __assign_22 = (!tempRight3 : string) in (
+              (Obj.magic self : t).bodyText <- __assign_22;
+              __assign_22
             ));
             let tempRight4 = ref (false : bool) in (
-              ignore (if hasBody2 == HxRuntime.hx_null then let __assign_21 = HxArray.length ((Obj.magic self : t).body) > 0 || HxString.length ((Obj.magic self : t).bodyText) > 0 in (
-                tempRight4 := __assign_21;
-                __assign_21
-              ) else let __assign_22 = let __nullable_bool_23 = hasBody2 in if __nullable_bool_23 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_23 in (
-                tempRight4 := __assign_22;
-                __assign_22
-              ));
-              let __assign_24 = !tempRight4 in (
-                (Obj.magic self : t).hasBody <- __assign_24;
+              ignore (if hasBody2 == HxRuntime.hx_null then let __assign_23 = HxArray.length ((Obj.magic self : t).body) > 0 || HxString.length ((Obj.magic self : t).bodyText) > 0 in (
+                tempRight4 := __assign_23;
+                __assign_23
+              ) else let __assign_24 = let __nullable_bool_25 = hasBody2 in if __nullable_bool_25 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_25 in (
+                tempRight4 := __assign_24;
                 __assign_24
+              ));
+              let __place_receiver_26 = self in let __place_rhs_27 = !tempRight4 in (
+                (__place_receiver_26 : t).hasBody <- __place_rhs_27;
+                __place_rhs_27
               )
             )
           )

@@ -26,12 +26,12 @@ let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.class_
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t)
 
-let toString = fun self () -> (("line " ^ string_of_int ((Obj.magic self : t).line)) ^ ", col ") ^ string_of_int ((Obj.magic self : t).column)
+let toString = fun self () -> ((("line " ^ string_of_int ((self : t).line)) ^ ", col ") ^ string_of_int ((self : t).column) : string)
 
-let getIndex = fun self () -> (Obj.magic self : t).index
+let getIndex = fun self () -> ((self : t).index : int)
 
-let getLine = fun self () -> (Obj.magic self : t).line
+let getLine = fun self () -> ((self : t).line : int)
 
-let getColumn = fun self () -> (Obj.magic self : t).column
+let getColumn = fun self () -> ((self : t).column : int)
 
-let unknown = fun () -> create 0 0 0
+let unknown = fun () -> (create 0 0 0 : t)

@@ -61,7 +61,8 @@ private typedef RuntimeRequirementReport = {
 	final schemaVersion:Int;
 	final model:String;
 	final authorityStatus:String;
-	final coveredFamilies:Array<String>;
+	final recordedSemanticCapabilities:Array<String>;
+	final recordedRequirementSourceKinds:Array<String>;
 	final selectionAuthority:String;
 	final runtimeMode:String;
 	final selectionMode:String;
@@ -272,7 +273,7 @@ class M6RuntimeCopierIntegrationTest {
 		final metalFullOutDir = rootOutDir + "/metal_full";
 		final emptyProfileOutDir = rootOutDir + "/portable_empty";
 		final portableManualOutDir = rootOutDir + "/portable_manual_selective";
-		final portableIncompleteManualOutDir = rootOutDir + "/portable_incomplete_manual_selective";
+		final portableMinimalManualOutDir = rootOutDir + "/portable_minimal_manual_selective";
 		final typeRegistryOutDir = rootOutDir + "/type_registry_runtime_requirements";
 		final invalidNativeBoundaryOutDir = rootOutDir + "/invalid_native_runtime_boundary";
 		final mismatchedNativeBoundaryOutDir = rootOutDir + "/mismatched_native_runtime_boundary";
@@ -303,17 +304,13 @@ class M6RuntimeCopierIntegrationTest {
 			"ocaml_runtime_modules=" + observedRuntimeRoots.join(",")
 		]);
 		assertTrue(portableManualCompile.exitCode == 0, "portable manual selective compile failed: " + portableManualCompile.stderr);
-		final portableIncompleteManualCompile = compileRuntimeFixture(portableIncompleteManualOutDir, "portable", "test", "Main", [
+		final portableMinimalManualCompile = compileRuntimeFixture(portableMinimalManualOutDir, "portable", "test", "Main", [
 			"ocaml_runtime_mode=selective",
 			"ocaml_runtime_no_infer",
 			"ocaml_runtime_modules=HxRuntime"
 		]);
-		assertTrue(portableIncompleteManualCompile.exitCode != 0, "manual runtime selection should reject omitted generated-code requirements");
-		final portableIncompleteManualOutput = portableIncompleteManualCompile.stderr + "\n" + portableIncompleteManualCompile.stdout;
-		assertContains(portableIncompleteManualOutput, "Runtime packaging omitted compiler-observed modules",
-			"manual runtime failure should explain what evidence was omitted");
-		assertContains(portableIncompleteManualOutput, "ocaml_runtime_modules",
-			"manual runtime failure should name the option that can supply the missing roots");
+		assertTrue(portableMinimalManualCompile.exitCode == 0,
+			"manual runtime roots must not disable mandatory semantic requirements: " + portableMinimalManualCompile.stderr);
 		final typeRegistryCompile = compileRuntimeFixture(typeRegistryOutDir, "portable", "test/fixtures/m6_runtime_type_registry/src", "Main");
 		assertTrue(typeRegistryCompile.exitCode == 0, "type-registry runtime requirement compile failed: " + typeRegistryCompile.stderr);
 		final invalidNativeBoundaryCompile = compileRuntimeFixture(invalidNativeBoundaryOutDir, "portable",
@@ -440,6 +437,7 @@ class M6RuntimeCopierIntegrationTest {
 		final metalFullRuntimeReport = readRuntimePlanReport(metalFullOutDir);
 		final emptyProfileRuntimeReport = readRuntimePlanReport(emptyProfileOutDir);
 		final portableManualRuntimeReport = readRuntimePlanReport(portableManualOutDir);
+		final portableMinimalManualRuntimeReport = readRuntimePlanReport(portableMinimalManualOutDir);
 		final metalTokenNoiseRuntimeReport = readRuntimePlanReport(metalTokenNoiseOutDir);
 		final metalTokenFallbackNoDebugRuntimeReport = readRuntimePlanReport(metalTokenFallbackNoDebugOutDir);
 		final metalTokenFallbackDebugRuntimeReport = readRuntimePlanReport(metalTokenFallbackDebugOutDir);
@@ -511,16 +509,34 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"portable report includes full-runtime reason");
-		assertTrue(portableRequirementReport.schemaVersion == 3, "portable requirement report schema version");
+		assertTrue(portableRequirementReport.schemaVersion == 5, "portable requirement report schema version");
 		assertTrue(portableRequirementReport.model == "recorded-ocaml-runtime-requirements", "portable requirement report model");
 		assertTrue(portableRequirementReport.authorityStatus == "partial", "portable requirement report authority status");
 		assertArrayEquals([
 			"compiler-core-runtime",
 			"compiler-type-registry",
-			"declared-static-native-runtime-boundary",
-			"typed-place-assignment-and-update"
-		], portableRequirementReport.coveredFamilies,
-			"portable requirement report covered families");
+			"compiler-type-registry-dynamic-args",
+			"compiler-type-registry-dynamic-string",
+			"compiler-type-registry-optional-null",
+			"haxe-anonymous-structure",
+			"haxe-bytes-access",
+			"haxe-bytes-producer",
+			"haxe-bytes-read",
+			"haxe-enum-dynamic-box",
+			"haxe-float-bit-conversions",
+			"haxe-int32-add",
+			"haxe-stack-traces",
+			"haxe-standard-io",
+			"haxe-string-null-sentinel"
+		],
+			portableRequirementReport.recordedSemanticCapabilities, "portable requirement report semantic capabilities");
+		assertArrayEquals([
+			"compiler-infrastructure",
+			"haxe-expression",
+			"native-boundary",
+			"representation-decision"
+		],
+			portableRequirementReport.recordedRequirementSourceKinds, "portable requirement report source kinds");
 		assertTrue(portableRequirementReport.selectionAuthority == "explicit-full-with-recorded-requirement-audit-v2",
 			"portable full mode should audit recorded requirements without claiming selective ownership");
 		assertTrue(portableRequirementReport.runtimeMode == "full", "portable requirement report runtime mode");
@@ -533,6 +549,12 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(registryRequirement.subject.kind == "generated-module" && registryRequirement.subject.id == "HxTypeRegistry",
 			"type-registry support should identify the generated module that uses it");
 		assertContains("\n" + registryRequirement.rootModules.join("\n") + "\n", "\nHxType\n", "type-registry requirement should select HxType");
+		final stringRequirement = requirementByCapability(portableRequirementReport, "haxe-string-null-sentinel");
+		assertTrue(stringRequirement.sourceKind == "representation-decision" && stringRequirement.cause == "representation-decision",
+			"the exact String sentinel should identify its sealed representation decision");
+		assertTrue(stringRequirement.subject.kind == "haxe-type" && stringRequirement.subject.id == "String",
+			"the String sentinel should identify the Haxe type it supports");
+		assertContains("\n" + stringRequirement.rootModules.join("\n") + "\n", "\nHxString\n", "the exact String null sentinel should select HxString");
 		final stdioRequirement = requirementByCapability(portableRequirementReport, "haxe-standard-io");
 		assertTrue(stdioRequirement.sourceKind == "native-boundary" && stdioRequirement.cause == "native-boundary",
 			"standard I/O support should identify a declared native boundary");
@@ -611,6 +633,14 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxBacktrace should overlap its declared typed extern requirement root");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxFPHelper\n",
 			"compiler-observed HxFPHelper should overlap its declared typed extern requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxString\n",
+			"compiler-observed HxString should overlap the exact String sentinel representation requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxBytes\n",
+			"compiler-observed HxBytes should overlap the supported non-null producer requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxAnon\n",
+			"compiler-observed HxAnon should overlap the bounded direct anonymous-object requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxEnum\n",
+			"compiler-observed HxEnum should overlap direct enum-throw requirement roots");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
@@ -619,8 +649,8 @@ class M6RuntimeCopierIntegrationTest {
 			"selective packaging should retain HxBacktrace because of the declared native boundary");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxFPHelper").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxFPHelper because of the declared native boundary");
-		assertArrayEquals(["HxAnon", "HxBytes", "HxEnum", "HxString"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
-			"partial coverage should keep the four compiler-observed modules with no recorded root visible");
+		assertArrayEquals([], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
+			"every compiler-observed runtime module should overlap a recorded root without claiming complete occurrence ownership");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 
@@ -654,6 +684,8 @@ class M6RuntimeCopierIntegrationTest {
 		assertArrayEquals(portableManualRuntimeReport.selectedModules, portableManualRequirementReport.selectedModules,
 			"manual requirement and selection reports should name the same packaged modules");
 		assertNotContains("\n" + portableManualRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "portable manual runtime omits file runtime");
+		assertArrayEquals(portableManualRuntimeReport.selectedModules, portableMinimalManualRuntimeReport.selectedModules,
+			"manual runtime roots should only add optional roots; they must not replace mandatory semantic requirements");
 
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
 		assertTrue(metalTokenNoiseRuntimeReport.runtimeMode == "selective", "token noise runtime mode");

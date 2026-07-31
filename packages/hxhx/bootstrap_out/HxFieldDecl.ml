@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisibility.hxvisibility; mutable isStatic : bool; mutable typeHint : string; mutable init : Obj.t; mutable metadata : string HxArray.t; mutable pos : HxPos.t; mutable endPos : HxPos.t; mutable isFinal : bool; mutable propertyGet : string; mutable propertySet : string; mutable initText : string }
 
-let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endPos2 isFinal2 propertyGet2 propertySet2 initText2 -> let self = ({ __hx_type = HxType.class_ "HxFieldDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; typeHint = ""; init = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); isFinal = false; propertyGet = ""; propertySet = ""; initText = "" } : t) in (
+let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endPos2 isFinal2 propertyGet2 propertySet2 initText2 -> let self = ({ __hx_type = HxType.class_ "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -16,109 +16,109 @@ let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endP
       (Obj.magic self : t).visibility <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = isStatic2 in (
-      (Obj.magic self : t).isStatic <- __assign_3;
-      __assign_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = isStatic2 in (
+      (__place_receiver_3 : t).isStatic <- __place_rhs_4;
+      __place_rhs_4
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if typeHint2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
-        tempRight := __assign_4;
-        __assign_4
-      ) else let __assign_5 = (typeHint2 : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if typeHint2 == HxString.hx_null_string then let __assign_5 = ("" : string) in (
         tempRight := __assign_5;
         __assign_5
-      ));
-      ignore (let __assign_6 = (!tempRight : string) in (
-        (Obj.magic self : t).typeHint <- __assign_6;
+      ) else let __assign_6 = (typeHint2 : string) in (
+        tempRight := __assign_6;
         __assign_6
       ));
-      ignore (let __assign_7 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init2)) in (
-        (Obj.magic self : t).init <- __assign_7;
+      ignore (let __assign_7 = (!tempRight : string) in (
+        (Obj.magic self : t).typeHint <- __assign_7;
         __assign_7
       ));
+      ignore (let __assign_8 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init2)) in (
+        (Obj.magic self : t).init <- __assign_8;
+        __assign_8
+      ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-        ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
-          tempRight1 := __assign_8;
-          __assign_8
-        ) else let __assign_10 = Obj.magic metadata2 in (
-          tempRight1 := __assign_10;
-          __assign_10
-        ));
-        ignore (let __assign_11 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).metadata <- __assign_11;
+        ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_9 = Obj.magic (let __arr_10 = HxArray.create () in __arr_10) in (
+          tempRight1 := __assign_9;
+          __assign_9
+        ) else let __assign_11 = Obj.magic metadata2 in (
+          tempRight1 := __assign_11;
           __assign_11
         ));
+        ignore (let __assign_12 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).metadata <- __assign_12;
+          __assign_12
+        ));
         let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-          ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (HxPos.unknown ()) in (
-            tempRight2 := __assign_12;
-            __assign_12
-          ) else let __assign_13 = Obj.magic pos2 in (
+          ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_13 = Obj.magic (HxPos.unknown ()) in (
             tempRight2 := __assign_13;
             __assign_13
-          ));
-          ignore (let __assign_14 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).pos <- __assign_14;
+          ) else let __assign_14 = Obj.magic pos2 in (
+            tempRight2 := __assign_14;
             __assign_14
           ));
+          ignore (let __assign_15 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).pos <- __assign_15;
+            __assign_15
+          ));
           let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-            ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic ((Obj.magic self : t).pos) in (
-              tempRight3 := __assign_15;
-              __assign_15
-            ) else let __assign_16 = Obj.magic endPos2 in (
+            ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic ((Obj.magic self : t).pos) in (
               tempRight3 := __assign_16;
               __assign_16
-            ));
-            ignore (let __assign_17 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).endPos <- __assign_17;
+            ) else let __assign_17 = Obj.magic endPos2 in (
+              tempRight3 := __assign_17;
               __assign_17
             ));
+            ignore (let __assign_18 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).endPos <- __assign_18;
+              __assign_18
+            ));
             let tempRight4 = ref (false : bool) in (
-              ignore (if isFinal2 == HxRuntime.hx_null then let __assign_18 = false in (
-                tempRight4 := __assign_18;
-                __assign_18
-              ) else let __assign_19 = let __nullable_bool_20 = isFinal2 in if __nullable_bool_20 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_20 in (
+              ignore (if isFinal2 == HxRuntime.hx_null then let __assign_19 = false in (
                 tempRight4 := __assign_19;
                 __assign_19
+              ) else let __assign_20 = let __nullable_bool_21 = isFinal2 in if __nullable_bool_21 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_21 in (
+                tempRight4 := __assign_20;
+                __assign_20
               ));
-              ignore (let __assign_21 = !tempRight4 in (
-                (Obj.magic self : t).isFinal <- __assign_21;
-                __assign_21
+              ignore (let __place_receiver_22 = self in let __place_rhs_23 = !tempRight4 in (
+                (__place_receiver_22 : t).isFinal <- __place_rhs_23;
+                __place_rhs_23
               ));
-              let tempRight5 = ref ("" : string) in (
-                ignore (if propertyGet2 == Obj.magic (HxRuntime.hx_null) then let __assign_22 = ("" : string) in (
-                  tempRight5 := __assign_22;
-                  __assign_22
-                ) else let __assign_23 = (propertyGet2 : string) in (
-                  tempRight5 := __assign_23;
-                  __assign_23
-                ));
-                ignore (let __assign_24 = (!tempRight5 : string) in (
-                  (Obj.magic self : t).propertyGet <- __assign_24;
+              let tempRight5 = ref (HxString.hx_null_string : string) in (
+                ignore (if propertyGet2 == Obj.magic (HxRuntime.hx_null) then let __assign_24 = ("" : string) in (
+                  tempRight5 := __assign_24;
                   __assign_24
+                ) else let __assign_25 = (propertyGet2 : string) in (
+                  tempRight5 := __assign_25;
+                  __assign_25
                 ));
-                let tempRight6 = ref ("" : string) in (
-                  ignore (if propertySet2 == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
-                    tempRight6 := __assign_25;
-                    __assign_25
-                  ) else let __assign_26 = (propertySet2 : string) in (
-                    tempRight6 := __assign_26;
-                    __assign_26
-                  ));
-                  ignore (let __assign_27 = (!tempRight6 : string) in (
-                    (Obj.magic self : t).propertySet <- __assign_27;
+                ignore (let __assign_26 = (!tempRight5 : string) in (
+                  (Obj.magic self : t).propertyGet <- __assign_26;
+                  __assign_26
+                ));
+                let tempRight6 = ref (HxString.hx_null_string : string) in (
+                  ignore (if propertySet2 == Obj.magic (HxRuntime.hx_null) then let __assign_27 = ("" : string) in (
+                    tempRight6 := __assign_27;
                     __assign_27
+                  ) else let __assign_28 = (propertySet2 : string) in (
+                    tempRight6 := __assign_28;
+                    __assign_28
                   ));
-                  let tempRight7 = ref ("" : string) in (
-                    ignore (if initText2 == Obj.magic (HxRuntime.hx_null) then let __assign_28 = ("" : string) in (
-                      tempRight7 := __assign_28;
-                      __assign_28
-                    ) else let __assign_29 = (initText2 : string) in (
-                      tempRight7 := __assign_29;
-                      __assign_29
-                    ));
-                    let __assign_30 = (!tempRight7 : string) in (
-                      (Obj.magic self : t).initText <- __assign_30;
+                  ignore (let __assign_29 = (!tempRight6 : string) in (
+                    (Obj.magic self : t).propertySet <- __assign_29;
+                    __assign_29
+                  ));
+                  let tempRight7 = ref (HxString.hx_null_string : string) in (
+                    ignore (if initText2 == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
+                      tempRight7 := __assign_30;
                       __assign_30
+                    ) else let __assign_31 = (initText2 : string) in (
+                      tempRight7 := __assign_31;
+                      __assign_31
+                    ));
+                    let __assign_32 = (!tempRight7 : string) in (
+                      (Obj.magic self : t).initText <- __assign_32;
+                      __assign_32
                     )
                   )
                 )
@@ -132,7 +132,7 @@ let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endP
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFieldDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; typeHint = ""; init = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); isFinal = false; propertyGet = ""; propertySet = ""; initText = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic (HxRuntime.hx_null); metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t)
 
 let getName = fun f -> (Obj.magic f : t).name
 

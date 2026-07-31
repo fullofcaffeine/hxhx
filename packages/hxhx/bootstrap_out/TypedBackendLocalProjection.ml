@@ -6,10 +6,10 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable projectedName : string; mutable binding : TyLocalBinding.t }
 
-let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = ""; binding = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if projectedName2 == Obj.magic (HxRuntime.hx_null) || HxString.length projectedName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires a transport name") ["Dynamic"; "String"]) else ());
-    ignore (if binding2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires an exact binding") ["Dynamic"; "String"]) else ());
+    ignore (if projectedName2 == HxString.hx_null_string || HxString.length projectedName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires a transport name") ["Dynamic"]) else ());
+    ignore (if binding2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires an exact binding") ["Dynamic"]) else ());
     ignore (let __assign_1 = (projectedName2 : string) in (
       (Obj.magic self : t).projectedName <- __assign_1;
       __assign_1
@@ -22,7 +22,7 @@ let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = ""; binding = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getProjectedName = fun self () -> (Obj.magic self : t).projectedName
 

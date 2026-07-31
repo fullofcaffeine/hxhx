@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable modules : CompilerTypedModuleRevision.t HxArray.t; mutable edges : CompilerDependencyEdge.t HxArray.t; mutable programConfiguration : CompilerProgramConfigurationObservation.t; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic (HxRuntime.hx_null); edges = Obj.magic (HxRuntime.hx_null); programConfiguration = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic (HxRuntime.hx_null); edges = Obj.magic (HxRuntime.hx_null); programConfiguration = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getModules = fun self () -> HxArray.copy ((Obj.magic self : t).modules)
 
@@ -54,64 +54,66 @@ let buildCanonicalIdentity = fun modules2 edges2 programConfiguration2 -> let va
   )
 )
 
-let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_25 = -1 in (
-    tempResult := __assign_25;
-    __assign_25
-  ) else if left > right then let __assign_26 = 1 in (
-    tempResult := __assign_26;
-    __assign_26
-  ) else let __assign_27 = 0 in (
-    tempResult := __assign_27;
-    __assign_27
+let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_29 = -1 in (
+    tempResult := __assign_29;
+    __assign_29
+  ) else if left > right then let __assign_30 = 1 in (
+    tempResult := __assign_30;
+    __assign_30
+  ) else let __assign_31 = 0 in (
+    tempResult := __assign_31;
+    __assign_31
   ));
   !tempResult
-)
+) : int)
 
-let compareModules = fun left right -> compareText ((Obj.magic left : CompilerTypedModuleRevision.t).modulePath : string) ((Obj.magic right : CompilerTypedModuleRevision.t).modulePath : string)
+let compareModules = fun left right -> let __call_arg_0_18 = (Obj.magic left : CompilerTypedModuleRevision.t).modulePath in let __call_arg_1_19 = (Obj.magic right : CompilerTypedModuleRevision.t).modulePath in compareText __call_arg_0_18 __call_arg_1_19
 
 let normalizeModules = fun values -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : CompilerTypedModuleRevision.t HxArray.t) in (
-  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_18 = Obj.magic (let __arr_19 = HxArray.create () in __arr_19) in (
-    tempArray := __assign_18;
-    __assign_18
-  ) else let __assign_20 = Obj.magic (HxArray.copy values) in (
+  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (let __arr_21 = HxArray.create () in __arr_21) in (
     tempArray := __assign_20;
     __assign_20
+  ) else let __assign_22 = Obj.magic (HxArray.copy values) in (
+    tempArray := __assign_22;
+    __assign_22
   ));
-  ignore (HxArray.sort (!tempArray) compareModules);
-  let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-    ignore (try while !_g < HxArray.length (!tempArray) do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic (!tempArray)) (!_g)) in (
-      ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
-        ignore (_g := __new_22);
-        __new_22
-      ));
-      ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency snapshot contains a null module revision") ["Dynamic"; "String"]) else ());
-      let tempMaybeCompilerTypedModuleRevision = ref (Obj.magic (HxRuntime.hx_null) : CompilerTypedModuleRevision.t) in (
-        ignore (if HxArray.length out = 0 then let __assign_23 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-          tempMaybeCompilerTypedModuleRevision := __assign_23;
-          __assign_23
-        ) else let __assign_24 = Obj.magic (Obj.magic (HxArray.get (Obj.magic out) (HxInt.sub (HxArray.length out) 1))) in (
-          tempMaybeCompilerTypedModuleRevision := __assign_24;
-          __assign_24
+  let sorted = Obj.magic (!tempArray) in (
+    ignore (HxArray.sort sorted compareModules);
+    let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+      ignore (try while !_g < HxArray.length sorted do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic sorted) (!_g)) in (
+        ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
+          ignore (_g := __new_24);
+          __new_24
         ));
-        let previous = Obj.magic (!tempMaybeCompilerTypedModuleRevision) in (
-          ignore (if previous == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).modulePath) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath)) then ignore ((
-            ignore (HxArray.push out hx_module);
-            raise (HxRuntime.Hx_continue)
-          )) else ());
-          let equivalent = HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginDescription) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginDescription) && HxString.equals (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) && HxString.equals (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) && HxString.equals (CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).macroFileDependencies)) ()) (CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).macroFileDependencies)) ()) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).publicInterfaceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).publicInterfaceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).implementationRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).implementationRevision) in if not (equivalent) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("compiler dependency snapshot contains conflicting observations for module identity: " ^ HxString.toStdString ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath))) ["Dynamic"; "String"]) else ()
+        ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler dependency snapshot contains a null module revision") ["Dynamic"]) else ());
+        let tempMaybeCompilerTypedModuleRevision = ref (Obj.magic (HxRuntime.hx_null) : CompilerTypedModuleRevision.t) in (
+          ignore (if HxArray.length out = 0 then let __assign_25 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempMaybeCompilerTypedModuleRevision := __assign_25;
+            __assign_25
+          ) else let __assign_26 = Obj.magic (Obj.magic (HxArray.get (Obj.magic out) (HxInt.sub (HxArray.length out) 1))) in (
+            tempMaybeCompilerTypedModuleRevision := __assign_26;
+            __assign_26
+          ));
+          let previous = Obj.magic (!tempMaybeCompilerTypedModuleRevision) in (
+            ignore (if previous == Obj.magic (HxRuntime.hx_null) || not (HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).modulePath) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath)) then ignore ((
+              ignore (HxArray.push out hx_module);
+              raise (HxRuntime.Hx_continue)
+            )) else ());
+            let equivalent = HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).sourceOriginDescription) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).sourceOriginDescription) && HxString.equals (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) (CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).conditionalCompilation)) ()) && HxString.equals (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) (CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).generatedDeclarations)) ()) && HxString.equals (CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic previous : CompilerTypedModuleRevision.t).macroFileDependencies)) ()) (CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic hx_module : CompilerTypedModuleRevision.t).macroFileDependencies)) ()) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).publicInterfaceRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).publicInterfaceRevision) && HxString.equals ((Obj.magic previous : CompilerTypedModuleRevision.t).implementationRevision) ((Obj.magic hx_module : CompilerTypedModuleRevision.t).implementationRevision) in if not (equivalent) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("compiler dependency snapshot contains conflicting observations for module identity: " ^ HxString.toStdString ((Obj.magic hx_module : CompilerTypedModuleRevision.t).modulePath))) ["Dynamic"]) else ()
+          )
         )
-      )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ());
-    out
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      out
+    )
   )
 )
 
-let compareEdges = fun left right -> compareText (CompilerDependencyEdge.canonicalKey (Obj.magic left) () : string) (CompilerDependencyEdge.canonicalKey (Obj.magic right) () : string)
+let compareEdges = fun left right -> let __call_arg_0_27 = CompilerDependencyEdge.canonicalKey (Obj.magic left) () in let __call_arg_1_28 = CompilerDependencyEdge.canonicalKey (Obj.magic right) () in compareText __call_arg_0_27 __call_arg_1_28
 
-let create = fun modules2 edges2 programConfiguration2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic (HxRuntime.hx_null); edges = Obj.magic (HxRuntime.hx_null); programConfiguration = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun modules2 edges2 programConfiguration2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic (HxRuntime.hx_null); edges = Obj.magic (HxRuntime.hx_null); programConfiguration = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (normalizeModules (Obj.magic modules2)) in (
       (Obj.magic self : t).modules <- __assign_1;

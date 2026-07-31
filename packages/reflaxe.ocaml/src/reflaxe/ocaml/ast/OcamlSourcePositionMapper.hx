@@ -8,14 +8,30 @@ import reflaxe.ocaml.ast.OcamlDebugPos;
 /**
 	Maps Haxe byte offsets to stable generated-OCaml debug positions.
 
-	File contents and line starts are cached per compiler process because the
-	expression builder may request positions for many nodes in the same source.
+	File contents and line starts are cached only within one compiler request
+	because the expression builder may request positions for many nodes in the
+	same source. The request boundary must release those snapshots: an upstream
+	Haxe compilation server can reuse this macro process after a file changes at
+	the same path.
 **/
 class OcamlSourcePositionMapper {
 	#if macro
 	static var sourceContentByFile:Map<String, String> = [];
 	static var lineStartsByFile:Map<String, Array<Int>> = [];
 	static var normalizedFileByFile:Map<String, String> = [];
+
+	/**
+		Starts a source-position snapshot for one target request.
+
+		Callers may rely on repeated positions in the same request sharing one
+		file read. No file contents or line offsets from an older request remain
+		reachable after this call.
+	**/
+	public static function beginRequest():Void {
+		sourceContentByFile.clear();
+		lineStartsByFile.clear();
+		normalizedFileByFile.clear();
+	}
 
 	static function normalizeHaxeFilePath(file:String):String {
 		if (file == null)

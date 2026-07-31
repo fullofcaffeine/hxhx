@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable source : string; mutable filePath : string; mutable decl : HxModuleDecl.t }
 
-let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (source2 : string) in (
       (Obj.magic self : t).source <- __assign_1;
@@ -24,7 +24,7 @@ let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getSource = fun self () -> (Obj.magic self : t).source
 

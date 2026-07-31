@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable hx_type : TyType.t; mutable isStatic : bool; mutable getterAccess : string; mutable setterAccess : string }
 
-let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self = ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; getterAccess = ""; setterAccess = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self = ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if name2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (name2 : string) in (
@@ -31,33 +31,33 @@ let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self
         (Obj.magic self : t).hx_type <- __assign_6;
         __assign_6
       ));
-      ignore (let __assign_7 = isStatic2 in (
-        (Obj.magic self : t).isStatic <- __assign_7;
-        __assign_7
+      ignore (let __place_receiver_7 = self in let __place_rhs_8 = isStatic2 in (
+        (__place_receiver_7 : t).isStatic <- __place_rhs_8;
+        __place_rhs_8
       ));
-      let tempRight2 = ref ("" : string) in (
-        ignore (if getterAccess2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = ("" : string) in (
-          tempRight2 := __assign_8;
-          __assign_8
-        ) else let __assign_9 = (getterAccess2 : string) in (
+      let tempRight2 = ref (HxString.hx_null_string : string) in (
+        ignore (if getterAccess2 == HxString.hx_null_string then let __assign_9 = ("" : string) in (
           tempRight2 := __assign_9;
           __assign_9
-        ));
-        ignore (let __assign_10 = (!tempRight2 : string) in (
-          (Obj.magic self : t).getterAccess <- __assign_10;
+        ) else let __assign_10 = (getterAccess2 : string) in (
+          tempRight2 := __assign_10;
           __assign_10
         ));
-        let tempRight3 = ref ("" : string) in (
-          ignore (if setterAccess2 == Obj.magic (HxRuntime.hx_null) then let __assign_11 = ("" : string) in (
-            tempRight3 := __assign_11;
-            __assign_11
-          ) else let __assign_12 = (setterAccess2 : string) in (
+        ignore (let __assign_11 = (!tempRight2 : string) in (
+          (Obj.magic self : t).getterAccess <- __assign_11;
+          __assign_11
+        ));
+        let tempRight3 = ref (HxString.hx_null_string : string) in (
+          ignore (if setterAccess2 == HxString.hx_null_string then let __assign_12 = ("" : string) in (
             tempRight3 := __assign_12;
             __assign_12
-          ));
-          let __assign_13 = (!tempRight3 : string) in (
-            (Obj.magic self : t).setterAccess <- __assign_13;
+          ) else let __assign_13 = (setterAccess2 : string) in (
+            tempRight3 := __assign_13;
             __assign_13
+          ));
+          let __assign_14 = (!tempRight3 : string) in (
+            (Obj.magic self : t).setterAccess <- __assign_14;
+            __assign_14
           )
         )
       )
@@ -66,7 +66,7 @@ let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = ""; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; getterAccess = ""; setterAccess = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic (HxRuntime.hx_null); isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 

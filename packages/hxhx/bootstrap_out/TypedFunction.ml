@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable ownerName : string; mutable sourceOrdinal : int; mutable sourceDeclaration : HxFunctionDecl.t; mutable declaration : TyDeclarationInfo.t; mutable environment : TyFunctionEnv.t; mutable body : TypedFunctionBody.t }
 
-let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 environment2 body2 -> let self = ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = ""; sourceOrdinal = 0; sourceDeclaration = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); environment = Obj.magic (HxRuntime.hx_null); body = Obj.magic (HxRuntime.hx_null) } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if ownerName2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 environment2 body2 -> let self = ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); environment = Obj.magic (HxRuntime.hx_null); body = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if ownerName2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (ownerName2 : string) in (
@@ -43,7 +43,7 @@ let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 envir
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = ""; sourceOrdinal = 0; sourceDeclaration = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); environment = Obj.magic (HxRuntime.hx_null); body = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); environment = Obj.magic (HxRuntime.hx_null); body = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getOwnerName = fun self () -> (Obj.magic self : t).ownerName
 
@@ -61,19 +61,19 @@ let withBody = fun self (loweredBody : TypedFunctionBody.t) -> create ((Obj.magi
 
 let stableIdentityFor = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 -> try let __fallback_result_15 = (
   ignore (if declaration2 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration2) ())) () : string))) else ());
-  let tempString = ref ("" : string) in (
-    ignore (if ownerName2 == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
+  let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if ownerName2 == HxString.hx_null_string then let __assign_10 = ("" : string) in (
       tempString := __assign_10;
       __assign_10
     ) else let __assign_11 = (ownerName2 : string) in (
       tempString := __assign_11;
       __assign_11
     ));
-    let tempString1 = ref ("" : string) in (
-      ignore (if HxFunctionDecl.getIsStatic (Obj.magic sourceDeclaration2) then let __assign_12 = ("static:" : string) in (
+    let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if HxFunctionDecl.getIsStatic (Obj.magic sourceDeclaration2) then let __assign_12 = "static:" in (
         tempString1 := __assign_12;
         __assign_12
-      ) else let __assign_13 = ("instance:" : string) in (
+      ) else let __assign_13 = "instance:" in (
         tempString1 := __assign_13;
         __assign_13
       ));
@@ -85,4 +85,4 @@ let stableIdentityFor = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declara
 
 let getStableIdentity = fun self () -> stableIdentityFor ((Obj.magic self : t).ownerName : string) ((Obj.magic self : t).sourceOrdinal) (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).declaration))
 
-let assertParsedBodyCurrent = fun self () -> ignore (ignore (let current = (TypedBodyFingerprint.forStatements (Obj.magic (HxFunctionDecl.getBody (Obj.magic ((Obj.magic self : t).sourceDeclaration)))) : string) in if not (HxString.equals current (TypedFunctionBody.getSourceFingerprint (Obj.magic ((Obj.magic self : t).body)) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("typed body revision mismatch for " ^ HxString.toStdString (getStableIdentity (Obj.magic self) ())) ^ "; retype the changed declaration before backend emission")) ["Dynamic"; "String"]) else ()))
+let assertParsedBodyCurrent = fun self () -> ignore (ignore (let current = (TypedBodyFingerprint.forStatements (Obj.magic (HxFunctionDecl.getBody (Obj.magic ((Obj.magic self : t).sourceDeclaration)))) : string) in if not (HxString.equals current (TypedFunctionBody.getSourceFingerprint (Obj.magic ((Obj.magic self : t).body)) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("typed body revision mismatch for " ^ HxString.toStdString (getStableIdentity (Obj.magic self) ())) ^ "; retype the changed declaration before backend emission")) ["Dynamic"]) else ()))

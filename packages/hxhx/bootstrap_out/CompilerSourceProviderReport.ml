@@ -8,53 +8,53 @@ type t = { __hx_type : Obj.t; mutable cacheEnabled : bool; mutable sourceHits : 
 
 let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = cacheEnabled2 in (
-      (Obj.magic self : t).cacheEnabled <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = cacheEnabled2 in (
+      (__place_receiver_1 : t).cacheEnabled <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __place_receiver_2 = self in let __place_rhs_3 = 0 in (
-      (__place_receiver_2 : t).sourceHits <- __place_rhs_3;
-      __place_rhs_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = 0 in (
+      (__place_receiver_3 : t).sourceHits <- __place_rhs_4;
+      __place_rhs_4
     ));
-    ignore (let __place_receiver_4 = self in let __place_rhs_5 = 0 in (
-      (__place_receiver_4 : t).sourceMisses <- __place_rhs_5;
-      __place_rhs_5
+    ignore (let __place_receiver_5 = self in let __place_rhs_6 = 0 in (
+      (__place_receiver_5 : t).sourceMisses <- __place_rhs_6;
+      __place_rhs_6
     ));
-    ignore (let __place_receiver_6 = self in let __place_rhs_7 = 0 in (
-      (__place_receiver_6 : t).sourceBytesRead <- __place_rhs_7;
-      __place_rhs_7
+    ignore (let __place_receiver_7 = self in let __place_rhs_8 = 0 in (
+      (__place_receiver_7 : t).sourceBytesRead <- __place_rhs_8;
+      __place_rhs_8
     ));
-    ignore (let __place_receiver_8 = self in let __place_rhs_9 = 0 in (
-      (__place_receiver_8 : t).resolutionHits <- __place_rhs_9;
-      __place_rhs_9
+    ignore (let __place_receiver_9 = self in let __place_rhs_10 = 0 in (
+      (__place_receiver_9 : t).resolutionHits <- __place_rhs_10;
+      __place_rhs_10
     ));
-    ignore (let __place_receiver_10 = self in let __place_rhs_11 = 0 in (
-      (__place_receiver_10 : t).resolutionMisses <- __place_rhs_11;
-      __place_rhs_11
+    ignore (let __place_receiver_11 = self in let __place_rhs_12 = 0 in (
+      (__place_receiver_11 : t).resolutionMisses <- __place_rhs_12;
+      __place_rhs_12
     ));
-    ignore (let __place_receiver_12 = self in let __place_rhs_13 = 0 in (
-      (__place_receiver_12 : t).parserHits <- __place_rhs_13;
-      __place_rhs_13
+    ignore (let __place_receiver_13 = self in let __place_rhs_14 = 0 in (
+      (__place_receiver_13 : t).parserHits <- __place_rhs_14;
+      __place_rhs_14
     ));
-    ignore (let __place_receiver_14 = self in let __place_rhs_15 = 0 in (
-      (__place_receiver_14 : t).parserMisses <- __place_rhs_15;
-      __place_rhs_15
+    ignore (let __place_receiver_15 = self in let __place_rhs_16 = 0 in (
+      (__place_receiver_15 : t).parserMisses <- __place_rhs_16;
+      __place_rhs_16
     ));
-    ignore (let __place_receiver_16 = self in let __place_rhs_17 = 0 in (
-      (__place_receiver_16 : t).evictions <- __place_rhs_17;
-      __place_rhs_17
+    ignore (let __place_receiver_17 = self in let __place_rhs_18 = 0 in (
+      (__place_receiver_17 : t).evictions <- __place_rhs_18;
+      __place_rhs_18
     ));
-    ignore (let __place_receiver_18 = self in let __place_rhs_19 = 0 in (
-      (__place_receiver_18 : t).retainedEntries <- __place_rhs_19;
-      __place_rhs_19
+    ignore (let __place_receiver_19 = self in let __place_rhs_20 = 0 in (
+      (__place_receiver_19 : t).retainedEntries <- __place_rhs_20;
+      __place_rhs_20
     ));
-    ignore (let __place_receiver_20 = self in let __place_rhs_21 = 0 in (
-      (__place_receiver_20 : t).retainedBytesEstimate <- __place_rhs_21;
-      __place_rhs_21
+    ignore (let __place_receiver_21 = self in let __place_rhs_22 = 0 in (
+      (__place_receiver_21 : t).retainedBytesEstimate <- __place_rhs_22;
+      __place_rhs_22
     ));
-    let __assign_22 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).missReasons <- __assign_22;
-      __assign_22
+    let __assign_23 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).missReasons <- __assign_23;
+      __assign_23
     )
   )));
   self
@@ -62,70 +62,70 @@ let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "Compi
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic (HxRuntime.hx_null) } : t)
 
-let recordSourceHit = fun self () -> ignore (ignore (let __place_receiver_23 = self in let __place_old_24 = (__place_receiver_23 : t).sourceHits in let __place_rhs_25 = 1 in let __place_new_26 = HxInt.add __place_old_24 __place_rhs_25 in (
-  (__place_receiver_23 : t).sourceHits <- __place_new_26;
-  __place_new_26
+let recordSourceHit = fun self () -> ignore (ignore (let __place_receiver_24 = self in let __place_old_25 = (__place_receiver_24 : t).sourceHits in let __place_rhs_26 = 1 in let __place_new_27 = HxInt.add __place_old_25 __place_rhs_26 in (
+  (__place_receiver_24 : t).sourceHits <- __place_new_27;
+  __place_new_27
 )))
 
 let recordSourceBytesRead = fun self (count : int) -> ignore (ignore (let tempRight = ref (0 : int) in (
-  ignore (if count > 0 then let __assign_31 = count in (
-    tempRight := __assign_31;
-    __assign_31
-  ) else let __assign_32 = 0 in (
+  ignore (if count > 0 then let __assign_32 = count in (
     tempRight := __assign_32;
     __assign_32
+  ) else let __assign_33 = 0 in (
+    tempRight := __assign_33;
+    __assign_33
   ));
-  let __place_receiver_33 = self in let __place_old_34 = (__place_receiver_33 : t).sourceBytesRead in let __place_rhs_35 = !tempRight in let __place_new_36 = HxInt.add __place_old_34 __place_rhs_35 in (
-    (__place_receiver_33 : t).sourceBytesRead <- __place_new_36;
-    __place_new_36
+  let __place_receiver_34 = self in let __place_old_35 = (__place_receiver_34 : t).sourceBytesRead in let __place_rhs_36 = !tempRight in let __place_new_37 = HxInt.add __place_old_35 __place_rhs_36 in (
+    (__place_receiver_34 : t).sourceBytesRead <- __place_new_37;
+    __place_new_37
   )
 )))
 
-let recordResolutionHit = fun self () -> ignore (ignore (let __place_receiver_37 = self in let __place_old_38 = (__place_receiver_37 : t).resolutionHits in let __place_rhs_39 = 1 in let __place_new_40 = HxInt.add __place_old_38 __place_rhs_39 in (
-  (__place_receiver_37 : t).resolutionHits <- __place_new_40;
-  __place_new_40
+let recordResolutionHit = fun self () -> ignore (ignore (let __place_receiver_38 = self in let __place_old_39 = (__place_receiver_38 : t).resolutionHits in let __place_rhs_40 = 1 in let __place_new_41 = HxInt.add __place_old_39 __place_rhs_40 in (
+  (__place_receiver_38 : t).resolutionHits <- __place_new_41;
+  __place_new_41
 )))
 
-let recordParserHit = fun self () -> ignore (ignore (let __place_receiver_45 = self in let __place_old_46 = (__place_receiver_45 : t).parserHits in let __place_rhs_47 = 1 in let __place_new_48 = HxInt.add __place_old_46 __place_rhs_47 in (
-  (__place_receiver_45 : t).parserHits <- __place_new_48;
-  __place_new_48
+let recordParserHit = fun self () -> ignore (ignore (let __place_receiver_46 = self in let __place_old_47 = (__place_receiver_46 : t).parserHits in let __place_rhs_48 = 1 in let __place_new_49 = HxInt.add __place_old_47 __place_rhs_48 in (
+  (__place_receiver_46 : t).parserHits <- __place_new_49;
+  __place_new_49
 )))
 
 let setRetainedState = fun self (entries : int) (bytesEstimate : int) (evictions2 : int) -> ignore (ignore (let tempRight = ref (0 : int) in (
-  ignore (if entries > 0 then let __assign_53 = entries in (
-    tempRight := __assign_53;
-    __assign_53
-  ) else let __assign_54 = 0 in (
+  ignore (if entries > 0 then let __assign_54 = entries in (
     tempRight := __assign_54;
     __assign_54
+  ) else let __assign_55 = 0 in (
+    tempRight := __assign_55;
+    __assign_55
   ));
-  ignore (let __place_receiver_55 = self in let __place_rhs_56 = !tempRight in (
-    (__place_receiver_55 : t).retainedEntries <- __place_rhs_56;
-    __place_rhs_56
+  ignore (let __place_receiver_56 = self in let __place_rhs_57 = !tempRight in (
+    (__place_receiver_56 : t).retainedEntries <- __place_rhs_57;
+    __place_rhs_57
   ));
   let tempRight1 = ref (0 : int) in (
-    ignore (if bytesEstimate > 0 then let __assign_57 = bytesEstimate in (
-      tempRight1 := __assign_57;
-      __assign_57
-    ) else let __assign_58 = 0 in (
+    ignore (if bytesEstimate > 0 then let __assign_58 = bytesEstimate in (
       tempRight1 := __assign_58;
       __assign_58
+    ) else let __assign_59 = 0 in (
+      tempRight1 := __assign_59;
+      __assign_59
     ));
-    ignore (let __place_receiver_59 = self in let __place_rhs_60 = !tempRight1 in (
-      (__place_receiver_59 : t).retainedBytesEstimate <- __place_rhs_60;
-      __place_rhs_60
+    ignore (let __place_receiver_60 = self in let __place_rhs_61 = !tempRight1 in (
+      (__place_receiver_60 : t).retainedBytesEstimate <- __place_rhs_61;
+      __place_rhs_61
     ));
     let tempRight2 = ref (0 : int) in (
-      ignore (if evictions2 > 0 then let __assign_61 = evictions2 in (
-        tempRight2 := __assign_61;
-        __assign_61
-      ) else let __assign_62 = 0 in (
+      ignore (if evictions2 > 0 then let __assign_62 = evictions2 in (
         tempRight2 := __assign_62;
         __assign_62
+      ) else let __assign_63 = 0 in (
+        tempRight2 := __assign_63;
+        __assign_63
       ));
-      let __place_receiver_63 = self in let __place_rhs_64 = !tempRight2 in (
-        (__place_receiver_63 : t).evictions <- __place_rhs_64;
-        __place_rhs_64
+      let __place_receiver_64 = self in let __place_rhs_65 = !tempRight2 in (
+        (__place_receiver_64 : t).evictions <- __place_rhs_65;
+        __place_rhs_65
       )
     )
   )
@@ -135,77 +135,77 @@ let totalHits = fun self () -> HxInt.add (HxInt.add ((Obj.magic self : t).source
 
 let totalMisses = fun self () -> HxInt.add (HxInt.add ((Obj.magic self : t).sourceMisses) ((Obj.magic self : t).resolutionMisses)) ((Obj.magic self : t).parserMisses)
 
-let missReasonCount = fun self (reason : string) -> let count = HxMap.get_string ((Obj.magic self : t).missReasons) reason in let tempResult = ref (0 : int) in (
-  ignore (if count == HxRuntime.hx_null then let __assign_67 = 0 in (
-    tempResult := __assign_67;
-    __assign_67
-  ) else let __assign_68 = let __nullable_int_69 = count in if __nullable_int_69 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_69 in (
+let missReasonCount = fun self (reason : string) -> let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber = HxMap.get_string (Obj.magic _this) (reason : string) in let count = tempMaybeNumber in let tempResult = ref (0 : int) in (
+  ignore (if count == HxRuntime.hx_null then let __assign_68 = 0 in (
     tempResult := __assign_68;
     __assign_68
+  ) else let __assign_69 = let __nullable_int_70 = count in if __nullable_int_70 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_70 in (
+    tempResult := __assign_69;
+    __assign_69
   ));
   !tempResult
 )
 
-let recordMissReason = fun self (reason : string) -> ignore (ignore (let tempString = ref ("" : string) in (
-  ignore (if reason == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (reason : string)) = 0 then let __assign_70 = ("unspecified" : string) in (
-    tempString := __assign_70;
-    __assign_70
-  ) else let __assign_71 = (StringTools.trim (reason : string) : string) in (
-    tempString := __assign_71;
-    __assign_71
+let recordMissReason = fun self (reason : string) -> ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if reason == HxString.hx_null_string || HxString.length (let __call_arg_0_71 = reason in StringTools.trim __call_arg_0_71) = 0 then let __assign_72 = "unspecified" in (
+    tempString := __assign_72;
+    __assign_72
+  ) else let __assign_73 = let __call_arg_0_74 = reason in StringTools.trim __call_arg_0_74 in (
+    tempString := __assign_73;
+    __assign_73
   ));
-  let previous = HxMap.get_string ((Obj.magic self : t).missReasons) (!tempString) in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
-    ignore (if previous == HxRuntime.hx_null then let __assign_72 = Obj.magic (Obj.repr 0) in (
-      tempMaybeNumber := __assign_72;
-      __assign_72
-    ) else let __assign_73 = Obj.magic previous in (
-      tempMaybeNumber := __assign_73;
-      __assign_73
+  let normalized = !tempString in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber = HxMap.get_string (Obj.magic _this) (normalized : string) in let previous = tempMaybeNumber in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempMaybeNumber1 = ref (HxRuntime.hx_null : Obj.t) in (
+    ignore (if previous == HxRuntime.hx_null then let __assign_75 = Obj.repr 0 in (
+      tempMaybeNumber1 := __assign_75;
+      __assign_75
+    ) else let __assign_76 = previous in (
+      tempMaybeNumber1 := __assign_76;
+      __assign_76
     ));
-    HxMap.set_string ((Obj.magic self : t).missReasons) (!tempString) (HxInt.add (let __nullable_int_74 = Obj.magic (!tempMaybeNumber) in if __nullable_int_74 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_74) 1)
+    HxMap.set_string (Obj.magic _this) (normalized : string) (HxInt.add (HxRuntime.nullable_int_unwrap (!tempMaybeNumber1)) 1)
   )
 )))
 
 let recordSourceMiss = fun self (reason : string) -> ignore (ignore ((
-  ignore (let __place_receiver_27 = self in let __place_old_28 = (__place_receiver_27 : t).sourceMisses in let __place_rhs_29 = 1 in let __place_new_30 = HxInt.add __place_old_28 __place_rhs_29 in (
-    (__place_receiver_27 : t).sourceMisses <- __place_new_30;
-    __place_new_30
+  ignore (let __place_receiver_28 = self in let __place_old_29 = (__place_receiver_28 : t).sourceMisses in let __place_rhs_30 = 1 in let __place_new_31 = HxInt.add __place_old_29 __place_rhs_30 in (
+    (__place_receiver_28 : t).sourceMisses <- __place_new_31;
+    __place_new_31
   ));
   recordMissReason (Obj.magic self) (reason : string)
 )))
 
 let recordResolutionMiss = fun self (reason : string) -> ignore (ignore ((
-  ignore (let __place_receiver_41 = self in let __place_old_42 = (__place_receiver_41 : t).resolutionMisses in let __place_rhs_43 = 1 in let __place_new_44 = HxInt.add __place_old_42 __place_rhs_43 in (
-    (__place_receiver_41 : t).resolutionMisses <- __place_new_44;
-    __place_new_44
+  ignore (let __place_receiver_42 = self in let __place_old_43 = (__place_receiver_42 : t).resolutionMisses in let __place_rhs_44 = 1 in let __place_new_45 = HxInt.add __place_old_43 __place_rhs_44 in (
+    (__place_receiver_42 : t).resolutionMisses <- __place_new_45;
+    __place_new_45
   ));
   recordMissReason (Obj.magic self) (reason : string)
 )))
 
 let recordParserMiss = fun self (reason : string) -> ignore (ignore ((
-  ignore (let __place_receiver_49 = self in let __place_old_50 = (__place_receiver_49 : t).parserMisses in let __place_rhs_51 = 1 in let __place_new_52 = HxInt.add __place_old_50 __place_rhs_51 in (
-    (__place_receiver_49 : t).parserMisses <- __place_new_52;
-    __place_new_52
+  ignore (let __place_receiver_50 = self in let __place_old_51 = (__place_receiver_50 : t).parserMisses in let __place_rhs_52 = 1 in let __place_new_53 = HxInt.add __place_old_51 __place_rhs_52 in (
+    (__place_receiver_50 : t).parserMisses <- __place_new_53;
+    __place_new_53
   ));
   recordMissReason (Obj.magic self) (reason : string)
 )))
 
-let compareStrings = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_75 = -1 in (
-    tempResult := __assign_75;
-    __assign_75
-  ) else if left > right then let __assign_76 = 1 in (
-    tempResult := __assign_76;
-    __assign_76
-  ) else let __assign_77 = 0 in (
+let compareStrings = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_77 = -1 in (
     tempResult := __assign_77;
     __assign_77
+  ) else if left > right then let __assign_78 = 1 in (
+    tempResult := __assign_78;
+    __assign_78
+  ) else let __assign_79 = 0 in (
+    tempResult := __assign_79;
+    __assign_79
   ));
   !tempResult
-)
+) : int)
 
-let sortedMissReasons = fun self () -> let reasons = Obj.magic (HxArray.create ()) in let reason = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).missReasons)) in (
-  ignore (while (let __iter_65 = reason in fun () -> HxIterator.hasNext (Obj.magic __iter_65)) () do ignore (let reason2 = ((let __iter_66 = reason in fun () -> HxIterator.next (Obj.magic __iter_66)) () : string) in HxArray.push reasons reason2) done);
+let sortedMissReasons = fun self () -> let reasons = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in (
+  ignore (while (let __iter_66 = tempIterator in fun () -> HxIterator.hasNext (Obj.magic __iter_66)) () do ignore (let reason2 = ((let __iter_67 = tempIterator in fun () -> HxIterator.next (Obj.magic __iter_67)) () : string) in HxArray.push reasons reason2) done);
   ignore (HxArray.sort reasons compareStrings);
   reasons
 )

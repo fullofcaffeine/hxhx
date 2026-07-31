@@ -20,7 +20,11 @@ let init () : unit =
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "haxe.StackItem");
-  HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
+  HxType.register_enum_ctor_layout "haxe.StackItem" "CFunction" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "Module" 1 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "FilePos" 2 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "Method" 3 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "haxe.StackItem" "LocalFunction" 4 (HxType.EnumBlock 3);
   HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_CallStack.CFunction)
   );
@@ -155,6 +159,10 @@ let init () : unit =
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioInput" [];
   HxType.register_class_instance_fields "sys.io._Stdio.OcamlStdioOutput" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "stream"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioOutput" [];
+  HxDynamic.register_class_stringifier "StringBuf" (fun value -> StringBuf.toString (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.Exception" (fun value -> Haxe_Exception.toString__impl (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.exceptions.PosException" (fun value -> Haxe_exceptions_PosException.toString__impl (Obj.obj value) ());
+  HxDynamic.register_class_stringifier "haxe.io.Eof" (fun value -> Haxe_io_Eof.toString (Obj.obj value) ());
   HxType.register_class_super "haxe.ValueException" (HxType.class_ "haxe.Exception");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioInput" (HxType.class_ "haxe.io.Input");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioOutput" (HxType.class_ "haxe.io.Output");

@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable ownerIdentity : string; mutable params : TySymbol.t HxArray.t; mutable locals : TySymbol.t HxArray.t; mutable scopes : TySymbol.t HxArray.t HxArray.t; mutable returnType : TyType.t; mutable returnExprType : TyType.t; mutable staticContext : bool; mutable replayMode : bool; mutable replayCursor : int }
 
-let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity2 activeScopes replayMode2 replayCursor2 staticContext2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; ownerIdentity = ""; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); scopes = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null); staticContext = false; replayMode = false; replayCursor = 0 } : t) in (
-  ignore (let replayMode2 = if Obj.repr replayMode2 == HxRuntime.hx_null then false else replayMode2 in let replayCursor2 = if Obj.repr replayCursor2 == HxRuntime.hx_null then 0 else replayCursor2 in let staticContext2 = if Obj.repr staticContext2 == HxRuntime.hx_null then false else staticContext2 in ignore (let tempRight = ref ("" : string) in (
-    ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity2 activeScopes replayMode2 replayCursor2 staticContext2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); scopes = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null); staticContext = false; replayMode = false; replayCursor = 0 } : t) in (
+  ignore (let replayMode2 = if Obj.repr replayMode2 == HxRuntime.hx_null then false else replayMode2 in let replayCursor2 = if Obj.repr replayCursor2 == HxRuntime.hx_null then 0 else replayCursor2 in let staticContext2 = if Obj.repr staticContext2 == HxRuntime.hx_null then false else staticContext2 in ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if name2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (name2 : string) in (
@@ -19,7 +19,7 @@ let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity
       (Obj.magic self : t).name <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref ("" : string) in (
+    let tempRight1 = ref (HxString.hx_null_string : string) in (
       ignore (if ownerIdentity2 == Obj.magic (HxRuntime.hx_null) || HxString.length ownerIdentity2 = 0 then let __assign_4 = ((Obj.magic self : t).name : string) in (
         tempRight1 := __assign_4;
         __assign_4
@@ -79,39 +79,39 @@ let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity
                 (Obj.magic self : t).returnExprType <- __assign_20;
                 __assign_20
               ));
-              ignore (let __assign_21 = staticContext2 in (
-                (Obj.magic self : t).staticContext <- __assign_21;
-                __assign_21
+              ignore (let __place_receiver_21 = self in let __place_rhs_22 = staticContext2 in (
+                (__place_receiver_21 : t).staticContext <- __place_rhs_22;
+                __place_rhs_22
               ));
-              ignore (let __assign_22 = replayMode2 in (
-                (Obj.magic self : t).replayMode <- __assign_22;
-                __assign_22
-              ));
-              ignore (let __place_receiver_23 = self in let __place_rhs_24 = replayCursor2 in (
-                (__place_receiver_23 : t).replayCursor <- __place_rhs_24;
+              ignore (let __place_receiver_23 = self in let __place_rhs_24 = replayMode2 in (
+                (__place_receiver_23 : t).replayMode <- __place_rhs_24;
                 __place_rhs_24
               ));
-              ignore (let __assign_25 = Obj.magic (HxArray.create ()) in (
-                (Obj.magic self : t).scopes <- __assign_25;
-                __assign_25
+              ignore (let __place_receiver_25 = self in let __place_rhs_26 = replayCursor2 in (
+                (__place_receiver_25 : t).replayCursor <- __place_rhs_26;
+                __place_rhs_26
+              ));
+              ignore (let __assign_27 = Obj.magic (HxArray.create ()) in (
+                (Obj.magic self : t).scopes <- __assign_27;
+                __assign_27
               ));
               ignore (if activeScopes == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push ((Obj.magic self : t).scopes) (HxArray.copy ((Obj.magic self : t).locals))) else ignore (let _g = ref 0 in while !_g < HxArray.length activeScopes do ignore (let scope = Obj.magic (HxArray.get (Obj.magic activeScopes) (!_g)) in (
-                ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
-                  ignore (_g := __new_27);
-                  __new_27
+                ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
+                  ignore (_g := __new_29);
+                  __new_29
                 ));
                 let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TySymbol.t HxArray.t) in (
-                  ignore (if scope == Obj.magic (HxRuntime.hx_null) then let __assign_28 = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in (
-                    tempArray := __assign_28;
-                    __assign_28
-                  ) else let __assign_30 = Obj.magic (HxArray.copy scope) in (
+                  ignore (if scope == Obj.magic (HxRuntime.hx_null) then let __assign_30 = Obj.magic (let __arr_31 = HxArray.create () in __arr_31) in (
                     tempArray := __assign_30;
                     __assign_30
+                  ) else let __assign_32 = Obj.magic (HxArray.copy scope) in (
+                    tempArray := __assign_32;
+                    __assign_32
                   ));
                   HxArray.push ((Obj.magic self : t).scopes) (!tempArray)
                 )
               )) done));
-              if HxArray.length ((Obj.magic self : t).scopes) = 0 then ignore (HxArray.push ((Obj.magic self : t).scopes) (let __arr_31 = HxArray.create () in __arr_31)) else ()
+              if HxArray.length ((Obj.magic self : t).scopes) = 0 then ignore (HxArray.push ((Obj.magic self : t).scopes) (let __arr_33 = HxArray.create () in __arr_33)) else ()
             )
           )
         )
@@ -121,7 +121,7 @@ let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; ownerIdentity = ""; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); scopes = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null); staticContext = false; replayMode = false; replayCursor = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); scopes = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null); staticContext = false; replayMode = false; replayCursor = 0 } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -139,136 +139,136 @@ let isStaticContext = fun self () -> (Obj.magic self : t).staticContext
 
 let withReturnTypes = fun self (finalReturnType : TyType.t) (finalReturnExprType : TyType.t) -> create ((Obj.magic self : t).name : string) (Obj.magic ((Obj.magic self : t).params)) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic finalReturnType) (Obj.magic finalReturnExprType) ((Obj.magic self : t).ownerIdentity : string) (Obj.magic ((Obj.magic self : t).scopes)) ((Obj.magic self : t).replayMode) ((Obj.magic self : t).replayCursor) ((Obj.magic self : t).staticContext)
 
-let enterLexicalScope = fun self () -> ignore (ignore (HxArray.push ((Obj.magic self : t).scopes) (let __arr_32 = HxArray.create () in __arr_32)))
+let enterLexicalScope = fun self () -> ignore (ignore (HxArray.push ((Obj.magic self : t).scopes) (let __arr_34 = HxArray.create () in __arr_34)))
 
 let exitLexicalScope = fun self () -> ignore (ignore ((
-  ignore (if HxArray.length ((Obj.magic self : t).scopes) <= 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "cannot exit the root function-local scope") ["Dynamic"; "String"]) else ());
+  ignore (if HxArray.length ((Obj.magic self : t).scopes) <= 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "cannot exit the root function-local scope") ["Dynamic"]) else ());
   HxArray.pop ((Obj.magic self : t).scopes) ()
 )))
 
 let replayLocal = fun self (name2 : string) (kind : TyLocalDeclarationKind.tylocaldeclarationkind) -> (
-  ignore (if (Obj.magic self : t).replayCursor >= HxArray.length ((Obj.magic self : t).locals) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local declaration replay produced more declarations than typing for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"; "String"]) else ());
-  let symbol = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).locals)) (let __place_receiver_35 = self in let __place_old_36 = (__place_receiver_35 : t).replayCursor in let __place_new_37 = HxInt.add __place_old_36 1 in (
-    (__place_receiver_35 : t).replayCursor <- __place_new_37;
-    __place_old_36
-  ))) in let tempString = ref ("" : string) in (
-    ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_38 = ("" : string) in (
-      tempString := __assign_38;
-      __assign_38
-    ) else let __assign_39 = (name2 : string) in (
-      tempString := __assign_39;
-      __assign_39
+  ignore (if (Obj.magic self : t).replayCursor >= HxArray.length ((Obj.magic self : t).locals) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local declaration replay produced more declarations than typing for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"]) else ());
+  let symbol = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).locals)) (let __place_receiver_37 = self in let __place_old_38 = (__place_receiver_37 : t).replayCursor in let __place_new_39 = HxInt.add __place_old_38 1 in (
+    (__place_receiver_37 : t).replayCursor <- __place_new_39;
+    __place_old_38
+  ))) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if name2 == HxString.hx_null_string then let __assign_40 = ("" : string) in (
+      tempString := __assign_40;
+      __assign_40
+    ) else let __assign_41 = (name2 : string) in (
+      tempString := __assign_41;
+      __assign_41
     ));
-    ignore (if not (HxString.equals (TySymbol.getName (Obj.magic symbol) ()) (!tempString)) || TySymbol.getKind (Obj.magic symbol) () <> kind then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((((((("typed local declaration replay mismatch for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity)) ^ ": expected ") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic kind))) ^ " ") ^ HxString.toStdString name2) ^ " but typing recorded ") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic (TySymbol.getKind (Obj.magic symbol) ())))) ^ " ") ^ HxString.toStdString (TySymbol.getName (Obj.magic symbol) ()))) ["Dynamic"; "String"]) else ());
+    ignore (if not (HxString.equals (TySymbol.getName (Obj.magic symbol) ()) (!tempString)) || TySymbol.getKind (Obj.magic symbol) () <> kind then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((((((("typed local declaration replay mismatch for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity)) ^ ": expected ") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic kind))) ^ " ") ^ HxString.toStdString name2) ^ " but typing recorded ") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic (TySymbol.getKind (Obj.magic symbol) ())))) ^ " ") ^ HxString.toStdString (TySymbol.getName (Obj.magic symbol) ()))) ["Dynamic"]) else ());
     ignore (HxArray.push (HxArray.get (Obj.magic ((Obj.magic self : t).scopes)) (HxInt.sub (HxArray.length ((Obj.magic self : t).scopes)) 1)) symbol);
     symbol
   )
 )
 
-let declareLocal = fun self (name2 : string) (ty : TyType.t) (kind : TyLocalDeclarationKind.tylocaldeclarationkind) -> let kind = if Obj.repr kind == HxRuntime.hx_null then Obj.magic (TyLocalDeclarationKind.Variable) else kind in try let __fallback_result_34 = (
+let declareLocal = fun self (name2 : string) (ty : TyType.t) (kind : TyLocalDeclarationKind.tylocaldeclarationkind) -> let kind = if Obj.repr kind == HxRuntime.hx_null then Obj.magic (TyLocalDeclarationKind.Variable) else kind in try let __fallback_result_36 = (
   ignore (if (Obj.magic self : t).replayMode then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (replayLocal (Obj.magic self) (name2 : string) (Obj.magic kind))))) else ());
   let symbol = Obj.magic (TySymbol.create (name2 : string) (Obj.magic ty) (Obj.magic (TyLocalId.forSourceDeclaration ((Obj.magic self : t).ownerIdentity : string) (HxInt.add (HxArray.length ((Obj.magic self : t).params)) (HxArray.length ((Obj.magic self : t).locals))) (Obj.magic kind) (name2 : string))) (Obj.magic kind)) in (
     ignore (HxArray.push ((Obj.magic self : t).locals) symbol);
     ignore (HxArray.push (HxArray.get (Obj.magic ((Obj.magic self : t).scopes)) (HxInt.sub (HxArray.length ((Obj.magic self : t).scopes)) 1)) symbol);
     symbol
   )
-) in Obj.magic __fallback_result_34 with
-  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
+) in Obj.magic __fallback_result_36 with
+  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
 
-let resolveSymbol = fun self (name2 : string) -> try let __fallback_result_47 = let scopeIndex = ref (HxArray.length ((Obj.magic self : t).scopes)) in (
+let resolveSymbol = fun self (name2 : string) -> try let __fallback_result_49 = let scopeIndex = ref (HxArray.length ((Obj.magic self : t).scopes)) in (
   ignore (while !scopeIndex > 0 do ignore ((
-    ignore (let __old_40 = !scopeIndex in let __new_41 = HxInt.add __old_40 (-1) in (
-      ignore (scopeIndex := __new_41);
-      __old_40
+    ignore (let __old_42 = !scopeIndex in let __new_43 = HxInt.add __old_42 (-1) in (
+      ignore (scopeIndex := __new_43);
+      __old_42
     ));
     let scope = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).scopes)) (!scopeIndex)) in let symbolIndex = ref (HxArray.length scope) in while !symbolIndex > 0 do ignore ((
-      ignore (let __old_42 = !symbolIndex in let __new_43 = HxInt.add __old_42 (-1) in (
-        ignore (symbolIndex := __new_43);
-        __old_42
+      ignore (let __old_44 = !symbolIndex in let __new_45 = HxInt.add __old_44 (-1) in (
+        ignore (symbolIndex := __new_45);
+        __old_44
       ));
       let symbol = Obj.magic (HxArray.get (Obj.magic scope) (!symbolIndex)) in if HxString.equals (TySymbol.getName (Obj.magic symbol) ()) name2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic symbol))) else ()
     )) done
   )) done);
   let parameterIndex = ref (HxArray.length ((Obj.magic self : t).params)) in (
     ignore (while !parameterIndex > 0 do ignore ((
-      ignore (let __old_44 = !parameterIndex in let __new_45 = HxInt.add __old_44 (-1) in (
-        ignore (parameterIndex := __new_45);
-        __old_44
+      ignore (let __old_46 = !parameterIndex in let __new_47 = HxInt.add __old_46 (-1) in (
+        ignore (parameterIndex := __new_47);
+        __old_46
       ));
       let parameter = Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).params)) (!parameterIndex)) in if HxString.equals (TySymbol.getName (Obj.magic parameter) ()) name2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parameter))) else ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic __fallback_result_47 with
-  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
+) in Obj.magic __fallback_result_49 with
+  | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48
 
 let resolveLocal = fun self (name2 : string) -> let symbol = Obj.magic (resolveSymbol (Obj.magic self) (name2 : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if symbol == Obj.magic (HxRuntime.hx_null) then let __assign_48 = Obj.magic (TyType.unknown ()) in (
-    tempResult := __assign_48;
-    __assign_48
-  ) else let __assign_49 = Obj.magic (TySymbol.getType (Obj.magic symbol) ()) in (
-    tempResult := __assign_49;
-    __assign_49
+  ignore (if symbol == Obj.magic (HxRuntime.hx_null) then let __assign_50 = Obj.magic (TyType.unknown ()) in (
+    tempResult := __assign_50;
+    __assign_50
+  ) else let __assign_51 = Obj.magic (TySymbol.getType (Obj.magic symbol) ()) in (
+    tempResult := __assign_51;
+    __assign_51
   ));
   !tempResult
 )
 
-let createBodyReplay = fun self () -> create ((Obj.magic self : t).name : string) (Obj.magic ((Obj.magic self : t).params)) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).returnType)) (Obj.magic ((Obj.magic self : t).returnExprType)) ((Obj.magic self : t).ownerIdentity : string) (Obj.magic (let __arr_50 = HxArray.create () in (
-  ignore (HxArray.push __arr_50 (let __arr_51 = HxArray.create () in __arr_51));
-  __arr_50
+let createBodyReplay = fun self () -> create ((Obj.magic self : t).name : string) (Obj.magic ((Obj.magic self : t).params)) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).returnType)) (Obj.magic ((Obj.magic self : t).returnExprType)) ((Obj.magic self : t).ownerIdentity : string) (Obj.magic (let __arr_52 = HxArray.create () in (
+  ignore (HxArray.push __arr_52 (let __arr_53 = HxArray.create () in __arr_53));
+  __arr_52
 ))) true 0 ((Obj.magic self : t).staticContext)
 
 let assertReplayComplete = fun self () -> ignore (ignore ((
-  ignore (if not ((Obj.magic self : t).replayMode) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local replay completion checked outside replay mode") ["Dynamic"; "String"]) else ());
-  ignore (if (Obj.magic self : t).replayCursor <> HxArray.length ((Obj.magic self : t).locals) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("typed local declaration replay consumed " ^ string_of_int ((Obj.magic self : t).replayCursor)) ^ " of ") ^ string_of_int (HxArray.length ((Obj.magic self : t).locals))) ^ " declarations for ") ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"; "String"]) else ());
-  if HxArray.length ((Obj.magic self : t).scopes) <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local declaration replay left nested scopes open for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"; "String"]) else ()
+  ignore (if not ((Obj.magic self : t).replayMode) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local replay completion checked outside replay mode") ["Dynamic"]) else ());
+  ignore (if (Obj.magic self : t).replayCursor <> HxArray.length ((Obj.magic self : t).locals) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("typed local declaration replay consumed " ^ string_of_int ((Obj.magic self : t).replayCursor)) ^ " of ") ^ string_of_int (HxArray.length ((Obj.magic self : t).locals))) ^ " declarations for ") ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"]) else ());
+  if HxArray.length ((Obj.magic self : t).scopes) <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local declaration replay left nested scopes open for " ^ HxString.toStdString ((Obj.magic self : t).ownerIdentity))) ["Dynamic"]) else ()
 )))
 
-let copyForInference = fun self () -> let copies = Obj.magic (HxMap.create_string ()) in let copySymbol = fun symbol -> try let __fallback_result_53 = let key = (TyLocalId.getCanonicalKey (Obj.magic (TySymbol.getIdentity (Obj.magic symbol) ())) () : string) in let existing = Obj.magic (HxMap.get_string copies key) in (
+let copyForInference = fun self () -> let copies = Obj.magic (HxMap.create_string ()) in let copySymbol = fun symbol -> try let __fallback_result_55 = let key = (TyLocalId.getCanonicalKey (Obj.magic (TySymbol.getIdentity (Obj.magic symbol) ())) () : string) in let existing = Obj.magic (HxMap.get_string (Obj.magic copies) (key : string)) in (
   ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic existing))) else ());
   let copied = Obj.magic (TySymbol.create (TySymbol.getName (Obj.magic symbol) () : string) (Obj.magic (TySymbol.getType (Obj.magic symbol) ())) (Obj.magic (TySymbol.getIdentity (Obj.magic symbol) ())) (Obj.magic (TySymbol.getKind (Obj.magic symbol) ()))) in (
-    ignore (HxMap.set_string copies key copied);
+    ignore (HxMap.set_string (Obj.magic copies) (key : string) copied);
     copied
   )
-) in Obj.magic __fallback_result_53 with
-  | HxRuntime.Hx_return __ret_52 -> Obj.obj __ret_52 in let _g = Obj.magic (let __arr_54 = HxArray.create () in __arr_54) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).params) in (
+) in Obj.magic __fallback_result_55 with
+  | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54 in let _g = Obj.magic (let __arr_56 = HxArray.create () in __arr_56) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).params) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-    ignore (let __old_55 = !_g1 in let __new_56 = HxInt.add __old_55 1 in (
-      ignore (_g1 := __new_56);
-      __new_56
+    ignore (let __old_57 = !_g1 in let __new_58 = HxInt.add __old_57 1 in (
+      ignore (_g1 := __new_58);
+      __new_58
     ));
     HxArray.push _g (copySymbol (Obj.magic parameter))
   )) done);
-  let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_57 = HxArray.create () in __arr_57) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).locals) in (
+  let tempArray = Obj.magic _g in let copiedParams = Obj.magic tempArray in let _g = Obj.magic (let __arr_59 = HxArray.create () in __arr_59) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).locals) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let local = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-      ignore (let __old_58 = !_g1 in let __new_59 = HxInt.add __old_58 1 in (
-        ignore (_g1 := __new_59);
-        __new_59
+      ignore (let __old_60 = !_g1 in let __new_61 = HxInt.add __old_60 1 in (
+        ignore (_g1 := __new_61);
+        __new_61
       ));
       HxArray.push _g (copySymbol (Obj.magic local))
     )) done);
-    let tempArray1 = Obj.magic _g in let _g = Obj.magic (let __arr_60 = HxArray.create () in __arr_60) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).scopes) in (
+    let tempArray1 = Obj.magic _g in let copiedLocals = Obj.magic tempArray1 in let _g = Obj.magic (let __arr_62 = HxArray.create () in __arr_62) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).scopes) in (
       ignore (while !_g1 < HxArray.length _g2 do ignore (let scope = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-        ignore (let __old_61 = !_g1 in let __new_62 = HxInt.add __old_61 1 in (
-          ignore (_g1 := __new_62);
-          __new_62
+        ignore (let __old_63 = !_g1 in let __new_64 = HxInt.add __old_63 1 in (
+          ignore (_g1 := __new_64);
+          __new_64
         ));
-        let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : TySymbol.t HxArray.t) in let _g3 = Obj.magic (let __arr_63 = HxArray.create () in __arr_63) in let _g4 = ref 0 in (
+        let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : TySymbol.t HxArray.t) in let _g3 = Obj.magic (let __arr_65 = HxArray.create () in __arr_65) in let _g4 = ref 0 in (
           ignore (while !_g4 < HxArray.length scope do ignore (let symbol = Obj.magic (HxArray.get (Obj.magic scope) (!_g4)) in (
-            ignore (let __old_64 = !_g4 in let __new_65 = HxInt.add __old_64 1 in (
-              ignore (_g4 := __new_65);
-              __new_65
+            ignore (let __old_66 = !_g4 in let __new_67 = HxInt.add __old_66 1 in (
+              ignore (_g4 := __new_67);
+              __new_67
             ));
             HxArray.push _g3 (copySymbol (Obj.magic symbol))
           )) done);
-          ignore (let __assign_66 = Obj.magic _g3 in (
-            tempArray3 := __assign_66;
-            __assign_66
+          ignore (let __assign_68 = Obj.magic _g3 in (
+            tempArray3 := __assign_68;
+            __assign_68
           ));
           HxArray.push _g (!tempArray3)
         )
       )) done);
-      let tempArray2 = Obj.magic _g in create ((Obj.magic self : t).name : string) (Obj.magic tempArray) (Obj.magic tempArray1) (Obj.magic ((Obj.magic self : t).returnType)) (Obj.magic ((Obj.magic self : t).returnExprType)) ((Obj.magic self : t).ownerIdentity : string) (Obj.magic tempArray2) false 0 ((Obj.magic self : t).staticContext)
+      let tempArray2 = Obj.magic _g in let copiedScopes = Obj.magic tempArray2 in create ((Obj.magic self : t).name : string) (Obj.magic copiedParams) (Obj.magic copiedLocals) (Obj.magic ((Obj.magic self : t).returnType)) (Obj.magic ((Obj.magic self : t).returnExprType)) ((Obj.magic self : t).ownerIdentity : string) (Obj.magic copiedScopes) false 0 ((Obj.magic self : t).staticContext)
     )
   )
 )

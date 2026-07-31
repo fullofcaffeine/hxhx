@@ -105,6 +105,42 @@ class Main {
 		return "ready";
 	}
 
+	static function recordCheckedString(source:String, message:String):Void {
+		Sys.println("nullable-string-call=" + source + message);
+	}
+
+	static function checkedResult(value:Null<Int>, fallback:Int):Int {
+		if (value == null)
+			return fallback;
+		return value;
+	}
+
+	static function checkedArgument(value:Int):Int {
+		return value + 1;
+	}
+
+	/**
+		Checks a typed function result even when its Dynamic argument keeps the
+		complete callable signature outside the first sealed call matrix.
+	**/
+	static function requiredDynamicInt(value:Dynamic):Int {
+		final parsed = Std.parseInt(Std.string(value));
+		if (parsed == null)
+			throw "required integer";
+		return parsed;
+	}
+
+	static function allPathNullable(label:String):Null<Int> {
+		switch (label) {
+			case "zero":
+				return 0;
+			case "one":
+				return 1;
+			default:
+				return null;
+		}
+	}
+
 	static function main():Void {
 		final result = Arithmetic.increment(sourceValue());
 		Sys.println("result=" + result);
@@ -162,6 +198,20 @@ class Main {
 		VoidCalls.noArguments();
 		VoidCalls.withArguments(voidIntSource(), voidBoolSource(), voidStringSource());
 		Sys.println("void-calls-complete");
+		final checkedMessage:Null<String> = "ready";
+		if (checkedMessage != null)
+			recordCheckedString("source:", checkedMessage);
+		final checkedResultValue:Null<Int> = 13;
+		Sys.println("checked-result-exact=" + checkedResult(checkedResultValue, 5));
+		final checkedResultMissing:Null<Int> = null;
+		Sys.println("checked-result-fallback=" + checkedResult(checkedResultMissing, 5));
+		final checkedArgumentValue:Null<Int> = 20;
+		if (checkedArgumentValue != null)
+			Sys.println("checked-argument=" + checkedArgument(checkedArgumentValue));
+		Sys.println("dynamic-result=" + requiredDynamicInt("27"));
+		Sys.println("all-path-zero=" + allPathNullable("zero"));
+		Sys.println("all-path-one=" + allPathNullable("one"));
+		Sys.println("all-path-missing=" + (allPathNullable("missing") == null));
 		Sys.println("instance=" + new Counter().increment(5));
 	}
 }

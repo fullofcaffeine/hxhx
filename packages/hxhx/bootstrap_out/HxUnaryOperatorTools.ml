@@ -13,50 +13,50 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxUnaryOperatorT
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxUnaryOperatorTools" } : t)
 
-let sourceToken = fun op -> let tempResult = ref ("" : string) in (
+let sourceToken = fun op -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match op with
-    | HxUnaryOperator.Increment -> let __assign_1 = ("++" : string) in (
+    | HxUnaryOperator.Increment -> let __assign_1 = "++" in (
       tempResult := __assign_1;
       __assign_1
     )
-    | HxUnaryOperator.Decrement -> let __assign_2 = ("--" : string) in (
+    | HxUnaryOperator.Decrement -> let __assign_2 = "--" in (
       tempResult := __assign_2;
       __assign_2
     )
-    | HxUnaryOperator.Negate -> let __assign_3 = ("-" : string) in (
+    | HxUnaryOperator.Negate -> let __assign_3 = "-" in (
       tempResult := __assign_3;
       __assign_3
     )
-    | HxUnaryOperator.LogicalNot -> let __assign_4 = ("!" : string) in (
+    | HxUnaryOperator.LogicalNot -> let __assign_4 = "!" in (
       tempResult := __assign_4;
       __assign_4
     )
-    | HxUnaryOperator.BitwiseNot -> let __assign_5 = ("~" : string) in (
+    | HxUnaryOperator.BitwiseNot -> let __assign_5 = "~" in (
       tempResult := __assign_5;
       __assign_5
     ));
   !tempResult
 )
 
-let macroConstructor = fun op -> let tempResult = ref ("" : string) in (
+let macroConstructor = fun op -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match op with
-    | HxUnaryOperator.Increment -> let __assign_6 = ("OpIncrement" : string) in (
+    | HxUnaryOperator.Increment -> let __assign_6 = "OpIncrement" in (
       tempResult := __assign_6;
       __assign_6
     )
-    | HxUnaryOperator.Decrement -> let __assign_7 = ("OpDecrement" : string) in (
+    | HxUnaryOperator.Decrement -> let __assign_7 = "OpDecrement" in (
       tempResult := __assign_7;
       __assign_7
     )
-    | HxUnaryOperator.Negate -> let __assign_8 = ("OpNeg" : string) in (
+    | HxUnaryOperator.Negate -> let __assign_8 = "OpNeg" in (
       tempResult := __assign_8;
       __assign_8
     )
-    | HxUnaryOperator.LogicalNot -> let __assign_9 = ("OpNot" : string) in (
+    | HxUnaryOperator.LogicalNot -> let __assign_9 = "OpNot" in (
       tempResult := __assign_9;
       __assign_9
     )
-    | HxUnaryOperator.BitwiseNot -> let __assign_10 = ("OpNegBits" : string) in (
+    | HxUnaryOperator.BitwiseNot -> let __assign_10 = "OpNegBits" in (
       tempResult := __assign_10;
       __assign_10
     ));
@@ -65,4 +65,4 @@ let macroConstructor = fun op -> let tempResult = ref ("" : string) in (
 
 let supportsPostfix = fun op -> op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement
 
-let requireValidFixity = fun op fixity -> ignore (if fixity = HxUnaryFixity.Postfix && not (supportsPostfix (Obj.magic op)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("invalid postfix unary operator " ^ HxString.toStdString (sourceToken (Obj.magic op)))) ["Dynamic"; "String"]) else ())
+let requireValidFixity = fun op fixity -> ignore (if fixity = HxUnaryFixity.Postfix && not (supportsPostfix (Obj.magic op)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("invalid postfix unary operator " ^ HxString.toStdString (sourceToken (Obj.magic op)))) ["Dynamic"]) else ())

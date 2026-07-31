@@ -1,6 +1,7 @@
 (* Minimal file system helpers for reflaxe.ocaml (WIP).
 
-   This backs the portable `sys.FileSystem` API via compiler intrinsics.
+   This backs the portable `sys.FileSystem` API through its checked typed
+   Haxe extern boundary.
 
    NOTE: `stat` returns a record that mirrors Haxe's `sys.FileStat` typedef.
    The `atime`/`mtime`/`ctime` fields are `Date.t` values implemented by the

@@ -6,17 +6,17 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable classIdentity : string; mutable moduleIdentity : string; mutable typeParameters : TyTypeParameterId.t HxArray.t; mutable superType : TyType.t; mutable superClassIdentity : string; mutable superTypeIdentity : string; mutable superTypeDisplay : string; mutable fields : Obj.t HxArray.t; mutable methods : Obj.t HxArray.t; mutable fieldIndex : Obj.t HxMap.string_map; mutable methodIndex : Obj.t HxMap.string_map; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = ""; moduleIdentity = ""; typeParameters = Obj.magic (HxRuntime.hx_null); superType = Obj.magic (HxRuntime.hx_null); superClassIdentity = Obj.magic (HxRuntime.hx_null); superTypeIdentity = Obj.magic (HxRuntime.hx_null); superTypeDisplay = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); methods = Obj.magic (HxRuntime.hx_null); fieldIndex = Obj.magic (HxRuntime.hx_null); methodIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; typeParameters = Obj.magic (HxRuntime.hx_null); superType = Obj.magic (HxRuntime.hx_null); superClassIdentity = Obj.magic (HxRuntime.hx_null); superTypeIdentity = Obj.magic (HxRuntime.hx_null); superTypeDisplay = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); methods = Obj.magic (HxRuntime.hx_null); fieldIndex = Obj.magic (HxRuntime.hx_null); methodIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getClassIdentity = fun self () -> (Obj.magic self : t).classIdentity
 
 let getModuleIdentity = fun self () -> (Obj.magic self : t).moduleIdentity
 
-let getTypeParameters = fun self () -> let _g = Obj.magic (let __arr_66 = HxArray.create () in __arr_66) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).typeParameters) in (
+let getTypeParameters = fun self () -> let _g = Obj.magic (let __arr_91 = HxArray.create () in __arr_91) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).typeParameters) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-    ignore (let __old_67 = !_g1 in let __new_68 = HxInt.add __old_67 1 in (
-      ignore (_g1 := __new_68);
-      __new_68
+    ignore (let __old_92 = !_g1 in let __new_93 = HxInt.add __old_92 1 in (
+      ignore (_g1 := __new_93);
+      __new_93
     ));
     HxArray.push _g (TyTypeParameterId.getName (Obj.magic parameter) ())
   )) done);
@@ -42,507 +42,527 @@ let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
 let sameField = fun left right -> HxString.equals (Obj.obj (HxAnon.get left "canonicalIdentity")) (Obj.obj (HxAnon.get right "canonicalIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "name")) (Obj.obj (HxAnon.get right "name")) && HxString.equals (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get left "semanticType"))) ()) (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get right "semanticType"))) ()) && HxString.equals (Obj.obj (HxAnon.get left "typeIdentity")) (Obj.obj (HxAnon.get right "typeIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "typeDisplay")) (Obj.obj (HxAnon.get right "typeDisplay")) && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isStatic") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isStatic") && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isPublic") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isPublic") && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isFinal") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isFinal") && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isInline") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isInline") && HxRuntime.unbox_bool_or_obj (HxAnon.get left "hasInitializer") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "hasInitializer") && HxString.equals (Obj.obj (HxAnon.get left "propertyGet")) (Obj.obj (HxAnon.get right "propertyGet")) && HxString.equals (Obj.obj (HxAnon.get left "propertySet")) (Obj.obj (HxAnon.get right "propertySet")) && HxRuntime.unbox_bool_or_obj (HxAnon.get left "noImportGlobal") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "noImportGlobal")
 
-let copyField = fun fact -> let __anon_83 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_83 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "canonicalIdentity"))));
-  ignore (HxAnon.set __anon_83 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
-  ignore (HxAnon.set __anon_83 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
-  ignore (HxAnon.set __anon_83 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
-  ignore (HxAnon.set __anon_83 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
-  ignore (HxAnon.set __anon_83 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isStatic"))));
-  ignore (HxAnon.set __anon_83 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isPublic"))));
-  ignore (HxAnon.set __anon_83 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isFinal"))));
-  ignore (HxAnon.set __anon_83 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isInline"))));
-  ignore (HxAnon.set __anon_83 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasInitializer"))));
-  ignore (HxAnon.set __anon_83 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get fact "propertyGet"))));
-  ignore (HxAnon.set __anon_83 "propertySet" (Obj.repr (Obj.obj (HxAnon.get fact "propertySet"))));
-  ignore (HxAnon.set __anon_83 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "noImportGlobal"))));
-  __anon_83
+let copyField = fun fact -> let __anon_108 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_108 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "canonicalIdentity"))));
+  ignore (HxAnon.set __anon_108 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
+  ignore (HxAnon.set __anon_108 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
+  ignore (HxAnon.set __anon_108 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
+  ignore (HxAnon.set __anon_108 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
+  ignore (HxAnon.set __anon_108 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isStatic"))));
+  ignore (HxAnon.set __anon_108 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isPublic"))));
+  ignore (HxAnon.set __anon_108 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isFinal"))));
+  ignore (HxAnon.set __anon_108 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isInline"))));
+  ignore (HxAnon.set __anon_108 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasInitializer"))));
+  ignore (HxAnon.set __anon_108 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get fact "propertyGet"))));
+  ignore (HxAnon.set __anon_108 "propertySet" (Obj.repr (Obj.obj (HxAnon.get fact "propertySet"))));
+  ignore (HxAnon.set __anon_108 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "noImportGlobal"))));
+  __anon_108
 )
 
-let copyFields = fun self () -> let _g = Obj.magic (let __arr_69 = HxArray.create () in __arr_69) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).fields) in (
+let copyFields = fun self () -> let _g = Obj.magic (let __arr_94 = HxArray.create () in __arr_94) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).fields) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let field = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_70 = !_g1 in let __new_71 = HxInt.add __old_70 1 in (
-      ignore (_g1 := __new_71);
-      __new_71
+    ignore (let __old_95 = !_g1 in let __new_96 = HxInt.add __old_95 1 in (
+      ignore (_g1 := __new_96);
+      __new_96
     ));
     HxArray.push _g (copyField field)
   )) done);
   _g
 )
 
-let findField = fun self (canonicalFieldIdentity : string) -> let fact = HxMap.get_string ((Obj.magic self : t).fieldIndex) canonicalFieldIdentity in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_75 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_75;
-    __assign_75
-  ) else let __assign_76 = Obj.magic (copyField fact) in (
-    tempResult := __assign_76;
-    __assign_76
+let findField = fun self (canonicalFieldIdentity : string) -> let _this = Obj.magic ((Obj.magic self : t).fieldIndex) in let tempMaybeTypedBackendClassFieldFact = HxMap.get_string (Obj.magic _this) (canonicalFieldIdentity : string) in let fact = tempMaybeTypedBackendClassFieldFact in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_100 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_100;
+    __assign_100
+  ) else let __assign_101 = Obj.magic (copyField fact) in (
+    tempResult := __assign_101;
+    __assign_101
   ));
   Obj.magic (!tempResult)
 )
 
 let addField = fun self (fact : Obj.t) -> ignore (ignore ((
-  ignore (if HxString.length (Obj.obj (HxAnon.get fact "canonicalIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "name")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete field for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-  let previous = HxMap.get_string ((Obj.magic self : t).fieldIndex) (Obj.obj (HxAnon.get fact "canonicalIdentity")) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string ((Obj.magic self : t).fieldIndex) (Obj.obj (HxAnon.get fact "canonicalIdentity")) (copyField fact)) else ignore (if not (sameField previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain conflicting field " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"; "String"]) else ())
+  ignore (if HxString.length (Obj.obj (HxAnon.get fact "canonicalIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "name")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete field for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+  let _this = Obj.magic ((Obj.magic self : t).fieldIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let tempMaybeTypedBackendClassFieldFact = HxMap.get_string (Obj.magic _this) (key : string) in let previous = tempMaybeTypedBackendClassFieldFact in if previous == Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).fieldIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let value = copyField fact in HxMap.set_string (Obj.magic _this) (key : string) value) else ignore (if not (sameField previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain conflicting field " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"]) else ())
 )))
 
-let copyArgument = fun fact -> let __anon_84 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_84 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
-  ignore (HxAnon.set __anon_84 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
-  ignore (HxAnon.set __anon_84 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
-  ignore (HxAnon.set __anon_84 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
-  ignore (HxAnon.set __anon_84 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isOptional"))));
-  ignore (HxAnon.set __anon_84 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isRest"))));
-  __anon_84
+let copyArgument = fun fact -> let __anon_109 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_109 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
+  ignore (HxAnon.set __anon_109 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
+  ignore (HxAnon.set __anon_109 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
+  ignore (HxAnon.set __anon_109 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
+  ignore (HxAnon.set __anon_109 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isOptional"))));
+  ignore (HxAnon.set __anon_109 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isRest"))));
+  __anon_109
 )
 
-let copyMethod = fun fact -> let _g = Obj.magic (let __arr_85 = HxArray.create () in __arr_85) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get fact "arguments")) in (
+let copyMethod = fun fact -> let _g = Obj.magic (let __arr_110 = HxArray.create () in __arr_110) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get fact "arguments")) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_86 = !_g1 in let __new_87 = HxInt.add __old_86 1 in (
-      ignore (_g1 := __new_87);
-      __new_87
+    ignore (let __old_111 = !_g1 in let __new_112 = HxInt.add __old_111 1 in (
+      ignore (_g1 := __new_112);
+      __new_112
     ));
     HxArray.push _g (copyArgument argument)
   )) done);
-  let __anon_88 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_88 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "canonicalIdentity"))));
-    ignore (HxAnon.set __anon_88 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
-    ignore (HxAnon.set __anon_88 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isStatic"))));
-    ignore (HxAnon.set __anon_88 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get fact "typeParameters")))));
-    ignore (HxAnon.set __anon_88 "arguments" (Obj.repr _g));
-    ignore (HxAnon.set __anon_88 "returnSemanticType" (Obj.repr (Obj.obj (HxAnon.get fact "returnSemanticType"))));
-    ignore (HxAnon.set __anon_88 "returnTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "returnTypeIdentity"))));
-    ignore (HxAnon.set __anon_88 "returnTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "returnTypeDisplay"))));
-    ignore (HxAnon.set __anon_88 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isPublic"))));
-    ignore (HxAnon.set __anon_88 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isInline"))));
-    ignore (HxAnon.set __anon_88 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isDynamic"))));
-    ignore (HxAnon.set __anon_88 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasBody"))));
-    ignore (HxAnon.set __anon_88 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isEnumConstructor"))));
-    ignore (HxAnon.set __anon_88 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "noImportGlobal"))));
-    __anon_88
+  let __anon_113 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_113 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "canonicalIdentity"))));
+    ignore (HxAnon.set __anon_113 "name" (Obj.repr (Obj.obj (HxAnon.get fact "name"))));
+    ignore (HxAnon.set __anon_113 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isStatic"))));
+    ignore (HxAnon.set __anon_113 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get fact "typeParameters")))));
+    ignore (HxAnon.set __anon_113 "arguments" (Obj.repr _g));
+    ignore (HxAnon.set __anon_113 "returnSemanticType" (Obj.repr (Obj.obj (HxAnon.get fact "returnSemanticType"))));
+    ignore (HxAnon.set __anon_113 "returnTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "returnTypeIdentity"))));
+    ignore (HxAnon.set __anon_113 "returnTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "returnTypeDisplay"))));
+    ignore (HxAnon.set __anon_113 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isPublic"))));
+    ignore (HxAnon.set __anon_113 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isInline"))));
+    ignore (HxAnon.set __anon_113 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isDynamic"))));
+    ignore (HxAnon.set __anon_113 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasBody"))));
+    ignore (HxAnon.set __anon_113 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isEnumConstructor"))));
+    ignore (HxAnon.set __anon_113 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "noImportGlobal"))));
+    __anon_113
   )
 )
 
-let copyMethods = fun self () -> let _g = Obj.magic (let __arr_72 = HxArray.create () in __arr_72) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).methods) in (
+let copyMethods = fun self () -> let _g = Obj.magic (let __arr_97 = HxArray.create () in __arr_97) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).methods) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_method = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_73 = !_g1 in let __new_74 = HxInt.add __old_73 1 in (
-      ignore (_g1 := __new_74);
-      __new_74
+    ignore (let __old_98 = !_g1 in let __new_99 = HxInt.add __old_98 1 in (
+      ignore (_g1 := __new_99);
+      __new_99
     ));
     HxArray.push _g (copyMethod hx_method)
   )) done);
   _g
 )
 
-let findMethod = fun self (canonicalDeclarationIdentity : string) -> let fact = HxMap.get_string ((Obj.magic self : t).methodIndex) canonicalDeclarationIdentity in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_77 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_77;
-    __assign_77
-  ) else let __assign_78 = Obj.magic (copyMethod fact) in (
-    tempResult := __assign_78;
-    __assign_78
+let findMethod = fun self (canonicalDeclarationIdentity : string) -> let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let tempMaybeTypedBackendClassMethodFact = HxMap.get_string (Obj.magic _this) (canonicalDeclarationIdentity : string) in let fact = tempMaybeTypedBackendClassMethodFact in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_102 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_102;
+    __assign_102
+  ) else let __assign_103 = Obj.magic (copyMethod fact) in (
+    tempResult := __assign_103;
+    __assign_103
   ));
   Obj.magic (!tempResult)
 )
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_89 = ("" : string) in (
-    tempResult := __assign_89;
-    __assign_89
-  ) else let __assign_90 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_90;
-    __assign_90
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_114 = "" in (
+    tempResult := __assign_114;
+    __assign_114
+  ) else let __assign_115 = let __call_arg_0_116 = value in StringTools.trim __call_arg_0_116 in (
+    tempResult := __assign_115;
+    __assign_115
   ));
   !tempResult
-)
+) : string)
 
-let boolText = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value then let __assign_91 = ("true" : string) in (
-    tempResult := __assign_91;
-    __assign_91
-  ) else let __assign_92 = ("false" : string) in (
-    tempResult := __assign_92;
-    __assign_92
+let boolText = fun (value : bool) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value then let __assign_117 = "true" in (
+    tempResult := __assign_117;
+    __assign_117
+  ) else let __assign_118 = "false" in (
+    tempResult := __assign_118;
+    __assign_118
   ));
   !tempResult
-)
+) : string)
 
 let requireDeclaredTypeParameters = fun hx_type allowed context -> ignore (let allowedKeys = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length allowed do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic allowed) (!_g)) in (
-    ignore (let __old_93 = !_g in let __new_94 = HxInt.add __old_93 1 in (
-      ignore (_g := __new_94);
-      __new_94
+    ignore (let __old_119 = !_g in let __new_120 = HxInt.add __old_119 1 in (
+      ignore (_g := __new_120);
+      __new_120
     ));
-    HxMap.set_string allowedKeys (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()) true
+    let key = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in HxMap.set_string (Obj.magic allowedKeys) (key : string) true
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (TyTypeSubstitution.parameterIdentities (Obj.magic hx_type)) in while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_95 = !_g in let __new_96 = HxInt.add __old_95 1 in (
-      ignore (_g := __new_96);
-      __new_96
+    ignore (let __old_121 = !_g in let __new_122 = HxInt.add __old_121 1 in (
+      ignore (_g := __new_122);
+      __new_122
     ));
-    if not (HxMap.exists_string allowedKeys (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain unbound type parameter " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " in ") ^ HxString.toStdString context)) ["Dynamic"; "String"]) else ()
+    let tempBool = ref (false : bool) in let key = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
+      ignore (let __assign_123 = HxMap.exists_string (Obj.magic allowedKeys) (key : string) in (
+        tempBool := __assign_123;
+        __assign_123
+      ));
+      if not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain unbound type parameter " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " in ") ^ HxString.toStdString context)) ["Dynamic"]) else ()
+    )
   )) done
 ))
 
-let sameTypeParameters = fun left right -> try let __fallback_result_100 = (
+let sameTypeParameters = fun left right -> try let __fallback_result_127 = (
   ignore (if HxArray.length left <> HxArray.length right then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = HxArray.length left in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_97 = !_g in let __new_98 = HxInt.add __old_97 1 in (
-      ignore (_g := __new_98);
-      __old_97
+    ignore (while !_g < _g1 do ignore (let index = let __old_124 = !_g in let __new_125 = HxInt.add __old_124 1 in (
+      ignore (_g := __new_125);
+      __old_124
     ) in if not (TyTypeParameterId.equals (Obj.magic (HxArray.get (Obj.magic left) index)) (Obj.magic (HxArray.get (Obj.magic right) index))) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
     true
   )
-) in Obj.magic __fallback_result_100 with
-  | HxRuntime.Hx_return __ret_99 -> Obj.obj __ret_99
+) in Obj.magic __fallback_result_127 with
+  | HxRuntime.Hx_return __ret_126 -> Obj.obj __ret_126
 
-let sameMethod = fun left right -> try let __fallback_result_82 = (
+let sameMethod = fun left right -> try let __fallback_result_107 = (
   ignore (if not (HxString.equals (Obj.obj (HxAnon.get left "canonicalIdentity")) (Obj.obj (HxAnon.get right "canonicalIdentity"))) || not (HxString.equals (Obj.obj (HxAnon.get left "name")) (Obj.obj (HxAnon.get right "name"))) || HxRuntime.unbox_bool_or_obj (HxAnon.get left "isStatic") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "isStatic") || not (sameTypeParameters (Obj.magic (Obj.obj (HxAnon.get left "typeParameters"))) (Obj.magic (Obj.obj (HxAnon.get right "typeParameters")))) || not (HxString.equals (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get left "returnSemanticType"))) ()) (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get right "returnSemanticType"))) ())) || not (HxString.equals (Obj.obj (HxAnon.get left "returnTypeIdentity")) (Obj.obj (HxAnon.get right "returnTypeIdentity"))) || not (HxString.equals (Obj.obj (HxAnon.get left "returnTypeDisplay")) (Obj.obj (HxAnon.get right "returnTypeDisplay"))) || HxRuntime.unbox_bool_or_obj (HxAnon.get left "isPublic") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "isPublic") || HxRuntime.unbox_bool_or_obj (HxAnon.get left "isInline") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "isInline") || HxRuntime.unbox_bool_or_obj (HxAnon.get left "isDynamic") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "isDynamic") || HxRuntime.unbox_bool_or_obj (HxAnon.get left "hasBody") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "hasBody") || HxRuntime.unbox_bool_or_obj (HxAnon.get left "isEnumConstructor") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "isEnumConstructor") || HxRuntime.unbox_bool_or_obj (HxAnon.get left "noImportGlobal") <> HxRuntime.unbox_bool_or_obj (HxAnon.get right "noImportGlobal") || HxArray.length (Obj.obj (HxAnon.get left "arguments")) <> HxArray.length (Obj.obj (HxAnon.get right "arguments")) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = HxArray.length (Obj.obj (HxAnon.get left "arguments")) in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_79 = !_g in let __new_80 = HxInt.add __old_79 1 in (
-      ignore (_g := __new_80);
-      __old_79
+    ignore (while !_g < _g1 do ignore (let index = let __old_104 = !_g in let __new_105 = HxInt.add __old_104 1 in (
+      ignore (_g := __new_105);
+      __old_104
     ) in let leftArgument = HxArray.get (Obj.magic (Obj.obj (HxAnon.get left "arguments"))) index in let rightArgument = HxArray.get (Obj.magic (Obj.obj (HxAnon.get right "arguments"))) index in if not (HxString.equals (Obj.obj (HxAnon.get leftArgument "name")) (Obj.obj (HxAnon.get rightArgument "name"))) || not (HxString.equals (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get leftArgument "semanticType"))) ()) (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get rightArgument "semanticType"))) ())) || not (HxString.equals (Obj.obj (HxAnon.get leftArgument "typeIdentity")) (Obj.obj (HxAnon.get rightArgument "typeIdentity"))) || not (HxString.equals (Obj.obj (HxAnon.get leftArgument "typeDisplay")) (Obj.obj (HxAnon.get rightArgument "typeDisplay"))) || HxRuntime.unbox_bool_or_obj (HxAnon.get leftArgument "isOptional") <> HxRuntime.unbox_bool_or_obj (HxAnon.get rightArgument "isOptional") || HxRuntime.unbox_bool_or_obj (HxAnon.get leftArgument "isRest") <> HxRuntime.unbox_bool_or_obj (HxAnon.get rightArgument "isRest") then raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
     true
   )
-) in Obj.magic __fallback_result_82 with
-  | HxRuntime.Hx_return __ret_81 -> Obj.obj __ret_81
+) in Obj.magic __fallback_result_107 with
+  | HxRuntime.Hx_return __ret_106 -> Obj.obj __ret_106
 
 let addMethod = fun self (fact : Obj.t) -> ignore (ignore ((
-  ignore (if HxString.length (Obj.obj (HxAnon.get fact "canonicalIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "name")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-  let previous = HxMap.get_string ((Obj.magic self : t).methodIndex) (Obj.obj (HxAnon.get fact "canonicalIdentity")) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string ((Obj.magic self : t).methodIndex) (Obj.obj (HxAnon.get fact "canonicalIdentity")) (copyMethod fact)) else ignore (if not (sameMethod previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain conflicting method " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"; "String"]) else ())
+  ignore (if HxString.length (Obj.obj (HxAnon.get fact "canonicalIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "name")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+  let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let tempMaybeTypedBackendClassMethodFact = HxMap.get_string (Obj.magic _this) (key : string) in let previous = tempMaybeTypedBackendClassMethodFact in if previous == Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let value = copyMethod fact in HxMap.set_string (Obj.magic _this) (key : string) value) else ignore (if not (sameMethod previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain conflicting method " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"]) else ())
 )))
 
-let create = fun info resolvedSuperType -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = ""; moduleIdentity = ""; typeParameters = Obj.magic (HxRuntime.hx_null); superType = Obj.magic (HxRuntime.hx_null); superClassIdentity = Obj.magic (HxRuntime.hx_null); superTypeIdentity = Obj.magic (HxRuntime.hx_null); superTypeDisplay = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); methods = Obj.magic (HxRuntime.hx_null); fieldIndex = Obj.magic (HxRuntime.hx_null); methodIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun info resolvedSuperType -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; typeParameters = Obj.magic (HxRuntime.hx_null); superType = Obj.magic (HxRuntime.hx_null); superClassIdentity = Obj.magic (HxRuntime.hx_null); superTypeIdentity = Obj.magic (HxRuntime.hx_null); superTypeDisplay = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); methods = Obj.magic (HxRuntime.hx_null); fieldIndex = Obj.magic (HxRuntime.hx_null); methodIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (if info == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class semantic facts require exact nominal information") ["Dynamic"; "String"]) else ());
-    ignore (let __assign_1 = (normalize (TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic info : TyNominalInfo.t).getIdentity (Obj.magic info) ())) () : string) : string) in (
+    ignore (if info == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class semantic facts require exact nominal information") ["Dynamic"]) else ());
+    ignore (let __assign_1 = (let __call_arg_0_2 = TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic info : TyNominalInfo.t).getIdentity (Obj.magic info) ())) () in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).classIdentity <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = (normalize ((Obj.magic info : TyNominalInfo.t).getModulePath (Obj.magic info) () : string) : string) in (
-      (Obj.magic self : t).moduleIdentity <- __assign_2;
-      __assign_2
+    ignore (let __assign_3 = (let __call_arg_0_4 = (Obj.magic info : TyNominalInfo.t).getModulePath (Obj.magic info) () in normalize __call_arg_0_4 : string) in (
+      (Obj.magic self : t).moduleIdentity <- __assign_3;
+      __assign_3
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TyTypeParameterId.t HxArray.t) in (
-      ignore (if HxType.isOfType (Obj.repr info) (HxType.class_ "TyClassInfo") then let __assign_3 = Obj.magic ((Obj.magic info : TyClassInfo.t).getTypeParameterIds (Obj.magic info) ()) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else if HxType.isOfType (Obj.repr info) (HxType.class_ "TyAbstractInfo") then let __assign_4 = Obj.magic ((Obj.magic info : TyAbstractInfo.t).getTypeParameterIds (Obj.magic info) ()) in (
-        tempRight := __assign_4;
-        __assign_4
-      ) else let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
+      ignore (if HxType.isOfType (Obj.repr info) (HxType.class_ "TyClassInfo") then let __assign_5 = Obj.magic ((Obj.magic info : TyClassInfo.t).getTypeParameterIds (Obj.magic info) ()) in (
         tempRight := __assign_5;
         __assign_5
-      ));
-      ignore (let __assign_7 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).typeParameters <- __assign_7;
+      ) else if HxType.isOfType (Obj.repr info) (HxType.class_ "TyAbstractInfo") then let __assign_6 = Obj.magic ((Obj.magic info : TyAbstractInfo.t).getTypeParameterIds (Obj.magic info) ()) in (
+        tempRight := __assign_6;
+        __assign_6
+      ) else let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
+        tempRight := __assign_7;
         __assign_7
       ));
-      ignore (if HxString.length ((Obj.magic self : t).classIdentity) = 0 || HxString.length ((Obj.magic self : t).moduleIdentity) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class semantic facts require canonical class and module identities") ["Dynamic"; "String"]) else ());
+      ignore (let __assign_9 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).typeParameters <- __assign_9;
+        __assign_9
+      ));
+      ignore (if HxString.length ((Obj.magic self : t).classIdentity) = 0 || HxString.length ((Obj.magic self : t).moduleIdentity) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class semantic facts require canonical class and module identities") ["Dynamic"]) else ());
       let seenTypeParameters = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typeParameters) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-          ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-            ignore (_g := __new_9);
-            __new_9
+          ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+            ignore (_g := __new_11);
+            __new_11
           ));
           let parameterName = (TyTypeParameterId.getName (Obj.magic parameter) () : string) in (
-            ignore (if HxString.length parameterName = 0 || HxMap.exists_string seenTypeParameters parameterName then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain invalid type parameters for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-            HxMap.set_string seenTypeParameters parameterName true
+            ignore (if HxString.length parameterName = 0 || HxMap.exists_string (Obj.magic seenTypeParameters) (parameterName : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain invalid type parameters for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+            HxMap.set_string (Obj.magic seenTypeParameters) (parameterName : string) true
           )
         )) done);
         let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-          ignore (if HxType.isOfType (Obj.repr info) (HxType.class_ "TyClassInfo") then let __assign_10 = Obj.magic (Obj.magic ((Obj.magic info : TyClassInfo.t).getSuperType (Obj.magic info) ())) in (
-            tempMaybeTyType := __assign_10;
-            __assign_10
-          ) else let __assign_11 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-            tempMaybeTyType := __assign_11;
-            __assign_11
+          ignore (if HxType.isOfType (Obj.repr info) (HxType.class_ "TyClassInfo") then let __assign_12 = Obj.magic (Obj.magic ((Obj.magic info : TyClassInfo.t).getSuperType (Obj.magic info) ())) in (
+            tempMaybeTyType := __assign_12;
+            __assign_12
+          ) else let __assign_13 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempMaybeTyType := __assign_13;
+            __assign_13
           ));
           let indexedSuperType = Obj.magic (!tempMaybeTyType) in let tempMaybeTyType1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-            ignore (if resolvedSuperType == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (Obj.magic indexedSuperType) in (
-              tempMaybeTyType1 := __assign_12;
-              __assign_12
-            ) else let __assign_13 = Obj.magic (Obj.magic resolvedSuperType) in (
-              tempMaybeTyType1 := __assign_13;
-              __assign_13
-            ));
-            ignore (if resolvedSuperType != Obj.magic (HxRuntime.hx_null) && indexedSuperType != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (TyType.getSemanticKey (Obj.magic resolvedSuperType) ()) (TyType.getSemanticKey (Obj.magic indexedSuperType) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("typed backend class semantic facts contain conflicting superclass identities for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity)) ^ ": indexed ") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic indexedSuperType) ())) ^ " versus resolved ") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic resolvedSuperType) ()))) ["Dynamic"; "String"]) else ());
-            ignore (let __assign_14 = Obj.magic (!tempMaybeTyType1) in (
-              (Obj.magic self : t).superType <- __assign_14;
+            ignore (if resolvedSuperType == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (Obj.magic indexedSuperType) in (
+              tempMaybeTyType1 := __assign_14;
               __assign_14
+            ) else let __assign_15 = Obj.magic (Obj.magic resolvedSuperType) in (
+              tempMaybeTyType1 := __assign_15;
+              __assign_15
             ));
-            let tempMaybeTyNominalTypeId = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
-              ignore (if !tempMaybeTyType1 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-                tempMaybeTyNominalTypeId := __assign_15;
-                __assign_15
-              ) else let __assign_16 = Obj.magic (Obj.magic (TyType.getNominalIdentity (Obj.magic (!tempMaybeTyType1)) ())) in (
-                tempMaybeTyNominalTypeId := __assign_16;
+            let selectedSuperType = Obj.magic (!tempMaybeTyType1) in (
+              ignore (if resolvedSuperType != Obj.magic (HxRuntime.hx_null) && indexedSuperType != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (TyType.getSemanticKey (Obj.magic resolvedSuperType) ()) (TyType.getSemanticKey (Obj.magic indexedSuperType) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("typed backend class semantic facts contain conflicting superclass identities for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity)) ^ ": indexed ") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic indexedSuperType) ())) ^ " versus resolved ") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic resolvedSuperType) ()))) ["Dynamic"]) else ());
+              ignore (let __assign_16 = Obj.magic selectedSuperType in (
+                (Obj.magic self : t).superType <- __assign_16;
                 __assign_16
               ));
-              let superNominalIdentity = Obj.magic (!tempMaybeTyNominalTypeId) in let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                ignore (if superNominalIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_17 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                  tempRight1 := __assign_17;
+              let tempMaybeTyNominalTypeId = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
+                ignore (if selectedSuperType == Obj.magic (HxRuntime.hx_null) then let __assign_17 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+                  tempMaybeTyNominalTypeId := __assign_17;
                   __assign_17
-                ) else let __assign_18 = Obj.magic (normalize (TyNominalTypeId.getCanonicalName (Obj.magic superNominalIdentity) () : string) : string) in (
-                  tempRight1 := __assign_18;
+                ) else let __assign_18 = Obj.magic (Obj.magic (TyType.getNominalIdentity (Obj.magic selectedSuperType) ())) in (
+                  tempMaybeTyNominalTypeId := __assign_18;
                   __assign_18
                 ));
-                ignore (let __assign_19 = (!tempRight1 : string) in (
-                  (Obj.magic self : t).superClassIdentity <- __assign_19;
-                  __assign_19
-                ));
-                let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                  ignore (if !tempMaybeTyType1 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                    tempRight2 := __assign_20;
+                let superNominalIdentity = Obj.magic (!tempMaybeTyNominalTypeId) in let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                  ignore (if superNominalIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                    tempRight1 := __assign_19;
+                    __assign_19
+                  ) else let __assign_20 = Obj.magic (let __call_arg_0_21 = TyNominalTypeId.getCanonicalName (Obj.magic superNominalIdentity) () in normalize __call_arg_0_21 : string) in (
+                    tempRight1 := __assign_20;
                     __assign_20
-                  ) else let __assign_21 = Obj.magic (TyType.getSemanticKey (Obj.magic (!tempMaybeTyType1)) () : string) in (
-                    tempRight2 := __assign_21;
-                    __assign_21
                   ));
-                  ignore (let __assign_22 = (!tempRight2 : string) in (
-                    (Obj.magic self : t).superTypeIdentity <- __assign_22;
+                  ignore (let __assign_22 = (!tempRight1 : string) in (
+                    (Obj.magic self : t).superClassIdentity <- __assign_22;
                     __assign_22
                   ));
-                  let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                    ignore (if !tempMaybeTyType1 == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                      tempRight3 := __assign_23;
+                  let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                    ignore (if selectedSuperType == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                      tempRight2 := __assign_23;
                       __assign_23
-                    ) else let __assign_24 = Obj.magic (TyType.getCanonicalDisplay (Obj.magic (!tempMaybeTyType1)) () : string) in (
-                      tempRight3 := __assign_24;
+                    ) else let __assign_24 = Obj.magic (TyType.getSemanticKey (Obj.magic selectedSuperType) () : string) in (
+                      tempRight2 := __assign_24;
                       __assign_24
                     ));
-                    ignore (let __assign_25 = (!tempRight3 : string) in (
-                      (Obj.magic self : t).superTypeDisplay <- __assign_25;
+                    ignore (let __assign_25 = (!tempRight2 : string) in (
+                      (Obj.magic self : t).superTypeIdentity <- __assign_25;
                       __assign_25
                     ));
-                    ignore (if !tempMaybeTyType1 != Obj.magic (HxRuntime.hx_null) then ignore (requireDeclaredTypeParameters (Obj.magic (!tempMaybeTyType1)) (Obj.magic ((Obj.magic self : t).typeParameters)) ("superclass " ^ HxString.toStdString ((Obj.magic self : t).classIdentity) : string)) else ());
-                    ignore (let __assign_26 = Obj.magic (HxMap.create_string ()) in (
-                      (Obj.magic self : t).fieldIndex <- __assign_26;
-                      __assign_26
-                    ));
-                    let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic info : TyNominalInfo.t).getFieldInfos (Obj.magic info) ()) in (
-                      ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-                        ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
-                          ignore (_g := __new_28);
-                          __new_28
-                        ));
-                        ignore (if field == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain a null field for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-                        ignore (if not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) ()) ((Obj.magic self : t).classIdentity)) || not (HxString.equals (TyFieldInfo.getModulePath (Obj.magic field) ()) ((Obj.magic self : t).moduleIdentity)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain foreign field " ^ HxString.toStdString (TyFieldInfo.getCanonicalKey (Obj.magic field) ())) ^ " in ") ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-                        let fact = let __anon_29 = HxAnon.create () in (
-                          ignore (HxAnon.set __anon_29 "canonicalIdentity" (Obj.repr (normalize (TyFieldInfo.getCanonicalKey (Obj.magic field) () : string))));
-                          ignore (HxAnon.set __anon_29 "name" (Obj.repr (normalize (TyFieldInfo.getName (Obj.magic field) () : string))));
-                          ignore (HxAnon.set __anon_29 "semanticType" (Obj.repr (TyFieldInfo.getType (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) ())));
-                          ignore (HxAnon.set __anon_29 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) ())));
-                          ignore (HxAnon.set __anon_29 "isStatic" (HxRuntime.box_bool (TyFieldInfo.getIsStatic (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "isPublic" (HxRuntime.box_bool (TyFieldInfo.getIsPublic (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "isFinal" (HxRuntime.box_bool (TyFieldInfo.getIsFinal (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "isInline" (HxRuntime.box_bool (TyFieldInfo.getIsInline (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "hasInitializer" (HxRuntime.box_bool (TyFieldInfo.getHasInitializer (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "propertyGet" (Obj.repr (TyFieldInfo.getPropertyGet (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "propertySet" (Obj.repr (TyFieldInfo.getPropertySet (Obj.magic field) ())));
-                          ignore (HxAnon.set __anon_29 "noImportGlobal" (HxRuntime.box_bool (TyFieldInfo.getNoImportGlobal (Obj.magic field) ())));
-                          __anon_29
-                        ) in (
-                          ignore (if HxString.length (Obj.obj (HxAnon.get fact "typeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "typeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete field type " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"; "String"]) else ());
-                          ignore (requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get fact "semanticType"))) (Obj.magic ((Obj.magic self : t).typeParameters)) ("field " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")) : string));
-                          addField (Obj.magic self) fact
-                        )
-                      )) done);
-                      ignore (let __assign_30 = Obj.magic (HxMap.create_string ()) in (
-                        (Obj.magic self : t).methodIndex <- __assign_30;
-                        __assign_30
+                    let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                      ignore (if selectedSuperType == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                        tempRight3 := __assign_26;
+                        __assign_26
+                      ) else let __assign_27 = Obj.magic (TyType.getCanonicalDisplay (Obj.magic selectedSuperType) () : string) in (
+                        tempRight3 := __assign_27;
+                        __assign_27
                       ));
-                      let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic info : TyNominalInfo.t).getDeclarations (Obj.magic info) ()) in (
-                        ignore (while !_g < HxArray.length _g1 do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-                          ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
-                            ignore (_g := __new_32);
-                            __new_32
+                      ignore (let __assign_28 = (!tempRight3 : string) in (
+                        (Obj.magic self : t).superTypeDisplay <- __assign_28;
+                        __assign_28
+                      ));
+                      ignore (if selectedSuperType != Obj.magic (HxRuntime.hx_null) then ignore (requireDeclaredTypeParameters (Obj.magic selectedSuperType) (Obj.magic ((Obj.magic self : t).typeParameters)) ("superclass " ^ HxString.toStdString ((Obj.magic self : t).classIdentity) : string)) else ());
+                      ignore (let __assign_29 = Obj.magic (HxMap.create_string ()) in (
+                        (Obj.magic self : t).fieldIndex <- __assign_29;
+                        __assign_29
+                      ));
+                      let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic info : TyNominalInfo.t).getFieldInfos (Obj.magic info) ()) in (
+                        ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+                          ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
+                            ignore (_g := __new_31);
+                            __new_31
                           ));
-                          ignore (if declaration == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain a null method for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-                          ignore (if not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) ()) ((Obj.magic self : t).classIdentity)) || not (HxString.equals (TyDeclarationInfo.getModulePath (Obj.magic declaration) ()) ((Obj.magic self : t).moduleIdentity)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain foreign method " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ())) ^ " in ") ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"; "String"]) else ());
-                          let signature = Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ()) in let argumentNames = Obj.magic (TyFunSig.getArgNames (Obj.magic signature) ()) in let argumentTypes = Obj.magic (TyFunSig.getArgs (Obj.magic signature) ()) in let optionalArguments = Obj.magic (TyFunSig.getArgOptional (Obj.magic signature) ()) in let restArguments = Obj.magic (TyFunSig.getArgRest (Obj.magic signature) ()) in (
-                            ignore (if HxArray.length argumentNames <> HxArray.length argumentTypes || HxArray.length argumentNames <> HxArray.length optionalArguments || HxArray.length argumentNames <> HxArray.length restArguments then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method signature " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"; "String"]) else ());
-                            let arguments = Obj.magic (HxArray.create ()) in let _g2 = ref 0 in let _g3 = HxArray.length argumentNames in (
-                              ignore (while !_g2 < _g3 do ignore (let index = let __old_33 = !_g2 in let __new_34 = HxInt.add __old_33 1 in (
-                                ignore (_g2 := __new_34);
-                                __old_33
-                              ) in let argument = let __anon_35 = HxAnon.create () in (
-                                ignore (HxAnon.set __anon_35 "name" (Obj.repr (normalize (HxArray.get (Obj.magic argumentNames) index : string))));
-                                ignore (HxAnon.set __anon_35 "semanticType" (Obj.repr (HxArray.get (Obj.magic argumentTypes) index)));
-                                ignore (HxAnon.set __anon_35 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic (HxArray.get (Obj.magic argumentTypes) index)) ())));
-                                ignore (HxAnon.set __anon_35 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic (HxArray.get (Obj.magic argumentTypes) index)) ())));
-                                ignore (HxAnon.set __anon_35 "isOptional" (HxRuntime.box_bool (HxArray.get (Obj.magic optionalArguments) index)));
-                                ignore (HxAnon.set __anon_35 "isRest" (HxRuntime.box_bool (HxArray.get (Obj.magic restArguments) index)));
-                                __anon_35
-                              ) in (
-                                ignore (if HxString.length (Obj.obj (HxAnon.get argument "name")) = 0 || HxString.length (Obj.obj (HxAnon.get argument "typeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get argument "typeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method argument " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"; "String"]) else ());
-                                HxArray.push arguments argument
-                              )) done);
-                              let returnType = Obj.magic (TyFunSig.getReturnType (Obj.magic signature) ()) in let methodTypeParameters = Obj.magic (TyDeclarationInfo.getTypeParameterIds (Obj.magic declaration) ()) in let seenMethodTypeParameters = Obj.magic (HxMap.create_string ()) in let _g2 = ref 0 in (
-                                ignore (while !_g2 < HxArray.length methodTypeParameters do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic methodTypeParameters) (!_g2)) in (
-                                  ignore (let __old_36 = !_g2 in let __new_37 = HxInt.add __old_36 1 in (
-                                    ignore (_g2 := __new_37);
-                                    __new_37
-                                  ));
-                                  let parameterName = (TyTypeParameterId.getName (Obj.magic parameter) () : string) in (
-                                    ignore (if HxString.length parameterName = 0 || HxMap.exists_string seenMethodTypeParameters parameterName then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain invalid method type parameters for " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"; "String"]) else ());
-                                    HxMap.set_string seenMethodTypeParameters parameterName true
-                                  )
-                                )) done);
-                                let allowedTypeParameters = Obj.magic (HxArray.concat ((Obj.magic self : t).typeParameters) methodTypeParameters) in let fact = let __anon_38 = HxAnon.create () in (
-                                  ignore (HxAnon.set __anon_38 "canonicalIdentity" (Obj.repr (normalize (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string))));
-                                  ignore (HxAnon.set __anon_38 "name" (Obj.repr (normalize (TyFunSig.getName (Obj.magic signature) () : string))));
-                                  ignore (HxAnon.set __anon_38 "isStatic" (HxRuntime.box_bool (TyFunSig.getIsStatic (Obj.magic signature) ())));
-                                  ignore (HxAnon.set __anon_38 "typeParameters" (Obj.repr methodTypeParameters));
-                                  ignore (HxAnon.set __anon_38 "arguments" (Obj.repr arguments));
-                                  ignore (HxAnon.set __anon_38 "returnSemanticType" (Obj.repr returnType));
-                                  ignore (HxAnon.set __anon_38 "returnTypeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic returnType) ())));
-                                  ignore (HxAnon.set __anon_38 "returnTypeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic returnType) ())));
-                                  ignore (HxAnon.set __anon_38 "isPublic" (HxRuntime.box_bool (TyDeclarationInfo.getIsPublic (Obj.magic declaration) ())));
-                                  ignore (HxAnon.set __anon_38 "isInline" (HxRuntime.box_bool (TyDeclarationInfo.getIsInline (Obj.magic declaration) ())));
-                                  ignore (HxAnon.set __anon_38 "isDynamic" (HxRuntime.box_bool (TyDeclarationInfo.getIsDynamic (Obj.magic declaration) ())));
-                                  ignore (HxAnon.set __anon_38 "hasBody" (HxRuntime.box_bool (TyDeclarationInfo.getHasBody (Obj.magic declaration) ())));
-                                  ignore (HxAnon.set __anon_38 "isEnumConstructor" (HxRuntime.box_bool (TyDeclarationInfo.getIsEnumConstructor (Obj.magic declaration) ())));
-                                  ignore (HxAnon.set __anon_38 "noImportGlobal" (HxRuntime.box_bool (TyDeclarationInfo.getNoImportGlobal (Obj.magic declaration) ())));
-                                  __anon_38
+                          ignore (if field == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain a null field for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+                          ignore (if not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) ()) ((Obj.magic self : t).classIdentity)) || not (HxString.equals (TyFieldInfo.getModulePath (Obj.magic field) ()) ((Obj.magic self : t).moduleIdentity)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain foreign field " ^ HxString.toStdString (TyFieldInfo.getCanonicalKey (Obj.magic field) ())) ^ " in ") ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+                          let fact = let __anon_32 = HxAnon.create () in (
+                            ignore (HxAnon.set __anon_32 "canonicalIdentity" (Obj.repr (let __call_arg_0_33 = TyFieldInfo.getCanonicalKey (Obj.magic field) () in normalize __call_arg_0_33)));
+                            ignore (HxAnon.set __anon_32 "name" (Obj.repr (let __call_arg_0_34 = TyFieldInfo.getName (Obj.magic field) () in normalize __call_arg_0_34)));
+                            ignore (HxAnon.set __anon_32 "semanticType" (Obj.repr (TyFieldInfo.getType (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) ())));
+                            ignore (HxAnon.set __anon_32 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) ())));
+                            ignore (HxAnon.set __anon_32 "isStatic" (HxRuntime.box_bool (TyFieldInfo.getIsStatic (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "isPublic" (HxRuntime.box_bool (TyFieldInfo.getIsPublic (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "isFinal" (HxRuntime.box_bool (TyFieldInfo.getIsFinal (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "isInline" (HxRuntime.box_bool (TyFieldInfo.getIsInline (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "hasInitializer" (HxRuntime.box_bool (TyFieldInfo.getHasInitializer (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "propertyGet" (Obj.repr (TyFieldInfo.getPropertyGet (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "propertySet" (Obj.repr (TyFieldInfo.getPropertySet (Obj.magic field) ())));
+                            ignore (HxAnon.set __anon_32 "noImportGlobal" (HxRuntime.box_bool (TyFieldInfo.getNoImportGlobal (Obj.magic field) ())));
+                            __anon_32
+                          ) in (
+                            ignore (if HxString.length (Obj.obj (HxAnon.get fact "typeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "typeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete field type " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"]) else ());
+                            ignore (requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get fact "semanticType"))) (Obj.magic ((Obj.magic self : t).typeParameters)) ("field " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")) : string));
+                            addField (Obj.magic self) fact
+                          )
+                        )) done);
+                        ignore (let __assign_35 = Obj.magic (HxMap.create_string ()) in (
+                          (Obj.magic self : t).methodIndex <- __assign_35;
+                          __assign_35
+                        ));
+                        let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic info : TyNominalInfo.t).getDeclarations (Obj.magic info) ()) in (
+                          ignore (while !_g < HxArray.length _g1 do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+                            ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
+                              ignore (_g := __new_37);
+                              __new_37
+                            ));
+                            ignore (if declaration == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain a null method for " ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+                            ignore (if not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) ()) ((Obj.magic self : t).classIdentity)) || not (HxString.equals (TyDeclarationInfo.getModulePath (Obj.magic declaration) ()) ((Obj.magic self : t).moduleIdentity)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class semantic facts contain foreign method " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ())) ^ " in ") ^ HxString.toStdString ((Obj.magic self : t).classIdentity))) ["Dynamic"]) else ());
+                            let signature = Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ()) in let argumentNames = Obj.magic (TyFunSig.getArgNames (Obj.magic signature) ()) in let argumentTypes = Obj.magic (TyFunSig.getArgs (Obj.magic signature) ()) in let optionalArguments = Obj.magic (TyFunSig.getArgOptional (Obj.magic signature) ()) in let restArguments = Obj.magic (TyFunSig.getArgRest (Obj.magic signature) ()) in (
+                              ignore (if HxArray.length argumentNames <> HxArray.length argumentTypes || HxArray.length argumentNames <> HxArray.length optionalArguments || HxArray.length argumentNames <> HxArray.length restArguments then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method signature " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"]) else ());
+                              let arguments = Obj.magic (HxArray.create ()) in let _g2 = ref 0 in let _g3 = HxArray.length argumentNames in (
+                                ignore (while !_g2 < _g3 do ignore (let index = let __old_38 = !_g2 in let __new_39 = HxInt.add __old_38 1 in (
+                                  ignore (_g2 := __new_39);
+                                  __old_38
+                                ) in let argument = let __anon_40 = HxAnon.create () in (
+                                  ignore (HxAnon.set __anon_40 "name" (Obj.repr (let __call_arg_0_41 = HxArray.get (Obj.magic argumentNames) index in normalize __call_arg_0_41)));
+                                  ignore (HxAnon.set __anon_40 "semanticType" (Obj.repr (HxArray.get (Obj.magic argumentTypes) index)));
+                                  ignore (HxAnon.set __anon_40 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic (HxArray.get (Obj.magic argumentTypes) index)) ())));
+                                  ignore (HxAnon.set __anon_40 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic (HxArray.get (Obj.magic argumentTypes) index)) ())));
+                                  ignore (HxAnon.set __anon_40 "isOptional" (HxRuntime.box_bool (HxArray.get (Obj.magic optionalArguments) index)));
+                                  ignore (HxAnon.set __anon_40 "isRest" (HxRuntime.box_bool (HxArray.get (Obj.magic restArguments) index)));
+                                  __anon_40
                                 ) in (
-                                  ignore (if HxString.length (Obj.obj (HxAnon.get fact "returnTypeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "returnTypeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method return type " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"; "String"]) else ());
-                                  let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get fact "arguments")) in (
-                                    ignore (while !_g2 < HxArray.length _g3 do ignore (let argument = HxArray.get (Obj.magic _g3) (!_g2) in (
-                                      ignore (let __old_39 = !_g2 in let __new_40 = HxInt.add __old_39 1 in (
-                                        ignore (_g2 := __new_40);
-                                        __new_40
-                                      ));
-                                      requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get argument "semanticType"))) (Obj.magic allowedTypeParameters) ((("method argument " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get argument "name")) : string)
-                                    )) done);
-                                    ignore (requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get fact "returnSemanticType"))) (Obj.magic allowedTypeParameters) ("method result " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")) : string));
-                                    addMethod (Obj.magic self) fact
+                                  ignore (if HxString.length (Obj.obj (HxAnon.get argument "name")) = 0 || HxString.length (Obj.obj (HxAnon.get argument "typeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get argument "typeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method argument " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"]) else ());
+                                  HxArray.push arguments argument
+                                )) done);
+                                let returnType = Obj.magic (TyFunSig.getReturnType (Obj.magic signature) ()) in let methodTypeParameters = Obj.magic (TyDeclarationInfo.getTypeParameterIds (Obj.magic declaration) ()) in let seenMethodTypeParameters = Obj.magic (HxMap.create_string ()) in let _g2 = ref 0 in (
+                                  ignore (while !_g2 < HxArray.length methodTypeParameters do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic methodTypeParameters) (!_g2)) in (
+                                    ignore (let __old_42 = !_g2 in let __new_43 = HxInt.add __old_42 1 in (
+                                      ignore (_g2 := __new_43);
+                                      __new_43
+                                    ));
+                                    let parameterName = (TyTypeParameterId.getName (Obj.magic parameter) () : string) in (
+                                      ignore (if HxString.length parameterName = 0 || HxMap.exists_string (Obj.magic seenMethodTypeParameters) (parameterName : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain invalid method type parameters for " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()))) ["Dynamic"]) else ());
+                                      HxMap.set_string (Obj.magic seenMethodTypeParameters) (parameterName : string) true
+                                    )
+                                  )) done);
+                                  let allowedTypeParameters = Obj.magic (HxArray.concat ((Obj.magic self : t).typeParameters) methodTypeParameters) in let fact = let __anon_44 = HxAnon.create () in (
+                                    ignore (HxAnon.set __anon_44 "canonicalIdentity" (Obj.repr (let __call_arg_0_45 = TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () in normalize __call_arg_0_45)));
+                                    ignore (HxAnon.set __anon_44 "name" (Obj.repr (let __call_arg_0_46 = TyFunSig.getName (Obj.magic signature) () in normalize __call_arg_0_46)));
+                                    ignore (HxAnon.set __anon_44 "isStatic" (HxRuntime.box_bool (TyFunSig.getIsStatic (Obj.magic signature) ())));
+                                    ignore (HxAnon.set __anon_44 "typeParameters" (Obj.repr methodTypeParameters));
+                                    ignore (HxAnon.set __anon_44 "arguments" (Obj.repr arguments));
+                                    ignore (HxAnon.set __anon_44 "returnSemanticType" (Obj.repr returnType));
+                                    ignore (HxAnon.set __anon_44 "returnTypeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic returnType) ())));
+                                    ignore (HxAnon.set __anon_44 "returnTypeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic returnType) ())));
+                                    ignore (HxAnon.set __anon_44 "isPublic" (HxRuntime.box_bool (TyDeclarationInfo.getIsPublic (Obj.magic declaration) ())));
+                                    ignore (HxAnon.set __anon_44 "isInline" (HxRuntime.box_bool (TyDeclarationInfo.getIsInline (Obj.magic declaration) ())));
+                                    ignore (HxAnon.set __anon_44 "isDynamic" (HxRuntime.box_bool (TyDeclarationInfo.getIsDynamic (Obj.magic declaration) ())));
+                                    ignore (HxAnon.set __anon_44 "hasBody" (HxRuntime.box_bool (TyDeclarationInfo.getHasBody (Obj.magic declaration) ())));
+                                    ignore (HxAnon.set __anon_44 "isEnumConstructor" (HxRuntime.box_bool (TyDeclarationInfo.getIsEnumConstructor (Obj.magic declaration) ())));
+                                    ignore (HxAnon.set __anon_44 "noImportGlobal" (HxRuntime.box_bool (TyDeclarationInfo.getNoImportGlobal (Obj.magic declaration) ())));
+                                    __anon_44
+                                  ) in (
+                                    ignore (if HxString.length (Obj.obj (HxAnon.get fact "returnTypeIdentity")) = 0 || HxString.length (Obj.obj (HxAnon.get fact "returnTypeDisplay")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class semantic facts contain an incomplete method return type " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")))) ["Dynamic"]) else ());
+                                    let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get fact "arguments")) in (
+                                      ignore (while !_g2 < HxArray.length _g3 do ignore (let argument = HxArray.get (Obj.magic _g3) (!_g2) in (
+                                        ignore (let __old_47 = !_g2 in let __new_48 = HxInt.add __old_47 1 in (
+                                          ignore (_g2 := __new_48);
+                                          __new_48
+                                        ));
+                                        requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get argument "semanticType"))) (Obj.magic allowedTypeParameters) ((("method argument " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get argument "name")) : string)
+                                      )) done);
+                                      ignore (requireDeclaredTypeParameters (Obj.magic (Obj.obj (HxAnon.get fact "returnSemanticType"))) (Obj.magic allowedTypeParameters) ("method result " ^ HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")) : string));
+                                      addMethod (Obj.magic self) fact
+                                    )
                                   )
                                 )
                               )
                             )
-                          )
-                        )) done);
-                        let _g = Obj.magic (let __arr_41 = HxArray.create () in __arr_41) in let identity = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).fieldIndex)) in (
-                          ignore (while (let __iter_42 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_42)) () do ignore (let identity2 = ((let __iter_43 = identity in fun () -> HxIterator.next (Obj.magic __iter_43)) () : string) in HxArray.push _g identity2) done);
-                          let tempArray = Obj.magic _g in (
-                            ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-                            let _g = Obj.magic (let __arr_44 = HxArray.create () in __arr_44) in let _g1 = ref 0 in (
-                              ignore (while !_g1 < HxArray.length tempArray do ignore (let identity = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
-                                ignore (let __old_45 = !_g1 in let __new_46 = HxInt.add __old_45 1 in (
-                                  ignore (_g1 := __new_46);
-                                  __new_46
-                                ));
-                                HxArray.push _g (copyField (HxMap.get_string ((Obj.magic self : t).fieldIndex) identity))
-                              )) done);
-                              let tempRight4 = Obj.magic _g in (
-                                ignore (let __assign_47 = Obj.magic tempRight4 in (
-                                  (Obj.magic self : t).fields <- __assign_47;
-                                  __assign_47
-                                ));
-                                let _g = Obj.magic (let __arr_48 = HxArray.create () in __arr_48) in let identity = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).methodIndex)) in (
-                                  ignore (while (let __iter_49 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_49)) () do ignore (let identity2 = ((let __iter_50 = identity in fun () -> HxIterator.next (Obj.magic __iter_50)) () : string) in HxArray.push _g identity2) done);
-                                  let tempArray1 = Obj.magic _g in (
-                                    ignore (HxArray.sort tempArray1 (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-                                    let _g = Obj.magic (let __arr_51 = HxArray.create () in __arr_51) in let _g1 = ref 0 in (
-                                      ignore (while !_g1 < HxArray.length tempArray1 do ignore (let identity = (HxArray.get (Obj.magic tempArray1) (!_g1) : string) in (
-                                        ignore (let __old_52 = !_g1 in let __new_53 = HxInt.add __old_52 1 in (
-                                          ignore (_g1 := __new_53);
-                                          __new_53
-                                        ));
-                                        HxArray.push _g (copyMethod (HxMap.get_string ((Obj.magic self : t).methodIndex) identity))
-                                      )) done);
-                                      let tempRight5 = Obj.magic _g in (
-                                        ignore (let __assign_54 = Obj.magic tempRight5 in (
-                                          (Obj.magic self : t).methods <- __assign_54;
-                                          __assign_54
-                                        ));
-                                        let identityFacts = Obj.magic (HxArray.create ()) in (
-                                          ignore (HxArray.push identityFacts (getSchemaRevision (Obj.magic self) ()));
-                                          ignore (HxArray.push identityFacts ((Obj.magic self : t).classIdentity));
-                                          ignore (HxArray.push identityFacts ((Obj.magic self : t).moduleIdentity));
-                                          ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).typeParameters))));
-                                          let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typeParameters) in (
-                                            ignore (while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-                                              ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
-                                                ignore (_g := __new_56);
-                                                __new_56
-                                              ));
-                                              ignore (HxArray.push identityFacts (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()));
-                                              HxArray.push identityFacts (TyTypeParameterId.getName (Obj.magic parameter) ())
-                                            )) done);
-                                            ignore (HxArray.push identityFacts ((Obj.magic self : t).superClassIdentity));
-                                            ignore (HxArray.push identityFacts ((Obj.magic self : t).superTypeIdentity));
-                                            ignore (HxArray.push identityFacts ((Obj.magic self : t).superTypeDisplay));
-                                            ignore (HxArray.push identityFacts "fields");
-                                            ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).fields))));
-                                            let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).fields) in (
-                                              ignore (while !_g < HxArray.length _g1 do ignore (let field = HxArray.get (Obj.magic _g1) (!_g) in (
-                                                ignore (let __old_57 = !_g in let __new_58 = HxInt.add __old_57 1 in (
-                                                  ignore (_g := __new_58);
-                                                  __new_58
+                          )) done);
+                          let _g = Obj.magic (let __arr_49 = HxArray.create () in __arr_49) in let _this = Obj.magic ((Obj.magic self : t).fieldIndex) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let identity = tempIterator in (
+                            ignore (while (let __iter_50 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_50)) () do ignore (let identity2 = ((let __iter_51 = identity in fun () -> HxIterator.next (Obj.magic __iter_51)) () : string) in HxArray.push _g identity2) done);
+                            let tempArray = Obj.magic _g in let fieldIdentities = Obj.magic tempArray in (
+                              ignore (HxArray.sort fieldIdentities (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+                              let _g = Obj.magic (let __arr_52 = HxArray.create () in __arr_52) in let _g1 = ref 0 in (
+                                ignore (while !_g1 < HxArray.length fieldIdentities do ignore (let identity = (HxArray.get (Obj.magic fieldIdentities) (!_g1) : string) in (
+                                  ignore (let __old_53 = !_g1 in let __new_54 = HxInt.add __old_53 1 in (
+                                    ignore (_g1 := __new_54);
+                                    __new_54
+                                  ));
+                                  let tempMaybeTypedBackendClassFieldFact = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).fieldIndex) in (
+                                    ignore (let __assign_55 = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in (
+                                      tempMaybeTypedBackendClassFieldFact := __assign_55;
+                                      __assign_55
+                                    ));
+                                    HxArray.push _g (copyField (Obj.magic (!tempMaybeTypedBackendClassFieldFact)))
+                                  )
+                                )) done);
+                                let tempRight4 = Obj.magic _g in (
+                                  ignore (let __assign_56 = Obj.magic tempRight4 in (
+                                    (Obj.magic self : t).fields <- __assign_56;
+                                    __assign_56
+                                  ));
+                                  let _g = Obj.magic (let __arr_57 = HxArray.create () in __arr_57) in let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let tempIterator1 = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let identity = tempIterator1 in (
+                                    ignore (while (let __iter_58 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_58)) () do ignore (let identity2 = ((let __iter_59 = identity in fun () -> HxIterator.next (Obj.magic __iter_59)) () : string) in HxArray.push _g identity2) done);
+                                    let tempArray1 = Obj.magic _g in let methodIdentities = Obj.magic tempArray1 in (
+                                      ignore (HxArray.sort methodIdentities (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+                                      let _g = Obj.magic (let __arr_60 = HxArray.create () in __arr_60) in let _g1 = ref 0 in (
+                                        ignore (while !_g1 < HxArray.length methodIdentities do ignore (let identity = (HxArray.get (Obj.magic methodIdentities) (!_g1) : string) in (
+                                          ignore (let __old_61 = !_g1 in let __new_62 = HxInt.add __old_61 1 in (
+                                            ignore (_g1 := __new_62);
+                                            __new_62
+                                          ));
+                                          let tempMaybeTypedBackendClassMethodFact = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).methodIndex) in (
+                                            ignore (let __assign_63 = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in (
+                                              tempMaybeTypedBackendClassMethodFact := __assign_63;
+                                              __assign_63
+                                            ));
+                                            HxArray.push _g (copyMethod (Obj.magic (!tempMaybeTypedBackendClassMethodFact)))
+                                          )
+                                        )) done);
+                                        let tempRight5 = Obj.magic _g in (
+                                          ignore (let __assign_64 = Obj.magic tempRight5 in (
+                                            (Obj.magic self : t).methods <- __assign_64;
+                                            __assign_64
+                                          ));
+                                          let identityFacts = Obj.magic (HxArray.create ()) in (
+                                            ignore (HxArray.push identityFacts (getSchemaRevision (Obj.magic self) ()));
+                                            ignore (HxArray.push identityFacts ((Obj.magic self : t).classIdentity));
+                                            ignore (HxArray.push identityFacts ((Obj.magic self : t).moduleIdentity));
+                                            ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).typeParameters))));
+                                            let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typeParameters) in (
+                                              ignore (while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+                                                ignore (let __old_65 = !_g in let __new_66 = HxInt.add __old_65 1 in (
+                                                  ignore (_g := __new_66);
+                                                  __new_66
                                                 ));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "canonicalIdentity")));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "name")));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "typeIdentity")));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "typeDisplay")));
-                                                ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic"))));
-                                                ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic"))));
-                                                ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal"))));
-                                                ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline"))));
-                                                ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer"))));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "propertyGet")));
-                                                ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "propertySet")));
-                                                HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal")))
+                                                ignore (HxArray.push identityFacts (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()));
+                                                HxArray.push identityFacts (TyTypeParameterId.getName (Obj.magic parameter) ())
                                               )) done);
-                                              ignore (HxArray.push identityFacts "methods");
-                                              ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).methods))));
-                                              let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).methods) in (
-                                                ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = HxArray.get (Obj.magic _g1) (!_g) in (
-                                                  ignore (let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
-                                                    ignore (_g := __new_60);
-                                                    __new_60
+                                              ignore (HxArray.push identityFacts ((Obj.magic self : t).superClassIdentity));
+                                              ignore (HxArray.push identityFacts ((Obj.magic self : t).superTypeIdentity));
+                                              ignore (HxArray.push identityFacts ((Obj.magic self : t).superTypeDisplay));
+                                              ignore (HxArray.push identityFacts "fields");
+                                              ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).fields))));
+                                              let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).fields) in (
+                                                ignore (while !_g < HxArray.length _g1 do ignore (let field = HxArray.get (Obj.magic _g1) (!_g) in (
+                                                  ignore (let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
+                                                    ignore (_g := __new_68);
+                                                    __new_68
                                                   ));
-                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "canonicalIdentity")));
-                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "name")));
-                                                  ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic"))));
-                                                  ignore (HxArray.push identityFacts (string_of_int (HxArray.length (Obj.obj (HxAnon.get hx_method "typeParameters")))));
-                                                  let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get hx_method "typeParameters")) in (
-                                                    ignore (while !_g2 < HxArray.length _g3 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-                                                      ignore (let __old_61 = !_g2 in let __new_62 = HxInt.add __old_61 1 in (
-                                                        ignore (_g2 := __new_62);
-                                                        __new_62
-                                                      ));
-                                                      ignore (HxArray.push identityFacts (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()));
-                                                      HxArray.push identityFacts (TyTypeParameterId.getName (Obj.magic parameter) ())
-                                                    )) done);
-                                                    ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "returnTypeIdentity")));
-                                                    ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "returnTypeDisplay")));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic"))));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline"))));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic"))));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody"))));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor"))));
-                                                    ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal"))));
-                                                    ignore (HxArray.push identityFacts (string_of_int (HxArray.length (Obj.obj (HxAnon.get hx_method "arguments")))));
-                                                    let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in while !_g2 < HxArray.length _g3 do ignore (let argument = HxArray.get (Obj.magic _g3) (!_g2) in (
-                                                      ignore (let __old_63 = !_g2 in let __new_64 = HxInt.add __old_63 1 in (
-                                                        ignore (_g2 := __new_64);
-                                                        __new_64
-                                                      ));
-                                                      ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "name")));
-                                                      ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "typeIdentity")));
-                                                      ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "typeDisplay")));
-                                                      ignore (HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
-                                                      HxArray.push identityFacts (boolText (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest")))
-                                                    )) done
-                                                  )
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "canonicalIdentity")));
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "name")));
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "typeIdentity")));
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "typeDisplay")));
+                                                  ignore (HxArray.push identityFacts (let __call_arg_0_69 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic") in boolText __call_arg_0_69));
+                                                  ignore (HxArray.push identityFacts (let __call_arg_0_70 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic") in boolText __call_arg_0_70));
+                                                  ignore (HxArray.push identityFacts (let __call_arg_0_71 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal") in boolText __call_arg_0_71));
+                                                  ignore (HxArray.push identityFacts (let __call_arg_0_72 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline") in boolText __call_arg_0_72));
+                                                  ignore (HxArray.push identityFacts (let __call_arg_0_73 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer") in boolText __call_arg_0_73));
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "propertyGet")));
+                                                  ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get field "propertySet")));
+                                                  HxArray.push identityFacts (let __call_arg_0_74 = HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal") in boolText __call_arg_0_74)
                                                 )) done);
-                                                let __assign_65 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
-                                                  (Obj.magic self : t).canonicalIdentity <- __assign_65;
-                                                  __assign_65
+                                                ignore (HxArray.push identityFacts "methods");
+                                                ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).methods))));
+                                                let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).methods) in (
+                                                  ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = HxArray.get (Obj.magic _g1) (!_g) in (
+                                                    ignore (let __old_75 = !_g in let __new_76 = HxInt.add __old_75 1 in (
+                                                      ignore (_g := __new_76);
+                                                      __new_76
+                                                    ));
+                                                    ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "canonicalIdentity")));
+                                                    ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "name")));
+                                                    ignore (HxArray.push identityFacts (let __call_arg_0_77 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic") in boolText __call_arg_0_77));
+                                                    ignore (HxArray.push identityFacts (string_of_int (HxArray.length (Obj.obj (HxAnon.get hx_method "typeParameters")))));
+                                                    let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get hx_method "typeParameters")) in (
+                                                      ignore (while !_g2 < HxArray.length _g3 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+                                                        ignore (let __old_78 = !_g2 in let __new_79 = HxInt.add __old_78 1 in (
+                                                          ignore (_g2 := __new_79);
+                                                          __new_79
+                                                        ));
+                                                        ignore (HxArray.push identityFacts (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()));
+                                                        HxArray.push identityFacts (TyTypeParameterId.getName (Obj.magic parameter) ())
+                                                      )) done);
+                                                      ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "returnTypeIdentity")));
+                                                      ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get hx_method "returnTypeDisplay")));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_80 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic") in boolText __call_arg_0_80));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_81 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline") in boolText __call_arg_0_81));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_82 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic") in boolText __call_arg_0_82));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_83 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody") in boolText __call_arg_0_83));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_84 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor") in boolText __call_arg_0_84));
+                                                      ignore (HxArray.push identityFacts (let __call_arg_0_85 = HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal") in boolText __call_arg_0_85));
+                                                      ignore (HxArray.push identityFacts (string_of_int (HxArray.length (Obj.obj (HxAnon.get hx_method "arguments")))));
+                                                      let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in while !_g2 < HxArray.length _g3 do ignore (let argument = HxArray.get (Obj.magic _g3) (!_g2) in (
+                                                        ignore (let __old_86 = !_g2 in let __new_87 = HxInt.add __old_86 1 in (
+                                                          ignore (_g2 := __new_87);
+                                                          __new_87
+                                                        ));
+                                                        ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "name")));
+                                                        ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "typeIdentity")));
+                                                        ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get argument "typeDisplay")));
+                                                        ignore (HxArray.push identityFacts (let __call_arg_0_88 = HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional") in boolText __call_arg_0_88));
+                                                        HxArray.push identityFacts (let __call_arg_0_89 = HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest") in boolText __call_arg_0_89)
+                                                      )) done
+                                                    )
+                                                  )) done);
+                                                  let __assign_90 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
+                                                    (Obj.magic self : t).canonicalIdentity <- __assign_90;
+                                                    __assign_90
+                                                  )
                                                 )
                                               )
                                             )

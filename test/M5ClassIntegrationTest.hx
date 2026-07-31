@@ -11,14 +11,6 @@ class M5ClassIntegrationTest {
 		}
 	}
 
-	static function assertMatchesEither(haystack:String, res:Array<EReg>, label:String):Void {
-		for (re in res) {
-			if (re.match(haystack))
-				return;
-		}
-		throw label + ": expected one of the regexes to match";
-	}
-
 	static function main() {
 		final outDir = "out_ocaml_m5_class_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(outDir);
@@ -69,7 +61,7 @@ class M5ClassIntegrationTest {
 				""),
 			"ctor assigns y through typed place plan");
 		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
-		assertMatches(pointMl, ~/let __place_receiver_[0-9]+ = self in let __place_rhs_[0-9]+ = HxInt\.add \(\(Obj\.magic self : t\)\.x\) 1 in/,
+		assertMatches(pointMl, ~/let __place_receiver_[0-9]+ = self in let __place_rhs_[0-9]+ = HxInt\.add \(\(self : t\)\.x\) 1 in/,
 			"incX plans receiver before rhs");
 
 		final mainPath = outDir + "/ClassMain.ml";
@@ -77,8 +69,10 @@ class M5ClassIntegrationTest {
 			throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
 		assertContains(mainMl, "Point.create 1 2", "new -> create");
-		assertMatchesEither(mainMl, [~/Point\.incX p \(\)/, ~/Point\.incX \(Obj\.magic p\) \(\)/], "method call (no args)");
-		assertMatchesEither(mainMl, [~/Point\.add p 3 4/, ~/Point\.add \(Obj\.magic p\) 3 4/], "method call (args)");
-		assertMatchesEither(mainMl, [~/Point\.sum p \(\)/, ~/Point\.sum \(Obj\.magic p\) \(\)/], "method call returning int");
+		assertMatches(mainMl, ~/let __call_receiver_[0-9]+ = p in Point\.incX __call_receiver_[0-9]+ \(\)/, "method call (no args)");
+		assertMatches(mainMl,
+			~/let __call_receiver_[0-9]+ = p in let __call_arg_0_[0-9]+ = 3 in let __call_arg_1_[0-9]+ = 4 in Point\.add __call_receiver_[0-9]+ __call_arg_0_[0-9]+ __call_arg_1_[0-9]+/,
+			"method call (args)");
+		assertMatches(mainMl, ~/let __call_receiver_[0-9]+ = p in Point\.sum __call_receiver_[0-9]+ \(\)/, "method call returning int");
 	}
 }

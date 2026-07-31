@@ -27,6 +27,17 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
+		switch (HxParser.parseExprText("TitleCase")) {
+			case EEnumValue("TitleCase"):
+			case _:
+				fail("TitleCase constructor shorthand no longer parses as an enum-like value");
+		}
+		switch (HxParser.parseExprText("TitleCase_Helper")) {
+			case EIdent("TitleCase_Helper"):
+			case _:
+				fail("underscore-bearing uppercase helper name was misclassified as an enum-like value");
+		}
+
 		final nullSafeCopy = HxParser.parseExprText("unexpectedStrings?.copy() ?? []");
 		switch (nullSafeCopy) {
 			case EBinop("??", ECall(ENullSafeField(EIdent("unexpectedStrings"), "copy"), []), EArrayDecl([])):

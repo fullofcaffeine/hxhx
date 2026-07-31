@@ -6,78 +6,78 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable scopeIdentity : string; mutable ordinal : int; mutable name : string; mutable canonicalKey : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = ""; ordinal = 0; name = ""; canonicalKey = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t)
 
-let getScopeIdentity = fun self () -> (Obj.magic self : t).scopeIdentity
+let getScopeIdentity = fun self () -> ((self : t).scopeIdentity : string)
 
-let getOrdinal = fun self () -> (Obj.magic self : t).ordinal
+let getOrdinal = fun self () -> ((self : t).ordinal : int)
 
-let getName = fun self () -> (Obj.magic self : t).name
+let getName = fun self () -> ((self : t).name : string)
 
-let getCanonicalKey = fun self () -> (Obj.magic self : t).canonicalKey
+let getCanonicalKey = fun self () -> ((self : t).canonicalKey : string)
 
-let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((Obj.magic self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
+let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
 
-let toString = fun self () -> (Obj.magic self : t).canonicalKey
+let toString = fun self () -> ((self : t).canonicalKey : string)
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
-    tempResult := __assign_9;
-    __assign_9
-  ) else let __assign_10 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_10;
-    __assign_10
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_12 = "" in (
+    tempResult := __assign_12;
+    __assign_12
+  ) else let __assign_13 = let __call_arg_0_14 = value in StringTools.trim __call_arg_0_14 in (
+    tempResult := __assign_13;
+    __assign_13
   ));
   !tempResult
-)
+) : string)
 
-let create = fun scopeIdentity2 ordinal2 name2 -> let self = ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = ""; ordinal = 0; name = ""; canonicalKey = "" } : t) in (
+let create = fun scopeIdentity2 ordinal2 name2 -> let self = ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (normalize (scopeIdentity2 : string) : string) in (
+    ignore (let __assign_1 = (let __call_arg_0_2 = scopeIdentity2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).scopeIdentity <- __assign_1;
       __assign_1
     ));
-    ignore (let __place_receiver_2 = self in let __place_rhs_3 = ordinal2 in (
-      (__place_receiver_2 : t).ordinal <- __place_rhs_3;
-      __place_rhs_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = ordinal2 in (
+      (__place_receiver_3 : t).ordinal <- __place_rhs_4;
+      __place_rhs_4
     ));
-    ignore (let __assign_4 = (normalize (name2 : string) : string) in (
-      (Obj.magic self : t).name <- __assign_4;
-      __assign_4
-    ));
-    ignore (if HxString.length ((Obj.magic self : t).scopeIdentity) = 0 || (Obj.magic self : t).ordinal < 0 || HxString.length ((Obj.magic self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "type parameter identity requires a scope, non-negative ordinal, and name") ["Dynamic"; "String"]) else ());
-    let __assign_5 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_6 = HxArray.create () in (
-      ignore (HxArray.push __arr_6 "type-parameter-identity-v1");
-      ignore (HxArray.push __arr_6 ((Obj.magic self : t).scopeIdentity));
-      ignore (HxArray.push __arr_6 (string_of_int ((Obj.magic self : t).ordinal)));
-      ignore (HxArray.push __arr_6 ((Obj.magic self : t).name));
-      __arr_6
-    ))) : string) in (
-      (Obj.magic self : t).canonicalKey <- __assign_5;
+    ignore (let __assign_5 = (let __call_arg_0_6 = name2 in normalize __call_arg_0_6 : string) in (
+      (Obj.magic self : t).name <- __assign_5;
       __assign_5
+    ));
+    ignore (if HxString.length ((self : t).scopeIdentity) = 0 || (self : t).ordinal < 0 || HxString.length ((self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "type parameter identity requires a scope, non-negative ordinal, and name") ["Dynamic"]) else ());
+    let __assign_7 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_8 = HxArray.create () in (
+      ignore (HxArray.push __arr_8 "type-parameter-identity-v1");
+      ignore (HxArray.push __arr_8 ((self : t).scopeIdentity));
+      ignore (HxArray.push __arr_8 (string_of_int ((self : t).ordinal)));
+      ignore (HxArray.push __arr_8 ((self : t).name));
+      __arr_8
+    ))) : string) in (
+      (Obj.magic self : t).canonicalKey <- __assign_7;
+      __assign_7
     )
   )));
   self
 )
 
 let nominal = fun owner ordinal2 name2 -> (
-  ignore (if owner == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "nominal type parameter identity requires an owner") ["Dynamic"; "String"]) else ());
+  ignore (if owner == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "nominal type parameter identity requires an owner") ["Dynamic"]) else ());
   create ("nominal:" ^ HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic owner) ()) : string) ordinal2 (name2 : string)
 )
 
 let hx_method = fun owner isStatic methodName occurrence ordinal2 name2 -> (
-  ignore (if owner == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "method type parameter identity requires an owner") ["Dynamic"; "String"]) else ());
-  let cleanMethodName = (normalize (methodName : string) : string) in (
-    ignore (if HxString.length cleanMethodName = 0 || occurrence < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "method type parameter identity requires a method name and non-negative occurrence") ["Dynamic"; "String"]) else ());
-    let tempString = ref ("" : string) in (
-      ignore (if isStatic then let __assign_7 = ("static" : string) in (
-        tempString := __assign_7;
-        __assign_7
-      ) else let __assign_8 = ("instance" : string) in (
-        tempString := __assign_8;
-        __assign_8
+  ignore (if owner == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "method type parameter identity requires an owner") ["Dynamic"]) else ());
+  let cleanMethodName = let __call_arg_0_9 = methodName in normalize __call_arg_0_9 in (
+    ignore (if HxString.length cleanMethodName = 0 || occurrence < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "method type parameter identity requires a method name and non-negative occurrence") ["Dynamic"]) else ());
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if isStatic then let __assign_10 = "static" in (
+        tempString := __assign_10;
+        __assign_10
+      ) else let __assign_11 = "instance" in (
+        tempString := __assign_11;
+        __assign_11
       ));
-      create ((((((("method:" ^ HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic owner) ())) ^ "#") ^ HxString.toStdString (!tempString)) ^ "#") ^ HxString.toStdString cleanMethodName) ^ "#") ^ string_of_int occurrence : string) ordinal2 (name2 : string)
+      let form = !tempString in create ((((((("method:" ^ HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic owner) ())) ^ "#") ^ HxString.toStdString form) ^ "#") ^ HxString.toStdString cleanMethodName) ^ "#") ^ string_of_int occurrence : string) ordinal2 (name2 : string)
     )
   )
 )

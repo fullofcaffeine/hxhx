@@ -2,7 +2,13 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
+import haxe.macro.TypedExprTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.OcamlCompiler;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionRole;
@@ -17,8 +23,10 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 
 /** Focused executable checks for local-storage decisions and explanations. */
+@:access(reflaxe.ocaml.OcamlCompiler)
 class LocalStoragePlannerFixture {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -39,8 +47,62 @@ class LocalStoragePlannerFixture {
 			throw '$label should have failed.';
 	}
 
+	/**
+		Copies one JSON-shaped plan record without sharing nested source or proof objects.
+
+		These tamper fixtures deliberately change several matching fields at once.
+		A shallow copy would also modify the original valid plan and make a later
+		failure ambiguous.
+	**/
+	static function copyPlanRecord(value:Dynamic):Dynamic {
+		return haxe.Json.parse(haxe.Json.stringify(value));
+	}
+
+	/**
+		Recomputes the IDs that authenticate one deliberately modified conversion.
+
+		Most tamper tests keep the old ID and prove that canonical-identity checks
+		reject the altered facts. The binding test instead needs an internally
+		consistent stale record, so this helper rebuilds its conversion and unsafe
+		operation IDs before checking it against the current function.
+	**/
+	static function reidentifyConversion(conversion:Dynamic, binding:OcamlFunctionPlanBinding):Void {
+		final id = OcamlLocalRepresentationPlan.occurrenceId(binding, conversion.localId, conversion.role, conversion.source);
+		conversion.id = id;
+		if (conversion.unsafeOperation != null) {
+			conversion.unsafeOperation.conversionId = id;
+			conversion.unsafeOperation.id = id + ":unsafe:" + conversion.unsafeOperation.operation;
+		}
+	}
+
+	/** Rebuilds one deliberately changed container conversion's stable IDs. */
+	static function reidentifyContainerConversion(conversion:Dynamic, binding:OcamlFunctionPlanBinding):Void {
+		final id = OcamlContainerElementPlan.occurrenceId(binding, conversion.role, conversion.containerSource, conversion.source,
+			conversion.containerOrdinal, conversion.elementIndex);
+		conversion.id = id;
+		conversion.unsafeOperation.conversionId = id;
+		conversion.unsafeOperation.id = id + ":unsafe:" + conversion.unsafeOperation.operation;
+	}
+
 	static function plan(source:Expr):OcamlLocalStoragePlan {
-		return OcamlLocalStoragePlanner.planExpression(Context.typeExpr(source));
+		final expression = Context.typeExpr(source);
+		return storagePlan(expression, "fixture|storage");
+	}
+
+	static function localIdentities(expression:TypedExpr, ownerId:String):LexicalLocalIdentityPlan {
+		return LexicalLocalIdentityPlan.build(ownerId, expression);
+	}
+
+	static function storagePlan(expression:TypedExpr, ownerId:String):OcamlLocalStoragePlan {
+		return OcamlLocalStoragePlanner.planExpression(expression, localIdentities(expression, ownerId));
+	}
+
+	static function representationPlan(expression:TypedExpr, representations:OcamlRepresentationRegistry,
+			?binding:OcamlFunctionPlanBinding):OcamlLocalRepresentationPlan {
+		final ownerId = binding == null ? "fixture|representation" : binding.functionId;
+		final identities = localIdentities(expression, ownerId);
+		return OcamlLocalRepresentationPlanner.planExpression(expression, identities, OcamlLocalStoragePlanner.planExpression(expression, identities),
+			representations, binding);
 	}
 
 	static function onlyDecision(storagePlan:OcamlLocalStoragePlan, label:String):OcamlLocalStorageDecision {
@@ -131,6 +193,79 @@ class LocalStoragePlannerFixture {
 		}, OcamlLocalStorageKind.RefCell,
 			["captured-and-mutated", "straight-line-assignment"], "captured mutation");
 
+		final immutableCaptureExpr = Context.typeExpr(macro {
+			final value = 3;
+			final read = function() return value;
+			read();
+		});
+		final immutableCaptureIdentities = localIdentities(immutableCaptureExpr, "fixture|immutable-capture");
+		final immutableCapture = OcamlLocalStoragePlanner.planExpression(immutableCaptureExpr, immutableCaptureIdentities);
+		var capturedLocalId:Null<Int> = null;
+		switch (immutableCaptureExpr.expr) {
+			case TBlock(items):
+				switch (items[0].expr) {
+					case TVar(local, _):
+						capturedLocalId = local.id;
+					case _:
+				}
+			case _:
+		}
+		final capturedStableId = capturedLocalId == null ? null : immutableCaptureIdentities.requireHostId(capturedLocalId).id;
+		assertTrue(capturedStableId != null
+			&& immutableCapture.decisions().length == 0
+			&& immutableCapture.isCaptured(capturedStableId)
+			&& immutableCapture.isImmutableCapture(capturedStableId),
+			"an immutable captured local should remain storage-free while exposing its capture boundary");
+		final capturedIds = immutableCapture.capturedIds();
+		assertTrue(capturedLocalId != null && capturedIds.length == 1 && capturedIds[0] == capturedStableId,
+			"an immutable capture should expose one deterministic lexical identity");
+		capturedIds.push("changed-by-caller");
+		assertTrue(immutableCapture.capturedIds().length == 1, "mutating a returned capture inventory must not change the retained plan");
+		final captureSetExpr = Context.typeExpr(macro {
+			final first = 1;
+			final second = 2;
+			() -> first + second;
+		});
+		final captureSetIdentities = localIdentities(captureSetExpr, "fixture|capture-set");
+		final captureSetHostIds = switch (captureSetExpr.expr) {
+			case TBlock(items): [
+					switch (items[0].expr) {
+						case TVar(local, _):
+							local.id;
+						case _:
+							throw "first capture-set declaration changed shape";
+					},
+					switch (items[1].expr) {
+						case TVar(local, _):
+							local.id;
+						case _:
+							throw "second capture-set declaration changed shape";
+					}
+				];
+			case _: throw "capture-set block changed shape";
+		}
+		final captureSetStableIds = captureSetHostIds.map(hostId -> captureSetIdentities.requireHostId(hostId).id);
+		final sameCaptureA = new OcamlLocalStoragePlan([], [captureSetStableIds[1], captureSetStableIds[0], captureSetStableIds[1]]);
+		final sameCaptureB = new OcamlLocalStoragePlan([], [captureSetStableIds[0], captureSetStableIds[1]]);
+		final noCapture = new OcamlLocalStoragePlan([]);
+		assertTrue(sameCaptureA.revision == sameCaptureB.revision,
+			"equivalent captured-local sets should have one revision regardless of input order or duplicates");
+		assertTrue(sameCaptureA.revision != noCapture.revision, "captured-local evidence must participate in the storage-plan revision");
+		expectFailure("captured immutable rebinding", "captured-mutation-without-cell", () -> new OcamlLocalStoragePlan([
+			{
+				localId: captureSetStableIds[0],
+				storage: OcamlLocalStorageKind.ImmutableRebinding,
+				reasons: [OcamlLocalStorageReason.CapturedAndMutated]
+			}
+		], [captureSetStableIds[0]]));
+		expectFailure("captured decision without evidence", "contradictory-capture-storage", () -> new OcamlLocalStoragePlan([
+			{
+				localId: captureSetStableIds[0],
+				storage: OcamlLocalStorageKind.RefCell,
+				reasons: [OcamlLocalStorageReason.CapturedAndMutated]
+			}
+		]));
+
 		final nestedFunction = plan(macro {
 			var outer = 0;
 			var mutate = function() {
@@ -169,8 +304,9 @@ class LocalStoragePlannerFixture {
 			first += 1;
 			first + second;
 		});
-		final firstPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput);
-		final secondPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput);
+		final deterministicIdentities = localIdentities(deterministicInput, "fixture|deterministic-storage");
+		final firstPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput, deterministicIdentities);
+		final secondPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput, deterministicIdentities);
 		final firstPass = firstPlan.decisions();
 		final secondPass = secondPlan.decisions();
 		assertTrue(firstPass.length == 2
@@ -179,9 +315,52 @@ class LocalStoragePlannerFixture {
 			"planning the same typed body twice should preserve decision identities and order");
 		assertTrue(firstPlan.revision == secondPlan.revision && StringTools.startsWith(firstPlan.revision, "sha256:"),
 			"the same typed body should produce one stable content revision");
+		final retypedSource = macro {
+			var value = 0;
+			value += 1;
+			value;
+		};
+		final firstRetypedInput = Context.typeExpr(retypedSource);
+		Context.typeExpr(macro {
+			var unrelated = 1;
+			unrelated++;
+			unrelated;
+		});
+		final secondRetypedInput = Context.typeExpr(retypedSource);
+		final firstRetypedHostId = switch (firstRetypedInput.expr) {
+			case TBlock(items):
+				switch (items[0].expr) {
+					case TVar(local, _): local.id;
+					case _: throw "first retyped declaration changed shape";
+				}
+			case _: throw "first retyped block changed shape";
+		}
+		final secondRetypedHostId = switch (secondRetypedInput.expr) {
+			case TBlock(items):
+				switch (items[0].expr) {
+					case TVar(local, _): local.id;
+					case _: throw "second retyped declaration changed shape";
+				}
+			case _: throw "second retyped block changed shape";
+		}
+		final firstRetypedPlan = storagePlan(firstRetypedInput, "fixture|retyped-storage");
+		final secondRetypedPlan = storagePlan(secondRetypedInput, "fixture|retyped-storage");
+		assertTrue(firstRetypedHostId != secondRetypedHostId, "the regression setup must observe different process-local Haxe IDs across equivalent retyping");
+		assertTrue(firstRetypedPlan.revision == secondRetypedPlan.revision
+			&& firstRetypedPlan.decisions()[0].localId == secondRetypedPlan.decisions()[0].localId,
+			"equivalent retyping must preserve the sealed storage identity and revision when raw Haxe IDs move");
+		final deterministicHostId = switch (deterministicInput.expr) {
+			case TBlock(items):
+				switch (items[0].expr) {
+					case TVar(local, _): local.id;
+					case _: throw "deterministic storage declaration changed shape";
+				}
+			case _: throw "deterministic storage block changed shape";
+		}
+		final deterministicStableId = deterministicIdentities.requireHostId(deterministicHostId).id;
 		final canonicalA = new OcamlLocalStoragePlan([
 			{
-				localId: 7,
+				localId: deterministicStableId,
 				storage: OcamlLocalStorageKind.RefCell,
 				reasons: [
 					OcamlLocalStorageReason.NestedBlockMutation,
@@ -191,7 +370,7 @@ class LocalStoragePlannerFixture {
 		]);
 		final canonicalB = new OcamlLocalStoragePlan([
 			{
-				localId: 7,
+				localId: deterministicStableId,
 				storage: OcamlLocalStorageKind.RefCell,
 				reasons: [
 					OcamlLocalStorageReason.LoopMutation,
@@ -226,10 +405,12 @@ class LocalStoragePlannerFixture {
 			+ mutableArray[0]
 			+ capturedArray[0];
 		});
-		final representedStorage = OcamlLocalStoragePlanner.planExpression(representedInput);
+		final representedIdentities = localIdentities(representedInput, "fixture|represented-locals");
+		final representedStorage = OcamlLocalStoragePlanner.planExpression(representedInput, representedIdentities);
 		final representations = new OcamlRepresentationRegistry();
 		representations.beginProgram("program:local-storage-fixture");
-		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(representedInput, representedStorage, representations);
+		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(representedInput, representedIdentities, representedStorage,
+			representations);
 		final references = localRepresentations.references();
 		assertTrue(localRepresentations.count == 7 && localRepresentations.admittedCount == 6,
 			"mutated locals plus the immutable Array<Int> receiver should have explicit representation choices");
@@ -286,14 +467,15 @@ class LocalStoragePlannerFixture {
 			}
 			mutable == null ? captured : mutable;
 		});
-		final nullIntStorage = OcamlLocalStoragePlanner.planExpression(nullIntInput);
 		final nullIntBinding:OcamlFunctionPlanBinding = {
 			functionId: "fixture|null-int-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:null-int-locals-v1",
 			pipelineRevision: "ocaml-function-plans-v21"
 		};
-		final nullIntPlan = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
+		final nullIntIdentities = localIdentities(nullIntInput, nullIntBinding.functionId);
+		final nullIntStorage = OcamlLocalStoragePlanner.planExpression(nullIntInput, nullIntIdentities);
+		final nullIntPlan = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntIdentities, nullIntStorage, representations, nullIntBinding);
 		final nullIntReferences = nullIntPlan.references().filter(reference -> reference.semanticTypeId == "Null<Int>");
 		assertTrue(nullIntReferences.length == 5, "every exact Null<Int> declaration in the focused body should reference one sealed program representation");
 		assertTrue(nullIntReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 3
@@ -315,7 +497,8 @@ class LocalStoragePlannerFixture {
 		assertTrue(nullIntUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprExactInt).length > 0
 			&& nullIntUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.CheckedNullableIntUnwrap).length > 0,
 			"the focused plan should own proof records for both admitted unsafe carrier operations");
-		final nullIntPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntStorage, representations, nullIntBinding);
+		final nullIntPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullIntInput, nullIntIdentities, nullIntStorage, representations,
+			nullIntBinding);
 		assertTrue(nullIntPlanAgain.revision == nullIntPlan.revision
 			&& nullIntPlanAgain.conversions()
 				.map(conversion -> conversion.id)
@@ -334,8 +517,7 @@ class LocalStoragePlannerFixture {
 			final nullable:Null<Bool> = internal;
 			nullable;
 		});
-		final boolStorage = OcamlLocalStoragePlanner.planExpression(boolInput);
-		final boolPlan = OcamlLocalRepresentationPlanner.planExpression(boolInput, boolStorage, representations, {
+		final boolPlan = representationPlan(boolInput, representations, {
 			functionId: "fixture|bool-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:bool-locals-v1",
@@ -362,7 +544,7 @@ class LocalStoragePlannerFixture {
 			replaceCaptured();
 			copied + mutable + captured;
 		});
-		final stringPlan = OcamlLocalRepresentationPlanner.planExpression(stringInput, OcamlLocalStoragePlanner.planExpression(stringInput), representations, {
+		final stringPlan = representationPlan(stringInput, representations, {
 			functionId: "fixture|string-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:string-locals-v1",
@@ -385,8 +567,7 @@ class LocalStoragePlannerFixture {
 			final explicitNull:String = null;
 			explicitNull;
 		});
-		final nullStringPlan = OcamlLocalRepresentationPlanner.planExpression(nullStringInput, OcamlLocalStoragePlanner.planExpression(nullStringInput),
-			representations);
+		final nullStringPlan = representationPlan(nullStringInput, representations);
 		assertTrue(nullStringPlan.references().filter(reference -> reference.semanticTypeId == "String").length == 0,
 			"an explicit null local String should remain unadmitted until it has an occurrence-bound sentinel conversion");
 		final dynamicStringInput = Context.typeExpr(macro {
@@ -395,21 +576,19 @@ class LocalStoragePlannerFixture {
 			final copied:String = converted;
 			copied;
 		});
-		final dynamicStringPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicStringInput,
-			OcamlLocalStoragePlanner.planExpression(dynamicStringInput), representations);
+		final dynamicStringPlan = representationPlan(dynamicStringInput, representations);
 		assertTrue(dynamicStringPlan.references().filter(reference -> reference.semanticTypeId == "String").length == 0,
 			"a Dynamic-to-String cast and its dependent copy should not borrow the exact String carrier without a typed conversion");
 		final unsupportedBoolExpression = Context.typeExpr(macro {
 			final nullable:Null<Bool> = true == false;
 			nullable;
 		});
-		final unsupportedBoolPlan = OcamlLocalRepresentationPlanner.planExpression(unsupportedBoolExpression,
-			OcamlLocalStoragePlanner.planExpression(unsupportedBoolExpression), representations, {
-				functionId: "fixture|unsupported-bool-expression",
-				programRevision: "program:local-storage-fixture",
-				bodyRevision: "body:unsupported-bool-expression-v1",
-				pipelineRevision: "ocaml-function-plans-v21"
-			});
+		final unsupportedBoolPlan = representationPlan(unsupportedBoolExpression, representations, {
+			functionId: "fixture|unsupported-bool-expression",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:unsupported-bool-expression-v1",
+			pipelineRevision: "ocaml-function-plans-v21"
+		});
 		assertTrue(unsupportedBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
 			"an arbitrary exact Bool expression should not publish a partial nullable-Bool representation");
 		assertTrue(unsupportedBoolPlan.conversions().length == 0,
@@ -420,13 +599,12 @@ class LocalStoragePlannerFixture {
 			final nullable:Null<Bool> = alias;
 			nullable;
 		});
-		final unsupportedBoolLocalPlan = OcamlLocalRepresentationPlanner.planExpression(unsupportedBoolLocalInput,
-			OcamlLocalStoragePlanner.planExpression(unsupportedBoolLocalInput), representations, {
-				functionId: "fixture|unsupported-bool-local",
-				programRevision: "program:local-storage-fixture",
-				bodyRevision: "body:unsupported-bool-local-v1",
-				pipelineRevision: "ocaml-function-plans-v21"
-			});
+		final unsupportedBoolLocalPlan = representationPlan(unsupportedBoolLocalInput, representations, {
+			functionId: "fixture|unsupported-bool-local",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:unsupported-bool-local-v1",
+			pipelineRevision: "ocaml-function-plans-v21"
+		});
 		assertTrue(unsupportedBoolLocalPlan.references()
 			.filter(reference -> reference.semanticTypeId == "Bool" || reference.semanticTypeId == "Null<Bool>")
 			.length == 0,
@@ -449,14 +627,16 @@ class LocalStoragePlannerFixture {
 				mutable = false;
 			}
 			readCaptured() || mutable;});
-		final nullBoolStorage = OcamlLocalStoragePlanner.planExpression(nullBoolInput);
 		final nullBoolBinding:OcamlFunctionPlanBinding = {
 			functionId: "fixture|null-bool-locals",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:null-bool-locals-v1",
 			pipelineRevision: "ocaml-function-plans-v21"
 		};
-		final nullBoolPlan = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolStorage, representations, nullBoolBinding);
+		final nullBoolIdentities = localIdentities(nullBoolInput, nullBoolBinding.functionId);
+		final nullBoolStorage = OcamlLocalStoragePlanner.planExpression(nullBoolInput, nullBoolIdentities);
+		final nullBoolPlan = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolIdentities, nullBoolStorage, representations,
+			nullBoolBinding);
 		final nullBoolReferences = nullBoolPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>");
 		assertTrue(nullBoolReferences.length == 4, "every exact Null<Bool> declaration in the focused body should reference one sealed program representation");
 		assertTrue(nullBoolReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 2
@@ -476,7 +656,8 @@ class LocalStoragePlannerFixture {
 		assertTrue(nullBoolUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprExactBool).length > 0
 			&& nullBoolUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.NullableBoolTruthiness).length > 0,
 			"the focused plan should own proof records for nullable-Bool boxing and truthiness");
-		final nullBoolPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolStorage, representations, nullBoolBinding);
+		final nullBoolPlanAgain = OcamlLocalRepresentationPlanner.planExpression(nullBoolInput, nullBoolIdentities, nullBoolStorage, representations,
+			nullBoolBinding);
 		assertTrue(nullBoolPlanAgain.revision == nullBoolPlan.revision
 			&& nullBoolPlanAgain.conversions()
 				.map(conversion -> conversion.id)
@@ -498,13 +679,12 @@ class LocalStoragePlannerFixture {
 			final concrete:Bool = nullable;
 			concrete;
 		});
-		final concreteBoolBoundaryPlan = OcamlLocalRepresentationPlanner.planExpression(concreteBoolBoundaryInput,
-			OcamlLocalStoragePlanner.planExpression(concreteBoolBoundaryInput), representations, {
-				functionId: "fixture|null-bool-concrete-boundary",
-				programRevision: "program:local-storage-fixture",
-				bodyRevision: "body:null-bool-concrete-boundary-v1",
-				pipelineRevision: "ocaml-function-plans-v21"
-			});
+		final concreteBoolBoundaryPlan = representationPlan(concreteBoolBoundaryInput, representations, {
+			functionId: "fixture|null-bool-concrete-boundary",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:null-bool-concrete-boundary-v1",
+			pipelineRevision: "ocaml-function-plans-v21"
+		});
 		final concreteBoolBoundaryLocalId = switch (concreteBoolBoundaryInput.expr) {
 			case TBlock(expressions):
 				switch (expressions[0].expr) {
@@ -513,7 +693,9 @@ class LocalStoragePlannerFixture {
 				}
 			case _: throw "concrete Bool boundary block changed shape";
 		}
-		assertTrue(concreteBoolBoundaryPlan.choiceFor(concreteBoolBoundaryLocalId) == null,
+		final concreteBoolBoundaryStableId = localIdentities(concreteBoolBoundaryInput,
+			"fixture|null-bool-concrete-boundary").requireHostId(concreteBoolBoundaryLocalId).id;
+		assertTrue(concreteBoolBoundaryPlan.choiceFor(concreteBoolBoundaryStableId) == null,
 			"a Null<Bool> local consumed by a concrete Bool boundary should remain outside the truthiness-only slice");
 		assertTrue(concreteBoolBoundaryPlan.conversions().length == 0,
 			"an unadmitted concrete Bool boundary must not publish partial nullable-Bool occurrence conversions");
@@ -522,17 +704,339 @@ class LocalStoragePlannerFixture {
 			final concrete:Bool = source;
 			final copy:Null<Bool> = source;
 			concrete || copy;});
-		final excludedNullableCopyPlan = OcamlLocalRepresentationPlanner.planExpression(excludedNullableCopyInput,
-			OcamlLocalStoragePlanner.planExpression(excludedNullableCopyInput), representations, {
-				functionId: "fixture|excluded-nullable-copy",
-				programRevision: "program:local-storage-fixture",
-				bodyRevision: "body:excluded-nullable-copy-v1",
-				pipelineRevision: "ocaml-function-plans-v21"
-			});
+		final excludedNullableCopyPlan = representationPlan(excludedNullableCopyInput, representations, {
+			functionId: "fixture|excluded-nullable-copy",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:excluded-nullable-copy-v1",
+			pipelineRevision: "ocaml-function-plans-v21"
+		});
 		assertTrue(excludedNullableCopyPlan.references().filter(reference -> reference.semanticTypeId == "Null<Bool>").length == 0,
 			"a nullable copy must not claim carrier preservation when its source local was excluded by a concrete-Bool boundary");
 		assertTrue(excludedNullableCopyPlan.conversions().length == 0,
 			"excluding a nullable source must also remove dependent carrier-preserving occurrence records");
+		final dynamicCarrierInput = Context.typeExpr(macro {
+			final text:Dynamic = cast("text" : String);
+			final decimal:Dynamic = cast(1.5 : Float);
+			final flag:Dynamic = cast(true : Bool);
+			final empty:Dynamic = null;
+			Std.string(text) + Std.string(decimal) + Std.string(flag) + Std.string(empty);
+		});
+		final dynamicCarrierBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-carrier",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-carrier-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
+		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
+		final dynamicCarrierPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities, dynamicCarrierStorage,
+			representations, dynamicCarrierBinding);
+		final dynamicReferences = dynamicCarrierPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic");
+		final dynamicConversions = dynamicCarrierPlan.conversions();
+		assertTrue(dynamicReferences.length == 4
+			&& dynamicReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue
+				&& reference.representationId == "representation:Dynamic:internal-value")
+				.length == 4,
+			'each immutable Dynamic local should reference the one internal Obj.t representation; observed ${dynamicReferences.length} references and ${dynamicConversions.map(conversion -> conversion.conversion + ":" + conversion.inputSemanticTypeId).join(",")} conversions');
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
+			&& conversion.inputSemanticTypeId == "String")
+			.length == 1,
+			"a concrete String should enter Dynamic through one proof-backed Obj.repr conversion");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxConcreteToDynamic
+			&& conversion.inputSemanticTypeId == "Float")
+			.length == 1,
+			"an exact Float should enter Dynamic through one proof-backed Obj.repr conversion");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic
+			&& conversion.inputSemanticTypeId == "Bool")
+			.length == 1,
+			"exact Bool should enter Dynamic through its distinguishable runtime box");
+		assertTrue(dynamicConversions.filter(conversion -> conversion.conversion == OcamlLocalCarrierConversion.PreserveDynamicCarrier
+			&& conversion.inputSemanticTypeId == "Dynamic")
+			.length == 1,
+			"the null sentinel should preserve the already-selected Dynamic carrier");
+		final dynamicUnsafe = dynamicCarrierPlan.unsafeOperations();
+		assertTrue(dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.ObjReprConcreteToDynamic).length == 2
+			&& dynamicUnsafe.filter(operation -> operation.operation == OcamlUnsafeOperationKind.BoxExactBoolToDynamic).length == 1,
+			"only concrete and Bool Dynamic crossings should publish unsafe-operation proof records");
+		final dynamicEnumInput = Context.typeExpr(macro {
+			final constant:Dynamic = LocalDynamicEnum.Idle;
+			final payload:Dynamic = LocalDynamicEnum.Payload(7);
+			Std.string(constant) + Std.string(payload);
+		});
+		final dynamicEnumBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-enum-carrier",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-enum-carrier-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
+		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
+		final dynamicEnumPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities, dynamicEnumStorage, representations,
+			dynamicEnumBinding);
+		final dynamicEnumReferences = dynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic");
+		final dynamicEnumConversions = dynamicEnumPlan.conversions();
+		assertTrue(dynamicEnumReferences.length == 2 && dynamicEnumConversions.length == 2,
+			"constant and payload enum constructors should each seal one immutable Dynamic local conversion");
+		for (conversion in dynamicEnumConversions) {
+			assertTrue(conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic
+				&& conversion.inputSemanticTypeId == "LocalDynamicEnum"
+				&& conversion.inputCarrierTypeId == OcamlEnumDynamicCarrier.CARRIER_MODEL + ":LocalDynamicEnum"
+				&& conversion.outputSemanticTypeId == "Dynamic"
+				&& conversion.outputCarrierTypeId == OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
+				"an enum-to-Dynamic decision should name the exact Haxe enum, native variant carrier, and Dynamic output carrier");
+			assertTrue(conversion.unsafeOperation != null
+				&& conversion.unsafeOperation.operation == OcamlUnsafeOperationKind.BoxExactEnumToDynamic,
+				"an enum-to-Dynamic decision should own the Obj.repr plus HxEnum boxing boundary");
+			final requirement = OcamlEnumRuntimeRequirementRecorder.requirement(conversion);
+			assertTrue(requirement.id == OcamlEnumDynamicCarrier.runtimeRequirementId(conversion.id)
+				&& requirement.semanticCapability == OcamlEnumDynamicCarrier.RUNTIME_CAPABILITY
+				&& requirement.rootModules.join(",") == OcamlEnumDynamicCarrier.RUNTIME_MODULE
+				&& requirement.subject.id == "LocalDynamicEnum",
+				"the runtime requirement should trace HxEnum back to the exact sealed source conversion");
+		}
+		final dynamicArrayInput = Context.typeExpr(macro {
+			final values:Array<Dynamic> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
+			values;
+		});
+		final dynamicArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|dynamic-enum-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:dynamic-enum-array-elements-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final dynamicArrayPlan = OcamlContainerElementPlanner.planExpression(dynamicArrayInput, dynamicArrayBinding);
+		final dynamicArrayConversions = dynamicArrayPlan.decisions();
+		final dynamicArrayRequiredIds = dynamicArrayPlan.requiredConversionIds();
+		assertTrue(dynamicArrayConversions.length == 2 && dynamicArrayPlan.unsafeOperations().length == 2,
+			"constant and payload enum constructors should each seal one Array<Dynamic> element conversion");
+		assertTrue(dynamicArrayRequiredIds.length == 2
+			&& dynamicArrayRequiredIds.join(",") == dynamicArrayConversions.map(conversion -> conversion.id).join(","),
+			"the independent typed-body inventory should require exactly the two sealed conversions");
+		OcamlContainerElementPlanner.requireCompleteness(dynamicArrayInput, dynamicArrayBinding, dynamicArrayPlan);
+		final dynamicArrayIndices = dynamicArrayConversions.map(conversion -> conversion.elementIndex);
+		dynamicArrayIndices.sort((left, right) -> left - right);
+		assertTrue(dynamicArrayIndices.join(",") == "0,1", "the two decisions should retain distinct zero-based array element indices");
+		for (conversion in dynamicArrayConversions) {
+			assertTrue(conversion.inputSemanticTypeId == "LocalDynamicEnum"
+				&& conversion.inputCarrierTypeId == OcamlEnumDynamicCarrier.CARRIER_MODEL + ":LocalDynamicEnum"
+				&& conversion.outputSemanticTypeId == "Dynamic"
+				&& conversion.outputCarrierTypeId == OcamlEnumDynamicCarrier.DYNAMIC_CARRIER
+				&& conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic,
+				"an Array<Dynamic> element decision should retain its exact slot, enum identity, native carrier, and Dynamic output");
+			final requirement = OcamlEnumRuntimeRequirementRecorder.containerElementRequirement(conversion);
+			assertTrue(requirement.id == OcamlEnumDynamicCarrier.runtimeRequirementId(conversion.id)
+				&& requirement.subject.id == "LocalDynamicEnum"
+				&& requirement.rootModules.join(",") == OcamlEnumDynamicCarrier.RUNTIME_MODULE,
+				"an enum array-element decision should publish one source-owned HxEnum runtime requirement");
+		}
+		final firstArrayConversion = dynamicArrayConversions[0];
+		expectFailure("duplicate array element conversion", "duplicate-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion, firstArrayConversion], [firstArrayConversion.id]));
+		expectFailure("required array element without a conversion", "missing-required-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion], dynamicArrayRequiredIds));
+		expectFailure("array element conversion absent from required inventory", "unexpected-conversion",
+			() -> new OcamlContainerElementPlan([firstArrayConversion], []));
+		final duplicateStructuralSlot = copyPlanRecord(dynamicArrayConversions[1]);
+		duplicateStructuralSlot.elementIndex = firstArrayConversion.elementIndex;
+		reidentifyContainerConversion(duplicateStructuralSlot, dynamicArrayBinding);
+		expectFailure("two conversions occupying one structural array slot", "duplicate-structural-slot",
+			() -> new OcamlContainerElementPlan([firstArrayConversion, cast duplicateStructuralSlot]));
+		final wrongArrayCarrier = copyPlanRecord(firstArrayConversion);
+		wrongArrayCarrier.inputCarrierTypeId = OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum";
+		wrongArrayCarrier.unsafeOperation.inputCarrierTypeId = wrongArrayCarrier.inputCarrierTypeId;
+		expectFailure("wrong array enum carrier", "wrong-dynamic-carrier", () -> new OcamlContainerElementPlan([cast wrongArrayCarrier]));
+		final staleArraySource = copyPlanRecord(firstArrayConversion);
+		staleArraySource.source.min += 1;
+		staleArraySource.unsafeOperation.source.min += 1;
+		expectFailure("coherently changed array element source with its old ID", "noncanonical-identity",
+			() -> new OcamlContainerElementPlan([cast staleArraySource]));
+		final brokenArrayProof = copyPlanRecord(firstArrayConversion);
+		brokenArrayProof.unsafeOperation.proofId = "wrong-proof";
+		expectFailure("mismatched array unsafe proof", "unsafe-proof-mismatch", () -> new OcamlContainerElementPlan([cast brokenArrayProof]));
+		final staleArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: dynamicArrayBinding.functionId,
+			programRevision: dynamicArrayBinding.programRevision,
+			bodyRevision: "body:other-array-elements",
+			pipelineRevision: dynamicArrayBinding.pipelineRevision
+		};
+		expectFailure("stale array element binding", "stale-binding", () -> dynamicArrayPlan.requirePlanBinding(staleArrayBinding));
+		final duplicatePositionArrays = Context.typeExpr(macro {
+			final first:Array<Dynamic> = [LocalDynamicEnum.Idle];
+			final second:Array<Dynamic> = [LocalDynamicEnum.Payload(12)];
+			first.length + second.length;
+		});
+		final duplicatePositionArrayNodes:Array<TypedExpr> = [];
+		function collectArrayNodes(current:TypedExpr):Void {
+			switch (current.expr) {
+				case TArrayDecl(_):
+					duplicatePositionArrayNodes.push(current);
+					TypedExprTools.iter(current, collectArrayNodes);
+				case _:
+					TypedExprTools.iter(current, collectArrayNodes);
+			}
+		}
+		collectArrayNodes(duplicatePositionArrays);
+		assertTrue(duplicatePositionArrayNodes.length == 2, "the duplicated-position regression should contain exactly two array literals");
+		duplicatePositionArrayNodes[1].pos = duplicatePositionArrayNodes[0].pos;
+		final firstDuplicateItems = switch (duplicatePositionArrayNodes[0].expr) {
+			case TArrayDecl(items): items;
+			case _: [];
+		};
+		final secondDuplicateItems = switch (duplicatePositionArrayNodes[1].expr) {
+			case TArrayDecl(items): items;
+			case _: [];
+		};
+		secondDuplicateItems[0].pos = firstDuplicateItems[0].pos;
+		final duplicatePositionBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|duplicate-position-dynamic-enum-arrays",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:duplicate-position-dynamic-enum-arrays-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final duplicatePositionPlan = OcamlContainerElementPlanner.planExpression(duplicatePositionArrays, duplicatePositionBinding);
+		final duplicatePositionDecisions = duplicatePositionPlan.decisions();
+		final duplicatePositionOrdinals = duplicatePositionDecisions.map(decision -> decision.containerOrdinal);
+		duplicatePositionOrdinals.sort((left, right) -> left - right);
+		assertTrue(duplicatePositionDecisions.length == 2
+			&& duplicatePositionDecisions[0].id != duplicatePositionDecisions[1].id
+			&& duplicatePositionDecisions[0].containerSource.min == duplicatePositionDecisions[1].containerSource.min
+			&& duplicatePositionDecisions[0].containerSource.max == duplicatePositionDecisions[1].containerSource.max
+			&& duplicatePositionDecisions[0].source.min == duplicatePositionDecisions[1].source.min
+			&& duplicatePositionDecisions[0].source.max == duplicatePositionDecisions[1].source.max
+			&& duplicatePositionOrdinals.join(",") == "0,1",
+			"two macro-generated arrays with identical source positions must keep distinct deterministic structural ordinals");
+		OcamlContainerElementPlanner.requireCompleteness(duplicatePositionArrays, duplicatePositionBinding, duplicatePositionPlan);
+		final standaloneOwnerCompiler = new OcamlCompiler();
+		final firstStandaloneRoot = Context.typeExpr(macro([LocalDynamicEnum.Idle] : Array<Dynamic>));
+		final secondStandaloneRoot = Context.typeExpr(macro([LocalDynamicEnum.Payload(13)] : Array<Dynamic>));
+		secondStandaloneRoot.pos = firstStandaloneRoot.pos;
+		final firstStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(firstStandaloneRoot);
+		final repeatedStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(firstStandaloneRoot);
+		final secondStandaloneOwner = standaloneOwnerCompiler.compilerExpressionOwner(secondStandaloneRoot);
+		assertTrue(firstStandaloneOwner == repeatedStandaloneOwner
+			&& firstStandaloneOwner != secondStandaloneOwner
+			&& StringTools.endsWith(firstStandaloneOwner, ":root:0")
+			&& StringTools.endsWith(secondStandaloneOwner, ":root:1"),
+			"distinct macro-generated standalone roots with the same source span need separate stable request-local owners");
+		final excludedDynamicArrayInput = Context.typeExpr(macro {
+			final seed = LocalDynamicEnum.Idle;
+			final factory = () -> LocalDynamicEnum.Payload(9);
+			final holder = {value: LocalDynamicEnum.Payload(10)};
+			final nullable:Null<LocalDynamicEnum> = LocalDynamicEnum.Idle;
+			final localRead:Array<Dynamic> = [seed];
+			final callResult:Array<Dynamic> = [factory()];
+			final fieldRead:Array<Dynamic> = [holder.value];
+			final nullableRead:Array<Dynamic> = [nullable];
+			final exactEnumArray:Array<LocalDynamicEnum> = [LocalDynamicEnum.Idle, LocalDynamicEnum.Payload(11)];
+			[localRead, callResult, fieldRead, nullableRead, cast exactEnumArray];
+		});
+		final excludedDynamicArrayBinding:OcamlFunctionPlanBinding = {
+			functionId: "fixture|excluded-dynamic-enum-array-elements",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:excluded-dynamic-enum-array-elements-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		};
+		final excludedDynamicArrayPlan = OcamlContainerElementPlanner.planExpression(excludedDynamicArrayInput, excludedDynamicArrayBinding);
+		assertTrue(excludedDynamicArrayPlan.decisions().length == 0 && excludedDynamicArrayPlan.requiredConversionIds().length == 0,
+			"enum local reads, call results, field reads, nullable values, and exact enum arrays must remain outside the direct-constructor Array<Dynamic> slice");
+		OcamlContainerElementPlanner.requireCompleteness(excludedDynamicArrayInput, excludedDynamicArrayBinding, excludedDynamicArrayPlan);
+		final indirectDynamicEnumInput = Context.typeExpr(macro {
+			final seed = LocalDynamicEnum.Idle;
+			final fromLocal:Dynamic = seed;
+			final make = () -> LocalDynamicEnum.Payload(9);
+			final fromCall:Dynamic = make();
+			Std.string(fromLocal) + Std.string(fromCall);
+		});
+		final indirectDynamicEnumPlan = representationPlan(indirectDynamicEnumInput, representations, {
+			functionId: "fixture|indirect-dynamic-enum",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:indirect-dynamic-enum-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		});
+		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& indirectDynamicEnumPlan.conversions().length == 0,
+			"enum locals and function results must remain outside the direct-constructor Dynamic slice until their own data-flow boundaries are sealed");
+		final enumConversion = dynamicEnumConversions[0];
+		final enumReference = dynamicEnumReferences.filter(reference -> reference.localId == enumConversion.localId)[0];
+		final enumDecision:OcamlLocalRepresentationDecision = {
+			localId: enumReference.localId,
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(enumReference.representationId, enumReference.semanticTypeId, enumReference.domain),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		};
+		final wrongEnumCarrier:Dynamic = Reflect.copy(enumConversion);
+		Reflect.setField(wrongEnumCarrier, "inputCarrierTypeId", OcamlEnumDynamicCarrier.CARRIER_MODEL + ":OtherEnum");
+		expectFailure("wrong enum Dynamic carrier", "wrong-dynamic-carrier", () -> new OcamlLocalRepresentationPlan([enumDecision], [cast wrongEnumCarrier]));
+		final staleEnumSource = copyPlanRecord(enumConversion);
+		staleEnumSource.source.min += 1;
+		staleEnumSource.unsafeOperation.source.min += 1;
+		expectFailure("coherently changed enum source with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumSource]));
+		final staleEnumFunction = copyPlanRecord(enumConversion);
+		staleEnumFunction.functionId = "fixture|different-enum-function";
+		staleEnumFunction.unsafeOperation.functionId = staleEnumFunction.functionId;
+		expectFailure("coherently changed enum function with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumFunction]));
+		final staleEnumRevision = copyPlanRecord(enumConversion);
+		staleEnumRevision.bodyRevision = "body:dynamic-enum-carrier-stale";
+		staleEnumRevision.unsafeOperation.bodyRevision = staleEnumRevision.bodyRevision;
+		expectFailure("coherently changed enum body revision with its old ID", "noncanonical-local-conversion",
+			() -> new OcamlLocalRepresentationPlan([enumDecision], [cast staleEnumRevision]));
+		final priorPipelineEnum = copyPlanRecord(enumConversion);
+		priorPipelineEnum.pipelineRevision = "ocaml-function-plans-v59";
+		priorPipelineEnum.unsafeOperation.pipelineRevision = priorPipelineEnum.pipelineRevision;
+		final priorPipelineBinding:OcamlFunctionPlanBinding = {
+			functionId: priorPipelineEnum.functionId,
+			programRevision: priorPipelineEnum.programRevision,
+			bodyRevision: priorPipelineEnum.bodyRevision,
+			pipelineRevision: priorPipelineEnum.pipelineRevision
+		};
+		reidentifyConversion(priorPipelineEnum, priorPipelineBinding);
+		final priorPipelinePlan = new OcamlLocalRepresentationPlan([enumDecision], [cast priorPipelineEnum]);
+		expectFailure("canonical enum conversion from a prior target pipeline", "stale-local-conversion-binding",
+			() -> priorPipelinePlan.requirePlanBinding(dynamicEnumBinding));
+		final uninitializedDynamicInput = Context.typeExpr(macro {
+			var value:Dynamic;
+			value;
+		});
+		final uninitializedDynamicPlan = representationPlan(uninitializedDynamicInput, representations, {
+			functionId: "fixture|uninitialized-dynamic",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:uninitialized-dynamic-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		});
+		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& uninitializedDynamicPlan.conversions().length == 0,
+			"an implicitly initialized Dynamic local must remain outside the immutable occurrence-bound slice");
+		final reassignedDynamicInput = Context.typeExpr(macro {
+			var value:Dynamic = cast("first" : String);
+			value = cast(7 : Int);
+			Std.string(value);
+		});
+		final reassignedDynamicPlan = representationPlan(reassignedDynamicInput, representations, {
+			functionId: "fixture|reassigned-dynamic",
+			programRevision: "program:local-storage-fixture",
+			bodyRevision: "body:reassigned-dynamic-v1",
+			pipelineRevision: "ocaml-function-plans-v62"
+		});
+		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
+			&& reassignedDynamicPlan.conversions().length == 0,
+			"a reassigned Dynamic local must reject the entire immutable slice instead of publishing its initializer conversion");
+		final wrongDynamicRole:Dynamic = copyPlanRecord(dynamicConversions[0]);
+		wrongDynamicRole.role = OcamlLocalConversionRole.Assignment;
+		reidentifyConversion(wrongDynamicRole, dynamicCarrierBinding);
+		final dynamicDecisions:Array<OcamlLocalRepresentationDecision> = dynamicReferences.map(reference -> ({
+			localId: reference.localId,
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(reference.representationId, reference.semanticTypeId, reference.domain),
+			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+		}));
+		final wrongDynamicConversions = dynamicConversions.copy();
+		wrongDynamicConversions[0] = cast wrongDynamicRole;
+		expectFailure("wrong Dynamic conversion role", "invalid-dynamic-conversion-role",
+			() -> new OcamlLocalRepresentationPlan(dynamicDecisions, wrongDynamicConversions));
 		final returnedConversion = nullIntConversions[0];
 		Reflect.setField(returnedConversion, "proofId", "changed-by-caller");
 		assertTrue(nullIntPlan.conversions()[0].proofId != "changed-by-caller", "mutating a returned conversion must not change the sealed occurrence plan");
@@ -579,16 +1083,14 @@ class LocalStoragePlannerFixture {
 			final nullable:Array<Int> = null;
 			nullable;
 		});
-		final nullableArrayRepresentations = OcamlLocalRepresentationPlanner.planExpression(nullableArrayInput,
-			OcamlLocalStoragePlanner.planExpression(nullableArrayInput), representations);
+		final nullableArrayRepresentations = representationPlan(nullableArrayInput, representations);
 		assertTrue(nullableArrayRepresentations.count == 0, "a null-initialized Array<Int> local should stay on the existing sentinel conversion path");
 		final dynamicInitializerInput = Context.typeExpr(macro {
 			final dynamicValue:Dynamic = [1];
 			final converted:Array<Int> = cast dynamicValue;
 			converted;
 		});
-		final dynamicInitializerPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicInitializerInput,
-			OcamlLocalStoragePlanner.planExpression(dynamicInitializerInput), representations);
+		final dynamicInitializerPlan = representationPlan(dynamicInitializerInput, representations);
 		assertTrue(dynamicInitializerPlan.count == 0, "an Array<Int> local initialized through a Dynamic cast should stay on the explicit conversion path");
 		final nullableReplacementInput = Context.typeExpr(macro {
 			var nullableReplacement:Array<Int> = [1];
@@ -597,8 +1099,7 @@ class LocalStoragePlannerFixture {
 			}
 			nullableReplacement;
 		});
-		final nullableReplacementPlan = OcamlLocalRepresentationPlanner.planExpression(nullableReplacementInput,
-			OcamlLocalStoragePlanner.planExpression(nullableReplacementInput), representations);
+		final nullableReplacementPlan = representationPlan(nullableReplacementInput, representations);
 		final nullableReplacementLocal = switch (nullableReplacementInput.expr) {
 			case TBlock(expressions):
 				switch (expressions[0].expr) {
@@ -607,7 +1108,8 @@ class LocalStoragePlannerFixture {
 				}
 			case _: throw "nullable replacement regression input changed shape";
 		}
-		switch (nullableReplacementPlan.choiceFor(nullableReplacementLocal.id)) {
+		final nullableReplacementStableId = localIdentities(nullableReplacementInput, "fixture|representation").requireHostId(nullableReplacementLocal.id).id;
+		switch (nullableReplacementPlan.choiceFor(nullableReplacementStableId)) {
 			case Unmigrated(_):
 			case _:
 				throw "a local that can receive null should remain outside direct Array<Int> carrier conversion";
@@ -620,8 +1122,7 @@ class LocalStoragePlannerFixture {
 			}
 			converted;
 		});
-		final dynamicReplacementPlan = OcamlLocalRepresentationPlanner.planExpression(dynamicReplacementInput,
-			OcamlLocalStoragePlanner.planExpression(dynamicReplacementInput), representations);
+		final dynamicReplacementPlan = representationPlan(dynamicReplacementInput, representations);
 		final dynamicReplacementLocal = switch (dynamicReplacementInput.expr) {
 			case TBlock(expressions):
 				switch (expressions[1].expr) {
@@ -630,7 +1131,8 @@ class LocalStoragePlannerFixture {
 				}
 			case _: throw "Dynamic replacement regression input changed shape";
 		}
-		switch (dynamicReplacementPlan.choiceFor(dynamicReplacementLocal.id)) {
+		final dynamicReplacementStableId = localIdentities(dynamicReplacementInput, "fixture|representation").requireHostId(dynamicReplacementLocal.id).id;
+		switch (dynamicReplacementPlan.choiceFor(dynamicReplacementStableId)) {
 			case Unmigrated(_):
 			case _:
 				throw "a local assigned through a Dynamic cast should remain outside direct Array<Int> carrier conversion";
@@ -639,9 +1141,10 @@ class LocalStoragePlannerFixture {
 		Reflect.setField(returnedReference, "representationId", "changed-by-caller");
 		assertTrue(localRepresentations.referenceFor(returnedReference.localId).representationId != "changed-by-caller",
 			"mutating a returned local reference must not change the sealed function plan");
+		final syntheticStableLocalId = deterministicIdentities.requireHostId(deterministicHostId).id;
 		final legacyAssignmentPlan = new OcamlLocalRepresentationPlan([
 			{
-				localId: 70,
+				localId: syntheticStableLocalId,
 				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
 					OcamlRepresentationDomain.InternalValue),
 				initializerConversion: OcamlLocalCarrierConversion.Identity,
@@ -651,7 +1154,7 @@ class LocalStoragePlannerFixture {
 		]);
 		final identityAssignmentPlan = new OcamlLocalRepresentationPlan([
 			{
-				localId: 70,
+				localId: syntheticStableLocalId,
 				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
 					OcamlRepresentationDomain.InternalValue),
 				initializerConversion: OcamlLocalCarrierConversion.Identity,
@@ -662,10 +1165,31 @@ class LocalStoragePlannerFixture {
 		assertTrue(legacyAssignmentPlan.revision != identityAssignmentPlan.revision,
 			"changing one sealed local-carrier conversion should change the function-local representation revision");
 
-		expectFailure("duplicate local", "planned more than once", () -> new OcamlLocalStoragePlan([straightLine, straightLine]));
+		final duplicateStorageInput:OcamlLocalStorageDecision = {
+			localId: syntheticStableLocalId,
+			storage: OcamlLocalStorageKind.ImmutableRebinding,
+			reasons: [OcamlLocalStorageReason.StraightLineAssignment]
+		};
+		expectFailure("request-local storage identity", "invalid-lexical-local-identity", () -> new OcamlLocalStoragePlan([
+			{
+				localId: Std.string(deterministicHostId),
+				storage: OcamlLocalStorageKind.ImmutableRebinding,
+				reasons: [OcamlLocalStorageReason.StraightLineAssignment]
+			}
+		]));
+		expectFailure("duplicate local", "planned more than once", () -> new OcamlLocalStoragePlan([duplicateStorageInput, duplicateStorageInput]));
+		expectFailure("request-local representation identity", "invalid-lexical-local-identity", () -> new OcamlLocalRepresentationPlan([
+			{
+				localId: Std.string(deterministicHostId),
+				choice: OcamlLocalRepresentationChoice.Unmigrated("Array<Int>"),
+				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
+				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
+			}
+		]));
 		expectFailure("unmigrated identity conversion", "unmigrated but selects a non-legacy carrier conversion", () -> new OcamlLocalRepresentationPlan([
 			{
-				localId: 8,
+				localId: syntheticStableLocalId,
 				choice: OcamlLocalRepresentationChoice.Unmigrated("Array<Int>"),
 				initializerConversion: OcamlLocalCarrierConversion.Identity,
 				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
@@ -674,14 +1198,14 @@ class LocalStoragePlannerFixture {
 		]));
 		expectFailure("duplicate local representation choice", "more than one representation choice", () -> new OcamlLocalRepresentationPlan([
 			{
-				localId: 7,
+				localId: syntheticStableLocalId,
 				choice: OcamlLocalRepresentationChoice.Unmigrated("Float"),
 				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 				readConversion: OcamlLocalCarrierConversion.LegacyCoercion
 			},
 			{
-				localId: 7,
+				localId: syntheticStableLocalId,
 				choice: OcamlLocalRepresentationChoice.Unmigrated("Float"),
 				initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,

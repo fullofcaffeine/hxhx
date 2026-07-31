@@ -25,7 +25,7 @@ let lines = fun typeParams -> let tempArray = ref (Obj.magic (HxRuntime.hx_null)
     tempArray := __assign_3;
     __assign_3
   ));
-  let keyType = (HxArray.get (Obj.magic (!tempArray)) 0 : string) in let valueType = (HxArray.get (Obj.magic (!tempArray)) 1 : string) in let __arr_4 = HxArray.create () in (
+  let params = Obj.magic (!tempArray) in let keyType = (HxArray.get (Obj.magic params) 0 : string) in let valueType = (HxArray.get (Obj.magic params) 1 : string) in let __arr_4 = HxArray.create () in (
     ignore (HxArray.push __arr_4 "template<typename K>");
     ignore (HxArray.push __arr_4 "struct __hxhx_map_key_less {");
     ignore (HxArray.push __arr_4 "  bool operator()(const K& left, const K& right) const {");
@@ -45,7 +45,7 @@ let lines = fun typeParams -> let tempArray = ref (Obj.magic (HxRuntime.hx_null)
     ignore (HxArray.push __arr_4 "  }");
     ignore (HxArray.push __arr_4 "};");
     ignore (HxArray.push __arr_4 "");
-    ignore (HxArray.push __arr_4 (("template<typename " ^ HxString.toStdString (HxArray.join (!tempArray) ", typename " (fun x -> x))) ^ ">"));
+    ignore (HxArray.push __arr_4 (("template<typename " ^ HxString.toStdString (HxArray.join params ", typename " (fun x -> x))) ^ ">"));
     ignore (HxArray.push __arr_4 "struct Map {");
     ignore (HxArray.push __arr_4 (((((("  std::map<" ^ HxString.toStdString keyType) ^ ", ") ^ HxString.toStdString valueType) ^ ", __hxhx_map_key_less<") ^ HxString.toStdString keyType) ^ ">> values;"));
     ignore (HxArray.push __arr_4 "  Map() {}");
@@ -99,9 +99,9 @@ let lines = fun typeParams -> let tempArray = ref (Obj.magic (HxRuntime.hx_null)
     ignore (HxArray.push __arr_4 "  }");
     ignore (HxArray.push __arr_4 "}");
     ignore (HxArray.push __arr_4 "");
-    ignore (HxArray.push __arr_4 (("template<typename " ^ HxString.toStdString (HxArray.join (!tempArray) ", typename " (fun x -> x))) ^ ">"));
-    ignore (HxArray.push __arr_4 (("std::shared_ptr<Map<" ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ">> __hxhx_make_shared_Map() {"));
-    ignore (HxArray.push __arr_4 (("  return std::make_shared<Map<" ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ">>();"));
+    ignore (HxArray.push __arr_4 (("template<typename " ^ HxString.toStdString (HxArray.join params ", typename " (fun x -> x))) ^ ">"));
+    ignore (HxArray.push __arr_4 (("std::shared_ptr<Map<" ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ">> __hxhx_make_shared_Map() {"));
+    ignore (HxArray.push __arr_4 (("  return std::make_shared<Map<" ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ">>();"));
     ignore (HxArray.push __arr_4 "}");
     __arr_4
   )

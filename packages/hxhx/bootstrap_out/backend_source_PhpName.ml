@@ -13,88 +13,88 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpName" } : t)
 
-let globalFunction = fun name -> Backend_source_SourceIdentifier.sanitize (name : string)
+let globalFunction = fun (name : string) -> (let __call_arg_0_9 = name in Backend_source_SourceIdentifier.sanitize __call_arg_0_9 : string)
 
-let isReservedValueIdentifier = fun name -> let tempResult = ref (false : bool) in (
-  ignore (let tempString = ref ("" : string) in (
-    ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
-      tempString := __assign_10;
-      __assign_10
-    ) else let __assign_11 = (name : string) in (
-      tempString := __assign_11;
-      __assign_11
+let isReservedValueIdentifier = fun (name : string) -> (let tempResult = ref (false : bool) in (
+  ignore (let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if name == HxString.hx_null_string then let __assign_24 = ("" : string) in (
+      tempString := __assign_24;
+      __assign_24
+    ) else let __assign_25 = (name : string) in (
+      tempString := __assign_25;
+      __assign_25
     ));
     let _g = (!tempString : string) in match _g with
-      | "GLOBALS" | "_COOKIE" | "_ENV" | "_FILES" | "_GET" | "_POST" | "_REQUEST" | "_SERVER" | "_SESSION" -> let __assign_13 = true in (
-        tempResult := __assign_13;
-        __assign_13
+      | "GLOBALS" | "_COOKIE" | "_ENV" | "_FILES" | "_GET" | "_POST" | "_REQUEST" | "_SERVER" | "_SESSION" -> let __assign_27 = true in (
+        tempResult := __assign_27;
+        __assign_27
       )
-      | _ -> let __assign_12 = false in (
-        tempResult := __assign_12;
-        __assign_12
+      | _ -> let __assign_26 = false in (
+        tempResult := __assign_26;
+        __assign_26
       )
   ));
   !tempResult
-)
+) : bool)
 
-let valueIdentifier = fun name -> let clean = (Backend_source_SourceIdentifier.sanitize (name : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if isReservedValueIdentifier (clean : string) then let __assign_3 = (HxString.toStdString clean ^ "_" : string) in (
+let valueIdentifier = fun (name : string) -> (let clean = let __call_arg_0_5 = name in Backend_source_SourceIdentifier.sanitize __call_arg_0_5 in let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if let __call_arg_0_6 = clean in isReservedValueIdentifier __call_arg_0_6 then let __assign_7 = HxString.toStdString clean ^ "_" in (
+    tempResult := __assign_7;
+    __assign_7
+  ) else let __assign_8 = clean in (
+    tempResult := __assign_8;
+    __assign_8
+  ));
+  !tempResult
+) : string)
+
+let isReservedTypeIdentifier = fun (name : string) -> (let tempResult = ref (false : bool) in (
+  ignore (let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if name == HxString.hx_null_string then let __assign_28 = ("" : string) in (
+      tempString := __assign_28;
+      __assign_28
+    ) else let __assign_29 = (HxString.toLowerCase name () : string) in (
+      tempString := __assign_29;
+      __assign_29
+    ));
+    let _g = (!tempString : string) in match _g with
+      | "abstract" | "and" | "array" | "as" | "break" | "callable" | "case" | "catch" | "class" | "clone" | "const" | "continue" | "declare" | "default" | "die" | "do" | "echo" | "else" | "elseif" | "empty" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" | "endwhile" | "enum" | "error" | "eval" | "exit" | "extends" | "false" | "final" | "finally" | "fn" | "for" | "foreach" | "from" | "function" | "global" | "goto" | "if" | "implements" | "include" | "include_once" | "instanceof" | "insteadof" | "interface" | "isset" | "list" | "match" | "namespace" | "new" | "null" | "or" | "parent" | "print" | "private" | "protected" | "public" | "readonly" | "require" | "require_once" | "return" | "self" | "static" | "switch" | "throw" | "trait" | "true" | "try" | "unset" | "use" | "var" | "while" | "xor" | "yield" -> let __assign_31 = true in (
+        tempResult := __assign_31;
+        __assign_31
+      )
+      | _ -> let __assign_30 = false in (
+        tempResult := __assign_30;
+        __assign_30
+      )
+  ));
+  !tempResult
+) : bool)
+
+let typeIdentifier = fun (name : string) -> (let clean = let __call_arg_0_1 = name in Backend_source_SourceIdentifier.sanitize __call_arg_0_1 in let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if let __call_arg_0_2 = clean in isReservedTypeIdentifier __call_arg_0_2 then let __assign_3 = HxString.toStdString clean ^ "_" in (
     tempResult := __assign_3;
     __assign_3
-  ) else let __assign_4 = (clean : string) in (
+  ) else let __assign_4 = clean in (
     tempResult := __assign_4;
     __assign_4
   ));
   !tempResult
-)
+) : string)
 
-let isReservedTypeIdentifier = fun name -> let tempResult = ref (false : bool) in (
-  ignore (let tempString = ref ("" : string) in (
-    ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
-      tempString := __assign_14;
-      __assign_14
-    ) else let __assign_15 = (HxString.toLowerCase name () : string) in (
-      tempString := __assign_15;
-      __assign_15
-    ));
-    let _g = (!tempString : string) in match _g with
-      | "abstract" | "and" | "array" | "as" | "break" | "callable" | "case" | "catch" | "class" | "clone" | "const" | "continue" | "declare" | "default" | "die" | "do" | "echo" | "else" | "elseif" | "empty" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" | "endwhile" | "enum" | "error" | "eval" | "exit" | "extends" | "false" | "final" | "finally" | "fn" | "for" | "foreach" | "from" | "function" | "global" | "goto" | "if" | "implements" | "include" | "include_once" | "instanceof" | "insteadof" | "interface" | "isset" | "list" | "match" | "namespace" | "new" | "null" | "or" | "parent" | "print" | "private" | "protected" | "public" | "readonly" | "require" | "require_once" | "return" | "self" | "static" | "switch" | "throw" | "trait" | "true" | "try" | "unset" | "use" | "var" | "while" | "xor" | "yield" -> let __assign_17 = true in (
-        tempResult := __assign_17;
-        __assign_17
-      )
-      | _ -> let __assign_16 = false in (
-        tempResult := __assign_16;
-        __assign_16
-      )
-  ));
-  !tempResult
-)
-
-let typeIdentifier = fun name -> let clean = (Backend_source_SourceIdentifier.sanitize (name : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if isReservedTypeIdentifier (clean : string) then let __assign_1 = (HxString.toStdString clean ^ "_" : string) in (
-    tempResult := __assign_1;
-    __assign_1
-  ) else let __assign_2 = (clean : string) in (
-    tempResult := __assign_2;
-    __assign_2
-  ));
-  !tempResult
-)
-
-let rec typePath = fun path -> try let __fallback_result_9 = (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr ("Unknown" : string))) else ());
-  ignore (if StringTools.startsWith (path : string) ("std." : string) then raise (HxRuntime.Hx_return (Obj.repr (typePath (HxString.substr path 4 (-1) : string) : string))) else ());
-  ignore (if HxString.equals path "haxe.io.Error" then raise (HxRuntime.Hx_return (Obj.repr (typeIdentifier ("Error" : string) : string))) else ());
-  ignore (if StringTools.startsWith (path : string) ("php." : string) || StringTools.startsWith (path : string) ("haxe." : string) then ignore (let _g = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in let _g1 = ref 0 in let _g2 = Obj.magic (HxString.split path ".") in (
+let rec typePath = fun (path : string) -> (try (
+  ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr "Unknown")) else ());
+  ignore (if let __call_arg_0_10 = path in let __call_arg_1_11 = "std." in StringTools.startsWith __call_arg_0_10 __call_arg_1_11 then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_12 = HxString.substr path 4 (-1) in typePath __call_arg_0_12))) else ());
+  ignore (if HxString.equals path "haxe.io.Error" then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_13 = "Error" in typeIdentifier __call_arg_0_13))) else ());
+  ignore (if (let __call_arg_0_14 = path in let __call_arg_1_15 = "php." in StringTools.startsWith __call_arg_0_14 __call_arg_1_15) || (let __call_arg_0_16 = path in let __call_arg_1_17 = "haxe." in StringTools.startsWith __call_arg_0_16 __call_arg_1_17) then ignore (let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let _g1 = ref 0 in let _g2 = Obj.magic (HxString.split path ".") in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let part = (HxArray.get (Obj.magic _g2) (!_g1) : string) in (
-      ignore (let __old_6 = !_g1 in let __new_7 = HxInt.add __old_6 1 in (
-        ignore (_g1 := __new_7);
-        __new_7
+      ignore (let __old_19 = !_g1 in let __new_20 = HxInt.add __old_19 1 in (
+        ignore (_g1 := __new_20);
+        __new_20
       ));
-      HxArray.push _g (typeIdentifier (part : string))
+      HxArray.push _g (let __call_arg_0_21 = part in typeIdentifier __call_arg_0_21)
     )) done);
     let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (HxArray.join tempArray "\\" (fun x -> x))))
   )) else ());
-  let parts = Obj.magic (HxString.split path ".") in typeIdentifier (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string)
-) in Obj.magic __fallback_result_9 with
-  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
+  let parts = Obj.magic (HxString.split path ".") in let __call_arg_0_22 = HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) in typeIdentifier __call_arg_0_22
+) with
+  | HxRuntime.Hx_return __ret_23 -> (Obj.obj __ret_23 : string) : string)

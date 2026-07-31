@@ -51,8 +51,17 @@
     {
       "module": "HxBytes",
       "scope": "application",
-      "files": [{ "path": "HxBytes.ml", "sha256": "ed49bcd6de29db07cfab2f1867a799e2a8102b376b0b674af55e4f2e047b48c9" }],
+      "files": [{ "path": "HxBytes.ml", "sha256": "404fe8a85d9d0bd660f253ada6729520f5424208c91729636903fdc3e0917713" }],
       "dependencies": ["HxRuntime"],
+      "duneLibraries": [],
+      "profiles": ["metal", "portable"],
+      "license": "MIT"
+    },
+    {
+      "module": "HxDynamic",
+      "scope": "application",
+      "files": [{ "path": "HxDynamic.ml", "sha256": "85294135b69799d1a476f444b45832eda597ebae2dc7f16f488d18f7e7c135e4" }],
+      "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"
@@ -78,7 +87,7 @@
     {
       "module": "HxFile",
       "scope": "application",
-      "files": [{ "path": "HxFile.ml", "sha256": "08ffce8b27046461491d0d6d5267d6864db75d54e487ecf305d3d6e1d4616fd2" }],
+      "files": [{ "path": "HxFile.ml", "sha256": "9ebcd9c3944652ded8f256bdc7336b703a384d5210bc836892c13a51e47a0696" }],
       "dependencies": ["HxBytes"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -96,7 +105,7 @@
     {
       "module": "HxFileSystem",
       "scope": "application",
-      "files": [{ "path": "HxFileSystem.ml", "sha256": "4661fa39a1b773840820f4a646daf6e956a49a466c2ba413a320e3ad0206d111" }],
+      "files": [{ "path": "HxFileSystem.ml", "sha256": "359dd208b48b1b24276c201b51aa3ebed11cf15f9f88ae8c9f3c8df1f46e5247" }],
       "dependencies": ["Date", "HxArray"],
       "duneLibraries": ["unix"],
       "profiles": ["metal", "portable"],
@@ -123,7 +132,7 @@
     {
       "module": "HxHxCompilerServer",
       "scope": "tooling",
-      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "15ee002a5f583050a5cfdf6c9b7b2f6309bd3205317751459f1be4707fbb99ea" }],
+      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "95d98ed8dc38fc73cbe7eb4f5e0ad6e750be28a98fc586cc06e8c1c91ebaaea3" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": ["unix"],
       "profiles": ["portable"],
@@ -195,7 +204,7 @@
     {
       "module": "HxRuntime",
       "scope": "application",
-      "files": [{ "path": "HxRuntime.ml", "sha256": "55b5eaf74a7bfc56f89cb16d44d09bbe6e05ae8ed56f3f677b12bd3baf916515" }],
+      "files": [{ "path": "HxRuntime.ml", "sha256": "12d7d500fd3d858228025d7b58d29e9bff38cb87faba7e2b1de014ee05652037" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -222,8 +231,8 @@
     {
       "module": "HxSys",
       "scope": "application",
-      "files": [{ "path": "HxSys.ml", "sha256": "05d02d882ac38194e29d536b2c8bc9d09a53ccdad0f47f38dbcbc9314ae3799b" }],
-      "dependencies": ["HxArray", "HxMap", "HxRuntime"],
+      "files": [{ "path": "HxSys.ml", "sha256": "89c79dadf1091696986ca2698e382d9bdf6752956181b0ec8e9f5d19dd5bce12" }],
+      "dependencies": ["HxArray", "HxDynamic", "HxMap", "HxRuntime"],
       "duneLibraries": ["unix"],
       "profiles": ["metal", "portable"],
       "license": "MIT"
@@ -240,7 +249,7 @@
     {
       "module": "HxType",
       "scope": "application",
-      "files": [{ "path": "HxType.ml", "sha256": "2aaf6cd2964114c8394eb8f0c13bb1210b104bf37b50bc5396822b42a768e4b1" }],
+      "files": [{ "path": "HxType.ml", "sha256": "b934a16dff9f495628f4bc8c35ec349ca6cff646a56acaf24e966be6fe64bde3" }],
       "dependencies": ["HxArray", "HxEnum", "HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -258,8 +267,8 @@
     {
       "module": "Std",
       "scope": "application",
-      "files": [{ "path": "Std.ml", "sha256": "05b780c940ecbf782d4404b87971bede395943e789646886f92ce5ebfaa4b3d0" }],
-      "dependencies": ["HxRuntime", "HxType"],
+      "files": [{ "path": "Std.ml", "sha256": "86e3b4e1b69864cdf07fe05f4242b2635f16eb3fcfbbc87d540ad97c23b540ac" }],
+      "dependencies": ["HxDynamic", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"
@@ -267,8 +276,8 @@
     {
       "module": "haxe_CallStack",
       "scope": "application",
-      "files": [{ "path": "haxe_CallStack.ml", "sha256": "a955defede0ddc3be802f8ec21e7e930ad9a247d2088cd21b03794a1164bf13c" }],
-      "dependencies": ["HxArray", "HxBacktrace", "HxRuntime"],
+      "files": [{ "path": "haxe_CallStack.ml", "sha256": "5ed6274849e2caa326df5ddc5e7424b431dd203ecf521b21c636af53715ba661" }],
+      "dependencies": ["HxArray", "HxBacktrace", "HxDynamic"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"

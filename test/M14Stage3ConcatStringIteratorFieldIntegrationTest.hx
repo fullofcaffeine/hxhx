@@ -46,7 +46,7 @@ class M14Stage3ConcatStringIteratorFieldIntegrationTest {
 			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
 			final ocaml = File.getContent(mainMl);
 			assertTrue(ocaml.indexOf('string_of_int field') < 0, 'Stage3 concat regression: identifier stringification emitted string_of_int field.');
-			assertTrue(ocaml.indexOf('HxRuntime.dynamic_toStdString (Obj.repr (field))') >= 0,
+			assertTrue(ocaml.indexOf('HxDynamic.toStdString (Obj.repr (field))') >= 0,
 				'Stage3 concat should stringify identifiers through the runtime Std.string path.');
 		} catch (e:Dynamic) {
 			thrown = e;

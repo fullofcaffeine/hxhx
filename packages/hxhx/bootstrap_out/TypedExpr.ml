@@ -108,53 +108,53 @@ let create = fun tag2 hx_type position2 texts2 expressions2 patterns2 boolValue2
               (Obj.magic self : t).patterns <- __assign_17;
               __assign_17
             ));
-            ignore (let __assign_18 = boolValue2 in (
-              (Obj.magic self : t).boolValue <- __assign_18;
-              __assign_18
+            ignore (let __place_receiver_18 = self in let __place_rhs_19 = boolValue2 in (
+              (__place_receiver_18 : t).boolValue <- __place_rhs_19;
+              __place_rhs_19
             ));
-            ignore (let __place_receiver_19 = self in let __place_rhs_20 = intValue2 in (
-              (__place_receiver_19 : t).intValue <- __place_rhs_20;
-              __place_rhs_20
+            ignore (let __place_receiver_20 = self in let __place_rhs_21 = intValue2 in (
+              (__place_receiver_20 : t).intValue <- __place_rhs_21;
+              __place_rhs_21
             ));
-            ignore (let __assign_21 = floatValue2 in (
-              (Obj.magic self : t).floatValue <- __assign_21;
-              __assign_21
-            ));
-            ignore (let __assign_22 = Obj.magic declaration2 in (
-              (Obj.magic self : t).declaration <- __assign_22;
+            ignore (let __assign_22 = floatValue2 in (
+              (Obj.magic self : t).floatValue <- __assign_22;
               __assign_22
             ));
-            ignore (let __assign_23 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" unaryOperator2)) in (
-              (Obj.magic self : t).unaryOperator <- __assign_23;
+            ignore (let __assign_23 = Obj.magic declaration2 in (
+              (Obj.magic self : t).declaration <- __assign_23;
               __assign_23
             ));
-            ignore (let __assign_24 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" unaryFixity2)) in (
-              (Obj.magic self : t).unaryFixity <- __assign_24;
+            ignore (let __assign_24 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" unaryOperator2)) in (
+              (Obj.magic self : t).unaryOperator <- __assign_24;
               __assign_24
             ));
-            ignore (let __assign_25 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" opaqueKind2)) in (
-              (Obj.magic self : t).opaqueKind <- __assign_25;
+            ignore (let __assign_25 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" unaryFixity2)) in (
+              (Obj.magic self : t).unaryFixity <- __assign_25;
               __assign_25
             ));
-            ignore (let __assign_26 = Obj.magic fieldInfo2 in (
-              (Obj.magic self : t).fieldInfo <- __assign_26;
+            ignore (let __assign_26 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" opaqueKind2)) in (
+              (Obj.magic self : t).opaqueKind <- __assign_26;
               __assign_26
             ));
+            ignore (let __assign_27 = Obj.magic fieldInfo2 in (
+              (Obj.magic self : t).fieldInfo <- __assign_27;
+              __assign_27
+            ));
             let tempRight4 = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t HxArray.t) in (
-              ignore (if localBindings2 == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (let __arr_28 = HxArray.create () in __arr_28) in (
-                tempRight4 := __assign_27;
-                __assign_27
-              ) else let __assign_29 = Obj.magic (HxArray.copy localBindings2) in (
-                tempRight4 := __assign_29;
-                __assign_29
-              ));
-              ignore (let __assign_30 = Obj.magic (!tempRight4) in (
-                (Obj.magic self : t).localBindings <- __assign_30;
+              ignore (if localBindings2 == Obj.magic (HxRuntime.hx_null) then let __assign_28 = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in (
+                tempRight4 := __assign_28;
+                __assign_28
+              ) else let __assign_30 = Obj.magic (HxArray.copy localBindings2) in (
+                tempRight4 := __assign_30;
                 __assign_30
               ));
-              let __assign_31 = Obj.magic extensionProvider2 in (
-                (Obj.magic self : t).extensionProvider <- __assign_31;
+              ignore (let __assign_31 = Obj.magic (!tempRight4) in (
+                (Obj.magic self : t).localBindings <- __assign_31;
                 __assign_31
+              ));
+              let __assign_32 = Obj.magic extensionProvider2 in (
+                (Obj.magic self : t).extensionProvider <- __assign_32;
+                __assign_32
               )
             )
           )
@@ -184,12 +184,12 @@ let getBoolValue = fun self () -> (Obj.magic self : t).boolValue
 let getRequiresOwnerQualification = fun self () -> (Obj.magic self : t).boolValue
 
 let getExtensionProvider = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
-  ignore (if (Obj.magic self : t).tag = Call then let __assign_32 = Obj.magic (Obj.magic ((Obj.magic self : t).extensionProvider)) in (
-    tempResult := __assign_32;
-    __assign_32
-  ) else let __assign_33 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if (Obj.magic self : t).tag = Call then let __assign_33 = Obj.magic (Obj.magic ((Obj.magic self : t).extensionProvider)) in (
     tempResult := __assign_33;
     __assign_33
+  ) else let __assign_34 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_34;
+    __assign_34
   ));
   !tempResult
 )
@@ -222,17 +222,17 @@ let nullValue = fun hx_type position2 -> create (Obj.magic NullValue) (Obj.magic
 
 let boolLiteral = fun value hx_type position2 -> create (Obj.magic BoolValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) value (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let stringLiteral = fun value hx_type position2 -> let tempString = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_34 = ("" : string) in (
-    tempString := __assign_34;
-    __assign_34
-  ) else let __assign_35 = (value : string) in (
+let stringLiteral = fun value hx_type position2 -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_35 = ("" : string) in (
     tempString := __assign_35;
     __assign_35
+  ) else let __assign_36 = (value : string) in (
+    tempString := __assign_36;
+    __assign_36
   ));
-  create (Obj.magic StringValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_36 = HxArray.create () in (
-    ignore (HxArray.push __arr_36 (!tempString));
-    __arr_36
+  create (Obj.magic StringValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_37 = HxArray.create () in (
+    ignore (HxArray.push __arr_37 (!tempString));
+    __arr_37
   ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 )
 
@@ -240,9 +240,9 @@ let intLiteral = fun value hx_type position2 -> create (Obj.magic IntValue) (Obj
 
 let floatLiteral = fun value hx_type position2 -> create (Obj.magic FloatValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 value (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let enumValue = fun name hx_type position2 -> create (Obj.magic EnumValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_37 = HxArray.create () in (
-  ignore (HxArray.push __arr_37 name);
-  __arr_37
+let enumValue = fun name hx_type position2 -> create (Obj.magic EnumValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_38 = HxArray.create () in (
+  ignore (HxArray.push __arr_38 name);
+  __arr_38
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let thisValue = fun hx_type position2 -> create (Obj.magic ThisValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
@@ -250,121 +250,121 @@ let thisValue = fun hx_type position2 -> create (Obj.magic ThisValue) (Obj.magic
 let superValue = fun hx_type position2 -> create (Obj.magic SuperValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let localRead = fun name hx_type position2 binding -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t HxArray.t) in (
-  ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_38 = Obj.magic (Obj.magic (let __arr_39 = HxArray.create () in __arr_39)) in (
-    tempMaybeArray := __assign_38;
-    __assign_38
-  ) else let __assign_40 = Obj.magic (Obj.magic (let __arr_41 = HxArray.create () in (
-    ignore (HxArray.push __arr_41 binding);
-    __arr_41
-  ))) in (
-    tempMaybeArray := __assign_40;
-    __assign_40
-  ));
-  create (Obj.magic LocalRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_42 = HxArray.create () in (
-    ignore (HxArray.push __arr_42 name);
+  ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_39 = Obj.magic (Obj.magic (let __arr_40 = HxArray.create () in __arr_40)) in (
+    tempMaybeArray := __assign_39;
+    __assign_39
+  ) else let __assign_41 = Obj.magic (Obj.magic (let __arr_42 = HxArray.create () in (
+    ignore (HxArray.push __arr_42 binding);
     __arr_42
+  ))) in (
+    tempMaybeArray := __assign_41;
+    __assign_41
+  ));
+  create (Obj.magic LocalRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_43 = HxArray.create () in (
+    ignore (HxArray.push __arr_43 name);
+    __arr_43
   ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (!tempMaybeArray)) (Obj.magic (HxRuntime.hx_null))
 )
 
-let nameRead = fun name hx_type position2 fieldInfo2 requiresOwnerQualification -> let requiresOwnerQualification = if Obj.repr requiresOwnerQualification == HxRuntime.hx_null then false else requiresOwnerQualification in create (Obj.magic NameRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_43 = HxArray.create () in (
-  ignore (HxArray.push __arr_43 name);
-  __arr_43
+let nameRead = fun name hx_type position2 fieldInfo2 requiresOwnerQualification -> let requiresOwnerQualification = if Obj.repr requiresOwnerQualification == HxRuntime.hx_null then false else requiresOwnerQualification in create (Obj.magic NameRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_44 = HxArray.create () in (
+  ignore (HxArray.push __arr_44 name);
+  __arr_44
 ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) requiresOwnerQualification 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic fieldInfo2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let fieldRead = fun hx_object field hx_type position2 fieldInfo2 -> create (Obj.magic FieldRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_44 = HxArray.create () in (
-  ignore (HxArray.push __arr_44 field);
-  __arr_44
-))) (Obj.magic (let __arr_45 = HxArray.create () in (
-  ignore (HxArray.push __arr_45 hx_object);
+let fieldRead = fun hx_object field hx_type position2 fieldInfo2 -> create (Obj.magic FieldRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_45 = HxArray.create () in (
+  ignore (HxArray.push __arr_45 field);
   __arr_45
+))) (Obj.magic (let __arr_46 = HxArray.create () in (
+  ignore (HxArray.push __arr_46 hx_object);
+  __arr_46
 ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic fieldInfo2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let nullSafeFieldRead = fun hx_object field hx_type position2 -> create (Obj.magic NullSafeFieldRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_46 = HxArray.create () in (
-  ignore (HxArray.push __arr_46 field);
-  __arr_46
-))) (Obj.magic (let __arr_47 = HxArray.create () in (
-  ignore (HxArray.push __arr_47 hx_object);
+let nullSafeFieldRead = fun hx_object field hx_type position2 -> create (Obj.magic NullSafeFieldRead) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_47 = HxArray.create () in (
+  ignore (HxArray.push __arr_47 field);
   __arr_47
+))) (Obj.magic (let __arr_48 = HxArray.create () in (
+  ignore (HxArray.push __arr_48 hx_object);
+  __arr_48
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let call = fun callee arguments declaration2 hx_type position2 requiresOwnerQualification extensionProvider2 -> let requiresOwnerQualification = if Obj.repr requiresOwnerQualification == HxRuntime.hx_null then false else requiresOwnerQualification in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-  ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_48 = Obj.magic (let __arr_49 = HxArray.create () in __arr_49) in (
-    tempArray := __assign_48;
-    __assign_48
-  ) else let __assign_50 = Obj.magic arguments in (
-    tempArray := __assign_50;
-    __assign_50
+  ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_49 = Obj.magic (let __arr_50 = HxArray.create () in __arr_50) in (
+    tempArray := __assign_49;
+    __assign_49
+  ) else let __assign_51 = Obj.magic arguments in (
+    tempArray := __assign_51;
+    __assign_51
   ));
-  create (Obj.magic Call) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_51 = HxArray.create () in (
-    ignore (HxArray.push __arr_51 callee);
-    __arr_51
+  create (Obj.magic Call) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_52 = HxArray.create () in (
+    ignore (HxArray.push __arr_52 callee);
+    __arr_52
   )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) requiresOwnerQualification 0 0.0 (Obj.magic declaration2) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic extensionProvider2)
 )
 
 let returnExpr = fun expression hx_type position2 -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-  ignore (if expression == Obj.magic (HxRuntime.hx_null) then let __assign_52 = Obj.magic (Obj.magic (let __arr_53 = HxArray.create () in __arr_53)) in (
-    tempMaybeArray := __assign_52;
-    __assign_52
-  ) else let __assign_54 = Obj.magic (Obj.magic (let __arr_55 = HxArray.create () in (
-    ignore (HxArray.push __arr_55 expression);
-    __arr_55
+  ignore (if expression == Obj.magic (HxRuntime.hx_null) then let __assign_53 = Obj.magic (Obj.magic (let __arr_54 = HxArray.create () in __arr_54)) in (
+    tempMaybeArray := __assign_53;
+    __assign_53
+  ) else let __assign_55 = Obj.magic (Obj.magic (let __arr_56 = HxArray.create () in (
+    ignore (HxArray.push __arr_56 expression);
+    __arr_56
   ))) in (
-    tempMaybeArray := __assign_54;
-    __assign_54
+    tempMaybeArray := __assign_55;
+    __assign_55
   ));
   create (Obj.magic ReturnExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (!tempMaybeArray)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 )
 
-let variableDeclaration = fun name typeHint hx_initializer isFinal isStatic hx_type position2 binding -> let tempString = ref ("" : string) in (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_56 = ("" : string) in (
-    tempString := __assign_56;
-    __assign_56
-  ) else let __assign_57 = (name : string) in (
+let variableDeclaration = fun name typeHint hx_initializer isFinal isStatic hx_type position2 binding -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if name == HxString.hx_null_string then let __assign_57 = ("" : string) in (
     tempString := __assign_57;
     __assign_57
+  ) else let __assign_58 = (name : string) in (
+    tempString := __assign_58;
+    __assign_58
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_58 = ("" : string) in (
-      tempString1 := __assign_58;
-      __assign_58
-    ) else let __assign_59 = (typeHint : string) in (
+  let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if typeHint == HxString.hx_null_string then let __assign_59 = ("" : string) in (
       tempString1 := __assign_59;
       __assign_59
+    ) else let __assign_60 = (typeHint : string) in (
+      tempString1 := __assign_60;
+      __assign_60
     ));
     let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-      ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_60 = Obj.magic (Obj.magic (let __arr_61 = HxArray.create () in __arr_61)) in (
-        tempMaybeArray := __assign_60;
-        __assign_60
-      ) else let __assign_62 = Obj.magic (Obj.magic (let __arr_63 = HxArray.create () in (
-        ignore (HxArray.push __arr_63 hx_initializer);
-        __arr_63
+      ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_61 = Obj.magic (Obj.magic (let __arr_62 = HxArray.create () in __arr_62)) in (
+        tempMaybeArray := __assign_61;
+        __assign_61
+      ) else let __assign_63 = Obj.magic (Obj.magic (let __arr_64 = HxArray.create () in (
+        ignore (HxArray.push __arr_64 hx_initializer);
+        __arr_64
       ))) in (
-        tempMaybeArray := __assign_62;
-        __assign_62
+        tempMaybeArray := __assign_63;
+        __assign_63
       ));
       let tempNumber = ref (0 : int) in (
-        ignore (if isStatic then let __assign_64 = 1 in (
-          tempNumber := __assign_64;
-          __assign_64
-        ) else let __assign_65 = 0 in (
+        ignore (if isStatic then let __assign_65 = 1 in (
           tempNumber := __assign_65;
           __assign_65
+        ) else let __assign_66 = 0 in (
+          tempNumber := __assign_66;
+          __assign_66
         ));
         let tempMaybeArray1 = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t HxArray.t) in (
-          ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_66 = Obj.magic (Obj.magic (let __arr_67 = HxArray.create () in __arr_67)) in (
-            tempMaybeArray1 := __assign_66;
-            __assign_66
-          ) else let __assign_68 = Obj.magic (Obj.magic (let __arr_69 = HxArray.create () in (
-            ignore (HxArray.push __arr_69 binding);
-            __arr_69
-          ))) in (
-            tempMaybeArray1 := __assign_68;
-            __assign_68
-          ));
-          create (Obj.magic VariableDeclaration) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_70 = HxArray.create () in (
-            ignore (HxArray.push __arr_70 (!tempString));
-            ignore (HxArray.push __arr_70 (!tempString1));
+          ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_67 = Obj.magic (Obj.magic (let __arr_68 = HxArray.create () in __arr_68)) in (
+            tempMaybeArray1 := __assign_67;
+            __assign_67
+          ) else let __assign_69 = Obj.magic (Obj.magic (let __arr_70 = HxArray.create () in (
+            ignore (HxArray.push __arr_70 binding);
             __arr_70
+          ))) in (
+            tempMaybeArray1 := __assign_69;
+            __assign_69
+          ));
+          create (Obj.magic VariableDeclaration) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_71 = HxArray.create () in (
+            ignore (HxArray.push __arr_71 (!tempString));
+            ignore (HxArray.push __arr_71 (!tempString1));
+            __arr_71
           ))) (Obj.magic (!tempMaybeArray)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) isFinal (!tempNumber) 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (!tempMaybeArray1)) (Obj.magic (HxRuntime.hx_null))
         )
       )
@@ -375,16 +375,16 @@ let variableDeclaration = fun name typeHint hx_initializer isFinal isStatic hx_t
 let variableDeclarations = fun declarations hx_type position2 -> create (Obj.magic VariableDeclarations) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic declarations) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let whileExpr = fun condition body bodyIsBlock hx_type position2 -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-  ignore (if body == Obj.magic (HxRuntime.hx_null) then let __assign_71 = Obj.magic (let __arr_72 = HxArray.create () in __arr_72) in (
-    tempArray := __assign_71;
-    __assign_71
-  ) else let __assign_73 = Obj.magic body in (
-    tempArray := __assign_73;
-    __assign_73
+  ignore (if body == Obj.magic (HxRuntime.hx_null) then let __assign_72 = Obj.magic (let __arr_73 = HxArray.create () in __arr_73) in (
+    tempArray := __assign_72;
+    __assign_72
+  ) else let __assign_74 = Obj.magic body in (
+    tempArray := __assign_74;
+    __assign_74
   ));
-  create (Obj.magic WhileExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_74 = HxArray.create () in (
-    ignore (HxArray.push __arr_74 condition);
-    __arr_74
+  create (Obj.magic WhileExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_75 = HxArray.create () in (
+    ignore (HxArray.push __arr_75 condition);
+    __arr_75
   )) (!tempArray))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) bodyIsBlock (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 )
 
@@ -392,162 +392,162 @@ let breakExpr = fun position2 -> create (Obj.magic BreakExpr) (Obj.magic (TyType
 
 let continueExpr = fun position2 -> create (Obj.magic ContinueExpr) (Obj.magic (TyType.noNormalCompletion ())) (Obj.magic position2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let macroExpr = fun expression wrappers hx_type position2 -> create (Obj.magic MacroExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic wrappers) (Obj.magic (let __arr_75 = HxArray.create () in (
-  ignore (HxArray.push __arr_75 expression);
-  __arr_75
+let macroExpr = fun expression wrappers hx_type position2 -> create (Obj.magic MacroExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic wrappers) (Obj.magic (let __arr_76 = HxArray.create () in (
+  ignore (HxArray.push __arr_76 expression);
+  __arr_76
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let macroType = fun typeText hx_type position2 -> create (Obj.magic MacroType) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_76 = HxArray.create () in (
-  ignore (HxArray.push __arr_76 typeText);
-  __arr_76
+let macroType = fun typeText hx_type position2 -> create (Obj.magic MacroType) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_77 = HxArray.create () in (
+  ignore (HxArray.push __arr_77 typeText);
+  __arr_77
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let lambda = fun arguments body hx_type position2 bindings -> create (Obj.magic Lambda) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic arguments) (Obj.magic (let __arr_77 = HxArray.create () in (
-  ignore (HxArray.push __arr_77 body);
-  __arr_77
+let lambda = fun arguments body hx_type position2 bindings -> create (Obj.magic Lambda) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic arguments) (Obj.magic (let __arr_78 = HxArray.create () in (
+  ignore (HxArray.push __arr_78 body);
+  __arr_78
 ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic bindings) (Obj.magic (HxRuntime.hx_null))
 
 let switchExpr = fun scrutinee patterns2 branches hx_type position2 bindings -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : t HxArray.t) in (
-  ignore (if branches == Obj.magic (HxRuntime.hx_null) then let __assign_78 = Obj.magic (let __arr_79 = HxArray.create () in __arr_79) in (
-    tempArray := __assign_78;
-    __assign_78
-  ) else let __assign_80 = Obj.magic branches in (
-    tempArray := __assign_80;
-    __assign_80
+  ignore (if branches == Obj.magic (HxRuntime.hx_null) then let __assign_79 = Obj.magic (let __arr_80 = HxArray.create () in __arr_80) in (
+    tempArray := __assign_79;
+    __assign_79
+  ) else let __assign_81 = Obj.magic branches in (
+    tempArray := __assign_81;
+    __assign_81
   ));
-  create (Obj.magic SwitchExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_81 = HxArray.create () in (
-    ignore (HxArray.push __arr_81 scrutinee);
-    __arr_81
+  create (Obj.magic SwitchExpr) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (HxArray.concat (let __arr_82 = HxArray.create () in (
+    ignore (HxArray.push __arr_82 scrutinee);
+    __arr_82
   )) (!tempArray))) (Obj.magic patterns2) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic bindings) (Obj.magic (HxRuntime.hx_null))
 )
 
-let newValue = fun typePath arguments hx_type position2 -> create (Obj.magic NewValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_82 = HxArray.create () in (
-  ignore (HxArray.push __arr_82 typePath);
-  __arr_82
+let newValue = fun typePath arguments hx_type position2 -> create (Obj.magic NewValue) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_83 = HxArray.create () in (
+  ignore (HxArray.push __arr_83 typePath);
+  __arr_83
 ))) (Obj.magic arguments) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let unary = fun op fixity expression hx_type position2 -> create (Obj.magic Unary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_83 = HxArray.create () in (
-  ignore (HxArray.push __arr_83 expression);
-  __arr_83
+let unary = fun op fixity expression hx_type position2 -> create (Obj.magic Unary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_84 = HxArray.create () in (
+  ignore (HxArray.push __arr_84 expression);
+  __arr_84
 ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (HxEnum.box_if_needed "HxUnaryOperator" (Obj.repr op)) (HxEnum.box_if_needed "HxUnaryFixity" (Obj.repr fixity)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let binary = fun op left right hx_type position2 -> create (Obj.magic Binary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_84 = HxArray.create () in (
-  ignore (HxArray.push __arr_84 op);
-  __arr_84
-))) (Obj.magic (let __arr_85 = HxArray.create () in (
-  ignore (HxArray.push __arr_85 left);
-  ignore (HxArray.push __arr_85 right);
+let binary = fun op left right hx_type position2 -> create (Obj.magic Binary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_85 = HxArray.create () in (
+  ignore (HxArray.push __arr_85 op);
   __arr_85
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
-
-let assign = fun target value hx_type position2 -> create (Obj.magic Assign) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_86 = HxArray.create () in (
-  ignore (HxArray.push __arr_86 target);
-  ignore (HxArray.push __arr_86 value);
+))) (Obj.magic (let __arr_86 = HxArray.create () in (
+  ignore (HxArray.push __arr_86 left);
+  ignore (HxArray.push __arr_86 right);
   __arr_86
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let compoundAssign = fun op target value hx_type position2 -> create (Obj.magic CompoundAssign) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_87 = HxArray.create () in (
-  ignore (HxArray.push __arr_87 op);
+let assign = fun target value hx_type position2 -> create (Obj.magic Assign) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_87 = HxArray.create () in (
+  ignore (HxArray.push __arr_87 target);
+  ignore (HxArray.push __arr_87 value);
   __arr_87
-))) (Obj.magic (let __arr_88 = HxArray.create () in (
-  ignore (HxArray.push __arr_88 target);
-  ignore (HxArray.push __arr_88 value);
-  __arr_88
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let ternary = fun condition whenTrue whenFalse hx_type position2 -> create (Obj.magic Ternary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_89 = HxArray.create () in (
-  ignore (HxArray.push __arr_89 condition);
-  ignore (HxArray.push __arr_89 whenTrue);
-  ignore (HxArray.push __arr_89 whenFalse);
+let compoundAssign = fun op target value hx_type position2 -> create (Obj.magic CompoundAssign) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_88 = HxArray.create () in (
+  ignore (HxArray.push __arr_88 op);
+  __arr_88
+))) (Obj.magic (let __arr_89 = HxArray.create () in (
+  ignore (HxArray.push __arr_89 target);
+  ignore (HxArray.push __arr_89 value);
   __arr_89
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+
+let ternary = fun condition whenTrue whenFalse hx_type position2 -> create (Obj.magic Ternary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_90 = HxArray.create () in (
+  ignore (HxArray.push __arr_90 condition);
+  ignore (HxArray.push __arr_90 whenTrue);
+  ignore (HxArray.push __arr_90 whenFalse);
+  __arr_90
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let anonymous = fun fieldNames fieldValues hx_type position2 -> create (Obj.magic Anonymous) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic fieldNames) (Obj.magic fieldValues) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let arrayComprehension = fun name iterable guard value hx_type position2 binding -> let children = Obj.magic (let __arr_90 = HxArray.create () in (
-  ignore (HxArray.push __arr_90 iterable);
-  __arr_90
+let arrayComprehension = fun name iterable guard value hx_type position2 binding -> let children = Obj.magic (let __arr_91 = HxArray.create () in (
+  ignore (HxArray.push __arr_91 iterable);
+  __arr_91
 )) in (
   ignore (if guard != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push children guard) else ());
   ignore (HxArray.push children value);
   let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t HxArray.t) in (
-    ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_91 = Obj.magic (Obj.magic (let __arr_92 = HxArray.create () in __arr_92)) in (
-      tempMaybeArray := __assign_91;
-      __assign_91
-    ) else let __assign_93 = Obj.magic (Obj.magic (let __arr_94 = HxArray.create () in (
-      ignore (HxArray.push __arr_94 binding);
-      __arr_94
-    ))) in (
-      tempMaybeArray := __assign_93;
-      __assign_93
-    ));
-    create (Obj.magic ArrayComprehension) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_95 = HxArray.create () in (
-      ignore (HxArray.push __arr_95 name);
+    ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_92 = Obj.magic (Obj.magic (let __arr_93 = HxArray.create () in __arr_93)) in (
+      tempMaybeArray := __assign_92;
+      __assign_92
+    ) else let __assign_94 = Obj.magic (Obj.magic (let __arr_95 = HxArray.create () in (
+      ignore (HxArray.push __arr_95 binding);
       __arr_95
+    ))) in (
+      tempMaybeArray := __assign_94;
+      __assign_94
+    ));
+    create (Obj.magic ArrayComprehension) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_96 = HxArray.create () in (
+      ignore (HxArray.push __arr_96 name);
+      __arr_96
     ))) (Obj.magic children) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (guard != Obj.magic (HxRuntime.hx_null)) 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (!tempMaybeArray)) (Obj.magic (HxRuntime.hx_null))
   )
 )
 
 let arrayDecl = fun values hx_type position2 -> create (Obj.magic ArrayDecl) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic values) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let arrayAccess = fun array index hx_type position2 -> create (Obj.magic ArrayAccess) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_96 = HxArray.create () in (
-  ignore (HxArray.push __arr_96 array);
-  ignore (HxArray.push __arr_96 index);
-  __arr_96
-))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
-
-let range = fun start hx_end hx_type position2 -> create (Obj.magic Range) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_97 = HxArray.create () in (
-  ignore (HxArray.push __arr_97 start);
-  ignore (HxArray.push __arr_97 hx_end);
+let arrayAccess = fun array index hx_type position2 -> create (Obj.magic ArrayAccess) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_97 = HxArray.create () in (
+  ignore (HxArray.push __arr_97 array);
+  ignore (HxArray.push __arr_97 index);
   __arr_97
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let castValue = fun expression typeHint hx_type position2 -> create (Obj.magic Cast) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_98 = HxArray.create () in (
-  ignore (HxArray.push __arr_98 typeHint);
+let range = fun start hx_end hx_type position2 -> create (Obj.magic Range) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_98 = HxArray.create () in (
+  ignore (HxArray.push __arr_98 start);
+  ignore (HxArray.push __arr_98 hx_end);
   __arr_98
-))) (Obj.magic (let __arr_99 = HxArray.create () in (
-  ignore (HxArray.push __arr_99 expression);
-  __arr_99
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let untypedValue = fun expression hx_type position2 -> create (Obj.magic Untyped) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_100 = HxArray.create () in (
+let castValue = fun expression typeHint hx_type position2 -> create (Obj.magic Cast) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_99 = HxArray.create () in (
+  ignore (HxArray.push __arr_99 typeHint);
+  __arr_99
+))) (Obj.magic (let __arr_100 = HxArray.create () in (
   ignore (HxArray.push __arr_100 expression);
   __arr_100
 ))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let opaque = fun kind raw hx_type position2 -> create (Obj.magic Opaque) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_101 = HxArray.create () in (
-  ignore (HxArray.push __arr_101 raw);
+let untypedValue = fun expression hx_type position2 -> create (Obj.magic Untyped) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (let __arr_101 = HxArray.create () in (
+  ignore (HxArray.push __arr_101 expression);
   __arr_101
+))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
+
+let opaque = fun kind raw hx_type position2 -> create (Obj.magic Opaque) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_102 = HxArray.create () in (
+  ignore (HxArray.push __arr_102 raw);
+  __arr_102
 ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (HxEnum.box_if_needed "TypedOpaqueExprKind" (Obj.repr kind)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let block = fun expressions2 hx_type position2 -> create (Obj.magic Block) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic expressions2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
-let temporary = fun name typeHint hx_initializer hx_type position2 binding -> let tempString = ref ("" : string) in (
-  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_102 = ("" : string) in (
-    tempString := __assign_102;
-    __assign_102
-  ) else let __assign_103 = (typeHint : string) in (
+let temporary = fun name typeHint hx_initializer hx_type position2 binding -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if typeHint == HxString.hx_null_string then let __assign_103 = ("" : string) in (
     tempString := __assign_103;
     __assign_103
+  ) else let __assign_104 = (typeHint : string) in (
+    tempString := __assign_104;
+    __assign_104
   ));
   let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t HxArray.t) in (
-    ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_104 = Obj.magic (Obj.magic (let __arr_105 = HxArray.create () in __arr_105)) in (
-      tempMaybeArray := __assign_104;
-      __assign_104
-    ) else let __assign_106 = Obj.magic (Obj.magic (let __arr_107 = HxArray.create () in (
-      ignore (HxArray.push __arr_107 binding);
-      __arr_107
-    ))) in (
-      tempMaybeArray := __assign_106;
-      __assign_106
-    ));
-    create (Obj.magic Temporary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_108 = HxArray.create () in (
-      ignore (HxArray.push __arr_108 name);
-      ignore (HxArray.push __arr_108 (!tempString));
+    ignore (if binding == Obj.magic (HxRuntime.hx_null) then let __assign_105 = Obj.magic (Obj.magic (let __arr_106 = HxArray.create () in __arr_106)) in (
+      tempMaybeArray := __assign_105;
+      __assign_105
+    ) else let __assign_107 = Obj.magic (Obj.magic (let __arr_108 = HxArray.create () in (
+      ignore (HxArray.push __arr_108 binding);
       __arr_108
-    ))) (Obj.magic (let __arr_109 = HxArray.create () in (
-      ignore (HxArray.push __arr_109 hx_initializer);
+    ))) in (
+      tempMaybeArray := __assign_107;
+      __assign_107
+    ));
+    create (Obj.magic Temporary) (Obj.magic hx_type) (Obj.magic position2) (Obj.magic (let __arr_109 = HxArray.create () in (
+      ignore (HxArray.push __arr_109 name);
+      ignore (HxArray.push __arr_109 (!tempString));
       __arr_109
+    ))) (Obj.magic (let __arr_110 = HxArray.create () in (
+      ignore (HxArray.push __arr_110 hx_initializer);
+      __arr_110
     ))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false 0 0.0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null)))) (Obj.obj (HxEnum.unbox_or_obj "TypedOpaqueExprKind" (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (!tempMaybeArray)) (Obj.magic (HxRuntime.hx_null))
   )
 )

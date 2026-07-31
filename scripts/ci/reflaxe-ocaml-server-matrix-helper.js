@@ -1,0 +1,198 @@
+#!/usr/bin/env node
+/**
+ * Small deterministic file helper for the real Reflaxe/Haxe-server matrix.
+ *
+ * Shell owns compiler and process orchestration. This helper owns structural
+ * text replacement, manifest revision reads, and content-only tree digests so
+ * the shell test does not accumulate inline source-patching programs.
+ */
+const crypto = require('crypto')
+const fs = require('fs')
+const path = require('path')
+
+function fail(message) {
+	throw new Error(message)
+}
+
+function replaceExactly(file, expected, replacement) {
+	const source = fs.readFileSync(file, 'utf8')
+	const occurrences = source.split(expected).length - 1
+	if (occurrences !== 1) {
+		fail(`expected exactly one ${JSON.stringify(expected)} in ${file}, found ${occurrences}`)
+	}
+	fs.writeFileSync(file, source.replace(expected, replacement))
+}
+
+function programRevision(manifestPath) {
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	if (typeof manifest.programRevision !== 'string' || manifest.programRevision.length === 0) {
+		fail(`artifact manifest has no programRevision: ${manifestPath}`)
+	}
+	process.stdout.write(manifest.programRevision)
+}
+
+function sourceBundleRevision(manifestPath) {
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	if (typeof manifest?.summary?.sourceBundleRevision !== 'string' || manifest.summary.sourceBundleRevision.length === 0) {
+		fail(`artifact manifest has no sourceBundleRevision: ${manifestPath}`)
+	}
+	process.stdout.write(manifest.summary.sourceBundleRevision)
+}
+
+function treeDigest(root) {
+	const hash = crypto.createHash('sha256')
+	const visit = (directory, prefix) => {
+		const entries = fs.readdirSync(directory, {withFileTypes: true})
+			.sort((left, right) => left.name < right.name ? -1 : (left.name > right.name ? 1 : 0))
+		for (const entry of entries) {
+			const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`
+			const absolute = path.join(directory, entry.name)
+			if (entry.isDirectory()) {
+				visit(absolute, relative)
+			} else if (entry.isFile()) {
+				hash.update(Buffer.from(relative, 'utf8'))
+				hash.update(Buffer.from([0]))
+				hash.update(fs.readFileSync(absolute))
+				hash.update(Buffer.from([0]))
+			} else {
+				fail(`unsupported tree entry in digest: ${absolute}`)
+			}
+		}
+	}
+	visit(root, '')
+	process.stdout.write(`sha256:${hash.digest('hex')}`)
+}
+
+function verifyReusePhasePair(coldPath, warmPath) {
+	const cold = JSON.parse(fs.readFileSync(coldPath, 'utf8'))
+	const warm = JSON.parse(fs.readFileSync(warmPath, 'utf8'))
+	for (const [name, report] of [['cold', cold], ['warm', warm]]) {
+		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 2) {
+			fail(`${name} target-reuse phase report has the wrong model or schema`)
+		}
+		for (const [phase, value] of Object.entries(report.timing ?? {})) {
+			if (!Number.isInteger(value) || value < 0) {
+				fail(`${name} target-reuse phase ${phase} is not a non-negative integer`)
+			}
+		}
+		if (!Number.isInteger(report?.macroRealm?.requestSequence)
+			|| report.macroRealm.requestSequence < 1
+			|| !Number.isInteger(report?.catalog?.payloadBytes)
+			|| report.catalog.payloadBytes < 0
+			|| !Number.isInteger(report?.catalog?.activeLeases)
+			|| report.catalog.activeLeases !== 0) {
+			fail(`${name} target-reuse phase report has invalid realm or catalog accounting`)
+		}
+	}
+	if (cold.outcome !== 'compiled-miss'
+		|| cold?.work?.semanticCompilerRan !== true
+		|| cold.work.missPreparationRan !== true
+		|| cold.work.replaySucceeded !== false) {
+		fail('cold target-reuse phase did not record one ordinary semantic compilation')
+	}
+	if (warm.outcome !== 'exact-hit'
+		|| warm?.work?.semanticCompilerRan !== false
+		|| warm.work.missPreparationRan !== false
+		|| warm.work.lookupRan !== true
+		|| warm.work.replaySucceeded !== true) {
+		fail('warm target-reuse phase did not record one exact replay with no semantic compilation')
+	}
+	if (cold?.targetRequest?.revision !== warm?.targetRequest?.revision
+		|| cold?.finalProgram?.revision !== warm?.finalProgram?.revision
+		|| cold?.macroRealm?.identityRevision !== warm?.macroRealm?.identityRevision
+		|| warm?.macroRealm?.requestSequence !== cold?.macroRealm?.requestSequence + 1
+		|| warm?.macroRealm?.survivedPriorRequest !== true) {
+		fail('cold and warm target-reuse phases do not describe one exact request in one persistent macro realm')
+	}
+	if (!(cold?.work?.payloadBytes > 0)
+		|| warm?.work?.payloadBytes !== cold.work.payloadBytes
+		|| warm?.catalog?.hits < 1) {
+		fail('cold and warm target-reuse phases do not prove admission and a later catalog hit')
+	}
+}
+
+/**
+ * Proves that two repeated Haxe 4 RTTI requests compiled normally instead of
+ * looking up or admitting a generated-source cache entry.
+ *
+ * Haxe 4 can change its compiler-generated RTTI string between otherwise
+ * unchanged server requests. Both compilations must therefore report the same
+ * explicit safety reason while using their current typed input.
+ */
+function verifyRttiIneligiblePhasePair(baselinePath, firstPath, secondPath) {
+	const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'))
+	const reports = [
+		['first', JSON.parse(fs.readFileSync(firstPath, 'utf8'))],
+		['second', JSON.parse(fs.readFileSync(secondPath, 'utf8'))],
+	]
+	const expectedBlocker = 'reflaxe:source-authority:haxe4-compiler-generated-rtti-warm-input-unstable'
+	for (const [name, report] of reports) {
+		if (report?.model !== 'reflaxe-ocaml-target-reuse-phase' || report?.schemaVersion !== 2) {
+			fail(`${name} RTTI target-reuse phase report has the wrong model or schema`)
+		}
+		if (report.outcome !== 'compiled-miss'
+			|| report?.targetRequest?.eligible !== false
+			|| typeof report.targetRequest.revision !== 'string'
+			|| report.targetRequest.revision.length === 0
+			|| !report.targetRequest.blockers.includes(expectedBlocker)
+			|| report?.work?.semanticCompilerRan !== true
+			|| report.work.missPreparationRan !== true
+			|| report.work.lookupRan !== false
+			|| report.work.replaySucceeded !== false
+			|| report.work.payloadBytes !== null) {
+			fail(`${name} RTTI request did not compile normally with exact replay disabled: ${JSON.stringify({
+				outcome: report?.outcome,
+				targetRequest: report?.targetRequest,
+				work: report?.work,
+			})}`)
+		}
+	}
+	const first = reports[0][1]
+	const second = reports[1][1]
+	if (baseline?.outcome !== 'exact-hit'
+		|| first?.macroRealm?.requestSequence !== baseline?.macroRealm?.requestSequence + 1
+		|| second?.macroRealm?.requestSequence !== first?.macroRealm?.requestSequence + 1
+		|| first?.macroRealm?.identityRevision !== baseline?.macroRealm?.identityRevision
+		|| second?.macroRealm?.identityRevision !== first?.macroRealm?.identityRevision
+		|| second?.macroRealm?.survivedPriorRequest !== true
+		|| first?.catalog?.ineligibleRequests !== baseline?.catalog?.ineligibleRequests + 1
+		|| second?.catalog?.ineligibleRequests !== first?.catalog?.ineligibleRequests + 1
+		|| first?.catalog?.admissions !== baseline?.catalog?.admissions
+		|| second?.catalog?.admissions !== baseline?.catalog?.admissions
+		|| first?.catalog?.entryCount !== baseline?.catalog?.entryCount
+		|| second?.catalog?.entryCount !== baseline?.catalog?.entryCount
+		|| first?.catalog?.payloadBytes !== baseline?.catalog?.payloadBytes
+		|| second?.catalog?.payloadBytes !== baseline?.catalog?.payloadBytes) {
+		fail('repeated RTTI requests did not preserve one macro realm and leave the reusable catalog unchanged')
+	}
+}
+
+const [command, ...args] = process.argv.slice(2)
+switch (command) {
+	case 'replace':
+		if (args.length !== 3) fail('replace needs: file expected replacement')
+		replaceExactly(args[0], args[1], args[2])
+		break
+	case 'program-revision':
+		if (args.length !== 1) fail('program-revision needs: manifest')
+		programRevision(args[0])
+		break
+	case 'source-bundle-revision':
+		if (args.length !== 1) fail('source-bundle-revision needs: manifest')
+		sourceBundleRevision(args[0])
+		break
+	case 'tree-digest':
+		if (args.length !== 1) fail('tree-digest needs: directory')
+		treeDigest(args[0])
+		break
+	case 'verify-reuse-phase-pair':
+		if (args.length !== 2) fail('verify-reuse-phase-pair needs: cold-report warm-report')
+		verifyReusePhasePair(args[0], args[1])
+		break
+	case 'verify-rtti-ineligible-phase-pair':
+		if (args.length !== 3) fail('verify-rtti-ineligible-phase-pair needs: baseline-report first-report second-report')
+		verifyRttiIneligiblePhasePair(args[0], args[1], args[2])
+		break
+	default:
+		fail(`unknown command: ${command || '<missing>'}`)
+}

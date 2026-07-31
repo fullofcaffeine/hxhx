@@ -16,33 +16,33 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExactEnumConstructorS
 let marker = fun () -> "$hxhx:exact-enum-constructor"
 
 let encode = fun owner modulePath declaration constructor callee arguments -> (
-  ignore (if callee == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact enum constructor marker requires its original call shape") ["Dynamic"; "String"]) else ());
-  let tempString = ref ("" : string) in (
-    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+  ignore (if callee == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact enum constructor marker requires its original call shape") ["Dynamic"]) else ());
+  let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if owner == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempString := __assign_1;
       __assign_1
     ) else let __assign_2 = (owner : string) in (
       tempString := __assign_2;
       __assign_2
     ));
-    let tempString1 = ref ("" : string) in (
-      ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+    let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if modulePath == HxString.hx_null_string then let __assign_3 = ("" : string) in (
         tempString1 := __assign_3;
         __assign_3
       ) else let __assign_4 = (modulePath : string) in (
         tempString1 := __assign_4;
         __assign_4
       ));
-      let tempString2 = ref ("" : string) in (
-        ignore (if declaration == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
+      let tempString2 = ref (HxString.hx_null_string : string) in (
+        ignore (if declaration == HxString.hx_null_string then let __assign_5 = ("" : string) in (
           tempString2 := __assign_5;
           __assign_5
         ) else let __assign_6 = (declaration : string) in (
           tempString2 := __assign_6;
           __assign_6
         ));
-        let tempString3 = ref ("" : string) in (
-          ignore (if constructor == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
+        let tempString3 = ref (HxString.hx_null_string : string) in (
+          ignore (if constructor == HxString.hx_null_string then let __assign_7 = ("" : string) in (
             tempString3 := __assign_7;
             __assign_7
           ) else let __assign_8 = (constructor : string) in (
@@ -343,7 +343,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EContinue _ -> 35) = 24 then let _g13 = Obj.magic (match _g8 with
     | HxExpr.EArrayDecl __enum_param_20 -> __enum_param_20
     | _ -> failwith "Unexpected enum parameter") in let arguments = Obj.magic _g13 in let callee = Obj.magic _g7 in let declaration = (_g11 : string) in let owner = (_g9 : string) in let modulePath = (_g10 : string) in let constructor = (_g12 : string) in let value = (_g2 : string) in if HxString.equals value "$hxhx:exact-enum-constructor" then (
-    ignore (if HxString.length owner = 0 || HxString.length modulePath = 0 || HxString.length declaration = 0 || HxString.length constructor = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact enum constructor marker has an incomplete typed identity") ["Dynamic"; "String"]) else ());
+    ignore (if HxString.length owner = 0 || HxString.length modulePath = 0 || HxString.length declaration = 0 || HxString.length constructor = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact enum constructor marker has an incomplete typed identity") ["Dynamic"]) else ());
     let __assign_21 = Obj.magic (let __anon_22 = HxAnon.create () in (
       ignore (HxAnon.set __anon_22 "owner" (Obj.repr owner));
       ignore (HxAnon.set __anon_22 "modulePath" (Obj.repr modulePath));

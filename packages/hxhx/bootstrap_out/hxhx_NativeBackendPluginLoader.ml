@@ -13,47 +13,47 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.NativeBacke
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.NativeBackendPluginLoader" } : t)
 
-let trim = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_1 = "" in (
     tempResult := __assign_1;
     __assign_1
-  ) else let __assign_2 = (StringTools.trim (value : string) : string) in (
+  ) else let __assign_2 = let __call_arg_0_3 = value in StringTools.trim __call_arg_0_3 in (
     tempResult := __assign_2;
     __assign_2
   ));
   !tempResult
 )
 
-let fail = fun sourceLabel message -> ignore (let tempString = ref ("" : string) in (
-  ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
-    tempString := __assign_3;
-    __assign_3
-  ) else let __assign_4 = (StringTools.trim (sourceLabel : string) : string) in (
+let fail = fun (sourceLabel : string) (message : string) -> ignore (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if sourceLabel == HxString.hx_null_string then let __assign_4 = "" in (
     tempString := __assign_4;
     __assign_4
+  ) else let __assign_5 = let __call_arg_0_6 = sourceLabel in StringTools.trim __call_arg_0_6 in (
+    tempString := __assign_5;
+    __assign_5
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if HxString.length (!tempString) = 0 then let __assign_5 = ("<unknown-manifest>" : string) in (
-      tempString1 := __assign_5;
-      __assign_5
-    ) else let __assign_6 = (!tempString : string) in (
-      tempString1 := __assign_6;
-      __assign_6
+  let source = !tempString in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length source = 0 then let __assign_7 = "<unknown-manifest>" in (
+      tempString1 := __assign_7;
+      __assign_7
+    ) else let __assign_8 = source in (
+      tempString1 := __assign_8;
+      __assign_8
     ));
-    HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString (!tempString1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+    let label = !tempString1 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
   )
 ))
 
 let resolvedSpecsForProviders = fun providerTypes -> let specs = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length providerTypes do ignore (let providerType = (HxArray.get (Obj.magic providerTypes) (!_g) : string) in (
-    ignore (let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
-      ignore (_g := __new_8);
-      __new_8
+    ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+      ignore (_g := __new_10);
+      __new_10
     ));
     let providerSpecs = Obj.magic (Hxhx_BackendProviderResolver.registrationsForType (providerType : string)) in let _g2 = ref 0 in while !_g2 < HxArray.length providerSpecs do ignore (let spec = HxArray.get (Obj.magic providerSpecs) (!_g2) in (
-      ignore (let __old_9 = !_g2 in let __new_10 = HxInt.add __old_9 1 in (
-        ignore (_g2 := __new_10);
-        __new_10
+      ignore (let __old_11 = !_g2 in let __new_12 = HxInt.add __old_11 1 in (
+        ignore (_g2 := __new_12);
+        __new_12
       ));
       HxArray.push specs spec
     )) done
@@ -61,42 +61,43 @@ let resolvedSpecsForProviders = fun providerTypes -> let specs = Obj.magic (HxAr
   specs
 )
 
-let providerTypeNamesForNativeManifest = fun manifest manifestPath -> try let __fallback_result_20 = (
-  ignore (if manifest == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get manifest "backend") == Obj.magic (HxRuntime.hx_null) then ignore (fail (manifestPath : string) ("manifest backend section is required" : string)) else ());
-  ignore (if not (HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind")) "ocaml-dynlink") then ignore (fail (manifestPath : string) ("native loader expects backend.kind=ocaml-dynlink" : string)) else ());
-  ignore (if Obj.obj (HxAnon.get manifest "requires") == Obj.magic (HxRuntime.hx_null) then ignore (fail (manifestPath : string) ("requires section is required" : string)) else ());
-  let requiresError = (Backend_BackendAbi.validateManifestRequires (Obj.obj (HxAnon.get manifest "pluginId") : string) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "abiVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "genIrVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "macroApiVersion")) : string) in (
-    ignore (if requiresError != Obj.magic (HxRuntime.hx_null) then ignore (fail (manifestPath : string) (requiresError : string)) else ());
-    let tempString = ref ("" : string) in (
+let providerTypeNamesForNativeManifest = fun manifest manifestPath -> try let __fallback_result_39 = (
+  ignore (if manifest == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get manifest "backend") == Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_13 = manifestPath in let __call_arg_1_14 = "manifest backend section is required" in fail __call_arg_0_13 __call_arg_1_14) else ());
+  ignore (if not (HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind")) "ocaml-dynlink") then ignore (let __call_arg_0_15 = manifestPath in let __call_arg_1_16 = "native loader expects backend.kind=ocaml-dynlink" in fail __call_arg_0_15 __call_arg_1_16) else ());
+  ignore (if Obj.obj (HxAnon.get manifest "requires") == Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_17 = manifestPath in let __call_arg_1_18 = "requires section is required" in fail __call_arg_0_17 __call_arg_1_18) else ());
+  let requiresError = (let __call_arg_0_19 = Obj.obj (HxAnon.get manifest "pluginId") in let __call_arg_1_20 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "abiVersion") in let __call_arg_2_21 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "genIrVersion") in let __call_arg_3_22 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "macroApiVersion") in Backend_BackendAbi.validateManifestRequires __call_arg_0_19 __call_arg_1_20 __call_arg_2_21 __call_arg_3_22 : string) in (
+    ignore (if requiresError != Obj.magic (HxRuntime.hx_null) then ignore (let __call_arg_0_23 = manifestPath in let __call_arg_1_24 = requiresError in fail __call_arg_0_23 __call_arg_1_24) else ());
+    let tempString = ref (HxString.hx_null_string : string) in (
       ignore (try let entryPath = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") : string) in let pluginId = (Obj.obj (HxAnon.get manifest "pluginId") : string) in let response = (HxHxBackendPluginDynlink.load_and_capture_safe (manifestPath : string) (entryPath : string) (pluginId : string) : string) in (
-        ignore (if response == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned no response") ["Dynamic"; "String"]) else ());
-        if StringTools.startsWith (response : string) ("ok\n" : string) then let __assign_11 = (HxString.substr response 3 (-1) : string) in (
-          tempString := __assign_11;
-          __assign_11
+        ignore (if response == HxString.hx_null_string then ignore (HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned no response") ["Dynamic"]) else ());
+        if let __call_arg_0_32 = response in let __call_arg_1_33 = "ok\n" in StringTools.startsWith __call_arg_0_32 __call_arg_1_33 then let __assign_34 = (HxString.substr response 3 (-1) : string) in (
+          tempString := __assign_34;
+          __assign_34
         ) else (
-          ignore (if StringTools.startsWith (response : string) ("err\n" : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxString.substr response 4 (-1))) ["Dynamic"; "String"]) else ());
-          HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned malformed response") ["Dynamic"; "String"]
+          ignore (if let __call_arg_0_35 = response in let __call_arg_1_36 = "err\n" in StringTools.startsWith __call_arg_0_35 __call_arg_1_36 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxString.substr response 4 (-1))) ["Dynamic"]) else ());
+          HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned malformed response") ["Dynamic"]
         )
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_12 -> raise (HxRuntime.Hx_return __ret_12)
-        | HxRuntime.Hx_exception (__exn_v_13, __exn_tags_14) -> if true then let error = (if HxRuntime.tags_has __exn_tags_14 "haxe.Exception" then Obj.obj __exn_v_13 else Obj.magic (Haxe_ValueException.create __exn_v_13 (Obj.magic (HxRuntime.hx_null)) __exn_v_13) : Haxe_Exception.t) in (
+        | HxRuntime.Hx_return __ret_28 -> raise (HxRuntime.Hx_return __ret_28)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_29, __exn_tags_30) -> if true then let error = (if HxRuntime.tags_has __exn_tags_30 "haxe.Exception" then Obj.obj __exn_v_29 else Obj.magic (Haxe_ValueException.create __exn_v_29 (Obj.magic (HxRuntime.hx_null)) __exn_v_29) : Haxe_Exception.t) in (
           ignore error;
           (
-            ignore (fail (manifestPath : string) ("native plugin load failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string));
-            raise (HxRuntime.Hx_return (Obj.repr (let __arr_15 = HxArray.create () in __arr_15)))
+            ignore (let __call_arg_0_25 = manifestPath in let __call_arg_1_26 = "native plugin load failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in fail __call_arg_0_25 __call_arg_1_26);
+            raise (HxRuntime.Hx_return (Obj.repr (let __arr_27 = HxArray.create () in __arr_27)))
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_13 __exn_tags_14
-        | __exn_16 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_16) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_16) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_16)) : Haxe_Exception.t) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_29 __exn_tags_30
+        | __exn_31 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_31) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_31) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_31)) : Haxe_Exception.t) in (
           ignore error;
           (
-            ignore (fail (manifestPath : string) ("native plugin load failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string));
-            raise (HxRuntime.Hx_return (Obj.repr (let __arr_17 = HxArray.create () in __arr_17)))
+            ignore (let __call_arg_0_25 = manifestPath in let __call_arg_1_26 = "native plugin load failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in fail __call_arg_0_25 __call_arg_1_26);
+            raise (HxRuntime.Hx_return (Obj.repr (let __arr_27 = HxArray.create () in __arr_27)))
           )
-        ) else raise (__exn_16));
-      let providerTypes = Obj.magic (Hxhx_NativeBackendPluginHostAbi.providerTypesForPluginAllowEmpty (!tempString : string) (Obj.obj (HxAnon.get manifest "pluginId") : string) (manifestPath : string)) in (
-        ignore (if HxArray.length providerTypes = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_18 = HxArray.create () in __arr_18)))) else ());
+        ) else raise (__exn_31));
+      let snapshot = (!tempString : string) in let providerTypes = Obj.magic (Hxhx_NativeBackendPluginHostAbi.providerTypesForPluginAllowEmpty (snapshot : string) (Obj.obj (HxAnon.get manifest "pluginId") : string) (manifestPath : string)) in (
+        ignore (if HxArray.length providerTypes = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_37 = HxArray.create () in __arr_37)))) else ());
         let specs = Obj.magic (resolvedSpecsForProviders (Obj.magic providerTypes)) in (
           ignore (Hxhx_NativeBackendPluginHostAbi.assertNoDescriptorConflicts (Obj.obj (HxAnon.get manifest "pluginId") : string) (Obj.magic specs) (manifestPath : string));
           providerTypes
@@ -104,5 +105,5 @@ let providerTypeNamesForNativeManifest = fun manifest manifestPath -> try let __
       )
     )
   )
-) in Obj.magic __fallback_result_20 with
-  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
+) in Obj.magic __fallback_result_39 with
+  | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38

@@ -13,13 +13,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependen
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyPhaseTools" } : t)
 
-let name = fun phase -> let tempResult = ref ("" : string) in (
+let name = fun phase -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match phase with
-    | CompilerDependencyPhase.ModuleResolution -> let __assign_1 = ("module-resolution" : string) in (
+    | CompilerDependencyPhase.ModuleResolution -> let __assign_1 = "module-resolution" in (
       tempResult := __assign_1;
       __assign_1
     )
-    | CompilerDependencyPhase.SharedTyping -> let __assign_2 = ("shared-typing" : string) in (
+    | CompilerDependencyPhase.SharedTyping -> let __assign_2 = "shared-typing" in (
       tempResult := __assign_2;
       __assign_2
     ));

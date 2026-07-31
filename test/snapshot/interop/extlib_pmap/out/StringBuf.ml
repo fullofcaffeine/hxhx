@@ -18,11 +18,11 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "StringBuf"; buf = Obj.magi
 
 let get_length = fun self () -> let b = (Obj.magic self : t).buf in let tempResult = Stdlib.Buffer.length b in tempResult
 
-let add = fun self (x : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxRuntime.dynamic_toStdString x : string) in Stdlib.Buffer.add_string b (s : string)))
+let add = fun self (x : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxDynamic.toStdString x : string) in Stdlib.Buffer.add_string b (s : string)))
 
 let addChar = fun self (c : int) -> ignore (ignore (let b = (Obj.magic self : t).buf in let s = (HxString.fromCharCode c : string) in Stdlib.Buffer.add_string b (s : string)))
 
-let addSub = fun self (s : string) (pos : int) (len : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let tempString = ref ("" : string) in (
+let addSub = fun self (s : string) (pos : int) (len : Obj.t) -> ignore (ignore (let b = (Obj.magic self : t).buf in let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if len == HxRuntime.hx_null then let __assign_2 = (HxString.substr s pos (-1) : string) in (
     tempString := __assign_2;
     __assign_2
@@ -30,7 +30,7 @@ let addSub = fun self (s : string) (pos : int) (len : Obj.t) -> ignore (ignore (
     tempString := __assign_3;
     __assign_3
   ));
-  Stdlib.Buffer.add_string b (!tempString : string)
+  let s2 = (!tempString : string) in Stdlib.Buffer.add_string b (s2 : string)
 )))
 
 let toString = fun self () -> let b = (Obj.magic self : t).buf in let tempResult = (Stdlib.Buffer.contents b : string) in tempResult

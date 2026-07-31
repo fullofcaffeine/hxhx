@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable field : TyFieldInfo.t; mutable expression 
 
 let create = fun field2 expression2 -> let self = ({ __hx_type = HxType.class_ "TypedFieldInitializer"; field = Obj.magic (HxRuntime.hx_null); expression = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if field2 == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field initializer requires field information and an expression") ["Dynamic"; "String"]) else ());
+    ignore (if field2 == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed field initializer requires field information and an expression") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic field2 in (
       (Obj.magic self : t).field <- __assign_1;
       __assign_1

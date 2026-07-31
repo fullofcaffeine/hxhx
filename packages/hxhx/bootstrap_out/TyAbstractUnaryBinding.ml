@@ -40,11 +40,11 @@ let rec containsTypeParameter = fun hx_type -> try let __fallback_result_6 = (
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
-let operatorLabel = fun op fixity -> let tempString = ref ("" : string) in (
-  ignore (if fixity = HxUnaryFixity.Prefix then let __assign_7 = ("prefix " : string) in (
+let operatorLabel = fun op fixity -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if fixity = HxUnaryFixity.Prefix then let __assign_7 = "prefix " in (
     tempString := __assign_7;
     __assign_7
-  ) else let __assign_8 = ("postfix " : string) in (
+  ) else let __assign_8 = "postfix " in (
     tempString := __assign_8;
     __assign_8
   ));

@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable pathIdentityRevision : string; mutable fileState : string; mutable contentRevision : string; mutable canonicalIdentity : string }
 
-let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = ""; fileState = ""; contentRevision = ""; canonicalIdentity = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if pathIdentityRevision2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if pathIdentityRevision2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (pathIdentityRevision2 : string) in (
@@ -19,8 +19,8 @@ let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self =
       (Obj.magic self : t).pathIdentityRevision <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref ("" : string) in (
-      ignore (if fileState2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
+    let tempRight1 = ref (HxString.hx_null_string : string) in (
+      ignore (if fileState2 == HxString.hx_null_string then let __assign_4 = ("" : string) in (
         tempRight1 := __assign_4;
         __assign_4
       ) else let __assign_5 = (fileState2 : string) in (
@@ -31,8 +31,8 @@ let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self =
         (Obj.magic self : t).fileState <- __assign_6;
         __assign_6
       ));
-      let tempRight2 = ref ("" : string) in (
-        ignore (if contentRevision2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
+      let tempRight2 = ref (HxString.hx_null_string : string) in (
+        ignore (if contentRevision2 == HxString.hx_null_string then let __assign_7 = ("" : string) in (
           tempRight2 := __assign_7;
           __assign_7
         ) else let __assign_8 = (contentRevision2 : string) in (
@@ -43,14 +43,14 @@ let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self =
           (Obj.magic self : t).contentRevision <- __assign_9;
           __assign_9
         ));
-        ignore (if HxString.length ((Obj.magic self : t).pathIdentityRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a path identity revision") ["Dynamic"; "String"]) else ());
-        ignore (if not (HxString.equals ((Obj.magic self : t).fileState) "file") && not (HxString.equals ((Obj.magic self : t).fileState) "missing") && not (HxString.equals ((Obj.magic self : t).fileState) "not-file") then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency has an unsupported file state") ["Dynamic"; "String"]) else ());
-        ignore (if HxString.length ((Obj.magic self : t).contentRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a content revision") ["Dynamic"; "String"]) else ());
+        ignore (if HxString.length ((self : t).pathIdentityRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a path identity revision") ["Dynamic"]) else ());
+        ignore (if not (HxString.equals ((self : t).fileState) "file") && not (HxString.equals ((self : t).fileState) "missing") && not (HxString.equals ((self : t).fileState) "not-file") then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency has an unsupported file state") ["Dynamic"]) else ());
+        ignore (if HxString.length ((self : t).contentRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a content revision") ["Dynamic"]) else ());
         let __assign_10 = (CompilerCacheIdentity.encode (Obj.magic (let __arr_11 = HxArray.create () in (
           ignore (HxArray.push __arr_11 "macro-file-dependency-input-v1");
-          ignore (HxArray.push __arr_11 ((Obj.magic self : t).pathIdentityRevision));
-          ignore (HxArray.push __arr_11 ((Obj.magic self : t).fileState));
-          ignore (HxArray.push __arr_11 ((Obj.magic self : t).contentRevision));
+          ignore (HxArray.push __arr_11 ((self : t).pathIdentityRevision));
+          ignore (HxArray.push __arr_11 ((self : t).fileState));
+          ignore (HxArray.push __arr_11 ((self : t).contentRevision));
           __arr_11
         ))) : string) in (
           (Obj.magic self : t).canonicalIdentity <- __assign_10;
@@ -62,42 +62,42 @@ let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = ""; fileState = ""; contentRevision = ""; canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
-let getPathIdentityRevision = fun self () -> (Obj.magic self : t).pathIdentityRevision
+let getPathIdentityRevision = fun self () -> ((self : t).pathIdentityRevision : string)
 
-let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
+let getCanonicalIdentity = fun self () -> ((self : t).canonicalIdentity : string)
 
-let fromObservedPath = fun path fileState2 content -> let tempString = ref ("" : string) in (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
+let fromObservedPath = fun path fileState2 content -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if path == HxString.hx_null_string then let __assign_12 = ("" : string) in (
     tempString := __assign_12;
     __assign_12
   ) else let __assign_13 = (path : string) in (
     tempString := __assign_13;
     __assign_13
   ));
-  let normalizedPath = (Haxe_io_Path.normalize (StringTools.replace (!tempString : string) ("\\" : string) ("/" : string) : string) : string) in (
-    ignore (if HxString.length normalizedPath = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a resolved path") ["Dynamic"; "String"]) else ());
-    ignore (if not (HxString.equals fileState2 "file") && not (HxString.equals fileState2 "missing") && not (HxString.equals fileState2 "not-file") then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency has an unsupported file state") ["Dynamic"; "String"]) else ());
-    ignore (if HxString.equals fileState2 "file" && content == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency file state requires exact bytes") ["Dynamic"; "String"]) else ());
-    ignore (if not (HxString.equals fileState2 "file") && content != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency non-file state cannot retain bytes") ["Dynamic"; "String"]) else ());
-    let pathRevision = (Haxe_crypto_Sha256.encode (CompilerCacheIdentity.encode (Obj.magic (let __arr_14 = HxArray.create () in (
-      ignore (HxArray.push __arr_14 "macro-file-dependency-path-v1");
-      ignore (HxArray.push __arr_14 normalizedPath);
-      __arr_14
-    ))) : string) : string) in let tempString1 = ref ("" : string) in (
-      ignore (if content == Obj.magic (HxRuntime.hx_null) then let __assign_15 = (Haxe_crypto_Sha256.encode (CompilerCacheIdentity.encode (Obj.magic (let __arr_16 = HxArray.create () in (
-        ignore (HxArray.push __arr_16 "macro-file-dependency-content-v1");
-        ignore (HxArray.push __arr_16 fileState2);
-        __arr_16
-      ))) : string) : string) in (
-        tempString1 := __assign_15;
-        __assign_15
-      ) else let __assign_17 = (HxString.toLowerCase (HxBytes.toHex (Haxe_crypto_Sha256.make (Obj.magic content)) ()) () : string) in (
-        tempString1 := __assign_17;
-        __assign_17
+  let normalizedPath = let __call_arg_0_14 = let __call_arg_0_15 = !tempString in let __call_arg_1_16 = "\\" in let __call_arg_2_17 = "/" in StringTools.replace __call_arg_0_15 __call_arg_1_16 __call_arg_2_17 in Haxe_io_Path.normalize __call_arg_0_14 in (
+    ignore (if HxString.length normalizedPath = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency requires a resolved path") ["Dynamic"]) else ());
+    ignore (if not (HxString.equals fileState2 "file") && not (HxString.equals fileState2 "missing") && not (HxString.equals fileState2 "not-file") then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency has an unsupported file state") ["Dynamic"]) else ());
+    ignore (if HxString.equals fileState2 "file" && content == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency file state requires exact bytes") ["Dynamic"]) else ());
+    ignore (if not (HxString.equals fileState2 "file") && content != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency non-file state cannot retain bytes") ["Dynamic"]) else ());
+    let pathRevision = let __call_arg_0_18 = CompilerCacheIdentity.encode (Obj.magic (let __arr_19 = HxArray.create () in (
+      ignore (HxArray.push __arr_19 "macro-file-dependency-path-v1");
+      ignore (HxArray.push __arr_19 normalizedPath);
+      __arr_19
+    ))) in Haxe_crypto_Sha256.encode __call_arg_0_18 in let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if content == Obj.magic (HxRuntime.hx_null) then let __assign_20 = (let __call_arg_0_21 = CompilerCacheIdentity.encode (Obj.magic (let __arr_22 = HxArray.create () in (
+        ignore (HxArray.push __arr_22 "macro-file-dependency-content-v1");
+        ignore (HxArray.push __arr_22 fileState2);
+        __arr_22
+      ))) in Haxe_crypto_Sha256.encode __call_arg_0_21 : string) in (
+        tempString1 := __assign_20;
+        __assign_20
+      ) else let __assign_23 = (HxString.toLowerCase (let __bytes_receiver_24 = Haxe_crypto_Sha256.make (Obj.magic content) in HxBytes.toHex __bytes_receiver_24 ()) () : string) in (
+        tempString1 := __assign_23;
+        __assign_23
       ));
-      create (pathRevision : string) (fileState2 : string) (!tempString1 : string)
+      let contentRevision2 = (!tempString1 : string) in create (pathRevision : string) (fileState2 : string) (contentRevision2 : string)
     )
   )
 )

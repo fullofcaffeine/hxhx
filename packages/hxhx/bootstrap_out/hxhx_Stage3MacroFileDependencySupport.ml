@@ -13,35 +13,36 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3Macro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3MacroFileDependencySupport" } : t)
 
-let observe = fun modulePath resolvedPath -> try let __fallback_result_15 = try (
-  ignore (if not (HxFileSystem.exists resolvedPath) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("missing" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))))))) else ());
-  ignore (if HxFileSystem.isDirectory resolvedPath then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("not-file" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))))))) else ());
+let observe = fun (modulePath : string) (resolvedPath : string) -> (try let __fallback_result_21 = try (
+  ignore (if not (HxFileSystem.exists (resolvedPath : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("missing" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))))))) else ());
+  ignore (if HxFileSystem.isDirectory (resolvedPath : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("not-file" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))))))) else ());
   raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("file" : string) (Obj.magic (HxBytes.ofData (HxFile.getBytes (resolvedPath : string)) ())))))
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_10 -> raise (HxRuntime.Hx_return __ret_10)
-  | HxRuntime.Hx_exception (__exn_v_11, __exn_tags_12) -> if HxRuntime.tags_has __exn_tags_12 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_11) : Haxe_io_Error.error) in (
+  | HxRuntime.Hx_return __ret_16 -> raise (HxRuntime.Hx_return __ret_16)
+  | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+  | HxRuntime.Hx_exception (__exn_v_17, __exn_tags_18) -> if HxRuntime.tags_has __exn_tags_18 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_17) : Haxe_io_Error.error) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else if true then let _hx = (if HxRuntime.tags_has __exn_tags_12 "haxe.Exception" then Obj.obj __exn_v_11 else Obj.magic (Haxe_ValueException.create __exn_v_11 (Obj.magic (HxRuntime.hx_null)) __exn_v_11) : Haxe_Exception.t) in (
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else if true then let _hx = (if HxRuntime.tags_has __exn_tags_18 "haxe.Exception" then Obj.obj __exn_v_17 else Obj.magic (Haxe_ValueException.create __exn_v_17 (Obj.magic (HxRuntime.hx_null)) __exn_v_17) : Haxe_Exception.t) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else if HxRuntime.tags_has __exn_tags_12 "String" then let _hx = (Obj.obj __exn_v_11 : string) in (
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else if HxRuntime.tags_has __exn_tags_18 "String" then let _hx = (Obj.obj __exn_v_17 : string) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else HxRuntime.hx_throw_typed __exn_v_11 __exn_tags_12
-  | __exn_13 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_13)) : Haxe_io_Error.error) in (
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else HxRuntime.hx_throw_typed __exn_v_17 __exn_tags_18
+  | __exn_19 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_19)) : Haxe_io_Error.error) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else if true then let _hx = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_13) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_13) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_13)) : Haxe_Exception.t) in (
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else if true then let _hx = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_19) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_19) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_19)) : Haxe_Exception.t) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_13) : string) in (
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_19) : string) in (
     ignore _hx;
-    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"; "String"]
-  ) else raise (__exn_13) in Obj.magic __fallback_result_15 with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
+    HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
+  ) else raise (__exn_19) in Obj.magic __fallback_result_21 with
+  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20 : CompilerMacroFileDependencyInput.t)
 
 let collect = fun cwd -> let inputsByModule = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listModuleDependencies ()) in (
   ignore (try while !_g < HxArray.length _g1 do try ignore (let registration = HxArray.get (Obj.magic _g1) (!_g) in (
@@ -49,27 +50,27 @@ let collect = fun cwd -> let inputsByModule = Obj.magic (HxMap.create_string ())
       ignore (_g := __new_2);
       __new_2
     ));
-    let tempString = ref ("" : string) in (
-      ignore (if Obj.obj (HxAnon.get registration "modulePath") == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if Obj.obj (HxAnon.get registration "modulePath") == HxString.hx_null_string then let __assign_3 = ("" : string) in (
         tempString := __assign_3;
         __assign_3
       ) else let __assign_4 = (Obj.obj (HxAnon.get registration "modulePath") : string) in (
         tempString := __assign_4;
         __assign_4
       ));
-      let modulePath = (StringTools.trim (!tempString : string) : string) in let tempString1 = ref ("" : string) in (
-        ignore (if Obj.obj (HxAnon.get registration "externFile") == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
-          tempString1 := __assign_5;
-          __assign_5
-        ) else let __assign_6 = (Obj.obj (HxAnon.get registration "externFile") : string) in (
+      let modulePath = let __call_arg_0_5 = !tempString in StringTools.trim __call_arg_0_5 in let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if Obj.obj (HxAnon.get registration "externFile") == HxString.hx_null_string then let __assign_6 = ("" : string) in (
           tempString1 := __assign_6;
           __assign_6
+        ) else let __assign_7 = (Obj.obj (HxAnon.get registration "externFile") : string) in (
+          tempString1 := __assign_7;
+          __assign_7
         ));
-        let rawPath = (StringTools.trim (!tempString1 : string) : string) in (
+        let rawPath = let __call_arg_0_8 = !tempString1 in StringTools.trim __call_arg_0_8 in (
           ignore (if HxString.length modulePath = 0 || HxString.length rawPath = 0 then raise (HxRuntime.Hx_continue) else ());
-          let resolvedPath = (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (rawPath : string) : string) in let input = Obj.magic (observe (modulePath : string) (resolvedPath : string)) in let inputs = Obj.magic (HxMap.get_string inputsByModule modulePath) in if inputs == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string inputsByModule modulePath (let __arr_7 = HxArray.create () in (
-            ignore (HxArray.push __arr_7 input);
-            __arr_7
+          let resolvedPath = let __call_arg_0_9 = cwd in let __call_arg_1_10 = rawPath in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_9 __call_arg_1_10 in let input = Obj.magic (let __call_arg_0_11 = modulePath in let __call_arg_1_12 = resolvedPath in observe __call_arg_0_11 __call_arg_1_12) in let inputs = Obj.magic (HxMap.get_string (Obj.magic inputsByModule) (modulePath : string)) in if inputs == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic inputsByModule) (modulePath : string) (let __arr_13 = HxArray.create () in (
+            ignore (HxArray.push __arr_13 input);
+            __arr_13
           ))) else ignore (HxArray.push inputs input)
         )
       )
@@ -77,8 +78,8 @@ let collect = fun cwd -> let inputsByModule = Obj.magic (HxMap.create_string ())
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let observations = Obj.magic (HxMap.create_string ()) in let modulePath = HxIterator.of_array (HxMap.keys_string inputsByModule) in (
-    ignore (while (let __iter_8 = modulePath in fun () -> HxIterator.hasNext (Obj.magic __iter_8)) () do ignore (let modulePath2 = ((let __iter_9 = modulePath in fun () -> HxIterator.next (Obj.magic __iter_9)) () : string) in HxMap.set_string observations modulePath2 (CompilerMacroFileDependencyObservation.create (Obj.magic (HxMap.get_string inputsByModule modulePath2)))) done);
+  let observations = Obj.magic (HxMap.create_string ()) in let modulePath = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic inputsByModule))) in (
+    ignore (while (let __iter_14 = modulePath in fun () -> HxIterator.hasNext (Obj.magic __iter_14)) () do ignore (let modulePath2 = ((let __iter_15 = modulePath in fun () -> HxIterator.next (Obj.magic __iter_15)) () : string) in let value = Obj.magic (CompilerMacroFileDependencyObservation.create (Obj.magic (HxMap.get_string (Obj.magic inputsByModule) (modulePath2 : string)))) in HxMap.set_string (Obj.magic observations) (modulePath2 : string) value) done);
     observations
   )
 )

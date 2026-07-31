@@ -25,8 +25,8 @@ let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  ignore (if !i <> 5 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad i") ["Dynamic"; "String"]) else ());
-  ignore (if !sum <> 8 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad sum") ["Dynamic"; "String"]) else ());
+  ignore (if !i <> 5 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad i") ["Dynamic"]) else ());
+  ignore (if !sum <> 8 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad sum") ["Dynamic"]) else ());
   let outer = ref 0 in let innerCount = ref 0 in (
     ignore (while !outer < 3 do ignore ((
       ignore (let __old_3 = !outer in let __new_4 = HxInt.add __old_3 1 in (
@@ -47,7 +47,7 @@ let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ()
     )) done);
-    ignore (if !innerCount <> 6 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad innerCount") ["Dynamic"; "String"]) else ());
-    print_endline "OK loop_control"
+    ignore (if !innerCount <> 6 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad innerCount") ["Dynamic"]) else ());
+    let value = Obj.repr "OK loop_control" in HxSys.printlnValue value
   )
 ))

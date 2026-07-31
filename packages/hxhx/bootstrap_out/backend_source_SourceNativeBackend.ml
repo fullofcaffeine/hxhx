@@ -13,25 +13,25 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.S
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceNativeBackend" } : t)
 
-let capabilitiesStatic = fun () -> let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_1 "supportsBuildExecutable" (HxRuntime.box_bool false));
-  ignore (HxAnon.set __anon_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_1
+let capabilitiesStatic = fun () -> let __anonymous_value_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_1 "supportsBuildExecutable" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anonymous_value_1 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_1
 )
 
-let javaCapabilities = fun () -> let __anon_2 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_2 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_2 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_2
+let javaCapabilities = fun () -> let __anonymous_value_2 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_2 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_2 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_2
 )
 
-let csCapabilities = fun () -> let __anon_3 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_3 "supportsNoEmit" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_3 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_3 "supportsCustomOutputFile" (HxRuntime.box_bool true));
-  __anon_3
+let csCapabilities = fun () -> let __anonymous_value_3 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_3 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_3 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anonymous_value_3 "supportsCustomOutputFile" (HxRuntime.box_bool true));
+  __anonymous_value_3
 )
 
 let descriptor = fun targetId implId description hostCap -> let __anon_4 = HxAnon.create () in (

@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable packagePath : string; mutable directives : HxModuleDirective.t HxArray.t; mutable mainClass : HxClassDecl.t; mutable classes : HxClassDecl.t HxArray.t; mutable headerOnly : bool; mutable hasToplevelMain : bool }
 
-let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasToplevelMain2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null); classes = Obj.magic (HxRuntime.hx_null); headerOnly = false; hasToplevelMain = false } : t) in (
+let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasToplevelMain2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null); classes = Obj.magic (HxRuntime.hx_null); headerOnly = false; hasToplevelMain = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
       (Obj.magic self : t).packagePath <- __assign_1;
@@ -67,20 +67,20 @@ let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasTop
           )
         )
       )));
-      ignore (let __assign_16 = headerOnly2 in (
-        (Obj.magic self : t).headerOnly <- __assign_16;
-        __assign_16
+      ignore (let __place_receiver_16 = self in let __place_rhs_17 = headerOnly2 in (
+        (__place_receiver_16 : t).headerOnly <- __place_rhs_17;
+        __place_rhs_17
       ));
-      let __assign_17 = hasToplevelMain2 in (
-        (Obj.magic self : t).hasToplevelMain <- __assign_17;
-        __assign_17
+      let __place_receiver_18 = self in let __place_rhs_19 = hasToplevelMain2 in (
+        (__place_receiver_18 : t).hasToplevelMain <- __place_rhs_19;
+        __place_rhs_19
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; directives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null); classes = Obj.magic (HxRuntime.hx_null); headerOnly = false; hasToplevelMain = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null); classes = Obj.magic (HxRuntime.hx_null); headerOnly = false; hasToplevelMain = false } : t)
 
 let getPackagePath = fun m -> (Obj.magic m : t).packagePath
 

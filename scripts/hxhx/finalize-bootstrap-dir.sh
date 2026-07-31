@@ -54,36 +54,11 @@ file_contains_literal() {
 
 bootstrap_emitter_shim_patch_anchor() {
   local emitter_path="$1"
-  local source_helper_anchor='ignore (patchStage3MacroContextLoadShimForStage3 (outAbs : string));'
-  local legacy_inline_anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
 
-  if file_contains_literal "$source_helper_anchor" "$emitter_path"; then
-    printf '%s\n' "$source_helper_anchor"
-  else
-    printf '%s\n' "$legacy_inline_anchor"
-  fi
-}
-
-patch_bootstrap_emitter_root_sys_stdio() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor
-  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
-  local marker='(* hxhx(stage3) bootstrap shim: root Sys stdio repair *)'
-  local temp_path="$emitter_path.tmp"
-  local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/root_sys_stdio.mlpatch"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$emitter_path"; then
-    return 0
-  fi
-
-  insert_bootstrap_patch_before_anchor     "$emitter_path"     "$temp_path"     "$anchor"     "$payload_path"     "build-hxhx: failed to locate root Sys stdio repair anchor in EmitterStage.ml"
-
-  mv "$temp_path" "$emitter_path"
+  # The target can render this typed call directly or through numbered
+  # argument temporaries. The structural helper returns the complete generated
+  # statement so payload insertion stays at one exact expression boundary.
+  run_bootstrap_patch_helper find-emitter-shim-patch-anchor "$emitter_path"
 }
 
 patch_bootstrap_emitter_project_generator_helper_calls() {
@@ -339,51 +314,6 @@ patch_bootstrap_hxparser_generic_function_decl() {
   run_bootstrap_patch_helper patch-hxparser-generic-function-decl "$parser_path"
 }
 
-patch_bootstrap_hxparser_uppercase_helper_call() {
-  local build_dir="$1"
-  local parser_path="$build_dir/HxParser.ml"
-
-  if [ ! -f "$parser_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'hasLowerAlpha (name : string) && HxString.indexOf name "_" 0 = -1' "$parser_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-hxparser-uppercase-helper-call "$parser_path"
-}
-
-patch_bootstrap_emitter_typed_param_fallback() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: typed param fallback for emitted fn args' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-emitter-typed-param-fallback "$emitter_path"
-}
-
-patch_bootstrap_emitter_parsed_arg_type_overlay() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: parsed arg type overlay for tyByIdent' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-emitter-parsed-arg-type-overlay "$emitter_path"
-}
-
 patch_bootstrap_emitter_preapplied_sig_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -397,21 +327,6 @@ patch_bootstrap_emitter_preapplied_sig_fallback() {
   fi
 
   run_bootstrap_patch_helper patch-emitter-preapplied-sig-fallback "$emitter_path"
-}
-
-patch_bootstrap_stage1_std_root_termination() {
-  local build_dir="$1"
-  local stage1_path="$build_dir/hxhx_Stage1Compiler.ml"
-
-  if [ ! -f "$stage1_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'StringTools.startsWith (nextDir : string) ("../" : string)' "$stage1_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-stage1-std-root-termination "$stage1_path"
 }
 
 patch_bootstrap_emitter_allowed_ident_fallback() {
@@ -616,66 +531,6 @@ patch_bootstrap_emitter_negative_unop_is_int_expr() {
   fi
 
   run_bootstrap_patch_helper patch-negative-unop-is-int-expr "$emitter_path"
-}
-
-patch_bootstrap_emitter_instance_call_receiver_forwarding() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: instance call receiver forwarding repair' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-instance-call-receiver-forwarding "$emitter_path"
-}
-
-patch_bootstrap_emitter_instance_call_this_binding() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: instance call this-binding repair' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-instance-call-this-binding "$emitter_path"
-}
-
-patch_bootstrap_emitter_instance_method_value_binding() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string))' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-instance-method-value-binding "$emitter_path"
-}
-
-patch_bootstrap_emitter_instance_call_preapplied_arity() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal 'bootstrap shim: preapplied receiver arity repair' "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-instance-call-preapplied-arity "$emitter_path"
 }
 
 patch_bootstrap_emitter_string_length_fallback() {
@@ -935,26 +790,6 @@ patch_bootstrap_clirouting_ocaml_eval_hxml() {
   run_bootstrap_patch_helper patch-cli-routing-ocaml-eval-hxml "$clirouting_path"
 }
 
-patch_bootstrap_typerstage_lowercase_static_receiver_guard() {
-  local build_dir="$1"
-  local typerstage_path="$build_dir/TyperStage.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: lower-case static receiver guard *)'
-
-  if [ ! -f "$typerstage_path" ]; then
-    return 0
-  fi
-
-	if file_contains_literal "$marker" "$typerstage_path"; then
-		return 0
-	fi
-
-	if file_contains_literal 'if isUpperStartName (typeName : string) then' "$typerstage_path"; then
-		return 0
-	fi
-
-	run_bootstrap_patch_helper patch-typerstage-lowercase-static-receiver-guard "$typerstage_path"
-}
-
 patch_bootstrap_emitter_interactive_cli_progress() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -989,7 +824,6 @@ finalize_bootstrap_dir() {
     bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$build_dir" >&2
   fi
 
-  patch_bootstrap_emitter_root_sys_stdio "$build_dir"
   patch_bootstrap_emitter_project_generator_helper_calls "$build_dir"
   patch_bootstrap_emitter_load_template_fallback "$build_dir"
   patch_bootstrap_emitter_template_engine_condition "$build_dir"
@@ -1001,10 +835,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_type_create_instance "$build_dir"
   patch_bootstrap_hxparser_interpolated_exprs "$build_dir"
   patch_bootstrap_hxparser_generic_function_decl "$build_dir"
-  patch_bootstrap_hxparser_uppercase_helper_call "$build_dir"
-  patch_bootstrap_emitter_typed_param_fallback "$build_dir"
-  patch_bootstrap_emitter_parsed_arg_type_overlay "$build_dir"
-  patch_bootstrap_stage1_std_root_termination "$build_dir"
   patch_bootstrap_emitter_allowed_ident_fallback "$build_dir"
   patch_bootstrap_emitter_typed_ty_map_copying "$build_dir"
   patch_bootstrap_emitter_typed_map_helper_obj_repr "$build_dir"
@@ -1017,11 +847,7 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_stmt_local_allowed_idents "$build_dir"
   patch_bootstrap_emitter_stmt_list_string_builder "$build_dir"
   patch_bootstrap_emitter_stmt_list_trace "$build_dir"
-  patch_bootstrap_emitter_instance_call_receiver_forwarding "$build_dir"
-  patch_bootstrap_emitter_instance_call_this_binding "$build_dir"
-  patch_bootstrap_emitter_instance_method_value_binding "$build_dir"
   patch_bootstrap_emitter_allowed_ident_fallback "$build_dir"
-  patch_bootstrap_emitter_instance_call_preapplied_arity "$build_dir"
   patch_bootstrap_emitter_string_length_fallback "$build_dir"
   patch_bootstrap_emitter_string_length_stdlib "$build_dir"
   patch_bootstrap_emitter_mutable_local_string_init_hints "$build_dir"
@@ -1040,7 +866,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_float_modulo_mutable_local "$build_dir"
   patch_bootstrap_emitter_plugin_dune_layout "$build_dir"
   patch_bootstrap_js_target_core_systools_static_bodies "$build_dir"
-  patch_bootstrap_typerstage_lowercase_static_receiver_guard "$build_dir"
   patch_bootstrap_clirouting_ocaml_eval_hxml "$build_dir"
   patch_bootstrap_emitter_interactive_cli_progress "$build_dir"
   patch_bootstrap_emitter_nested_call_arg_reprs "$build_dir"

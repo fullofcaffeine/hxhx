@@ -39,11 +39,11 @@ let hasInvocationFlag = fun self (flag : string) -> HxArray.indexOf ((Obj.magic 
 
 let hasRequestFlag = fun self (flag : string) -> HxArray.indexOf ((Obj.magic self : t).requestArgsValue) flag 0 >= 0
 
-let copyBytes = fun value -> try let __fallback_result_9 = (
+let copyBytes = fun value -> try let __fallback_result_15 = (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  HxBytes.sub value 0 (HxBytes.length value)
-) in Obj.magic __fallback_result_9 with
-  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
+  let __bytes_receiver_input_8 = value in let __bytes_receiver_9 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_8) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_8 in let __bytes_arg_0_10 = 0 in let __bytes_arg_1_11 = let __bytes_receiver_input_12 = value in let __bytes_receiver_13 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_12) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_12 in HxBytes.length __bytes_receiver_13 in HxBytes.sub __bytes_receiver_9 __bytes_arg_0_10 __bytes_arg_1_11
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let create = fun requestId2 baseArgs requestArgs__local stdinBytes__local -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic (HxRuntime.hx_null); requestArgsValue = Obj.magic (HxRuntime.hx_null); stdinBytesValue = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((

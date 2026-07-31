@@ -22,20 +22,20 @@ let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t)
 
-let incX = fun self () -> ignore (ignore (let __place_receiver_5 = self in let __place_rhs_6 = HxInt.add ((Obj.magic self : t).x) 1 in (
+let incX = fun self () -> ignore (ignore (let __place_receiver_5 = self in let __place_rhs_6 = HxInt.add ((self : t).x) 1 in (
   (__place_receiver_5 : t).x <- __place_rhs_6;
   __place_rhs_6
 )))
 
 let add = fun self (dx : int) (dy : int) -> ignore (ignore ((
-  ignore (let __place_receiver_7 = self in let __place_rhs_8 = HxInt.add ((Obj.magic self : t).x) dx in (
+  ignore (let __place_receiver_7 = self in let __place_rhs_8 = HxInt.add ((self : t).x) dx in (
     (__place_receiver_7 : t).x <- __place_rhs_8;
     __place_rhs_8
   ));
-  let __place_receiver_9 = self in let __place_rhs_10 = HxInt.add ((Obj.magic self : t).y) dy in (
+  let __place_receiver_9 = self in let __place_rhs_10 = HxInt.add ((self : t).y) dy in (
     (__place_receiver_9 : t).y <- __place_rhs_10;
     __place_rhs_10
   )
 )))
 
-let sum = fun self () -> HxInt.add ((Obj.magic self : t).x) ((Obj.magic self : t).y)
+let sum = fun self () -> (HxInt.add ((self : t).x) ((self : t).y) : int)

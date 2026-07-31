@@ -41,8 +41,8 @@ class ReflaxeOcamlScaffoldCli {
 				Sys.println("Run these commands from that directory:");
 				Sys.println("  haxelib run reflaxe.ocaml doctor --require native");
 				if (summary.kind == "app") {
-					Sys.println("  haxelib run reflaxe.ocaml build --run out/_build/default/out.exe");
-					Sys.println("  haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe");
+					Sys.println("  haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe");
+					Sys.println("  haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe");
 				} else {
 					Sys.println("  haxelib run reflaxe.ocaml build");
 					Sys.println("  haxelib run reflaxe.ocaml watch");

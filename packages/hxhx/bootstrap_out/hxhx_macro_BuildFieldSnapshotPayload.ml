@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type buildfieldpayloaditem_t = { __hx_type : Obj.t; mutable name : string; mutable kind : string; mutable isStatic : bool; mutable visibility : string; mutable metadata : string HxArray.t; mutable min : int; mutable max : int; mutable isFinal : bool; mutable propertyGet : string; mutable propertySet : string; mutable typeHint : string; mutable initText : string; mutable args : Obj.t HxArray.t; mutable returnTypeHint : string; mutable bodyText : string }
 
-let buildfieldpayloaditem_create = fun name2 kind2 isStatic2 visibility2 metadata2 min2 max2 isFinal2 propertyGet2 propertySet2 typeHint2 initText2 args2 returnTypeHint2 bodyText2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem"; name = ""; kind = ""; isStatic = false; visibility = ""; metadata = Obj.magic (HxRuntime.hx_null); min = 0; max = 0; isFinal = false; propertyGet = ""; propertySet = ""; typeHint = ""; initText = ""; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; bodyText = "" } : buildfieldpayloaditem_t) in (
+let buildfieldpayloaditem_create = fun name2 kind2 isStatic2 visibility2 metadata2 min2 max2 isFinal2 propertyGet2 propertySet2 typeHint2 initText2 args2 returnTypeHint2 bodyText2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem"; name = HxString.hx_null_string; kind = HxString.hx_null_string; isStatic = false; visibility = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); min = 0; max = 0; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; typeHint = HxString.hx_null_string; initText = HxString.hx_null_string; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = HxString.hx_null_string; bodyText = HxString.hx_null_string } : buildfieldpayloaditem_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : buildfieldpayloaditem_t).name <- __assign_1;
@@ -16,121 +16,121 @@ let buildfieldpayloaditem_create = fun name2 kind2 isStatic2 visibility2 metadat
       (Obj.magic self : buildfieldpayloaditem_t).kind <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = isStatic2 in (
-      (Obj.magic self : buildfieldpayloaditem_t).isStatic <- __assign_3;
-      __assign_3
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = isStatic2 in (
+      (__place_receiver_3 : buildfieldpayloaditem_t).isStatic <- __place_rhs_4;
+      __place_rhs_4
     ));
-    ignore (let __assign_4 = (visibility2 : string) in (
-      (Obj.magic self : buildfieldpayloaditem_t).visibility <- __assign_4;
-      __assign_4
+    ignore (let __assign_5 = (visibility2 : string) in (
+      (Obj.magic self : buildfieldpayloaditem_t).visibility <- __assign_5;
+      __assign_5
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
-        tempRight := __assign_5;
-        __assign_5
-      ) else let __assign_7 = Obj.magic metadata2 in (
-        tempRight := __assign_7;
-        __assign_7
-      ));
-      ignore (let __assign_8 = Obj.magic (!tempRight) in (
-        (Obj.magic self : buildfieldpayloaditem_t).metadata <- __assign_8;
+      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in (
+        tempRight := __assign_6;
+        __assign_6
+      ) else let __assign_8 = Obj.magic metadata2 in (
+        tempRight := __assign_8;
         __assign_8
       ));
-      ignore (let __place_receiver_9 = self in let __place_rhs_10 = min2 in (
-        (__place_receiver_9 : buildfieldpayloaditem_t).min <- __place_rhs_10;
-        __place_rhs_10
+      ignore (let __assign_9 = Obj.magic (!tempRight) in (
+        (Obj.magic self : buildfieldpayloaditem_t).metadata <- __assign_9;
+        __assign_9
       ));
-      ignore (let __place_receiver_11 = self in let __place_rhs_12 = max2 in (
-        (__place_receiver_11 : buildfieldpayloaditem_t).max <- __place_rhs_12;
-        __place_rhs_12
+      ignore (let __place_receiver_10 = self in let __place_rhs_11 = min2 in (
+        (__place_receiver_10 : buildfieldpayloaditem_t).min <- __place_rhs_11;
+        __place_rhs_11
       ));
-      ignore (let __assign_13 = isFinal2 in (
-        (Obj.magic self : buildfieldpayloaditem_t).isFinal <- __assign_13;
-        __assign_13
+      ignore (let __place_receiver_12 = self in let __place_rhs_13 = max2 in (
+        (__place_receiver_12 : buildfieldpayloaditem_t).max <- __place_rhs_13;
+        __place_rhs_13
       ));
-      let tempRight1 = ref ("" : string) in (
-        ignore (if propertyGet2 == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
-          tempRight1 := __assign_14;
-          __assign_14
-        ) else let __assign_15 = (propertyGet2 : string) in (
-          tempRight1 := __assign_15;
-          __assign_15
-        ));
-        ignore (let __assign_16 = (!tempRight1 : string) in (
-          (Obj.magic self : buildfieldpayloaditem_t).propertyGet <- __assign_16;
+      ignore (let __place_receiver_14 = self in let __place_rhs_15 = isFinal2 in (
+        (__place_receiver_14 : buildfieldpayloaditem_t).isFinal <- __place_rhs_15;
+        __place_rhs_15
+      ));
+      let tempRight1 = ref (HxString.hx_null_string : string) in (
+        ignore (if propertyGet2 == HxString.hx_null_string then let __assign_16 = ("" : string) in (
+          tempRight1 := __assign_16;
           __assign_16
+        ) else let __assign_17 = (propertyGet2 : string) in (
+          tempRight1 := __assign_17;
+          __assign_17
         ));
-        let tempRight2 = ref ("" : string) in (
-          ignore (if propertySet2 == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("" : string) in (
-            tempRight2 := __assign_17;
-            __assign_17
-          ) else let __assign_18 = (propertySet2 : string) in (
-            tempRight2 := __assign_18;
-            __assign_18
-          ));
-          ignore (let __assign_19 = (!tempRight2 : string) in (
-            (Obj.magic self : buildfieldpayloaditem_t).propertySet <- __assign_19;
+        ignore (let __assign_18 = (!tempRight1 : string) in (
+          (Obj.magic self : buildfieldpayloaditem_t).propertyGet <- __assign_18;
+          __assign_18
+        ));
+        let tempRight2 = ref (HxString.hx_null_string : string) in (
+          ignore (if propertySet2 == HxString.hx_null_string then let __assign_19 = ("" : string) in (
+            tempRight2 := __assign_19;
             __assign_19
+          ) else let __assign_20 = (propertySet2 : string) in (
+            tempRight2 := __assign_20;
+            __assign_20
           ));
-          let tempRight3 = ref ("" : string) in (
-            ignore (if typeHint2 == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
-              tempRight3 := __assign_20;
-              __assign_20
-            ) else let __assign_21 = (typeHint2 : string) in (
-              tempRight3 := __assign_21;
-              __assign_21
-            ));
-            ignore (let __assign_22 = (!tempRight3 : string) in (
-              (Obj.magic self : buildfieldpayloaditem_t).typeHint <- __assign_22;
+          ignore (let __assign_21 = (!tempRight2 : string) in (
+            (Obj.magic self : buildfieldpayloaditem_t).propertySet <- __assign_21;
+            __assign_21
+          ));
+          let tempRight3 = ref (HxString.hx_null_string : string) in (
+            ignore (if typeHint2 == HxString.hx_null_string then let __assign_22 = ("" : string) in (
+              tempRight3 := __assign_22;
               __assign_22
+            ) else let __assign_23 = (typeHint2 : string) in (
+              tempRight3 := __assign_23;
+              __assign_23
             ));
-            let tempRight4 = ref ("" : string) in (
-              ignore (if initText2 == Obj.magic (HxRuntime.hx_null) then let __assign_23 = ("" : string) in (
-                tempRight4 := __assign_23;
-                __assign_23
-              ) else let __assign_24 = (initText2 : string) in (
-                tempRight4 := __assign_24;
-                __assign_24
-              ));
-              ignore (let __assign_25 = (!tempRight4 : string) in (
-                (Obj.magic self : buildfieldpayloaditem_t).initText <- __assign_25;
+            ignore (let __assign_24 = (!tempRight3 : string) in (
+              (Obj.magic self : buildfieldpayloaditem_t).typeHint <- __assign_24;
+              __assign_24
+            ));
+            let tempRight4 = ref (HxString.hx_null_string : string) in (
+              ignore (if initText2 == HxString.hx_null_string then let __assign_25 = ("" : string) in (
+                tempRight4 := __assign_25;
                 __assign_25
+              ) else let __assign_26 = (initText2 : string) in (
+                tempRight4 := __assign_26;
+                __assign_26
+              ));
+              ignore (let __assign_27 = (!tempRight4 : string) in (
+                (Obj.magic self : buildfieldpayloaditem_t).initText <- __assign_27;
+                __assign_27
               ));
               let tempRight5 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-                ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in (
-                  tempRight5 := __assign_26;
-                  __assign_26
-                ) else let __assign_28 = Obj.magic args2 in (
+                ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_28 = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in (
                   tempRight5 := __assign_28;
                   __assign_28
+                ) else let __assign_30 = Obj.magic args2 in (
+                  tempRight5 := __assign_30;
+                  __assign_30
                 ));
-                ignore (let __assign_29 = Obj.magic (!tempRight5) in (
-                  (Obj.magic self : buildfieldpayloaditem_t).args <- __assign_29;
-                  __assign_29
+                ignore (let __assign_31 = Obj.magic (!tempRight5) in (
+                  (Obj.magic self : buildfieldpayloaditem_t).args <- __assign_31;
+                  __assign_31
                 ));
-                let tempRight6 = ref ("" : string) in (
-                  ignore (if returnTypeHint2 == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
-                    tempRight6 := __assign_30;
-                    __assign_30
-                  ) else let __assign_31 = (returnTypeHint2 : string) in (
-                    tempRight6 := __assign_31;
-                    __assign_31
-                  ));
-                  ignore (let __assign_32 = (!tempRight6 : string) in (
-                    (Obj.magic self : buildfieldpayloaditem_t).returnTypeHint <- __assign_32;
+                let tempRight6 = ref (HxString.hx_null_string : string) in (
+                  ignore (if returnTypeHint2 == HxString.hx_null_string then let __assign_32 = ("" : string) in (
+                    tempRight6 := __assign_32;
                     __assign_32
+                  ) else let __assign_33 = (returnTypeHint2 : string) in (
+                    tempRight6 := __assign_33;
+                    __assign_33
                   ));
-                  let tempRight7 = ref ("" : string) in (
-                    ignore (if bodyText2 == Obj.magic (HxRuntime.hx_null) then let __assign_33 = ("" : string) in (
-                      tempRight7 := __assign_33;
-                      __assign_33
-                    ) else let __assign_34 = (bodyText2 : string) in (
-                      tempRight7 := __assign_34;
-                      __assign_34
-                    ));
-                    let __assign_35 = (!tempRight7 : string) in (
-                      (Obj.magic self : buildfieldpayloaditem_t).bodyText <- __assign_35;
+                  ignore (let __assign_34 = (!tempRight6 : string) in (
+                    (Obj.magic self : buildfieldpayloaditem_t).returnTypeHint <- __assign_34;
+                    __assign_34
+                  ));
+                  let tempRight7 = ref (HxString.hx_null_string : string) in (
+                    ignore (if bodyText2 == HxString.hx_null_string then let __assign_35 = ("" : string) in (
+                      tempRight7 := __assign_35;
                       __assign_35
+                    ) else let __assign_36 = (bodyText2 : string) in (
+                      tempRight7 := __assign_36;
+                      __assign_36
+                    ));
+                    let __assign_37 = (!tempRight7 : string) in (
+                      (Obj.magic self : buildfieldpayloaditem_t).bodyText <- __assign_37;
+                      __assign_37
                     )
                   )
                 )
@@ -144,7 +144,7 @@ let buildfieldpayloaditem_create = fun name2 kind2 isStatic2 visibility2 metadat
   self
 )
 
-let buildfieldpayloaditem___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem"; name = ""; kind = ""; isStatic = false; visibility = ""; metadata = Obj.magic (HxRuntime.hx_null); min = 0; max = 0; isFinal = false; propertyGet = ""; propertySet = ""; typeHint = ""; initText = ""; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; bodyText = "" } : buildfieldpayloaditem_t)
+let buildfieldpayloaditem___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem"; name = HxString.hx_null_string; kind = HxString.hx_null_string; isStatic = false; visibility = HxString.hx_null_string; metadata = Obj.magic (HxRuntime.hx_null); min = 0; max = 0; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; typeHint = HxString.hx_null_string; initText = HxString.hx_null_string; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = HxString.hx_null_string; bodyText = HxString.hx_null_string } : buildfieldpayloaditem_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: hxhx.macro.BuildFieldSnapshotPayload *)
@@ -172,20 +172,20 @@ let encodeParsedModule = fun pm -> let decl = Obj.magic (ParsedModule.getDecl (O
           ignore (_g3 := __new_5);
           __new_5
         ));
-        HxArray.push _g2 (let __anon_6 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_6 "name" (Obj.repr (HxFunctionArg.getName (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "isOptional" (HxRuntime.box_bool (HxFunctionArg.getIsOptional (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "isRest" (HxRuntime.box_bool (HxFunctionArg.getIsRest (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "typeHint" (Obj.repr (HxFunctionArg.getTypeHint (Obj.magic arg))));
-          ignore (HxAnon.set __anon_6 "defaultValueText" (Obj.repr (HxFunctionArg.getDefaultValueText (Obj.magic arg))));
-          __anon_6
+        HxArray.push _g2 (let __anonymous_value_6 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_6 "name" (Obj.repr (HxFunctionArg.getName (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "isOptional" (HxRuntime.box_bool (HxFunctionArg.getIsOptional (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "isRest" (HxRuntime.box_bool (HxFunctionArg.getIsRest (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "typeHint" (Obj.repr (HxFunctionArg.getTypeHint (Obj.magic arg))));
+          ignore (HxAnon.set __anonymous_value_6 "defaultValueText" (Obj.repr (HxFunctionArg.getDefaultValueText (Obj.magic arg))));
+          __anonymous_value_6
         ))
       )) done);
       ignore (let __assign_7 = Obj.magic _g2 in (
         tempArray := __assign_7;
         __assign_7
       ));
-      let args = Obj.magic (!tempArray) in HxArray.push items (buildfieldpayloaditem_create (HxFunctionDecl.getName (Obj.magic fn) : string) ("fun" : string) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (HxRuntime.dynamic_toStdString (Obj.repr (HxFunctionDecl.getVisibility (Obj.magic fn))) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) ()) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) ()) false ("" : string) ("" : string) ("" : string) ("" : string) (Obj.magic args) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
+      let args = Obj.magic (!tempArray) in HxArray.push items (buildfieldpayloaditem_create (HxFunctionDecl.getName (Obj.magic fn) : string) ("fun" : string) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (HxDynamic.toStdString (Obj.repr (HxFunctionDecl.getVisibility (Obj.magic fn))) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) ()) (HxPos.getIndex (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) ()) false ("" : string) ("" : string) ("" : string) ("" : string) (Obj.magic args) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
     )
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
@@ -194,93 +194,93 @@ let encodeParsedModule = fun pm -> let decl = Obj.magic (ParsedModule.getDecl (O
         ignore (_g := __new_9);
         __new_9
       ));
-      let tempString = ref ("" : string) in (
-        ignore (if HxString.length (HxFieldDecl.getPropertyGet (Obj.magic f)) > 0 || HxString.length (HxFieldDecl.getPropertySet (Obj.magic f)) > 0 then let __assign_10 = ("prop" : string) in (
+      let tempString = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.length (HxFieldDecl.getPropertyGet (Obj.magic f)) > 0 || HxString.length (HxFieldDecl.getPropertySet (Obj.magic f)) > 0 then let __assign_10 = "prop" in (
           tempString := __assign_10;
           __assign_10
-        ) else let __assign_11 = ("var" : string) in (
+        ) else let __assign_11 = "var" in (
           tempString := __assign_11;
           __assign_11
         ));
-        let kind = (!tempString : string) in HxArray.push items (buildfieldpayloaditem_create (HxFieldDecl.getName (Obj.magic f) : string) (kind : string) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxRuntime.dynamic_toStdString (Obj.repr (HxFieldDecl.getVisibility (Obj.magic f))) : string) (Obj.magic (HxFieldDecl.getMetadata (Obj.magic f))) (HxPos.getIndex (Obj.magic (HxFieldDecl.getPos (Obj.magic f))) ()) (HxPos.getIndex (Obj.magic (HxFieldDecl.getEndPos (Obj.magic f))) ()) (HxFieldDecl.getIsFinal (Obj.magic f)) (HxFieldDecl.getPropertyGet (Obj.magic f) : string) (HxFieldDecl.getPropertySet (Obj.magic f) : string) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (HxFieldDecl.getInitText (Obj.magic f) : string) (Obj.magic (let __arr_12 = HxArray.create () in __arr_12)) ("" : string) ("" : string))
+        let kind = !tempString in HxArray.push items (buildfieldpayloaditem_create (HxFieldDecl.getName (Obj.magic f) : string) (kind : string) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxDynamic.toStdString (Obj.repr (HxFieldDecl.getVisibility (Obj.magic f))) : string) (Obj.magic (HxFieldDecl.getMetadata (Obj.magic f))) (HxPos.getIndex (Obj.magic (HxFieldDecl.getPos (Obj.magic f))) ()) (HxPos.getIndex (Obj.magic (HxFieldDecl.getEndPos (Obj.magic f))) ()) (HxFieldDecl.getIsFinal (Obj.magic f)) (HxFieldDecl.getPropertyGet (Obj.magic f) : string) (HxFieldDecl.getPropertySet (Obj.magic f) : string) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (HxFieldDecl.getInitText (Obj.magic f) : string) (Obj.magic (let __arr_12 = HxArray.create () in __arr_12)) ("" : string) ("" : string))
       )
     )) done);
-    let parts = Obj.magic (HxArray.create ()) in let tempString1 = ref ("" : string) in (
-      ignore (if filePath == Obj.magic (HxRuntime.hx_null) then let __assign_13 = ("" : string) in (
+    let parts = Obj.magic (HxArray.create ()) in let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if filePath == HxString.hx_null_string then let __assign_13 = ("" : string) in (
         tempString1 := __assign_13;
         __assign_13
       ) else let __assign_14 = (filePath : string) in (
         tempString1 := __assign_14;
         __assign_14
       ));
-      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("f" : string) (!tempString1 : string)));
-      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("c" : string) (string_of_int (HxArray.length items) : string)));
+      ignore (HxArray.push parts (let __call_arg_0_15 = "f" in let __call_arg_1_16 = !tempString1 in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_15 __call_arg_1_16));
+      ignore (HxArray.push parts (let __call_arg_0_17 = "c" in let __call_arg_1_18 = string_of_int (HxArray.length items) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_17 __call_arg_1_18));
       let _g = ref 0 in let _g1 = HxArray.length items in (
-        ignore (while !_g < _g1 do ignore (let i = let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-          ignore (_g := __new_16);
-          __old_15
+        ignore (while !_g < _g1 do ignore (let i = let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+          ignore (_g := __new_20);
+          __old_19
         ) in let it = Obj.magic (HxArray.get (Obj.magic items) i) in (
-          ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("n" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).name : string)));
-          ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("k" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).kind : string)));
-          let tempString2 = ref ("" : string) in (
-            ignore (if (Obj.magic it : buildfieldpayloaditem_t).isStatic then let __assign_17 = ("1" : string) in (
-              tempString2 := __assign_17;
-              __assign_17
-            ) else let __assign_18 = ("0" : string) in (
-              tempString2 := __assign_18;
-              __assign_18
+          ignore (HxArray.push parts (let __call_arg_0_21 = "n" ^ string_of_int i in let __call_arg_1_22 = (Obj.magic it : buildfieldpayloaditem_t).name in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_21 __call_arg_1_22));
+          ignore (HxArray.push parts (let __call_arg_0_23 = "k" ^ string_of_int i in let __call_arg_1_24 = (Obj.magic it : buildfieldpayloaditem_t).kind in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_23 __call_arg_1_24));
+          let tempString2 = ref (HxString.hx_null_string : string) in (
+            ignore (if (Obj.magic it : buildfieldpayloaditem_t).isStatic then let __assign_25 = "1" in (
+              tempString2 := __assign_25;
+              __assign_25
+            ) else let __assign_26 = "0" in (
+              tempString2 := __assign_26;
+              __assign_26
             ));
-            ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("s" ^ string_of_int i : string) (!tempString2 : string)));
-            ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("v" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).visibility : string)));
-            ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("mn" ^ string_of_int i : string) (string_of_int ((Obj.magic it : buildfieldpayloaditem_t).min) : string)));
-            ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("mx" ^ string_of_int i : string) (string_of_int ((Obj.magic it : buildfieldpayloaditem_t).max) : string)));
-            let tempString3 = ref ("" : string) in (
-              ignore (if (Obj.magic it : buildfieldpayloaditem_t).isFinal then let __assign_19 = ("1" : string) in (
-                tempString3 := __assign_19;
-                __assign_19
-              ) else let __assign_20 = ("0" : string) in (
-                tempString3 := __assign_20;
-                __assign_20
+            ignore (HxArray.push parts (let __call_arg_0_27 = "s" ^ string_of_int i in let __call_arg_1_28 = !tempString2 in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_27 __call_arg_1_28));
+            ignore (HxArray.push parts (let __call_arg_0_29 = "v" ^ string_of_int i in let __call_arg_1_30 = (Obj.magic it : buildfieldpayloaditem_t).visibility in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_29 __call_arg_1_30));
+            ignore (HxArray.push parts (let __call_arg_0_31 = "mn" ^ string_of_int i in let __call_arg_1_32 = string_of_int ((Obj.magic it : buildfieldpayloaditem_t).min) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_31 __call_arg_1_32));
+            ignore (HxArray.push parts (let __call_arg_0_33 = "mx" ^ string_of_int i in let __call_arg_1_34 = string_of_int ((Obj.magic it : buildfieldpayloaditem_t).max) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_33 __call_arg_1_34));
+            let tempString3 = ref (HxString.hx_null_string : string) in (
+              ignore (if (Obj.magic it : buildfieldpayloaditem_t).isFinal then let __assign_35 = "1" in (
+                tempString3 := __assign_35;
+                __assign_35
+              ) else let __assign_36 = "0" in (
+                tempString3 := __assign_36;
+                __assign_36
               ));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("fi" ^ string_of_int i : string) (!tempString3 : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("pg" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).propertyGet : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("ps" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).propertySet : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("th" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).typeHint : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("ie" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).initText : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("rt" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).returnTypeHint : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("bd" ^ string_of_int i : string) ((Obj.magic it : buildfieldpayloaditem_t).bodyText : string)));
-              ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("mc" ^ string_of_int i : string) (string_of_int (HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).metadata)) : string)));
+              ignore (HxArray.push parts (let __call_arg_0_37 = "fi" ^ string_of_int i in let __call_arg_1_38 = !tempString3 in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_37 __call_arg_1_38));
+              ignore (HxArray.push parts (let __call_arg_0_39 = "pg" ^ string_of_int i in let __call_arg_1_40 = (Obj.magic it : buildfieldpayloaditem_t).propertyGet in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_39 __call_arg_1_40));
+              ignore (HxArray.push parts (let __call_arg_0_41 = "ps" ^ string_of_int i in let __call_arg_1_42 = (Obj.magic it : buildfieldpayloaditem_t).propertySet in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_41 __call_arg_1_42));
+              ignore (HxArray.push parts (let __call_arg_0_43 = "th" ^ string_of_int i in let __call_arg_1_44 = (Obj.magic it : buildfieldpayloaditem_t).typeHint in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_43 __call_arg_1_44));
+              ignore (HxArray.push parts (let __call_arg_0_45 = "ie" ^ string_of_int i in let __call_arg_1_46 = (Obj.magic it : buildfieldpayloaditem_t).initText in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_45 __call_arg_1_46));
+              ignore (HxArray.push parts (let __call_arg_0_47 = "rt" ^ string_of_int i in let __call_arg_1_48 = (Obj.magic it : buildfieldpayloaditem_t).returnTypeHint in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_47 __call_arg_1_48));
+              ignore (HxArray.push parts (let __call_arg_0_49 = "bd" ^ string_of_int i in let __call_arg_1_50 = (Obj.magic it : buildfieldpayloaditem_t).bodyText in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_49 __call_arg_1_50));
+              ignore (HxArray.push parts (let __call_arg_0_51 = "mc" ^ string_of_int i in let __call_arg_1_52 = string_of_int (HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).metadata)) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_51 __call_arg_1_52));
               let _g2 = ref 0 in let _g3 = HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).metadata) in (
-                ignore (while !_g2 < _g3 do ignore (let j = let __old_21 = !_g2 in let __new_22 = HxInt.add __old_21 1 in (
-                  ignore (_g2 := __new_22);
-                  __old_21
-                ) in HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("m" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (HxArray.get (Obj.magic ((Obj.magic it : buildfieldpayloaditem_t).metadata)) j : string))) done);
-                ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("ac" ^ string_of_int i : string) (string_of_int (HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).args)) : string)));
-                let _g2 = ref 0 in let _g3 = HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).args) in while !_g2 < _g3 do ignore (let j = let __old_23 = !_g2 in let __new_24 = HxInt.add __old_23 1 in (
-                  ignore (_g2 := __new_24);
-                  __old_23
+                ignore (while !_g2 < _g3 do ignore (let j = let __old_53 = !_g2 in let __new_54 = HxInt.add __old_53 1 in (
+                  ignore (_g2 := __new_54);
+                  __old_53
+                ) in HxArray.push parts (let __call_arg_0_55 = (("m" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_56 = HxArray.get (Obj.magic ((Obj.magic it : buildfieldpayloaditem_t).metadata)) j in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_55 __call_arg_1_56)) done);
+                ignore (HxArray.push parts (let __call_arg_0_57 = "ac" ^ string_of_int i in let __call_arg_1_58 = string_of_int (HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).args)) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_57 __call_arg_1_58));
+                let _g2 = ref 0 in let _g3 = HxArray.length ((Obj.magic it : buildfieldpayloaditem_t).args) in while !_g2 < _g3 do ignore (let j = let __old_59 = !_g2 in let __new_60 = HxInt.add __old_59 1 in (
+                  ignore (_g2 := __new_60);
+                  __old_59
                 ) in let arg = HxArray.get (Obj.magic ((Obj.magic it : buildfieldpayloaditem_t).args)) j in (
-                  ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("an" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (Obj.obj (HxAnon.get arg "name") : string)));
-                  let tempString4 = ref ("" : string) in (
-                    ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "isOptional") then let __assign_25 = ("1" : string) in (
-                      tempString4 := __assign_25;
-                      __assign_25
-                    ) else let __assign_26 = ("0" : string) in (
-                      tempString4 := __assign_26;
-                      __assign_26
+                  ignore (HxArray.push parts (let __call_arg_0_61 = (("an" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_62 = Obj.obj (HxAnon.get arg "name") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_61 __call_arg_1_62));
+                  let tempString4 = ref (HxString.hx_null_string : string) in (
+                    ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "isOptional") then let __assign_63 = "1" in (
+                      tempString4 := __assign_63;
+                      __assign_63
+                    ) else let __assign_64 = "0" in (
+                      tempString4 := __assign_64;
+                      __assign_64
                     ));
-                    ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("ao" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (!tempString4 : string)));
-                    let tempString5 = ref ("" : string) in (
-                      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "isRest") then let __assign_27 = ("1" : string) in (
-                        tempString5 := __assign_27;
-                        __assign_27
-                      ) else let __assign_28 = ("0" : string) in (
-                        tempString5 := __assign_28;
-                        __assign_28
+                    ignore (HxArray.push parts (let __call_arg_0_65 = (("ao" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_66 = !tempString4 in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_65 __call_arg_1_66));
+                    let tempString5 = ref (HxString.hx_null_string : string) in (
+                      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "isRest") then let __assign_67 = "1" in (
+                        tempString5 := __assign_67;
+                        __assign_67
+                      ) else let __assign_68 = "0" in (
+                        tempString5 := __assign_68;
+                        __assign_68
                       ));
-                      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("ar" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (!tempString5 : string)));
-                      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("at" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (Obj.obj (HxAnon.get arg "typeHint") : string)));
-                      HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("ad" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (Obj.obj (HxAnon.get arg "defaultValueText") : string))
+                      ignore (HxArray.push parts (let __call_arg_0_69 = (("ar" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_70 = !tempString5 in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_69 __call_arg_1_70));
+                      ignore (HxArray.push parts (let __call_arg_0_71 = (("at" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_72 = Obj.obj (HxAnon.get arg "typeHint") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_71 __call_arg_1_72));
+                      HxArray.push parts (let __call_arg_0_73 = (("ad" ^ string_of_int i) ^ "_") ^ string_of_int j in let __call_arg_1_74 = Obj.obj (HxAnon.get arg "defaultValueText") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_73 __call_arg_1_74)
                     )
                   )
                 )) done

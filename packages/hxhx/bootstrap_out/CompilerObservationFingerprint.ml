@@ -13,22 +13,22 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerObservat
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerObservationFingerprint" } : t)
 
-let display = fun value -> let tempString = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let display = fun (value : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_1 = ("" : string) in (
     tempString := __assign_1;
     __assign_1
   ) else let __assign_2 = (value : string) in (
     tempString := __assign_2;
     __assign_2
   ));
-  let state = ref 17 in let _g = ref 0 in let _g1 = HxString.length (!tempString) in (
+  let text = (!tempString : string) in let state = ref 17 in let _g = ref 0 in let _g1 = HxString.length text in (
     ignore (while !_g < _g1 do ignore (let index = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
       ignore (_g := __new_4);
       __old_3
-    ) in let __assign_5 = HxInt.add (HxInt.mul (!state) 31) (let __nullable_int_6 = HxString.charCodeAt (!tempString) index in if __nullable_int_6 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_6) in (
+    ) in let __assign_5 = HxInt.add (HxInt.mul (!state) 31) (let __nullable_int_6 = HxString.charCodeAt text index in if __nullable_int_6 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_6) in (
       state := __assign_5;
       __assign_5
     )) done);
-    (("display31-v1:" ^ string_of_int (HxString.length (!tempString))) ^ ":") ^ string_of_int (!state)
+    (("display31-v1:" ^ string_of_int (HxString.length text)) ^ ":") ^ string_of_int (!state)
   )
-)
+) : string)

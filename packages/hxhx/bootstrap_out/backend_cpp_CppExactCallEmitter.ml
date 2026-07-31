@@ -15,7 +15,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppExactCallEm
 
 let cppType = fun expression scope services -> try let __fallback_result_4 = (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in let tempResult = ref ("" : string) in (
+  let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in let tempResult = ref (HxString.hx_null_string : string) in (
     ignore (if exact == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
       tempResult := __assign_1;
       __assign_1
@@ -32,7 +32,7 @@ let render = fun expression scope services -> try let __fallback_result_11 = (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in (
     ignore (if exact == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    ignore (if HxString.length (Obj.obj (HxAnon.get exact "declaration")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact typed instance call is missing its canonical declaration identity") ["Dynamic"; "String"]) else ());
+    ignore (if HxString.length (Obj.obj (HxAnon.get exact "declaration")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "exact typed instance call is missing its canonical declaration identity") ["Dynamic"]) else ());
     let lookup = Obj.obj (HxAnon.get services "lookupForScope") scope in let owner = Obj.magic (Obj.obj (HxAnon.get services "ownerForType") (Obj.obj (HxAnon.get exact "owner") : string) scope lookup) in let representation = Obj.magic (Obj.obj (HxAnon.get services "representation") (Obj.magic owner) lookup) in (
       ignore (if representation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get services "ordinaryCall") (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Obj.obj (HxAnon.get exact "method") : string) (Obj.magic (Obj.obj (HxAnon.get exact "arguments"))) scope : string))) else ());
       let helper = Obj.magic (Obj.obj (HxAnon.get services "method") (Obj.magic owner) (Obj.obj (HxAnon.get exact "method") : string)) in (

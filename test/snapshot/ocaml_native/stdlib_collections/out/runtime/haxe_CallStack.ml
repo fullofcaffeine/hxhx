@@ -32,7 +32,7 @@ let toString (stack : t) : string =
   else (
     let buf = Buffer.create 128 in
     for i = 0 to len - 1 do
-      let line = HxRuntime.dynamic_toStdString (Obj.repr (HxArray.get stack i)) in
+      let line = HxDynamic.toStdString (Obj.repr (HxArray.get stack i)) in
       if i > 0 then Buffer.add_char buf '\n';
       Buffer.add_string buf line
     done;
@@ -42,4 +42,3 @@ let toString (stack : t) : string =
 (* Bring-up helper used by some std code paths; semantics are intentionally minimal. *)
 let subtract (a : t) (_b : t) : t =
   a
-

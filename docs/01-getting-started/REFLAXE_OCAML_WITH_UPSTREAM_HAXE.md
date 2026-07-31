@@ -80,9 +80,22 @@ From an installed-package project that has a `build.hxml`, use:
 
 ```bash
 haxelib run reflaxe.ocaml build
-haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
-haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe
+haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
+
+Fresh Haxe processes remain the default. For an explicitly warm local workflow,
+start Haxe 4.3.7 separately with `haxe --wait 6000`, then run:
+
+```bash
+haxelib run reflaxe.ocaml build --connect 6000
+haxelib run reflaxe.ocaml watch --connect 6000 \
+  --run .out.reflaxe-ocaml-dune-build/default/out.exe
+```
+
+The authoring command accepts only loopback endpoints and does not own the
+external server process. Omit `--connect` for a clean comparison; restart the
+server when you need to discard its in-memory frontend cache.
 
 The one-shot command runs the HXML in the project directory. The watch command
 discovers classpaths and included HXML files, groups rapid edits into one stable
@@ -90,14 +103,26 @@ batch, rebuilds, and runs the artifact only after a successful build. Add
 `--watch-path <path>` for native adapters or other inputs outside the discovered
 roots.
 
-The watcher deliberately starts a fresh Haxe process for each batch. Current
-Reflaxe evidence found that persistent Haxe-server reuse could leave generated
-output incomplete. Fast native iteration instead comes from Reflaxe avoiding
-unchanged file rewrites and Dune reusing its incremental build cache. Generated
-output and normal cache/build directories do not trigger rebuild loops.
+Earlier Reflaxe behavior treated only the modules rebuilt by a warm Haxe-server
+request as the whole target program, so target output could be incomplete. The
+pinned framework candidate now reconstructs the complete current program and
+publishes a complete tree through a private output transaction. The
+fresh-process route remains the default while the explicit `--connect` route
+provides opt-in frontend reuse. The real-server matrix covers
+add/delete/move/shadow, define/profile, DCE, build-macro, failure,
+A-to-B-to-A, and restart behavior; representative compiler-scale timing remains
+a separate evidence gate.
 
-For the measured failure, current defaults, server/editor/CI scenarios, and the
-criteria for enabling a supported warm path, read
+Fast native iteration keeps source and compiled state separate. Reflaxe
+atomically replaces generated `out/` only after source generation succeeds.
+Dune then builds that public tree and stores compiled state in the stable
+sibling `.out.reflaxe-ocaml-dune-build/`. An unchanged request reuses the
+existing native artifacts; a failed Reflaxe request leaves both the prior
+public source and Dune state usable. Generated output and normal cache/build
+directories do not trigger rebuild loops.
+
+For the original measured failure, current defaults, server/editor/CI
+scenarios, and the criteria for any future default change, read
 `docs/01-getting-started/COMPILATION_SERVER.md`.
 
 Each authoring build requests a receipt-linked native timing report. Console

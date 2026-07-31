@@ -65,6 +65,11 @@ class FileOutput extends Output {
 	}
 }
 
+/**
+	Typed output-stream boundary whose runtime declaration validates and explains
+	the packaged `HxFileStream` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file-stream")
 @:native("HxFileStream")
 private extern class NativeHxFileStream {
 	static function close_out(h:Dynamic):Void;

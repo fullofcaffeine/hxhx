@@ -13,20 +13,20 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "ParsedModuleInte
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModuleIntegrity" } : t)
 
-let visibilityName = fun visibility -> let tempResult = ref ("" : string) in (
+let visibilityName = fun visibility -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match visibility with
-    | HxVisibility.Public -> let __assign_40 = ("public" : string) in (
+    | HxVisibility.Public -> let __assign_40 = "public" in (
       tempResult := __assign_40;
       __assign_40
     )
-    | HxVisibility.Private -> let __assign_41 = ("private" : string) in (
+    | HxVisibility.Private -> let __assign_41 = "private" in (
       tempResult := __assign_41;
       __assign_41
     ));
   !tempResult
 )
 
-let add = fun out value -> ignore (try (
+let add = fun out value -> ignore (try ignore ((
   ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (StringBuf.add (Obj.magic out) (Obj.repr "-1:"));
     raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -34,7 +34,7 @@ let add = fun out value -> ignore (try (
   ignore (StringBuf.add (Obj.magic out) (Obj.repr (HxString.length value)));
   ignore (StringBuf.add (Obj.magic out) (Obj.repr ":"));
   StringBuf.add (Obj.magic out) (Obj.repr value)
-) with
+)) with
   | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42)
 
 let addStrings = fun out values -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -55,13 +55,13 @@ let addStrings = fun out values -> ignore (let tempMaybeString = ref (Obj.magic 
   )) done) else ()
 ))
 
-let addPosition = fun out position -> ignore (try (
+let addPosition = fun out position -> ignore (try ignore ((
   ignore (if position == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (add (Obj.magic out) ("unknown-position" : string));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   add (Obj.magic out) ((((("" ^ string_of_int (HxPos.getIndex (Obj.magic position) ())) ^ ":") ^ string_of_int (HxPos.getLine (Obj.magic position) ())) ^ ":") ^ string_of_int (HxPos.getColumn (Obj.magic position) ()) : string)
-) with
+)) with
   | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39)
 
 let addClass = fun out parsedClass -> ignore ((

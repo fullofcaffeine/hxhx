@@ -41,6 +41,12 @@
       ]
     },
     {
+      "module": "HxDynamic",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
       "module": "HxEnum",
       "reasons": [
         "full_runtime_mode"
@@ -164,6 +170,7 @@
     "HxArray",
     "HxBacktrace",
     "HxBytes",
+    "HxDynamic",
     "HxEnum",
     "HxFPHelper",
     "HxFile",
@@ -193,6 +200,7 @@
     "HxArray",
     "HxBacktrace",
     "HxBytes",
+    "HxDynamic",
     "HxEnum",
     "HxFPHelper",
     "HxFile",
@@ -220,6 +228,7 @@
     "HxArray",
     "HxBacktrace",
     "HxBytes",
+    "HxDynamic",
     "HxEnum",
     "HxFPHelper",
     "HxFile",

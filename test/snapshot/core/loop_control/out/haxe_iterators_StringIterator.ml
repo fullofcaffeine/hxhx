@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable s : string }
 
-let create = fun s2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.StringIterator"; s = "" } : t) in (
+let create = fun s2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.StringIterator"; s = HxString.hx_null_string } : t) in (
   ignore (ignore (let __assign_1 = (s2 : string) in (
     (Obj.magic self : t).s <- __assign_1;
     __assign_1
@@ -14,4 +14,4 @@ let create = fun s2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.S
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.StringIterator"; s = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.StringIterator"; s = HxString.hx_null_string } : t)

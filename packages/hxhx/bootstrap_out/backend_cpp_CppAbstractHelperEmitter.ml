@@ -18,10 +18,16 @@ let configureReceiver = fun scope representation ownerHaxeName -> ignore ((
     HxAnon.set scope "erasedAbstractThisName" (Obj.repr __assign_1);
     __assign_1
   ));
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) "__hxhx_abstract_this" (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) ()));
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypeHints")) "__hxhx_abstract_this" ownerHaxeName);
-  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNames")) "__hxhx_abstract_this" "__hxhx_abstract_this");
-  HxMap.set_string (Obj.obj (HxAnon.get scope "localNameCounts")) "__hxhx_abstract_this" 1
+  let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in let value = (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) in (
+    ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) value);
+    let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypeHints")) in (
+      ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) ownerHaxeName);
+      let _this = Obj.magic (Obj.obj (HxAnon.get scope "localNames")) in (
+        ignore (HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) "__hxhx_abstract_this");
+        let _this = Obj.magic (Obj.obj (HxAnon.get scope "localNameCounts")) in HxMap.set_string (Obj.magic _this) ("__hxhx_abstract_this" : string) 1
+      )
+    )
+  )
 ))
 
 let renderInstanceHelper = fun representation returnType helperName sourceParameters bodyLines -> let parameters = Obj.magic (let __arr_2 = HxArray.create () in (
@@ -88,18 +94,18 @@ let renderMethodCall = fun receiver hx_method args scope services -> try let __f
 ) in Obj.magic __fallback_result_13 with
   | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
-let isInlineBinaryOperator = fun op -> let tempResult = ref (false : bool) in (
+let isInlineBinaryOperator = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%" | "*" | "+" | "-" | "/" -> let __assign_34 = true in (
+    | "%" | "*" | "+" | "-" | "/" -> let __assign_35 = true in (
+      tempResult := __assign_35;
+      __assign_35
+    )
+    | _ -> let __assign_34 = false in (
       tempResult := __assign_34;
       __assign_34
-    )
-    | _ -> let __assign_33 = false in (
-      tempResult := __assign_33;
-      __assign_33
     ));
   !tempResult
-)
+) : bool)
 
 let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (let _g = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in if HxArray.length _g = 1 then let _g2 = Obj.magic (HxArray.get (Obj.magic _g) 0) in match _g2 with
@@ -146,15 +152,15 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
           | HxExpr.EWhile (_, _, _, _) -> 33
           | HxExpr.EBreak _ -> 34
-          | HxExpr.EContinue _ -> 35) = 6 then let op = (_g4 : string) in let right = Obj.magic _g6 in if isInlineBinaryOperator (op : string) then let __assign_17 = Obj.magic (((((("(" ^ HxString.toStdString receiver) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (renderExpression (Obj.magic right))) ^ ")" : string) in (
-          tempResult := __assign_17;
-          __assign_17
-        ) else let __assign_18 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          | HxExpr.EContinue _ -> 35) = 6 then let op = (_g4 : string) in let right = Obj.magic _g6 in if let __call_arg_0_17 = op in isInlineBinaryOperator __call_arg_0_17 then let __assign_18 = Obj.magic (((((("(" ^ HxString.toStdString receiver) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (renderExpression (Obj.magic right))) ^ ")" : string) in (
           tempResult := __assign_18;
           __assign_18
         ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempResult := __assign_19;
           __assign_19
+        ) else let __assign_20 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_20;
+          __assign_20
         )
         | HxExpr.ECast (_p0, _p1) -> let _g4 = Obj.magic _p0 in (
           ignore _p1;
@@ -194,12 +200,12 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
             | HxExpr.EWhile (_, _, _, _) -> 33
             | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let __assign_20 = Obj.magic (receiver : string) in (
-            tempResult := __assign_20;
-            __assign_20
-          ) else let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            | HxExpr.EContinue _ -> 35) = 6 then let __assign_21 = Obj.magic (receiver : string) in (
             tempResult := __assign_21;
             __assign_21
+          ) else let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_22;
+            __assign_22
           )
         )
         | _ -> let __assign_15 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -246,18 +252,18 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
           | HxExpr.EWhile (_, _, _, _) -> 33
           | HxExpr.EBreak _ -> 34
-          | HxExpr.EContinue _ -> 35) = 6 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if fixity = HxUnaryFixity.Postfix then let __assign_23 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
-          tempResult := __assign_23;
-          __assign_23
-        ) else let __assign_24 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
+          | HxExpr.EContinue _ -> 35) = 6 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if fixity = HxUnaryFixity.Postfix then let __assign_24 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
           tempResult := __assign_24;
           __assign_24
-        ) else let __assign_25 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        ) else let __assign_25 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
           tempResult := __assign_25;
           __assign_25
         ) else let __assign_26 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempResult := __assign_26;
           __assign_26
+        ) else let __assign_27 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_27;
+          __assign_27
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g4 = (_p0 : string) in let _g5 = Obj.magic _p1 in let _g6 = Obj.magic _p2 in match _g4 with
           | "+=" -> if (match _g5 with
@@ -296,12 +302,12 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
             | HxExpr.EWhile (_, _, _, _) -> 33
             | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_28 = Obj.magic ((HxString.toStdString receiver ^ " += ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
-            tempResult := __assign_28;
-            __assign_28
-          ) else let __assign_29 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_29 = Obj.magic ((HxString.toStdString receiver ^ " += ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
             tempResult := __assign_29;
             __assign_29
+          ) else let __assign_30 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_30;
+            __assign_30
           )
           | "-=" -> if (match _g5 with
             | HxExpr.ENull -> 0
@@ -339,53 +345,53 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
             | HxExpr.EWhile (_, _, _, _) -> 33
             | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_30 = Obj.magic ((HxString.toStdString receiver ^ " -= ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
-            tempResult := __assign_30;
-            __assign_30
-          ) else let __assign_31 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_31 = Obj.magic ((HxString.toStdString receiver ^ " -= ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
             tempResult := __assign_31;
             __assign_31
+          ) else let __assign_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_32;
+            __assign_32
           )
-          | _ -> let __assign_27 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_27;
-            __assign_27
+          | _ -> let __assign_28 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_28;
+            __assign_28
           ))
-        | _ -> let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_22;
-          __assign_22
+        | _ -> let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_23;
+          __assign_23
         )
     )
     | _ -> let __assign_14 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_14;
       __assign_14
-    ) else let __assign_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_32;
-    __assign_32
+    ) else let __assign_33 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_33;
+    __assign_33
   ));
   !tempResult
 )
 
-let renderPrimitiveIntLike = fun hx_method receiverIsIntLike receiver -> try let __fallback_result_40 = (
+let renderPrimitiveIntLike = fun (hx_method : string) (receiverIsIntLike : bool) (receiver : string) -> (try let __fallback_result_41 = (
   ignore (if not (receiverIsIntLike) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (match hx_method with
-      | "incr" -> let __assign_36 = Obj.magic (("(" ^ HxString.toStdString receiver) ^ "++)" : string) in (
-        tempResult := __assign_36;
-        __assign_36
-      )
-      | "toFloat" -> let __assign_37 = Obj.magic (("static_cast<double>(" ^ HxString.toStdString receiver) ^ ")" : string) in (
+      | "incr" -> let __assign_37 = Obj.magic (("(" ^ HxString.toStdString receiver) ^ "++)" : string) in (
         tempResult := __assign_37;
         __assign_37
       )
-      | "toInt" -> let __assign_38 = Obj.magic (receiver : string) in (
+      | "toFloat" -> let __assign_38 = Obj.magic (("static_cast<double>(" ^ HxString.toStdString receiver) ^ ")" : string) in (
         tempResult := __assign_38;
         __assign_38
       )
-      | _ -> let __assign_35 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_35;
-        __assign_35
+      | "toInt" -> let __assign_39 = Obj.magic (receiver : string) in (
+        tempResult := __assign_39;
+        __assign_39
+      )
+      | _ -> let __assign_36 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_36;
+        __assign_36
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_40 with
-  | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39
+) in Obj.magic __fallback_result_41 with
+  | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40 : string)

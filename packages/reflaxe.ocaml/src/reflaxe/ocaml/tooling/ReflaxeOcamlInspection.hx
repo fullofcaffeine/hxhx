@@ -7,10 +7,19 @@ import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureOperation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlLoopTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlNominalRepresentationProof;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionControlPayload;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionContainerElementConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
@@ -22,6 +31,8 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
+import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
+import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
 using StringTools;
 
@@ -45,7 +56,11 @@ class ReflaxeOcamlInspection {
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
 	static inline final DIRECT_STATIC_SIGNATURE_PROOF_ID = "direct-static-representation-signature-v3";
+	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
+	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v62";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -75,7 +90,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 10,
+			schemaVersion: 30,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -96,10 +111,16 @@ class ReflaxeOcamlInspection {
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length,
 				representationDecisionCount: representation.decisions.length,
+				anonymousStructureCount: lowering.anonymousStructures.length,
+				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
 				localConversionCount: lowering.localConversions.length,
+				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
+				controlCount: lowering.controls.length,
+				controlCatchCount: lowering.controlCatches.length,
+				controlTargetCount: lowering.controlTargets.length,
 				staticStorageCount: lowering.staticStorage.length
 			}
 		};
@@ -135,7 +156,13 @@ class ReflaxeOcamlInspection {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
 			}
+			lines.push('[PASS] Anonymous objects: ${report.lowering.anonymousStructures.length} runtime shape${report.lowering.anonymousStructures.length == 1 ? "" : "s"} and ${report.lowering.anonymousStructureOperations.length} create, initialize, read, plain-write, or compound-write occurrence${report.lowering.anonymousStructureOperations.length == 1 ? "" : "s"} were validated before target syntax.');
+			for (structure in report.lowering.anonymousStructures) {
+				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
+				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
+			}
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
+			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PARTIAL] Unsafe carrier proof ledger: ${report.lowering.unsafeOperations.length} admitted operation${report.lowering.unsafeOperations.length == 1 ? "" : "s"}; whole-program raw/unsafe coverage remains incomplete.');
 			for (operation in report.lowering.unsafeOperations) {
 				lines.push('  - ${operation.sourceFile} bytes ${operation.sourceMin}-${operation.sourceMax} ${operation.operation}: ${operation.inputSemanticTypeId}/${operation.inputCarrierTypeId} -> ${operation.outputSemanticTypeId}/${operation.outputCarrierTypeId}');
@@ -151,6 +178,17 @@ class ReflaxeOcamlInspection {
 					.join(", ");
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
+			}
+			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
+			for (control in report.lowering.controls) {
+				lines.push('  - ${control.sourceFile} bytes ${control.sourceMin}-${control.sourceMax}: ${control.kind} -> ${control.targetKind} ${control.targetId}');
+				final payload = control.payload;
+				if (payload != null)
+					lines.push('    payload: ${payload.inputSemanticTypeId}/${payload.inputCarrierTypeId} -${payload.conversion}-> ${payload.signalCarrierTypeId} -> ${payload.outputSemanticTypeId}/${payload.outputCarrierTypeId}');
+				if (control.runtimeTags.length > 0)
+					lines.push('    runtime tags: ${control.runtimeTags.join(", ")}');
+				lines.push('    runtime tag policy: ${control.runtimeTagPolicy}');
+				lines.push('    mechanism: ${control.mechanism}; runtime capability: ${control.runtimeCapabilityId}');
 			}
 			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
 			for (entry in report.lowering.staticStorage) {
@@ -302,17 +340,30 @@ class ReflaxeOcamlInspection {
 					plans: [],
 					representation: representationFailure("not-enabled", path,
 						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
+					anonymousStructureRevision: null,
+					anonymousStructures: [],
+					anonymousStructureOperations: [],
 					localConversionRevision: null,
 					localConversions: [],
+					containerElementRequiredConversionRevision: null,
+					containerElementRequiredConversionIds: [],
+					containerElementConversionRevision: null,
+					containerElementConversions: [],
 					unsafeOperationCompleteness: null,
 					unsafeOperationRevision: null,
 					unsafeOperations: [],
 					callRevision: null,
 					calls: [],
 					callableBoundaries: [],
+					controlRevision: null,
+					controls: [],
+					controlCatchRevision: null,
+					controlCatches: [],
+					controlTargetRevision: null,
+					controlTargets: [],
 					staticStorageRevision: null,
 					staticStorage: [],
-					scope: "typed-place-and-first-call-families",
+					scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
 			case Invalid(message):
@@ -320,8 +371,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 23) {
-						throw 'Unsupported lowering report schema $version; expected 23.';
+					if (version != 50) {
+						throw 'Unsupported lowering report schema $version; expected 50.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -335,11 +386,18 @@ class ReflaxeOcamlInspection {
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
+					final anonymousStructures = ReflaxeOcamlAnonymousStructureInspection.inspect(value, representation);
 					final localConversions = inspectLocalConversions(value);
-					final unsafeOperations = inspectUnsafeOperations(value, localConversions);
+					final containerElementRequiredConversionIds = inspectContainerElementRequiredConversions(value);
+					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
+					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
+					final controlTargets = inspectControlTargets(value);
+					final controls = inspectControls(value, representation, controlTargets);
+					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
-					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
+						containerElementConversions, anonymousStructures.operations, callInventory.calls, controls);
 					{
 						status: "present",
 						required: required,
@@ -349,18 +407,31 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						representation: representation,
+						anonymousStructureRevision: anonymousStructures.revision,
+						anonymousStructures: anonymousStructures.structures,
+						anonymousStructureOperations: anonymousStructures.operations,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
+						containerElementRequiredConversionRevision: requiredSha256Revision(value, "containerElementRequiredConversionRevision"),
+						containerElementRequiredConversionIds: containerElementRequiredConversionIds,
+						containerElementConversionRevision: requiredSha256Revision(value, "containerElementConversionRevision"),
+						containerElementConversions: containerElementConversions,
 						unsafeOperationCompleteness: requiredString(value, "unsafeOperationCompleteness"),
 						unsafeOperationRevision: requiredSha256Revision(value, "unsafeOperationRevision"),
 						unsafeOperations: unsafeOperations,
 						callRevision: requiredSha256Revision(value, "callRevision"),
 						calls: callInventory.calls,
 						callableBoundaries: callInventory.boundaries,
+						controlRevision: requiredSha256Revision(value, "controlRevision"),
+						controls: controls,
+						controlCatchRevision: requiredSha256Revision(value, "controlCatchRevision"),
+						controlCatches: controlCatches,
+						controlTargetRevision: requiredSha256Revision(value, "controlTargetRevision"),
+						controlTargets: controlTargets,
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
-						scope: "typed-place-and-first-call-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -368,9 +439,571 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
+	static function inspectControlTargets(value:Dynamic):Array<InspectionControlLoopTarget> {
+		if (requiredString(value, "controlTargetModel") != "typed-ocaml-lexical-loop-target-v1")
+			throw "Unsupported control-target report model.";
+		final rawTargets = requiredArray(value, "controlTargets");
+		if (rawTargets.length != requiredInt(value, "controlTargetCount"))
+			throw "Control-target count does not match its inventory.";
+		final targets = [for (entry in rawTargets) controlLoopTarget(entry)];
+		final ids:Map<String, Bool> = [];
+		for (target in targets) {
+			if (ids.exists(target.id))
+				throw 'Control-target report contains duplicate identity "${target.id}".';
+			if (target.sourceFile.length == 0
+				|| target.sourceMin < 0
+				|| target.sourceMax < target.sourceMin
+				|| (target.kind != "while" && target.kind != "do-while")
+				|| target.functionId.length == 0
+				|| target.programRevision.length == 0
+				|| target.bodyRevision.length == 0
+				|| target.pipelineRevision.length == 0
+				|| target.proofId != "lexical-loop-control-v1"
+				|| target.proofClaim.length == 0) {
+				throw 'Control loop target "${target.id}" has incomplete identity, source, proof, or revision metadata.';
+			}
+			ids.set(target.id, true);
+		}
+		targets.sort((left, right) -> compareStrings(left.id, right.id));
+		return targets;
+	}
+
+	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
+			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v15")
+			throw "Unsupported control report model.";
+		final rawControls = requiredArray(value, "controls");
+		if (rawControls.length != requiredInt(value, "controlCount"))
+			throw "Control count does not match its inventory.";
+		final canonicalControls = Json.stringify({
+			targets: requiredArray(value, "controlTargets"),
+			decisions: rawControls,
+			catchChains: requiredArray(value, "controlCatches")
+		});
+		final expectedControlRevision = "sha256:" + Sha256.encode(canonicalControls);
+		final reportedControlRevision = requiredSha256Revision(value, "controlRevision");
+		if (reportedControlRevision != expectedControlRevision)
+			throw "Control report revision does not match its targets, decisions, and catch chains.";
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final targetById:Map<String, InspectionControlLoopTarget> = [];
+		for (target in targets)
+			targetById.set(target.id, target);
+		final controls = [for (entry in rawControls) controlDecision(entry)];
+		final ids:Map<String, Bool> = [];
+		for (control in controls) {
+			if (ids.exists(control.id))
+				throw 'Control report contains duplicate identity "${control.id}".';
+			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
+				throw 'Control decision "${control.id}" has an invalid source span.';
+			if (control.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION) {
+				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$FUNCTION_PLAN_PIPELINE_REVISION".';
+			}
+			final payload = control.payload;
+			switch (control.kind) {
+				case "return":
+					if (control.effect != "exit-function"
+						|| control.targetKind != "function"
+						|| control.targetId != control.functionId
+						|| control.runtimeTags.length != 0
+						|| control.runtimeTagPolicy != "no-runtime-tags") {
+						throw 'Control decision "${control.id}" has an invalid return target, effect, or tag policy.';
+					}
+					switch (control.mechanism) {
+						case "runtime-void-return-signal":
+							if (control.runtimeCapabilityId != "hxhx-runtime:function-void-return-signal-v1"
+								|| payload != null
+								|| control.proofId != "effect-only-void-early-return-control-v1") {
+								throw 'Control decision "${control.id}" has an invalid effect-only Void return contract.';
+							}
+						case "runtime-return-signal":
+							if (control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1" || payload == null)
+								throw 'Control decision "${control.id}" has an invalid exact-value return capability or payload.';
+							validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+								'Control decision "${control.id}" input');
+							validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
+								representationById, 'Control decision "${control.id}" output');
+							final admittedExactInput = (payload.inputSemanticTypeId == "Int"
+								&& payload.inputCarrierTypeId == "int"
+								&& payload.inputRepresentationId == "representation:Int:internal-value")
+								|| (payload.inputSemanticTypeId == "Bool"
+									&& payload.inputCarrierTypeId == "bool"
+									&& payload.inputRepresentationId == "representation:Bool:internal-value")
+								|| (payload.inputSemanticTypeId == "String"
+									&& payload.inputCarrierTypeId == "string"
+									&& payload.inputRepresentationId == "representation:String:internal-value");
+							final admittedNullableInput = (payload.inputSemanticTypeId == "Null<Int>"
+								&& payload.inputCarrierTypeId == "Obj.t"
+								&& payload.inputRepresentationId == "representation:Null<Int>:internal-value")
+								|| (payload.inputSemanticTypeId == "Null<Bool>"
+									&& payload.inputCarrierTypeId == "Obj.t"
+									&& payload.inputRepresentationId == "representation:Null<Bool>:internal-value");
+							final commonPayloadValid = payload.signalCarrierTypeId == "Obj.t";
+							final sameSides = payload.outputSemanticTypeId == payload.inputSemanticTypeId
+								&& payload.outputCarrierTypeId == payload.inputCarrierTypeId
+								&& payload.outputRepresentationId == payload.inputRepresentationId;
+							final exactPayloadValid = admittedExactInput
+								&& sameSides
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "box-and-recover-exact-value"
+								&& payload.proofId == "exact-value-early-return-control-v2"
+								&& control.proofId == "exact-value-early-return-control-v2";
+							final nullablePayloadValid = admittedNullableInput
+								&& sameSides
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "preserve-nullable-carrier"
+								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
+								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
+							final nullableIntConversionValid = payload.inputSemanticTypeId == "Int"
+								&& payload.inputCarrierTypeId == "int"
+								&& payload.inputRepresentationId == "representation:Int:internal-value"
+								&& payload.outputSemanticTypeId == "Null<Int>"
+								&& payload.outputCarrierTypeId == "Obj.t"
+								&& payload.outputRepresentationId == "representation:Null<Int>:internal-value"
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "box-exact-int-to-nullable-carrier"
+								&& payload.proofId == "exact-int-to-nullable-early-return-control-v1"
+								&& control.proofId == "exact-int-to-nullable-early-return-control-v1";
+							final nullableBoolConversionValid = payload.inputSemanticTypeId == "Bool"
+								&& payload.inputCarrierTypeId == "bool"
+								&& payload.inputRepresentationId == "representation:Bool:internal-value"
+								&& payload.outputSemanticTypeId == "Null<Bool>"
+								&& payload.outputCarrierTypeId == "Obj.t"
+								&& payload.outputRepresentationId == "representation:Null<Bool>:internal-value"
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "box-exact-bool-to-nullable-carrier"
+								&& payload.proofId == "exact-bool-to-nullable-early-return-control-v1"
+								&& control.proofId == "exact-bool-to-nullable-early-return-control-v1";
+							final nominalDecision = representationById.get(payload.inputRepresentationId);
+							final nominal = payload.nominalRepresentation;
+							final nominalPayloadValid = nominalDecision != null
+								&& nominal != null
+								&& sameSides
+								&& nominalDecision.semanticTypeId == payload.inputSemanticTypeId
+								&& nominalDecision.carrierTypeId == payload.inputCarrierTypeId
+								&& nominalDecision.domain == "internal-value"
+								&& nominalDecision.boxingPolicy == "nullable-nominal-record-carrier"
+								&& nominalDecision.nominalTargetModuleName == nominal.targetModuleName
+								&& nominalDecision.nominalTargetTypeName == nominal.targetTypeName
+								&& nominalDecision.nominalLayoutRevision == nominal.layoutRevision
+								&& nominalDecision.proofId == nominal.representationProofId
+								&& payload.conversion == "box-and-recover-nominal-value"
+								&& payload.proofId == "exact-monomorphic-class-early-return-control-v1"
+								&& control.proofId == "exact-monomorphic-class-early-return-control-v1";
+							if (!commonPayloadValid
+								|| payload.proofClaim.length == 0
+								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !nullableIntConversionValid
+									&& !nullableBoolConversionValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, or primitive-to-nullable payload crossing.';
+							}
+						case _:
+							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
+					}
+				case "break", "continue":
+					final isBreak = control.kind == "break";
+					final target = targetById.get(control.targetId);
+					if (target == null)
+						throw 'Control decision "${control.id}" refers to missing loop target "${control.targetId}".';
+					if (control.targetKind != "loop"
+						|| control.effect != (isBreak ? "exit-loop" : "next-loop-iteration")
+						|| control.mechanism != (isBreak ? "runtime-break-signal" : "runtime-continue-signal")
+						|| control.runtimeCapabilityId != (isBreak ? "hxhx-runtime:loop-break-signal-v1" : "hxhx-runtime:loop-continue-signal-v1")
+						|| payload != null
+						|| control.proofId != "lexical-loop-control-v1"
+						|| control.runtimeTags.length != 0
+						|| control.runtimeTagPolicy != "no-runtime-tags"
+						|| target.functionId != control.functionId
+						|| target.programRevision != control.programRevision
+						|| target.bodyRevision != control.bodyRevision
+						|| target.pipelineRevision != control.pipelineRevision) {
+						throw 'Control decision "${control.id}" has an invalid loop target, effect, mechanism, capability, payload, or revision.';
+					}
+				case "throw":
+					if (control.effect != "raise-haxe-value"
+						|| control.targetKind != "haxe-exception-channel"
+						|| control.targetId != "control-target:haxe-exception-channel:v1"
+						|| control.mechanism != "runtime-typed-haxe-exception-signal"
+						|| control.runtimeCapabilityId != "hxhx-runtime:typed-haxe-exception-signal-v1"
+						|| payload == null) {
+						throw 'Control decision "${control.id}" has an invalid Haxe exception target, effect, mechanism, capability, or payload.';
+					}
+					final enumCarrier = "haxe-enum-native-variant-carrier-v1:" + payload.inputSemanticTypeId;
+					final enumRepresentation = "control-representation:enum-direct-v1:" + payload.inputSemanticTypeId;
+					final claimsDirectEnumPayload = payload.conversion == "box-enum-throw-carrier"
+						|| payload.proofId == "exact-enum-constructor-throw-control-v1"
+						|| control.proofId == "exact-enum-constructor-throw-control-v1"
+						|| payload.inputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+						|| payload.outputCarrierTypeId.startsWith("haxe-enum-native-variant-carrier-v1:")
+						|| payload.inputRepresentationId.startsWith("control-representation:enum-direct-v1:")
+						|| payload.outputRepresentationId.startsWith("control-representation:enum-direct-v1:");
+					final directEnumPayload = payload.inputSemanticTypeId.length > 0
+						&& payload.inputCarrierTypeId == enumCarrier
+						&& payload.outputSemanticTypeId == payload.inputSemanticTypeId
+						&& payload.outputCarrierTypeId == enumCarrier
+						&& payload.inputRepresentationId == enumRepresentation
+						&& payload.outputRepresentationId == enumRepresentation
+						&& payload.nominalRepresentation == null;
+					if (claimsDirectEnumPayload && !directEnumPayload) {
+						throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
+					}
+					if (payload.inputSemanticTypeId == "Dynamic") {
+						if (payload.inputCarrierTypeId != "Obj.t"
+							|| payload.outputSemanticTypeId != "Dynamic"
+							|| payload.outputCarrierTypeId != "Obj.t"
+							|| payload.inputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| payload.outputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| payload.nominalRepresentation != null) {
+							throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+						}
+					} else if (payload.inputSemanticTypeId == "haxe.Exception" || payload.inputSemanticTypeId == "haxe.ValueException") {
+						final valueException = payload.inputSemanticTypeId == "haxe.ValueException";
+						if (payload.inputCarrierTypeId != (valueException ? "Haxe_ValueException.t" : "Haxe_Exception.t")
+							|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+							|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+							|| payload.inputRepresentationId != (valueException ? "control-representation:haxe.ValueException:runtime-wrapper-v1" : "control-representation:haxe.Exception:runtime-wrapper-v1")
+							|| payload.outputRepresentationId != payload.inputRepresentationId
+							|| payload.nominalRepresentation != null) {
+							throw 'Control decision "${control.id}" has an invalid exact Haxe exception-wrapper carrier.';
+						}
+					} else if (!directEnumPayload) {
+						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
+							'Control decision "${control.id}" input');
+						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
+							'Control decision "${control.id}" output');
+					}
+					final expectedConversion = switch (payload.inputSemanticTypeId) {
+						case "Int", "String": "repr-and-recover-exact-value";
+						case "Bool": "box-bool-and-recover-exact-value";
+						case "Null<Int>": "preserve-nullable-int-throw-carrier";
+						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
+						case "Dynamic": "preserve-dynamic-throw-carrier";
+						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
+						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
+					};
+					final expectedTags = switch (payload.inputSemanticTypeId) {
+						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
+						case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
+					};
+					final expectedProofId = switch (payload.inputSemanticTypeId) {
+						case "Int", "Bool", "String": "exact-value-throw-control-v1";
+						case "Null<Int>": "nullable-int-throw-control-v1";
+						case "Null<Bool>": "nullable-bool-throw-control-v1";
+						case "Dynamic": "dynamic-carrier-throw-control-v1";
+						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
+						case _: directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");
+					};
+					final nominalPayloadValid = payload.nominalRepresentation == null ? expectedProofId != "exact-monomorphic-class-throw-control-v1" : validControlNominalRepresentation(payload.inputRepresentationId,
+						payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.nominalRepresentation,
+						representationById);
+					if (expectedConversion == null
+						|| expectedProofId == null
+						|| payload.signalCarrierTypeId != "Obj.t"
+						|| payload.outputSemanticTypeId != payload.inputSemanticTypeId
+						|| payload.outputCarrierTypeId != payload.inputCarrierTypeId
+						|| payload.outputRepresentationId != payload.inputRepresentationId
+						|| payload.conversion != expectedConversion
+						|| !nominalPayloadValid
+						|| payload.proofId != expectedProofId
+						|| payload.proofClaim.length == 0
+						|| control.proofId != expectedProofId
+						|| !sameStrings(control.runtimeTags, expectedTags)
+						|| control.runtimeTagPolicy != "merge-dynamic-with-exact-runtime-value") {
+						if (directEnumPayload)
+							throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
+						throw 'Control decision "${control.id}" has an invalid represented Haxe exception crossing.';
+					}
+				case _:
+					throw 'Control decision "${control.id}" has unsupported transfer kind "${control.kind}".';
+			}
+			if (control.proofClaim.length == 0
+				|| control.reason.length == 0
+				|| control.functionId.length == 0
+				|| control.programRevision.length == 0
+				|| control.bodyRevision.length == 0
+				|| control.profileEligibility.length != 2
+				|| control.profileEligibility[0] != "metal"
+				|| control.profileEligibility[1] != "portable") {
+				throw 'Control decision "${control.id}" has incomplete proof, revision, or profile metadata.';
+			}
+			ids.set(control.id, true);
+		}
+		controls.sort((left, right) -> compareStrings(left.id, right.id));
+		return controls;
+	}
+
+	static function inspectControlCatches(value:Dynamic, representation:InspectionRepresentation):Array<InspectionControlCatchChain> {
+		if (requiredString(value, "controlCatchModel") != "typed-ocaml-represented-value-catch-chain-v3")
+			throw "Unsupported control catch-chain report model.";
+		final rawChains = requiredArray(value, "controlCatches");
+		if (rawChains.length != requiredInt(value, "controlCatchCount"))
+			throw "Control catch-chain count does not match its inventory.";
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+
+		final chains = [for (entry in rawChains) controlCatchChain(entry)];
+		final chainIds:Map<String, Bool> = [];
+		final clauseIds:Map<String, Bool> = [];
+		for (chain in chains) {
+			if (chainIds.exists(chain.id))
+				throw 'Control catch-chain report contains duplicate identity "${chain.id}".';
+			if (chain.sourceFile.length == 0
+				|| chain.sourceMin < 0
+				|| chain.sourceMax < chain.sourceMin
+				|| chain.clauses.length == 0
+				|| !isControlCatchBranchResultPolicy(chain.tryBodyResultPolicy)
+				|| !sameStrings(chain.inputChannels, ["haxe-exception-signal", "target-native-exception"])
+				|| !sameStrings(chain.targetNativeRuntimeTags, ["OcamlExn"])
+				|| chain.haxeUnmatchedPolicy != "rethrow-haxe-exception-signal"
+				|| chain.targetNativeUnmatchedPolicy != "reraise-target-native-exception"
+				|| chain.privateControlPolicy != "propagate-private-control-signals"
+				|| chain.runtimeCapabilityId != "hxhx-runtime:typed-haxe-catch-chain-v1"
+				|| !sameStrings(chain.profileEligibility, ["metal", "portable"])
+				|| chain.reason.length == 0
+				|| chain.proofId != "represented-value-catch-control-v3"
+				|| chain.proofClaim.length == 0
+				|| chain.functionId.length == 0
+				|| chain.programRevision.length == 0
+				|| chain.bodyRevision.length == 0
+				|| chain.pipelineRevision.length == 0) {
+				throw 'Control catch chain "${chain.id}" has incomplete channels, fallback behavior, proof, profile, or revision metadata.';
+			}
+			for (index in 0...chain.clauses.length) {
+				final clause = chain.clauses[index];
+				if (clauseIds.exists(clause.id))
+					throw 'Control catch-chain report contains duplicate clause identity "${clause.id}".';
+				if (clause.sourceFile.length == 0
+					|| clause.sourceMin < 0
+					|| clause.sourceMax < clause.sourceMin
+					|| clause.order != index
+					|| clause.variableName.length == 0
+					|| clause.signalCarrierTypeId != "Obj.t"
+					|| !isControlCatchBranchResultPolicy(clause.bodyResultPolicy)
+					|| !sameStrings(clause.effects, ["select-first-matching-clause", "bind-catch-variable", "execute-catch-body"])
+					|| clause.proofId != "represented-value-catch-control-v3"
+					|| clause.proofClaim.length == 0
+					|| clause.functionId != chain.functionId
+					|| clause.programRevision != chain.programRevision
+					|| clause.bodyRevision != chain.bodyRevision
+					|| clause.pipelineRevision != chain.pipelineRevision) {
+					throw 'Control catch clause "${clause.id}" has incomplete order, payload, effects, proof, or revision metadata.';
+				}
+				switch (clause.semanticTypeId) {
+					case "Int":
+						validateControlCatchExactSide(clause, "int", "representation:Int:internal-value", "Int", "recover-exact-value", representationById);
+					case "Bool":
+						validateControlCatchExactSide(clause, "bool", "representation:Bool:internal-value", "Bool", "recover-checked-bool", representationById);
+					case "String":
+						validateControlCatchExactSide(clause, "string", "representation:String:internal-value", "String", "recover-exact-value",
+							representationById);
+					case "Dynamic":
+						if (clause.outputCarrierTypeId != "Obj.t"
+							|| clause.outputRepresentationId != "control-representation:Dynamic:runtime-obj-v1"
+							|| clause.matchPolicy != "match-all"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-dynamic-carrier"
+							|| clause.nominalRepresentation != null
+							|| index != chain.clauses.length - 1) {
+							throw 'Dynamic control catch clause "${clause.id}" has an invalid match-all, order, or carrier-preserving contract.';
+						}
+					case "haxe.Exception":
+						if (clause.outputCarrierTypeId != "Haxe_Exception.t"
+							|| clause.outputRepresentationId != "control-representation:haxe.Exception:runtime-wrapper-v1"
+							|| clause.matchPolicy != "match-haxe-exception"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-or-wrap-haxe-exception"
+							|| clause.nominalRepresentation != null) {
+							throw 'haxe.Exception control catch clause "${clause.id}" has an invalid match-all wrapper contract.';
+						}
+					case "haxe.ValueException":
+						if (clause.outputCarrierTypeId != "Haxe_ValueException.t"
+							|| clause.outputRepresentationId != "control-representation:haxe.ValueException:runtime-wrapper-v1"
+							|| clause.matchPolicy != "match-haxe-value-exception"
+							|| clause.runtimeTag != null
+							|| clause.conversion != "preserve-or-wrap-haxe-value-exception"
+							|| clause.nominalRepresentation != null) {
+							throw 'haxe.ValueException control catch clause "${clause.id}" has an invalid wrapper-selection contract.';
+						}
+					case _:
+						final nominal = clause.nominalRepresentation;
+						if (nominal == null
+							|| clause.matchPolicy != "exact-runtime-tag"
+							|| clause.runtimeTag != clause.semanticTypeId
+							|| clause.conversion != "recover-nominal-value"
+							|| !validControlNominalRepresentation(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, nominal,
+								representationById)) {
+							throw 'Monomorphic-class control catch clause "${clause.id}" has an invalid tag, carrier, representation, conversion, or layout proof.';
+						}
+				}
+				clauseIds.set(clause.id, true);
+			}
+			chainIds.set(chain.id, true);
+		}
+		chains.sort((left, right) -> compareStrings(left.id, right.id));
+		return chains;
+	}
+
+	static function isControlCatchBranchResultPolicy(policy:String):Bool {
+		return policy == "preserve-typed-result" || policy == "discard-completed-value-to-unit";
+	}
+
+	static function validateControlCatchExactSide(clause:InspectionControlCatchClause, carrierTypeId:String, representationId:String, runtimeTag:String,
+			conversion:String, representationById:Map<String, InspectionRepresentationDecision>):Void {
+		if (clause.outputCarrierTypeId != carrierTypeId
+			|| clause.outputRepresentationId != representationId
+			|| clause.matchPolicy != "exact-runtime-tag"
+			|| clause.runtimeTag != runtimeTag
+			|| clause.conversion != conversion
+			|| clause.nominalRepresentation != null) {
+			throw 'Exact ${clause.semanticTypeId} control catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion.';
+		}
+		validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, representationById,
+			'Control catch clause "${clause.id}" output');
+	}
+
+	static function controlCatchChain(value:Dynamic):InspectionControlCatchChain {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			clauses: [for (entry in requiredArray(value, "clauses")) controlCatchClause(entry)],
+			tryBodyResultPolicy: requiredString(value, "tryBodyResultPolicy"),
+			inputChannels: requiredStringArray(value, "inputChannels"),
+			targetNativeRuntimeTags: requiredStringArray(value, "targetNativeRuntimeTags"),
+			haxeUnmatchedPolicy: requiredString(value, "haxeUnmatchedPolicy"),
+			targetNativeUnmatchedPolicy: requiredString(value, "targetNativeUnmatchedPolicy"),
+			privateControlPolicy: requiredString(value, "privateControlPolicy"),
+			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlCatchClause(value:Dynamic):InspectionControlCatchClause {
+		final source = requiredObject(value, "source");
+		final nominalValue = Reflect.field(value, "nominalRepresentation");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			order: requiredInt(value, "order"),
+			variableName: requiredString(value, "variableName"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			signalCarrierTypeId: requiredString(value, "signalCarrierTypeId"),
+			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			matchPolicy: requiredString(value, "matchPolicy"),
+			runtimeTag: optionalString(value, "runtimeTag"),
+			conversion: requiredString(value, "conversion"),
+			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
+			bodyResultPolicy: requiredString(value, "bodyResultPolicy"),
+			effects: requiredStringArray(value, "effects"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlDecision(value:Dynamic):InspectionControl {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			kind: requiredString(value, "kind"),
+			effect: requiredString(value, "effect"),
+			targetKind: requiredString(value, "targetKind"),
+			targetId: requiredString(value, "targetId"),
+			payload: Reflect.field(value, "payload") == null ? null : controlPayload(requiredObject(value, "payload")),
+			runtimeTags: requiredStringArray(value, "runtimeTags"),
+			runtimeTagPolicy: requiredString(value, "runtimeTagPolicy"),
+			mechanism: requiredString(value, "mechanism"),
+			runtimeCapabilityId: requiredString(value, "runtimeCapabilityId"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function controlLoopTarget(value:Dynamic):InspectionControlLoopTarget {
+		final source = requiredObject(value, "source");
+		return {
+			id: requiredString(value, "id"),
+			sourceFile: requiredString(source, "file"),
+			sourceMin: requiredInt(source, "min"),
+			sourceMax: requiredInt(source, "max"),
+			kind: requiredString(value, "kind"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
+		};
+	}
+
+	static function controlPayload(value:Dynamic):InspectionControlPayload {
+		final nominalValue = Reflect.field(value, "nominalRepresentation");
+		return {
+			inputSemanticTypeId: requiredString(value, "inputSemanticTypeId"),
+			inputCarrierTypeId: requiredString(value, "inputCarrierTypeId"),
+			inputRepresentationId: requiredString(value, "inputRepresentationId"),
+			signalCarrierTypeId: requiredString(value, "signalCarrierTypeId"),
+			outputSemanticTypeId: requiredString(value, "outputSemanticTypeId"),
+			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
+			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			conversion: requiredString(value, "conversion"),
+			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
+		};
+	}
+
+	static function controlNominalRepresentation(value:Dynamic):InspectionControlNominalRepresentationProof {
+		return {
+			targetModuleName: requiredString(value, "targetModuleName"),
+			targetTypeName: requiredString(value, "targetTypeName"),
+			layoutRevision: requiredString(value, "layoutRevision"),
+			representationProofId: requiredString(value, "representationProofId")
+		};
+	}
+
+	static function validControlNominalRepresentation(representationId:String, semanticTypeId:String, carrierTypeId:String,
+			nominal:InspectionControlNominalRepresentationProof, representationById:Map<String, InspectionRepresentationDecision>):Bool {
+		final decision = representationById.get(representationId);
+		return decision != null
+			&& decision.semanticTypeId == semanticTypeId
+			&& decision.carrierTypeId == carrierTypeId
+			&& decision.domain == "internal-value"
+			&& decision.boxingPolicy == "nullable-nominal-record-carrier"
+			&& decision.nominalTargetModuleName == nominal.targetModuleName
+			&& decision.nominalTargetTypeName == nominal.targetTypeName
+			&& decision.nominalLayoutRevision == nominal.layoutRevision
+			&& decision.proofId == nominal.representationProofId;
+	}
+
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v14")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v18")
 			throw "Unsupported call-boundary report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
@@ -390,12 +1023,16 @@ class ReflaxeOcamlInspection {
 				throw 'Callable-boundary report contains duplicate identity "${boundary.id}".';
 			if (boundaryByCallee.exists(boundary.calleeId))
 				throw 'Callable-boundary report contains duplicate callee "${boundary.calleeId}".';
+			if (boundary.receiver != null)
+				validateCallValue(boundary.receiver, representationById, 'Callable boundary "${boundary.id}" receiver');
 			for (index in 0...boundary.arguments.length)
 				validateCallValue(boundary.arguments[index], representationById, 'Callable boundary "${boundary.id}" argument $index');
 			if (boundary.result != null)
 				validateCallValue(boundary.result, representationById, 'Callable boundary "${boundary.id}" result');
-			validateCallSignature(boundary.kind, boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId, true,
+			validateDeclaredCallIdentity(boundary.kind, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName,
 				'Callable boundary "${boundary.id}"');
+			validateCallSignature(boundary.kind, boundary.receiver, boundary.arguments, boundary.resultKind, boundary.result, boundary.proofId,
+				representationById, true, 'Callable boundary "${boundary.id}"');
 			boundaryIds.set(boundary.id, true);
 			boundaryByCallee.set(boundary.calleeId, boundary);
 		}
@@ -406,11 +1043,22 @@ class ReflaxeOcamlInspection {
 				throw 'Call report contains duplicate identity "${call.id}".';
 			if (call.sourceMin < 0 || call.sourceMax < call.sourceMin)
 				throw 'Call "${call.id}" has an invalid source span.';
+			if (call.kind == "standard-imap-method") {
+				ReflaxeOcamlStandardIMapInspection.validate(call);
+				callIds.set(call.id, true);
+				continue;
+			}
+			if (call.standardIMapTarget != null)
+				throw 'Call "${call.id}" carries a standard IMap target for ordinary call kind "${call.kind}".';
+			if (call.receiver != null)
+				validateCallValue(call.receiver, representationById, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], representationById, 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				validateCallValue(call.result, representationById, 'Call "${call.id}" result');
-			validateCallSignature(call.kind, call.arguments, call.resultKind, call.result, call.proofId, false, 'Call "${call.id}"');
+			validateDeclaredCallIdentity(call.kind, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, 'Call "${call.id}"');
+			validateCallSignature(call.kind, call.receiver, call.arguments, call.resultKind, call.result, call.proofId, representationById, false,
+				'Call "${call.id}"');
 			if (call.kind == "typed-function-value") {
 				if (call.sourceModuleId.length != 0 || call.sourceTypeName.length != 0 || call.sourceFieldName.length != 0)
 					throw 'Function-value call "${call.id}" must not report a declaration identity.';
@@ -425,7 +1073,8 @@ class ReflaxeOcamlInspection {
 				|| boundary.sourceTypeName != call.sourceTypeName
 				|| boundary.sourceFieldName != call.sourceFieldName
 				|| boundary.arguments.length != call.arguments.length
-				|| !sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)) {
+				|| !sameCallResult(call.resultKind, call.result, boundary.resultKind, boundary.result)
+				|| !sameOptionalBoundary(call.receiver, boundary.receiver)) {
 				throw 'Call "${call.id}" disagrees with callable boundary "${boundary.id}".';
 			}
 			for (index in 0...call.arguments.length) {
@@ -472,10 +1121,15 @@ class ReflaxeOcamlInspection {
 		return kind;
 	}
 
-	static function callResult(value:Dynamic, resultKind:String):Null<InspectionCallValue> {
+	static function callResult(value:Dynamic, resultKind:String, kind:String):Null<InspectionCallValue> {
 		if (!Reflect.hasField(value, "result"))
 			throw 'Expected typed-call field "result".';
 		final rawResult = Reflect.field(value, "result");
+		if (kind == "standard-imap-method") {
+			if (rawResult != null)
+				throw "Standard IMap calls describe their result in the sealed target instead of an ordinary call crossing.";
+			return null;
+		}
 		if (resultKind == "effect-only-void") {
 			if (rawResult != null)
 				throw "Effect-only Void call results cannot carry a value crossing.";
@@ -489,9 +1143,28 @@ class ReflaxeOcamlInspection {
 		return result;
 	}
 
+	static function callReceiver(value:Dynamic, kind:String):Null<InspectionCallValue> {
+		if (!Reflect.hasField(value, "receiver"))
+			throw 'Expected typed-call field "receiver".';
+		final rawReceiver = Reflect.field(value, "receiver");
+		if (kind != "direct-instance-haxe-method") {
+			if (rawReceiver != null)
+				throw 'Typed-call kind "$kind" cannot carry an instance receiver.';
+			return null;
+		}
+		final receiver = callValue(requiredObject(value, "receiver"));
+		if (receiver.index != -2 || receiver.parameterOptional || receiver.conversion != "identity")
+			throw "Direct instance receiver must use index -2 and one required identity crossing.";
+		return receiver;
+	}
+
 	static function requireCallKind(value:Dynamic):String {
 		final kind = requiredString(value, "kind");
-		if (kind != "direct-static-haxe-method" && kind != "typed-function-value")
+		if (kind != "direct-static-haxe-method"
+			&& kind != "direct-instance-haxe-method"
+			&& kind != "direct-haxe-constructor"
+			&& kind != "typed-function-value"
+			&& kind != "standard-imap-method")
 			throw 'Unsupported typed-call kind "$kind".';
 		return kind;
 	}
@@ -500,8 +1173,10 @@ class ReflaxeOcamlInspection {
 		final source = requiredObject(value, "source");
 		final id = requiredString(value, "id");
 		final kind = requireCallKind(value);
+		final receiver = callReceiver(value, kind);
 		final arguments = callValues(value, "arguments");
-		final schedule = callEvaluationSchedule(value, id, kind, arguments);
+		final standardIMapTarget = standardIMapCallTarget(value, kind);
+		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardIMapTarget);
 		final resultKind = callResultKind(value);
 		return {
 			id: id,
@@ -513,9 +1188,10 @@ class ReflaxeOcamlInspection {
 			sourceTypeName: requiredString(value, "sourceTypeName"),
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: kind,
+			receiver: receiver,
 			arguments: arguments,
 			resultKind: resultKind,
-			result: callResult(value, resultKind),
+			result: callResult(value, resultKind, kind),
 			evaluationSchedule: schedule,
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
@@ -524,12 +1200,45 @@ class ReflaxeOcamlInspection {
 			functionId: requiredString(value, "functionId"),
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
-			pipelineRevision: requiredString(value, "pipelineRevision")
+			pipelineRevision: requiredString(value, "pipelineRevision"),
+			standardIMapTarget: standardIMapTarget
 		};
 	}
 
-	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String,
-			arguments:Array<InspectionCallValue>):Array<InspectionCallEvaluationStep> {
+	static function standardIMapCallTarget(value:Dynamic, kind:String):Null<InspectionStandardIMapCallTarget> {
+		if (!Reflect.hasField(value, "standardIMapTarget"))
+			throw 'Expected typed-call field "standardIMapTarget".';
+		final rawTarget = Reflect.field(value, "standardIMapTarget");
+		if (kind != "standard-imap-method") {
+			if (rawTarget != null)
+				throw 'Typed-call kind "$kind" cannot carry a standard IMap target.';
+			return null;
+		}
+		final target = requiredObject(value, "standardIMapTarget");
+		return {
+			operation: requiredString(target, "operation"),
+			keyKind: requiredString(target, "keyKind"),
+			receiverSemanticTypeId: requiredString(target, "receiverSemanticTypeId"),
+			receiverCarrierId: requiredString(target, "receiverCarrierId"),
+			keySemanticTypeId: requiredString(target, "keySemanticTypeId"),
+			valueSemanticTypeId: requiredString(target, "valueSemanticTypeId"),
+			argumentSemanticTypeIds: requiredStringArray(target, "argumentSemanticTypeIds"),
+			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			runtimeModule: requiredString(target, "runtimeModule"),
+			runtimeFunction: requiredString(target, "runtimeFunction"),
+			resultForm: requiredString(target, "resultForm"),
+			iteratorModule: optionalString(target, "iteratorModule"),
+			iteratorFunction: optionalString(target, "iteratorFunction"),
+			keyStringifier: optionalString(target, "keyStringifier"),
+			valueStringifier: optionalString(target, "valueStringifier"),
+			runtimeCapabilities: requiredStringArray(target, "runtimeCapabilities"),
+			proofId: requiredString(target, "proofId"),
+			proofClaim: requiredString(target, "proofClaim")
+		};
+	}
+
+	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String, arguments:Array<InspectionCallValue>,
+			standardIMapTarget:Null<InspectionStandardIMapCallTarget>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
 				{
@@ -540,8 +1249,10 @@ class ReflaxeOcamlInspection {
 				}
 		];
 		final materializesCallee = kind == "typed-function-value";
-		final scheduleOffset = materializesCallee ? 1 : 0;
-		if (schedule.length != arguments.length + scheduleOffset + 1)
+		final materializesReceiver = kind == "direct-instance-haxe-method" || kind == "standard-imap-method";
+		final argumentCount = standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length;
+		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
+		if (schedule.length != argumentCount + scheduleOffset + 1)
 			throw 'Call "$callId" has an unsupported evaluation-schedule length.';
 		if (materializesCallee) {
 			final callee = schedule[0];
@@ -550,10 +1261,19 @@ class ReflaxeOcamlInspection {
 				|| callee.slotId != expectedCalleeSlot)
 				throw 'Call "$callId" has an invalid callee materialization.';
 		}
+		if (materializesReceiver) {
+			final receiver = schedule[0];
+			final expectedReceiverSlot = "call-receiver-slot:" + Sha256.encode(callId).substr(0, 24);
+			if (receiver.kind != "materialize-receiver"
+				|| receiver.argumentIndex != null
+				|| receiver.sourceArgumentIndex != null
+				|| receiver.slotId != expectedReceiverSlot)
+				throw 'Call "$callId" has an invalid receiver materialization.';
+		}
 		var sourceArgumentIndex = 0;
-		for (index in 0...arguments.length) {
+		for (index in 0...argumentCount) {
 			final step = schedule[index + scheduleOffset];
-			final omitted = isOmittedConversion(arguments[index].conversion);
+			final omitted = standardIMapTarget == null && isOmittedConversion(arguments[index].conversion);
 			final expectedKind = omitted ? "materialize-omitted-argument" : "materialize-argument";
 			final expectedSourceIndex:Null<Int> = omitted ? null : sourceArgumentIndex++;
 			final expectedSlot = "call-argument-slot:" + Sha256.encode(callId + "|" + index).substr(0, 24);
@@ -575,8 +1295,9 @@ class ReflaxeOcamlInspection {
 	static function callableBoundary(value:Dynamic):InspectionCallableBoundary {
 		final resultKind = callResultKind(value);
 		final kind = requireCallKind(value);
-		if (kind != "direct-static-haxe-method")
+		if (kind != "direct-static-haxe-method" && kind != "direct-instance-haxe-method" && kind != "direct-haxe-constructor")
 			throw 'Unsupported callable-boundary kind "$kind".';
+		final receiver = callReceiver(value, kind);
 		return {
 			id: requiredString(value, "id"),
 			calleeId: requiredString(value, "calleeId"),
@@ -584,9 +1305,10 @@ class ReflaxeOcamlInspection {
 			sourceTypeName: requiredString(value, "sourceTypeName"),
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			kind: kind,
+			receiver: receiver,
 			arguments: callValues(value, "arguments"),
 			resultKind: resultKind,
-			result: callResult(value, resultKind),
+			result: callResult(value, resultKind, kind),
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(value, "proofId"),
@@ -621,6 +1343,15 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-int-call-box-v1")
 					throw '$owner has an invalid exact Int-to-Null<Int> boxing crossing.';
+			case "checked-unbox-nullable-int":
+				if (value.index < -1
+					|| value.parameterOptional
+					|| value.inputSemanticTypeId != "Null<Int>"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.outputSemanticTypeId != "Int"
+					|| value.outputCarrierTypeId != "int"
+					|| value.proofId != "nullable-int-call-checked-unbox-v1")
+					throw '$owner has an invalid checked Null<Int>-to-Int result crossing.';
 			case "preserve-nullable-bool-carrier":
 				if (!sameSides
 					|| value.inputSemanticTypeId != "Null<Bool>"
@@ -634,6 +1365,27 @@ class ReflaxeOcamlInspection {
 					|| value.outputCarrierTypeId != "Obj.t"
 					|| value.proofId != "nullable-bool-call-box-v1")
 					throw '$owner has an invalid exact Bool-to-Null<Bool> boxing crossing.';
+			case "preserve-dynamic-carrier":
+				if (!sameSides
+					|| value.inputSemanticTypeId != "Dynamic"
+					|| value.inputCarrierTypeId != "Obj.t"
+					|| value.proofId != "dynamic-call-carrier-preserve-v1")
+					throw '$owner has an invalid Dynamic carrier-preserving crossing.';
+			case "box-concrete-to-dynamic":
+				final concreteInput = isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Int", "int")
+					|| isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "String", "string")
+					|| isAdmittedNominalSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, representations);
+				if (value.index < 0
+					|| !concreteInput
+					|| !isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Dynamic", "Obj.t")
+					|| value.proofId != "dynamic-call-box-concrete-v1")
+					throw '$owner has an invalid admitted concrete-to-Dynamic boxing crossing.';
+			case "box-exact-bool-to-dynamic":
+				if (value.index < 0
+					|| !isCallValueSide(value.inputSemanticTypeId, value.inputCarrierTypeId, value.inputRepresentationId, "Bool", "bool")
+					|| !isCallValueSide(value.outputSemanticTypeId, value.outputCarrierTypeId, value.outputRepresentationId, "Dynamic", "Obj.t")
+					|| value.proofId != "dynamic-call-box-bool-v1")
+					throw '$owner has an invalid exact Bool-to-Dynamic boxing crossing.';
 			case "materialize-omitted-nullable-int":
 				if (!value.parameterOptional
 					|| !sameSides
@@ -667,10 +1419,55 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
-	static function validateCallSignature(kind:String, arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>,
-			proofId:String, isCallableBoundary:Bool, owner:String):Void {
+	/** Rejects report entries whose source declaration identity contradicts their call kind. */
+	static function validateDeclaredCallIdentity(kind:String, sourceModuleId:String, sourceTypeName:String, sourceFieldName:String, owner:String):Void {
+		if (kind == "typed-function-value") {
+			if (sourceModuleId.length != 0 || sourceTypeName.length != 0 || sourceFieldName.length != 0)
+				throw '$owner assigns a declaration identity to a computed function value.';
+			return;
+		}
+		if (sourceModuleId.length == 0 || sourceTypeName.length == 0 || sourceFieldName.length == 0)
+			throw '$owner has an incomplete Haxe declaration identity.';
+		if (kind == "direct-haxe-constructor" && sourceFieldName != "new")
+			throw '$owner identifies constructor field "$sourceFieldName" instead of "new".';
+	}
+
+	static function validateCallSignature(kind:String, receiver:Null<InspectionCallValue>, arguments:Array<InspectionCallValue>, resultKind:String,
+			result:Null<InspectionCallValue>, proofId:String, representations:Map<String, InspectionRepresentationDecision>, isCallableBoundary:Bool,
+			owner:String):Void {
 		if (kind == "direct-static-haxe-method" && proofId != DIRECT_STATIC_SIGNATURE_PROOF_ID)
 			throw '$owner has proof "$proofId" instead of "$DIRECT_STATIC_SIGNATURE_PROOF_ID".';
+		if (kind == "direct-instance-haxe-method") {
+			if (proofId != DIRECT_INSTANCE_SIGNATURE_PROOF_ID)
+				throw '$owner has proof "$proofId" instead of "$DIRECT_INSTANCE_SIGNATURE_PROOF_ID".';
+			if (receiver == null)
+				throw '$owner has no sealed instance receiver.';
+			if (!isAdmittedNominalSide(receiver.inputSemanticTypeId, receiver.inputCarrierTypeId, receiver.inputRepresentationId, representations)
+				|| !isAdmittedNominalSide(receiver.outputSemanticTypeId, receiver.outputCarrierTypeId, receiver.outputRepresentationId, representations)) {
+				throw '$owner has an instance receiver outside the sealed nominal carrier family.';
+			}
+		} else if (receiver != null) {
+			throw '$owner unexpectedly owns an instance receiver.';
+		}
+		if (kind == "direct-haxe-constructor") {
+			if (proofId != DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID)
+				throw '$owner has proof "$proofId" instead of "$DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID".';
+			if (arguments.length != 1 || arguments[0].parameterOptional)
+				throw '$owner is outside the one-required-argument constructor slice.';
+			if (!isCallValueSide(arguments[0].inputSemanticTypeId, arguments[0].inputCarrierTypeId, arguments[0].inputRepresentationId, "Int", "int")
+				|| !isCallValueSide(arguments[0].outputSemanticTypeId, arguments[0].outputCarrierTypeId, arguments[0].outputRepresentationId, "Int", "int")) {
+				throw '$owner is outside the first exact Int constructor-argument slice.';
+			}
+			if (resultKind != "value" || result == null)
+				throw '$owner has no sealed nominal constructor result.';
+			final constructorResult:InspectionCallValue = result;
+			if (!isAdmittedNominalSide(constructorResult.inputSemanticTypeId, constructorResult.inputCarrierTypeId, constructorResult.inputRepresentationId,
+				representations)
+				|| !isAdmittedNominalSide(constructorResult.outputSemanticTypeId, constructorResult.outputCarrierTypeId,
+					constructorResult.outputRepresentationId, representations)) {
+				throw '$owner has no sealed nominal constructor result.';
+			}
+		}
 		if (kind == "typed-function-value") {
 			if (isCallableBoundary)
 				throw '$owner cannot describe a computed function value.';
@@ -682,8 +1479,9 @@ class ReflaxeOcamlInspection {
 			case "value":
 				if (result == null)
 					throw '$owner has a value result kind without a value crossing.';
-				if (!isAdmittedCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-					|| !isAdmittedCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)) {
+				if (!isAdmittedDirectResultSide(kind, result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, representations)
+					|| !isAdmittedDirectResultSide(kind, result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId,
+						representations)) {
 					throw '$owner contains a result outside the closed typed-call representation matrix.';
 				}
 				if (!isCallableBoundary && result.conversion != "identity")
@@ -699,7 +1497,11 @@ class ReflaxeOcamlInspection {
 		var optionalCount = 0;
 		for (index in 0...arguments.length) {
 			final argument = arguments[index];
-			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+			final admittedDynamicNominalInput = !isCallableBoundary
+				&& argument.conversion == "box-concrete-to-dynamic"
+				&& isAdmittedNominalSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId, representations);
+			if ((!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
+				&& !admittedDynamicNominalInput)
 				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
 				throw '$owner contains an argument outside the closed typed-call representation matrix.';
 			}
@@ -763,7 +1565,34 @@ class ReflaxeOcamlInspection {
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Bool", "bool")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "String", "string")
 			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Int>", "Obj.t")
-			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t");
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Null<Bool>", "Obj.t")
+			|| isCallValueSide(semanticTypeId, carrierTypeId, representationId, "Dynamic", "Obj.t");
+	}
+
+	static function isAdmittedDirectResultSide(kind:String, semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
+		if (isAdmittedCallValueSide(semanticTypeId, carrierTypeId, representationId))
+			return true;
+		return (kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method" || kind == "direct-haxe-constructor")
+			&& isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations);
+	}
+
+	/**
+		Returns whether one reported call side is backed by a sealed nominal
+		representation, rather than merely using a nominal-looking identity.
+	**/
+	static function isAdmittedNominalSide(semanticTypeId:String, carrierTypeId:String, representationId:String,
+			representations:Map<String, InspectionRepresentationDecision>):Bool {
+		final representation = representations.get(representationId);
+		return representation != null
+			&& representation.semanticTypeId == semanticTypeId
+			&& representation.carrierTypeId == carrierTypeId
+			&& representation.domain == "internal-value"
+			&& representation.boxingPolicy == "nullable-nominal-record-carrier"
+			&& representation.nominalTargetModuleName != null
+			&& representation.nominalTargetTypeName == carrierTypeId
+			&& representation.nominalLayoutRevision != null
+			&& representationId == 'representation:$semanticTypeId:internal-value';
 	}
 
 	static function isCallValueSide(semanticTypeId:String, carrierTypeId:String, representationId:String, expectedSemanticTypeId:String,
@@ -793,6 +1622,12 @@ class ReflaxeOcamlInspection {
 				&& callValue.inputRepresentationId == boundaryValue.outputRepresentationId) : (callValue.outputSemanticTypeId == boundaryValue.inputSemanticTypeId
 					&& callValue.outputCarrierTypeId == boundaryValue.inputCarrierTypeId
 					&& callValue.outputRepresentationId == boundaryValue.inputRepresentationId));
+	}
+
+	static function sameOptionalBoundary(left:Null<InspectionCallValue>, right:Null<InspectionCallValue>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return sameCallableBoundary(left, right, false);
 	}
 
 	static function sameCallResult(callKind:String, callValue:Null<InspectionCallValue>, boundaryKind:String, boundaryValue:Null<InspectionCallValue>):Bool {
@@ -879,7 +1714,7 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
@@ -936,6 +1771,15 @@ class ReflaxeOcamlInspection {
 					|| receiverDecision.domain != "internal-value") {
 					throw 'Typed place plan "${plan.id}" receiver expects ${plan.receiverSemanticTypeId} -> ${plan.receiverCarrierTypeId} in internal-value, but representation ${receiverDecision.id} selects ${receiverDecision.semanticTypeId} -> ${receiverDecision.carrierTypeId} in ${receiverDecision.domain}.';
 				}
+			} else if (receiverRepresentationId != null && StringTools.startsWith(receiverRepresentationId, "representation:")) {
+				if (!byId.exists(receiverRepresentationId))
+					throw 'Typed place plan "${plan.id}" refers to missing receiver representation "$receiverRepresentationId".';
+				final receiverDecision:InspectionRepresentationDecision = cast byId.get(receiverRepresentationId);
+				if (receiverDecision.semanticTypeId != plan.receiverSemanticTypeId
+					|| receiverDecision.carrierTypeId != plan.receiverCarrierTypeId
+					|| receiverDecision.domain != "internal-value") {
+					throw 'Typed place plan "${plan.id}" receiver expects ${plan.receiverSemanticTypeId} -> ${plan.receiverCarrierTypeId} in internal-value, but representation ${receiverDecision.id} selects ${receiverDecision.semanticTypeId} -> ${receiverDecision.carrierTypeId} in ${receiverDecision.domain}.';
+				}
 			}
 		}
 		return {
@@ -946,12 +1790,12 @@ class ReflaxeOcamlInspection {
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned exact Int, Bool, String, nullable-primitive, or direct Array<Int> carrier decision${decisions.length == 1 ? "" : "s"}. Admitted instance/static fields carry their Haxe implicit-default policy, including the distinction between null and an empty String; generic, other nullable, abstract, Dynamic, broader field, and ABI domains remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, the narrow exact Float internal value, the exact nominal Int64 value, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. The Float decision is limited to sealed Bytes binary I/O. The Int64 decision fixes one value-semantic high/low record layout. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
 		};
 	}
 
 	static function inspectLocalConversions(value:Dynamic):Array<InspectionLocalConversion> {
-		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v1")
+		if (requiredString(value, "localConversionModel") != "typed-ocaml-local-carrier-conversions-v3")
 			throw "Unsupported local conversion report model.";
 		final raw = requiredArray(value, "localConversions");
 		if (raw.length != requiredInt(value, "localConversionCount"))
@@ -963,7 +1807,7 @@ class ReflaxeOcamlInspection {
 				final unsafe = Reflect.field(entry, "unsafeOperation");
 				final result:InspectionLocalConversion = {
 					id: requiredString(entry, "id"),
-					localId: requiredInt(entry, "localId"),
+					localId: requiredString(entry, "localId"),
 					role: requiredString(entry, "role"),
 					sourceFile: requiredString(source, "file"),
 					sourceMin: requiredInt(source, "min"),
@@ -986,6 +1830,22 @@ class ReflaxeOcamlInspection {
 				if (seen.exists(result.id)) throw 'Local conversion report contains duplicate identity "${result.id}".';
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Local conversion "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Local conversion "${result.id}" has no eligible profile.';
+				final canonicalId = localConversionOccurrenceId(result);
+				if (result.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION
+					|| result.id != canonicalId)
+					throw 'Local conversion "${result.id}" does not match its retained function, revisions, local, role, and source; expected "$canonicalId".';
+				if (result.conversion == "box-exact-enum-to-dynamic") {
+					final expectedCarrier = "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId;
+					if (result.role != "initializer"
+						|| result.inputSemanticTypeId.length == 0
+						|| result.inputCarrierTypeId != expectedCarrier
+						|| result.outputSemanticTypeId != "Dynamic"
+						|| result.outputCarrierTypeId != "Obj.t"
+						|| result.proofId != "dynamic-box-exact-enum-v1"
+						|| result.unsafeOperationId == null) {
+						throw 'Local conversion "${result.id}" has an invalid exact enum-to-Dynamic contract.';
+					}
+				}
 				seen.set(result.id, true);
 				result;
 			}
@@ -994,17 +1854,189 @@ class ReflaxeOcamlInspection {
 		return conversions;
 	}
 
-	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>):Array<InspectionUnsafeOperation> {
+	/** Rebuilds the occurrence key using the same schema as final target planning. */
+	static function localConversionOccurrenceId(conversion:InspectionLocalConversion):String {
+		return "local-conversion:" + Sha256.encode([
+			conversion.functionId,
+			conversion.programRevision,
+			conversion.bodyRevision,
+			conversion.pipelineRevision,
+			conversion.localId,
+			conversion.role,
+			conversion.sourceFile,
+			Std.string(conversion.sourceMin),
+			Std.string(conversion.sourceMax)
+		].join("\n")).substr(0, 32);
+	}
+
+	/**
+		Validates the independent typed-body inventory of required conversions.
+
+		This section remains present even if a conversion, unsafe-operation proof,
+		and runtime requirement are all accidentally removed together. The public
+		inspector can therefore detect complete disappearance instead of accepting
+		a smaller but internally self-consistent report.
+	**/
+	static function inspectContainerElementRequiredConversions(value:Dynamic):Array<String> {
+		if (requiredString(value, "containerElementRequiredConversionModel") != "typed-ocaml-required-container-element-conversions-v1")
+			throw "Unsupported required container-element conversion report model.";
+		final ids = requiredStringArray(value, "containerElementRequiredConversionIds");
+		if (ids.length != requiredInt(value, "containerElementRequiredConversionCount"))
+			throw "Required container-element conversion count does not match its inventory.";
+		final seen:Map<String, Bool> = [];
+		var previous:Null<String> = null;
+		for (id in ids) {
+			if (id.length == 0)
+				throw "Required container-element conversion inventory contains an empty identity.";
+			if (seen.exists(id))
+				throw 'Required container-element conversion inventory contains duplicate identity "$id".';
+			if (previous != null && compareStrings(previous, id) >= 0)
+				throw "Required container-element conversion inventory is not in deterministic identity order.";
+			seen.set(id, true);
+			previous = id;
+		}
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(ids));
+		if (requiredSha256Revision(value, "containerElementRequiredConversionRevision") != expectedRevision)
+			throw "Required container-element conversion revision does not match its inventory.";
+		return ids;
+	}
+
+	static function inspectContainerElementConversions(value:Dynamic, requiredConversionIds:Array<String>):Array<InspectionContainerElementConversion> {
+		if (requiredString(value, "containerElementConversionModel") != "typed-ocaml-container-element-conversions-v1")
+			throw "Unsupported container-element conversion report model.";
+		final raw = requiredArray(value, "containerElementConversions");
+		if (raw.length != requiredInt(value, "containerElementConversionCount"))
+			throw "Container-element conversion count does not match its inventory.";
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(raw));
+		if (requiredSha256Revision(value, "containerElementConversionRevision") != expectedRevision)
+			throw "Container-element conversion revision does not match its inventory.";
+		final seen:Map<String, Bool> = [];
+		final conversions = [
+			for (entry in raw) {
+				final containerSource = requiredObject(entry, "containerSource");
+				final source = requiredObject(entry, "source");
+				final unsafe = requiredObject(entry, "unsafeOperation");
+				final result:InspectionContainerElementConversion = {
+					id: requiredString(entry, "id"),
+					role: requiredString(entry, "role"),
+					containerSourceFile: requiredString(containerSource, "file"),
+					containerSourceMin: requiredInt(containerSource, "min"),
+					containerSourceMax: requiredInt(containerSource, "max"),
+					sourceFile: requiredString(source, "file"),
+					sourceMin: requiredInt(source, "min"),
+					sourceMax: requiredInt(source, "max"),
+					containerOrdinal: requiredInt(entry, "containerOrdinal"),
+					elementIndex: requiredInt(entry, "elementIndex"),
+					inputSemanticTypeId: requiredString(entry, "inputSemanticTypeId"),
+					inputCarrierTypeId: requiredString(entry, "inputCarrierTypeId"),
+					outputSemanticTypeId: requiredString(entry, "outputSemanticTypeId"),
+					outputCarrierTypeId: requiredString(entry, "outputCarrierTypeId"),
+					conversion: requiredString(entry, "conversion"),
+					reason: requiredString(entry, "reason"),
+					proofId: requiredString(entry, "proofId"),
+					proofClaim: requiredString(entry, "proofClaim"),
+					profileEligibility: requiredStringArray(entry, "profileEligibility"),
+					functionId: requiredString(entry, "functionId"),
+					programRevision: requiredString(entry, "programRevision"),
+					bodyRevision: requiredString(entry, "bodyRevision"),
+					pipelineRevision: requiredString(entry, "pipelineRevision"),
+					unsafeOperationId: requiredString(unsafe, "id")
+				};
+				if (seen.exists(result.id)) throw 'Container-element conversion report contains duplicate identity "${result.id}".';
+				final expectedPipelineRevision = StringTools.startsWith(result.functionId,
+					"standalone:") ? STANDALONE_EXPRESSION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+				if (result.role != "array-literal-dynamic-element"
+					|| result.containerOrdinal < 0
+					|| result.elementIndex < 0
+					|| result.containerSourceFile != result.sourceFile
+					|| result.containerSourceMin < 0
+					|| result.containerSourceMax < result.containerSourceMin
+					|| result.sourceMin < 0
+					|| result.sourceMax < result.sourceMin
+					|| result.inputSemanticTypeId.length == 0
+					|| result.inputCarrierTypeId != "haxe-enum-native-variant-carrier-v1:" + result.inputSemanticTypeId
+					|| result.outputSemanticTypeId != "Dynamic"
+					|| result.outputCarrierTypeId != "Obj.t"
+					|| result.conversion != "box-exact-enum-to-dynamic"
+					|| result.reason.length == 0
+					|| result.proofId != "dynamic-array-element-box-exact-enum-v1"
+					|| result.proofClaim.length == 0
+					|| result.profileEligibility.length == 0
+					|| result.functionId.length == 0
+					|| result.programRevision.length == 0
+					|| result.bodyRevision.length == 0
+					|| result.pipelineRevision != expectedPipelineRevision) {
+					throw 'Container-element conversion "${result.id}" has an invalid exact enum-to-Dynamic array contract.';
+				}
+				final canonicalId = containerElementOccurrenceId(result);
+				if (result.id != canonicalId)
+					throw 'Container-element conversion "${result.id}" does not match its retained function, revisions, role, sources, array ordinal, and element index; expected "$canonicalId".';
+				seen.set(result.id, true);
+				result;
+			}
+		];
+		conversions.sort((left, right) -> compareStrings(left.id, right.id));
+		final containerSourceByOrdinal:Map<String, String> = [];
+		final occupiedSlots:Map<String, Bool> = [];
+		for (conversion in conversions) {
+			final ordinal = [
+				conversion.functionId,
+				conversion.programRevision,
+				conversion.bodyRevision,
+				conversion.pipelineRevision,
+				Std.string(conversion.containerOrdinal)
+			].join("|");
+			final containerSource = '${conversion.containerSourceFile}:${conversion.containerSourceMin}:${conversion.containerSourceMax}';
+			final previousSource = containerSourceByOrdinal.get(ordinal);
+			if (previousSource != null && previousSource != containerSource)
+				throw 'Container-element structural ordinal "$ordinal" names both "$previousSource" and "$containerSource".';
+			containerSourceByOrdinal.set(ordinal, containerSource);
+			final slot = '$ordinal:${conversion.elementIndex}';
+			if (occupiedSlots.exists(slot))
+				throw 'Container-element structural slot "$slot" occurs more than once.';
+			occupiedSlots.set(slot, true);
+		}
+		final conversionIds = conversions.map(conversion -> conversion.id);
+		if (conversionIds.join("\n") != requiredConversionIds.join("\n"))
+			throw 'Required container-element conversion inventory [${requiredConversionIds.join(",")}] does not match sealed conversions [${conversionIds.join(",")}].';
+		return conversions;
+	}
+
+	static function containerElementOccurrenceId(conversion:InspectionContainerElementConversion):String {
+		return "container-element-conversion:" + Sha256.encode([
+			conversion.functionId,
+			conversion.programRevision,
+			conversion.bodyRevision,
+			conversion.pipelineRevision,
+			conversion.role,
+			conversion.containerSourceFile,
+			Std.string(conversion.containerSourceMin),
+			Std.string(conversion.containerSourceMax),
+			conversion.sourceFile,
+			Std.string(conversion.sourceMin),
+			Std.string(conversion.sourceMax),
+			Std.string(conversion.containerOrdinal),
+			Std.string(conversion.elementIndex)
+		].join("\n")).substr(0, 32);
+	}
+
+	static function inspectUnsafeOperations(value:Dynamic, conversions:Array<InspectionLocalConversion>,
+			containerElementConversions:Array<InspectionContainerElementConversion>):Array<InspectionUnsafeOperation> {
 		if (requiredString(value, "unsafeOperationModel") != "proof-backed-admitted-unsafe-operations-v1")
 			throw "Unsupported unsafe-operation report model.";
-		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-and-null-bool-local-slices-only")
+		if (requiredString(value, "unsafeOperationCompleteness") != "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices")
 			throw "Unsupported unsafe-operation completeness claim.";
 		final raw = requiredArray(value, "unsafeOperations");
 		if (raw.length != requiredInt(value, "unsafeOperationCount"))
 			throw "Unsafe-operation count does not match its inventory.";
-		final conversionById:Map<String, InspectionLocalConversion> = [];
+		final conversionById:Map<String, Dynamic> = [];
 		for (conversion in conversions)
 			conversionById.set(conversion.id, conversion);
+		for (conversion in containerElementConversions) {
+			if (conversionById.exists(conversion.id))
+				throw 'Unsafe-operation owner identity "${conversion.id}" occurs in both local and container-element conversions.';
+			conversionById.set(conversion.id, conversion);
+		}
 		final seen:Map<String, Bool> = [];
 		final operations = [
 			for (entry in raw) {
@@ -1029,9 +2061,28 @@ class ReflaxeOcamlInspection {
 					bodyRevision: requiredString(entry, "bodyRevision"),
 					pipelineRevision: requiredString(entry, "pipelineRevision")
 				};
-				final conversion = conversionById.get(result.conversionId);
+				final conversion:Dynamic = conversionById.get(result.conversionId);
 				if (conversion == null
-					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed local conversion.';
+					|| conversion.unsafeOperationId != result.id) throw 'Unsafe operation "${result.id}" is not owned by its sealed conversion.';
+				if (conversion.conversion == "box-exact-enum-to-dynamic"
+					&& (result.id != conversion.id + ":unsafe:box-exact-enum-to-dynamic"
+						|| result.operation != "box-exact-enum-to-dynamic"
+						|| result.sourceFile != conversion.sourceFile
+						|| result.sourceMin != conversion.sourceMin
+						|| result.sourceMax != conversion.sourceMax
+						|| result.inputSemanticTypeId != conversion.inputSemanticTypeId
+						|| result.inputCarrierTypeId != conversion.inputCarrierTypeId
+						|| result.outputSemanticTypeId != conversion.outputSemanticTypeId
+						|| result.outputCarrierTypeId != conversion.outputCarrierTypeId
+						|| result.reason != conversion.reason
+						|| result.proofId != conversion.proofId
+						|| result.proofClaim != conversion.proofClaim
+						|| result.profileEligibility.join(",") != conversion.profileEligibility.join(",")
+						|| result.functionId != conversion.functionId
+						|| result.programRevision != conversion.programRevision
+						|| result.bodyRevision != conversion.bodyRevision
+						|| result.pipelineRevision != conversion.pipelineRevision))
+					throw 'Unsafe operation "${result.id}" does not preserve its sealed enum-to-Dynamic conversion.';
 				if (seen.exists(result.id)) throw 'Unsafe-operation report contains duplicate identity "${result.id}".';
 				if (result.sourceMin < 0 || result.sourceMax < result.sourceMin) throw 'Unsafe operation "${result.id}" has an invalid source span.';
 				if (result.profileEligibility.length == 0) throw 'Unsafe operation "${result.id}" has no eligible profile.';
@@ -1042,6 +2093,9 @@ class ReflaxeOcamlInspection {
 		for (conversion in conversions)
 			if (conversion.unsafeOperationId != null && !seen.exists(conversion.unsafeOperationId))
 				throw 'Local conversion "${conversion.id}" refers to a missing unsafe operation.';
+		for (conversion in containerElementConversions)
+			if (!seen.exists(conversion.unsafeOperationId))
+				throw 'Container-element conversion "${conversion.id}" refers to a missing unsafe operation.';
 		operations.sort((left, right) -> compareStrings(left.id, right.id));
 		return operations;
 	}
@@ -1051,7 +2105,7 @@ class ReflaxeOcamlInspection {
 		final profiles = requiredStringArray(value, "profileEligibility");
 		if (profiles.length == 0)
 			throw 'Representation decision "${requiredString(value, "id")}" has no eligible profile.';
-		return {
+		final decision:InspectionRepresentationDecision = {
 			id: requiredString(value, "id"),
 			key: requiredString(value, "key"),
 			programRevision: requiredString(value, "programRevision"),
@@ -1069,8 +2123,77 @@ class ReflaxeOcamlInspection {
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(proof, "id"),
 			proofClaim: requiredString(proof, "claim"),
-			profileEligibility: profiles
+			profileEligibility: profiles,
+			nominalTargetModuleName: optionalString(value, "nominalTargetModuleName"),
+			nominalTargetTypeName: optionalString(value, "nominalTargetTypeName"),
+			nominalLayoutRevision: optionalString(value, "nominalLayoutRevision")
 		};
+		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
+			+ (decision.nominalLayoutRevision == null ? 0 : 1);
+		final isNominal = decision.boxingPolicy == "nullable-nominal-record-carrier"
+			|| decision.boxingPolicy == "direct-nominal-value-carrier";
+		if (isNominal != (nominalCount == 3))
+			throw 'Representation decision "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
+		if (isNominal
+			&& (decision.nominalTargetModuleName == null
+				|| decision.nominalTargetModuleName.length == 0
+				|| decision.nominalTargetTypeName == null
+				|| decision.nominalTargetTypeName.length == 0
+				|| decision.carrierTypeId != decision.nominalTargetTypeName
+				|| decision.nominalLayoutRevision == null
+				|| !StringTools.startsWith((cast decision.nominalLayoutRevision : String), "sha256:"))) {
+			throw 'Representation decision "${decision.id}" does not match its sealed nominal carrier layout.';
+		}
+		if (decision.semanticTypeId == OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+			|| decision.id == OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID) {
+			if (decision.id != OcamlFloatRepresentationContract.INTERNAL_REPRESENTATION_ID
+				|| decision.semanticTypeId != OcamlFloatRepresentationContract.SEMANTIC_TYPE_ID
+				|| decision.domain != "internal-value"
+				|| decision.carrierTypeId != OcamlFloatRepresentationContract.CARRIER_TYPE_ID
+				|| decision.nullPolicy != "non-null"
+				|| decision.identityPolicy != "primitive-value"
+				|| decision.aliasingPolicy != "no-value-alias"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "immutable-value"
+				|| decision.boxingPolicy != "direct-unboxed"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.proofId != OcamlFloatRepresentationContract.PROOF_ID
+				|| nominalCount != 0) {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact Float internal value carrier.';
+			}
+		}
+		if (decision.boxingPolicy == "direct-nominal-value-carrier") {
+			if (decision.id != OcamlInt64RepresentationContract.INTERNAL_REPRESENTATION_ID
+				|| decision.semanticTypeId != OcamlInt64RepresentationContract.SEMANTIC_TYPE_ID
+				|| decision.domain != "internal-value"
+				|| decision.carrierTypeId != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				|| decision.nullPolicy != "non-null"
+				|| decision.identityPolicy != "primitive-value"
+				|| decision.aliasingPolicy != "no-value-alias"
+				|| decision.storageMutationPolicy != "immutable-binding"
+				|| decision.valueMutationPolicy != "immutable-value"
+				|| decision.implicitDefaultPolicy != "not-admitted"
+				|| decision.nominalTargetModuleName != OcamlInt64RepresentationContract.TARGET_MODULE_NAME
+				|| decision.nominalTargetTypeName != OcamlInt64RepresentationContract.TARGET_TYPE_NAME
+				|| decision.nominalLayoutRevision != OcamlInt64RepresentationContract.LAYOUT_REVISION
+				|| decision.proofId != OcamlInt64RepresentationContract.PROOF_ID) {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
+			}
+		} else if (decision.boxingPolicy == "nullable-nominal-record-carrier") {
+			if (decision.proofId != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
+				throw 'Representation decision "${decision.id}" does not match its sealed monomorphic-class carrier proof.';
+			}
+			final expectedStoragePolicy = switch (decision.domain) {
+				case "internal-value": "immutable-binding";
+				case "captured-local-storage": "shared-local-cell";
+				case _:
+					throw 'Representation decision "${decision.id}" selects unsupported nominal carrier domain ${decision.domain}.';
+			};
+			if (decision.storageMutationPolicy != expectedStoragePolicy) {
+				throw 'Representation decision "${decision.id}" selects ${decision.storageMutationPolicy} storage for nominal carrier domain ${decision.domain}, expected $expectedStoragePolicy.';
+			}
+		}
+		return decision;
 	}
 
 	static function loweredPlan(value:Dynamic):InspectionLoweredPlan {
@@ -1106,19 +2229,21 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
-	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>):Int {
+	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
+			localConversions:Array<InspectionLocalConversion>, containerElementConversions:Array<InspectionContainerElementConversion>,
+			anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
 		if (requirementValues.length != expectedCount) {
 			throw 'Lowering report runtimeRequirementCount is $expectedCount but runtimeRequirements contains ${requirementValues.length} entries.';
 		}
-		final requirements:Map<String, Bool> = [];
+		final requirements:Map<String, Dynamic> = [];
 		for (requirement in requirementValues) {
 			final id = requiredString(requirement, "id");
 			if (requirements.exists(id))
 				throw 'Lowering report contains duplicate runtime requirement "$id".';
-			requirements.set(id, true);
+			requirements.set(id, requirement);
 			requiredString(requirement, "sourceKind");
 			requiredString(requirement, "sourceId");
 			final source = requiredObject(requirement, "source");
@@ -1149,6 +2274,215 @@ class ReflaxeOcamlInspection {
 			for (requirementId in plan.runtimeRequirementIds) {
 				if (!requirements.exists(requirementId))
 					throw 'Lowered plan "${plan.id}" refers to missing runtime requirement "$requirementId".';
+				referenced.set(requirementId, true);
+			}
+		}
+		for (conversion in localConversions) {
+			if (conversion.conversion != "box-exact-enum-to-dynamic")
+				continue;
+			final requirementId = conversion.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Enum-to-Dynamic conversion "${conversion.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != conversion.id
+				|| requiredString(source, "file") != conversion.sourceFile
+				|| requiredInt(source, "min") != conversion.sourceMin
+				|| requiredInt(source, "max") != conversion.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != conversion.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != conversion.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
+				throw 'Enum-to-Dynamic conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (conversion in containerElementConversions) {
+			final requirementId = conversion.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Container-element conversion "${conversion.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != conversion.id
+				|| requiredString(source, "file") != conversion.sourceFile
+				|| requiredInt(source, "min") != conversion.sourceMin
+				|| requiredInt(source, "max") != conversion.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != conversion.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != conversion.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != conversion.profileEligibility.join(",")) {
+				throw 'Container-element conversion "${conversion.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (control in controls) {
+			final payload = control.payload;
+			if (control.kind != "throw" || payload == null)
+				continue;
+			final enumPayload:InspectionControlPayload = payload;
+			if (enumPayload.conversion != "box-enum-throw-carrier")
+				continue;
+			final requirementId = control.id + ":runtime:haxe-enum-dynamic-box";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Direct enum throw "${control.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != control.id
+				|| requiredString(source, "file") != control.sourceFile
+				|| requiredInt(source, "min") != control.sourceMin
+				|| requiredInt(source, "max") != control.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-enum-dynamic-box"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != control.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != enumPayload.inputSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != "haxe-enum-dynamic-box-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxEnum"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != control.profileEligibility.join(",")) {
+				throw 'Direct enum throw "${control.id}" runtime requirement "$requirementId" disagrees with its sealed HxEnum dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (decision in representation.decisions) {
+			final selectsExactStringSentinel = decision.boxingPolicy == "nullable-string-carrier"
+				|| decision.proofId == "nullable-string-runtime-sentinel-carrier-v1";
+			if (!selectsExactStringSentinel)
+				continue;
+			if (decision.semanticTypeId != "String"
+				|| decision.carrierTypeId != "string"
+				|| decision.nullPolicy != "runtime-sentinel"
+				|| decision.boxingPolicy != "nullable-string-carrier"
+				|| decision.implicitDefaultPolicy != "runtime-null-sentinel"
+				|| decision.proofId != "nullable-string-runtime-sentinel-carrier-v1") {
+				throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
+			}
+			final requirementId = decision.id + ":runtime:haxe-string-null-sentinel";
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Representation decision "${decision.id}" refers to missing runtime requirement "$requirementId".';
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (requiredString(requirement, "sourceKind") != "representation-decision"
+				|| requiredString(requirement, "sourceId") != decision.id + "@" + decision.revision
+				|| requiredString(requirement, "semanticCapability") != "haxe-string-null-sentinel"
+				|| requiredString(requirement, "cause") != "representation-decision"
+				|| requiredString(requirement, "decisionId") != decision.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != "String"
+				|| requiredString(requirement, "implementationFeature") != "haxe-string-null-sentinel-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxString") {
+				throw 'Representation decision "${decision.id}" runtime requirement "$requirementId" does not match the sealed exact String dependency.';
+			}
+			referenced.set(requirementId, true);
+		}
+		for (operation in anonymousOperations) {
+			final compoundWrite = operation.kind == "compound-write-field";
+			if (operation.runtimeRequirementIds.length != (compoundWrite ? 2 : 1))
+				throw 'Anonymous operation "${operation.id}" has the wrong number of runtime requirements for ${operation.kind}.';
+			final requirementId = operation.runtimeRequirementIds[0];
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Anonymous operation "${operation.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			final expectedSubject = operation.resultSemanticTypeId.length == 0 ? operation.structureId : operation.resultSemanticTypeId;
+			if (requirementId != operation.id + ":runtime:haxe-anonymous-structure"
+				|| requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != operation.occurrenceId
+				|| requiredString(source, "file") != operation.sourceFile
+				|| requiredInt(source, "min") != operation.sourceMin
+				|| requiredInt(source, "max") != operation.sourceMax
+				|| requiredString(requirement, "semanticCapability") != "haxe-anonymous-structure"
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != operation.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != expectedSubject
+				|| requiredString(requirement, "implementationFeature") != "haxe-anonymous-structure-v1"
+				|| roots.length != 1
+				|| roots[0] != "HxAnon"
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+				throw 'Anonymous operation "${operation.id}" runtime requirement "$requirementId" disagrees with its sealed runtime-container decision.';
+			}
+			referenced.set(requirementId, true);
+			if (compoundWrite) {
+				final arithmeticId = operation.runtimeRequirementIds[1];
+				final arithmetic = requirements.get(arithmeticId);
+				if (arithmetic == null)
+					throw 'Anonymous compound write "${operation.id}" refers to missing Int32 runtime requirement "$arithmeticId".';
+				final arithmeticSource = requiredObject(arithmetic, "source");
+				final arithmeticSubject = requiredObject(arithmetic, "subject");
+				final arithmeticRoots = requiredStringArray(arithmetic, "rootModules");
+				if (arithmeticId != operation.id + ":runtime:haxe-int32-add"
+					|| requiredString(arithmetic, "sourceKind") != "haxe-expression"
+					|| requiredString(arithmetic, "sourceId") != operation.occurrenceId
+					|| requiredString(arithmeticSource, "file") != operation.sourceFile
+					|| requiredInt(arithmeticSource, "min") != operation.sourceMin
+					|| requiredInt(arithmeticSource, "max") != operation.sourceMax
+					|| requiredString(arithmetic, "semanticCapability") != "haxe-int32-add"
+					|| requiredString(arithmetic, "cause") != "lowering-decision"
+					|| requiredString(arithmetic, "decisionId") != operation.id
+					|| requiredString(arithmeticSubject, "kind") != "haxe-type"
+					|| requiredString(arithmeticSubject, "id") != operation.fieldSemanticTypeId
+					|| requiredString(arithmetic, "implementationFeature") != "haxe-int32-arithmetic-v1"
+					|| arithmeticRoots.length != 1
+					|| arithmeticRoots[0] != "HxInt"
+					|| requiredStringArray(arithmetic, "profileEligibility").join(",") != "metal,portable") {
+					throw 'Anonymous compound write "${operation.id}" runtime requirement "$arithmeticId" disagrees with its sealed Int32 addition decision.';
+				}
+				referenced.set(arithmeticId, true);
+			}
+		}
+		for (call in calls) {
+			final target = call.standardIMapTarget;
+			if (target == null)
+				continue;
+			for (capability in target.runtimeCapabilities) {
+				final requirementId = call.id + ":runtime:" + capability;
+				final requirement = requirements.get(requirementId);
+				if (requirement == null)
+					throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
+				final implementation = ReflaxeOcamlStandardIMapInspection.runtimeImplementation(capability);
+				final source = requiredObject(requirement, "source");
+				final subject = requiredObject(requirement, "subject");
+				final roots = requiredStringArray(requirement, "rootModules");
+				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+					|| requiredString(requirement, "sourceId") != call.id
+					|| requiredString(source, "file") != call.sourceFile
+					|| requiredInt(source, "min") != call.sourceMin
+					|| requiredInt(source, "max") != call.sourceMax
+					|| requiredString(requirement, "semanticCapability") != capability
+					|| requiredString(requirement, "cause") != "lowering-decision"
+					|| requiredString(requirement, "decisionId") != call.id
+					|| requiredString(subject, "kind") != "haxe-type"
+					|| requiredString(subject, "id") != target.receiverSemanticTypeId
+					|| requiredString(requirement, "implementationFeature") != implementation.feature
+					|| roots.length != 1
+					|| roots[0] != implementation.root
+					|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+					throw 'Standard IMap call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+				}
 				referenced.set(requirementId, true);
 			}
 		}
@@ -1248,13 +2582,13 @@ class ReflaxeOcamlInspection {
 	static function unavailableCapabilities(lowering:InspectionLowering):Array<InspectionUnavailableCapability> {
 		return [
 			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
-				"A checked partial report now covers core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates; other compiler paths still need explicit explanations."),
+				"The checked partial report derives its capability and source-kind inventory from this compilation's exact requirements. Some generated runtime uses still have only module-name observations, so they need occurrence-level explanations before whole-program authority is complete."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
 			{
 				id: "raw-unsafe",
 				label: "Whole-program raw and unsafe operation inventory",
 				status: lowering.status == "present" ? "partial" : "unavailable",
-				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact Null<Int> and Null<Bool> locals; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the exact nullable-primitive local slices is not available."
+				reason: lowering.status == "present" ? 'The compiler reports ${lowering.unsafeOperations.length} proof-backed operation${lowering.unsafeOperations.length == 1 ? "" : "s"} for admitted exact nullable-primitive and immutable Dynamic-local crossings, including exact enum boxing; other raw, Obj, and Obj.magic uses are not yet inventoried.' : "The lowering report that owns the admitted local-carrier slices is not available."
 			},
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
 			unavailable("export-abi", "Curated public OCaml export ABI", "Inferred .mli files are not a stable export contract.")
@@ -1451,17 +2785,30 @@ class ReflaxeOcamlInspection {
 			admittedInputRevision: null,
 			plans: [],
 			representation: representationFailure("invalid", path, message),
+			anonymousStructureRevision: null,
+			anonymousStructures: [],
+			anonymousStructureOperations: [],
 			localConversionRevision: null,
 			localConversions: [],
+			containerElementRequiredConversionRevision: null,
+			containerElementRequiredConversionIds: [],
+			containerElementConversionRevision: null,
+			containerElementConversions: [],
 			unsafeOperationCompleteness: null,
 			unsafeOperationRevision: null,
 			unsafeOperations: [],
 			callRevision: null,
 			calls: [],
 			callableBoundaries: [],
+			controlRevision: null,
+			controls: [],
+			controlCatchRevision: null,
+			controlCatches: [],
+			controlTargetRevision: null,
+			controlTargets: [],
 			staticStorageRevision: null,
 			staticStorage: [],
-			scope: "typed-place-and-first-call-families",
+			scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
 			message: message
 		};
 	}
@@ -1474,12 +2821,21 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10",
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14",
 			message: message
 		};
 	}
 
 	static function compareStrings(left:String, right:String):Int {
 		return left < right ? -1 : (left > right ? 1 : 0);
+	}
+
+	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
 	}
 }

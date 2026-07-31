@@ -12,8 +12,9 @@ extern class Bytes {
 		Internal constructor used by some stdlib code (e.g. `haxe.io.BytesBuffer`)
 		inside `untyped` blocks.
 
-		We keep this declared so Haxe can type/resolve `new Bytes(len, data)`
-		even though the OCaml backend ultimately maps this to runtime helpers.
+		The OCaml backend admits an exact typed occurrence only after its
+		left-to-right arguments, explicit-length/aliased-data policy, result
+		carrier, and runtime requirement have been sealed before syntax.
 	**/
 	private function new(length:Int, b:BytesData);
 
@@ -53,7 +54,8 @@ extern class Bytes {
 		  provide the API surface so upstream code types correctly.
 
 		How
-		- The OCaml backend lowers this call to `HxBytes.get` for now (bounds-checked).
+		- The OCaml backend lowers this call to `HxBytes.fastGet`, which reads the
+		  native `BytesData` directly and keeps a bounds failure deterministic.
 		- Once we have a safe/unsafe split in the runtime, we can map this to an unchecked
 		  read to better match upstream intent.
 	**/

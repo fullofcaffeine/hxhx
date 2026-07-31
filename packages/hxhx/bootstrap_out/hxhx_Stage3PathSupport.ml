@@ -13,191 +13,197 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3PathS
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3PathSupport" } : t)
 
-let absFromCwd = fun cwd path -> try let __fallback_result_5 = (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr (cwd : string))) else ());
-  let tempResult = ref ("" : string) in (
-    ignore (if Haxe_io_Path.isAbsolute (path : string) then let __assign_1 = (Haxe_io_Path.normalize (path : string) : string) in (
-      tempResult := __assign_1;
-      __assign_1
-    ) else let __assign_2 = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_3 = HxArray.create () in (
-      ignore (HxArray.push __arr_3 cwd);
-      ignore (HxArray.push __arr_3 path);
-      __arr_3
-    ))) : string) : string) in (
+let absFromCwd = fun (cwd : string) (path : string) -> (try (
+  ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr cwd)) else ());
+  let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if let __call_arg_0_1 = path in Haxe_io_Path.isAbsolute __call_arg_0_1 then let __assign_2 = let __call_arg_0_3 = path in Haxe_io_Path.normalize __call_arg_0_3 in (
       tempResult := __assign_2;
       __assign_2
+    ) else let __assign_4 = let __call_arg_0_5 = Haxe_io_Path.join (Obj.magic (let __arr_6 = HxArray.create () in (
+      ignore (HxArray.push __arr_6 cwd);
+      ignore (HxArray.push __arr_6 path);
+      __arr_6
+    ))) in Haxe_io_Path.normalize __call_arg_0_5 in (
+      tempResult := __assign_4;
+      __assign_4
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_5 with
-  | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
+) with
+  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : string) : string)
 
-let inferMainFromMacroExpr = fun expr -> try let __fallback_result_8 = (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let value = ref (StringTools.trim (expr : string) : string) in (
-    ignore (if HxString.length (!value) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+let inferMainFromMacroExpr = fun (expr : string) -> (try (
+  ignore (if expr == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let value = ref (let __call_arg_0_8 = expr in StringTools.trim __call_arg_0_8) in (
+    ignore (if HxString.length (!value) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
     let paren = HxString.indexOf (!value) "(" 0 in (
-      ignore (if paren <> -1 then ignore (let __assign_6 = (StringTools.trim (HxString.substr (!value) 0 paren : string) : string) in (
-        value := __assign_6;
-        __assign_6
+      ignore (if paren <> -1 then ignore (let __assign_9 = let __call_arg_0_10 = HxString.substr (!value) 0 paren in StringTools.trim __call_arg_0_10 in (
+        value := __assign_9;
+        __assign_9
       )) else ());
       let lastDot = HxString.lastIndexOf (!value) "." (HxString.length (!value)) in (
-        ignore (if lastDot = -1 then raise (HxRuntime.Hx_return (Obj.repr (!value : string))) else ());
-        StringTools.trim (HxString.substr (!value) 0 lastDot : string)
+        ignore (if lastDot = -1 then raise (HxRuntime.Hx_return (Obj.repr (!value))) else ());
+        let __call_arg_0_11 = HxString.substr (!value) 0 lastDot in StringTools.trim __call_arg_0_11
       )
     )
   )
-) in Obj.magic __fallback_result_8 with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+) with
+  | HxRuntime.Hx_return __ret_12 -> (Obj.obj __ret_12 : string) : string)
 
-let inferRepoRootForScripts = fun () -> try let __fallback_result_34 = let env = (HxSys.getEnv "HXHX_REPO_ROOT" : string) in (
-  ignore (if env != Obj.magic (HxRuntime.hx_null) && HxString.length env > 0 && HxFileSystem.exists env && HxFileSystem.isDirectory env then raise (HxRuntime.Hx_return (Obj.repr (env : string))) else ());
+let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO_ROOT" : string) : string) in (
+  ignore (if env != HxString.hx_null_string && HxString.length env > 0 && HxFileSystem.exists (env : string) && HxFileSystem.isDirectory (env : string) then raise (HxRuntime.Hx_return (Obj.repr env)) else ());
   let prog = (HxSys.programPath () : string) in (
-    ignore (if prog == Obj.magic (HxRuntime.hx_null) || HxString.length prog = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-    let tempString = ref ("" : string) in (
-      ignore (try let __assign_9 = (HxFileSystem.fullPath prog : string) in (
-        tempString := __assign_9;
-        __assign_9
+    ignore (if prog == HxString.hx_null_string || HxString.length prog = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (try let __assign_18 = (HxFileSystem.fullPath (prog : string) : string) in (
+        tempString := __assign_18;
+        __assign_18
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_10 -> raise (HxRuntime.Hx_return __ret_10)
-        | HxRuntime.Hx_exception (__exn_v_11, __exn_tags_12) -> if HxRuntime.tags_has __exn_tags_12 "String" then let _hx = (Obj.obj __exn_v_11 : string) in (
+        | HxRuntime.Hx_return __ret_14 -> raise (HxRuntime.Hx_return __ret_14)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_15, __exn_tags_16) -> if HxRuntime.tags_has __exn_tags_16 "String" then let _hx = (Obj.obj __exn_v_15 : string) in (
           ignore _hx;
           let __assign_13 = (prog : string) in (
             tempString := __assign_13;
             __assign_13
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_11 __exn_tags_12
-        | __exn_14 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_14) : string) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_15 __exn_tags_16
+        | __exn_17 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_17) : string) in (
           ignore _hx;
-          let __assign_15 = (prog : string) in (
-            tempString := __assign_15;
-            __assign_15
+          let __assign_13 = (prog : string) in (
+            tempString := __assign_13;
+            __assign_13
           )
-        ) else raise (__exn_14));
-      let tempString1 = ref ("" : string) in (
-        ignore (try let __assign_16 = (Haxe_io_Path.directory (!tempString : string) : string) in (
-          tempString1 := __assign_16;
-          __assign_16
+        ) else raise (__exn_17));
+      let abs = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (try let __assign_24 = let __call_arg_0_25 = abs in Haxe_io_Path.directory __call_arg_0_25 in (
+          tempString1 := __assign_24;
+          __assign_24
         ) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-          | HxRuntime.Hx_return __ret_17 -> raise (HxRuntime.Hx_return __ret_17)
-          | HxRuntime.Hx_exception (__exn_v_18, __exn_tags_19) -> if HxRuntime.tags_has __exn_tags_19 "String" then let _hx = (Obj.obj __exn_v_18 : string) in (
+          | HxRuntime.Hx_return __ret_20 -> raise (HxRuntime.Hx_return __ret_20)
+          | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+          | HxRuntime.Hx_exception (__exn_v_21, __exn_tags_22) -> if HxRuntime.tags_has __exn_tags_22 "String" then let _hx = (Obj.obj __exn_v_21 : string) in (
             ignore _hx;
-            let __assign_20 = ("" : string) in (
-              tempString1 := __assign_20;
-              __assign_20
+            let __assign_19 = "" in (
+              tempString1 := __assign_19;
+              __assign_19
             )
-          ) else HxRuntime.hx_throw_typed __exn_v_18 __exn_tags_19
-          | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
+          ) else HxRuntime.hx_throw_typed __exn_v_21 __exn_tags_22
+          | __exn_23 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_23) : string) in (
             ignore _hx;
-            let __assign_22 = ("" : string) in (
-              tempString1 := __assign_22;
-              __assign_22
+            let __assign_19 = "" in (
+              tempString1 := __assign_19;
+              __assign_19
             )
-          ) else raise (__exn_21));
-        ignore (if !tempString1 == Obj.magic (HxRuntime.hx_null) || HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-        ignore (let __assign_23 = (HxFileSystem.absolutePath (!tempString1) : string) in (
-          tempString1 := __assign_23;
-          __assign_23
-        ));
-        let _g = ref 0 in (
-          ignore (try while !_g < 10 do try ignore ((
-            ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-              ignore (_g := __new_25);
-              __old_24
-            ));
-            let tempString2 = ref ("" : string) in (
-              ignore (if HxString.length (!tempString1) = 0 then let __assign_26 = ("scripts/hxhx/build-hxhx-macro-host.sh" : string) in (
-                tempString2 := __assign_26;
-                __assign_26
-              ) else if StringTools.endsWith (!tempString1 : string) ("/" : string) then let __assign_27 = (HxString.toStdString (!tempString1) ^ "scripts/hxhx/build-hxhx-macro-host.sh" : string) in (
-                tempString2 := __assign_27;
-                __assign_27
-              ) else let __assign_28 = ((HxString.toStdString (!tempString1) ^ "/") ^ "scripts/hxhx/build-hxhx-macro-host.sh" : string) in (
-                tempString2 := __assign_28;
-                __assign_28
+          ) else raise (__exn_23));
+        let dir = ref (!tempString1 : string) in (
+          ignore (if !dir == HxString.hx_null_string || HxString.length (!dir) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+          ignore (let __assign_26 = (HxFileSystem.absolutePath (!dir : string) : string) in (
+            dir := __assign_26;
+            __assign_26
+          ));
+          let _g = ref 0 in (
+            ignore (try while !_g < 10 do try ignore ((
+              ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+                ignore (_g := __new_28);
+                __old_27
               ));
-              let candidate = (!tempString2 : string) in (
-                ignore (if HxFileSystem.exists candidate && not (HxFileSystem.isDirectory candidate) then raise (HxRuntime.Hx_return (Obj.repr (!tempString1 : string))) else ());
-                let tempString3 = ref ("" : string) in (
-                  ignore (if HxString.length (!tempString1) = 0 then let __assign_29 = (".." : string) in (
-                    tempString3 := __assign_29;
-                    __assign_29
-                  ) else if StringTools.endsWith (!tempString1 : string) ("/" : string) then let __assign_30 = (HxString.toStdString (!tempString1) ^ ".." : string) in (
-                    tempString3 := __assign_30;
-                    __assign_30
-                  ) else let __assign_31 = ((HxString.toStdString (!tempString1) ^ "/") ^ ".." : string) in (
-                    tempString3 := __assign_31;
-                    __assign_31
-                  ));
-                  let parent = (HxFileSystem.absolutePath (!tempString3) : string) in (
-                    ignore (if HxString.equals parent (!tempString1) then raise (HxRuntime.Hx_break) else ());
-                    let __assign_32 = (parent : string) in (
-                      tempString1 := __assign_32;
-                      __assign_32
+              let tempString2 = ref (HxString.hx_null_string : string) in (
+                ignore (if HxString.length (!dir) = 0 then let __assign_29 = "scripts/hxhx/build-hxhx-macro-host.sh" in (
+                  tempString2 := __assign_29;
+                  __assign_29
+                ) else if let __call_arg_0_30 = !dir in let __call_arg_1_31 = "/" in StringTools.endsWith __call_arg_0_30 __call_arg_1_31 then let __assign_32 = HxString.toStdString (!dir) ^ "scripts/hxhx/build-hxhx-macro-host.sh" in (
+                  tempString2 := __assign_32;
+                  __assign_32
+                ) else let __assign_33 = (HxString.toStdString (!dir) ^ "/") ^ "scripts/hxhx/build-hxhx-macro-host.sh" in (
+                  tempString2 := __assign_33;
+                  __assign_33
+                ));
+                let candidate = !tempString2 in (
+                  ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (!dir))) else ());
+                  let tempString3 = ref (HxString.hx_null_string : string) in (
+                    ignore (if HxString.length (!dir) = 0 then let __assign_34 = ".." in (
+                      tempString3 := __assign_34;
+                      __assign_34
+                    ) else if let __call_arg_0_35 = !dir in let __call_arg_1_36 = "/" in StringTools.endsWith __call_arg_0_35 __call_arg_1_36 then let __assign_37 = HxString.toStdString (!dir) ^ ".." in (
+                      tempString3 := __assign_37;
+                      __assign_37
+                    ) else let __assign_38 = (HxString.toStdString (!dir) ^ "/") ^ ".." in (
+                      tempString3 := __assign_38;
+                      __assign_38
+                    ));
+                    let parent = (HxFileSystem.absolutePath (!tempString3 : string) : string) in (
+                      ignore (if HxString.equals parent (!dir) then raise (HxRuntime.Hx_break) else ());
+                      let __assign_39 = (parent : string) in (
+                        dir := __assign_39;
+                        __assign_39
+                      )
                     )
                   )
                 )
+              )
+            )) with
+              | HxRuntime.Hx_continue -> () done with
+              | HxRuntime.Hx_break -> ());
+            ""
+          )
+        )
+      )
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_40 -> (Obj.obj __ret_40 : string) : string)
+
+let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> try let __fallback_result_72 = (
+  ignore (if displayRequest == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let trimmed = let __call_arg_0_41 = displayRequest in StringTools.trim __call_arg_0_41 in (
+    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    let at = HxString.indexOf trimmed "@" 0 in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if at = -1 then let __assign_42 = (trimmed : string) in (
+        tempString := __assign_42;
+        __assign_42
+      ) else let __assign_43 = (HxString.substr trimmed 0 at : string) in (
+        tempString := __assign_43;
+        __assign_43
+      ));
+      let rawPath = (!tempString : string) in (
+        ignore (if HxString.length rawPath = 0 || not (let __call_arg_0_44 = rawPath in let __call_arg_1_45 = ".hx" in StringTools.endsWith __call_arg_0_44 __call_arg_1_45) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+        let displayAbs = let __call_arg_0_46 = cwd in let __call_arg_1_47 = rawPath in absFromCwd __call_arg_0_46 __call_arg_1_47 in let displayNorm = let __call_arg_0_48 = displayAbs in Haxe_io_Path.normalize __call_arg_0_48 in let _g = ref 0 in (
+          ignore (try while !_g < HxArray.length classPaths do try ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
+            ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
+              ignore (_g := __new_50);
+              __new_50
+            ));
+            let cpAbs = let __call_arg_0_51 = cwd in let __call_arg_1_52 = cp in absFromCwd __call_arg_0_51 __call_arg_1_52 in let cpNorm = ref (let __call_arg_0_53 = cpAbs in Haxe_io_Path.normalize __call_arg_0_53) in (
+              ignore (if not (let __call_arg_0_54 = !cpNorm in let __call_arg_1_55 = "/" in StringTools.endsWith __call_arg_0_54 __call_arg_1_55) then ignore (cpNorm := HxString.toStdString (!cpNorm) ^ "/") else ());
+              ignore (if not (let __call_arg_0_56 = displayNorm in let __call_arg_1_57 = !cpNorm in StringTools.startsWith __call_arg_0_56 __call_arg_1_57) then raise (HxRuntime.Hx_continue) else ());
+              let rel = ref (HxString.substr displayNorm (HxString.length (!cpNorm)) (-1) : string) in (
+                ignore (if let __call_arg_0_58 = !rel in let __call_arg_1_59 = ".hx" in StringTools.endsWith __call_arg_0_58 __call_arg_1_59 then ignore (let __assign_60 = (HxString.substr (!rel) 0 (HxInt.sub (HxString.length (!rel)) 3) : string) in (
+                  rel := __assign_60;
+                  __assign_60
+                )) else ());
+                ignore (let __assign_61 = (let __call_arg_0_62 = !rel in let __call_arg_1_63 = "\\" in let __call_arg_2_64 = "/" in StringTools.replace __call_arg_0_62 __call_arg_1_63 __call_arg_2_64 : string) in (
+                  rel := __assign_61;
+                  __assign_61
+                ));
+                ignore (let __assign_65 = (let __call_arg_0_66 = !rel in let __call_arg_1_67 = "/" in let __call_arg_2_68 = "." in StringTools.replace __call_arg_0_66 __call_arg_1_67 __call_arg_2_68 : string) in (
+                  rel := __assign_65;
+                  __assign_65
+                ));
+                if HxString.length (!rel) > 0 then raise (HxRuntime.Hx_return (Obj.repr (!rel : string))) else ()
               )
             )
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
-          ""
+          let __call_arg_0_69 = let __call_arg_0_70 = displayNorm in Haxe_io_Path.withoutDirectory __call_arg_0_70 in Haxe_io_Path.withoutExtension __call_arg_0_69
         )
       )
     )
   )
-) in Obj.magic __fallback_result_34 with
-  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
-
-let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> try let __fallback_result_43 = (
-  ignore (if displayRequest == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let trimmed = (StringTools.trim (displayRequest : string) : string) in (
-    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-    let at = HxString.indexOf trimmed "@" 0 in let tempString = ref ("" : string) in (
-      ignore (if at = -1 then let __assign_35 = (trimmed : string) in (
-        tempString := __assign_35;
-        __assign_35
-      ) else let __assign_36 = (HxString.substr trimmed 0 at : string) in (
-        tempString := __assign_36;
-        __assign_36
-      ));
-      ignore (if HxString.length (!tempString) = 0 || not (StringTools.endsWith (!tempString : string) (".hx" : string)) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-      let displayAbs = (absFromCwd (cwd : string) (!tempString : string) : string) in let displayNorm = (Haxe_io_Path.normalize (displayAbs : string) : string) in let _g = ref 0 in (
-        ignore (try while !_g < HxArray.length classPaths do try ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
-          ignore (let __old_37 = !_g in let __new_38 = HxInt.add __old_37 1 in (
-            ignore (_g := __new_38);
-            __new_38
-          ));
-          let cpAbs = (absFromCwd (cwd : string) (cp : string) : string) in let cpNorm = ref (Haxe_io_Path.normalize (cpAbs : string) : string) in (
-            ignore (if not (StringTools.endsWith (!cpNorm : string) ("/" : string)) then ignore (cpNorm := HxString.toStdString (!cpNorm) ^ "/") else ());
-            ignore (if not (StringTools.startsWith (displayNorm : string) (!cpNorm : string)) then raise (HxRuntime.Hx_continue) else ());
-            let rel = ref (HxString.substr displayNorm (HxString.length (!cpNorm)) (-1) : string) in (
-              ignore (if StringTools.endsWith (!rel : string) (".hx" : string) then ignore (let __assign_39 = (HxString.substr (!rel) 0 (HxInt.sub (HxString.length (!rel)) 3) : string) in (
-                rel := __assign_39;
-                __assign_39
-              )) else ());
-              ignore (let __assign_40 = (StringTools.replace (!rel : string) ("\\" : string) ("/" : string) : string) in (
-                rel := __assign_40;
-                __assign_40
-              ));
-              ignore (let __assign_41 = (StringTools.replace (!rel : string) ("/" : string) ("." : string) : string) in (
-                rel := __assign_41;
-                __assign_41
-              ));
-              if HxString.length (!rel) > 0 then raise (HxRuntime.Hx_return (Obj.repr (!rel : string))) else ()
-            )
-          )
-        )) with
-          | HxRuntime.Hx_continue -> () done with
-          | HxRuntime.Hx_break -> ());
-        Haxe_io_Path.withoutExtension (Haxe_io_Path.withoutDirectory (displayNorm : string) : string)
-      )
-    )
-  )
-) in Obj.magic __fallback_result_43 with
-  | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
+) in Obj.magic __fallback_result_72 with
+  | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71

@@ -164,6 +164,90 @@ typedef InspectionLoweredPlan = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** One exact field carried by an admitted mutable anonymous object. */
+typedef InspectionAnonymousStructureField = {
+	final name:String;
+	final canonicalOrder:Int;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final representationRevision:String;
+	final storeConversion:String;
+	final loadConversion:String;
+}
+
+/**
+	The validated runtime shape selected for one anonymous-object family.
+
+	A structure is a name-sorted field layout plus the aliasing and mutation
+	rules that generated code must preserve. Source evaluation order is recorded
+	on the operation occurrences below because field-name order alone cannot
+	explain which initializer runs first.
+**/
+typedef InspectionAnonymousStructure = {
+	final id:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final fields:Array<InspectionAnonymousStructureField>;
+	final representationId:String;
+	final representationRevision:String;
+	final representationDomain:String;
+	final nullPolicy:String;
+	final identityPolicy:String;
+	final aliasingPolicy:String;
+	final mutationPolicy:String;
+	final proofId:String;
+	final proofClaim:String;
+	final programRevision:String;
+	final revision:String;
+}
+
+/**
+	One validated create, initialize, read, plain write, or compound-write occurrence.
+
+	The evaluation schedule states the observable order explicitly. For example,
+	an `Int +=` field update evaluates its receiver once, reads the old value,
+	evaluates the right-hand side once, adds with Haxe Int32 behavior, stores the
+	new value, and returns that same new value.
+**/
+typedef InspectionAnonymousStructureOperation = {
+	final id:String;
+	final occurrenceId:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final structureId:String;
+	final structureRevision:String;
+	final structureRepresentationId:String;
+	final structureRepresentationRevision:String;
+	final fieldName:Null<String>;
+	final fieldCanonicalOrder:Int;
+	final fieldSourceOrder:Int;
+	final fieldSemanticTypeId:String;
+	final fieldCarrierTypeId:String;
+	final fieldRepresentationId:String;
+	final fieldRepresentationRevision:String;
+	final storeConversion:Null<String>;
+	final loadConversion:Null<String>;
+	final fieldOperator:Null<String>;
+	final evaluationSchedule:Array<String>;
+	final resultSemanticTypeId:String;
+	final resultCarrierTypeId:String;
+	final resultRepresentationId:String;
+	final resultRepresentationRevision:String;
+	final runtimeModule:String;
+	final runtimeReadOperation:Null<String>;
+	final runtimeOperation:String;
+	final runtimeRequirementIds:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One program-owned Haxe-type to OCaml-carrier choice. **/
 typedef InspectionRepresentationDecision = {
 	final id:String;
@@ -184,6 +268,9 @@ typedef InspectionRepresentationDecision = {
 	final proofId:String;
 	final proofClaim:String;
 	final profileEligibility:Array<String>;
+	final nominalTargetModuleName:Null<String>;
+	final nominalTargetTypeName:Null<String>;
+	final nominalLayoutRevision:Null<String>;
 }
 
 /** The admitted portion of the program-wide representation registry. **/
@@ -201,7 +288,7 @@ typedef InspectionRepresentation = {
 /** One occurrence-bound carrier conversion selected before OCaml syntax. **/
 typedef InspectionLocalConversion = {
 	final id:String;
-	final localId:Int;
+	final localId:String;
 	final role:String;
 	final sourceFile:String;
 	final sourceMin:Int;
@@ -220,6 +307,34 @@ typedef InspectionLocalConversion = {
 	final bodyRevision:String;
 	final pipelineRevision:String;
 	final unsafeOperationId:Null<String>;
+}
+
+/** One typed array element whose enum identity is preserved before Dynamic storage. **/
+typedef InspectionContainerElementConversion = {
+	final id:String;
+	final role:String;
+	final containerSourceFile:String;
+	final containerSourceMin:Int;
+	final containerSourceMax:Int;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final containerOrdinal:Int;
+	final elementIndex:Int;
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final conversion:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+	final unsafeOperationId:String;
 }
 
 /** One admitted unsafe carrier operation and the proof that owns it. **/
@@ -267,6 +382,34 @@ typedef InspectionCallEvaluationStep = {
 	final slotId:Null<String>;
 }
 
+/**
+	The standard Haxe `IMap` carrier and operation selected before OCaml syntax.
+
+	This is intentionally separate from a callable boundary: it describes the
+	closed standard-library interface slice, not arbitrary user interface
+	dispatch.
+**/
+typedef InspectionStandardIMapCallTarget = {
+	final operation:String;
+	final keyKind:String;
+	final receiverSemanticTypeId:String;
+	final receiverCarrierId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final runtimeModule:String;
+	final runtimeFunction:String;
+	final resultForm:String;
+	final iteratorModule:Null<String>;
+	final iteratorFunction:Null<String>;
+	final keyStringifier:Null<String>;
+	final valueStringifier:Null<String>;
+	final runtimeCapabilities:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -278,6 +421,7 @@ typedef InspectionCall = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:String;
+	final receiver:Null<InspectionCallValue>;
 	final arguments:Array<InspectionCallValue>;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
@@ -290,6 +434,7 @@ typedef InspectionCall = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 }
 
 /** One callable definition independently sealed against its final body. **/
@@ -300,9 +445,123 @@ typedef InspectionCallableBoundary = {
 	final sourceTypeName:String;
 	final sourceFieldName:String;
 	final kind:String;
+	final receiver:Null<InspectionCallValue>;
 	final arguments:Array<InspectionCallValue>;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One report-safe reference to the program-owned nominal class layout. **/
+typedef InspectionControlNominalRepresentationProof = {
+	final targetModuleName:String;
+	final targetTypeName:String;
+	final layoutRevision:String;
+	final representationProofId:String;
+}
+
+/** The exact value crossing carried by one private compiler-control signal. **/
+typedef InspectionControlPayload = {
+	final inputSemanticTypeId:String;
+	final inputCarrierTypeId:String;
+	final inputRepresentationId:String;
+	final signalCarrierTypeId:String;
+	final outputSemanticTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
+	final conversion:String;
+	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/** One lexical loop target sealed before break/continue syntax is emitted. **/
+typedef InspectionControlLoopTarget = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/** One function, loop, or Haxe exception transfer sealed before OCaml syntax. **/
+typedef InspectionControl = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final kind:String;
+	final effect:String;
+	final targetKind:String;
+	final targetId:String;
+	final payload:Null<InspectionControlPayload>;
+	final runtimeTags:Array<String>;
+	final runtimeTagPolicy:String;
+	final mechanism:String;
+	final runtimeCapabilityId:String;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One represented primitive, monomorphic class, or Dynamic catch binding. **/
+typedef InspectionControlCatchClause = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final order:Int;
+	final variableName:String;
+	final semanticTypeId:String;
+	final signalCarrierTypeId:String;
+	final outputCarrierTypeId:String;
+	final outputRepresentationId:String;
+	final matchPolicy:String;
+	final runtimeTag:Null<String>;
+	final conversion:String;
+	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
+	final bodyResultPolicy:String;
+	final effects:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One complete source-ordered catch chain sealed before OCaml syntax. **/
+typedef InspectionControlCatchChain = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final clauses:Array<InspectionControlCatchClause>;
+	final tryBodyResultPolicy:String;
+	final inputChannels:Array<String>;
+	final targetNativeRuntimeTags:Array<String>;
+	final haxeUnmatchedPolicy:String;
+	final targetNativeUnmatchedPolicy:String;
+	final privateControlPolicy:String;
+	final runtimeCapabilityId:String;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;
@@ -348,14 +607,27 @@ typedef InspectionLowering = {
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
 	final representation:InspectionRepresentation;
+	final anonymousStructureRevision:Null<String>;
+	final anonymousStructures:Array<InspectionAnonymousStructure>;
+	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
+	final containerElementRequiredConversionRevision:Null<String>;
+	final containerElementRequiredConversionIds:Array<String>;
+	final containerElementConversionRevision:Null<String>;
+	final containerElementConversions:Array<InspectionContainerElementConversion>;
 	final unsafeOperationCompleteness:Null<String>;
 	final unsafeOperationRevision:Null<String>;
 	final unsafeOperations:Array<InspectionUnsafeOperation>;
 	final callRevision:Null<String>;
 	final calls:Array<InspectionCall>;
 	final callableBoundaries:Array<InspectionCallableBoundary>;
+	final controlRevision:Null<String>;
+	final controls:Array<InspectionControl>;
+	final controlCatchRevision:Null<String>;
+	final controlCatches:Array<InspectionControlCatchChain>;
+	final controlTargetRevision:Null<String>;
+	final controlTargets:Array<InspectionControlLoopTarget>;
 	final staticStorageRevision:Null<String>;
 	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
@@ -380,10 +652,16 @@ typedef InspectionSummary = {
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
+	final anonymousStructureCount:Int;
+	final anonymousStructureOperationCount:Int;
 	final localConversionCount:Int;
+	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;
 	final callCount:Int;
 	final callableBoundaryCount:Int;
+	final controlCount:Int;
+	final controlCatchCount:Int;
+	final controlTargetCount:Int;
 	final staticStorageCount:Int;
 }
 

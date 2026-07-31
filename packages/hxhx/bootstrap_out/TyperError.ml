@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable filePath : string; mutable pos : HxPos.t; mutable message : string }
 
-let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.class_ "TyperError"; filePath = ""; pos = Obj.magic (HxRuntime.hx_null); message = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if filePath2 == Obj.magic (HxRuntime.hx_null) || HxString.length filePath2 = 0 then let __assign_1 = ("<unknown>" : string) in (
+let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.class_ "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic (HxRuntime.hx_null); message = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if filePath2 == HxString.hx_null_string || HxString.length filePath2 = 0 then let __assign_1 = ("<unknown>" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (filePath2 : string) in (
@@ -31,8 +31,8 @@ let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.cla
         (Obj.magic self : t).pos <- __assign_6;
         __assign_6
       ));
-      let tempRight2 = ref ("" : string) in (
-        ignore (if message2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("<no message>" : string) in (
+      let tempRight2 = ref (HxString.hx_null_string : string) in (
+        ignore (if message2 == HxString.hx_null_string then let __assign_7 = ("<no message>" : string) in (
           tempRight2 := __assign_7;
           __assign_7
         ) else let __assign_8 = (message2 : string) in (
@@ -49,7 +49,7 @@ let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperError"; filePath = ""; pos = Obj.magic (HxRuntime.hx_null); message = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic (HxRuntime.hx_null); message = HxString.hx_null_string } : t)
 
 let toString = fun self () -> (((((HxString.toStdString ((Obj.magic self : t).filePath) ^ ":") ^ string_of_int ((Obj.magic ((Obj.magic self : t).pos) : HxPos.t).line)) ^ ":") ^ string_of_int ((Obj.magic ((Obj.magic self : t).pos) : HxPos.t).column)) ^ ": ") ^ HxString.toStdString ((Obj.magic self : t).message)
 

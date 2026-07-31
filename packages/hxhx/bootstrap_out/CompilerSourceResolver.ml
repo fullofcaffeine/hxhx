@@ -13,31 +13,31 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerSourceRe
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerSourceResolver" } : t)
 
-let normalizePath = fun path -> try let __fallback_result_21 = (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  Haxe_io_Path.normalize (HxFileSystem.absolutePath path : string)
-) in Obj.magic __fallback_result_21 with
-  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
+let normalizePath = fun (path : string) -> (try (
+  ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let __call_arg_0_26 = HxFileSystem.absolutePath (path : string) in Haxe_io_Path.normalize __call_arg_0_26
+) with
+  | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : string) : string)
 
-let contains = fun values expected -> try let __fallback_result_25 = let _g = ref 0 in (
+let contains = fun values expected -> try let __fallback_result_31 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g) : string) in (
-    ignore (let __old_22 = !_g in let __new_23 = HxInt.add __old_22 1 in (
-      ignore (_g := __new_23);
-      __new_23
+    ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
+      ignore (_g := __new_29);
+      __new_29
     ));
     if HxString.equals value expected then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_25 with
-  | HxRuntime.Hx_return __ret_24 -> Obj.obj __ret_24
+) in Obj.magic __fallback_result_31 with
+  | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30
 
 let observationRevision = fun observations -> let values = Obj.magic (HxArray.create ()) in (
   ignore (HxArray.push values "module-observations-v1");
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length observations do ignore (let observation = (HxArray.get (Obj.magic observations) (!_g) : string) in (
-      ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
-        ignore (_g := __new_27);
-        __new_27
+      ignore (let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
+        ignore (_g := __new_33);
+        __new_33
       ));
       HxArray.push values observation
     )) done);
@@ -50,62 +50,62 @@ let missing = fun lookupIdentity observations -> (
   CompilerModuleResolution.create (lookupIdentity : string) (observationRevision (Obj.magic observations) : string) (Obj.magic (HxRuntime.hx_null)) (-1) false
 )
 
-let compareStrings = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_28 = -1 in (
-    tempResult := __assign_28;
-    __assign_28
-  ) else if left > right then let __assign_29 = 1 in (
-    tempResult := __assign_29;
-    __assign_29
-  ) else let __assign_30 = 0 in (
-    tempResult := __assign_30;
-    __assign_30
+let compareStrings = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_34 = -1 in (
+    tempResult := __assign_34;
+    __assign_34
+  ) else if left > right then let __assign_35 = 1 in (
+    tempResult := __assign_35;
+    __assign_35
+  ) else let __assign_36 = 0 in (
+    tempResult := __assign_36;
+    __assign_36
   ));
   !tempResult
-)
+) : int)
 
-let find = fun readDirectory isFile classPaths relativePath usedFallback lookupIdentity observations -> try let __fallback_result_19 = let _g = ref 0 in let _g1 = HxArray.length classPaths in (
-  ignore (try while !_g < _g1 do try ignore (let index = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
-    ignore (_g := __new_10);
-    __old_9
-  ) in let classPath = (HxArray.get (Obj.magic classPaths) index : string) in let candidate = (Haxe_io_Path.join (Obj.magic (let __arr_11 = HxArray.create () in (
-    ignore (HxArray.push __arr_11 classPath);
-    ignore (HxArray.push __arr_11 relativePath);
-    __arr_11
-  ))) : string) in let candidateDirectory = (Haxe_io_Path.directory (candidate : string) : string) in let tempString = ref ("" : string) in (
-    ignore (if candidateDirectory == Obj.magic (HxRuntime.hx_null) || HxString.length candidateDirectory = 0 then let __assign_12 = ("." : string) in (
-      tempString := __assign_12;
-      __assign_12
-    ) else let __assign_13 = (candidateDirectory : string) in (
-      tempString := __assign_13;
-      __assign_13
+let find = fun readDirectory isFile classPaths relativePath usedFallback lookupIdentity observations -> try let __fallback_result_25 = let _g = ref 0 in let _g1 = HxArray.length classPaths in (
+  ignore (try while !_g < _g1 do try ignore (let index = let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+    ignore (_g := __new_11);
+    __old_10
+  ) in let classPath = (HxArray.get (Obj.magic classPaths) index : string) in let candidate = (Haxe_io_Path.join (Obj.magic (let __arr_12 = HxArray.create () in (
+    ignore (HxArray.push __arr_12 classPath);
+    ignore (HxArray.push __arr_12 relativePath);
+    __arr_12
+  ))) : string) in let candidateDirectory = let __call_arg_0_13 = candidate in Haxe_io_Path.directory __call_arg_0_13 in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if candidateDirectory == HxString.hx_null_string || HxString.length candidateDirectory = 0 then let __assign_14 = "." in (
+      tempString := __assign_14;
+      __assign_14
+    ) else let __assign_15 = candidateDirectory in (
+      tempString := __assign_15;
+      __assign_15
     ));
-    let directory = (!tempString : string) in let basename = (Haxe_io_Path.withoutDirectory (candidate : string) : string) in let entries = Obj.magic (readDirectory (directory : string)) in (
+    let directory = !tempString in let basename = let __call_arg_0_16 = candidate in Haxe_io_Path.withoutDirectory __call_arg_0_16 in let entries = Obj.magic (readDirectory (directory : string)) in (
       ignore (HxArray.sort entries compareStrings);
-      let tempString1 = ref ("" : string) in (
-        ignore (if usedFallback then let __assign_14 = ("fallback" : string) in (
-          tempString1 := __assign_14;
-          __assign_14
-        ) else let __assign_15 = ("direct" : string) in (
-          tempString1 := __assign_15;
-          __assign_15
+      let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if usedFallback then let __assign_17 = "fallback" in (
+          tempString1 := __assign_17;
+          __assign_17
+        ) else let __assign_18 = "direct" in (
+          tempString1 := __assign_18;
+          __assign_18
         ));
         ignore (HxArray.push observations ((((("candidate=" ^ HxString.toStdString (!tempString1)) ^ ":") ^ string_of_int index) ^ ":") ^ HxString.toStdString basename));
         ignore (if not (contains (Obj.magic entries) (basename : string)) then ignore ((
           ignore (HxArray.push observations "kind=missing");
           raise (HxRuntime.Hx_continue)
         )) else ());
-        let candidateIsFile = isFile (candidate : string) in let tempString2 = ref ("" : string) in (
-          ignore (if candidateIsFile then let __assign_16 = ("file" : string) in (
-            tempString2 := __assign_16;
-            __assign_16
-          ) else let __assign_17 = ("non-file" : string) in (
-            tempString2 := __assign_17;
-            __assign_17
+        let candidateIsFile = let __call_callee_19 = isFile in let __call_arg_0_20 = candidate in __call_callee_19 __call_arg_0_20 in let tempString2 = ref (HxString.hx_null_string : string) in (
+          ignore (if candidateIsFile then let __assign_21 = "file" in (
+            tempString2 := __assign_21;
+            __assign_21
+          ) else let __assign_22 = "non-file" in (
+            tempString2 := __assign_22;
+            __assign_22
           ));
           ignore (HxArray.push observations ("kind=" ^ HxString.toStdString (!tempString2)));
           ignore (if not (candidateIsFile) then raise (HxRuntime.Hx_continue) else ());
-          ignore (HxArray.push observations ("selected-normalized=" ^ HxString.toStdString (normalizePath (candidate : string))));
+          ignore (HxArray.push observations ("selected-normalized=" ^ HxString.toStdString (let __call_arg_0_23 = candidate in normalizePath __call_arg_0_23)));
           ignore (HxArray.push observations ("selected-path=" ^ HxString.toStdString candidate));
           raise (HxRuntime.Hx_return (Obj.repr (CompilerModuleResolution.create (lookupIdentity : string) (observationRevision (Obj.magic observations) : string) (candidate : string) index usedFallback)))
         )
@@ -115,10 +115,10 @@ let find = fun readDirectory isFile classPaths relativePath usedFallback lookupI
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_19 with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+) in Obj.magic __fallback_result_25 with
+  | HxRuntime.Hx_return __ret_24 -> Obj.obj __ret_24
 
-let resolve = fun readDirectory isFile classPaths modulePath -> try let __fallback_result_8 = let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+let resolve = fun readDirectory isFile classPaths modulePath -> try let __fallback_result_9 = let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if classPaths == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
     tempArray := __assign_1;
     __assign_1
@@ -126,30 +126,30 @@ let resolve = fun readDirectory isFile classPaths modulePath -> try let __fallba
     tempArray := __assign_3;
     __assign_3
   ));
-  let tempString = ref ("" : string) in (
-    ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
+  let effectiveClassPaths = Obj.magic (!tempArray) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if modulePath == HxString.hx_null_string then let __assign_4 = "" in (
       tempString := __assign_4;
       __assign_4
-    ) else let __assign_5 = (StringTools.trim (modulePath : string) : string) in (
+    ) else let __assign_5 = let __call_arg_0_6 = modulePath in StringTools.trim __call_arg_0_6 in (
       tempString := __assign_5;
       __assign_5
     ));
-    let lookupIdentity = (CompilerCacheIdentity.encode (Obj.magic (let __arr_6 = HxArray.create () in (
-      ignore (HxArray.push __arr_6 "module-lookup-v3");
-      ignore (HxArray.push __arr_6 (!tempString));
-      __arr_6
+    let normalizedModulePath = !tempString in let lookupIdentity = (CompilerCacheIdentity.encode (Obj.magic (let __arr_7 = HxArray.create () in (
+      ignore (HxArray.push __arr_7 "module-lookup-v3");
+      ignore (HxArray.push __arr_7 normalizedModulePath);
+      __arr_7
     ))) : string) in let observations = Obj.magic (HxArray.create ()) in (
       ignore (HxArray.push observations ("lookup=" ^ HxString.toStdString lookupIdentity));
-      ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (missing (lookupIdentity : string) (Obj.magic observations))))) else ());
-      let parts = Obj.magic (HxString.split (!tempString) ".") in (
+      ignore (if HxString.length normalizedModulePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (missing (lookupIdentity : string) (Obj.magic observations))))) else ());
+      let parts = Obj.magic (HxString.split normalizedModulePath ".") in (
         ignore (if HxArray.length parts = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (missing (lookupIdentity : string) (Obj.magic observations))))) else ());
-        let direct = (HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" : string) in let directResult = Obj.magic (find readDirectory isFile (Obj.magic (!tempArray)) (direct : string) false (lookupIdentity : string) (Obj.magic observations)) in (
+        let direct = HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" in let directResult = Obj.magic (find readDirectory isFile (Obj.magic effectiveClassPaths) (direct : string) false (lookupIdentity : string) (Obj.magic observations)) in (
           ignore (if directResult != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic directResult))) else ());
-          ignore (if HxArray.length parts >= 2 then ignore (let fallback = (HxString.toStdString (HxArray.join (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) "/" (fun x -> x)) ^ ".hx" : string) in let fallbackResult = Obj.magic (find readDirectory isFile (Obj.magic (!tempArray)) (fallback : string) true (lookupIdentity : string) (Obj.magic observations)) in if fallbackResult != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fallbackResult))) else ()) else ());
+          ignore (if HxArray.length parts >= 2 then ignore (let fallback = HxString.toStdString (HxArray.join (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) "/" (fun x -> x)) ^ ".hx" in let fallbackResult = Obj.magic (find readDirectory isFile (Obj.magic effectiveClassPaths) (fallback : string) true (lookupIdentity : string) (Obj.magic observations)) in if fallbackResult != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fallbackResult))) else ()) else ());
           missing (lookupIdentity : string) (Obj.magic observations)
         )
       )
     )
   )
-) in Obj.magic __fallback_result_8 with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+) in Obj.magic __fallback_result_9 with
+  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8

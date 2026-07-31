@@ -8,9 +8,9 @@ type t = { __hx_type : Obj.t; mutable locals : Obj.t HxArray.t; mutable typeHint
 
 let create = fun projection normalizeName initializerCatalog -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic (HxRuntime.hx_null); typeHints = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if projection == Obj.magic (HxRuntime.hx_null) && initializerCatalog == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require an exact typed executable projection") ["Dynamic"; "String"]) else ());
-    ignore (if projection != Obj.magic (HxRuntime.hx_null) && initializerCatalog != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts cannot combine function and field-initializer catalogs") ["Dynamic"; "String"]) else ());
-    ignore (if normalizeName == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require a target-name normalizer") ["Dynamic"; "String"]) else ());
+    ignore (if projection == Obj.magic (HxRuntime.hx_null) && initializerCatalog == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require an exact typed executable projection") ["Dynamic"]) else ());
+    ignore (if projection != Obj.magic (HxRuntime.hx_null) && initializerCatalog != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts cannot combine function and field-initializer catalogs") ["Dynamic"]) else ());
+    ignore (if normalizeName == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require a target-name normalizer") ["Dynamic"]) else ());
     let tempMaybeTypedBackendLocalCatalog = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendLocalCatalog.t) in (
       ignore (if projection == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic initializerCatalog) in (
         tempMaybeTypedBackendLocalCatalog := __assign_1;
@@ -34,38 +34,48 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
               ignore (_g := __new_7);
               __new_7
             ));
-            let projectedName = (TypedBackendLocalProjection.getProjectedName (Obj.magic local) () : string) in let targetName = (normalizeName (projectedName : string) : string) in (
-              ignore (if targetName == Obj.magic (HxRuntime.hx_null) || HxString.length targetName = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts produced an empty target name for " ^ HxString.toStdString projectedName)) ["Dynamic"; "String"]) else ());
-              let binding = Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ()) in let semanticType = Obj.magic (TyLocalBinding.getType (Obj.magic binding) ()) in let tempString = ref ("" : string) in (
-                ignore (if TyType.isUnknown (Obj.magic semanticType) () || TyType.isNoNormalCompletion (Obj.magic semanticType) () then let __assign_8 = ("" : string) in (
-                  tempString := __assign_8;
-                  __assign_8
-                ) else let __assign_9 = (TyType.getCanonicalDisplay (Obj.magic semanticType) () : string) in (
-                  tempString := __assign_9;
-                  __assign_9
+            let projectedName = (TypedBackendLocalProjection.getProjectedName (Obj.magic local) () : string) in let targetName = let __call_callee_8 = normalizeName in let __call_arg_0_9 = projectedName in __call_callee_8 __call_arg_0_9 in (
+              ignore (if targetName == HxString.hx_null_string || HxString.length targetName = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts produced an empty target name for " ^ HxString.toStdString projectedName)) ["Dynamic"]) else ());
+              let binding = Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ()) in let semanticType = Obj.magic (TyLocalBinding.getType (Obj.magic binding) ()) in let tempString = ref (HxString.hx_null_string : string) in (
+                ignore (if TyType.isUnknown (Obj.magic semanticType) () || TyType.isNoNormalCompletion (Obj.magic semanticType) () then let __assign_10 = ("" : string) in (
+                  tempString := __assign_10;
+                  __assign_10
+                ) else let __assign_11 = (TyType.getCanonicalDisplay (Obj.magic semanticType) () : string) in (
+                  tempString := __assign_11;
+                  __assign_11
                 ));
-                let typeHint = (!tempString : string) in (
-                  ignore (if HxMap.exists_string ((Obj.magic self : t).typeHints) targetName && not (HxString.equals (HxMap.get_string ((Obj.magic self : t).typeHints) targetName) typeHint) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts contain conflicting types for target local " ^ HxString.toStdString targetName)) ["Dynamic"; "String"]) else ());
-                  let _g2 = ref 0 in let _g3 = Obj.magic ((Obj.magic self : t).locals) in (
-                    ignore (while !_g2 < HxArray.length _g3 do ignore (let fact = HxArray.get (Obj.magic _g3) (!_g2) in (
-                      ignore (let __old_10 = !_g2 in let __new_11 = HxInt.add __old_10 1 in (
-                        ignore (_g2 := __new_11);
-                        __new_11
-                      ));
-                      if HxString.equals (Obj.obj (HxAnon.get fact "targetName")) targetName && not (HxString.equals (Obj.obj (HxAnon.get fact "bindingIdentity")) (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts contain conflicting exact locals for target name " ^ HxString.toStdString targetName)) ["Dynamic"; "String"]) else ()
-                    )) done);
-                    ignore (HxArray.push ((Obj.magic self : t).locals) (let __anon_12 = HxAnon.create () in (
-                      ignore (HxAnon.set __anon_12 "projectedName" (Obj.repr projectedName));
-                      ignore (HxAnon.set __anon_12 "targetName" (Obj.repr targetName));
-                      ignore (HxAnon.set __anon_12 "bindingIdentity" (Obj.repr (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())));
-                      ignore (HxAnon.set __anon_12 "sourceName" (Obj.repr (TyLocalBinding.getSourceName (Obj.magic binding) ())));
-                      ignore (HxAnon.set __anon_12 "semanticType" (Obj.repr semanticType));
-                      ignore (HxAnon.set __anon_12 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
-                      ignore (HxAnon.set __anon_12 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
-                      ignore (HxAnon.set __anon_12 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (TyLocalBinding.getKind (Obj.magic binding) ()))));
-                      __anon_12
-                    )));
-                    HxMap.set_string ((Obj.magic self : t).typeHints) targetName typeHint
+                let typeHint = (!tempString : string) in let tempLeft = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).typeHints) in (
+                  ignore (let __assign_12 = HxMap.exists_string (Obj.magic _this) (targetName : string) in (
+                    tempLeft := __assign_12;
+                    __assign_12
+                  ));
+                  let tempLeft1 = ref (Obj.magic (HxRuntime.hx_null) : string) in let _this = Obj.magic ((Obj.magic self : t).typeHints) in (
+                    ignore (let __assign_13 = Obj.magic (HxMap.get_string (Obj.magic _this) (targetName : string) : string) in (
+                      tempLeft1 := __assign_13;
+                      __assign_13
+                    ));
+                    ignore (if !tempLeft && not (HxString.equals (!tempLeft1) typeHint) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts contain conflicting types for target local " ^ HxString.toStdString targetName)) ["Dynamic"]) else ());
+                    let _g2 = ref 0 in let _g3 = Obj.magic ((Obj.magic self : t).locals) in (
+                      ignore (while !_g2 < HxArray.length _g3 do ignore (let fact = HxArray.get (Obj.magic _g3) (!_g2) in (
+                        ignore (let __old_14 = !_g2 in let __new_15 = HxInt.add __old_14 1 in (
+                          ignore (_g2 := __new_15);
+                          __new_15
+                        ));
+                        if HxString.equals (Obj.obj (HxAnon.get fact "targetName")) targetName && not (HxString.equals (Obj.obj (HxAnon.get fact "bindingIdentity")) (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts contain conflicting exact locals for target name " ^ HxString.toStdString targetName)) ["Dynamic"]) else ()
+                      )) done);
+                      ignore (HxArray.push ((Obj.magic self : t).locals) (let __anon_16 = HxAnon.create () in (
+                        ignore (HxAnon.set __anon_16 "projectedName" (Obj.repr projectedName));
+                        ignore (HxAnon.set __anon_16 "targetName" (Obj.repr targetName));
+                        ignore (HxAnon.set __anon_16 "bindingIdentity" (Obj.repr (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())));
+                        ignore (HxAnon.set __anon_16 "sourceName" (Obj.repr (TyLocalBinding.getSourceName (Obj.magic binding) ())));
+                        ignore (HxAnon.set __anon_16 "semanticType" (Obj.repr semanticType));
+                        ignore (HxAnon.set __anon_16 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
+                        ignore (HxAnon.set __anon_16 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
+                        ignore (HxAnon.set __anon_16 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (TyLocalBinding.getKind (Obj.magic binding) ()))));
+                        __anon_16
+                      )));
+                      let _this = Obj.magic ((Obj.magic self : t).typeHints) in HxMap.set_string (Obj.magic _this) (targetName : string) typeHint
+                    )
                   )
                 )
               )
@@ -81,30 +91,30 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic (HxRuntime.hx_null); typeHints = Obj.magic (HxRuntime.hx_null) } : t)
 
-let copyTypeHints = fun self () -> let copy = Obj.magic (HxMap.create_string ()) in let _g = HxIterator.of_array (HxMap.pairs_string ((Obj.magic self : t).typeHints)) in (
-  ignore (while (let __iter_16 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_16)) () do ignore (let _g2 = (let __iter_17 = _g in fun () -> HxIterator.next (Obj.magic __iter_17)) () in let name = (fst _g2 : string) in let typeHint = (snd _g2 : string) in HxMap.set_string copy name typeHint) done);
+let copyTypeHints = fun self () -> let copy = Obj.magic (HxMap.create_string ()) in let _this = Obj.magic ((Obj.magic self : t).typeHints) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic _this))) in let _g = tempKeyValueIterator in (
+  ignore (while (let __iter_20 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_20)) () do ignore (let _g2 = (let __iter_21 = _g in fun () -> HxIterator.next (Obj.magic __iter_21)) () in let name = (fst _g2 : string) in let typeHint = (snd _g2 : string) in HxMap.set_string (Obj.magic copy) (name : string) typeHint) done);
   copy
 )
 
 let fromCatalog = fun catalog normalizeName -> create (Obj.magic (Obj.magic (HxRuntime.hx_null))) normalizeName (Obj.magic catalog)
 
-let copyLocal = fun fact -> let __anon_18 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_18 "projectedName" (Obj.repr (Obj.obj (HxAnon.get fact "projectedName"))));
-  ignore (HxAnon.set __anon_18 "targetName" (Obj.repr (Obj.obj (HxAnon.get fact "targetName"))));
-  ignore (HxAnon.set __anon_18 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "bindingIdentity"))));
-  ignore (HxAnon.set __anon_18 "sourceName" (Obj.repr (Obj.obj (HxAnon.get fact "sourceName"))));
-  ignore (HxAnon.set __anon_18 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
-  ignore (HxAnon.set __anon_18 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
-  ignore (HxAnon.set __anon_18 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
-  ignore (HxAnon.set __anon_18 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get fact "declarationKind"))))));
-  __anon_18
+let copyLocal = fun fact -> let __anon_22 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_22 "projectedName" (Obj.repr (Obj.obj (HxAnon.get fact "projectedName"))));
+  ignore (HxAnon.set __anon_22 "targetName" (Obj.repr (Obj.obj (HxAnon.get fact "targetName"))));
+  ignore (HxAnon.set __anon_22 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "bindingIdentity"))));
+  ignore (HxAnon.set __anon_22 "sourceName" (Obj.repr (Obj.obj (HxAnon.get fact "sourceName"))));
+  ignore (HxAnon.set __anon_22 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
+  ignore (HxAnon.set __anon_22 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
+  ignore (HxAnon.set __anon_22 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
+  ignore (HxAnon.set __anon_22 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get fact "declarationKind"))))));
+  __anon_22
 )
 
-let copyLocals = fun self () -> let _g = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).locals) in (
+let copyLocals = fun self () -> let _g = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).locals) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let fact = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_14 = !_g1 in let __new_15 = HxInt.add __old_14 1 in (
-      ignore (_g1 := __new_15);
-      __new_15
+    ignore (let __old_18 = !_g1 in let __new_19 = HxInt.add __old_18 1 in (
+      ignore (_g1 := __new_19);
+      __new_19
     ));
     HxArray.push _g (copyLocal fact)
   )) done);

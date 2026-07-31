@@ -1,6 +1,7 @@
 package sys.io;
 
 import haxe.io.Bytes;
+import haxe.io.BytesData;
 
 /**
 	OCaml target override for `sys.io.File`.
@@ -23,6 +24,9 @@ import haxe.io.Bytes;
 	- Implemented as a small Haxe wrapper around tiny OCaml runtime helpers:
 	  - `HxFile` (whole-file ops)
 	  - `HxFileStream` (stream open/seek/tell/read/write)
+	- Whole-file byte operations use the exact target `BytesData` carrier, so
+	  the compiler does not box native `bytes` as `Dynamic` between `HxFile`
+	  and `HxBytes`.
 
 	Notes
 	- This is correctness-first and intentionally minimal. Performance improvements (buffered
@@ -66,15 +70,25 @@ class File {
 	}
 }
 
+/**
+	Typed whole-file boundary whose runtime declaration validates and explains
+	the packaged `HxFile` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file")
 @:native("HxFile")
 private extern class NativeHxFile {
 	static function getContent(path:String):String;
 	static function saveContent(path:String, content:String):Void;
-	static function getBytes(path:String):Dynamic;
-	static function saveBytes(path:String, bytes:Dynamic):Void;
+	static function getBytes(path:String):BytesData;
+	static function saveBytes(path:String, bytes:BytesData):Void;
 	static function copy(srcPath:String, dstPath:String):Void;
 }
 
+/**
+	Typed file-open boundary whose runtime declaration validates and explains
+	the packaged `HxFileStream` dependency for each emitted operation.
+**/
+@:ocamlRuntime("haxe-file-stream")
 @:native("HxFileStream")
 private extern class NativeHxFileStream {
 	static function open_in(path:String, binary:Bool):Dynamic;

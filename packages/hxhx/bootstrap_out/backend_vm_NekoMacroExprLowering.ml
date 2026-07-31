@@ -44,12 +44,12 @@ let nekomacroexprbuilder_render = fun self (root : string) -> let parts = Obj.ma
 let nekomacroexprbuilder_quote = fun self (value : string) -> (
   ignore self;
   try let __fallback_result_116 = (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("\"\"" : string))) else ());
-    let out = ref ("\"" : string) in let _g = ref 0 in let _g1 = HxString.length value in (
+    ignore (if value == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr ("\"\"" : string))) else ());
+    let out = ref "\"" in let _g = ref 0 in let _g1 = HxString.length value in (
       ignore (while !_g < _g1 do ignore (let i = let __old_100 = !_g in let __new_101 = HxInt.add __old_100 1 in (
         ignore (_g := __new_101);
         __old_100
-      ) in let c = HxString.charCodeAt value i in let tempRight = ref ("" : string) in (
+      ) in let c = HxString.charCodeAt value i in let tempRight = ref (HxString.hx_null_string : string) in (
         ignore (if c == HxRuntime.hx_null then let __assign_102 = (HxString.charAt value i : string) in (
           tempRight := __assign_102;
           __assign_102
@@ -92,16 +92,16 @@ let nekomacroexprbuilder_quote = fun self (value : string) -> (
 let nekomacroexprbuilder_safeIdent = fun self (name : string) -> (
   ignore self;
   try let __fallback_result_118 = (
-    ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("_" : string))) else ());
+    ignore (if name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("_" : string))) else ());
     EReg.replace (Obj.magic (EReg.create ("[^A-Za-z0-9_]" : string) ("g" : string))) (name : string) ("_" : string)
   ) in Obj.magic __fallback_result_118 with
     | HxRuntime.Hx_return __ret_117 -> Obj.obj __ret_117
 )
 
-let nekomacroexprbuilder_anonObject = fun self (fieldNames : string HxArray.t) (fieldValues : string HxArray.t) -> let tmp = ("__hxhx_macro_o" ^ string_of_int (let __place_receiver_93 = self in let __place_old_94 = (__place_receiver_93 : nekomacroexprbuilder_t).nextObjectId in let __place_new_95 = HxInt.add __place_old_94 1 in (
+let nekomacroexprbuilder_anonObject = fun self (fieldNames : string HxArray.t) (fieldValues : string HxArray.t) -> let tmp = "__hxhx_macro_o" ^ string_of_int (let __place_receiver_93 = self in let __place_old_94 = (__place_receiver_93 : nekomacroexprbuilder_t).nextObjectId in let __place_new_95 = HxInt.add __place_old_94 1 in (
   (__place_receiver_93 : nekomacroexprbuilder_t).nextObjectId <- __place_new_95;
   __place_old_94
-)) : string) in (
+)) in (
   ignore (HxArray.push ((Obj.magic self : nekomacroexprbuilder_t).statements) (("var " ^ HxString.toStdString tmp) ^ " = $new(null);"));
   let tempNumber = ref (0 : int) in (
     ignore (if HxArray.length fieldNames < HxArray.length fieldValues then let __assign_96 = HxArray.length fieldNames in (
@@ -131,7 +131,7 @@ let nekomacroexprbuilder_macroExprObject = fun self (exprDef : string) -> nekoma
   __arr_10
 )))
 
-let nekomacroexprbuilder_macroEnum = fun self (name : string) (params : string HxArray.t) -> let tempString = ref ("" : string) in (
+let nekomacroexprbuilder_macroEnum = fun self (name : string) (params : string HxArray.t) -> let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if params == Obj.magic (HxRuntime.hx_null) then let __assign_89 = ("" : string) in (
     tempString := __assign_89;
     __assign_89
@@ -152,7 +152,7 @@ let nekomacroexprbuilder_macroEnum = fun self (name : string) (params : string H
   )))
 )
 
-let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> let tempResult = ref ("" : string) in (
+let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match expr with
     | HxExpr.ENull -> let __assign_14 = (nekomacroexprbuilder_macroEnum (Obj.magic self) ("EConst" : string) (Obj.magic (let __arr_15 = HxArray.create () in (
       ignore (HxArray.push __arr_15 (nekomacroexprbuilder_macroEnum (Obj.magic self) ("CIdent" : string) (Obj.magic (let __arr_16 = HxArray.create () in (
@@ -278,7 +278,7 @@ let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> l
           tempHxExpr1 := __assign_39;
           __assign_39
         ));
-        let thenExpr = Obj.magic (!tempHxExpr1) in let tempString = ref ("" : string) in (
+        let thenExpr = Obj.magic (!tempHxExpr1) in let tempString = ref (HxString.hx_null_string : string) in (
           ignore (if HxArray.length args > 2 then let _g3 = Obj.magic (HxArray.get (Obj.magic args) 2) in if (match _g3 with
             | HxExpr.ENull -> 0
             | HxExpr.EBool _ -> 1
@@ -394,11 +394,11 @@ let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> l
     )
     | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = Obj.magic _g in let fixity = Obj.magic _g1 in let inner = Obj.magic _g2 in (
       ignore (HxUnaryOperatorTools.requireValidFixity (Obj.magic op) (Obj.magic fixity));
-      let tempString1 = ref ("" : string) in (
-        ignore (if fixity = HxUnaryFixity.Postfix then let __assign_63 = ("true" : string) in (
+      let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if fixity = HxUnaryFixity.Postfix then let __assign_63 = "true" in (
           tempString1 := __assign_63;
           __assign_63
-        ) else let __assign_64 = ("false" : string) in (
+        ) else let __assign_64 = "false" in (
           tempString1 := __assign_64;
           __assign_64
         ));
@@ -515,7 +515,7 @@ let render = fun expr wrappers fallback -> let builder = Obj.magic (nekomacroexp
       ignore (i := __new_2);
       __old_1
     ));
-    let tempRight = ref ("" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
       ignore (let _g = (HxArray.get (Obj.magic wrappers) (!i) : string) in match _g with
         | "parenthesis" -> let __assign_4 = (nekomacroexprbuilder_macroEnum (Obj.magic builder) ("EParenthesis" : string) (Obj.magic (let __arr_5 = HxArray.create () in (
           ignore (HxArray.push __arr_5 (nekomacroexprbuilder_macroExprObject (Obj.magic builder) (!exprDef : string)));

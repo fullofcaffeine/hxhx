@@ -28,7 +28,7 @@ let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.class_ "hxh
         (__place_receiver_7 : t).maxInvocations <- __place_rhs_8;
         __place_rhs_8
       ));
-      if (Obj.magic self : t).maxInvocations <= 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation catalog requires a positive invocation limit") ["Dynamic"; "String"]) else ()
+      if (Obj.magic self : t).maxInvocations <= 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "dependency observation catalog requires a positive invocation limit") ["Dynamic"]) else ()
     )
   )));
   self
@@ -36,8 +36,8 @@ let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.class_ "hxh
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyCatalog"; snapshotByInvocation = Obj.magic (HxRuntime.hx_null); invocationOrder = Obj.magic (HxRuntime.hx_null); maxInvocations = 0 } : t)
 
-let reset = fun self () -> ignore (ignore ((
-  ignore (HxMap.clear_string ((Obj.magic self : t).snapshotByInvocation));
+let reset = fun self () -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).snapshotByInvocation) in (
+  ignore (HxMap.clear_string (Obj.magic _this));
   HxArray.resize ((Obj.magic self : t).invocationOrder) 0
 )))
 
@@ -46,10 +46,10 @@ let touch = fun self (invocationIdentity : string) -> ignore (ignore ((
   HxArray.push ((Obj.magic self : t).invocationOrder) invocationIdentity
 )))
 
-let publish = fun self (invocationIdentity : string) (snapshot : CompilerDependencySnapshot.t) -> ignore (ignore ((
-  ignore (HxMap.set_string ((Obj.magic self : t).snapshotByInvocation) invocationIdentity snapshot);
+let publish = fun self (invocationIdentity : string) (snapshot : CompilerDependencySnapshot.t) -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).snapshotByInvocation) in (
+  ignore (HxMap.set_string (Obj.magic _this) (invocationIdentity : string) snapshot);
   ignore (touch (Obj.magic self) (invocationIdentity : string));
-  while HxArray.length ((Obj.magic self : t).invocationOrder) > (Obj.magic self : t).maxInvocations do ignore (let evicted = (HxArray.shift ((Obj.magic self : t).invocationOrder) () : string) in if evicted != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.remove_string ((Obj.magic self : t).snapshotByInvocation) evicted) else ()) done
+  while HxArray.length ((Obj.magic self : t).invocationOrder) > (Obj.magic self : t).maxInvocations do ignore (let evicted = (HxArray.shift ((Obj.magic self : t).invocationOrder) () : string) in if evicted != Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).snapshotByInvocation) in HxMap.remove_string (Obj.magic _this) (evicted : string)) else ()) done
 )))
 
 let openRequest = fun self (compilerArgs : string HxArray.t) -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
@@ -63,7 +63,7 @@ let openRequest = fun self (compilerArgs : string HxArray.t) -> let tempArray = 
   let invocationIdentity = (CompilerCacheIdentity.encode (Obj.magic (HxArray.concat (let __arr_12 = HxArray.create () in (
     ignore (HxArray.push __arr_12 "compiler-dependency-invocation-v1");
     __arr_12
-  )) (!tempArray))) : string) in let previous = Obj.magic (HxMap.get_string ((Obj.magic self : t).snapshotByInvocation) invocationIdentity) in (
+  )) (!tempArray))) : string) in let _this = Obj.magic ((Obj.magic self : t).snapshotByInvocation) in let tempMaybeCompilerDependencySnapshot = Obj.magic (HxMap.get_string (Obj.magic _this) (invocationIdentity : string)) in let previous = Obj.magic tempMaybeCompilerDependencySnapshot in (
     ignore (if previous != Obj.magic (HxRuntime.hx_null) then ignore (touch (Obj.magic self) (invocationIdentity : string)) else ());
     Hxhx_CompilationServerDependencyRequest.create (invocationIdentity : string) (Obj.magic previous) (fun a0 a1 -> publish self a0 a1)
   )

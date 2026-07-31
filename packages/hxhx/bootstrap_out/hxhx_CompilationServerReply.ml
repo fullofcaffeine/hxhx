@@ -12,13 +12,13 @@ let create = fun outputEvents2 isError2 stopServer2 -> let self = ({ __hx_type =
       (Obj.magic self : t).outputEvents <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = isError2 in (
-      (Obj.magic self : t).isError <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_2 = self in let __place_rhs_3 = isError2 in (
+      (__place_receiver_2 : t).isError <- __place_rhs_3;
+      __place_rhs_3
     ));
-    let __assign_3 = stopServer2 in (
-      (Obj.magic self : t).stopServer <- __assign_3;
-      __assign_3
+    let __place_receiver_4 = self in let __place_rhs_5 = stopServer2 in (
+      (__place_receiver_4 : t).stopServer <- __place_rhs_5;
+      __place_rhs_5
     )
   )));
   self
@@ -28,7 +28,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRepl
 
 let events = fun self () -> HxArray.copy ((Obj.magic self : t).outputEvents)
 
-let message = fun text isError2 stopServer2 -> let stopServer2 = if Obj.repr stopServer2 == HxRuntime.hx_null then false else stopServer2 in create (Obj.magic (let __arr_4 = HxArray.create () in (
-  ignore (HxArray.push __arr_4 (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString text ^ "\n" : string) true));
-  __arr_4
+let message = fun text isError2 stopServer2 -> let stopServer2 = if Obj.repr stopServer2 == HxRuntime.hx_null then false else stopServer2 in create (Obj.magic (let __arr_6 = HxArray.create () in (
+  ignore (HxArray.push __arr_6 (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString text ^ "\n" : string) true));
+  __arr_6
 ))) isError2 stopServer2

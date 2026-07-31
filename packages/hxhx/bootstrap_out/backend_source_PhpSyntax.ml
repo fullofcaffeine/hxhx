@@ -13,54 +13,30 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpSyntax" } : t)
 
-let quoteString = fun value -> let tempString = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let quoteString = fun (value : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_1 = ("" : string) in (
     tempString := __assign_1;
     __assign_1
   ) else let __assign_2 = (value : string) in (
     tempString := __assign_2;
     __assign_2
   ));
-  ignore (let __assign_3 = (StringTools.replace (!tempString : string) ("\\" : string) ("\\\\" : string) : string) in (
-    tempString := __assign_3;
-    __assign_3
-  ));
-  ignore (let __assign_4 = (StringTools.replace (!tempString : string) ("\"" : string) ("\\\"" : string) : string) in (
-    tempString := __assign_4;
-    __assign_4
-  ));
-  ignore (let __assign_5 = (StringTools.replace (!tempString : string) ("\n" : string) ("\\n" : string) : string) in (
-    tempString := __assign_5;
-    __assign_5
-  ));
-  ignore (let __assign_6 = (StringTools.replace (!tempString : string) ("\r" : string) ("\\r" : string) : string) in (
-    tempString := __assign_6;
-    __assign_6
-  ));
-  ignore (let __assign_7 = (StringTools.replace (!tempString : string) ("\t" : string) ("\\t" : string) : string) in (
-    tempString := __assign_7;
-    __assign_7
-  ));
-  ignore (let __assign_8 = (StringTools.replace (!tempString : string) ("$" : string) ("\\$" : string) : string) in (
-    tempString := __assign_8;
-    __assign_8
-  ));
-  ("\"" ^ HxString.toStdString (!tempString)) ^ "\""
-)
+  let text = (!tempString : string) in let text = (let __call_arg_0_3 = text in let __call_arg_1_4 = "\\" in let __call_arg_2_5 = "\\\\" in StringTools.replace __call_arg_0_3 __call_arg_1_4 __call_arg_2_5 : string) in let text = (let __call_arg_0_6 = text in let __call_arg_1_7 = "\"" in let __call_arg_2_8 = "\\\"" in StringTools.replace __call_arg_0_6 __call_arg_1_7 __call_arg_2_8 : string) in let text = (let __call_arg_0_9 = text in let __call_arg_1_10 = "\n" in let __call_arg_2_11 = "\\n" in StringTools.replace __call_arg_0_9 __call_arg_1_10 __call_arg_2_11 : string) in let text = (let __call_arg_0_12 = text in let __call_arg_1_13 = "\r" in let __call_arg_2_14 = "\\r" in StringTools.replace __call_arg_0_12 __call_arg_1_13 __call_arg_2_14 : string) in let text = (let __call_arg_0_15 = text in let __call_arg_1_16 = "\t" in let __call_arg_2_17 = "\\t" in StringTools.replace __call_arg_0_15 __call_arg_1_16 __call_arg_2_17 : string) in let text = (let __call_arg_0_18 = text in let __call_arg_1_19 = "$" in let __call_arg_2_20 = "\\$" in StringTools.replace __call_arg_0_18 __call_arg_1_19 __call_arg_2_20 : string) in ("\"" ^ HxString.toStdString text) ^ "\""
+) : string)
 
-let assocEntry = fun key valueExpr -> (HxString.toStdString (quoteString (key : string)) ^ " => ") ^ HxString.toStdString valueExpr
+let assocEntry = fun (key : string) (valueExpr : string) -> ((HxString.toStdString (let __call_arg_0_21 = key in quoteString __call_arg_0_21) ^ " => ") ^ HxString.toStdString valueExpr : string)
 
 let sortedAssocEntries = fun entries -> let sorted = Obj.magic (HxArray.copy entries) in (
   ignore (HxArray.sort sorted (fun left right -> let tempResult = ref (0 : int) in (
-    ignore (if left < right then let __assign_9 = -1 in (
-      tempResult := __assign_9;
-      __assign_9
-    ) else if left > right then let __assign_10 = 1 in (
-      tempResult := __assign_10;
-      __assign_10
-    ) else let __assign_11 = 0 in (
-      tempResult := __assign_11;
-      __assign_11
+    ignore (if left < right then let __assign_22 = -1 in (
+      tempResult := __assign_22;
+      __assign_22
+    ) else if left > right then let __assign_23 = 1 in (
+      tempResult := __assign_23;
+      __assign_23
+    ) else let __assign_24 = 0 in (
+      tempResult := __assign_24;
+      __assign_24
     ));
     !tempResult
   )));
@@ -73,9 +49,9 @@ let appendStaticAssocMap = fun lines indent variableName entries -> ignore ((
   ignore (HxArray.push lines (((HxString.toStdString indent ^ "static $") ^ HxString.toStdString variableName) ^ " = ["));
   let _g = ref 0 in let _g1 = Obj.magic (sortedAssocEntries (Obj.magic entries)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-      ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
-        ignore (_g := __new_13);
-        __new_13
+      ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+        ignore (_g := __new_26);
+        __new_26
       ));
       HxArray.push lines (((HxString.toStdString indent ^ "  ") ^ HxString.toStdString entry) ^ ",")
     )) done);

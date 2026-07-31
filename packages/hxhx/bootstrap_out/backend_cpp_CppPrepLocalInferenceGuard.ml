@@ -186,26 +186,26 @@ let functionHasLocalDeclEvidence = fun fn evidence -> try let __fallback_result_
 ) in Obj.magic __fallback_result_8 with
   | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
-let hasTypeHint = fun typeHint -> let tempString = ref ("" : string) in (
-  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_60 = ("" : string) in (
-    tempString := __assign_60;
-    __assign_60
-  ) else let __assign_61 = (typeHint : string) in (
-    tempString := __assign_61;
-    __assign_61
+let hasTypeHint = fun (typeHint : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if typeHint == HxString.hx_null_string then let __assign_67 = ("" : string) in (
+    tempString := __assign_67;
+    __assign_67
+  ) else let __assign_68 = (typeHint : string) in (
+    tempString := __assign_68;
+    __assign_68
   ));
-  HxString.length (StringTools.trim (!tempString : string)) > 0
-)
+  HxString.length (let __call_arg_0_69 = !tempString in StringTools.trim __call_arg_0_69) > 0
+) : bool)
 
 let localDeclHasGenericFactoryLocalInferenceEvidence = fun _hx typeHint init -> (
   ignore _hx;
-  try let __fallback_result_57 = (
-    ignore (if hasTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  try let __fallback_result_60 = (
+    ignore (if let __call_arg_0_50 = typeHint in hasTypeHint __call_arg_0_50 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let tempResult = ref (false : bool) in (
-      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_48 = false in (
-        tempResult := __assign_48;
-        __assign_48
-      ) else if (let __enum_idx_49 = init in if __enum_idx_49 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_49 with
+      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_51 = false in (
+        tempResult := __assign_51;
+        __assign_51
+      ) else if (let __enum_idx_52 = init in if __enum_idx_52 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_52 with
         | HxExpr.ENull -> 0
         | HxExpr.EBool _ -> 1
         | HxExpr.EString _ -> 2
@@ -242,65 +242,65 @@ let localDeclHasGenericFactoryLocalInferenceEvidence = fun _hx typeHint init -> 
         | HxExpr.EWhile (_, _, _, _) -> 33
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35) = 18 then (
-        ignore (let __enum_param_51 = init in if __enum_param_51 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_51 with
-          | HxExpr.ENew (__enum_param_50, _) -> __enum_param_50
+        ignore (let __enum_param_54 = init in if __enum_param_54 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_54 with
+          | HxExpr.ENew (__enum_param_53, _) -> __enum_param_53
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_53 = init in if __enum_param_53 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_53 with
-          | HxExpr.ENew (_, __enum_param_52) -> __enum_param_52
-          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_54 = args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 0 in (
-          tempResult := __assign_54;
-          __assign_54
+        let _g2 = Obj.magic (let __enum_param_56 = init in if __enum_param_56 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_56 with
+          | HxExpr.ENew (_, __enum_param_55) -> __enum_param_55
+          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_57 = args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 0 in (
+          tempResult := __assign_57;
+          __assign_57
         )
-      ) else let __assign_55 = false in (
-        tempResult := __assign_55;
-        __assign_55
+      ) else let __assign_58 = false in (
+        tempResult := __assign_58;
+        __assign_58
       ));
       !tempResult
     )
-  ) in Obj.magic __fallback_result_57 with
-    | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
+  ) in Obj.magic __fallback_result_60 with
+    | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
 )
 
 let functionHasGenericFactoryLocalInferenceEvidence = fun fn -> functionHasLocalDeclEvidence (Obj.magic fn) localDeclHasGenericFactoryLocalInferenceEvidence
 
-let typePathBaseName = fun typePath -> let tempString = ref ("" : string) in (
-  ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_62 = ("" : string) in (
-    tempString := __assign_62;
-    __assign_62
-  ) else let __assign_63 = (typePath : string) in (
-    tempString := __assign_63;
-    __assign_63
+let typePathBaseName = fun (typePath : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if typePath == HxString.hx_null_string then let __assign_70 = ("" : string) in (
+    tempString := __assign_70;
+    __assign_70
+  ) else let __assign_71 = (typePath : string) in (
+    tempString := __assign_71;
+    __assign_71
   ));
-  let clean = (StringTools.trim (!tempString : string) : string) in let dot = HxString.lastIndexOf clean "." (HxString.length clean) in let slash = HxString.lastIndexOf clean "/" (HxString.length clean) in let tempNumber = ref (0 : int) in (
-    ignore (if dot > slash then let __assign_64 = dot in (
-      tempNumber := __assign_64;
-      __assign_64
-    ) else let __assign_65 = slash in (
-      tempNumber := __assign_65;
-      __assign_65
+  let clean = let __call_arg_0_72 = !tempString in StringTools.trim __call_arg_0_72 in let dot = HxString.lastIndexOf clean "." (HxString.length clean) in let slash = HxString.lastIndexOf clean "/" (HxString.length clean) in let tempNumber = ref (0 : int) in (
+    ignore (if dot > slash then let __assign_73 = dot in (
+      tempNumber := __assign_73;
+      __assign_73
+    ) else let __assign_74 = slash in (
+      tempNumber := __assign_74;
+      __assign_74
     ));
-    let sep = !tempNumber in let tempResult = ref ("" : string) in (
-      ignore (if sep < 0 then let __assign_66 = (clean : string) in (
-        tempResult := __assign_66;
-        __assign_66
-      ) else let __assign_67 = (HxString.substr clean (HxInt.add sep 1) (-1) : string) in (
-        tempResult := __assign_67;
-        __assign_67
+    let sep = !tempNumber in let tempResult = ref (HxString.hx_null_string : string) in (
+      ignore (if sep < 0 then let __assign_75 = (clean : string) in (
+        tempResult := __assign_75;
+        __assign_75
+      ) else let __assign_76 = (HxString.substr clean (HxInt.add sep 1) (-1) : string) in (
+        tempResult := __assign_76;
+        __assign_76
       ));
       !tempResult
     )
   )
-)
+) : string)
 
 let localDeclHasStringMapLocalInferenceEvidence = fun _hx typeHint init -> (
   ignore _hx;
-  try let __fallback_result_47 = (
-    ignore (if hasTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  try let __fallback_result_49 = (
+    ignore (if let __call_arg_0_34 = typeHint in hasTypeHint __call_arg_0_34 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let tempResult = ref (false : bool) in (
-      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_34 = false in (
-        tempResult := __assign_34;
-        __assign_34
-      ) else match let __enum_idx_45 = init in if __enum_idx_45 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_45 with
+      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_35 = false in (
+        tempResult := __assign_35;
+        __assign_35
+      ) else match let __enum_idx_47 = init in if __enum_idx_47 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_47 with
         | HxExpr.ENull -> 0
         | HxExpr.EBool _ -> 1
         | HxExpr.EString _ -> 2
@@ -337,45 +337,45 @@ let localDeclHasStringMapLocalInferenceEvidence = fun _hx typeHint init -> (
         | HxExpr.EWhile (_, _, _, _) -> 33
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35 with
-        | 18 -> let _g = (let __enum_param_37 = init in if __enum_param_37 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_37 with
-          | HxExpr.ENew (__enum_param_36, _) -> __enum_param_36
+        | 18 -> let _g = (let __enum_param_38 = init in if __enum_param_38 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_38 with
+          | HxExpr.ENew (__enum_param_37, _) -> __enum_param_37
           | _ -> failwith "Unexpected enum parameter" : string) in (
-          ignore (let __enum_param_39 = init in if __enum_param_39 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_39 with
-            | HxExpr.ENew (_, __enum_param_38) -> __enum_param_38
+          ignore (let __enum_param_40 = init in if __enum_param_40 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_40 with
+            | HxExpr.ENew (_, __enum_param_39) -> __enum_param_39
             | _ -> failwith "Unexpected enum parameter");
-          let typePath = (_g : string) in let _g2 = (typePathBaseName (typePath : string) : string) in match _g2 with
-            | "IntMap" | "Map" | "StringMap" -> let __assign_41 = true in (
-              tempResult := __assign_41;
-              __assign_41
+          let typePath = (_g : string) in let _g2 = let __call_arg_0_41 = typePath in typePathBaseName __call_arg_0_41 in match _g2 with
+            | "IntMap" | "Map" | "StringMap" -> let __assign_43 = true in (
+              tempResult := __assign_43;
+              __assign_43
             )
-            | _ -> let __assign_40 = false in (
-              tempResult := __assign_40;
-              __assign_40
+            | _ -> let __assign_42 = false in (
+              tempResult := __assign_42;
+              __assign_42
             )
         )
-        | 24 -> let _g = Obj.magic (let __enum_param_43 = init in if __enum_param_43 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_43 with
-          | HxExpr.EArrayDecl __enum_param_42 -> __enum_param_42
-          | _ -> failwith "Unexpected enum parameter") in let elements = Obj.magic _g in let __assign_44 = Backend_cpp_CppMapLiteral.isElements (Obj.magic elements) in (
-          tempResult := __assign_44;
-          __assign_44
+        | 24 -> let _g = Obj.magic (let __enum_param_45 = init in if __enum_param_45 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_45 with
+          | HxExpr.EArrayDecl __enum_param_44 -> __enum_param_44
+          | _ -> failwith "Unexpected enum parameter") in let elements = Obj.magic _g in let __assign_46 = Backend_cpp_CppMapLiteral.isElements (Obj.magic elements) in (
+          tempResult := __assign_46;
+          __assign_46
         )
-        | _ -> let __assign_35 = false in (
-          tempResult := __assign_35;
-          __assign_35
+        | _ -> let __assign_36 = false in (
+          tempResult := __assign_36;
+          __assign_36
         ));
       !tempResult
     )
-  ) in Obj.magic __fallback_result_47 with
-    | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
+  ) in Obj.magic __fallback_result_49 with
+    | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48
 )
 
 let functionHasStringMapLocalInferenceEvidence = fun fn -> functionHasLocalDeclEvidence (Obj.magic fn) localDeclHasStringMapLocalInferenceEvidence
 
 let isEmptyArrayExpr = fun expr -> let tempResult = ref (false : bool) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_68 = false in (
-    tempResult := __assign_68;
-    __assign_68
-  ) else if (let __enum_idx_69 = expr in if __enum_idx_69 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_69 with
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_77 = false in (
+    tempResult := __assign_77;
+    __assign_77
+  ) else if (let __enum_idx_78 = expr in if __enum_idx_78 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_78 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
     | HxExpr.EString _ -> 2
@@ -411,23 +411,23 @@ let isEmptyArrayExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
-    | HxExpr.EContinue _ -> 35) = 24 then let _g = Obj.magic (let __enum_param_71 = expr in if __enum_param_71 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_71 with
-    | HxExpr.EArrayDecl __enum_param_70 -> __enum_param_70
-    | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let __assign_72 = HxArray.length values = 0 in (
-    tempResult := __assign_72;
-    __assign_72
-  ) else let __assign_73 = false in (
-    tempResult := __assign_73;
-    __assign_73
+    | HxExpr.EContinue _ -> 35) = 24 then let _g = Obj.magic (let __enum_param_80 = expr in if __enum_param_80 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_80 with
+    | HxExpr.EArrayDecl __enum_param_79 -> __enum_param_79
+    | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let __assign_81 = HxArray.length values = 0 in (
+    tempResult := __assign_81;
+    __assign_81
+  ) else let __assign_82 = false in (
+    tempResult := __assign_82;
+    __assign_82
   ));
   !tempResult
 )
 
 let isNullExpr = fun expr -> let tempResult = ref (false : bool) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_74 = false in (
-    tempResult := __assign_74;
-    __assign_74
-  ) else if (let __enum_idx_75 = expr in if __enum_idx_75 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_75 with
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_83 = false in (
+    tempResult := __assign_83;
+    __assign_83
+  ) else if (let __enum_idx_84 = expr in if __enum_idx_84 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_84 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
     | HxExpr.EString _ -> 2
@@ -463,21 +463,21 @@ let isNullExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
-    | HxExpr.EContinue _ -> 35) = 0 then let __assign_76 = true in (
-    tempResult := __assign_76;
-    __assign_76
-  ) else let __assign_77 = false in (
-    tempResult := __assign_77;
-    __assign_77
+    | HxExpr.EContinue _ -> 35) = 0 then let __assign_85 = true in (
+    tempResult := __assign_85;
+    __assign_85
+  ) else let __assign_86 = false in (
+    tempResult := __assign_86;
+    __assign_86
   ));
   !tempResult
 )
 
 let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_96 = false in (
-    tempResult := __assign_96;
-    __assign_96
-  ) else if (let __enum_idx_97 = expr in if __enum_idx_97 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_97 with
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_105 = false in (
+    tempResult := __assign_105;
+    __assign_105
+  ) else if (let __enum_idx_106 = expr in if __enum_idx_106 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_106 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
     | HxExpr.EString _ -> 2
@@ -513,10 +513,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
-    | HxExpr.EContinue _ -> 35) = 11 then let _g = Obj.magic (let __enum_param_99 = expr in if __enum_param_99 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_99 with
-    | HxExpr.ECall (__enum_param_98, _) -> __enum_param_98
-    | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_101 = expr in if __enum_param_101 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_101 with
-    | HxExpr.ECall (_, __enum_param_100) -> __enum_param_100
+    | HxExpr.EContinue _ -> 35) = 11 then let _g = Obj.magic (let __enum_param_108 = expr in if __enum_param_108 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_108 with
+    | HxExpr.ECall (__enum_param_107, _) -> __enum_param_107
+    | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_110 = expr in if __enum_param_110 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_110 with
+    | HxExpr.ECall (_, __enum_param_109) -> __enum_param_109
     | _ -> failwith "Unexpected enum parameter") in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -554,7 +554,7 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_102 -> __enum_param_102
+    | HxExpr.EIdent __enum_param_111 -> __enum_param_111
     | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_optional_lambda" then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g4 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in if (match _g3 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -593,10 +593,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 14 then (
     ignore (match _g3 with
-      | HxExpr.ELambda (__enum_param_103, _) -> __enum_param_103
+      | HxExpr.ELambda (__enum_param_112, _) -> __enum_param_112
       | _ -> failwith "Unexpected enum parameter");
     ignore (match _g3 with
-      | HxExpr.ELambda (_, __enum_param_104) -> __enum_param_104
+      | HxExpr.ELambda (_, __enum_param_113) -> __enum_param_113
       | _ -> failwith "Unexpected enum parameter");
     if (match _g4 with
       | HxExpr.ENull -> 0
@@ -636,64 +636,64 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
       | HxExpr.EBreak _ -> 34
       | HxExpr.EContinue _ -> 35) = 24 then (
       ignore (match _g4 with
-        | HxExpr.EArrayDecl __enum_param_105 -> __enum_param_105
+        | HxExpr.EArrayDecl __enum_param_114 -> __enum_param_114
         | _ -> failwith "Unexpected enum parameter");
-      let __assign_106 = true in (
-        tempResult := __assign_106;
-        __assign_106
+      let __assign_115 = true in (
+        tempResult := __assign_115;
+        __assign_115
       )
-    ) else let __assign_107 = false in (
-      tempResult := __assign_107;
-      __assign_107
+    ) else let __assign_116 = false in (
+      tempResult := __assign_116;
+      __assign_116
     )
-  ) else let __assign_108 = false in (
-    tempResult := __assign_108;
-    __assign_108
-  ) else let __assign_109 = false in (
-    tempResult := __assign_109;
-    __assign_109
-  ) else let __assign_110 = false in (
-    tempResult := __assign_110;
-    __assign_110
-  ) else let __assign_111 = false in (
-    tempResult := __assign_111;
-    __assign_111
-  ) else let __assign_112 = false in (
-    tempResult := __assign_112;
-    __assign_112
+  ) else let __assign_117 = false in (
+    tempResult := __assign_117;
+    __assign_117
+  ) else let __assign_118 = false in (
+    tempResult := __assign_118;
+    __assign_118
+  ) else let __assign_119 = false in (
+    tempResult := __assign_119;
+    __assign_119
+  ) else let __assign_120 = false in (
+    tempResult := __assign_120;
+    __assign_120
+  ) else let __assign_121 = false in (
+    tempResult := __assign_121;
+    __assign_121
   ));
   !tempResult
 )
 
 let localDeclHasOptionalLambdaLocalInferenceEvidence = fun _hx typeHint init -> (
   ignore _hx;
-  not (hasTypeHint (typeHint : string)) && isOptionalLambdaLocalInit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init))
+  not (let __call_arg_0_61 = typeHint in hasTypeHint __call_arg_0_61) && isOptionalLambdaLocalInit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init))
 )
 
 let functionHasOptionalLambdaLocalInferenceEvidence = fun fn -> functionHasLocalDeclEvidence (Obj.magic fn) localDeclHasOptionalLambdaLocalInferenceEvidence
 
 let rec isReflectStaticReceiver = fun expr -> let tempResult = ref (false : bool) in (
   ignore (match expr with
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_114 = HxString.equals (typePathBaseName (name : string)) "Reflect" in (
-      tempResult := __assign_114;
-      __assign_114
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_123 = HxString.equals (let __call_arg_0_124 = name in typePathBaseName __call_arg_0_124) "Reflect" in (
+      tempResult := __assign_123;
+      __assign_123
     )
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let name = (_g1 : string) in let __assign_115 = HxString.equals (typePathBaseName (name : string)) "Reflect" || isReflectStaticReceiver (Obj.magic receiver) in (
-      tempResult := __assign_115;
-      __assign_115
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let name = (_g1 : string) in let __assign_125 = HxString.equals (let __call_arg_0_126 = name in typePathBaseName __call_arg_0_126) "Reflect" || isReflectStaticReceiver (Obj.magic receiver) in (
+      tempResult := __assign_125;
+      __assign_125
     )
-    | _ -> let __assign_113 = false in (
-      tempResult := __assign_113;
-      __assign_113
+    | _ -> let __assign_122 = false in (
+      tempResult := __assign_122;
+      __assign_122
     ));
   !tempResult
 )
 
 let isLocalCallableInit = fun expr -> let tempResult = ref (false : bool) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_78 = false in (
-    tempResult := __assign_78;
-    __assign_78
-  ) else match let __enum_idx_95 = expr in if __enum_idx_95 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_95 with
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_87 = false in (
+    tempResult := __assign_87;
+    __assign_87
+  ) else match let __enum_idx_104 = expr in if __enum_idx_104 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_104 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
     | HxExpr.EString _ -> 2
@@ -730,58 +730,58 @@ let isLocalCallableInit = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35 with
-    | 11 -> (let _g = Obj.magic (let __enum_param_81 = expr in if __enum_param_81 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_81 with
-      | HxExpr.ECall (__enum_param_80, _) -> __enum_param_80
-      | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_83 = expr in if __enum_param_83 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_83 with
-      | HxExpr.ECall (_, __enum_param_82) -> __enum_param_82
+    | 11 -> (let _g = Obj.magic (let __enum_param_90 = expr in if __enum_param_90 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_90 with
+      | HxExpr.ECall (__enum_param_89, _) -> __enum_param_89
+      | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_92 = expr in if __enum_param_92 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_92 with
+      | HxExpr.ECall (_, __enum_param_91) -> __enum_param_91
       | _ -> failwith "Unexpected enum parameter") in match _g with
-      | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in if HxString.equals _g2 "__hxhx_optional_lambda" then let __assign_85 = true in (
-        tempResult := __assign_85;
-        __assign_85
-      ) else let __assign_86 = false in (
-        tempResult := __assign_86;
-        __assign_86
-      )
-      | HxExpr.EField (_p0, _p1) -> let _g2 = Obj.magic _p0 in let _g3 = (_p1 : string) in if HxString.equals _g3 "makeVarArgs" then let receiver = Obj.magic _g2 in let args = Obj.magic _g1 in if HxArray.length args = 1 && isReflectStaticReceiver (Obj.magic receiver) then let __assign_87 = true in (
-        tempResult := __assign_87;
-        __assign_87
-      ) else let __assign_88 = false in (
-        tempResult := __assign_88;
-        __assign_88
-      ) else let __assign_89 = false in (
-        tempResult := __assign_89;
-        __assign_89
-      )
-      | _ -> let __assign_84 = false in (
-        tempResult := __assign_84;
-        __assign_84
-      ))
-    | 14 -> (
-      ignore (let __enum_param_91 = expr in if __enum_param_91 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_91 with
-        | HxExpr.ELambda (__enum_param_90, _) -> __enum_param_90
-        | _ -> failwith "Unexpected enum parameter");
-      ignore (let __enum_param_93 = expr in if __enum_param_93 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_93 with
-        | HxExpr.ELambda (_, __enum_param_92) -> __enum_param_92
-        | _ -> failwith "Unexpected enum parameter");
-      let __assign_94 = true in (
+      | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in if HxString.equals _g2 "__hxhx_optional_lambda" then let __assign_94 = true in (
         tempResult := __assign_94;
         __assign_94
+      ) else let __assign_95 = false in (
+        tempResult := __assign_95;
+        __assign_95
+      )
+      | HxExpr.EField (_p0, _p1) -> let _g2 = Obj.magic _p0 in let _g3 = (_p1 : string) in if HxString.equals _g3 "makeVarArgs" then let receiver = Obj.magic _g2 in let args = Obj.magic _g1 in if HxArray.length args = 1 && isReflectStaticReceiver (Obj.magic receiver) then let __assign_96 = true in (
+        tempResult := __assign_96;
+        __assign_96
+      ) else let __assign_97 = false in (
+        tempResult := __assign_97;
+        __assign_97
+      ) else let __assign_98 = false in (
+        tempResult := __assign_98;
+        __assign_98
+      )
+      | _ -> let __assign_93 = false in (
+        tempResult := __assign_93;
+        __assign_93
+      ))
+    | 14 -> (
+      ignore (let __enum_param_100 = expr in if __enum_param_100 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_100 with
+        | HxExpr.ELambda (__enum_param_99, _) -> __enum_param_99
+        | _ -> failwith "Unexpected enum parameter");
+      ignore (let __enum_param_102 = expr in if __enum_param_102 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_102 with
+        | HxExpr.ELambda (_, __enum_param_101) -> __enum_param_101
+        | _ -> failwith "Unexpected enum parameter");
+      let __assign_103 = true in (
+        tempResult := __assign_103;
+        __assign_103
       )
     )
-    | _ -> let __assign_79 = false in (
-      tempResult := __assign_79;
-      __assign_79
+    | _ -> let __assign_88 = false in (
+      tempResult := __assign_88;
+      __assign_88
     ));
   !tempResult
 )
 
-let localDeclHasDynamicLocalInferenceEvidence = fun typeHint init dynamicTypeHint -> try let __fallback_result_59 = (
+let localDeclHasDynamicLocalInferenceEvidence = fun typeHint init dynamicTypeHint -> try let __fallback_result_66 = (
   ignore (if isLocalCallableInit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if dynamicTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if hasTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if let __call_callee_62 = dynamicTypeHint in let __call_arg_0_63 = typeHint in __call_callee_62 __call_arg_0_63 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if let __call_arg_0_64 = typeHint in hasTypeHint __call_arg_0_64 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   init == Obj.magic (HxRuntime.hx_null) || isEmptyArrayExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) || isNullExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init))
-) in Obj.magic __fallback_result_59 with
-  | HxRuntime.Hx_return __ret_58 -> Obj.obj __ret_58
+) in Obj.magic __fallback_result_66 with
+  | HxRuntime.Hx_return __ret_65 -> Obj.obj __ret_65
 
 let functionHasDynamicLocalInferenceEvidence = fun fn dynamicTypeHint -> try let __fallback_result_4 = (
   ignore (if dynamicTypeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -792,13 +792,13 @@ let functionHasDynamicLocalInferenceEvidence = fun fn dynamicTypeHint -> try let
 ) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
-let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_237 = (
+let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_248 = (
   ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
-    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_141 = false in (
-      tempResult := __assign_141;
-      __assign_141
-    ) else match let __enum_idx_235 = expr in if __enum_idx_235 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_235 with
+    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_152 = false in (
+      tempResult := __assign_152;
+      __assign_152
+    ) else match let __enum_idx_246 = expr in if __enum_idx_246 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_246 with
       | HxExpr.ENull -> 0
       | HxExpr.EBool _ -> 1
       | HxExpr.EString _ -> 2
@@ -835,21 +835,21 @@ let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_237 
       | HxExpr.EWhile (_, _, _, _) -> 33
       | HxExpr.EBreak _ -> 34
       | HxExpr.EContinue _ -> 35 with
-      | 9 -> let _g = Obj.magic (let __enum_param_144 = expr in if __enum_param_144 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_144 with
-        | HxExpr.EField (__enum_param_143, _) -> __enum_param_143
+      | 9 -> let _g = Obj.magic (let __enum_param_155 = expr in if __enum_param_155 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_155 with
+        | HxExpr.EField (__enum_param_154, _) -> __enum_param_154
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_146 = expr in if __enum_param_146 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_146 with
-          | HxExpr.EField (_, __enum_param_145) -> __enum_param_145
+        ignore (let __enum_param_157 = expr in if __enum_param_157 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_157 with
+          | HxExpr.EField (_, __enum_param_156) -> __enum_param_156
           | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_147 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_147;
-          __assign_147
+        let receiver = Obj.magic _g in let __assign_158 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_158;
+          __assign_158
         )
       )
-      | 11 -> let _g = Obj.magic (let __enum_param_149 = expr in if __enum_param_149 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_149 with
-        | HxExpr.ECall (__enum_param_148, _) -> __enum_param_148
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_151 = expr in if __enum_param_151 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_151 with
-        | HxExpr.ECall (_, __enum_param_150) -> __enum_param_150
+      | 11 -> let _g = Obj.magic (let __enum_param_160 = expr in if __enum_param_160 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_160 with
+        | HxExpr.ECall (__enum_param_159, _) -> __enum_param_159
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_162 = expr in if __enum_param_162 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_162 with
+        | HxExpr.ECall (_, __enum_param_161) -> __enum_param_161
         | _ -> failwith "Unexpected enum parameter") in if (match _g with
         | HxExpr.ENull -> 0
         | HxExpr.EBool _ -> 1
@@ -888,215 +888,215 @@ let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_237 
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35) = 9 then (
         ignore (match _g with
-          | HxExpr.EField (__enum_param_152, _) -> __enum_param_152
+          | HxExpr.EField (__enum_param_163, _) -> __enum_param_163
           | _ -> failwith "Unexpected enum parameter");
         let _g3 = (match _g with
-          | HxExpr.EField (_, __enum_param_153) -> __enum_param_153
-          | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "bind" then let __assign_154 = true in (
-          tempResult := __assign_154;
-          __assign_154
-        ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_155 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasBindCallableEvidence (Obj.magic args) in (
-          tempResult := __assign_155;
-          __assign_155
-        )
-      ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_156 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasBindCallableEvidence (Obj.magic args) in (
-        tempResult := __assign_156;
-        __assign_156
-      )
-      | 12 -> let _g = Obj.magic (let __enum_param_158 = expr in if __enum_param_158 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_158 with
-        | HxExpr.EMacroExpr (__enum_param_157, _) -> __enum_param_157
-        | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_160 = expr in if __enum_param_160 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_160 with
-          | HxExpr.EMacroExpr (_, __enum_param_159) -> __enum_param_159
-          | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_161 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_161;
-          __assign_161
-        )
-      )
-      | 14 -> (
-        ignore (let __enum_param_163 = expr in if __enum_param_163 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_163 with
-          | HxExpr.ELambda (__enum_param_162, _) -> __enum_param_162
-          | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_165 = expr in if __enum_param_165 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_165 with
-          | HxExpr.ELambda (_, __enum_param_164) -> __enum_param_164
-          | _ -> failwith "Unexpected enum parameter") in let body = Obj.magic _g2 in let __assign_166 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr body)) in (
+          | HxExpr.EField (_, __enum_param_164) -> __enum_param_164
+          | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "bind" then let __assign_165 = true in (
+          tempResult := __assign_165;
+          __assign_165
+        ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_166 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasBindCallableEvidence (Obj.magic args) in (
           tempResult := __assign_166;
           __assign_166
         )
+      ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_167 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasBindCallableEvidence (Obj.magic args) in (
+        tempResult := __assign_167;
+        __assign_167
       )
-      | 17 -> let _g = Obj.magic (let __enum_param_168 = expr in if __enum_param_168 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_168 with
-        | HxExpr.ESwitch (__enum_param_167, _, _) -> __enum_param_167
+      | 12 -> let _g = Obj.magic (let __enum_param_169 = expr in if __enum_param_169 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_169 with
+        | HxExpr.EMacroExpr (__enum_param_168, _) -> __enum_param_168
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_170 = expr in if __enum_param_170 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_170 with
-          | HxExpr.ESwitch (_, __enum_param_169, _) -> __enum_param_169
+        ignore (let __enum_param_171 = expr in if __enum_param_171 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_171 with
+          | HxExpr.EMacroExpr (_, __enum_param_170) -> __enum_param_170
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_172 = expr in if __enum_param_172 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_172 with
-          | HxExpr.ESwitch (_, _, __enum_param_171) -> __enum_param_171
-          | _ -> failwith "Unexpected enum parameter") in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_173 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || exprListHasBindCallableEvidence (Obj.magic exprs) in (
-          tempResult := __assign_173;
-          __assign_173
+        let receiver = Obj.magic _g in let __assign_172 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_172;
+          __assign_172
+        )
+      )
+      | 14 -> (
+        ignore (let __enum_param_174 = expr in if __enum_param_174 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_174 with
+          | HxExpr.ELambda (__enum_param_173, _) -> __enum_param_173
+          | _ -> failwith "Unexpected enum parameter");
+        let _g2 = Obj.magic (let __enum_param_176 = expr in if __enum_param_176 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_176 with
+          | HxExpr.ELambda (_, __enum_param_175) -> __enum_param_175
+          | _ -> failwith "Unexpected enum parameter") in let body = Obj.magic _g2 in let __assign_177 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr body)) in (
+          tempResult := __assign_177;
+          __assign_177
+        )
+      )
+      | 17 -> let _g = Obj.magic (let __enum_param_179 = expr in if __enum_param_179 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_179 with
+        | HxExpr.ESwitch (__enum_param_178, _, _) -> __enum_param_178
+        | _ -> failwith "Unexpected enum parameter") in (
+        ignore (let __enum_param_181 = expr in if __enum_param_181 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_181 with
+          | HxExpr.ESwitch (_, __enum_param_180, _) -> __enum_param_180
+          | _ -> failwith "Unexpected enum parameter");
+        let _g2 = Obj.magic (let __enum_param_183 = expr in if __enum_param_183 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_183 with
+          | HxExpr.ESwitch (_, _, __enum_param_182) -> __enum_param_182
+          | _ -> failwith "Unexpected enum parameter") in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_184 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || exprListHasBindCallableEvidence (Obj.magic exprs) in (
+          tempResult := __assign_184;
+          __assign_184
         )
       )
       | 18 -> (
-        ignore (let __enum_param_175 = expr in if __enum_param_175 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_175 with
-          | HxExpr.ENew (__enum_param_174, _) -> __enum_param_174
+        ignore (let __enum_param_186 = expr in if __enum_param_186 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_186 with
+          | HxExpr.ENew (__enum_param_185, _) -> __enum_param_185
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_177 = expr in if __enum_param_177 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_177 with
-          | HxExpr.ENew (_, __enum_param_176) -> __enum_param_176
-          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_178 = exprListHasBindCallableEvidence (Obj.magic args) in (
-          tempResult := __assign_178;
-          __assign_178
+        let _g2 = Obj.magic (let __enum_param_188 = expr in if __enum_param_188 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_188 with
+          | HxExpr.ENew (_, __enum_param_187) -> __enum_param_187
+          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_189 = exprListHasBindCallableEvidence (Obj.magic args) in (
+          tempResult := __assign_189;
+          __assign_189
         )
       )
       | 19 -> (
-        ignore (let __enum_param_180 = expr in if __enum_param_180 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_180 with
-          | HxExpr.EUnop (__enum_param_179, _, _) -> __enum_param_179
+        ignore (let __enum_param_191 = expr in if __enum_param_191 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_191 with
+          | HxExpr.EUnop (__enum_param_190, _, _) -> __enum_param_190
           | _ -> failwith "Unexpected enum parameter");
-        ignore (let __enum_param_182 = expr in if __enum_param_182 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_182 with
-          | HxExpr.EUnop (_, __enum_param_181, _) -> __enum_param_181
+        ignore (let __enum_param_193 = expr in if __enum_param_193 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_193 with
+          | HxExpr.EUnop (_, __enum_param_192, _) -> __enum_param_192
           | _ -> failwith "Unexpected enum parameter");
-        let _g3 = Obj.magic (let __enum_param_184 = expr in if __enum_param_184 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_184 with
-          | HxExpr.EUnop (_, _, __enum_param_183) -> __enum_param_183
-          | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g3 in let __assign_185 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_185;
-          __assign_185
+        let _g3 = Obj.magic (let __enum_param_195 = expr in if __enum_param_195 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_195 with
+          | HxExpr.EUnop (_, _, __enum_param_194) -> __enum_param_194
+          | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g3 in let __assign_196 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_196;
+          __assign_196
         )
       )
       | 20 -> (
-        ignore (let __enum_param_187 = expr in if __enum_param_187 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_187 with
-          | HxExpr.EBinop (__enum_param_186, _, _) -> __enum_param_186
+        ignore (let __enum_param_198 = expr in if __enum_param_198 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_198 with
+          | HxExpr.EBinop (__enum_param_197, _, _) -> __enum_param_197
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_189 = expr in if __enum_param_189 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_189 with
-          | HxExpr.EBinop (_, __enum_param_188, _) -> __enum_param_188
-          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_191 = expr in if __enum_param_191 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_191 with
-          | HxExpr.EBinop (_, _, __enum_param_190) -> __enum_param_190
-          | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_192 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
-          tempResult := __assign_192;
-          __assign_192
+        let _g2 = Obj.magic (let __enum_param_200 = expr in if __enum_param_200 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_200 with
+          | HxExpr.EBinop (_, __enum_param_199, _) -> __enum_param_199
+          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_202 = expr in if __enum_param_202 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_202 with
+          | HxExpr.EBinop (_, _, __enum_param_201) -> __enum_param_201
+          | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_203 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
+          tempResult := __assign_203;
+          __assign_203
         )
       )
-      | 21 -> let _g = Obj.magic (let __enum_param_194 = expr in if __enum_param_194 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_194 with
-        | HxExpr.ETernary (__enum_param_193, _, _) -> __enum_param_193
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_196 = expr in if __enum_param_196 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_196 with
-        | HxExpr.ETernary (_, __enum_param_195, _) -> __enum_param_195
-        | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_198 = expr in if __enum_param_198 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_198 with
-        | HxExpr.ETernary (_, _, __enum_param_197) -> __enum_param_197
-        | _ -> failwith "Unexpected enum parameter") in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_199 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr thenExpr)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr elseExpr)) in (
-        tempResult := __assign_199;
-        __assign_199
+      | 21 -> let _g = Obj.magic (let __enum_param_205 = expr in if __enum_param_205 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_205 with
+        | HxExpr.ETernary (__enum_param_204, _, _) -> __enum_param_204
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_207 = expr in if __enum_param_207 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_207 with
+        | HxExpr.ETernary (_, __enum_param_206, _) -> __enum_param_206
+        | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_209 = expr in if __enum_param_209 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_209 with
+        | HxExpr.ETernary (_, _, __enum_param_208) -> __enum_param_208
+        | _ -> failwith "Unexpected enum parameter") in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_210 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr thenExpr)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr elseExpr)) in (
+        tempResult := __assign_210;
+        __assign_210
       )
       | 22 -> (
-        ignore (let __enum_param_201 = expr in if __enum_param_201 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_201 with
-          | HxExpr.EAnon (__enum_param_200, _) -> __enum_param_200
+        ignore (let __enum_param_212 = expr in if __enum_param_212 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_212 with
+          | HxExpr.EAnon (__enum_param_211, _) -> __enum_param_211
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_203 = expr in if __enum_param_203 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_203 with
-          | HxExpr.EAnon (_, __enum_param_202) -> __enum_param_202
-          | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g2 in let __assign_204 = exprListHasBindCallableEvidence (Obj.magic fieldValues) in (
-          tempResult := __assign_204;
-          __assign_204
+        let _g2 = Obj.magic (let __enum_param_214 = expr in if __enum_param_214 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_214 with
+          | HxExpr.EAnon (_, __enum_param_213) -> __enum_param_213
+          | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g2 in let __assign_215 = exprListHasBindCallableEvidence (Obj.magic fieldValues) in (
+          tempResult := __assign_215;
+          __assign_215
         )
       )
       | 23 -> (
-        ignore (let __enum_param_206 = expr in if __enum_param_206 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_206 with
-          | HxExpr.EArrayComprehension (__enum_param_205, _, _, _) -> __enum_param_205
+        ignore (let __enum_param_217 = expr in if __enum_param_217 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_217 with
+          | HxExpr.EArrayComprehension (__enum_param_216, _, _, _) -> __enum_param_216
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_208 = expr in if __enum_param_208 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_208 with
-          | HxExpr.EArrayComprehension (_, __enum_param_207, _, _) -> __enum_param_207
-          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __enum_param_210 = expr in if __enum_param_210 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_210 with
-          | HxExpr.EArrayComprehension (_, _, __enum_param_209, _) -> __enum_param_209
-          | _ -> failwith "Unexpected enum parameter")) in let _g3 = Obj.magic (let __enum_param_212 = expr in if __enum_param_212 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_212 with
-          | HxExpr.EArrayComprehension (_, _, _, __enum_param_211) -> __enum_param_211
-          | _ -> failwith "Unexpected enum parameter") in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_213 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || exprHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr yieldExpr)) in (
-          tempResult := __assign_213;
-          __assign_213
+        let _g2 = Obj.magic (let __enum_param_219 = expr in if __enum_param_219 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_219 with
+          | HxExpr.EArrayComprehension (_, __enum_param_218, _, _) -> __enum_param_218
+          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __enum_param_221 = expr in if __enum_param_221 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_221 with
+          | HxExpr.EArrayComprehension (_, _, __enum_param_220, _) -> __enum_param_220
+          | _ -> failwith "Unexpected enum parameter")) in let _g3 = Obj.magic (let __enum_param_223 = expr in if __enum_param_223 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_223 with
+          | HxExpr.EArrayComprehension (_, _, _, __enum_param_222) -> __enum_param_222
+          | _ -> failwith "Unexpected enum parameter") in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_224 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || exprHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr yieldExpr)) in (
+          tempResult := __assign_224;
+          __assign_224
         )
       )
-      | 24 -> let _g = Obj.magic (let __enum_param_215 = expr in if __enum_param_215 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_215 with
-        | HxExpr.EArrayDecl __enum_param_214 -> __enum_param_214
-        | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g in let __assign_216 = exprListHasBindCallableEvidence (Obj.magic fieldValues) in (
-        tempResult := __assign_216;
-        __assign_216
+      | 24 -> let _g = Obj.magic (let __enum_param_226 = expr in if __enum_param_226 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_226 with
+        | HxExpr.EArrayDecl __enum_param_225 -> __enum_param_225
+        | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g in let __assign_227 = exprListHasBindCallableEvidence (Obj.magic fieldValues) in (
+        tempResult := __assign_227;
+        __assign_227
       )
-      | 25 -> let _g = Obj.magic (let __enum_param_218 = expr in if __enum_param_218 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_218 with
-        | HxExpr.EArrayAccess (__enum_param_217, _) -> __enum_param_217
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_220 = expr in if __enum_param_220 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_220 with
-        | HxExpr.EArrayAccess (_, __enum_param_219) -> __enum_param_219
-        | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_221 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
-        tempResult := __assign_221;
-        __assign_221
+      | 25 -> let _g = Obj.magic (let __enum_param_229 = expr in if __enum_param_229 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_229 with
+        | HxExpr.EArrayAccess (__enum_param_228, _) -> __enum_param_228
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_231 = expr in if __enum_param_231 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_231 with
+        | HxExpr.EArrayAccess (_, __enum_param_230) -> __enum_param_230
+        | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_232 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
+        tempResult := __assign_232;
+        __assign_232
       )
-      | 26 -> let _g = Obj.magic (let __enum_param_223 = expr in if __enum_param_223 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_223 with
-        | HxExpr.ERange (__enum_param_222, _) -> __enum_param_222
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_225 = expr in if __enum_param_225 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_225 with
-        | HxExpr.ERange (_, __enum_param_224) -> __enum_param_224
-        | _ -> failwith "Unexpected enum parameter") in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_226 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr start)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr hx_end)) in (
-        tempResult := __assign_226;
-        __assign_226
+      | 26 -> let _g = Obj.magic (let __enum_param_234 = expr in if __enum_param_234 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_234 with
+        | HxExpr.ERange (__enum_param_233, _) -> __enum_param_233
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_236 = expr in if __enum_param_236 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_236 with
+        | HxExpr.ERange (_, __enum_param_235) -> __enum_param_235
+        | _ -> failwith "Unexpected enum parameter") in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_237 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr start)) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr hx_end)) in (
+        tempResult := __assign_237;
+        __assign_237
       )
-      | 27 -> let _g = Obj.magic (let __enum_param_228 = expr in if __enum_param_228 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_228 with
-        | HxExpr.ECast (__enum_param_227, _) -> __enum_param_227
+      | 27 -> let _g = Obj.magic (let __enum_param_239 = expr in if __enum_param_239 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_239 with
+        | HxExpr.ECast (__enum_param_238, _) -> __enum_param_238
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_230 = expr in if __enum_param_230 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_230 with
-          | HxExpr.ECast (_, __enum_param_229) -> __enum_param_229
+        ignore (let __enum_param_241 = expr in if __enum_param_241 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_241 with
+          | HxExpr.ECast (_, __enum_param_240) -> __enum_param_240
           | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_231 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_231;
-          __assign_231
+        let receiver = Obj.magic _g in let __assign_242 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_242;
+          __assign_242
         )
       )
-      | 28 -> let _g = Obj.magic (let __enum_param_233 = expr in if __enum_param_233 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_233 with
-        | HxExpr.EUntyped __enum_param_232 -> __enum_param_232
-        | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g in let __assign_234 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-        tempResult := __assign_234;
-        __assign_234
+      | 28 -> let _g = Obj.magic (let __enum_param_244 = expr in if __enum_param_244 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_244 with
+        | HxExpr.EUntyped __enum_param_243 -> __enum_param_243
+        | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g in let __assign_245 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+        tempResult := __assign_245;
+        __assign_245
       )
-      | _ -> let __assign_142 = false in (
-        tempResult := __assign_142;
-        __assign_142
+      | _ -> let __assign_153 = false in (
+        tempResult := __assign_153;
+        __assign_153
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_237 with
-  | HxRuntime.Hx_return __ret_236 -> Obj.obj __ret_236
-and exprListHasBindCallableEvidence = fun exprs -> try let __fallback_result_241 = (
+) in Obj.magic __fallback_result_248 with
+  | HxRuntime.Hx_return __ret_247 -> Obj.obj __ret_247
+and exprListHasBindCallableEvidence = fun exprs -> try let __fallback_result_252 = (
   ignore (if exprs == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length exprs do ignore (let expr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g)) in (
-      ignore (let __old_238 = !_g in let __new_239 = HxInt.add __old_238 1 in (
-        ignore (_g := __new_239);
-        __new_239
+      ignore (let __old_249 = !_g in let __new_250 = HxInt.add __old_249 1 in (
+        ignore (_g := __new_250);
+        __new_250
       ));
       if exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_241 with
-  | HxRuntime.Hx_return __ret_240 -> Obj.obj __ret_240
+) in Obj.magic __fallback_result_252 with
+  | HxRuntime.Hx_return __ret_251 -> Obj.obj __ret_251
 
-let rec stmtListHasBindCallableEvidence = fun stmts -> try let __fallback_result_119 = (
+let rec stmtListHasBindCallableEvidence = fun stmts -> try let __fallback_result_130 = (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
-      ignore (let __old_116 = !_g in let __new_117 = HxInt.add __old_116 1 in (
-        ignore (_g := __new_117);
-        __new_117
+      ignore (let __old_127 = !_g in let __new_128 = HxInt.add __old_127 1 in (
+        ignore (_g := __new_128);
+        __new_128
       ));
       if stmtHasBindCallableEvidence (Obj.magic stmt) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_119 with
-  | HxRuntime.Hx_return __ret_118 -> Obj.obj __ret_118
-and stmtHasBindCallableEvidence = fun stmt -> try let __fallback_result_140 = (
+) in Obj.magic __fallback_result_130 with
+  | HxRuntime.Hx_return __ret_129 -> Obj.obj __ret_129
+and stmtHasBindCallableEvidence = fun stmt -> try let __fallback_result_151 = (
   ignore (if stmt == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
     ignore (match stmt with
       | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let stmts = Obj.magic _g in let __assign_120 = stmtListHasBindCallableEvidence (Obj.magic stmts) in (
-          tempResult := __assign_120;
-          __assign_120
+        let stmts = Obj.magic _g in let __assign_131 = stmtListHasBindCallableEvidence (Obj.magic stmts) in (
+          tempResult := __assign_131;
+          __assign_131
         )
       )
       | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
@@ -1105,26 +1105,26 @@ and stmtHasBindCallableEvidence = fun stmt -> try let __fallback_result_140 = (
         let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
           ignore _p3;
           ignore _p4;
-          let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_121 = exprHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
-            tempResult := __assign_121;
-            __assign_121
+          let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_132 = exprHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
+            tempResult := __assign_132;
+            __assign_132
           )
         )
       )
       | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
         ignore _p3;
-        let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_122 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasBindCallableEvidence (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-          tempResult := __assign_122;
-          __assign_122
+        let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_133 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasBindCallableEvidence (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtHasBindCallableEvidence (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+          tempResult := __assign_133;
+          __assign_133
         )
       )
       | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> (
         ignore _p0;
         let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in (
           ignore _p3;
-          let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_123 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasBindCallableEvidence (Obj.magic body) in (
-            tempResult := __assign_123;
-            __assign_123
+          let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_134 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasBindCallableEvidence (Obj.magic body) in (
+            tempResult := __assign_134;
+            __assign_134
           )
         )
       )
@@ -1133,104 +1133,104 @@ and stmtHasBindCallableEvidence = fun stmt -> try let __fallback_result_140 = (
         ignore _p1;
         let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in (
           ignore _p4;
-          let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_124 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasBindCallableEvidence (Obj.magic body) in (
-            tempResult := __assign_124;
-            __assign_124
+          let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_135 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasBindCallableEvidence (Obj.magic body) in (
+            tempResult := __assign_135;
+            __assign_135
           )
         )
       )
       | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_125 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasBindCallableEvidence (Obj.magic body) in (
-          tempResult := __assign_125;
-          __assign_125
+        let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_136 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasBindCallableEvidence (Obj.magic body) in (
+          tempResult := __assign_136;
+          __assign_136
         )
       )
       | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_126 = stmtHasBindCallableEvidence (Obj.magic body) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) in (
-          tempResult := __assign_126;
-          __assign_126
+        let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_137 = stmtHasBindCallableEvidence (Obj.magic body) || exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) in (
+          tempResult := __assign_137;
+          __assign_137
         )
       )
       | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in (
         ignore _p1;
         let _g2 = Obj.magic _p2 in (
           ignore _p3;
-          let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_127 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || stmtListHasBindCallableEvidence (Obj.magic bodies) in (
-            tempResult := __assign_127;
-            __assign_127
+          let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_138 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || stmtListHasBindCallableEvidence (Obj.magic bodies) in (
+            tempResult := __assign_138;
+            __assign_138
           )
         )
       )
       | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if stmtHasBindCallableEvidence (Obj.magic tryBody) then let __assign_128 = true in (
-          tempResult := __assign_128;
-          __assign_128
+        let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if stmtHasBindCallableEvidence (Obj.magic tryBody) then let __assign_139 = true in (
+          tempResult := __assign_139;
+          __assign_139
         ) else let found = ref false in let _g3 = ref 0 in (
           ignore (while !_g3 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g3) in (
-            ignore (let __old_129 = !_g3 in let __new_130 = HxInt.add __old_129 1 in (
-              ignore (_g3 := __new_130);
-              __new_130
+            ignore (let __old_140 = !_g3 in let __new_141 = HxInt.add __old_140 1 in (
+              ignore (_g3 := __new_141);
+              __new_141
             ));
-            if stmtHasBindCallableEvidence (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_131 = true in (
-              found := __assign_131;
-              __assign_131
+            if stmtHasBindCallableEvidence (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_142 = true in (
+              found := __assign_142;
+              __assign_142
             )) else ()
           )) done);
-          let __assign_132 = !found in (
-            tempResult := __assign_132;
-            __assign_132
+          let __assign_143 = !found in (
+            tempResult := __assign_143;
+            __assign_143
           )
         )
       )
       | HxStmt.SBreak _p0 -> (
         ignore _p0;
-        let __assign_133 = false in (
-          tempResult := __assign_133;
-          __assign_133
+        let __assign_144 = false in (
+          tempResult := __assign_144;
+          __assign_144
         )
       )
       | HxStmt.SContinue _p0 -> (
         ignore _p0;
-        let __assign_134 = false in (
-          tempResult := __assign_134;
-          __assign_134
+        let __assign_145 = false in (
+          tempResult := __assign_145;
+          __assign_145
         )
       )
       | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_135 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_135;
-          __assign_135
+        let expr = Obj.magic _g in let __assign_146 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_146;
+          __assign_146
         )
       )
       | HxStmt.SReturnVoid _p0 -> (
         ignore _p0;
-        let __assign_136 = false in (
-          tempResult := __assign_136;
-          __assign_136
+        let __assign_147 = false in (
+          tempResult := __assign_147;
+          __assign_147
         )
       )
       | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_137 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_137;
-          __assign_137
+        let expr = Obj.magic _g in let __assign_148 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_148;
+          __assign_148
         )
       )
       | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_138 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_138;
-          __assign_138
+        let expr = Obj.magic _g in let __assign_149 = exprHasBindCallableEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_149;
+          __assign_149
         )
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_140 with
-  | HxRuntime.Hx_return __ret_139 -> Obj.obj __ret_139
+) in Obj.magic __fallback_result_151 with
+  | HxRuntime.Hx_return __ret_150 -> Obj.obj __ret_150
 
 let functionHasBindCallableEvidence = fun fn -> try let __fallback_result_2 = (
   ignore (if fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -1240,23 +1240,23 @@ let functionHasBindCallableEvidence = fun fn -> try let __fallback_result_2 = (
 
 let isHelperTypedAsCallee = fun callee -> let tempResult = ref (false : bool) in (
   ignore (match callee with
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in if HxString.equals _g "typedAs" then let __assign_365 = true in (
-      tempResult := __assign_365;
-      __assign_365
-    ) else let __assign_366 = false in (
-      tempResult := __assign_366;
-      __assign_366
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in if HxString.equals _g "typedAs" then let __assign_376 = true in (
+      tempResult := __assign_376;
+      __assign_376
+    ) else let __assign_377 = false in (
+      tempResult := __assign_377;
+      __assign_377
     )
     | HxExpr.EField (_p0, _p1) -> (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in match _g with
-      | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in if HxString.equals _g2 "HelperMacros" then if HxString.equals _g1 "typedAs" then let __assign_368 = true in (
-        tempResult := __assign_368;
-        __assign_368
-      ) else let __assign_369 = false in (
-        tempResult := __assign_369;
-        __assign_369
-      ) else let __assign_370 = false in (
-        tempResult := __assign_370;
-        __assign_370
+      | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in if HxString.equals _g2 "HelperMacros" then if HxString.equals _g1 "typedAs" then let __assign_379 = true in (
+        tempResult := __assign_379;
+        __assign_379
+      ) else let __assign_380 = false in (
+        tempResult := __assign_380;
+        __assign_380
+      ) else let __assign_381 = false in (
+        tempResult := __assign_381;
+        __assign_381
       )
       | HxExpr.EField (_p0, _p1) -> let _g2 = Obj.magic _p0 in let _g3 = (_p1 : string) in if (match _g2 with
         | HxExpr.ENull -> 0
@@ -1295,41 +1295,41 @@ let isHelperTypedAsCallee = fun callee -> let tempResult = ref (false : bool) in
         | HxExpr.EWhile (_, _, _, _) -> 33
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
-        | HxExpr.EIdent __enum_param_371 -> __enum_param_371
-        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "unit" then if HxString.equals _g3 "HelperMacros" then if HxString.equals _g1 "typedAs" then let __assign_372 = true in (
-        tempResult := __assign_372;
-        __assign_372
-      ) else let __assign_373 = false in (
-        tempResult := __assign_373;
-        __assign_373
-      ) else let __assign_374 = false in (
-        tempResult := __assign_374;
-        __assign_374
-      ) else let __assign_375 = false in (
-        tempResult := __assign_375;
-        __assign_375
-      ) else let __assign_376 = false in (
-        tempResult := __assign_376;
-        __assign_376
+        | HxExpr.EIdent __enum_param_382 -> __enum_param_382
+        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "unit" then if HxString.equals _g3 "HelperMacros" then if HxString.equals _g1 "typedAs" then let __assign_383 = true in (
+        tempResult := __assign_383;
+        __assign_383
+      ) else let __assign_384 = false in (
+        tempResult := __assign_384;
+        __assign_384
+      ) else let __assign_385 = false in (
+        tempResult := __assign_385;
+        __assign_385
+      ) else let __assign_386 = false in (
+        tempResult := __assign_386;
+        __assign_386
+      ) else let __assign_387 = false in (
+        tempResult := __assign_387;
+        __assign_387
       )
-      | _ -> let __assign_367 = false in (
-        tempResult := __assign_367;
-        __assign_367
+      | _ -> let __assign_378 = false in (
+        tempResult := __assign_378;
+        __assign_378
       ))
-    | _ -> let __assign_364 = false in (
-      tempResult := __assign_364;
-      __assign_364
+    | _ -> let __assign_375 = false in (
+      tempResult := __assign_375;
+      __assign_375
     ));
   !tempResult
 )
 
-let rec exprHasHelperTypedAsEvidence = fun expr -> try let __fallback_result_359 = (
+let rec exprHasHelperTypedAsEvidence = fun expr -> try let __fallback_result_370 = (
   ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
-    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_267 = false in (
-      tempResult := __assign_267;
-      __assign_267
-    ) else match let __enum_idx_357 = expr in if __enum_idx_357 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_357 with
+    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_278 = false in (
+      tempResult := __assign_278;
+      __assign_278
+    ) else match let __enum_idx_368 = expr in if __enum_idx_368 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_368 with
       | HxExpr.ENull -> 0
       | HxExpr.EBool _ -> 1
       | HxExpr.EString _ -> 2
@@ -1366,219 +1366,219 @@ let rec exprHasHelperTypedAsEvidence = fun expr -> try let __fallback_result_359
       | HxExpr.EWhile (_, _, _, _) -> 33
       | HxExpr.EBreak _ -> 34
       | HxExpr.EContinue _ -> 35 with
-      | 9 -> let _g = Obj.magic (let __enum_param_270 = expr in if __enum_param_270 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_270 with
-        | HxExpr.EField (__enum_param_269, _) -> __enum_param_269
+      | 9 -> let _g = Obj.magic (let __enum_param_281 = expr in if __enum_param_281 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_281 with
+        | HxExpr.EField (__enum_param_280, _) -> __enum_param_280
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_272 = expr in if __enum_param_272 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_272 with
-          | HxExpr.EField (_, __enum_param_271) -> __enum_param_271
+        ignore (let __enum_param_283 = expr in if __enum_param_283 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_283 with
+          | HxExpr.EField (_, __enum_param_282) -> __enum_param_282
           | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_273 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_273;
-          __assign_273
+        let receiver = Obj.magic _g in let __assign_284 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_284;
+          __assign_284
         )
       )
-      | 11 -> let _g = Obj.magic (let __enum_param_275 = expr in if __enum_param_275 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_275 with
-        | HxExpr.ECall (__enum_param_274, _) -> __enum_param_274
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_277 = expr in if __enum_param_277 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_277 with
-        | HxExpr.ECall (_, __enum_param_276) -> __enum_param_276
-        | _ -> failwith "Unexpected enum parameter") in let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_278 = isHelperTypedAsCallee (Obj.magic callee) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasHelperTypedAsEvidence (Obj.magic args) in (
-        tempResult := __assign_278;
-        __assign_278
+      | 11 -> let _g = Obj.magic (let __enum_param_286 = expr in if __enum_param_286 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_286 with
+        | HxExpr.ECall (__enum_param_285, _) -> __enum_param_285
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_288 = expr in if __enum_param_288 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_288 with
+        | HxExpr.ECall (_, __enum_param_287) -> __enum_param_287
+        | _ -> failwith "Unexpected enum parameter") in let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_289 = isHelperTypedAsCallee (Obj.magic callee) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) || exprListHasHelperTypedAsEvidence (Obj.magic args) in (
+        tempResult := __assign_289;
+        __assign_289
       )
-      | 12 -> let _g = Obj.magic (let __enum_param_280 = expr in if __enum_param_280 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_280 with
-        | HxExpr.EMacroExpr (__enum_param_279, _) -> __enum_param_279
+      | 12 -> let _g = Obj.magic (let __enum_param_291 = expr in if __enum_param_291 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_291 with
+        | HxExpr.EMacroExpr (__enum_param_290, _) -> __enum_param_290
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_282 = expr in if __enum_param_282 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_282 with
-          | HxExpr.EMacroExpr (_, __enum_param_281) -> __enum_param_281
+        ignore (let __enum_param_293 = expr in if __enum_param_293 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_293 with
+          | HxExpr.EMacroExpr (_, __enum_param_292) -> __enum_param_292
           | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_283 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_283;
-          __assign_283
+        let receiver = Obj.magic _g in let __assign_294 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_294;
+          __assign_294
         )
       )
       | 14 -> (
-        ignore (let __enum_param_285 = expr in if __enum_param_285 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_285 with
-          | HxExpr.ELambda (__enum_param_284, _) -> __enum_param_284
+        ignore (let __enum_param_296 = expr in if __enum_param_296 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_296 with
+          | HxExpr.ELambda (__enum_param_295, _) -> __enum_param_295
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_287 = expr in if __enum_param_287 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_287 with
-          | HxExpr.ELambda (_, __enum_param_286) -> __enum_param_286
-          | _ -> failwith "Unexpected enum parameter") in let body = Obj.magic _g2 in let __assign_288 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr body)) in (
-          tempResult := __assign_288;
-          __assign_288
+        let _g2 = Obj.magic (let __enum_param_298 = expr in if __enum_param_298 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_298 with
+          | HxExpr.ELambda (_, __enum_param_297) -> __enum_param_297
+          | _ -> failwith "Unexpected enum parameter") in let body = Obj.magic _g2 in let __assign_299 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr body)) in (
+          tempResult := __assign_299;
+          __assign_299
         )
       )
-      | 17 -> let _g = Obj.magic (let __enum_param_290 = expr in if __enum_param_290 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_290 with
-        | HxExpr.ESwitch (__enum_param_289, _, _) -> __enum_param_289
+      | 17 -> let _g = Obj.magic (let __enum_param_301 = expr in if __enum_param_301 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_301 with
+        | HxExpr.ESwitch (__enum_param_300, _, _) -> __enum_param_300
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_292 = expr in if __enum_param_292 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_292 with
-          | HxExpr.ESwitch (_, __enum_param_291, _) -> __enum_param_291
+        ignore (let __enum_param_303 = expr in if __enum_param_303 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_303 with
+          | HxExpr.ESwitch (_, __enum_param_302, _) -> __enum_param_302
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_294 = expr in if __enum_param_294 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_294 with
-          | HxExpr.ESwitch (_, _, __enum_param_293) -> __enum_param_293
-          | _ -> failwith "Unexpected enum parameter") in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_295 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || exprListHasHelperTypedAsEvidence (Obj.magic exprs) in (
-          tempResult := __assign_295;
-          __assign_295
+        let _g2 = Obj.magic (let __enum_param_305 = expr in if __enum_param_305 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_305 with
+          | HxExpr.ESwitch (_, _, __enum_param_304) -> __enum_param_304
+          | _ -> failwith "Unexpected enum parameter") in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_306 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || exprListHasHelperTypedAsEvidence (Obj.magic exprs) in (
+          tempResult := __assign_306;
+          __assign_306
         )
       )
       | 18 -> (
-        ignore (let __enum_param_297 = expr in if __enum_param_297 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_297 with
-          | HxExpr.ENew (__enum_param_296, _) -> __enum_param_296
+        ignore (let __enum_param_308 = expr in if __enum_param_308 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_308 with
+          | HxExpr.ENew (__enum_param_307, _) -> __enum_param_307
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_299 = expr in if __enum_param_299 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_299 with
-          | HxExpr.ENew (_, __enum_param_298) -> __enum_param_298
-          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_300 = exprListHasHelperTypedAsEvidence (Obj.magic args) in (
-          tempResult := __assign_300;
-          __assign_300
+        let _g2 = Obj.magic (let __enum_param_310 = expr in if __enum_param_310 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_310 with
+          | HxExpr.ENew (_, __enum_param_309) -> __enum_param_309
+          | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g2 in let __assign_311 = exprListHasHelperTypedAsEvidence (Obj.magic args) in (
+          tempResult := __assign_311;
+          __assign_311
         )
       )
       | 19 -> (
-        ignore (let __enum_param_302 = expr in if __enum_param_302 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_302 with
-          | HxExpr.EUnop (__enum_param_301, _, _) -> __enum_param_301
+        ignore (let __enum_param_313 = expr in if __enum_param_313 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_313 with
+          | HxExpr.EUnop (__enum_param_312, _, _) -> __enum_param_312
           | _ -> failwith "Unexpected enum parameter");
-        ignore (let __enum_param_304 = expr in if __enum_param_304 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_304 with
-          | HxExpr.EUnop (_, __enum_param_303, _) -> __enum_param_303
+        ignore (let __enum_param_315 = expr in if __enum_param_315 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_315 with
+          | HxExpr.EUnop (_, __enum_param_314, _) -> __enum_param_314
           | _ -> failwith "Unexpected enum parameter");
-        let _g3 = Obj.magic (let __enum_param_306 = expr in if __enum_param_306 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_306 with
-          | HxExpr.EUnop (_, _, __enum_param_305) -> __enum_param_305
-          | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g3 in let __assign_307 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_307;
-          __assign_307
+        let _g3 = Obj.magic (let __enum_param_317 = expr in if __enum_param_317 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_317 with
+          | HxExpr.EUnop (_, _, __enum_param_316) -> __enum_param_316
+          | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g3 in let __assign_318 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_318;
+          __assign_318
         )
       )
       | 20 -> (
-        ignore (let __enum_param_309 = expr in if __enum_param_309 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_309 with
-          | HxExpr.EBinop (__enum_param_308, _, _) -> __enum_param_308
+        ignore (let __enum_param_320 = expr in if __enum_param_320 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_320 with
+          | HxExpr.EBinop (__enum_param_319, _, _) -> __enum_param_319
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_311 = expr in if __enum_param_311 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_311 with
-          | HxExpr.EBinop (_, __enum_param_310, _) -> __enum_param_310
-          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_313 = expr in if __enum_param_313 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_313 with
-          | HxExpr.EBinop (_, _, __enum_param_312) -> __enum_param_312
-          | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_314 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
-          tempResult := __assign_314;
-          __assign_314
+        let _g2 = Obj.magic (let __enum_param_322 = expr in if __enum_param_322 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_322 with
+          | HxExpr.EBinop (_, __enum_param_321, _) -> __enum_param_321
+          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_324 = expr in if __enum_param_324 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_324 with
+          | HxExpr.EBinop (_, _, __enum_param_323) -> __enum_param_323
+          | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_325 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
+          tempResult := __assign_325;
+          __assign_325
         )
       )
-      | 21 -> let _g = Obj.magic (let __enum_param_316 = expr in if __enum_param_316 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_316 with
-        | HxExpr.ETernary (__enum_param_315, _, _) -> __enum_param_315
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_318 = expr in if __enum_param_318 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_318 with
-        | HxExpr.ETernary (_, __enum_param_317, _) -> __enum_param_317
-        | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_320 = expr in if __enum_param_320 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_320 with
-        | HxExpr.ETernary (_, _, __enum_param_319) -> __enum_param_319
-        | _ -> failwith "Unexpected enum parameter") in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_321 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr thenExpr)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr elseExpr)) in (
-        tempResult := __assign_321;
-        __assign_321
+      | 21 -> let _g = Obj.magic (let __enum_param_327 = expr in if __enum_param_327 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_327 with
+        | HxExpr.ETernary (__enum_param_326, _, _) -> __enum_param_326
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_329 = expr in if __enum_param_329 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_329 with
+        | HxExpr.ETernary (_, __enum_param_328, _) -> __enum_param_328
+        | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_331 = expr in if __enum_param_331 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_331 with
+        | HxExpr.ETernary (_, _, __enum_param_330) -> __enum_param_330
+        | _ -> failwith "Unexpected enum parameter") in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_332 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr thenExpr)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr elseExpr)) in (
+        tempResult := __assign_332;
+        __assign_332
       )
       | 22 -> (
-        ignore (let __enum_param_323 = expr in if __enum_param_323 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_323 with
-          | HxExpr.EAnon (__enum_param_322, _) -> __enum_param_322
+        ignore (let __enum_param_334 = expr in if __enum_param_334 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_334 with
+          | HxExpr.EAnon (__enum_param_333, _) -> __enum_param_333
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_325 = expr in if __enum_param_325 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_325 with
-          | HxExpr.EAnon (_, __enum_param_324) -> __enum_param_324
-          | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g2 in let __assign_326 = exprListHasHelperTypedAsEvidence (Obj.magic fieldValues) in (
-          tempResult := __assign_326;
-          __assign_326
+        let _g2 = Obj.magic (let __enum_param_336 = expr in if __enum_param_336 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_336 with
+          | HxExpr.EAnon (_, __enum_param_335) -> __enum_param_335
+          | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g2 in let __assign_337 = exprListHasHelperTypedAsEvidence (Obj.magic fieldValues) in (
+          tempResult := __assign_337;
+          __assign_337
         )
       )
       | 23 -> (
-        ignore (let __enum_param_328 = expr in if __enum_param_328 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_328 with
-          | HxExpr.EArrayComprehension (__enum_param_327, _, _, _) -> __enum_param_327
+        ignore (let __enum_param_339 = expr in if __enum_param_339 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_339 with
+          | HxExpr.EArrayComprehension (__enum_param_338, _, _, _) -> __enum_param_338
           | _ -> failwith "Unexpected enum parameter");
-        let _g2 = Obj.magic (let __enum_param_330 = expr in if __enum_param_330 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_330 with
-          | HxExpr.EArrayComprehension (_, __enum_param_329, _, _) -> __enum_param_329
-          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __enum_param_332 = expr in if __enum_param_332 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_332 with
-          | HxExpr.EArrayComprehension (_, _, __enum_param_331, _) -> __enum_param_331
-          | _ -> failwith "Unexpected enum parameter")) in let _g3 = Obj.magic (let __enum_param_334 = expr in if __enum_param_334 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_334 with
-          | HxExpr.EArrayComprehension (_, _, _, __enum_param_333) -> __enum_param_333
-          | _ -> failwith "Unexpected enum parameter") in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_335 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || exprHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr yieldExpr)) in (
-          tempResult := __assign_335;
-          __assign_335
+        let _g2 = Obj.magic (let __enum_param_341 = expr in if __enum_param_341 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_341 with
+          | HxExpr.EArrayComprehension (_, __enum_param_340, _, _) -> __enum_param_340
+          | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __enum_param_343 = expr in if __enum_param_343 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_343 with
+          | HxExpr.EArrayComprehension (_, _, __enum_param_342, _) -> __enum_param_342
+          | _ -> failwith "Unexpected enum parameter")) in let _g3 = Obj.magic (let __enum_param_345 = expr in if __enum_param_345 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_345 with
+          | HxExpr.EArrayComprehension (_, _, _, __enum_param_344) -> __enum_param_344
+          | _ -> failwith "Unexpected enum parameter") in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_346 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || exprHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr yieldExpr)) in (
+          tempResult := __assign_346;
+          __assign_346
         )
       )
-      | 24 -> let _g = Obj.magic (let __enum_param_337 = expr in if __enum_param_337 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_337 with
-        | HxExpr.EArrayDecl __enum_param_336 -> __enum_param_336
-        | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g in let __assign_338 = exprListHasHelperTypedAsEvidence (Obj.magic fieldValues) in (
-        tempResult := __assign_338;
-        __assign_338
+      | 24 -> let _g = Obj.magic (let __enum_param_348 = expr in if __enum_param_348 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_348 with
+        | HxExpr.EArrayDecl __enum_param_347 -> __enum_param_347
+        | _ -> failwith "Unexpected enum parameter") in let fieldValues = Obj.magic _g in let __assign_349 = exprListHasHelperTypedAsEvidence (Obj.magic fieldValues) in (
+        tempResult := __assign_349;
+        __assign_349
       )
-      | 25 -> let _g = Obj.magic (let __enum_param_340 = expr in if __enum_param_340 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_340 with
-        | HxExpr.EArrayAccess (__enum_param_339, _) -> __enum_param_339
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_342 = expr in if __enum_param_342 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_342 with
-        | HxExpr.EArrayAccess (_, __enum_param_341) -> __enum_param_341
-        | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_343 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
-        tempResult := __assign_343;
-        __assign_343
+      | 25 -> let _g = Obj.magic (let __enum_param_351 = expr in if __enum_param_351 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_351 with
+        | HxExpr.EArrayAccess (__enum_param_350, _) -> __enum_param_350
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_353 = expr in if __enum_param_353 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_353 with
+        | HxExpr.EArrayAccess (_, __enum_param_352) -> __enum_param_352
+        | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_354 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) in (
+        tempResult := __assign_354;
+        __assign_354
       )
-      | 26 -> let _g = Obj.magic (let __enum_param_345 = expr in if __enum_param_345 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_345 with
-        | HxExpr.ERange (__enum_param_344, _) -> __enum_param_344
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_347 = expr in if __enum_param_347 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_347 with
-        | HxExpr.ERange (_, __enum_param_346) -> __enum_param_346
-        | _ -> failwith "Unexpected enum parameter") in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_348 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr start)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr hx_end)) in (
-        tempResult := __assign_348;
-        __assign_348
+      | 26 -> let _g = Obj.magic (let __enum_param_356 = expr in if __enum_param_356 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_356 with
+        | HxExpr.ERange (__enum_param_355, _) -> __enum_param_355
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_358 = expr in if __enum_param_358 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_358 with
+        | HxExpr.ERange (_, __enum_param_357) -> __enum_param_357
+        | _ -> failwith "Unexpected enum parameter") in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_359 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr start)) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr hx_end)) in (
+        tempResult := __assign_359;
+        __assign_359
       )
-      | 27 -> let _g = Obj.magic (let __enum_param_350 = expr in if __enum_param_350 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_350 with
-        | HxExpr.ECast (__enum_param_349, _) -> __enum_param_349
+      | 27 -> let _g = Obj.magic (let __enum_param_361 = expr in if __enum_param_361 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_361 with
+        | HxExpr.ECast (__enum_param_360, _) -> __enum_param_360
         | _ -> failwith "Unexpected enum parameter") in (
-        ignore (let __enum_param_352 = expr in if __enum_param_352 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_352 with
-          | HxExpr.ECast (_, __enum_param_351) -> __enum_param_351
+        ignore (let __enum_param_363 = expr in if __enum_param_363 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_363 with
+          | HxExpr.ECast (_, __enum_param_362) -> __enum_param_362
           | _ -> failwith "Unexpected enum parameter");
-        let receiver = Obj.magic _g in let __assign_353 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-          tempResult := __assign_353;
-          __assign_353
+        let receiver = Obj.magic _g in let __assign_364 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+          tempResult := __assign_364;
+          __assign_364
         )
       )
-      | 28 -> let _g = Obj.magic (let __enum_param_355 = expr in if __enum_param_355 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_355 with
-        | HxExpr.EUntyped __enum_param_354 -> __enum_param_354
-        | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g in let __assign_356 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
-        tempResult := __assign_356;
-        __assign_356
+      | 28 -> let _g = Obj.magic (let __enum_param_366 = expr in if __enum_param_366 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_366 with
+        | HxExpr.EUntyped __enum_param_365 -> __enum_param_365
+        | _ -> failwith "Unexpected enum parameter") in let receiver = Obj.magic _g in let __assign_367 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)) in (
+        tempResult := __assign_367;
+        __assign_367
       )
-      | _ -> let __assign_268 = false in (
-        tempResult := __assign_268;
-        __assign_268
+      | _ -> let __assign_279 = false in (
+        tempResult := __assign_279;
+        __assign_279
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_359 with
-  | HxRuntime.Hx_return __ret_358 -> Obj.obj __ret_358
-and exprListHasHelperTypedAsEvidence = fun exprs -> try let __fallback_result_363 = (
+) in Obj.magic __fallback_result_370 with
+  | HxRuntime.Hx_return __ret_369 -> Obj.obj __ret_369
+and exprListHasHelperTypedAsEvidence = fun exprs -> try let __fallback_result_374 = (
   ignore (if exprs == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length exprs do ignore (let expr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g)) in (
-      ignore (let __old_360 = !_g in let __new_361 = HxInt.add __old_360 1 in (
-        ignore (_g := __new_361);
-        __new_361
+      ignore (let __old_371 = !_g in let __new_372 = HxInt.add __old_371 1 in (
+        ignore (_g := __new_372);
+        __new_372
       ));
       if exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_363 with
-  | HxRuntime.Hx_return __ret_362 -> Obj.obj __ret_362
+) in Obj.magic __fallback_result_374 with
+  | HxRuntime.Hx_return __ret_373 -> Obj.obj __ret_373
 
-let rec stmtListHasHelperTypedAsEvidence = fun stmts -> try let __fallback_result_245 = (
+let rec stmtListHasHelperTypedAsEvidence = fun stmts -> try let __fallback_result_256 = (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
-      ignore (let __old_242 = !_g in let __new_243 = HxInt.add __old_242 1 in (
-        ignore (_g := __new_243);
-        __new_243
+      ignore (let __old_253 = !_g in let __new_254 = HxInt.add __old_253 1 in (
+        ignore (_g := __new_254);
+        __new_254
       ));
       if stmtHasHelperTypedAsEvidence (Obj.magic stmt) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_245 with
-  | HxRuntime.Hx_return __ret_244 -> Obj.obj __ret_244
-and stmtHasHelperTypedAsEvidence = fun stmt -> try let __fallback_result_266 = (
+) in Obj.magic __fallback_result_256 with
+  | HxRuntime.Hx_return __ret_255 -> Obj.obj __ret_255
+and stmtHasHelperTypedAsEvidence = fun stmt -> try let __fallback_result_277 = (
   ignore (if stmt == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
     ignore (match stmt with
       | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let stmts = Obj.magic _g in let __assign_246 = stmtListHasHelperTypedAsEvidence (Obj.magic stmts) in (
-          tempResult := __assign_246;
-          __assign_246
+        let stmts = Obj.magic _g in let __assign_257 = stmtListHasHelperTypedAsEvidence (Obj.magic stmts) in (
+          tempResult := __assign_257;
+          __assign_257
         )
       )
       | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
@@ -1587,26 +1587,26 @@ and stmtHasHelperTypedAsEvidence = fun stmt -> try let __fallback_result_266 = (
         let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
           ignore _p3;
           ignore _p4;
-          let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_247 = exprHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
-            tempResult := __assign_247;
-            __assign_247
+          let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_258 = exprHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
+            tempResult := __assign_258;
+            __assign_258
           )
         )
       )
       | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
         ignore _p3;
-        let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_248 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasHelperTypedAsEvidence (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-          tempResult := __assign_248;
-          __assign_248
+        let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_259 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasHelperTypedAsEvidence (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtHasHelperTypedAsEvidence (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+          tempResult := __assign_259;
+          __assign_259
         )
       )
       | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> (
         ignore _p0;
         let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in (
           ignore _p3;
-          let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_249 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
-            tempResult := __assign_249;
-            __assign_249
+          let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_260 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
+            tempResult := __assign_260;
+            __assign_260
           )
         )
       )
@@ -1615,104 +1615,104 @@ and stmtHasHelperTypedAsEvidence = fun stmt -> try let __fallback_result_266 = (
         ignore _p1;
         let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in (
           ignore _p4;
-          let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_250 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
-            tempResult := __assign_250;
-            __assign_250
+          let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_261 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr iterable)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
+            tempResult := __assign_261;
+            __assign_261
           )
         )
       )
       | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_251 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
-          tempResult := __assign_251;
-          __assign_251
+        let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_262 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) || stmtHasHelperTypedAsEvidence (Obj.magic body) in (
+          tempResult := __assign_262;
+          __assign_262
         )
       )
       | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_252 = stmtHasHelperTypedAsEvidence (Obj.magic body) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) in (
-          tempResult := __assign_252;
-          __assign_252
+        let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_263 = stmtHasHelperTypedAsEvidence (Obj.magic body) || exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr cond)) in (
+          tempResult := __assign_263;
+          __assign_263
         )
       )
       | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in (
         ignore _p1;
         let _g2 = Obj.magic _p2 in (
           ignore _p3;
-          let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_253 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || stmtListHasHelperTypedAsEvidence (Obj.magic bodies) in (
-            tempResult := __assign_253;
-            __assign_253
+          let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_264 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr scrutinee)) || stmtListHasHelperTypedAsEvidence (Obj.magic bodies) in (
+            tempResult := __assign_264;
+            __assign_264
           )
         )
       )
       | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
         ignore _p2;
-        let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if stmtHasHelperTypedAsEvidence (Obj.magic tryBody) then let __assign_254 = true in (
-          tempResult := __assign_254;
-          __assign_254
+        let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if stmtHasHelperTypedAsEvidence (Obj.magic tryBody) then let __assign_265 = true in (
+          tempResult := __assign_265;
+          __assign_265
         ) else let found = ref false in let _g3 = ref 0 in (
           ignore (while !_g3 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g3) in (
-            ignore (let __old_255 = !_g3 in let __new_256 = HxInt.add __old_255 1 in (
-              ignore (_g3 := __new_256);
-              __new_256
+            ignore (let __old_266 = !_g3 in let __new_267 = HxInt.add __old_266 1 in (
+              ignore (_g3 := __new_267);
+              __new_267
             ));
-            if stmtHasHelperTypedAsEvidence (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_257 = true in (
-              found := __assign_257;
-              __assign_257
+            if stmtHasHelperTypedAsEvidence (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_268 = true in (
+              found := __assign_268;
+              __assign_268
             )) else ()
           )) done);
-          let __assign_258 = !found in (
-            tempResult := __assign_258;
-            __assign_258
+          let __assign_269 = !found in (
+            tempResult := __assign_269;
+            __assign_269
           )
         )
       )
       | HxStmt.SBreak _p0 -> (
         ignore _p0;
-        let __assign_259 = false in (
-          tempResult := __assign_259;
-          __assign_259
+        let __assign_270 = false in (
+          tempResult := __assign_270;
+          __assign_270
         )
       )
       | HxStmt.SContinue _p0 -> (
         ignore _p0;
-        let __assign_260 = false in (
-          tempResult := __assign_260;
-          __assign_260
+        let __assign_271 = false in (
+          tempResult := __assign_271;
+          __assign_271
         )
       )
       | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_261 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_261;
-          __assign_261
+        let expr = Obj.magic _g in let __assign_272 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_272;
+          __assign_272
         )
       )
       | HxStmt.SReturnVoid _p0 -> (
         ignore _p0;
-        let __assign_262 = false in (
-          tempResult := __assign_262;
-          __assign_262
+        let __assign_273 = false in (
+          tempResult := __assign_273;
+          __assign_273
         )
       )
       | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_263 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_263;
-          __assign_263
+        let expr = Obj.magic _g in let __assign_274 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_274;
+          __assign_274
         )
       )
       | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
-        let expr = Obj.magic _g in let __assign_264 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
-          tempResult := __assign_264;
-          __assign_264
+        let expr = Obj.magic _g in let __assign_275 = exprHasHelperTypedAsEvidence (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
+          tempResult := __assign_275;
+          __assign_275
         )
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_266 with
-  | HxRuntime.Hx_return __ret_265 -> Obj.obj __ret_265
+) in Obj.magic __fallback_result_277 with
+  | HxRuntime.Hx_return __ret_276 -> Obj.obj __ret_276
 
 let functionHasHelperTypedAsLocalInferenceEvidence = fun fn -> try let __fallback_result_6 = (
   ignore (if fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());

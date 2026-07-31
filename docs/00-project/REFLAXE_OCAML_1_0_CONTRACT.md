@@ -1,6 +1,6 @@
 # reflaxe.ocaml 1.0 Contract
 
-Last audited: 2026-07-23
+Last audited: 2026-07-27
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
@@ -11,11 +11,250 @@ target-lowering and six-month architecture reviews, it is necessary but not
 sufficient for a 1.0 release. The target must complete one validated semantic
 path for place/evaluation (`haxe_ocaml-9v1va`, completed), representation,
 storage, and capture (`haxe_ocaml-9bome`), calls and conversions
-(`haxe_ocaml-taef5`), structured control effects (`haxe_ocaml-w32h3`), and
-fail-closed runtime ownership (`haxe_ocaml-0uwin`). This aggregate must then
-open those results. Existing package, matrix, documentation, and performance
+(`haxe_ocaml-taef5`, completed for the represented ordinary-Haxe foundation),
+structured control effects (`haxe_ocaml-w32h3`), and fail-closed runtime
+ownership (`haxe_ocaml-0uwin`). This aggregate must then open those results.
+Target-native labelled calls, typed adapters, and native dependencies remain
+owned by `haxe_ocaml-v8a9b` and block only a release scope that claims those
+interop capabilities. Existing package, matrix, documentation, and performance
 receipts remain valid within their recorded scope; they are not revoked or
 silently reinterpreted.
+
+The first twelve bounded control-effect slices are now executable. An ordinary
+static Haxe function returning an exact `Int`, `Bool`, or represented `String`
+can leave early from a nested branch, block, loop, or `try` body without the
+OCaml generator reconstructing that behavior from target syntax. The
+represented String carrier also preserves the target's existing runtime null
+sentinel. Exact `Null<Int>` and `Null<Bool>` values can now leave early as
+well: the selected `Obj.t` carrier—one OCaml runtime value capable of
+distinguishing null, zero/false, and nonzero/true—is transported unchanged
+instead of being boxed a second time. The compiler records and validates the
+return target and exact input/output carrier before printing OCaml, and the
+generated function catches only its own return signal. An ordinary static
+`Void` function can likewise use `return;` from a nested branch, loop, `try`,
+or `catch`. Because that statement carries no Haxe value, the compiler records
+a payloadless function-exit decision and the runtime transports no invented
+`Obj.t` value.
+
+The third slice gives every ordinary `while` and `do ... while` loop a sealed
+target before OCaml syntax is built. Each `break` or `continue` names the exact
+innermost loop it affects, and an ordinary source `catch` rethrows the
+compiler-private loop signal instead of intercepting it. Loop admission is
+independent from return-carrier support, so the target is also sealed in
+`Void`, `Float`, and other functions whose early-return payload family remains
+unsupported. Stable record identities follow the final typed body's structural
+path because Haxe-generated nodes can legitimately share the same source
+position; source positions remain diagnostic evidence rather than a uniqueness
+key. Nested anonymous functions keep independent return and loop boundaries.
+
+The fourth slice moves exact `Int`, `Bool`, and represented `String` throws out
+of OCaml syntax construction. Before printing target code, the compiler now
+records the value carrier, the global Haxe exception channel, the runtime
+boxing conversion, and a value-sensitive tag policy. The policy matters for a
+nullable String: upstream Haxe 4.3.7 sends a null String to `Dynamic`, not
+`String`, while a non-null String still matches `String`. A throw may propagate
+across calls because its target is the global exception channel rather than a
+lexically nearby catch. If one function also throws an unsupported payload such
+as `Float`, that function publishes no throw decisions and remains wholly on
+the older path.
+
+The fifth slice fixes the order, type test, and bound value for complete catch
+chains containing exact `Int`, exact `Bool`, represented `String`, and a final
+`Dynamic` catch before OCaml syntax is built. For example, `catch (_:Int)`
+followed by `catch (value:Bool)` tests `Int` first, then binds the exact Bool
+value through its checked carrier; adding `catch (_:Dynamic)` last makes that
+clause the catch-all. A null String still bypasses `String` and reaches
+`Dynamic`, matching the upstream Haxe 4.3.7 oracle. Both compiler-owned Haxe
+throws and target-native OCaml exceptions enter the recorded source order, but
+an unmatched value leaves through its original exception channel. Private
+return, break, and continue signals bypass source catches.
+
+Admission is all-or-nothing for each `try`, not each function. A `try` with an
+unsupported `Float`, enum, `haxe.Exception`, or `haxe.ValueException` catch
+remains entirely on the older catch path, while a separate supported `try` in
+the same function can use the sealed path. The lowering and public inspection
+reports expose the admitted chains and reject corrupt order, tags, carriers,
+conversions, result handling, or revision ownership. Result handling says
+whether a branch's completed value is discarded because the typed `try` is
+`Void`, or preserved because the branch exits through return/throw; this keeps
+OCaml handler branches type-compatible without asking the printer to infer
+control flow. This does not yet claim that the older catch families are safe
+for 1.0.
+
+The sixth slice seals nested `return;` in ordinary static `Void` functions
+before OCaml syntax is built. The recorded decision names the exact function
+boundary and selects a private payloadless runtime signal. Source catches
+rethrow that signal, and the owning function alone turns it into `unit`, so a
+`return;` inside a `try` or `catch` cannot be mistaken for a source exception.
+A nested anonymous function retains its own return boundary rather than
+returning from the outer function. The lowering report and public inspection
+surface expose the proof, capability, revision, and absence of a payload, and
+reject a record that substitutes the value-return mechanism. This slice does
+not use an `Obj.t` payload, `Obj.magic`, or a target-printer guess to represent
+the missing value.
+
+The seventh slice preserves exact `Null<Int>` and `Null<Bool>` carriers across
+early returns. For example, in a function that returns `Null<Int>`, an early
+`return value;` now raises the private return signal with the existing
+`Obj.t` value, while a final direct `return 7;` performs its one required
+`Int`-to-`Null<Int>` conversion inside the same function boundary. The
+same boundary leaves an already-nullable final fallback unchanged. The
+function boundary returns an early carrier directly, without `Obj.obj`,
+`Obj.magic`, or another `Obj.repr`, so null and zero/false remain distinct.
+Source `catch` clauses rethrow the private signal before matching source
+exceptions. The lowering report and public inspection expose the exact
+nullable semantic type, carrier, representation, conversion, proof, and
+revision, and reject a record that substitutes exact-value boxing.
+
+The eighth slice adds the matching directional crossing for early exact
+`Int` and `Bool` values. For example, this now has one defined path:
+
+```haxe
+static function choose(stop:Bool, early:Int, fallback:Null<Int>):Null<Int> {
+	if (stop)
+		return early;
+	return fallback;
+}
+```
+
+Before OCaml syntax is written, the compiler records that `early` starts as an
+OCaml `int`, must become the function's `Null<Int>` `Obj.t` carrier, and must
+be boxed exactly once before the private return signal is raised. The function
+then catches that signal and returns the resulting `Obj.t` unchanged. The same
+rule covers `Bool` to `Null<Bool>`, including false, and can coexist with an
+already-nullable early return in the same function. An incompatible return,
+such as a `Dynamic` value mixed into that family, rejects the whole function
+before generated source or lowering evidence is published.
+
+The ninth slice lets one already-proven monomorphic class local leave early
+without falling back to `Obj.magic`. A **monomorphic class** in this slice is a
+closed, non-generic user class for which the complete program has selected one
+exact OCaml record layout. For example:
+
+```haxe
+static function choose(stop:Bool, earlyValue:Int, fallbackValue:Int):Counter {
+	final early = new Counter(earlyValue);
+	final fallback = new Counter(fallbackValue);
+	if (stop)
+		return early;
+	return fallback;
+}
+```
+
+Before OCaml syntax is written, the function-local plan proves that `early`
+already uses the registered `Counter` record. The control record then carries
+the same semantic type, target carrier, representation identity, layout
+revision, and representation proof into the function's private return signal.
+Generated OCaml uses `Obj.repr` once while control is in flight and `Obj.obj`
+once at the exact `Counter` boundary. The recovered value remains the same
+mutable object, so later field writes and aliases observe the same state.
+
+This does not admit every class-shaped value. Class parameters, call-produced
+locals, inheritance, interfaces, generics, extern classes, dynamic methods,
+and the Haxe null sentinel remain on the older path. In particular,
+`return null` from a class-valued function still needs a separate
+null-to-nominal conversion contract; the record-carrier proof does not invent
+that crossing. The lowering report and public inspector reject a control
+record whose nominal layout revision or representation proof disagrees with
+the program registry.
+
+The tenth slice seals exact nullable primitive throws before OCaml syntax.
+Upstream Haxe 4.3.7 distinguishes the value thrown, not merely its static
+nullable type: a non-null `Null<Int>` reaches `catch (value:Int)`, a non-null
+`Null<Bool>` reaches `catch (value:Bool)`, and null skips both concrete catches
+and reaches `Dynamic`. The same distinction survives a function call and
+rethrow.
+
+`Null<Int>` can use its existing `Obj.t` carrier unchanged because a non-null
+OCaml integer has an unambiguous runtime shape. `Null<Bool>` needs one explicit
+control-boundary normalization: OCaml represents ordinary nullable Bool
+storage with `Obj.repr`, where `true` can otherwise look like the integer `1`.
+The sealed throw decision therefore preserves null, but unboxes and reboxes a
+non-null Bool once into the runtime's existing unambiguous Bool exception
+carrier. The shared exception channel then derives the concrete tag from the
+actual payload. Generated syntax does not select catch compatibility, use
+`Obj.magic`, or create a second exception mechanism.
+
+The eleventh slice extends that same exception channel to one exact
+whole-program-monomorphic class. A **whole-program-monomorphic class** here is
+a concrete, non-extern, non-generic user class with no superclass, subclasses,
+interfaces, or dynamic methods, for which the compiler has selected one OCaml
+record layout. For example:
+
+```haxe
+final thrown = new Box(4);
+final alias = thrown;
+try {
+	throw thrown;
+} catch (_:Int) {
+	trace("wrong");
+} catch (caught:Box) {
+	caught.value++;
+	trace(caught == alias);
+}
+```
+
+Before target syntax is written, the throw record names the exact `Box`
+representation, layout revision, and representation proof. The payload crosses
+the shared exception channel opaquely as `Obj.t`; the matching `Box` catch first
+checks the runtime `Box` marker and then recovers the registered record type.
+The catch therefore receives the same mutable object rather than a copy, and a
+later rethrow preserves both the object identity and any field mutation.
+
+Only `Dynamic` is attached as a static throw tag. For a real record, the
+existing runtime derives `Box` from its `__hx_type` marker; for a class-typed
+null, there is no `Box` marker, so the value skips `catch (_:Box)` and reaches
+`Dynamic`, matching upstream Haxe 4.3.7. This avoids a stale type tag that could
+make null look like an instance. The lowering report and public inspector bind
+both throw and catch records to the same program-owned layout proof and reject
+a stale or conflicting revision.
+
+This is deliberately not general class-exception support. Inheritance,
+interfaces, generics, extern classes, dynamic methods, `haxe.Exception`,
+`haxe.ValueException`, enums, abstracts, nullable catch declarations, and
+class values that lack an exact representation proof remain unadmitted. The
+slice proves only the exception crossing and recovery boundary; it does not
+claim that every operation on a class value is already free of older target
+fallbacks.
+
+The twelfth slice seals a throw whose static Haxe type is `Dynamic`. The
+practical change is that this function no longer asks the OCaml syntax builder
+how to box or classify `value`:
+
+```haxe
+static function fail(value:Dynamic):Void {
+	throw value;
+}
+```
+
+`Dynamic` already uses `Obj.t` in the target: one opaque OCaml carrier that can
+hold the runtime value without choosing its source type again. The control plan
+now records that exact carrier under the control-only identity
+`control-representation:Dynamic:runtime-obj-v1` and selects
+`preserve-dynamic-throw-carrier`. Generated syntax transports the carrier
+unchanged. It neither applies `Obj.repr` a second time nor invents an exact tag
+from the static `Dynamic` annotation.
+
+Only `Dynamic` is attached as a static tag. The existing exception channel
+examines the value already in the carrier: an integer reaches an `Int` catch, a
+Bool reaches `Bool`, a non-null String reaches `String`, and an admitted
+monomorphic-class record contributes its runtime class marker. Null contributes
+no more specific tag and therefore reaches only the final `Dynamic` catch. A
+`Dynamic` catch preserves the same carrier, so rethrowing that variable keeps
+the runtime value and lets an outer exact catch classify it the same way.
+
+This is exception-transport support, not a general `Dynamic` representation
+claim. Dynamic fields, storage, calls, operators, reflection, public ABI, and
+metal-profile admission keep their existing owners. The slice also does not
+define `haxe.Exception` or `haxe.ValueException` wrapping, class-hierarchy
+matching, enum/abstract payloads, Float payloads, or nested-function plan
+ownership.
+
+This is evidence for `haxe_ocaml-w32h3.1` through
+`haxe_ocaml-w32h3.12`, not closure of the parent control-effects requirement.
+Additional value-return payloads, other primitive-to-nullable and nullable
+return carriers, wider nominal/exception families, cleanup effects, and the
+complete runtime-requirement ledger remain unfinished.
 
 Accepted architecture checkpoint:
 
@@ -156,11 +395,39 @@ Required semantic-safety prerequisites before release authorization:
 - representation, local storage, closure capture, nullability, boxing, and
   boundary carriers come from one immutable registry rather than independent
   compiler and builder guesses (`haxe_ocaml-9bome`);
-- resolved calls, labels, optional arguments, callbacks, coercions, and
-  conversions use one typed call contract (`haxe_ocaml-taef5`);
+- represented ordinary non-extern calls, optional arguments, callbacks,
+  receivers, constructors, coercions, and conversions use one typed call
+  contract before OCaml syntax (`haxe_ocaml-taef5`, completed foundation);
+- target-native labels, imported OCaml call shapes, typed adapters, and native
+  package dependencies use that foundation only when the declared release scope
+  admits them (`haxe_ocaml-v8a9b`);
 - returns, throws, catches, loops, and other admitted non-local control behavior
   are explicit before target syntax and fail when the declared OCaml target
-  model cannot represent them (`haxe_ocaml-w32h3`);
+  model cannot represent them (`haxe_ocaml-w32h3`); its first eleven slices cover
+  exact-`Int`, exact-`Bool`, represented-`String`, and the first
+  constructor-produced monomorphic-class local early returns from
+  ordinary static functions, including the existing String runtime null
+  sentinel; carrier-preserving early returns of exact `Null<Int>` and
+  `Null<Bool>` values; and payloadless early return from ordinary static
+  `Void` functions without inventing a value. A direct final or nested early
+  exact `Int` or `Bool` may cross once into its matching nullable carrier
+  inside that function boundary; an already-nullable early value remains
+  unchanged. The monomorphic-class slice binds the private crossing to the
+  exact program-owned record layout and representation proof, while class
+  parameters, call-produced locals, and null-to-nominal conversion remain
+  deliberately unadmitted. The slices also cover exact lexical targets for `break` and
+  `continue` in ordinary `while` and `do ... while` loops, and
+  exact-`Int`/`Bool`/represented-`String` payloads entering the global Haxe
+  exception channel with upstream-compatible runtime-value tags. Complete
+  source-ordered catch chains over those exact primitive types, one exact
+  whole-program-monomorphic class, and a final `Dynamic` catch are also sealed,
+  including the separate target-native exception channel and private-control
+  bypass. A nominal payload carries the program registry's exact layout proof,
+  preserves object identity and mutation through rethrow, and derives its
+  class tag only from a real runtime record so null still reaches `Dynamic`.
+  Wider class hierarchies, `haxe.Exception`, `haxe.ValueException`, enums,
+  abstracts, the remaining value/nullable return conversions, unsupported
+  catches, and cleanup families are still release blockers;
 - runtime requests fail for unknown, missing, stale, modified, or
   profile-illegal sources, and admitted selective requirements have a semantic
   reason plus checked closure (`haxe_ocaml-0uwin`);

@@ -36,8 +36,10 @@ Options:
   --kill-repo-server         Stop only the repo-owned haxe --wait server before emit.
   --kill-all-haxe-servers    Stop all local haxe --wait/--server-connect processes before emit (unsafe).
   --kill-stale-haxe-servers  Deprecated alias for --kill-all-haxe-servers.
-  --use-repo-server          Diagnostic only: blocked until warm Reflaxe target state is complete.
-  --keep-repo-server         Diagnostic only: keep server alive (implies --use-repo-server).
+  --use-repo-server          Reuse the repository-owned upstream Haxe server.
+                             Complete warm target reconstruction is supported;
+                             compiler-scale benefit is measured separately.
+  --keep-repo-server         Keep the owned server alive (implies --use-repo-server).
   --skip-if-unchanged        Skip stage0 emit when fingerprint matches previous successful regen.
   --force                    Ignore fingerprint match and force stage0 emit.
   --profile                  Enable stage0 `--times` and per-filter timing (`-D filter-times`).
@@ -82,8 +84,6 @@ Environment knobs (all optional):
   HXHX_KILL_REPO_HAXE_SERVER=1      Kill only repo-owned haxe server in preflight.
   HXHX_BOOTSTRAP_USE_REPO_SERVER=1  Use repo-owned haxe --wait server.
   HXHX_BOOTSTRAP_KEEP_REPO_SERVER=1 Keep repo-owned server alive after run.
-  HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1
-                                    Maintainer-only override for lifecycle tests; output is not release evidence.
   HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED=1  Enable fingerprint skip.
   HXHX_BOOTSTRAP_FORCE=1            Force emit even when fingerprint matches.
   HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
@@ -204,7 +204,6 @@ HXHX_KILL_REPO_HAXE_SERVER="${HXHX_KILL_REPO_HAXE_SERVER:-0}"
 HXHX_STAGE0_DIAG_EVERY="${HXHX_STAGE0_DIAG_EVERY:-0}"
 HXHX_BOOTSTRAP_USE_REPO_SERVER="${HXHX_BOOTSTRAP_USE_REPO_SERVER:-0}"
 HXHX_BOOTSTRAP_KEEP_REPO_SERVER="${HXHX_BOOTSTRAP_KEEP_REPO_SERVER:-0}"
-HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE="${HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE:-0}"
 HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED="${HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED:-0}"
 HXHX_BOOTSTRAP_FORCE="${HXHX_BOOTSTRAP_FORCE:-0}"
 HXHX_BOOTSTRAP_PROFILE="${HXHX_BOOTSTRAP_PROFILE:-0}"
@@ -391,7 +390,6 @@ assert_bool_01 "HXHX_KILL_STALE_HAXE_SERVERS" "$HXHX_KILL_STALE_HAXE_SERVERS"
 assert_bool_01 "HXHX_KILL_REPO_HAXE_SERVER" "$HXHX_KILL_REPO_HAXE_SERVER"
 assert_bool_01 "HXHX_BOOTSTRAP_USE_REPO_SERVER" "$HXHX_BOOTSTRAP_USE_REPO_SERVER"
 assert_bool_01 "HXHX_BOOTSTRAP_KEEP_REPO_SERVER" "$HXHX_BOOTSTRAP_KEEP_REPO_SERVER"
-assert_bool_01 "HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE"
 assert_bool_01 "HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED"
 assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
@@ -1282,19 +1280,6 @@ if [ "$HXHX_STAGE0_SELECTION_ONLY" = "1" ]; then
 	fi
 	echo "OK: stage0 haxe selection resolved"
 	exit 0
-fi
-
-if { [ -n "$resolved_haxe_connect" ] || [ "$HXHX_BOOTSTRAP_USE_REPO_SERVER" = "1" ]; } \
-	&& [ "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" != "1" ]; then
-	echo "Bootstrap regeneration through a warm Reflaxe compilation server is temporarily disabled for correctness." >&2
-	echo "A measured unchanged warm request reused Haxe typing work but lost complete target module/runtime ownership." >&2
-	echo "Run without --use-repo-server/HAXE_CONNECT until haxe_ocaml-850ii.33 is resolved." >&2
-	echo "Maintainer-only lifecycle tests may set HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1; their output is not release evidence." >&2
-	exit 2
-fi
-if { [ -n "$resolved_haxe_connect" ] || [ "$HXHX_BOOTSTRAP_USE_REPO_SERVER" = "1" ]; } \
-	&& [ "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" = "1" ]; then
-	echo "== Reflaxe server reuse: diagnostic-only incomplete-state experiment"
 fi
 
 total_start="$(now_ts)"

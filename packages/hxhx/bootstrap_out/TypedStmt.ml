@@ -132,7 +132,7 @@ let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchN
                       (Obj.magic self : t).localBindings <- __assign_34;
                       __assign_34
                     ));
-                    if tag2 = Try && (HxArray.length ((Obj.magic self : t).statements) <> HxInt.add (HxArray.length ((Obj.magic self : t).catchNames)) 1 || HxArray.length ((Obj.magic self : t).catchNames) <> HxArray.length ((Obj.magic self : t).catchTypeHints)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed try statement has inconsistent catch payloads") ["Dynamic"; "String"]) else ()
+                    if tag2 = Try && (HxArray.length ((Obj.magic self : t).statements) <> HxInt.add (HxArray.length ((Obj.magic self : t).catchNames)) 1 || HxArray.length ((Obj.magic self : t).catchNames) <> HxArray.length ((Obj.magic self : t).catchTypeHints)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed try statement has inconsistent catch payloads") ["Dynamic"]) else ()
                   )
                 )
               )

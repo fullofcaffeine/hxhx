@@ -19,6 +19,7 @@ exception Hx_exception of Obj.t * string list
 exception Hx_break
 exception Hx_continue
 exception Hx_return of Obj.t
+exception Hx_return_void
 
 (* Sentinel used to represent Haxe `null` across otherwise non-nullable OCaml types.
    Must be a heap block (not an immediate like `()`) so it doesn't collide with
@@ -150,7 +151,7 @@ let nullable_bool_toStdString (v : Obj.t) : string =
 
 let nullable_int_unwrap (v : Obj.t) : int =
   if is_null v then
-    failwith "Null<Int> unwrap"
+    raise (Hx_exception (Obj.repr "Null Access", [ "String"; "Dynamic" ]))
   else
     Obj.obj v
 
@@ -165,33 +166,6 @@ let nullable_bool_unwrap (v : Obj.t) : bool =
     failwith "Null<Bool> unwrap"
   else
     unbox_bool_or_obj v
-
-(* Best-effort `Std.string` for values stored as `Obj.t`.
-
-   This is primarily used when Haxe code concatenates `Dynamic` values into strings
-   (including values extracted from anonymous structures via `Reflect.field` or
-   `obj.field` on Dynamic).
-
-   Limitations:
-   - `bool` and `int` are both immediates in OCaml, so we treat all immediates as `int`.
-     Typed (non-Dynamic) booleans are still printed correctly via `string_of_bool` in codegen. *)
-let dynamic_toStdString (v : Obj.t) : string =
-  if is_null v then
-    "null"
-  else if is_boxed_bool v then
-    string_of_bool (unbox_bool_or_obj v)
-  else if Obj.is_int v then
-    string_of_int (Obj.obj v)
-  else
-    let tag = Obj.tag v in
-    if tag = Obj.string_tag then
-      let hx_null_string : string = Obj.magic hx_null in
-      let s : string = Obj.obj v in
-      if s == hx_null_string then "null" else s
-    else if tag = Obj.double_tag then
-      string_of_float (Obj.obj v)
-    else
-      "<object>"
 
 let tags_has (tags : string list) (tag : string) : bool =
   Stdlib.List.exists (fun t -> t = tag) tags
@@ -208,4 +182,5 @@ let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
   | Hx_break -> raise Hx_break
   | Hx_continue -> raise Hx_continue
   | Hx_return v -> raise (Hx_return v)
+  | Hx_return_void -> raise Hx_return_void
   | exn -> handler (Obj.repr exn)

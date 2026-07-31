@@ -8,9 +8,39 @@ import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 #if (macro || reflaxe_runtime || eval)
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+#if macro
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+#end
+import reflaxe.ocaml.lowered.OcamlBytesMutationModel.OcamlBytesMutationDecision;
+import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
+import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
+import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 #end
+
+/**
+	Records how one Haxe enum constructor is represented by native OCaml.
+
+	Haxe assigns one index in declaration order. OCaml instead assigns separate
+	numeric sequences to constructors without payloads and constructors with
+	payloads. Generated runtime metadata keeps both numbers so reflection can
+	report Haxe behavior without treating an OCaml tag as a Haxe index.
+**/
+typedef OcamlEnumConstructorLayout = {
+	final name:String;
+	final haxeIndex:Int;
+	final carriesPayload:Bool;
+	final ocamlTag:Int;
+}
 
 /**
  * Per-compilation, instance-based state for reflaxe.ocaml.
@@ -127,13 +157,15 @@ class CompilationContext {
 	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
 
 	/**
-	 * Enum constructor names by enum full name (`pack.Enum`).
+	 * Haxe constructor order and native OCaml representation by enum full name.
 	 *
-	 * Why
-	 * - `Type.getEnumConstructs(E)` returns the list of constructor identifiers for `E`.
-	 * - OCaml variants do not carry reflection metadata; we must generate it at compile time.
+	 * Dynamic-backed `Type.getEnumConstructs`, `Type.enumConstructor`,
+	 * `Type.enumIndex`, and `Type.createEnumIndex` consume this generated
+	 * layout. Direct typed calls compile from the same `EnumField.index` values.
+	 * Keeping both paths rooted in that typed declaration order prevents drift
+	 * when payload and constant constructors are interleaved.
 	 */
-	public final enumConstructsByFullName:Map<String, Array<String>> = [];
+	public final enumConstructorLayoutsByFullName:Map<String, Array<OcamlEnumConstructorLayout>> = [];
 
 	/**
 	 * Defining module id for each compiled enum full name (`pack.Enum` → `pack.Module`).
@@ -320,6 +352,18 @@ class CompilationContext {
 	public final classModuleIdByFullName:Map<String, String> = [];
 
 	/**
+	 * Generated zero-argument class `toString` adapters available to Dynamic.
+	 *
+	 * The final type registry uses this exact emitted method identity to register
+	 * runtime dispatch. `HxDynamic` never guesses record layouts or method names.
+	 */
+	public final dynamicStringifierByFullName:Map<String, {
+		moduleId:String,
+		sourceTypeName:String,
+		targetMethodName:String
+	}> = [];
+
+	/**
 	 * For each compiled class full name, the full set of runtime "type tags" that should
 	 * be considered a match for typed catches.
 	 *
@@ -433,6 +477,84 @@ class CompilationContext {
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
 		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
+	}
+
+	#if macro
+	/** Records runtime support selected by one sealed standard `IMap` call. */
+	public function recordStandardIMapRuntimeRequirements(call:OcamlCallDecision):Void {
+		if (call.standardIMapTarget == null)
+			throw 'Standard IMap call "${call.id}" has no sealed runtime target.';
+		runtimeRequirements.recordStandardIMapCall(call.id, call.source, call.profileEligibility, call.standardIMapTarget);
+	}
+	#end
+
+	/** Records runtime support selected by one sealed non-null Bytes producer. **/
+	public function recordBytesProducerRuntimeRequirements(decision:OcamlBytesProducerDecision):Void {
+		OcamlBytesRuntimeRequirementRecorder.recordProducer(runtimeRequirements, decision);
+	}
+
+	/** Records runtime support selected by one sealed Bytes mutation. **/
+	public function recordBytesMutationRuntimeRequirements(decision:OcamlBytesMutationDecision):Void {
+		OcamlBytesRuntimeRequirementRecorder.recordMutation(runtimeRequirements, decision);
+	}
+
+	/** Records runtime support selected by one sealed Bytes access. **/
+	public function recordBytesAccessRuntimeRequirements(decision:OcamlBytesAccessDecision):Void {
+		OcamlBytesRuntimeRequirementRecorder.recordAccess(runtimeRequirements, decision);
+	}
+
+	/** Records runtime support selected by one sealed read-only Bytes operation. **/
+	public function recordBytesReadRuntimeRequirements(decision:OcamlBytesReadDecision):Void {
+		OcamlBytesRuntimeRequirementRecorder.recordRead(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed anonymous-object operation needs `HxAnon`.
+
+		The operation was already selected from the final typed function. This
+		method only transfers that decision into the request's runtime inventory;
+		it does not infer a dependency from generated OCaml text.
+	**/
+	public function recordAnonymousStructureRuntimeRequirement(decision:OcamlAnonymousStructureOperationDecision):Void {
+		OcamlAnonymousStructureRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed enum-to-`Dynamic` initializer needs `HxEnum`.
+
+		The conversion already names the exact source expression and enum carrier.
+		This method transfers that answer to the request's runtime inventory; it
+		does not rediscover the dependency from generated OCaml.
+	**/
+	public function recordEnumDynamicLocalRuntimeRequirement(decision:OcamlLocalConversionDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one sealed enum array element needs `HxEnum`.
+
+		The container plan already owns the exact array slot, enum identity, and
+		boxing operation. Packaging receives that typed reason without inspecting
+		the generated `HxArray.push` expression.
+	**/
+	public function recordEnumDynamicContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.recordContainerElement(runtimeRequirements, decision);
+	}
+
+	/**
+		Records why one directly thrown enum constructor needs `HxEnum`.
+
+		The control plan has already fixed the source occurrence, enum name,
+		carrier, boxing operation, and runtime tags. This request-local handoff
+		makes packaging follow that decision instead of scanning printed OCaml.
+	**/
+	public function recordEnumThrowRuntimeRequirement(decision:OcamlControlDecision):Void {
+		OcamlEnumRuntimeRequirementRecorder.recordThrow(runtimeRequirements, decision);
+	}
+
+	/** Records runtime support selected by one sealed program representation. **/
+	public function recordRepresentationRuntimeRequirements(decision:OcamlRepresentationDecision):Void {
+		runtimeRequirements.recordRepresentationDecision(decision);
 	}
 
 	/** Records one runtime helper required by compiler-generated output or policy. **/

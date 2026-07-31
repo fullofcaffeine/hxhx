@@ -608,11 +608,15 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Autocreated `.tmp/hxhx-bootstrap-build.*` workdirs are pruned on later runs; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` or disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.
-  - Stage0 source lane server reuse (used when `HXHX_FORCE_STAGE0=1`) is
-    temporarily blocked for correctness. Both explicit `HAXE_CONNECT=<port>`
-    and helper-managed `HXHX_STAGE0_USE_REPO_SERVER=1` fail before generation.
-    The internal `HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1` override is only
-    for lifecycle fixtures and does not produce release evidence.
+  - Stage0 source lane server reuse is an explicit supported option when
+    `HXHX_FORCE_STAGE0=1`: set `HAXE_CONNECT=<port>` for a user-owned local
+    Haxe 4.3.7 server, or set `HXHX_STAGE0_USE_REPO_SERVER=1` for the
+    repository-owned helper. Omit both for the fresh-process default and clean
+    comparison.
+  - `npm run test:reflaxe-ocaml:complete-program-server` compares complete
+    generated trees and executable behavior across the real clean/warm edit
+    matrix. `npm run test:hxhx:reflaxe-server-routing` separately checks that
+    the stage0 build forwards the explicit endpoint without a hidden override.
   - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).
   - Dune worker knob: `HXHX_DUNE_JOBS=auto|<N>` (defaults to `auto`; set `HXHX_DUNE_JOBS=4` for a fixed worker cap when tuning memory/throughput).
 - **Stage2**: stage1 builds stage2; compare behavior/codegen stability.

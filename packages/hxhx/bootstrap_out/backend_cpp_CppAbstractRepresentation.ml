@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable ownerCppName : string; mutable carrierCppType : string }
 
-let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = ""; carrierCppType = "" } : t) in (
+let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (ownerCppName2 : string) in (
       (Obj.magic self : t).ownerCppName <- __assign_1;
@@ -20,18 +20,18 @@ let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxTy
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = ""; carrierCppType = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t)
 
-let getOwnerCppName = fun self () -> (Obj.magic self : t).ownerCppName
+let getOwnerCppName = fun self () -> ((self : t).ownerCppName : string)
 
-let getCarrierCppType = fun self () -> (Obj.magic self : t).carrierCppType
+let getCarrierCppType = fun self () -> ((self : t).carrierCppType : string)
 
 let usesDirectUnderlyingCarrier = fun self () -> (
   ignore self;
-  true
+  (true : bool)
 )
 
-let helperReceiverParameter = fun self () -> (HxString.toStdString ((Obj.magic self : t).carrierCppType) ^ " ") ^ "__hxhx_abstract_this"
+let helperReceiverParameter = fun self () -> ((HxString.toStdString ((self : t).carrierCppType) ^ " ") ^ "__hxhx_abstract_this" : string)
 
 let instanceHelperCall = fun self (methodName : string) (renderedReceiver : string) (renderedArguments : string HxArray.t) -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if renderedArguments == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
@@ -44,7 +44,7 @@ let instanceHelperCall = fun self (methodName : string) (renderedReceiver : stri
   let arguments = Obj.magic (HxArray.concat (let __arr_6 = HxArray.create () in (
     ignore (HxArray.push __arr_6 renderedReceiver);
     __arr_6
-  )) (!tempArray)) in ((((HxString.toStdString ((Obj.magic self : t).ownerCppName) ^ "::") ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (HxArray.join arguments ", " (fun x -> x))) ^ ")"
+  )) (!tempArray)) in ((((HxString.toStdString ((self : t).ownerCppName) ^ "::") ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (HxArray.join arguments ", " (fun x -> x))) ^ ")"
 )
 
 let forPrimitiveClass = fun cls classLookup services -> try let __fallback_result_10 = (
@@ -63,7 +63,7 @@ let forPrimitiveClass = fun cls classLookup services -> try let __fallback_resul
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
 let classBackedCastExpression = fun inner typeHint scope services -> try let __fallback_result_12 = (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || typeHint == Obj.magic (HxRuntime.hx_null) || HxString.length typeHint = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || typeHint == HxString.hx_null_string || HxString.length typeHint = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let lookup = Obj.obj (HxAnon.get services "lookupForScope") scope in let cls = Obj.magic (Obj.obj (HxAnon.get services "lookupClassForTypeHint") (typeHint : string) scope lookup) in (
     ignore (if cls == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get services "abstractUnderlying") (Obj.magic cls) == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get services "primitiveUnderlying") (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     Obj.obj (HxAnon.get services "wrapUnderlying") (Obj.magic cls) (Obj.obj (HxAnon.get services "renderExpression") (Obj.magic inner) scope : string) scope
@@ -72,7 +72,7 @@ let classBackedCastExpression = fun inner typeHint scope services -> try let __f
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let classBackedCastForExpectedType = fun expr expectedType scope services -> try let __fallback_result_19 = (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || expectedType == Obj.magic (HxRuntime.hx_null) || HxString.length expectedType = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || expectedType == HxString.hx_null_string || HxString.length expectedType = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if (match expr with
       | HxExpr.ENull -> 0
@@ -129,8 +129,8 @@ let classBackedCastForExpectedType = fun expr expectedType scope services -> try
 ) in Obj.magic __fallback_result_19 with
   | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let wrapClassBackedValue = fun className underlyingClass valueExpression -> try let __fallback_result_21 = (
-  ignore (if HxString.length underlyingClass = 0 then raise (HxRuntime.Hx_return (Obj.repr (valueExpression : string))) else ());
+let wrapClassBackedValue = fun (className : string) (underlyingClass : string) (valueExpression : string) -> (try (
+  ignore (if HxString.length underlyingClass = 0 then raise (HxRuntime.Hx_return (Obj.repr valueExpression)) else ());
   ((("std::make_shared<" ^ HxString.toStdString className) ^ ">(") ^ HxString.toStdString valueExpression) ^ ")"
-) in Obj.magic __fallback_result_21 with
-  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
+) with
+  | HxRuntime.Hx_return __ret_20 -> (Obj.obj __ret_20 : string) : string)

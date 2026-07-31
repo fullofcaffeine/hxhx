@@ -6,27 +6,27 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable canonicalName : string }
 
-let create = fun canonicalName2 -> let self = ({ __hx_type = HxType.class_ "TyNominalTypeId"; canonicalName = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if canonicalName2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun canonicalName2 -> let self = ({ __hx_type = HxType.class_ "TyNominalTypeId"; canonicalName = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if canonicalName2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = (StringTools.trim (canonicalName2 : string) : string) in (
+    ) else let __assign_2 = let __call_arg_0_3 = canonicalName2 in StringTools.trim __call_arg_0_3 in (
       tempRight := __assign_2;
       __assign_2
     ));
-    let __assign_3 = (!tempRight : string) in (
-      (Obj.magic self : t).canonicalName <- __assign_3;
-      __assign_3
+    let __assign_4 = (!tempRight : string) in (
+      (Obj.magic self : t).canonicalName <- __assign_4;
+      __assign_4
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNominalTypeId"; canonicalName = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNominalTypeId"; canonicalName = HxString.hx_null_string } : t)
 
-let getCanonicalName = fun self () -> (Obj.magic self : t).canonicalName
+let getCanonicalName = fun self () -> ((self : t).canonicalName : string)
 
-let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((Obj.magic self : t).canonicalName) (getCanonicalName (Obj.magic other) ())
+let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((self : t).canonicalName) (getCanonicalName (Obj.magic other) ())
 
-let toString = fun self () -> (Obj.magic self : t).canonicalName
+let toString = fun self () -> ((self : t).canonicalName : string)

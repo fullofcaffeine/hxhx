@@ -17,6 +17,6 @@ let emit = fun _program _context -> (
   ignore _program;
   (
     ignore _context;
-    let detail = ("HashLink output is binary .hl bytecode, so this target must implement a real bytecode writer/runtime contract " ^ "rather than a source-only placeholder." : string) in HxType.hx_throw_typed_rtti (Obj.repr ("HashLink native backend reached Stage3 dispatch, but hxhx does not yet have a HashLink bytecode emitter. " ^ HxString.toStdString detail)) ["Dynamic"; "String"]
+    let detail = "HashLink output is binary .hl bytecode, so this target must implement a real bytecode writer/runtime contract " ^ "rather than a source-only placeholder." in HxType.hx_throw_typed_rtti (Obj.repr ("HashLink native backend reached Stage3 dispatch, but hxhx does not yet have a HashLink bytecode emitter. " ^ HxString.toStdString detail)) ["Dynamic"]
   )
 )

@@ -18,140 +18,140 @@ let coreId__impl = fun (self : t) () -> (
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;
-  let profile = (Backend_BackendContext.ensureOcamlProfileDefine (Obj.magic context) () : string) in let tempBool = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-    ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_1 = false in (
+  let profile = (Backend_BackendContext.ensureOcamlProfileDefine (Obj.magic context) () : string) in let tempBool = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+    ignore (if raw == HxString.hx_null_string then let __assign_1 = false in (
       tempBool := __assign_1;
       __assign_1
-    ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_2 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-      tempBool := __assign_2;
-      __assign_2
+    ) else let s = (HxString.toLowerCase (let __call_arg_0_2 = raw in StringTools.trim __call_arg_0_2) () : string) in let __assign_3 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+      tempBool := __assign_3;
+      __assign_3
     ));
-    ignore (if !tempBool then ignore (print_endline "stage3_driver=ocaml_target_core_before_require_program") else ());
+    ignore (if !tempBool then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_require_program" in HxSys.printlnValue value) else ());
     ignore (MacroExpandedProgram.assertTypedBodyRevisionsCurrent (Obj.magic program) ());
-    let tempBool1 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-      ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_3 = false in (
-        tempBool1 := __assign_3;
-        __assign_3
-      ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_4 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+    let tempBool1 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+      ignore (if raw == HxString.hx_null_string then let __assign_4 = false in (
         tempBool1 := __assign_4;
         __assign_4
+      ) else let s = (HxString.toLowerCase (let __call_arg_0_5 = raw in StringTools.trim __call_arg_0_5) () : string) in let __assign_6 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+        tempBool1 := __assign_6;
+        __assign_6
       ));
-      ignore (if !tempBool1 then ignore (print_endline "stage3_driver=ocaml_target_core_after_require_program") else ());
-      ignore (if HxString.equals profile "metal" then ignore (let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_5 = false in (
-          tempBool2 := __assign_5;
-          __assign_5
-        ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_6 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-          tempBool2 := __assign_6;
-          __assign_6
-        ));
-        ignore (if !tempBool2 then ignore (print_endline "stage3_driver=ocaml_target_core_before_metal_verify") else ());
-        ignore (Backend_ocaml_MetalProfileVerifier.verifyProgram (Obj.magic program));
-        let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_7 = false in (
-            tempBool3 := __assign_7;
-            __assign_7
-          ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_8 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-            tempBool3 := __assign_8;
-            __assign_8
-          ));
-          if !tempBool3 then ignore (print_endline "stage3_driver=ocaml_target_core_after_metal_verify") else ()
-        )
-      )) else ());
-      let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_9 = false in (
-          tempBool4 := __assign_9;
+      ignore (if !tempBool1 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_require_program" in HxSys.printlnValue value) else ());
+      ignore (if HxString.equals profile "metal" then ignore (let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+        ignore (if raw == HxString.hx_null_string then let __assign_7 = false in (
+          tempBool2 := __assign_7;
+          __assign_7
+        ) else let s = (HxString.toLowerCase (let __call_arg_0_8 = raw in StringTools.trim __call_arg_0_8) () : string) in let __assign_9 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+          tempBool2 := __assign_9;
           __assign_9
-        ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_10 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-          tempBool4 := __assign_10;
-          __assign_10
         ));
-        ignore (if !tempBool4 then ignore (print_endline "stage3_driver=ocaml_target_core_before_plan") else ());
-        let portableMetalizationPlan = Obj.magic (Backend_ocaml_PortableMetalizationPlanner.buildPlan (Obj.magic program) (profile : string)) in let tempBool5 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_11 = false in (
-            tempBool5 := __assign_11;
-            __assign_11
-          ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_12 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-            tempBool5 := __assign_12;
+        ignore (if !tempBool2 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_metal_verify" in HxSys.printlnValue value) else ());
+        ignore (Backend_ocaml_MetalProfileVerifier.verifyProgram (Obj.magic program));
+        let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+          ignore (if raw == HxString.hx_null_string then let __assign_10 = false in (
+            tempBool3 := __assign_10;
+            __assign_10
+          ) else let s = (HxString.toLowerCase (let __call_arg_0_11 = raw in StringTools.trim __call_arg_0_11) () : string) in let __assign_12 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+            tempBool3 := __assign_12;
             __assign_12
           ));
-          ignore (if !tempBool5 then ignore (print_endline "stage3_driver=ocaml_target_core_after_plan") else ());
-          let tempBool6 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-            ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_13 = false in (
-              tempBool6 := __assign_13;
-              __assign_13
-            ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_14 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-              tempBool6 := __assign_14;
-              __assign_14
+          if !tempBool3 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_metal_verify" in HxSys.printlnValue value) else ()
+        )
+      )) else ());
+      let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+        ignore (if raw == HxString.hx_null_string then let __assign_13 = false in (
+          tempBool4 := __assign_13;
+          __assign_13
+        ) else let s = (HxString.toLowerCase (let __call_arg_0_14 = raw in StringTools.trim __call_arg_0_14) () : string) in let __assign_15 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+          tempBool4 := __assign_15;
+          __assign_15
+        ));
+        ignore (if !tempBool4 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_plan" in HxSys.printlnValue value) else ());
+        let portableMetalizationPlan = Obj.magic (Backend_ocaml_PortableMetalizationPlanner.buildPlan (Obj.magic program) (profile : string)) in let tempBool5 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+          ignore (if raw == HxString.hx_null_string then let __assign_16 = false in (
+            tempBool5 := __assign_16;
+            __assign_16
+          ) else let s = (HxString.toLowerCase (let __call_arg_0_17 = raw in StringTools.trim __call_arg_0_17) () : string) in let __assign_18 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+            tempBool5 := __assign_18;
+            __assign_18
+          ));
+          ignore (if !tempBool5 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_plan" in HxSys.printlnValue value) else ());
+          let tempBool6 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+            ignore (if raw == HxString.hx_null_string then let __assign_19 = false in (
+              tempBool6 := __assign_19;
+              __assign_19
+            ) else let s = (HxString.toLowerCase (let __call_arg_0_20 = raw in StringTools.trim __call_arg_0_20) () : string) in let __assign_21 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+              tempBool6 := __assign_21;
+              __assign_21
             ));
-            ignore (if !tempBool6 then ignore (print_endline "stage3_driver=ocaml_target_core_before_emitter") else ());
-            let planScope = Obj.magic (EmitterStage.installPortableMetalizationPlan (Obj.magic portableMetalizationPlan)) in let tempString = ref ("" : string) in (
-              ignore (try let tempBool7 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_15 = false in (
-                  tempBool7 := __assign_15;
-                  __assign_15
-                ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_16 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                  tempBool7 := __assign_16;
-                  __assign_16
+            ignore (if !tempBool6 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_emitter" in HxSys.printlnValue value) else ());
+            let planScope = Obj.magic (EmitterStage.installPortableMetalizationPlan (Obj.magic portableMetalizationPlan)) in let tempString = ref (HxString.hx_null_string : string) in (
+              ignore (try let tempBool7 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                ignore (if raw == HxString.hx_null_string then let __assign_26 = false in (
+                  tempBool7 := __assign_26;
+                  __assign_26
+                ) else let s = (HxString.toLowerCase (let __call_arg_0_27 = raw in StringTools.trim __call_arg_0_27) () : string) in let __assign_28 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                  tempBool7 := __assign_28;
+                  __assign_28
                 ));
-                ignore (if !tempBool7 then ignore (print_endline "stage3_driver=ocaml_target_core_before_emitToDir_direct") else ());
-                let emitTypedProgram = Obj.magic program in let tempBool8 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_17 = false in (
-                    tempBool8 := __assign_17;
-                    __assign_17
-                  ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_18 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                    tempBool8 := __assign_18;
-                    __assign_18
+                ignore (if !tempBool7 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_emitToDir_direct" in HxSys.printlnValue value) else ());
+                let emitTypedProgram = Obj.magic program in let tempBool8 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                  ignore (if raw == HxString.hx_null_string then let __assign_29 = false in (
+                    tempBool8 := __assign_29;
+                    __assign_29
+                  ) else let s = (HxString.toLowerCase (let __call_arg_0_30 = raw in StringTools.trim __call_arg_0_30) () : string) in let __assign_31 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                    tempBool8 := __assign_31;
+                    __assign_31
                   ));
-                  ignore (if !tempBool8 then ignore (print_endline ("stage3_driver=ocaml_target_core_after_emit_arg_typedProgram modules=" ^ string_of_int (HxArray.length (MacroExpandedProgram.getTypedModules (Obj.magic emitTypedProgram) ())))) else ());
-                  let emitOutDir = ((Obj.magic context : Backend_BackendContext.t).outputDir : string) in let tempBool9 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                    ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_19 = false in (
-                      tempBool9 := __assign_19;
-                      __assign_19
-                    ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_20 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                      tempBool9 := __assign_20;
-                      __assign_20
+                  ignore (if !tempBool8 then ignore (let v = Obj.repr ("stage3_driver=ocaml_target_core_after_emit_arg_typedProgram modules=" ^ string_of_int (HxArray.length (MacroExpandedProgram.getTypedModules (Obj.magic emitTypedProgram) ()))) in let value = v in HxSys.printlnValue value) else ());
+                  let emitOutDir = ((Obj.magic context : Backend_BackendContext.t).outputDir : string) in let tempBool9 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                    ignore (if raw == HxString.hx_null_string then let __assign_32 = false in (
+                      tempBool9 := __assign_32;
+                      __assign_32
+                    ) else let s = (HxString.toLowerCase (let __call_arg_0_33 = raw in StringTools.trim __call_arg_0_33) () : string) in let __assign_34 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                      tempBool9 := __assign_34;
+                      __assign_34
                     ));
-                    ignore (if !tempBool9 then ignore (print_endline ("stage3_driver=ocaml_target_core_after_emit_arg_outDir value=" ^ HxString.toStdString emitOutDir)) else ());
-                    let emitFullBodies = (Obj.magic context : Backend_BackendContext.t).emitFullBodies in let tempBool10 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                      ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_21 = false in (
-                        tempBool10 := __assign_21;
-                        __assign_21
-                      ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_22 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                        tempBool10 := __assign_22;
-                        __assign_22
+                    ignore (if !tempBool9 then ignore (let value = Obj.repr ("stage3_driver=ocaml_target_core_after_emit_arg_outDir value=" ^ HxString.toStdString emitOutDir) in HxSys.printlnValue value) else ());
+                    let emitFullBodies = (Obj.magic context : Backend_BackendContext.t).emitFullBodies in let tempBool10 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                      ignore (if raw == HxString.hx_null_string then let __assign_35 = false in (
+                        tempBool10 := __assign_35;
+                        __assign_35
+                      ) else let s = (HxString.toLowerCase (let __call_arg_0_36 = raw in StringTools.trim __call_arg_0_36) () : string) in let __assign_37 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                        tempBool10 := __assign_37;
+                        __assign_37
                       ));
-                      ignore (if !tempBool10 then ignore (print_endline ("stage3_driver=ocaml_target_core_after_emit_arg_emitFullBodies value=" ^ HxString.toStdString (string_of_bool emitFullBodies))) else ());
-                      let emitBuildExecutable = (Obj.magic context : Backend_BackendContext.t).buildExecutable in let tempBool11 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_23 = false in (
-                          tempBool11 := __assign_23;
-                          __assign_23
-                        ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_24 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                          tempBool11 := __assign_24;
-                          __assign_24
+                      ignore (if !tempBool10 then ignore (let v = Obj.repr ("stage3_driver=ocaml_target_core_after_emit_arg_emitFullBodies value=" ^ HxString.toStdString (string_of_bool emitFullBodies)) in let value = v in HxSys.printlnValue value) else ());
+                      let emitBuildExecutable = (Obj.magic context : Backend_BackendContext.t).buildExecutable in let tempBool11 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                        ignore (if raw == HxString.hx_null_string then let __assign_38 = false in (
+                          tempBool11 := __assign_38;
+                          __assign_38
+                        ) else let s = (HxString.toLowerCase (let __call_arg_0_39 = raw in StringTools.trim __call_arg_0_39) () : string) in let __assign_40 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                          tempBool11 := __assign_40;
+                          __assign_40
                         ));
-                        ignore (if !tempBool11 then ignore (print_endline ("stage3_driver=ocaml_target_core_after_emit_arg_buildExecutable value=" ^ HxString.toStdString (string_of_bool emitBuildExecutable))) else ());
-                        let emitProfile = (profile : string) in let tempBool12 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_25 = false in (
-                            tempBool12 := __assign_25;
-                            __assign_25
-                          ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_26 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                            tempBool12 := __assign_26;
-                            __assign_26
+                        ignore (if !tempBool11 then ignore (let v = Obj.repr ("stage3_driver=ocaml_target_core_after_emit_arg_buildExecutable value=" ^ HxString.toStdString (string_of_bool emitBuildExecutable)) in let value = v in HxSys.printlnValue value) else ());
+                        let emitProfile = (profile : string) in let tempBool12 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                          ignore (if raw == HxString.hx_null_string then let __assign_41 = false in (
+                            tempBool12 := __assign_41;
+                            __assign_41
+                          ) else let s = (HxString.toLowerCase (let __call_arg_0_42 = raw in StringTools.trim __call_arg_0_42) () : string) in let __assign_43 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                            tempBool12 := __assign_43;
+                            __assign_43
                           ));
-                          ignore (if !tempBool12 then ignore (print_endline ("stage3_driver=ocaml_target_core_after_emit_arg_profile value=" ^ HxString.toStdString emitProfile)) else ());
-                          let path = (EmitterStage.emitToDir (Obj.magic emitTypedProgram) (emitOutDir : string) emitFullBodies emitBuildExecutable (emitProfile : string) : string) in let tempBool13 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                            ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_27 = false in (
-                              tempBool13 := __assign_27;
-                              __assign_27
-                            ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_28 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                              tempBool13 := __assign_28;
-                              __assign_28
+                          ignore (if !tempBool12 then ignore (let value = Obj.repr ("stage3_driver=ocaml_target_core_after_emit_arg_profile value=" ^ HxString.toStdString emitProfile) in HxSys.printlnValue value) else ());
+                          let path = (EmitterStage.emitToDir (Obj.magic emitTypedProgram) (emitOutDir : string) emitFullBodies emitBuildExecutable (emitProfile : string) : string) in let tempBool13 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                            ignore (if raw == HxString.hx_null_string then let __assign_44 = false in (
+                              tempBool13 := __assign_44;
+                              __assign_44
+                            ) else let s = (HxString.toLowerCase (let __call_arg_0_45 = raw in StringTools.trim __call_arg_0_45) () : string) in let __assign_46 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                              tempBool13 := __assign_46;
+                              __assign_46
                             ));
-                            ignore (if !tempBool13 then ignore (print_endline "stage3_driver=ocaml_target_core_after_emitToDir_direct") else ());
-                            let __assign_29 = (path : string) in (
-                              tempString := __assign_29;
-                              __assign_29
+                            ignore (if !tempBool13 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_emitToDir_direct" in HxSys.printlnValue value) else ());
+                            let __assign_47 = (path : string) in (
+                              tempString := __assign_47;
+                              __assign_47
                             )
                           )
                         )
@@ -162,62 +162,65 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
               ) with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_30 -> raise (HxRuntime.Hx_return __ret_30)
-                | HxRuntime.Hx_exception (__exn_v_31, __exn_tags_32) -> if true then let error = (if HxRuntime.tags_has __exn_tags_32 "haxe.Exception" then Obj.obj __exn_v_31 else Obj.magic (Haxe_ValueException.create __exn_v_31 (Obj.magic (HxRuntime.hx_null)) __exn_v_31) : Haxe_Exception.t) in (
+                | HxRuntime.Hx_return __ret_22 -> raise (HxRuntime.Hx_return __ret_22)
+                | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+                | HxRuntime.Hx_exception (__exn_v_23, __exn_tags_24) -> if true then let error = (if HxRuntime.tags_has __exn_tags_24 "haxe.Exception" then Obj.obj __exn_v_23 else Obj.magic (Haxe_ValueException.create __exn_v_23 (Obj.magic (HxRuntime.hx_null)) __exn_v_23) : Haxe_Exception.t) in (
                   ignore error;
                   (
                     ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
-                    HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"; "haxe.Exception"]
+                    HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
                   )
-                ) else HxRuntime.hx_throw_typed __exn_v_31 __exn_tags_32
-                | __exn_33 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_33) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_33) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_33)) : Haxe_Exception.t) in (
+                ) else HxRuntime.hx_throw_typed __exn_v_23 __exn_tags_24
+                | __exn_25 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_25) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_25) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_25)) : Haxe_Exception.t) in (
                   ignore error;
                   (
                     ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
-                    HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"; "haxe.Exception"]
+                    HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
                   )
-                ) else raise (__exn_33));
-              ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
-              let tempBool14 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_34 = false in (
-                  tempBool14 := __assign_34;
-                  __assign_34
-                ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_35 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                  tempBool14 := __assign_35;
-                  __assign_35
-                ));
-                ignore (if !tempBool14 then ignore (print_endline "stage3_driver=ocaml_target_core_after_emitter") else ());
-                let tempBool15 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_36 = false in (
-                    tempBool15 := __assign_36;
-                    __assign_36
-                  ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_37 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                    tempBool15 := __assign_37;
-                    __assign_37
+                ) else raise (__exn_25));
+              let entryPath = (!tempString : string) in (
+                ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
+                let tempBool14 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                  ignore (if raw == HxString.hx_null_string then let __assign_48 = false in (
+                    tempBool14 := __assign_48;
+                    __assign_48
+                  ) else let s = (HxString.toLowerCase (let __call_arg_0_49 = raw in StringTools.trim __call_arg_0_49) () : string) in let __assign_50 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                    tempBool14 := __assign_50;
+                    __assign_50
                   ));
-                  ignore (if !tempBool15 then ignore (print_endline "stage3_driver=ocaml_target_core_before_plan_report") else ());
-                  let portableMetalizationReportPath = (Backend_ocaml_PortableMetalizationPlanner.writeReport ((Obj.magic context : Backend_BackendContext.t).outputDir : string) (Obj.magic portableMetalizationPlan) : string) in let tempBool16 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-                    ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_38 = false in (
-                      tempBool16 := __assign_38;
-                      __assign_38
-                    ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_39 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
-                      tempBool16 := __assign_39;
-                      __assign_39
+                  ignore (if !tempBool14 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_emitter" in HxSys.printlnValue value) else ());
+                  let tempBool15 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                    ignore (if raw == HxString.hx_null_string then let __assign_51 = false in (
+                      tempBool15 := __assign_51;
+                      __assign_51
+                    ) else let s = (HxString.toLowerCase (let __call_arg_0_52 = raw in StringTools.trim __call_arg_0_52) () : string) in let __assign_53 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                      tempBool15 := __assign_53;
+                      __assign_53
                     ));
-                    ignore (if !tempBool16 then ignore (print_endline "stage3_driver=ocaml_target_core_after_plan_report") else ());
-                    let tempString1 = ref ("" : string) in (
-                      ignore (if (Obj.magic context : Backend_BackendContext.t).buildExecutable then let __assign_40 = ("entry_executable" : string) in (
-                        tempString1 := __assign_40;
-                        __assign_40
-                      ) else let __assign_41 = ("entry_planned_executable" : string) in (
-                        tempString1 := __assign_41;
-                        __assign_41
+                    ignore (if !tempBool15 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_plan_report" in HxSys.printlnValue value) else ());
+                    let portableMetalizationReportPath = (Backend_ocaml_PortableMetalizationPlanner.writeReport ((Obj.magic context : Backend_BackendContext.t).outputDir : string) (Obj.magic portableMetalizationPlan) : string) in let tempBool16 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                      ignore (if raw == HxString.hx_null_string then let __assign_54 = false in (
+                        tempBool16 := __assign_54;
+                        __assign_54
+                      ) else let s = (HxString.toLowerCase (let __call_arg_0_55 = raw in StringTools.trim __call_arg_0_55) () : string) in let __assign_56 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
+                        tempBool16 := __assign_56;
+                        __assign_56
                       ));
-                      Backend_EmitResult.create (!tempString : string) (Obj.magic (let __arr_42 = HxArray.create () in (
-                        ignore (HxArray.push __arr_42 (Backend_EmitArtifact.create (!tempString1 : string) (!tempString : string)));
-                        ignore (HxArray.push __arr_42 (Backend_EmitArtifact.create ("portable_metalization_report" : string) (portableMetalizationReportPath : string)));
-                        __arr_42
-                      ))) ((Obj.magic context : Backend_BackendContext.t).buildExecutable)
+                      ignore (if !tempBool16 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_after_plan_report" in HxSys.printlnValue value) else ());
+                      let tempString1 = ref (HxString.hx_null_string : string) in (
+                        ignore (if (Obj.magic context : Backend_BackendContext.t).buildExecutable then let __assign_57 = "entry_executable" in (
+                          tempString1 := __assign_57;
+                          __assign_57
+                        ) else let __assign_58 = "entry_planned_executable" in (
+                          tempString1 := __assign_58;
+                          __assign_58
+                        ));
+                        Backend_EmitResult.create (entryPath : string) (Obj.magic (let __arr_59 = HxArray.create () in (
+                          ignore (HxArray.push __arr_59 (Backend_EmitArtifact.create (!tempString1 : string) (entryPath : string)));
+                          ignore (HxArray.push __arr_59 (Backend_EmitArtifact.create ("portable_metalization_report" : string) (portableMetalizationReportPath : string)));
+                          __arr_59
+                        ))) ((Obj.magic context : Backend_BackendContext.t).buildExecutable)
+                      )
                     )
                   )
                 )
@@ -240,10 +243,10 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Oc
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
 
-let traceEnabled = fun () -> try let __fallback_result_44 = let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on"
-) in Obj.magic __fallback_result_44 with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
+let traceEnabled = fun () -> try let __fallback_result_62 = let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+  ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let s = (HxString.toLowerCase (let __call_arg_0_60 = raw in StringTools.trim __call_arg_0_60) () : string) in HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on"
+) in Obj.magic __fallback_result_62 with
+  | HxRuntime.Hx_return __ret_61 -> Obj.obj __ret_61
 
 let emitBridge = fun core program context -> (Obj.magic core : t).emit (Obj.magic core) (Obj.magic program) (Obj.magic context)

@@ -44,6 +44,14 @@ enum abstract OcamlRepresentationIdentityPolicy(String) from String to String {
 
 	/** Copies preserve the identity of one reference-bearing runtime value. */
 	final ReferenceIdentity = "reference-identity";
+
+	/**
+		The carrier preserves the identity policy of its dynamically stored payload.
+
+		Primitive payloads retain value semantics. Reference-bearing payloads keep
+		their existing runtime identity; entering Dynamic never clones them.
+	**/
+	final DynamicPayloadIdentity = "dynamic-payload-identity";
 }
 
 /** How source aliases can observe this represented value. */
@@ -53,6 +61,14 @@ enum abstract OcamlRepresentationAliasingPolicy(String) from String to String {
 
 	/** Copies share one reference-bearing value and observe the same mutations. */
 	final SharedReferenceAliases = "shared-reference-aliases";
+
+	/**
+		Aliasing follows the payload stored in Dynamic.
+
+		Primitive payloads have no source-visible alias identity. Reference-bearing
+		payloads continue to share the same underlying value and mutations.
+	**/
+	final DynamicPayloadAliases = "dynamic-payload-aliases";
 }
 
 /** Which surrounding storage location owns replacement of the represented value. */
@@ -80,6 +96,14 @@ enum abstract OcamlRepresentationValueMutationPolicy(String) from String to Stri
 
 	/** The carrier is a mutable runtime container shared by reference aliases. */
 	final MutableRuntimeContainer = "mutable-runtime-container";
+
+	/**
+		Whether mutation is observable depends on the value stored in Dynamic.
+
+		The `Obj.t` carrier itself adds no mutation. It preserves a mutable
+		reference payload or an immutable primitive payload unchanged.
+	**/
+	final DynamicPayloadMutation = "dynamic-payload-mutation";
 }
 
 /** Whether the Haxe value needs an additional target box or wrapper. */
@@ -92,6 +116,15 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		Dynamic box or representation wrapper.
 	**/
 	final DirectRuntimeContainer = "direct-runtime-container";
+
+	/**
+		A Haxe value-semantic type uses one canonical nominal OCaml record.
+
+		The record needs no additional Dynamic box, but its target module, type,
+		and exact field-layout revision remain part of the representation proof.
+		The carrier does not imply source-visible reference identity or aliasing.
+	**/
+	final DirectNominalValueCarrier = "direct-nominal-value-carrier";
 
 	/**
 		Primitive values are boxed only when they enter this nullable carrier.
@@ -112,6 +145,26 @@ enum abstract OcamlRepresentationBoxingPolicy(String) from String to String {
 		boundaries preserve the selected carrier directly.
 	**/
 	final NullableStringCarrier = "nullable-string-carrier";
+
+	/**
+		A Haxe class value uses one nominal OCaml record for non-null payloads.
+
+		The source class remains nullable. This first slice admits only producer
+		and receiver occurrences proven to contain that record payload; a general
+		null-to-record crossing is not implied by the carrier decision.
+	**/
+	final NullableNominalRecordCarrier = "nullable-nominal-record-carrier";
+
+	/**
+		Haxe Dynamic stores one already-produced target value in `Obj.t`.
+
+		Every concrete-to-Dynamic occurrence owns one explicit conversion.
+		`Obj.repr` preserves ordinary concrete values; exact Bool uses the runtime's
+		distinguishable Bool box because OCaml Bool and Int are both immediate
+		values. Existing Dynamic values and the canonical null sentinel preserve
+		the carrier directly.
+	**/
+	final DynamicCarrier = "dynamic-carrier";
 }
 
 /**
@@ -156,6 +209,15 @@ typedef OcamlRepresentationSelection = {
 	final reason:String;
 	final proof:OcamlRepresentationProof;
 	final profileEligibility:Array<String>;
+
+	/** Canonical OCaml module that owns an admitted nominal record carrier. */
+	final ?nominalTargetModuleName:String;
+
+	/** Unqualified record type inside the canonical target module. */
+	final ?nominalTargetTypeName:String;
+
+	/** Revision of the exact field layout represented by the nominal carrier. */
+	final ?nominalLayoutRevision:String;
 }
 
 /** One immutable program-owned representation decision. */

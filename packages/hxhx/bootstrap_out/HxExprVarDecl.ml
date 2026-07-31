@@ -13,16 +13,16 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "_HxExprVarDecl.H
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "_HxExprVarDecl.HxExprVarDecl_Impl_" } : t)
 
-let make = fun name typeHint hx_initializer position isFinal isStatic -> let isFinal = if Obj.repr isFinal == HxRuntime.hx_null then false else isFinal in let isStatic = if Obj.repr isStatic == HxRuntime.hx_null then false else isStatic in let tempString = ref ("" : string) in (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let make = fun name typeHint hx_initializer position isFinal isStatic -> let isFinal = if Obj.repr isFinal == HxRuntime.hx_null then false else isFinal in let isStatic = if Obj.repr isStatic == HxRuntime.hx_null then false else isStatic in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if name == HxString.hx_null_string then let __assign_1 = ("" : string) in (
     tempString := __assign_1;
     __assign_1
   ) else let __assign_2 = (name : string) in (
     tempString := __assign_2;
     __assign_2
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+  let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if typeHint == HxString.hx_null_string then let __assign_3 = ("" : string) in (
       tempString1 := __assign_3;
       __assign_3
     ) else let __assign_4 = (typeHint : string) in (
@@ -42,9 +42,9 @@ let make = fun name typeHint hx_initializer position isFinal isStatic -> let isF
   )
 )
 
-let invalidMessage = fun declaration -> "HxExpr.EVars contains a child that is not EVariableDeclaration: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr declaration))
+let invalidMessage = fun declaration -> "HxExpr.EVars contains a child that is not EVariableDeclaration: " ^ HxString.toStdString (HxDynamic.toStdString (Obj.repr declaration))
 
-let getName = fun declaration -> let tempResult = ref ("" : string) in (
+let getName = fun declaration -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if (match declaration with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -103,11 +103,11 @@ let getName = fun declaration -> let tempResult = ref ("" : string) in (
       tempResult := __assign_13;
       __assign_13
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   !tempResult
 )
 
-let getTypeHint = fun declaration -> let tempResult = ref ("" : string) in (
+let getTypeHint = fun declaration -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if (match declaration with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -168,7 +168,7 @@ let getTypeHint = fun declaration -> let tempResult = ref ("" : string) in (
         __assign_20
       )
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   !tempResult
 )
 
@@ -233,7 +233,7 @@ let getInitializer = fun declaration -> let tempResult = ref (Obj.magic (HxRunti
         __assign_27
       )
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   Obj.magic (!tempResult)
 )
 
@@ -298,7 +298,7 @@ let getPosition = fun declaration -> let tempResult = ref (Obj.magic (HxRuntime.
         __assign_34
       )
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   !tempResult
 )
 
@@ -363,7 +363,7 @@ let getIsFinal = fun declaration -> let tempResult = ref (false : bool) in (
         __assign_41
       )
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   !tempResult
 )
 
@@ -426,6 +426,6 @@ let getIsStatic = fun declaration -> let tempResult = ref (false : bool) in (
       tempResult := __assign_48;
       __assign_48
     )
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"; "String"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (invalidMessage (Obj.magic declaration))) ["Dynamic"]);
   !tempResult
 )

@@ -1,0 +1,7 @@
+string=text|text|text
+int=7|7|7
+float=1.5|1.5|1.5
+bool=true|true|true
+null=null|null|null
+class=SampleValue(class)|SampleValue(class)|SampleValue(class)
+anonymous={ label => anonymous }|{ label => anonymous }|{ label => anonymous }

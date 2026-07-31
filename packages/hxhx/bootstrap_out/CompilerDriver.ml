@@ -13,181 +13,196 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDriver" 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDriver" } : t)
 
-let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/fixtures/src" : string) in let legacyFixtureRoot = ("examples/hih-compiler/fixtures/src" : string) in let tempString = ref ("" : string) in (
-  ignore (if HxFileSystem.exists preferredFixtureRoot then let __assign_1 = (preferredFixtureRoot : string) in (
+let run = fun () -> ignore (let preferredFixtureRoot = "workloads/hih-compiler/fixtures/src" in let legacyFixtureRoot = "examples/hih-compiler/fixtures/src" in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if HxFileSystem.exists (preferredFixtureRoot : string) then let __assign_1 = preferredFixtureRoot in (
     tempString := __assign_1;
     __assign_1
-  ) else let __assign_2 = (legacyFixtureRoot : string) in (
+  ) else let __assign_2 = legacyFixtureRoot in (
     tempString := __assign_2;
     __assign_2
   ));
-  let classPaths = Obj.magic (let __arr_3 = HxArray.create () in (
-    ignore (HxArray.push __arr_3 (!tempString));
+  let fixtureRoot = !tempString in let classPaths = Obj.magic (let __arr_3 = HxArray.create () in (
+    ignore (HxArray.push __arr_3 fixtureRoot);
     __arr_3
-  )) in let mainModule = ("demo.A" : string) in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
+  )) in let mainModule = "demo.A" in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
     ignore (ResolvedModule.getParsed);
-    let root = Obj.magic (HxArray.get (Obj.magic resolved) 0) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in (
-      ignore (print_endline "parse=ok");
-      ignore (print_endline ("modules=" ^ string_of_int (HxArray.length resolved)));
-      ignore (print_endline ("main=" ^ HxString.toStdString mainModule));
-      ignore (print_endline ("mainFile=" ^ HxString.toStdString (ResolvedModule.getFilePath (Obj.magic root))));
-      let tempString1 = ref ("" : string) in (
-        ignore (if HxString.length pkg = 0 then let __assign_4 = ("<none>" : string) in (
-          tempString1 := __assign_4;
-          __assign_4
-        ) else let __assign_5 = (pkg : string) in (
-          tempString1 := __assign_5;
-          __assign_5
-        ));
-        ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
-        ignore (print_endline ("module_directives=" ^ string_of_int (HxArray.length directives)));
-        ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic mainClass))));
-        let tempString2 = ref ("" : string) in (
-          ignore (if HxClassDecl.getHasStaticMain (Obj.magic mainClass) then let __assign_6 = ("yes" : string) in (
-            tempString2 := __assign_6;
-            __assign_6
-          ) else let __assign_7 = ("no" : string) in (
-            tempString2 := __assign_7;
-            __assign_7
-          ));
-          ignore (print_endline ("hasStaticMain=" ^ HxString.toStdString (!tempString2)));
-          let fns = Obj.magic (HxClassDecl.getFunctions (Obj.magic mainClass)) in (
-            ignore (print_endline ("functions=" ^ string_of_int (HxArray.length fns)));
-            let _g = ref 0 in (
-              ignore (while !_g < HxArray.length fns do ignore (let fn = Obj.magic (HxArray.get (Obj.magic fns) (!_g)) in (
-                ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-                  ignore (_g := __new_9);
-                  __new_9
-                ));
-                let tempString3 = ref ("" : string) in (
-                  ignore (let _g2 = Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn)) in match _g2 with
-                    | HxVisibility.Public -> let __assign_10 = ("public" : string) in (
-                      tempString3 := __assign_10;
-                      __assign_10
-                    )
-                    | HxVisibility.Private -> let __assign_11 = ("private" : string) in (
-                      tempString3 := __assign_11;
-                      __assign_11
-                    ));
-                  let vis = (!tempString3 : string) in let retHint = (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) in let tempString4 = ref ("" : string) in (
-                    ignore (if HxString.length retHint = 0 then let __assign_12 = ("<none>" : string) in (
-                      tempString4 := __assign_12;
-                      __assign_12
-                    ) else let __assign_13 = (retHint : string) in (
-                      tempString4 := __assign_13;
-                      __assign_13
-                    ));
-                    let ret = (!tempString4 : string) in let retStrLit = (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) in let tempString5 = ref ("" : string) in (
-                      ignore (if HxString.length retStrLit = 0 then let __assign_14 = ("<none>" : string) in (
-                        tempString5 := __assign_14;
-                        __assign_14
-                      ) else let __assign_15 = (retStrLit : string) in (
-                        tempString5 := __assign_15;
-                        __assign_15
+    let root = Obj.magic (HxArray.get (Obj.magic resolved) 0) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let value = Obj.repr "parse=ok" in (
+      ignore (HxSys.printlnValue value);
+      let v = Obj.repr ("modules=" ^ string_of_int (HxArray.length resolved)) in (
+        ignore (HxSys.printlnValue v);
+        let value = Obj.repr ("main=" ^ HxString.toStdString mainModule) in (
+          ignore (HxSys.printlnValue value);
+          let v = Obj.repr ("mainFile=" ^ HxString.toStdString (ResolvedModule.getFilePath (Obj.magic root))) in (
+            ignore (HxSys.printlnValue v);
+            let tempString1 = ref (HxString.hx_null_string : string) in (
+              ignore (if HxString.length pkg = 0 then let __assign_4 = ("<none>" : string) in (
+                tempString1 := __assign_4;
+                __assign_4
+              ) else let __assign_5 = (pkg : string) in (
+                tempString1 := __assign_5;
+                __assign_5
+              ));
+              let v = Obj.repr ("package=" ^ HxString.toStdString (!tempString1)) in (
+                ignore (HxSys.printlnValue v);
+                let v = Obj.repr ("module_directives=" ^ string_of_int (HxArray.length directives)) in (
+                  ignore (HxSys.printlnValue v);
+                  let v = Obj.repr ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic mainClass))) in (
+                    ignore (HxSys.printlnValue v);
+                    let tempString2 = ref (HxString.hx_null_string : string) in (
+                      ignore (if HxClassDecl.getHasStaticMain (Obj.magic mainClass) then let __assign_6 = "yes" in (
+                        tempString2 := __assign_6;
+                        __assign_6
+                      ) else let __assign_7 = "no" in (
+                        tempString2 := __assign_7;
+                        __assign_7
                       ));
-                      let retStr = (!tempString5 : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString6 = ref ("" : string) in (
-                        ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_16 = ("yes" : string) in (
-                          tempString6 := __assign_16;
-                          __assign_16
-                        ) else let __assign_17 = ("no" : string) in (
-                          tempString6 := __assign_17;
-                          __assign_17
-                        ));
-                        print_endline ((((((((((("fn=" ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " static=") ^ HxString.toStdString (!tempString6)) ^ " vis=") ^ HxString.toStdString vis) ^ " args=") ^ string_of_int (HxArray.length args)) ^ " ret=") ^ HxString.toStdString ret) ^ " retStr=") ^ HxString.toStdString retStr)
-                      )
-                    )
-                  )
-                )
-              )) done);
-              ignore (try (
-                ignore (ResolverStage.parseProject (Obj.magic classPaths) ("demo.B" : string) (Obj.magic (HxRuntime.hx_null)));
-                print_endline "missing_import=fail"
-              ) with
-                | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
-                | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
-                  ignore _hx;
-                  print_endline "missing_import=ok"
-                ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
-                | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
-                  ignore _hx;
-                  print_endline "missing_import=ok"
-                ) else raise (__exn_21));
-              let parserFixtures = Obj.magic (let __arr_22 = HxArray.create () in (
-                ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseMod.hx" : string) (HxArray.join (let __arr_23 = HxArray.create () in (
-                  ignore (HxArray.push __arr_23 "package pack;");
-                  ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseMod {}");
-                  ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseModCompanion {}");
-                  __arr_23
-                )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseMod" : string) false));
-                ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseWithStatic.hx" : string) (HxArray.join (let __arr_24 = HxArray.create () in (
-                  ignore (HxArray.push __arr_24 "package pack;");
-                  ignore (HxArray.push __arr_24 "");
-                  ignore (HxArray.push __arr_24 "class ParserCaseWithStatic {");
-                  ignore (HxArray.push __arr_24 "  public static function localStatic() return \"pack.ParserCaseWithStatic.localStatic\";");
-                  ignore (HxArray.push __arr_24 "}");
-                  ignore (HxArray.push __arr_24 "");
-                  ignore (HxArray.push __arr_24 "@:build(Macro.build())");
-                  ignore (HxArray.push __arr_24 "class ParserCaseWithStaticMarker {}");
-                  __arr_24
-                )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseWithStatic" : string) false));
-                __arr_22
-              )) in let _g = ref 0 in (
-                ignore (while !_g < HxArray.length parserFixtures do ignore (let case_ = Obj.magic (HxArray.get (Obj.magic parserFixtures) (!_g)) in (
-                  ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-                    ignore (_g := __new_26);
-                    __new_26
-                  ));
-                  let label = (FrontendFixture.getLabel (Obj.magic case_) () : string) in let src = (FrontendFixture.getSource (Obj.magic case_) () : string) in let parsed = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (label : string))) ()) in let parsedPkg = (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) in let parsedMain = Obj.magic (HxModuleDecl.getMainClass (Obj.magic parsed)) in (
-                    ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                    ignore (if not (HxString.equals (HxClassDecl.getName (Obj.magic parsedMain)) (FrontendFixture.getExpectMainClassName (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                    ignore (if HxClassDecl.getHasStaticMain (Obj.magic parsedMain) <> FrontendFixture.getExpectHasStaticMain (Obj.magic case_) () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                    ignore (if HxString.indexOf label "ParserCaseWithStatic" 0 >= 0 then ignore (let found = Obj.magic (HxArray.filter (HxClassDecl.getFunctions (Obj.magic parsedMain)) (fun f -> HxString.equals (HxFunctionDecl.getName (Obj.magic f)) "localStatic")) in (
-                      ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 localStatic function" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                      let retStr = (HxFunctionDecl.getReturnStringLiteral (Obj.magic (HxArray.get (Obj.magic found) 0)) : string) in if not (HxString.equals retStr "pack.ParserCaseWithStatic.localStatic") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": localStatic return differs" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()
-                    )) else ());
-                    let haxeDecl = Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (src : string) (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (HxRuntime.hx_null))) in (
-                      ignore (if not (HxString.equals (HxModuleDecl.getPackagePath (Obj.magic haxeDecl)) parsedPkg) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                      let haxeDirectives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic haxeDecl)) in let parsedDirectives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic parsed)) in (
-                        ignore (if HxArray.length haxeDirectives <> HxArray.length parsedDirectives then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": module-directive count differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                        let _g2 = ref 0 in let _g1 = HxArray.length haxeDirectives in (
-                          ignore (while !_g2 < _g1 do ignore (let i = let __old_27 = !_g2 in let __new_28 = HxInt.add __old_27 1 in (
-                            ignore (_g2 := __new_28);
-                            __old_27
-                          ) in if not (HxString.equals (HxModuleDirective.canonicalIdentity (Obj.magic (HxArray.get (Obj.magic haxeDirectives) i))) (HxModuleDirective.canonicalIdentity (Obj.magic (HxArray.get (Obj.magic parsedDirectives) i)))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": module directive differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()) done);
-                          let haxeMain = Obj.magic (HxModuleDecl.getMainClass (Obj.magic haxeDecl)) in (
-                            ignore (if not (HxString.equals (HxClassDecl.getName (Obj.magic haxeMain)) (HxClassDecl.getName (Obj.magic parsedMain))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                            ignore (if HxClassDecl.getHasStaticMain (Obj.magic haxeMain) <> HxClassDecl.getHasStaticMain (Obj.magic parsedMain) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                            let haxeFns = Obj.magic (HxClassDecl.getFunctions (Obj.magic haxeMain)) in let parsedFns = Obj.magic (HxClassDecl.getFunctions (Obj.magic parsedMain)) in (
-                              ignore (if HxArray.length haxeFns <> HxArray.length parsedFns then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function count differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                              let _g2 = ref 0 in let _g1 = HxArray.length haxeFns in while !_g2 < _g1 do ignore (let i = let __old_29 = !_g2 in let __new_30 = HxInt.add __old_29 1 in (
-                                ignore (_g2 := __new_30);
-                                __old_29
-                              ) in if not (HxString.equals (HxFunctionDecl.getName (Obj.magic (HxArray.get (Obj.magic haxeFns) i))) (HxFunctionDecl.getName (Obj.magic (HxArray.get (Obj.magic parsedFns) i)))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function name differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()) done
+                      let v = Obj.repr ("hasStaticMain=" ^ HxString.toStdString (!tempString2)) in (
+                        ignore (HxSys.printlnValue v);
+                        let fns = Obj.magic (HxClassDecl.getFunctions (Obj.magic mainClass)) in let v = Obj.repr ("functions=" ^ string_of_int (HxArray.length fns)) in (
+                          ignore (HxSys.printlnValue v);
+                          let _g = ref 0 in (
+                            ignore (while !_g < HxArray.length fns do ignore (let fn = Obj.magic (HxArray.get (Obj.magic fns) (!_g)) in (
+                              ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+                                ignore (_g := __new_9);
+                                __new_9
+                              ));
+                              let tempString3 = ref (HxString.hx_null_string : string) in (
+                                ignore (let _g2 = Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn)) in match _g2 with
+                                  | HxVisibility.Public -> let __assign_10 = "public" in (
+                                    tempString3 := __assign_10;
+                                    __assign_10
+                                  )
+                                  | HxVisibility.Private -> let __assign_11 = "private" in (
+                                    tempString3 := __assign_11;
+                                    __assign_11
+                                  ));
+                                let vis = !tempString3 in let retHint = (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) in let tempString4 = ref (HxString.hx_null_string : string) in (
+                                  ignore (if HxString.length retHint = 0 then let __assign_12 = ("<none>" : string) in (
+                                    tempString4 := __assign_12;
+                                    __assign_12
+                                  ) else let __assign_13 = (retHint : string) in (
+                                    tempString4 := __assign_13;
+                                    __assign_13
+                                  ));
+                                  let ret = (!tempString4 : string) in let retStrLit = (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) in let tempString5 = ref (HxString.hx_null_string : string) in (
+                                    ignore (if HxString.length retStrLit = 0 then let __assign_14 = ("<none>" : string) in (
+                                      tempString5 := __assign_14;
+                                      __assign_14
+                                    ) else let __assign_15 = (retStrLit : string) in (
+                                      tempString5 := __assign_15;
+                                      __assign_15
+                                    ));
+                                    let retStr = (!tempString5 : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString6 = ref (HxString.hx_null_string : string) in (
+                                      ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_16 = "yes" in (
+                                        tempString6 := __assign_16;
+                                        __assign_16
+                                      ) else let __assign_17 = "no" in (
+                                        tempString6 := __assign_17;
+                                        __assign_17
+                                      ));
+                                      let v = Obj.repr ((((((((((("fn=" ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " static=") ^ HxString.toStdString (!tempString6)) ^ " vis=") ^ HxString.toStdString vis) ^ " args=") ^ string_of_int (HxArray.length args)) ^ " ret=") ^ HxString.toStdString ret) ^ " retStr=") ^ HxString.toStdString retStr) in let value = v in HxSys.printlnValue value
+                                    )
+                                  )
+                                )
+                              )
+                            )) done);
+                            ignore (try ignore ((
+                              ignore (ResolverStage.parseProject (Obj.magic classPaths) ("demo.B" : string) (Obj.magic (HxRuntime.hx_null)));
+                              let value = Obj.repr "missing_import=fail" in HxSys.printlnValue value
+                            )) with
+                              | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                              | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                              | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
+                              | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+                              | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
+                                ignore _hx;
+                                ignore (let value = Obj.repr "missing_import=ok" in HxSys.printlnValue value)
+                              ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
+                              | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
+                                ignore _hx;
+                                ignore (let value = Obj.repr "missing_import=ok" in HxSys.printlnValue value)
+                              ) else raise (__exn_21));
+                            let parserFixtures = Obj.magic (let __arr_22 = HxArray.create () in (
+                              ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseMod.hx" : string) (HxArray.join (let __arr_23 = HxArray.create () in (
+                                ignore (HxArray.push __arr_23 "package pack;");
+                                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseMod {}");
+                                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseModCompanion {}");
+                                __arr_23
+                              )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseMod" : string) false));
+                              ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseWithStatic.hx" : string) (HxArray.join (let __arr_24 = HxArray.create () in (
+                                ignore (HxArray.push __arr_24 "package pack;");
+                                ignore (HxArray.push __arr_24 "");
+                                ignore (HxArray.push __arr_24 "class ParserCaseWithStatic {");
+                                ignore (HxArray.push __arr_24 "  public static function localStatic() return \"pack.ParserCaseWithStatic.localStatic\";");
+                                ignore (HxArray.push __arr_24 "}");
+                                ignore (HxArray.push __arr_24 "");
+                                ignore (HxArray.push __arr_24 "@:build(Macro.build())");
+                                ignore (HxArray.push __arr_24 "class ParserCaseWithStaticMarker {}");
+                                __arr_24
+                              )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseWithStatic" : string) false));
+                              __arr_22
+                            )) in let _g = ref 0 in (
+                              ignore (while !_g < HxArray.length parserFixtures do ignore (let case_ = Obj.magic (HxArray.get (Obj.magic parserFixtures) (!_g)) in (
+                                ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+                                  ignore (_g := __new_26);
+                                  __new_26
+                                ));
+                                let label = (FrontendFixture.getLabel (Obj.magic case_) () : string) in let src = (FrontendFixture.getSource (Obj.magic case_) () : string) in let parsed = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (label : string))) ()) in let parsedPkg = (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) in let parsedMain = Obj.magic (HxModuleDecl.getMainClass (Obj.magic parsed)) in (
+                                  ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                  ignore (if not (HxString.equals (HxClassDecl.getName (Obj.magic parsedMain)) (FrontendFixture.getExpectMainClassName (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                  ignore (if HxClassDecl.getHasStaticMain (Obj.magic parsedMain) <> FrontendFixture.getExpectHasStaticMain (Obj.magic case_) () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                  ignore (if HxString.indexOf label "ParserCaseWithStatic" 0 >= 0 then ignore (let found = Obj.magic (HxArray.filter (HxClassDecl.getFunctions (Obj.magic parsedMain)) (fun f -> HxString.equals (HxFunctionDecl.getName (Obj.magic f)) "localStatic")) in (
+                                    ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 localStatic function" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                    let retStr = (HxFunctionDecl.getReturnStringLiteral (Obj.magic (HxArray.get (Obj.magic found) 0)) : string) in if not (HxString.equals retStr "pack.ParserCaseWithStatic.localStatic") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": localStatic return differs" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()
+                                  )) else ());
+                                  let haxeDecl = Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (src : string) (Obj.magic (HxRuntime.hx_null)))) (Obj.magic (HxRuntime.hx_null))) in (
+                                    ignore (if not (HxString.equals (HxModuleDecl.getPackagePath (Obj.magic haxeDecl)) parsedPkg) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                    let haxeDirectives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic haxeDecl)) in let parsedDirectives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic parsed)) in (
+                                      ignore (if HxArray.length haxeDirectives <> HxArray.length parsedDirectives then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": module-directive count differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                      let _g2 = ref 0 in let _g1 = HxArray.length haxeDirectives in (
+                                        ignore (while !_g2 < _g1 do ignore (let i = let __old_27 = !_g2 in let __new_28 = HxInt.add __old_27 1 in (
+                                          ignore (_g2 := __new_28);
+                                          __old_27
+                                        ) in if not (HxString.equals (HxModuleDirective.canonicalIdentity (Obj.magic (HxArray.get (Obj.magic haxeDirectives) i))) (HxModuleDirective.canonicalIdentity (Obj.magic (HxArray.get (Obj.magic parsedDirectives) i)))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": module directive differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()) done);
+                                        let haxeMain = Obj.magic (HxModuleDecl.getMainClass (Obj.magic haxeDecl)) in (
+                                          ignore (if not (HxString.equals (HxClassDecl.getName (Obj.magic haxeMain)) (HxClassDecl.getName (Obj.magic parsedMain))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                          ignore (if HxClassDecl.getHasStaticMain (Obj.magic haxeMain) <> HxClassDecl.getHasStaticMain (Obj.magic parsedMain) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                          let haxeFns = Obj.magic (HxClassDecl.getFunctions (Obj.magic haxeMain)) in let parsedFns = Obj.magic (HxClassDecl.getFunctions (Obj.magic parsedMain)) in (
+                                            ignore (if HxArray.length haxeFns <> HxArray.length parsedFns then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function count differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                                            let _g2 = ref 0 in let _g1 = HxArray.length haxeFns in while !_g2 < _g1 do ignore (let i = let __old_29 = !_g2 in let __new_30 = HxInt.add __old_29 1 in (
+                                              ignore (_g2 := __new_30);
+                                              __old_29
+                                            ) in if not (HxString.equals (HxFunctionDecl.getName (Obj.magic (HxArray.get (Obj.magic haxeFns) i))) (HxFunctionDecl.getName (Obj.magic (HxArray.get (Obj.magic parsedFns) i)))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function name differs (ParserStage vs HxParser)" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()) done
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
+                                )
+                              )) done);
+                              let typed = Obj.magic (TyperStage.typeModule (Obj.magic ast)) in let value = Obj.repr "typer=ok" in (
+                                ignore (HxSys.printlnValue value);
+                                let typedFns = Obj.magic (TyClassEnv.getFunctions (Obj.magic (TyModuleEnv.getMainClass (Obj.magic (TypedModule.getEnv (Obj.magic typed) ())) ())) ()) in let v = Obj.repr ("typed_functions=" ^ string_of_int (HxArray.length typedFns)) in (
+                                  ignore (HxSys.printlnValue v);
+                                  let _g = ref 0 in (
+                                    ignore (while !_g < HxArray.length typedFns do ignore (let tf = Obj.magic (HxArray.get (Obj.magic typedFns) (!_g)) in (
+                                      ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
+                                        ignore (_g := __new_32);
+                                        __new_32
+                                      ));
+                                      let v = Obj.repr ((((((((("typed_fn=" ^ HxString.toStdString (TyFunctionEnv.getName (Obj.magic tf) ())) ^ " args=") ^ string_of_int (HxArray.length (TyFunctionEnv.getParams (Obj.magic tf) ()))) ^ " locals=") ^ string_of_int (HxArray.length (TyFunctionEnv.getLocals (Obj.magic tf) ()))) ^ " ret=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) ())) ^ " retExpr=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnExprType (Obj.magic tf) ())) ())) in let value = v in HxSys.printlnValue value
+                                    )) done);
+                                    let expanded = Obj.magic (MacroStage.expand (Obj.magic typed) (Obj.magic (let __arr_33 = HxArray.create () in __arr_33))) in let value = Obj.repr "macros=stub" in (
+                                      ignore (HxSys.printlnValue value);
+                                      ignore (EmitterStage.emit (Obj.magic expanded));
+                                      let value = Obj.repr "emit=stub" in HxSys.printlnValue value
+                                    )
+                                  )
+                                )
+                              )
                             )
                           )
                         )
-                      )
-                    )
-                  )
-                )) done);
-                let typed = Obj.magic (TyperStage.typeModule (Obj.magic ast)) in (
-                  ignore (print_endline "typer=ok");
-                  let typedFns = Obj.magic (TyClassEnv.getFunctions (Obj.magic (TyModuleEnv.getMainClass (Obj.magic (TypedModule.getEnv (Obj.magic typed) ())) ())) ()) in (
-                    ignore (print_endline ("typed_functions=" ^ string_of_int (HxArray.length typedFns)));
-                    let _g = ref 0 in (
-                      ignore (while !_g < HxArray.length typedFns do ignore (let tf = Obj.magic (HxArray.get (Obj.magic typedFns) (!_g)) in (
-                        ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
-                          ignore (_g := __new_32);
-                          __new_32
-                        ));
-                        print_endline ((((((((("typed_fn=" ^ HxString.toStdString (TyFunctionEnv.getName (Obj.magic tf) ())) ^ " args=") ^ string_of_int (HxArray.length (TyFunctionEnv.getParams (Obj.magic tf) ()))) ^ " locals=") ^ string_of_int (HxArray.length (TyFunctionEnv.getLocals (Obj.magic tf) ()))) ^ " ret=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) ())) ^ " retExpr=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnExprType (Obj.magic tf) ())) ()))
-                      )) done);
-                      let expanded = Obj.magic (MacroStage.expand (Obj.magic typed) (Obj.magic (let __arr_33 = HxArray.create () in __arr_33))) in (
-                        ignore (print_endline "macros=stub");
-                        ignore (EmitterStage.emit (Obj.magic expanded));
-                        print_endline "emit=stub"
                       )
                     )
                   )

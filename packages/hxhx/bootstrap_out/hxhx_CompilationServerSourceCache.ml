@@ -8,84 +8,102 @@ type t = { __hx_type : Obj.t; mutable sourceEntries : Hxhx_CompilationServerCach
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic (HxRuntime.hx_null); parsedEntries = Obj.magic (HxRuntime.hx_null); resolutionEntries = Obj.magic (HxRuntime.hx_null); accessTicks = Obj.magic (HxRuntime.hx_null); latestSourceRevisionByPath = Obj.magic (HxRuntime.hx_null); latestParserInputByPath = Obj.magic (HxRuntime.hx_null); latestResolutionKeyByLookup = Obj.magic (HxRuntime.hx_null); latestResolutionPathByLookup = Obj.magic (HxRuntime.hx_null); maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t)
 
-let reset = fun self () -> ignore (ignore ((
-  ignore (HxMap.clear_string ((Obj.magic self : t).sourceEntries));
-  ignore (HxMap.clear_string ((Obj.magic self : t).parsedEntries));
-  ignore (HxMap.clear_string ((Obj.magic self : t).resolutionEntries));
-  ignore (HxMap.clear_string ((Obj.magic self : t).accessTicks));
-  ignore (HxMap.clear_string ((Obj.magic self : t).latestSourceRevisionByPath));
-  ignore (HxMap.clear_string ((Obj.magic self : t).latestParserInputByPath));
-  ignore (HxMap.clear_string ((Obj.magic self : t).latestResolutionKeyByLookup));
-  ignore (HxMap.clear_string ((Obj.magic self : t).latestResolutionPathByLookup));
-  ignore (let __place_receiver_17 = self in let __place_rhs_18 = 0 in (
-    (__place_receiver_17 : t).retainedBytesEstimate <- __place_rhs_18;
-    __place_rhs_18
-  ));
-  ignore (let __place_receiver_19 = self in let __place_rhs_20 = 0 in (
-    (__place_receiver_19 : t).accessTick <- __place_rhs_20;
-    __place_rhs_20
-  ));
-  let __place_receiver_21 = self in let __place_rhs_22 = 0 in (
-    (__place_receiver_21 : t).totalEvictions <- __place_rhs_22;
-    __place_rhs_22
+let reset = fun self () -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in (
+  ignore (HxMap.clear_string (Obj.magic _this));
+  let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in (
+    ignore (HxMap.clear_string (Obj.magic _this));
+    let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in (
+      ignore (HxMap.clear_string (Obj.magic _this));
+      let _this = Obj.magic ((Obj.magic self : t).accessTicks) in (
+        ignore (HxMap.clear_string (Obj.magic _this));
+        let _this = Obj.magic ((Obj.magic self : t).latestSourceRevisionByPath) in (
+          ignore (HxMap.clear_string (Obj.magic _this));
+          let _this = Obj.magic ((Obj.magic self : t).latestParserInputByPath) in (
+            ignore (HxMap.clear_string (Obj.magic _this));
+            let _this = Obj.magic ((Obj.magic self : t).latestResolutionKeyByLookup) in (
+              ignore (HxMap.clear_string (Obj.magic _this));
+              let _this = Obj.magic ((Obj.magic self : t).latestResolutionPathByLookup) in (
+                ignore (HxMap.clear_string (Obj.magic _this));
+                ignore (let __place_receiver_18 = self in let __place_rhs_19 = 0 in (
+                  (__place_receiver_18 : t).retainedBytesEstimate <- __place_rhs_19;
+                  __place_rhs_19
+                ));
+                ignore (let __place_receiver_20 = self in let __place_rhs_21 = 0 in (
+                  (__place_receiver_20 : t).accessTick <- __place_rhs_21;
+                  __place_rhs_21
+                ));
+                let __place_receiver_22 = self in let __place_rhs_23 = 0 in (
+                  (__place_receiver_22 : t).totalEvictions <- __place_rhs_23;
+                  __place_rhs_23
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
 )))
 
-let sourceMissReason = fun self (logicalPath : string) (contentRevision : string) -> try let __fallback_result_26 = let previous = (HxMap.get_string ((Obj.magic self : t).latestSourceRevisionByPath) logicalPath : string) in (
-  ignore (if previous == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("cold" : string))) else ());
-  let tempResult = ref ("" : string) in (
-    ignore (if HxString.equals previous contentRevision then let __assign_23 = ("evicted" : string) in (
-      tempResult := __assign_23;
-      __assign_23
-    ) else let __assign_24 = ("source-changed" : string) in (
+let sourceMissReason = fun self (logicalPath : string) (contentRevision : string) -> try let __fallback_result_27 = let _this = Obj.magic ((Obj.magic self : t).latestSourceRevisionByPath) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (logicalPath : string) : string) in (
+  ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("cold" : string))) else ());
+  let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.equals tempMaybeString contentRevision then let __assign_24 = "evicted" in (
       tempResult := __assign_24;
       __assign_24
+    ) else let __assign_25 = "source-changed" in (
+      tempResult := __assign_25;
+      __assign_25
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_26 with
-  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
+) in Obj.magic __fallback_result_27 with
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26
 
-let parserMissReason = fun self (logicalPath : string) (inputRevision : string) -> try let __fallback_result_30 = let previous = (HxMap.get_string ((Obj.magic self : t).latestParserInputByPath) logicalPath : string) in (
-  ignore (if previous == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("cold" : string))) else ());
-  let tempResult = ref ("" : string) in (
-    ignore (if HxString.equals previous inputRevision then let __assign_27 = ("evicted" : string) in (
-      tempResult := __assign_27;
-      __assign_27
-    ) else let __assign_28 = ("parser-input-changed" : string) in (
+let parserMissReason = fun self (logicalPath : string) (inputRevision : string) -> try let __fallback_result_31 = let _this = Obj.magic ((Obj.magic self : t).latestParserInputByPath) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (logicalPath : string) : string) in (
+  ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("cold" : string))) else ());
+  let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.equals tempMaybeString inputRevision then let __assign_28 = "evicted" in (
       tempResult := __assign_28;
       __assign_28
+    ) else let __assign_29 = "parser-input-changed" in (
+      tempResult := __assign_29;
+      __assign_29
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_30 with
-  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
+) in Obj.magic __fallback_result_31 with
+  | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30
 
-let quarantineParsed = fun self (key : string) -> ignore (ignore (try let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).parsedEntries) key) in (
+let quarantineParsed = fun self (key : string) -> ignore (ignore (try ignore (let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let tempMaybeCompilationServerCachedParse = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedParse in (
   ignore (if entry == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (HxMap.remove_string ((Obj.magic self : t).parsedEntries) key);
-  ignore (HxMap.remove_string ((Obj.magic self : t).accessTicks) ("parser:" ^ HxString.toStdString key));
-  ignore (let __recv_35 = self in let __recv_typed_36 = (Obj.magic __recv_35 : t) in __recv_typed_36.retainedBytesEstimate <- HxInt.sub (__recv_typed_36.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate));
-  if (Obj.magic self : t).retainedBytesEstimate < 0 then ignore (let __place_receiver_37 = self in let __place_rhs_38 = 0 in (
-    (__place_receiver_37 : t).retainedBytesEstimate <- __place_rhs_38;
-    __place_rhs_38
-  )) else ()
-) with
-  | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39))
+  let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in (
+    ignore (HxMap.remove_string (Obj.magic _this) (key : string));
+    let _this = Obj.magic ((Obj.magic self : t).accessTicks) in (
+      ignore (HxMap.remove_string (Obj.magic _this) ("parser:" ^ HxString.toStdString key : string));
+      ignore (let __recv_37 = self in let __recv_typed_38 = (Obj.magic __recv_37 : t) in __recv_typed_38.retainedBytesEstimate <- HxInt.sub (__recv_typed_38.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate));
+      if (Obj.magic self : t).retainedBytesEstimate < 0 then ignore (let __place_receiver_39 = self in let __place_rhs_40 = 0 in (
+        (__place_receiver_39 : t).retainedBytesEstimate <- __place_rhs_40;
+        __place_rhs_40
+      )) else ()
+    )
+  )
+)) with
+  | HxRuntime.Hx_return __ret_41 -> Obj.obj __ret_41))
 
-let entryCount = fun self () -> let count = ref 0 in let _hx = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).sourceEntries)) in (
-  ignore (while (let __iter_58 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_58)) () do ignore ((
-    ignore ((let __iter_59 = _hx in fun () -> HxIterator.next (Obj.magic __iter_59)) ());
+let entryCount = fun self () -> let count = ref 0 in let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let _hx = tempIterator in (
+  ignore (while (let __iter_64 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_64)) () do ignore ((
+    ignore ((let __iter_65 = _hx in fun () -> HxIterator.next (Obj.magic __iter_65)) ());
     count := HxInt.add (!count) 1
   )) done);
-  let _hx = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).parsedEntries)) in (
-    ignore (while (let __iter_60 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_60)) () do ignore ((
-      ignore ((let __iter_61 = _hx in fun () -> HxIterator.next (Obj.magic __iter_61)) ());
+  let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let tempIterator1 = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let _hx = tempIterator1 in (
+    ignore (while (let __iter_66 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_66)) () do ignore ((
+      ignore ((let __iter_67 = _hx in fun () -> HxIterator.next (Obj.magic __iter_67)) ());
       count := HxInt.add (!count) 1
     )) done);
-    let _hx = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).resolutionEntries)) in (
-      ignore (while (let __iter_62 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_62)) () do ignore ((
-        ignore ((let __iter_63 = _hx in fun () -> HxIterator.next (Obj.magic __iter_63)) ());
+    let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in let tempIterator2 = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let _hx = tempIterator2 in (
+      ignore (while (let __iter_68 = _hx in fun () -> HxIterator.hasNext (Obj.magic __iter_68)) () do ignore ((
+        ignore ((let __iter_69 = _hx in fun () -> HxIterator.next (Obj.magic __iter_69)) ());
         count := HxInt.add (!count) 1
       )) done);
       !count
@@ -98,191 +116,235 @@ let updateReportState = fun self (report : CompilerSourceProviderReport.t) (requ
 let snapshotReportState = fun self (report : CompilerSourceProviderReport.t) -> ignore (ignore (updateReportState (Obj.magic self) (Obj.magic report) 0))
 
 let touch = fun self (key : string) -> ignore (ignore ((
-  ignore (let __place_receiver_64 = self in let __place_old_65 = (__place_receiver_64 : t).accessTick in let __place_rhs_66 = 1 in let __place_new_67 = HxInt.add __place_old_65 __place_rhs_66 in (
-    (__place_receiver_64 : t).accessTick <- __place_new_67;
-    __place_new_67
+  ignore (let __place_receiver_70 = self in let __place_old_71 = (__place_receiver_70 : t).accessTick in let __place_rhs_72 = 1 in let __place_new_73 = HxInt.add __place_old_71 __place_rhs_72 in (
+    (__place_receiver_70 : t).accessTick <- __place_new_73;
+    __place_new_73
   ));
-  HxMap.set_string ((Obj.magic self : t).accessTicks) key ((Obj.magic self : t).accessTick)
+  let _this = Obj.magic ((Obj.magic self : t).accessTicks) in let value = (Obj.magic self : t).accessTick in HxMap.set_string (Obj.magic _this) (key : string) value
 )))
 
-let findSource = fun self (key : string) -> let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).sourceEntries) key) in (
+let findSource = fun self (key : string) -> let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in let tempMaybeCompilationServerCachedSource = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedSource in (
   ignore (if entry != Obj.magic (HxRuntime.hx_null) then ignore (touch (Obj.magic self) ("source:" ^ HxString.toStdString key : string)) else ());
   entry
 )
 
-let findParsed = fun self (key : string) -> let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).parsedEntries) key) in (
+let findParsed = fun self (key : string) -> let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let tempMaybeCompilationServerCachedParse = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedParse in (
   ignore (if entry != Obj.magic (HxRuntime.hx_null) then ignore (touch (Obj.magic self) ("parser:" ^ HxString.toStdString key : string)) else ());
   entry
 )
 
-let findResolution = fun self (key : string) -> let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).resolutionEntries) key) in (
+let findResolution = fun self (key : string) -> let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in let tempMaybeCompilationServerCachedResolution = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedResolution in (
   ignore (if entry != Obj.magic (HxRuntime.hx_null) then ignore (touch (Obj.magic self) ("resolution:" ^ HxString.toStdString key : string)) else ());
   entry
 )
 
-let compareAccessKeys = fun self (left : string) (right : string) -> try let __fallback_result_83 = let leftTick = HxMap.get_string ((Obj.magic self : t).accessTicks) left in let rightTick = HxMap.get_string ((Obj.magic self : t).accessTicks) right in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
-  ignore (if leftTick == HxRuntime.hx_null then let __assign_71 = Obj.magic (Obj.repr 0) in (
-    tempMaybeNumber := __assign_71;
-    __assign_71
-  ) else let __assign_72 = Obj.magic leftTick in (
-    tempMaybeNumber := __assign_72;
-    __assign_72
+let compareAccessKeys = fun self (left : string) (right : string) -> try let __fallback_result_90 = let _this = Obj.magic ((Obj.magic self : t).accessTicks) in let tempMaybeNumber = HxMap.get_string (Obj.magic _this) (left : string) in let leftTick = tempMaybeNumber in let _this = Obj.magic ((Obj.magic self : t).accessTicks) in let tempMaybeNumber1 = HxMap.get_string (Obj.magic _this) (right : string) in let rightTick = tempMaybeNumber1 in let tempMaybeNumber2 = ref (HxRuntime.hx_null : Obj.t) in (
+  ignore (if leftTick == HxRuntime.hx_null then let __assign_78 = Obj.repr 0 in (
+    tempMaybeNumber2 := __assign_78;
+    __assign_78
+  ) else let __assign_79 = leftTick in (
+    tempMaybeNumber2 := __assign_79;
+    __assign_79
   ));
-  let leftValue = Obj.magic (!tempMaybeNumber) in let tempMaybeNumber1 = ref (HxRuntime.hx_null : Obj.t) in (
-    ignore (if rightTick == HxRuntime.hx_null then let __assign_73 = Obj.magic (Obj.repr 0) in (
-      tempMaybeNumber1 := __assign_73;
-      __assign_73
-    ) else let __assign_74 = Obj.magic rightTick in (
-      tempMaybeNumber1 := __assign_74;
-      __assign_74
+  let leftValue = !tempMaybeNumber2 in let tempMaybeNumber3 = ref (HxRuntime.hx_null : Obj.t) in (
+    ignore (if rightTick == HxRuntime.hx_null then let __assign_80 = Obj.repr 0 in (
+      tempMaybeNumber3 := __assign_80;
+      __assign_80
+    ) else let __assign_81 = rightTick in (
+      tempMaybeNumber3 := __assign_81;
+      __assign_81
     ));
-    let rightValue = Obj.magic (!tempMaybeNumber1) in (
-      ignore (if let __nullable_75 = leftValue in let __nullable_76 = rightValue in if __nullable_75 == HxRuntime.hx_null || __nullable_76 == HxRuntime.hx_null then false else Obj.obj __nullable_75 < Obj.obj __nullable_76 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
-      ignore (if let __nullable_77 = leftValue in let __nullable_78 = rightValue in if __nullable_77 == HxRuntime.hx_null || __nullable_78 == HxRuntime.hx_null then false else Obj.obj __nullable_77 > Obj.obj __nullable_78 then raise (HxRuntime.Hx_return (Obj.repr 1)) else ());
+    let rightValue = !tempMaybeNumber3 in (
+      ignore (if let __nullable_82 = leftValue in let __nullable_83 = rightValue in if __nullable_82 == HxRuntime.hx_null || __nullable_83 == HxRuntime.hx_null then false else Obj.obj __nullable_82 < Obj.obj __nullable_83 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
+      ignore (if let __nullable_84 = leftValue in let __nullable_85 = rightValue in if __nullable_84 == HxRuntime.hx_null || __nullable_85 == HxRuntime.hx_null then false else Obj.obj __nullable_84 > Obj.obj __nullable_85 then raise (HxRuntime.Hx_return (Obj.repr 1)) else ());
       let tempResult = ref (0 : int) in (
-        ignore (if left < right then let __assign_79 = -1 in (
-          tempResult := __assign_79;
-          __assign_79
-        ) else if left > right then let __assign_80 = 1 in (
-          tempResult := __assign_80;
-          __assign_80
-        ) else let __assign_81 = 0 in (
-          tempResult := __assign_81;
-          __assign_81
+        ignore (if left < right then let __assign_86 = -1 in (
+          tempResult := __assign_86;
+          __assign_86
+        ) else if left > right then let __assign_87 = 1 in (
+          tempResult := __assign_87;
+          __assign_87
+        ) else let __assign_88 = 0 in (
+          tempResult := __assign_88;
+          __assign_88
         ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_83 with
-  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82
+) in Obj.magic __fallback_result_90 with
+  | HxRuntime.Hx_return __ret_89 -> Obj.obj __ret_89
 
-let evict = fun self (key : string) -> ignore (ignore ((
-  ignore (HxMap.remove_string ((Obj.magic self : t).accessTicks) key);
-  ignore (if StringTools.startsWith (key : string) ("source:" : string) then ignore (let entryKey = (HxString.substr key (HxString.length "source:") (-1) : string) in let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).sourceEntries) entryKey) in if entry != Obj.magic (HxRuntime.hx_null) then ignore ((
-    ignore (HxMap.remove_string ((Obj.magic self : t).sourceEntries) entryKey);
-    ignore (if HxString.equals (HxMap.get_string ((Obj.magic self : t).latestSourceRevisionByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath)) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).contentRevision) then ignore (HxMap.remove_string ((Obj.magic self : t).latestSourceRevisionByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath)) else ());
-    let __recv_84 = self in let __recv_typed_85 = (Obj.magic __recv_84 : t) in __recv_typed_85.retainedBytesEstimate <- HxInt.sub (__recv_typed_85.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).retainedBytesEstimate)
-  )) else ()) else ignore (if StringTools.startsWith (key : string) ("parser:" : string) then ignore (let entryKey = (HxString.substr key (HxString.length "parser:") (-1) : string) in let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).parsedEntries) entryKey) in if entry != Obj.magic (HxRuntime.hx_null) then ignore ((
-    ignore (HxMap.remove_string ((Obj.magic self : t).parsedEntries) entryKey);
-    ignore (if HxString.equals (HxMap.get_string ((Obj.magic self : t).latestParserInputByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath)) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).inputRevision) then ignore (HxMap.remove_string ((Obj.magic self : t).latestParserInputByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath)) else ());
-    let __recv_86 = self in let __recv_typed_87 = (Obj.magic __recv_86 : t) in __recv_typed_87.retainedBytesEstimate <- HxInt.sub (__recv_typed_87.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate)
-  )) else ()) else ignore (if StringTools.startsWith (key : string) ("resolution:" : string) then ignore (let entryKey = (HxString.substr key (HxString.length "resolution:") (-1) : string) in let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).resolutionEntries) entryKey) in if entry != Obj.magic (HxRuntime.hx_null) then ignore ((
-    ignore (HxMap.remove_string ((Obj.magic self : t).resolutionEntries) entryKey);
-    ignore (if HxString.equals (HxMap.get_string ((Obj.magic self : t).latestResolutionKeyByLookup) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity)) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) then ignore ((
-      ignore (HxMap.remove_string ((Obj.magic self : t).latestResolutionKeyByLookup) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity));
-      HxMap.remove_string ((Obj.magic self : t).latestResolutionPathByLookup) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity)
-    )) else ());
-    let __recv_88 = self in let __recv_typed_89 = (Obj.magic __recv_88 : t) in __recv_typed_89.retainedBytesEstimate <- HxInt.sub (__recv_typed_89.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).retainedBytesEstimate)
+let evict = fun self (key : string) -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).accessTicks) in (
+  ignore (HxMap.remove_string (Obj.magic _this) (key : string));
+  ignore (if let __call_arg_0_91 = key in let __call_arg_1_92 = "source:" in StringTools.startsWith __call_arg_0_91 __call_arg_1_92 then ignore (let entryKey = (HxString.substr key (HxString.length "source:") (-1) : string) in let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in let tempMaybeCompilationServerCachedSource = Obj.magic (HxMap.get_string (Obj.magic _this) (entryKey : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedSource in if entry != Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in (
+    ignore (HxMap.remove_string (Obj.magic _this) (entryKey : string));
+    let _this = Obj.magic ((Obj.magic self : t).latestSourceRevisionByPath) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath : string) in let tempLeft = (HxMap.get_string (Obj.magic _this) (key2 : string) : string) in (
+      ignore (if HxString.equals tempLeft ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).contentRevision) then ignore (let _this = Obj.magic ((Obj.magic self : t).latestSourceRevisionByPath) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath : string) in HxMap.remove_string (Obj.magic _this) (key2 : string)) else ());
+      let __recv_93 = self in let __recv_typed_94 = (Obj.magic __recv_93 : t) in __recv_typed_94.retainedBytesEstimate <- HxInt.sub (__recv_typed_94.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).retainedBytesEstimate)
+    )
+  )) else ()) else ignore (if let __call_arg_0_95 = key in let __call_arg_1_96 = "parser:" in StringTools.startsWith __call_arg_0_95 __call_arg_1_96 then ignore (let entryKey = (HxString.substr key (HxString.length "parser:") (-1) : string) in let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let tempMaybeCompilationServerCachedParse = Obj.magic (HxMap.get_string (Obj.magic _this) (entryKey : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedParse in if entry != Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in (
+    ignore (HxMap.remove_string (Obj.magic _this) (entryKey : string));
+    let _this = Obj.magic ((Obj.magic self : t).latestParserInputByPath) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath : string) in let tempLeft1 = (HxMap.get_string (Obj.magic _this) (key2 : string) : string) in (
+      ignore (if HxString.equals tempLeft1 ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).inputRevision) then ignore (let _this = Obj.magic ((Obj.magic self : t).latestParserInputByPath) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath : string) in HxMap.remove_string (Obj.magic _this) (key2 : string)) else ());
+      let __recv_97 = self in let __recv_typed_98 = (Obj.magic __recv_97 : t) in __recv_typed_98.retainedBytesEstimate <- HxInt.sub (__recv_typed_98.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate)
+    )
+  )) else ()) else ignore (if let __call_arg_0_99 = key in let __call_arg_1_100 = "resolution:" in StringTools.startsWith __call_arg_0_99 __call_arg_1_100 then ignore (let entryKey = (HxString.substr key (HxString.length "resolution:") (-1) : string) in let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in let tempMaybeCompilationServerCachedResolution = Obj.magic (HxMap.get_string (Obj.magic _this) (entryKey : string)) in let entry = Obj.magic tempMaybeCompilationServerCachedResolution in if entry != Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in (
+    ignore (HxMap.remove_string (Obj.magic _this) (entryKey : string));
+    let _this = Obj.magic ((Obj.magic self : t).latestResolutionKeyByLookup) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity : string) in let tempLeft2 = (HxMap.get_string (Obj.magic _this) (key2 : string) : string) in (
+      ignore (if HxString.equals tempLeft2 ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) then ignore (let _this = Obj.magic ((Obj.magic self : t).latestResolutionKeyByLookup) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity : string) in (
+        ignore (HxMap.remove_string (Obj.magic _this) (key2 : string));
+        let _this = Obj.magic ((Obj.magic self : t).latestResolutionPathByLookup) in let key2 = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity : string) in HxMap.remove_string (Obj.magic _this) (key2 : string)
+      )) else ());
+      let __recv_101 = self in let __recv_typed_102 = (Obj.magic __recv_101 : t) in __recv_typed_102.retainedBytesEstimate <- HxInt.sub (__recv_typed_102.retainedBytesEstimate) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).retainedBytesEstimate)
+    )
   )) else ()) else ())));
-  ignore (if (Obj.magic self : t).retainedBytesEstimate < 0 then ignore (let __place_receiver_90 = self in let __place_rhs_91 = 0 in (
-    (__place_receiver_90 : t).retainedBytesEstimate <- __place_rhs_91;
-    __place_rhs_91
+  ignore (if (Obj.magic self : t).retainedBytesEstimate < 0 then ignore (let __place_receiver_103 = self in let __place_rhs_104 = 0 in (
+    (__place_receiver_103 : t).retainedBytesEstimate <- __place_rhs_104;
+    __place_rhs_104
   )) else ());
-  let __place_receiver_92 = self in let __place_old_93 = (__place_receiver_92 : t).totalEvictions in let __place_rhs_94 = 1 in let __place_new_95 = HxInt.add __place_old_93 __place_rhs_94 in (
-    (__place_receiver_92 : t).totalEvictions <- __place_new_95;
-    __place_new_95
+  let __place_receiver_105 = self in let __place_old_106 = (__place_receiver_105 : t).totalEvictions in let __place_rhs_107 = 1 in let __place_new_108 = HxInt.add __place_old_106 __place_rhs_107 in (
+    (__place_receiver_105 : t).totalEvictions <- __place_new_108;
+    __place_new_108
   )
 )))
 
-let evictToBudget = fun self () -> ignore (ignore (try (
+let evictToBudget = fun self () -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).retainedBytesEstimate <= (Obj.magic self : t).maxBytes then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let candidates = Obj.magic (HxArray.create ()) in let key = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).accessTicks)) in (
-    ignore (while (let __iter_68 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_68)) () do ignore (let key2 = ((let __iter_69 = key in fun () -> HxIterator.next (Obj.magic __iter_69)) () : string) in let tick = HxMap.get_string ((Obj.magic self : t).accessTicks) key2 in if tick != HxRuntime.hx_null then ignore (HxArray.push candidates key2) else ()) done);
+  let candidates = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).accessTicks) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let key = tempIterator in (
+    ignore (while (let __iter_74 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_74)) () do ignore (let key2 = ((let __iter_75 = key in fun () -> HxIterator.next (Obj.magic __iter_75)) () : string) in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).accessTicks) in (
+      ignore (let __assign_76 = HxMap.get_string (Obj.magic _this) (key2 : string) in (
+        tempMaybeNumber := __assign_76;
+        __assign_76
+      ));
+      let tick = !tempMaybeNumber in if tick != HxRuntime.hx_null then ignore (HxArray.push candidates key2) else ()
+    )) done);
     ignore (HxArray.sort candidates (fun a0 a1 -> compareAccessKeys self a0 a1));
     let index = ref 0 in while (Obj.magic self : t).retainedBytesEstimate > (Obj.magic self : t).maxBytes && !index < HxArray.length candidates do ignore ((
       ignore (evict (Obj.magic self) (HxArray.get (Obj.magic candidates) (!index) : string));
       index := HxInt.add (!index) 1
     )) done
   )
-) with
-  | HxRuntime.Hx_return __ret_70 -> Obj.obj __ret_70))
+)) with
+  | HxRuntime.Hx_return __ret_77 -> Obj.obj __ret_77))
 
-let pathToken = fun path -> let tempResult = ref ("" : string) in (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_96 = ("<missing>" : string) in (
-    tempResult := __assign_96;
-    __assign_96
-  ) else let __assign_97 = (path : string) in (
-    tempResult := __assign_97;
-    __assign_97
+let pathToken = fun (path : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_109 = ("<missing>" : string) in (
+    tempResult := __assign_109;
+    __assign_109
+  ) else let __assign_110 = (path : string) in (
+    tempResult := __assign_110;
+    __assign_110
   ));
   !tempResult
-)
+) : string)
 
-let resolutionMissReason = fun self (lookupIdentity : string) (key : string) (filePath : string) -> try let __fallback_result_34 = let previousKey = (HxMap.get_string ((Obj.magic self : t).latestResolutionKeyByLookup) lookupIdentity : string) in (
+let resolutionMissReason = fun self (lookupIdentity : string) (key : string) (filePath : string) -> try let __fallback_result_36 = let _this = Obj.magic ((Obj.magic self : t).latestResolutionKeyByLookup) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (lookupIdentity : string) : string) in let previousKey = (tempMaybeString : string) in (
   ignore (if previousKey == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("cold" : string))) else ());
   ignore (if HxString.equals previousKey key then raise (HxRuntime.Hx_return (Obj.repr ("evicted" : string))) else ());
-  let previousPath = (HxMap.get_string ((Obj.magic self : t).latestResolutionPathByLookup) lookupIdentity : string) in let tempResult = ref ("" : string) in (
-    ignore (if HxString.equals previousPath (pathToken (filePath : string)) then let __assign_31 = ("resolution-observations-changed" : string) in (
-      tempResult := __assign_31;
-      __assign_31
-    ) else let __assign_32 = ("origin-shadowed" : string) in (
-      tempResult := __assign_32;
-      __assign_32
+  let _this = Obj.magic ((Obj.magic self : t).latestResolutionPathByLookup) in let tempMaybeString1 = (HxMap.get_string (Obj.magic _this) (lookupIdentity : string) : string) in let previousPath = (tempMaybeString1 : string) in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.equals previousPath (let __call_arg_0_32 = filePath in pathToken __call_arg_0_32) then let __assign_33 = "resolution-observations-changed" in (
+      tempResult := __assign_33;
+      __assign_33
+    ) else let __assign_34 = "origin-shadowed" in (
+      tempResult := __assign_34;
+      __assign_34
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_34 with
-  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
+) in Obj.magic __fallback_result_36 with
+  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
 
 let publish = fun self (sources : Hxhx_CompilationServerCachedSource.t HxArray.t) (parsedModules : Hxhx_CompilationServerCachedParse.t HxArray.t) (resolutions : Hxhx_CompilationServerCachedResolution.t HxArray.t) (report : CompilerSourceProviderReport.t) -> ignore (ignore (let evictionsBefore = (Obj.magic self : t).totalEvictions in let _g = ref 0 in (
   ignore (try while !_g < HxArray.length sources do try ignore (let entry = Obj.magic (HxArray.get (Obj.magic sources) (!_g)) in (
-    ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
-      ignore (_g := __new_41);
-      __new_41
+    ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
+      ignore (_g := __new_43);
+      __new_43
     ));
-    ignore (HxMap.set_string ((Obj.magic self : t).latestSourceRevisionByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).contentRevision));
-    ignore (if HxMap.exists_string ((Obj.magic self : t).sourceEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) then ignore ((
-      ignore (touch (Obj.magic self) ("source:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) : string));
-      raise (HxRuntime.Hx_continue)
-    )) else ());
-    ignore (HxMap.set_string ((Obj.magic self : t).sourceEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) entry);
-    ignore (let __place_receiver_42 = self in let __place_old_43 = (__place_receiver_42 : t).retainedBytesEstimate in let __place_rhs_44 = (Obj.magic entry : Hxhx_CompilationServerCachedSource.t).retainedBytesEstimate in let __place_new_45 = HxInt.add __place_old_43 __place_rhs_44 in (
-      (__place_receiver_42 : t).retainedBytesEstimate <- __place_new_45;
-      __place_new_45
-    ));
-    touch (Obj.magic self) ("source:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) : string)
+    let _this = Obj.magic ((Obj.magic self : t).latestSourceRevisionByPath) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).logicalPath : string) in let value = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).contentRevision : string) in (
+      ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
+      let tempBool = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key : string) in (
+        ignore (let __assign_44 = HxMap.exists_string (Obj.magic _this) (key : string) in (
+          tempBool := __assign_44;
+          __assign_44
+        ));
+        ignore (if !tempBool then ignore ((
+          ignore (touch (Obj.magic self) ("source:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) : string));
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key : string) in (
+          ignore (HxMap.set_string (Obj.magic _this) (key : string) entry);
+          ignore (let __place_receiver_45 = self in let __place_old_46 = (__place_receiver_45 : t).retainedBytesEstimate in let __place_rhs_47 = (Obj.magic entry : Hxhx_CompilationServerCachedSource.t).retainedBytesEstimate in let __place_new_48 = HxInt.add __place_old_46 __place_rhs_47 in (
+            (__place_receiver_45 : t).retainedBytesEstimate <- __place_new_48;
+            __place_new_48
+          ));
+          touch (Obj.magic self) ("source:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedSource.t).key) : string)
+        )
+      )
+    )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   let _g = ref 0 in (
     ignore (try while !_g < HxArray.length parsedModules do try ignore (let entry = Obj.magic (HxArray.get (Obj.magic parsedModules) (!_g)) in (
-      ignore (let __old_46 = !_g in let __new_47 = HxInt.add __old_46 1 in (
-        ignore (_g := __new_47);
-        __new_47
+      ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
+        ignore (_g := __new_50);
+        __new_50
       ));
-      ignore (HxMap.set_string ((Obj.magic self : t).latestParserInputByPath) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).inputRevision));
-      ignore (if HxMap.exists_string ((Obj.magic self : t).parsedEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) then ignore ((
-        ignore (touch (Obj.magic self) ("parser:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) : string));
-        raise (HxRuntime.Hx_continue)
-      )) else ());
-      ignore (HxMap.set_string ((Obj.magic self : t).parsedEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) entry);
-      ignore (let __place_receiver_48 = self in let __place_old_49 = (__place_receiver_48 : t).retainedBytesEstimate in let __place_rhs_50 = (Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate in let __place_new_51 = HxInt.add __place_old_49 __place_rhs_50 in (
-        (__place_receiver_48 : t).retainedBytesEstimate <- __place_new_51;
-        __place_new_51
-      ));
-      touch (Obj.magic self) ("parser:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) : string)
+      let _this = Obj.magic ((Obj.magic self : t).latestParserInputByPath) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).logicalPath : string) in let value = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).inputRevision : string) in (
+        ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
+        let tempBool1 = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key : string) in (
+          ignore (let __assign_51 = HxMap.exists_string (Obj.magic _this) (key : string) in (
+            tempBool1 := __assign_51;
+            __assign_51
+          ));
+          ignore (if !tempBool1 then ignore ((
+            ignore (touch (Obj.magic self) ("parser:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) : string));
+            raise (HxRuntime.Hx_continue)
+          )) else ());
+          let _this = Obj.magic ((Obj.magic self : t).parsedEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key : string) in (
+            ignore (HxMap.set_string (Obj.magic _this) (key : string) entry);
+            ignore (let __place_receiver_52 = self in let __place_old_53 = (__place_receiver_52 : t).retainedBytesEstimate in let __place_rhs_54 = (Obj.magic entry : Hxhx_CompilationServerCachedParse.t).retainedBytesEstimate in let __place_new_55 = HxInt.add __place_old_53 __place_rhs_54 in (
+              (__place_receiver_52 : t).retainedBytesEstimate <- __place_new_55;
+              __place_new_55
+            ));
+            touch (Obj.magic self) ("parser:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key) : string)
+          )
+        )
+      )
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
     let _g = ref 0 in (
       ignore (try while !_g < HxArray.length resolutions do try ignore (let entry = Obj.magic (HxArray.get (Obj.magic resolutions) (!_g)) in (
-        ignore (let __old_52 = !_g in let __new_53 = HxInt.add __old_52 1 in (
-          ignore (_g := __new_53);
-          __new_53
+        ignore (let __old_56 = !_g in let __new_57 = HxInt.add __old_56 1 in (
+          ignore (_g := __new_57);
+          __new_57
         ));
-        ignore (HxMap.set_string ((Obj.magic self : t).latestResolutionKeyByLookup) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key));
-        ignore (HxMap.set_string ((Obj.magic self : t).latestResolutionPathByLookup) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity) (pathToken ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath : string)));
-        ignore (if HxMap.exists_string ((Obj.magic self : t).resolutionEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) then ignore ((
-          ignore (touch (Obj.magic self) ("resolution:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) : string));
-          raise (HxRuntime.Hx_continue)
-        )) else ());
-        ignore (HxMap.set_string ((Obj.magic self : t).resolutionEntries) ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) entry);
-        ignore (let __place_receiver_54 = self in let __place_old_55 = (__place_receiver_54 : t).retainedBytesEstimate in let __place_rhs_56 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).retainedBytesEstimate in let __place_new_57 = HxInt.add __place_old_55 __place_rhs_56 in (
-          (__place_receiver_54 : t).retainedBytesEstimate <- __place_new_57;
-          __place_new_57
-        ));
-        touch (Obj.magic self) ("resolution:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) : string)
+        let _this = Obj.magic ((Obj.magic self : t).latestResolutionKeyByLookup) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity : string) in let value = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key : string) in (
+          ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
+          let _this = Obj.magic ((Obj.magic self : t).latestResolutionPathByLookup) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity : string) in let value = let __call_arg_0_58 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath in pathToken __call_arg_0_58 in (
+            ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
+            let tempBool2 = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key : string) in (
+              ignore (let __assign_59 = HxMap.exists_string (Obj.magic _this) (key : string) in (
+                tempBool2 := __assign_59;
+                __assign_59
+              ));
+              ignore (if !tempBool2 then ignore ((
+                ignore (touch (Obj.magic self) ("resolution:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) : string));
+                raise (HxRuntime.Hx_continue)
+              )) else ());
+              let _this = Obj.magic ((Obj.magic self : t).resolutionEntries) in let key = ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key : string) in (
+                ignore (HxMap.set_string (Obj.magic _this) (key : string) entry);
+                ignore (let __place_receiver_60 = self in let __place_old_61 = (__place_receiver_60 : t).retainedBytesEstimate in let __place_rhs_62 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).retainedBytesEstimate in let __place_new_63 = HxInt.add __place_old_61 __place_rhs_62 in (
+                  (__place_receiver_60 : t).retainedBytesEstimate <- __place_new_63;
+                  __place_new_63
+                ));
+                touch (Obj.magic self) ("resolution:" ^ HxString.toStdString ((Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).key) : string)
+              )
+            )
+          )
+        )
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
@@ -294,82 +356,82 @@ let publish = fun self (sources : Hxhx_CompilationServerCachedSource.t HxArray.t
 
 let openRequest = fun self () -> let request = Obj.magic (Hxhx_CompilationServerSourceCacheRequest.create (fun a0 -> findSource self a0) (fun a0 -> findParsed self a0) (fun a0 -> findResolution self a0) (fun a0 a1 -> sourceMissReason self a0 a1) (fun a0 a1 -> parserMissReason self a0 a1) (fun a0 a1 a2 -> resolutionMissReason self a0 a1 a2) (fun a0 -> quarantineParsed self a0) (fun a0 a1 a2 a3 -> publish self a0 a1 a2 a3) (fun a0 -> snapshotReportState self a0)) in Hxhx_CompilationServerSourceCacheRequest.provider (Obj.magic request) ()
 
-let normalizedMaxBytes = fun explicit -> try let __fallback_result_109 = (
+let normalizedMaxBytes = fun (explicit : Obj.t) -> (try (
   ignore (if explicit != HxRuntime.hx_null then ignore (let tempResult = ref (0 : int) in (
-    ignore (if let __nullable_98 = explicit in let __nullable_99 = 1024 in if __nullable_98 == HxRuntime.hx_null then false else Obj.obj __nullable_98 < __nullable_99 then let __assign_100 = 1024 in (
-      tempResult := __assign_100;
-      __assign_100
-    ) else let __assign_101 = let __nullable_int_102 = explicit in if __nullable_int_102 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_102 in (
-      tempResult := __assign_101;
-      __assign_101
+    ignore (if let __nullable_111 = explicit in let __nullable_112 = 1024 in if __nullable_111 == HxRuntime.hx_null then false else Obj.obj __nullable_111 < __nullable_112 then let __assign_113 = 1024 in (
+      tempResult := __assign_113;
+      __assign_113
+    ) else let __assign_114 = let __nullable_int_115 = explicit in if __nullable_int_115 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_115 in (
+      tempResult := __assign_114;
+      __assign_114
     ));
     raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   )) else ());
-  let configured = (HxSys.getEnv "HXHX_NATIVE_SERVER_SOURCE_CACHE_BYTES" : string) in (
-    ignore (if configured == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (configured : string)) = 0 then raise (HxRuntime.Hx_return (Obj.repr 67108864)) else ());
-    let parsed = Std.parseInt (StringTools.trim (configured : string) : string) in let tempResult1 = ref (0 : int) in (
-      ignore (if parsed == HxRuntime.hx_null || (let __nullable_103 = parsed in let __nullable_104 = 1024 in if __nullable_103 == HxRuntime.hx_null then false else Obj.obj __nullable_103 < __nullable_104) then let __assign_105 = 67108864 in (
-        tempResult1 := __assign_105;
-        __assign_105
-      ) else let __assign_106 = let __nullable_int_107 = parsed in if __nullable_int_107 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_107 in (
-        tempResult1 := __assign_106;
-        __assign_106
+  let configured = (HxSys.getEnv ("HXHX_NATIVE_SERVER_SOURCE_CACHE_BYTES" : string) : string) in (
+    ignore (if configured == HxString.hx_null_string || HxString.length (let __call_arg_0_116 = configured in StringTools.trim __call_arg_0_116) = 0 then raise (HxRuntime.Hx_return (Obj.repr 67108864)) else ());
+    let parsed = Std.parseInt (let __call_arg_0_117 = configured in StringTools.trim __call_arg_0_117 : string) in let tempResult1 = ref (0 : int) in (
+      ignore (if parsed == HxRuntime.hx_null || (let __nullable_118 = parsed in let __nullable_119 = 1024 in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 < __nullable_119) then let __assign_120 = 67108864 in (
+        tempResult1 := __assign_120;
+        __assign_120
+      ) else let __assign_121 = let __nullable_int_122 = parsed in if __nullable_int_122 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_122 in (
+        tempResult1 := __assign_121;
+        __assign_121
       ));
       !tempResult1
     )
   )
-) in Obj.magic __fallback_result_109 with
-  | HxRuntime.Hx_return __ret_108 -> Obj.obj __ret_108
+) with
+  | HxRuntime.Hx_return __ret_123 -> (Obj.obj __ret_123 : int) : int)
 
 let create = fun maxBytes2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic (HxRuntime.hx_null); parsedEntries = Obj.magic (HxRuntime.hx_null); resolutionEntries = Obj.magic (HxRuntime.hx_null); accessTicks = Obj.magic (HxRuntime.hx_null); latestSourceRevisionByPath = Obj.magic (HxRuntime.hx_null); latestParserInputByPath = Obj.magic (HxRuntime.hx_null); latestResolutionKeyByLookup = Obj.magic (HxRuntime.hx_null); latestResolutionPathByLookup = Obj.magic (HxRuntime.hx_null); maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t) in (
   ignore (ignore ((
-    ignore (let __place_receiver_1 = self in let __place_rhs_2 = normalizedMaxBytes maxBytes2 in (
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = let __call_arg_0_3 = maxBytes2 in normalizedMaxBytes __call_arg_0_3 in (
       (__place_receiver_1 : t).maxBytes <- __place_rhs_2;
       __place_rhs_2
     ));
-    ignore (let __assign_3 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).sourceEntries <- __assign_3;
-      __assign_3
-    ));
     ignore (let __assign_4 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).parsedEntries <- __assign_4;
+      (Obj.magic self : t).sourceEntries <- __assign_4;
       __assign_4
     ));
     ignore (let __assign_5 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).resolutionEntries <- __assign_5;
+      (Obj.magic self : t).parsedEntries <- __assign_5;
       __assign_5
     ));
     ignore (let __assign_6 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).accessTicks <- __assign_6;
+      (Obj.magic self : t).resolutionEntries <- __assign_6;
       __assign_6
     ));
     ignore (let __assign_7 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).latestSourceRevisionByPath <- __assign_7;
+      (Obj.magic self : t).accessTicks <- __assign_7;
       __assign_7
     ));
     ignore (let __assign_8 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).latestParserInputByPath <- __assign_8;
+      (Obj.magic self : t).latestSourceRevisionByPath <- __assign_8;
       __assign_8
     ));
     ignore (let __assign_9 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).latestResolutionKeyByLookup <- __assign_9;
+      (Obj.magic self : t).latestParserInputByPath <- __assign_9;
       __assign_9
     ));
     ignore (let __assign_10 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).latestResolutionPathByLookup <- __assign_10;
+      (Obj.magic self : t).latestResolutionKeyByLookup <- __assign_10;
       __assign_10
     ));
-    ignore (let __place_receiver_11 = self in let __place_rhs_12 = 0 in (
-      (__place_receiver_11 : t).retainedBytesEstimate <- __place_rhs_12;
-      __place_rhs_12
+    ignore (let __assign_11 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).latestResolutionPathByLookup <- __assign_11;
+      __assign_11
     ));
-    ignore (let __place_receiver_13 = self in let __place_rhs_14 = 0 in (
-      (__place_receiver_13 : t).accessTick <- __place_rhs_14;
-      __place_rhs_14
+    ignore (let __place_receiver_12 = self in let __place_rhs_13 = 0 in (
+      (__place_receiver_12 : t).retainedBytesEstimate <- __place_rhs_13;
+      __place_rhs_13
     ));
-    let __place_receiver_15 = self in let __place_rhs_16 = 0 in (
-      (__place_receiver_15 : t).totalEvictions <- __place_rhs_16;
-      __place_rhs_16
+    ignore (let __place_receiver_14 = self in let __place_rhs_15 = 0 in (
+      (__place_receiver_14 : t).accessTick <- __place_rhs_15;
+      __place_rhs_15
+    ));
+    let __place_receiver_16 = self in let __place_rhs_17 = 0 in (
+      (__place_receiver_16 : t).totalEvictions <- __place_rhs_17;
+      __place_rhs_17
     )
   )));
   self

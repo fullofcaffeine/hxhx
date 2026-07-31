@@ -19,9 +19,9 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "FilesystemCompilerSourcePr
 let readSource = fun self (filePath : string) -> (
   ignore self;
   try let __fallback_result_13 = (
-    ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if filePath == HxString.hx_null_string || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (try if not (HxFileSystem.exists filePath) || HxFileSystem.isDirectory filePath then let __assign_2 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      ignore (try if not (HxFileSystem.exists (filePath : string)) || HxFileSystem.isDirectory (filePath : string) then let __assign_2 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
         tempResult := __assign_2;
         __assign_2
       ) else let __assign_3 = Obj.magic (HxFile.getContent (filePath : string) : string) in (
@@ -31,6 +31,7 @@ let readSource = fun self (filePath : string) -> (
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
         | HxRuntime.Hx_return __ret_4 -> raise (HxRuntime.Hx_return __ret_4)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_5, __exn_tags_6) -> if HxRuntime.tags_has __exn_tags_6 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_5) : Haxe_io_Error.error) in (
           ignore _hx;
           let __assign_8 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -71,15 +72,16 @@ let parseFilteredSource = fun self (filteredSource : string) (filePath : string)
 let isFile = fun self (path : string) -> (
   ignore self;
   try let __fallback_result_42 = (
-    ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let tempResult = ref (false : bool) in (
-      ignore (try let __assign_32 = HxFileSystem.exists path && not (HxFileSystem.isDirectory path) in (
+      ignore (try let __assign_32 = HxFileSystem.exists (path : string) && not (HxFileSystem.isDirectory (path : string)) in (
         tempResult := __assign_32;
         __assign_32
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
         | HxRuntime.Hx_return __ret_33 -> raise (HxRuntime.Hx_return __ret_33)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_34, __exn_tags_35) -> if HxRuntime.tags_has __exn_tags_35 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_34) : Haxe_io_Error.error) in (
           ignore _hx;
           let __assign_37 = false in (
@@ -130,7 +132,7 @@ let finish = fun self (_requestSucceeded : bool) -> ignore ((
 
 let report = fun self () -> (Obj.magic self : t).providerReport
 
-let compareStrings = fun left right -> let tempResult = ref (0 : int) in (
+let compareStrings = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
   ignore (if left < right then let __assign_43 = -1 in (
     tempResult := __assign_43;
     __assign_43
@@ -142,23 +144,24 @@ let compareStrings = fun left right -> let tempResult = ref (0 : int) in (
     __assign_45
   ));
   !tempResult
-)
+) : int)
 
 let readDirectory = fun self (path : string) -> (
   ignore self;
   try let __fallback_result_31 = (
-    ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_14 = HxArray.create () in __arr_14)))) else ());
+    ignore (if path == HxString.hx_null_string || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_14 = HxArray.create () in __arr_14)))) else ());
     let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (try if not (HxFileSystem.exists path) || not (HxFileSystem.isDirectory path) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
+      ignore (try if not (HxFileSystem.exists (path : string)) || not (HxFileSystem.isDirectory (path : string)) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
         tempArray := __assign_15;
         __assign_15
-      ) else let __assign_17 = Obj.magic (HxFileSystem.readDirectory path) in (
+      ) else let __assign_17 = Obj.magic (HxFileSystem.readDirectory (path : string)) in (
         tempArray := __assign_17;
         __assign_17
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
         | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_19) : Haxe_io_Error.error) in (
           ignore _hx;
           let __assign_23 = Obj.magic (let __arr_24 = HxArray.create () in __arr_24) in (
@@ -185,8 +188,10 @@ let readDirectory = fun self (path : string) -> (
             __assign_26
           )
         ) else raise (__exn_25));
-      ignore (HxArray.sort (!tempArray) compareStrings);
-      !tempArray
+      let entries = Obj.magic (!tempArray) in (
+        ignore (HxArray.sort entries compareStrings);
+        entries
+      )
     )
   ) in Obj.magic __fallback_result_31 with
     | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30

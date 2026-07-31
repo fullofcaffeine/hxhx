@@ -6,47 +6,47 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable timingsEnabled : bool; mutable timingMethodFilter : string; mutable deepEnabled : bool; mutable lambdaPhasesEnabled : bool; mutable callArgDetailPhasesEnabled : bool; mutable helperClassificationDetailsEnabled : bool; mutable timingPhaseBuffer : string HxArray.t }
 
-let create = fun timingsEnabled2 timingMethodFilter2 deepEnabled2 lambdaPhasesEnabled2 callArgDetailPhasesEnabled2 helperClassificationDetailsEnabled2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppTraceContext"; timingsEnabled = false; timingMethodFilter = ""; deepEnabled = false; lambdaPhasesEnabled = false; callArgDetailPhasesEnabled = false; helperClassificationDetailsEnabled = false; timingPhaseBuffer = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun timingsEnabled2 timingMethodFilter2 deepEnabled2 lambdaPhasesEnabled2 callArgDetailPhasesEnabled2 helperClassificationDetailsEnabled2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppTraceContext"; timingsEnabled = false; timingMethodFilter = HxString.hx_null_string; deepEnabled = false; lambdaPhasesEnabled = false; callArgDetailPhasesEnabled = false; helperClassificationDetailsEnabled = false; timingPhaseBuffer = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (let deepEnabled2 = if Obj.repr deepEnabled2 == HxRuntime.hx_null then false else deepEnabled2 in let lambdaPhasesEnabled2 = if Obj.repr lambdaPhasesEnabled2 == HxRuntime.hx_null then false else lambdaPhasesEnabled2 in let callArgDetailPhasesEnabled2 = if Obj.repr callArgDetailPhasesEnabled2 == HxRuntime.hx_null then false else callArgDetailPhasesEnabled2 in let helperClassificationDetailsEnabled2 = if Obj.repr helperClassificationDetailsEnabled2 == HxRuntime.hx_null then false else helperClassificationDetailsEnabled2 in ignore ((
-    ignore (let __assign_1 = timingsEnabled2 in (
-      (Obj.magic self : t).timingsEnabled <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = timingsEnabled2 in (
+      (__place_receiver_1 : t).timingsEnabled <- __place_rhs_2;
+      __place_rhs_2
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if timingMethodFilter2 == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
-        tempRight := __assign_2;
-        __assign_2
-      ) else let __assign_3 = (StringTools.trim (timingMethodFilter2 : string) : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if timingMethodFilter2 == HxString.hx_null_string then let __assign_3 = "" in (
         tempRight := __assign_3;
         __assign_3
-      ));
-      ignore (let __assign_4 = (!tempRight : string) in (
-        (Obj.magic self : t).timingMethodFilter <- __assign_4;
+      ) else let __assign_4 = let __call_arg_0_5 = timingMethodFilter2 in StringTools.trim __call_arg_0_5 in (
+        tempRight := __assign_4;
         __assign_4
       ));
-      ignore (let __assign_5 = deepEnabled2 in (
-        (Obj.magic self : t).deepEnabled <- __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = lambdaPhasesEnabled2 in (
-        (Obj.magic self : t).lambdaPhasesEnabled <- __assign_6;
+      ignore (let __assign_6 = (!tempRight : string) in (
+        (Obj.magic self : t).timingMethodFilter <- __assign_6;
         __assign_6
       ));
-      ignore (let __assign_7 = callArgDetailPhasesEnabled2 in (
-        (Obj.magic self : t).callArgDetailPhasesEnabled <- __assign_7;
-        __assign_7
+      ignore (let __place_receiver_7 = self in let __place_rhs_8 = deepEnabled2 in (
+        (__place_receiver_7 : t).deepEnabled <- __place_rhs_8;
+        __place_rhs_8
       ));
-      ignore (let __assign_8 = helperClassificationDetailsEnabled2 in (
-        (Obj.magic self : t).helperClassificationDetailsEnabled <- __assign_8;
-        __assign_8
+      ignore (let __place_receiver_9 = self in let __place_rhs_10 = lambdaPhasesEnabled2 in (
+        (__place_receiver_9 : t).lambdaPhasesEnabled <- __place_rhs_10;
+        __place_rhs_10
       ));
-      let __assign_9 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        (Obj.magic self : t).timingPhaseBuffer <- __assign_9;
-        __assign_9
+      ignore (let __place_receiver_11 = self in let __place_rhs_12 = callArgDetailPhasesEnabled2 in (
+        (__place_receiver_11 : t).callArgDetailPhasesEnabled <- __place_rhs_12;
+        __place_rhs_12
+      ));
+      ignore (let __place_receiver_13 = self in let __place_rhs_14 = helperClassificationDetailsEnabled2 in (
+        (__place_receiver_13 : t).helperClassificationDetailsEnabled <- __place_rhs_14;
+        __place_rhs_14
+      ));
+      let __assign_15 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        (Obj.magic self : t).timingPhaseBuffer <- __assign_15;
+        __assign_15
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppTraceContext"; timingsEnabled = false; timingMethodFilter = ""; deepEnabled = false; lambdaPhasesEnabled = false; callArgDetailPhasesEnabled = false; helperClassificationDetailsEnabled = false; timingPhaseBuffer = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppTraceContext"; timingsEnabled = false; timingMethodFilter = HxString.hx_null_string; deepEnabled = false; lambdaPhasesEnabled = false; callArgDetailPhasesEnabled = false; helperClassificationDetailsEnabled = false; timingPhaseBuffer = Obj.magic (HxRuntime.hx_null) } : t)

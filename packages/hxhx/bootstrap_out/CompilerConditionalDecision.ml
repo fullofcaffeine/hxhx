@@ -6,49 +6,49 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable expressionRevision : string; mutable result : bool; mutable inputs : CompilerConditionalDefineInput.t HxArray.t; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = ""; result = false; inputs = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getInputs = fun self () -> HxArray.copy ((Obj.magic self : t).inputs)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
-let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_20 = -1 in (
-    tempResult := __assign_20;
-    __assign_20
-  ) else if left > right then let __assign_21 = 1 in (
+let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_21 = -1 in (
     tempResult := __assign_21;
     __assign_21
-  ) else let __assign_22 = 0 in (
+  ) else if left > right then let __assign_22 = 1 in (
     tempResult := __assign_22;
     __assign_22
+  ) else let __assign_23 = 0 in (
+    tempResult := __assign_23;
+    __assign_23
   ));
   !tempResult
-)
+) : int)
 
 let normalizeInputs = fun values -> let byAccess = Obj.magic (HxMap.create_string ()) in (
   ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length values do ignore (let value = Obj.magic (HxArray.get (Obj.magic values) (!_g)) in (
-    ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
-      ignore (_g := __new_13);
-      __new_13
+    ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+      ignore (_g := __new_14);
+      __new_14
     ));
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation decision contains a null definition input") ["Dynamic"; "String"]) else ());
-    let accessKey = (CompilerConditionalDefineInput.accessKey (Obj.magic value) () : string) in let previous = Obj.magic (HxMap.get_string byAccess accessKey) in (
-      ignore (if previous != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic previous) ()) (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic value) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conditional-compilation decision contains conflicting observations for definition: " ^ HxString.toStdString ((Obj.magic value : CompilerConditionalDefineInput.t).name))) ["Dynamic"; "String"]) else ());
-      HxMap.set_string byAccess accessKey value
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation decision contains a null definition input") ["Dynamic"]) else ());
+    let accessKey = (CompilerConditionalDefineInput.accessKey (Obj.magic value) () : string) in let previous = Obj.magic (HxMap.get_string (Obj.magic byAccess) (accessKey : string)) in (
+      ignore (if previous != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic previous) ()) (CompilerConditionalDefineInput.getObservedInputRevision (Obj.magic value) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conditional-compilation decision contains conflicting observations for definition: " ^ HxString.toStdString ((Obj.magic value : CompilerConditionalDefineInput.t).name))) ["Dynamic"]) else ());
+      HxMap.set_string (Obj.magic byAccess) (accessKey : string) value
     )
   )) done) else ());
-  let _g = Obj.magic (let __arr_14 = HxArray.create () in __arr_14) in let key = HxIterator.of_array (HxMap.keys_string byAccess) in (
-    ignore (while (let __iter_15 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_15)) () do ignore (let key2 = ((let __iter_16 = key in fun () -> HxIterator.next (Obj.magic __iter_16)) () : string) in HxArray.push _g key2) done);
-    let tempArray = Obj.magic _g in (
-      ignore (HxArray.sort tempArray compareText);
-      let _g = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in let _g1 = ref 0 in (
-        ignore (while !_g1 < HxArray.length tempArray do ignore (let key = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
-          ignore (let __old_18 = !_g1 in let __new_19 = HxInt.add __old_18 1 in (
-            ignore (_g1 := __new_19);
-            __new_19
+  let _g = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic byAccess))) in (
+    ignore (while (let __iter_16 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_16)) () do ignore (let key2 = ((let __iter_17 = key in fun () -> HxIterator.next (Obj.magic __iter_17)) () : string) in HxArray.push _g key2) done);
+    let tempArray = Obj.magic _g in let keys = Obj.magic tempArray in (
+      ignore (HxArray.sort keys compareText);
+      let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let _g1 = ref 0 in (
+        ignore (while !_g1 < HxArray.length keys do ignore (let key = (HxArray.get (Obj.magic keys) (!_g1) : string) in (
+          ignore (let __old_19 = !_g1 in let __new_20 = HxInt.add __old_19 1 in (
+            ignore (_g1 := __new_20);
+            __new_20
           ));
-          HxArray.push _g (HxMap.get_string byAccess key)
+          HxArray.push _g (HxMap.get_string (Obj.magic byAccess) (key : string))
         )) done);
         let tempResult = Obj.magic _g in tempResult
       )
@@ -56,9 +56,9 @@ let normalizeInputs = fun values -> let byAccess = Obj.magic (HxMap.create_strin
   )
 )
 
-let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = ""; result = false; inputs = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if expressionRevision2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if expressionRevision2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
     ) else let __assign_2 = (expressionRevision2 : string) in (
@@ -69,38 +69,38 @@ let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type 
       (Obj.magic self : t).expressionRevision <- __assign_3;
       __assign_3
     ));
-    ignore (if HxString.length ((Obj.magic self : t).expressionRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation expression revision is required") ["Dynamic"; "String"]) else ());
-    ignore (let __assign_4 = result2 in (
-      (Obj.magic self : t).result <- __assign_4;
-      __assign_4
+    ignore (if HxString.length ((Obj.magic self : t).expressionRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation expression revision is required") ["Dynamic"]) else ());
+    ignore (let __place_receiver_4 = self in let __place_rhs_5 = result2 in (
+      (__place_receiver_4 : t).result <- __place_rhs_5;
+      __place_rhs_5
     ));
-    ignore (let __assign_5 = Obj.magic (normalizeInputs (Obj.magic inputs2)) in (
-      (Obj.magic self : t).inputs <- __assign_5;
-      __assign_5
+    ignore (let __assign_6 = Obj.magic (normalizeInputs (Obj.magic inputs2)) in (
+      (Obj.magic self : t).inputs <- __assign_6;
+      __assign_6
     ));
     let values = Obj.magic (HxArray.create ()) in (
       ignore (HxArray.push values "conditional-decision-v1");
       ignore (HxArray.push values ((Obj.magic self : t).expressionRevision));
       let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if result2 then let __assign_6 = Obj.magic ("true" : string) in (
-          tempMaybeString := __assign_6;
-          __assign_6
-        ) else let __assign_7 = Obj.magic ("false" : string) in (
+        ignore (if result2 then let __assign_7 = Obj.magic ("true" : string) in (
           tempMaybeString := __assign_7;
           __assign_7
+        ) else let __assign_8 = Obj.magic ("false" : string) in (
+          tempMaybeString := __assign_8;
+          __assign_8
         ));
         ignore (HxArray.push values (!tempMaybeString));
         let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).inputs) in (
           ignore (while !_g < HxArray.length _g1 do ignore (let input = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-            ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-              ignore (_g := __new_9);
-              __new_9
+            ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+              ignore (_g := __new_10);
+              __new_10
             ));
             HxArray.push values (CompilerConditionalDefineInput.canonicalKey (Obj.magic input) ())
           )) done);
-          let __assign_10 = (CompilerCacheIdentity.encode (Obj.magic values) : string) in (
-            (Obj.magic self : t).canonicalIdentity <- __assign_10;
-            __assign_10
+          let __assign_11 = (CompilerCacheIdentity.encode (Obj.magic values) : string) in (
+            (Obj.magic self : t).canonicalIdentity <- __assign_11;
+            __assign_11
           )
         )
       )
@@ -109,8 +109,8 @@ let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type 
   self
 )
 
-let fromEvaluation = fun expression result2 inputs2 -> create (CompilerCacheIdentity.encode (Obj.magic (let __arr_11 = HxArray.create () in (
-  ignore (HxArray.push __arr_11 "conditional-expression-v1");
-  ignore (HxArray.push __arr_11 expression);
-  __arr_11
+let fromEvaluation = fun expression result2 inputs2 -> create (CompilerCacheIdentity.encode (Obj.magic (let __arr_12 = HxArray.create () in (
+  ignore (HxArray.push __arr_12 "conditional-expression-v1");
+  ignore (HxArray.push __arr_12 expression);
+  __arr_12
 ))) : string) result2 (Obj.magic inputs2)

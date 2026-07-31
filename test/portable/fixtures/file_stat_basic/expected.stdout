@@ -1,3 +1,10 @@
+exists=true
 size=5
 mtime_null=false
 mtime_positive=true
+full_path_contains_root=true
+absolute_path_contains_root=true
+directory=true
+renamed=true
+entries=true
+cleaned=true

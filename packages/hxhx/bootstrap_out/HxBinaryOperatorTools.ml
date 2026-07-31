@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxBinaryOperator
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxBinaryOperatorTools" } : t)
 
-let isCompoundAssignment = fun op -> let tempResult = ref (false : bool) in (
+let isCompoundAssignment = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
     | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | ">>=" | ">>>=" | "^=" | "|=" -> let __assign_2 = true in (
       tempResult := __assign_2;
@@ -24,9 +24,9 @@ let isCompoundAssignment = fun op -> let tempResult = ref (false : bool) in (
       __assign_1
     ));
   !tempResult
-)
+) : bool)
 
-let baseOperator = fun op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+let baseOperator = fun (op : string) -> (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match op with
     | "%=" -> let __assign_4 = Obj.magic ("%" : string) in (
       tempResult := __assign_4;
@@ -77,9 +77,9 @@ let baseOperator = fun op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)
       __assign_3
     ));
   !tempResult
-)
+) : string)
 
-let isAbstractOverloadable = fun op -> let tempResult = ref (false : bool) in (
+let isAbstractOverloadable = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
     | "!=" | "%" | "%=" | "&" | "&=" | "*" | "*=" | "+" | "+=" | "-" | "-=" | "/" | "/=" | "<" | "<<" | "<<=" | "<=" | "==" | ">" | ">=" | ">>" | ">>=" | ">>>" | ">>>=" | "^" | "^=" | "|" | "|=" -> let __assign_16 = true in (
       tempResult := __assign_16;
@@ -90,6 +90,6 @@ let isAbstractOverloadable = fun op -> let tempResult = ref (false : bool) in (
       __assign_15
     ));
   !tempResult
-)
+) : bool)
 
-let permitsOrdinaryAbstractFallback = fun op -> HxString.equals op "==" || HxString.equals op "!="
+let permitsOrdinaryAbstractFallback = fun (op : string) -> (HxString.equals op "==" || HxString.equals op "!=" : bool)

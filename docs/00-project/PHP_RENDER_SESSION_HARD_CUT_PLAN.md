@@ -678,7 +678,7 @@ retirement and product evidence gates.
 10. Generated OCaml is regenerated from Haxe sources only; it is never edited as
    the implementation.
 11. Upstream Haxe 4.3.7 remains a black-box behavior and architecture oracle.
-    Its GPL implementation and tests are not copied, translated, retyped, or
+    Its copyleft-licensed implementation and tests are not copied, translated, retyped, or
     mechanically adapted into the MIT shipping path.
 
 ## Required evidence

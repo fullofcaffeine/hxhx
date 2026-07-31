@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3Args"
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3Args" } : t)
 
 let hasFlag = fun args flag -> try let __fallback_result_4 = (
-  ignore (if args == Obj.magic (HxRuntime.hx_null) || flag == Obj.magic (HxRuntime.hx_null) || HxString.length flag = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if args == Obj.magic (HxRuntime.hx_null) || flag == HxString.hx_null_string || HxString.length flag = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
       ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
@@ -31,7 +31,7 @@ let hasFlag = fun args flag -> try let __fallback_result_4 = (
 let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let backendId = ref ("ocaml-stage3" : string) in let macroRuntimeMode = ref (Obj.magic (HxRuntime.hx_null) : string) in let typeOnly = ref false in let emitFullBodies = ref false in let noEmit = ref false in let noRun = ref false in let serverReport = ref false in let customizations = Obj.magic (HxArray.create ()) in let rest = Obj.magic (HxArray.create ()) in let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!i) : string) in match a with
     | "--hxhx-backend" -> ignore ((
-      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-backend") ["Dynamic"; "String"]) else ());
+      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-backend") ["Dynamic"]) else ());
       ignore (let __assign_5 = (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string) in (
         backendId := __assign_5;
         __assign_5
@@ -39,7 +39,7 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
       i := HxInt.add (!i) 2
     ))
     | "--hxhx-customization" -> ignore ((
-      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-customization") ["Dynamic"; "String"]) else ());
+      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-customization") ["Dynamic"]) else ());
       ignore (HxArray.push customizations (HxArray.get (Obj.magic args) (HxInt.add (!i) 1)));
       i := HxInt.add (!i) 2
     ))
@@ -51,7 +51,7 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
       i := HxInt.add (!i) 1
     ))
     | "--hxhx-macro-runtime" -> ignore ((
-      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-macro-runtime") ["Dynamic"; "String"]) else ());
+      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-macro-runtime") ["Dynamic"]) else ());
       ignore (let __assign_7 = Obj.magic (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string) in (
         macroRuntimeMode := __assign_7;
         __assign_7
@@ -73,7 +73,7 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
       i := HxInt.add (!i) 1
     ))
     | "--hxhx-out" -> ignore ((
-      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-out") ["Dynamic"; "String"]) else ());
+      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-out") ["Dynamic"]) else ());
       ignore (let __assign_10 = (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string) in (
         outDir := __assign_10;
         __assign_10
@@ -113,50 +113,50 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
   )
 )
 
-let targetDefineForBackend = fun backendId -> let tempResult = ref ("" : string) in (
+let targetDefineForBackend = fun (backendId : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match backendId with
-    | "cpp-native" -> let __assign_15 = ("cpp" : string) in (
+    | "cpp-native" -> let __assign_15 = "cpp" in (
       tempResult := __assign_15;
       __assign_15
     )
-    | "cs-native" -> let __assign_16 = ("cs" : string) in (
+    | "cs-native" -> let __assign_16 = "cs" in (
       tempResult := __assign_16;
       __assign_16
     )
-    | "hl-native" -> let __assign_17 = ("hl" : string) in (
+    | "hl-native" -> let __assign_17 = "hl" in (
       tempResult := __assign_17;
       __assign_17
     )
-    | "java-native" -> let __assign_18 = ("java" : string) in (
+    | "java-native" -> let __assign_18 = "java" in (
       tempResult := __assign_18;
       __assign_18
     )
-    | "js-native" -> let __assign_19 = ("js" : string) in (
+    | "js-native" -> let __assign_19 = "js" in (
       tempResult := __assign_19;
       __assign_19
     )
-    | "lua-native" -> let __assign_20 = ("lua" : string) in (
+    | "lua-native" -> let __assign_20 = "lua" in (
       tempResult := __assign_20;
       __assign_20
     )
-    | "neko-native" -> let __assign_21 = ("neko" : string) in (
+    | "neko-native" -> let __assign_21 = "neko" in (
       tempResult := __assign_21;
       __assign_21
     )
-    | "php-native" -> let __assign_22 = ("php" : string) in (
+    | "php-native" -> let __assign_22 = "php" in (
       tempResult := __assign_22;
       __assign_22
     )
-    | "python-native" -> let __assign_23 = ("python" : string) in (
+    | "python-native" -> let __assign_23 = "python" in (
       tempResult := __assign_23;
       __assign_23
     )
-    | _ -> let __assign_14 = ("ocaml" : string) in (
+    | _ -> let __assign_14 = "ocaml" in (
       tempResult := __assign_14;
       __assign_14
     ));
   !tempResult
-)
+) : string)
 
 let targetOutputFlags = fun backendId -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (match backendId with
@@ -292,40 +292,40 @@ let findTargetOutputDirectoryHint = fun args backendId -> try let __fallback_res
 ) in Obj.magic __fallback_result_51 with
   | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
 
-let initialRoots = fun parsedMain parsedRoots parsedMacros -> try let __fallback_result_57 = let roots = Obj.magic (HxArray.create ()) in (
+let initialRoots = fun parsedMain parsedRoots parsedMacros -> try let __fallback_result_58 = let roots = Obj.magic (HxArray.create ()) in (
   ignore (if parsedMain != Obj.magic (HxRuntime.hx_null) && HxString.length parsedMain > 0 then ignore (HxArray.push roots parsedMain) else ignore (if parsedRoots != Obj.magic (HxRuntime.hx_null) && HxArray.length parsedRoots > 0 then ignore (let _g = ref 0 in while !_g < HxArray.length parsedRoots do ignore (let r = (HxArray.get (Obj.magic parsedRoots) (!_g) : string) in (
     ignore (let __old_52 = !_g in let __new_53 = HxInt.add __old_52 1 in (
       ignore (_g := __new_53);
       __new_53
     ));
-    if r != Obj.magic (HxRuntime.hx_null) && HxString.length r > 0 then ignore (HxArray.push roots r) else ()
-  )) done) else ignore (if HxArray.length parsedMacros > 0 then ignore (let inferred = (Hxhx_Stage3PathSupport.inferMainFromMacroExpr (HxArray.get (Obj.magic parsedMacros) 0 : string) : string) in (
-    ignore (if HxString.length inferred = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_54 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_54 "roots" (Obj.repr roots));
-      ignore (HxAnon.set __anon_54 "missingMainFromMacro" (HxRuntime.box_bool true));
-      __anon_54
+    if r != HxString.hx_null_string && HxString.length r > 0 then ignore (HxArray.push roots r) else ()
+  )) done) else ignore (if HxArray.length parsedMacros > 0 then ignore (let inferred = let __call_arg_0_54 = HxArray.get (Obj.magic parsedMacros) 0 in Hxhx_Stage3PathSupport.inferMainFromMacroExpr __call_arg_0_54 in (
+    ignore (if HxString.length inferred = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_55 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_55 "roots" (Obj.repr roots));
+      ignore (HxAnon.set __anon_55 "missingMainFromMacro" (HxRuntime.box_bool true));
+      __anon_55
     )))) else ());
     HxArray.push roots inferred
   )) else ())));
-  let __anon_55 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_55 "roots" (Obj.repr roots));
-    ignore (HxAnon.set __anon_55 "missingMainFromMacro" (HxRuntime.box_bool false));
-    __anon_55
+  let __anon_56 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_56 "roots" (Obj.repr roots));
+    ignore (HxAnon.set __anon_56 "missingMainFromMacro" (HxRuntime.box_bool false));
+    __anon_56
   )
-) in Obj.magic __fallback_result_57 with
-  | HxRuntime.Hx_return __ret_56 -> Obj.magic __ret_56
+) in Obj.magic __fallback_result_58 with
+  | HxRuntime.Hx_return __ret_57 -> Obj.magic __ret_57
 
-let findFlagValue = fun args a b -> try let __fallback_result_61 = let i = ref 0 in (
+let findFlagValue = fun args a b -> try let __fallback_result_62 = let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in (
     ignore (if (HxString.equals t a || HxString.equals t b) && HxInt.add (!i) 1 < HxArray.length args then raise (HxRuntime.Hx_return (Obj.repr (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string))) else ());
-    let __old_58 = !i in let __new_59 = HxInt.add __old_58 1 in (
-      ignore (i := __new_59);
-      __old_58
+    let __old_59 = !i in let __new_60 = HxInt.add __old_59 1 in (
+      ignore (i := __new_60);
+      __old_59
     )
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_61 with
-  | HxRuntime.Hx_return __ret_60 -> Obj.obj __ret_60
+) in Obj.magic __fallback_result_62 with
+  | HxRuntime.Hx_return __ret_61 -> Obj.obj __ret_61
 
 let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create ()) in let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in let hx_match = HxString.equals t a || HxString.equals t b || c != Obj.magic (HxRuntime.hx_null) && HxString.equals t c in (
@@ -334,9 +334,9 @@ let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create (
       ignore (i := HxInt.add (!i) 2);
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let __old_62 = !i in let __new_63 = HxInt.add __old_62 1 in (
-      ignore (i := __new_63);
-      __old_62
+    let __old_63 = !i in let __new_64 = HxInt.add __old_63 1 in (
+      ignore (i := __new_64);
+      __old_63
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
@@ -344,8 +344,8 @@ let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create (
   out
 )
 
-let summarizeArgs = fun args -> try let __fallback_result_65 = let joined = (HxArray.join args " " (fun x -> x) : string) in let maxLen = 160 in (
+let summarizeArgs = fun args -> try let __fallback_result_66 = let joined = (HxArray.join args " " (fun x -> x) : string) in let maxLen = 160 in (
   ignore (if HxString.length joined <= maxLen then raise (HxRuntime.Hx_return (Obj.repr (joined : string))) else ());
   HxString.toStdString (HxString.substr joined 0 maxLen) ^ "..."
-) in Obj.magic __fallback_result_65 with
-  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64
+) in Obj.magic __fallback_result_66 with
+  | HxRuntime.Hx_return __ret_65 -> Obj.obj __ret_65

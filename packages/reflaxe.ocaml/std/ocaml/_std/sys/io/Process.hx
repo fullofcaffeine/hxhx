@@ -170,7 +170,10 @@ private class OcamlProcessOutput extends Output {
 
 	This is intentionally *not* a macro API: it is a tiny “process + pipes”
 	service implemented in OCaml for correctness during early bootstrapping.
+	The runtime declaration lets the compiler explain and validate the packaged
+	`HxProcess` dependency for every typed extern field that reaches output.
 **/
+@:ocamlRuntime("haxe-process")
 @:native("HxProcess")
 private extern class NativeHxProcess {
 	static function spawn(cmd:String, args:Array<String>):Int;

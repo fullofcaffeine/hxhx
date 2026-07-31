@@ -40,226 +40,226 @@ let addLocalBindings = fun out bindings -> ignore (let tempMaybeString = ref (Ob
   )) done) else ()
 ))
 
-let statementTagName = fun tag -> let tempResult = ref ("" : string) in (
+let statementTagName = fun tag -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match tag with
-    | TypedStmt.Block -> let __assign_46 = ("block" : string) in (
+    | TypedStmt.Block -> let __assign_46 = "block" in (
       tempResult := __assign_46;
       __assign_46
     )
-    | TypedStmt.Var -> let __assign_47 = ("var" : string) in (
+    | TypedStmt.Var -> let __assign_47 = "var" in (
       tempResult := __assign_47;
       __assign_47
     )
-    | TypedStmt.If -> let __assign_48 = ("if" : string) in (
+    | TypedStmt.If -> let __assign_48 = "if" in (
       tempResult := __assign_48;
       __assign_48
     )
-    | TypedStmt.ForIn -> let __assign_49 = ("for-in" : string) in (
+    | TypedStmt.ForIn -> let __assign_49 = "for-in" in (
       tempResult := __assign_49;
       __assign_49
     )
-    | TypedStmt.ForKeyValue -> let __assign_50 = ("for-key-value" : string) in (
+    | TypedStmt.ForKeyValue -> let __assign_50 = "for-key-value" in (
       tempResult := __assign_50;
       __assign_50
     )
-    | TypedStmt.While -> let __assign_51 = ("while" : string) in (
+    | TypedStmt.While -> let __assign_51 = "while" in (
       tempResult := __assign_51;
       __assign_51
     )
-    | TypedStmt.DoWhile -> let __assign_52 = ("do-while" : string) in (
+    | TypedStmt.DoWhile -> let __assign_52 = "do-while" in (
       tempResult := __assign_52;
       __assign_52
     )
-    | TypedStmt.Switch -> let __assign_53 = ("switch" : string) in (
+    | TypedStmt.Switch -> let __assign_53 = "switch" in (
       tempResult := __assign_53;
       __assign_53
     )
-    | TypedStmt.Try -> let __assign_54 = ("try" : string) in (
+    | TypedStmt.Try -> let __assign_54 = "try" in (
       tempResult := __assign_54;
       __assign_54
     )
-    | TypedStmt.Break -> let __assign_55 = ("break" : string) in (
+    | TypedStmt.Break -> let __assign_55 = "break" in (
       tempResult := __assign_55;
       __assign_55
     )
-    | TypedStmt.Continue -> let __assign_56 = ("continue" : string) in (
+    | TypedStmt.Continue -> let __assign_56 = "continue" in (
       tempResult := __assign_56;
       __assign_56
     )
-    | TypedStmt.Throw -> let __assign_57 = ("throw" : string) in (
+    | TypedStmt.Throw -> let __assign_57 = "throw" in (
       tempResult := __assign_57;
       __assign_57
     )
-    | TypedStmt.ReturnVoid -> let __assign_58 = ("return-void" : string) in (
+    | TypedStmt.ReturnVoid -> let __assign_58 = "return-void" in (
       tempResult := __assign_58;
       __assign_58
     )
-    | TypedStmt.Return -> let __assign_59 = ("return" : string) in (
+    | TypedStmt.Return -> let __assign_59 = "return" in (
       tempResult := __assign_59;
       __assign_59
     )
-    | TypedStmt.Expression -> let __assign_60 = ("expression" : string) in (
+    | TypedStmt.Expression -> let __assign_60 = "expression" in (
       tempResult := __assign_60;
       __assign_60
     ));
   !tempResult
 )
 
-let expressionTagName = fun tag -> let tempResult = ref ("" : string) in (
+let expressionTagName = fun tag -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match tag with
-    | TypedExpr.NullValue -> let __assign_61 = ("null" : string) in (
+    | TypedExpr.NullValue -> let __assign_61 = "null" in (
       tempResult := __assign_61;
       __assign_61
     )
-    | TypedExpr.BoolValue -> let __assign_62 = ("bool" : string) in (
+    | TypedExpr.BoolValue -> let __assign_62 = "bool" in (
       tempResult := __assign_62;
       __assign_62
     )
-    | TypedExpr.StringValue -> let __assign_63 = ("string" : string) in (
+    | TypedExpr.StringValue -> let __assign_63 = "string" in (
       tempResult := __assign_63;
       __assign_63
     )
-    | TypedExpr.IntValue -> let __assign_64 = ("int" : string) in (
+    | TypedExpr.IntValue -> let __assign_64 = "int" in (
       tempResult := __assign_64;
       __assign_64
     )
-    | TypedExpr.FloatValue -> let __assign_65 = ("float" : string) in (
+    | TypedExpr.FloatValue -> let __assign_65 = "float" in (
       tempResult := __assign_65;
       __assign_65
     )
-    | TypedExpr.EnumValue -> let __assign_66 = ("enum" : string) in (
+    | TypedExpr.EnumValue -> let __assign_66 = "enum" in (
       tempResult := __assign_66;
       __assign_66
     )
-    | TypedExpr.ThisValue -> let __assign_67 = ("this" : string) in (
+    | TypedExpr.ThisValue -> let __assign_67 = "this" in (
       tempResult := __assign_67;
       __assign_67
     )
-    | TypedExpr.SuperValue -> let __assign_68 = ("super" : string) in (
+    | TypedExpr.SuperValue -> let __assign_68 = "super" in (
       tempResult := __assign_68;
       __assign_68
     )
-    | TypedExpr.LocalRead -> let __assign_69 = ("local-read" : string) in (
+    | TypedExpr.LocalRead -> let __assign_69 = "local-read" in (
       tempResult := __assign_69;
       __assign_69
     )
-    | TypedExpr.NameRead -> let __assign_70 = ("name-read" : string) in (
+    | TypedExpr.NameRead -> let __assign_70 = "name-read" in (
       tempResult := __assign_70;
       __assign_70
     )
-    | TypedExpr.FieldRead -> let __assign_71 = ("field-read" : string) in (
+    | TypedExpr.FieldRead -> let __assign_71 = "field-read" in (
       tempResult := __assign_71;
       __assign_71
     )
-    | TypedExpr.NullSafeFieldRead -> let __assign_72 = ("null-safe-field-read" : string) in (
+    | TypedExpr.NullSafeFieldRead -> let __assign_72 = "null-safe-field-read" in (
       tempResult := __assign_72;
       __assign_72
     )
-    | TypedExpr.Call -> let __assign_73 = ("call" : string) in (
+    | TypedExpr.Call -> let __assign_73 = "call" in (
       tempResult := __assign_73;
       __assign_73
     )
-    | TypedExpr.MacroExpr -> let __assign_74 = ("macro-expr" : string) in (
+    | TypedExpr.MacroExpr -> let __assign_74 = "macro-expr" in (
       tempResult := __assign_74;
       __assign_74
     )
-    | TypedExpr.MacroType -> let __assign_75 = ("macro-type" : string) in (
+    | TypedExpr.MacroType -> let __assign_75 = "macro-type" in (
       tempResult := __assign_75;
       __assign_75
     )
-    | TypedExpr.Lambda -> let __assign_76 = ("lambda" : string) in (
+    | TypedExpr.Lambda -> let __assign_76 = "lambda" in (
       tempResult := __assign_76;
       __assign_76
     )
-    | TypedExpr.SwitchExpr -> let __assign_77 = ("switch" : string) in (
+    | TypedExpr.SwitchExpr -> let __assign_77 = "switch" in (
       tempResult := __assign_77;
       __assign_77
     )
-    | TypedExpr.NewValue -> let __assign_78 = ("new" : string) in (
+    | TypedExpr.NewValue -> let __assign_78 = "new" in (
       tempResult := __assign_78;
       __assign_78
     )
-    | TypedExpr.Unary -> let __assign_79 = ("unary" : string) in (
+    | TypedExpr.Unary -> let __assign_79 = "unary" in (
       tempResult := __assign_79;
       __assign_79
     )
-    | TypedExpr.Binary -> let __assign_80 = ("binary" : string) in (
+    | TypedExpr.Binary -> let __assign_80 = "binary" in (
       tempResult := __assign_80;
       __assign_80
     )
-    | TypedExpr.Assign -> let __assign_81 = ("assign" : string) in (
+    | TypedExpr.Assign -> let __assign_81 = "assign" in (
       tempResult := __assign_81;
       __assign_81
     )
-    | TypedExpr.CompoundAssign -> let __assign_82 = ("compound-assign" : string) in (
+    | TypedExpr.CompoundAssign -> let __assign_82 = "compound-assign" in (
       tempResult := __assign_82;
       __assign_82
     )
-    | TypedExpr.Ternary -> let __assign_83 = ("ternary" : string) in (
+    | TypedExpr.Ternary -> let __assign_83 = "ternary" in (
       tempResult := __assign_83;
       __assign_83
     )
-    | TypedExpr.Anonymous -> let __assign_84 = ("anonymous" : string) in (
+    | TypedExpr.Anonymous -> let __assign_84 = "anonymous" in (
       tempResult := __assign_84;
       __assign_84
     )
-    | TypedExpr.ArrayComprehension -> let __assign_85 = ("array-comprehension" : string) in (
+    | TypedExpr.ArrayComprehension -> let __assign_85 = "array-comprehension" in (
       tempResult := __assign_85;
       __assign_85
     )
-    | TypedExpr.ArrayDecl -> let __assign_86 = ("array" : string) in (
+    | TypedExpr.ArrayDecl -> let __assign_86 = "array" in (
       tempResult := __assign_86;
       __assign_86
     )
-    | TypedExpr.ArrayAccess -> let __assign_87 = ("array-access" : string) in (
+    | TypedExpr.ArrayAccess -> let __assign_87 = "array-access" in (
       tempResult := __assign_87;
       __assign_87
     )
-    | TypedExpr.Range -> let __assign_88 = ("range" : string) in (
+    | TypedExpr.Range -> let __assign_88 = "range" in (
       tempResult := __assign_88;
       __assign_88
     )
-    | TypedExpr.Cast -> let __assign_89 = ("cast" : string) in (
+    | TypedExpr.Cast -> let __assign_89 = "cast" in (
       tempResult := __assign_89;
       __assign_89
     )
-    | TypedExpr.Untyped -> let __assign_90 = ("untyped" : string) in (
+    | TypedExpr.Untyped -> let __assign_90 = "untyped" in (
       tempResult := __assign_90;
       __assign_90
     )
-    | TypedExpr.Opaque -> let __assign_91 = ("opaque" : string) in (
+    | TypedExpr.Opaque -> let __assign_91 = "opaque" in (
       tempResult := __assign_91;
       __assign_91
     )
-    | TypedExpr.Block -> let __assign_92 = ("block" : string) in (
+    | TypedExpr.Block -> let __assign_92 = "block" in (
       tempResult := __assign_92;
       __assign_92
     )
-    | TypedExpr.Temporary -> let __assign_93 = ("temporary" : string) in (
+    | TypedExpr.Temporary -> let __assign_93 = "temporary" in (
       tempResult := __assign_93;
       __assign_93
     )
-    | TypedExpr.ReturnExpr -> let __assign_94 = ("return" : string) in (
+    | TypedExpr.ReturnExpr -> let __assign_94 = "return" in (
       tempResult := __assign_94;
       __assign_94
     )
-    | TypedExpr.VariableDeclarations -> let __assign_95 = ("variable-declarations" : string) in (
+    | TypedExpr.VariableDeclarations -> let __assign_95 = "variable-declarations" in (
       tempResult := __assign_95;
       __assign_95
     )
-    | TypedExpr.VariableDeclaration -> let __assign_96 = ("variable-declaration" : string) in (
+    | TypedExpr.VariableDeclaration -> let __assign_96 = "variable-declaration" in (
       tempResult := __assign_96;
       __assign_96
     )
-    | TypedExpr.WhileExpr -> let __assign_97 = ("while" : string) in (
+    | TypedExpr.WhileExpr -> let __assign_97 = "while" in (
       tempResult := __assign_97;
       __assign_97
     )
-    | TypedExpr.BreakExpr -> let __assign_98 = ("break" : string) in (
+    | TypedExpr.BreakExpr -> let __assign_98 = "break" in (
       tempResult := __assign_98;
       __assign_98
     )
-    | TypedExpr.ContinueExpr -> let __assign_99 = ("continue" : string) in (
+    | TypedExpr.ContinueExpr -> let __assign_99 = "continue" in (
       tempResult := __assign_99;
       __assign_99
     ));
@@ -483,7 +483,7 @@ let rec addPattern = fun out pattern -> ignore (match pattern with
     )) done
   )))
 
-let rec addExpression = fun out expression__local -> ignore (try (
+let rec addExpression = fun out expression__local -> ignore (try ignore ((
   ignore (if expression__local == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (HxArray.push out "null-expression");
     raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -559,11 +559,11 @@ let rec addExpression = fun out expression__local -> ignore (try (
       )
     )
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29)
 
 let expression = fun ownerIdentity expression__local -> (
-  ignore (if ownerIdentity == Obj.magic (HxRuntime.hx_null) || HxString.length ownerIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed expression revision requires an owner identity") ["Dynamic"; "String"]) else ());
+  ignore (if ownerIdentity == HxString.hx_null_string || HxString.length ownerIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed expression revision requires an owner identity") ["Dynamic"]) else ());
   let facts = Obj.magic (HxArray.create ()) in (
     ignore (HxArray.push facts "typed-expression-v2");
     ignore (HxArray.push facts ownerIdentity);
@@ -572,7 +572,7 @@ let expression = fun ownerIdentity expression__local -> (
   )
 )
 
-let rec addStatement = fun out statement -> ignore (try (
+let rec addStatement = fun out statement -> ignore (try ignore ((
   ignore (if statement == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (HxArray.push out "null-statement");
     raise (HxRuntime.Hx_return (Obj.repr ()))
@@ -617,11 +617,11 @@ let rec addStatement = fun out statement -> ignore (try (
       )
     )
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16)
 
 let functionBody = fun typedFunction -> (
-  ignore (if typedFunction == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "cannot revise a null typed function body") ["Dynamic"; "String"]) else ());
+  ignore (if typedFunction == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "cannot revise a null typed function body") ["Dynamic"]) else ());
   let facts = Obj.magic (HxArray.create ()) in (
     ignore (HxArray.push facts "typed-function-body-v2");
     ignore (HxArray.push facts (TypedFunction.getStableIdentity (Obj.magic typedFunction) ()));
@@ -633,35 +633,37 @@ let functionBody = fun typedFunction -> (
         tempArray := __assign_3;
         __assign_3
       ));
-      ignore (HxArray.push facts (string_of_int (HxArray.length (!tempArray))));
-      let _g = ref 0 in (
-        ignore (while !_g < HxArray.length (!tempArray) do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic (!tempArray)) (!_g)) in (
-          ignore (let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
-            ignore (_g := __new_5);
-            __new_5
-          ));
-          let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-            ignore (if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-              tempMaybeString := __assign_6;
-              __assign_6
-            ) else let __assign_7 = Obj.magic (TyLocalBinding.getCanonicalIdentity (Obj.magic (TySymbol.toBinding (Obj.magic parameter) ())) () : string) in (
-              tempMaybeString := __assign_7;
-              __assign_7
+      let parameters = Obj.magic (!tempArray) in (
+        ignore (HxArray.push facts (string_of_int (HxArray.length parameters)));
+        let _g = ref 0 in (
+          ignore (while !_g < HxArray.length parameters do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic parameters) (!_g)) in (
+            ignore (let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
+              ignore (_g := __new_5);
+              __new_5
             ));
-            HxArray.push facts (!tempMaybeString)
-          )
-        )) done);
-        let statements = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in (
-          ignore (HxArray.push facts (string_of_int (HxArray.length statements)));
-          let _g = ref 0 in (
-            ignore (while !_g < HxArray.length statements do ignore (let statement = Obj.magic (HxArray.get (Obj.magic statements) (!_g)) in (
-              ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-                ignore (_g := __new_9);
-                __new_9
+            let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+              ignore (if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                tempMaybeString := __assign_6;
+                __assign_6
+              ) else let __assign_7 = Obj.magic (TyLocalBinding.getCanonicalIdentity (Obj.magic (TySymbol.toBinding (Obj.magic parameter) ())) () : string) in (
+                tempMaybeString := __assign_7;
+                __assign_7
               ));
-              addStatement (Obj.magic facts) (Obj.magic statement)
-            )) done);
-            CompilerCacheIdentity.encode (Obj.magic facts)
+              HxArray.push facts (!tempMaybeString)
+            )
+          )) done);
+          let statements = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in (
+            ignore (HxArray.push facts (string_of_int (HxArray.length statements)));
+            let _g = ref 0 in (
+              ignore (while !_g < HxArray.length statements do ignore (let statement = Obj.magic (HxArray.get (Obj.magic statements) (!_g)) in (
+                ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+                  ignore (_g := __new_9);
+                  __new_9
+                ));
+                addStatement (Obj.magic facts) (Obj.magic statement)
+              )) done);
+              CompilerCacheIdentity.encode (Obj.magic facts)
+            )
           )
         )
       )

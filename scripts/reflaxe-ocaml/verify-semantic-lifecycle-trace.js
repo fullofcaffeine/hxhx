@@ -4,9 +4,9 @@
 const crypto = require('node:crypto')
 const fs = require('node:fs')
 
-const [tracePath, expectedFunction] = process.argv.slice(2)
-if (!tracePath || !expectedFunction) {
-	console.error('Usage: verify-semantic-lifecycle-trace.js <trace.json> <function-id-substring>')
+const [tracePath, expectedFunction, expectedPipelineRevision] = process.argv.slice(2)
+if (!tracePath || !expectedFunction || !expectedPipelineRevision) {
+	console.error('Usage: verify-semantic-lifecycle-trace.js <trace.json> <function-id-substring> <pipeline-revision>')
 	process.exit(2)
 }
 
@@ -32,8 +32,8 @@ function oneEvent(preprocessorSuffix, phase) {
 if (report.schemaVersion !== 1 || report.model !== 'reflaxe-ocaml-semantic-lifecycle') {
 	fail('unexpected report schema or model')
 }
-if (report.pipelineRevision !== 'ocaml-function-plans-v21') {
-	fail(`unexpected pipeline revision ${report.pipelineRevision}`)
+if (report.pipelineRevision !== expectedPipelineRevision) {
+	fail(`unexpected pipeline revision ${report.pipelineRevision}; current compiler owns ${expectedPipelineRevision}`)
 }
 if (report.functionFilter !== expectedFunction) {
 	fail(`report filter ${report.functionFilter} does not match ${expectedFunction}`)

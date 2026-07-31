@@ -5,12 +5,27 @@ import haxe.macro.Expr.Position;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
+import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
+import reflaxe.ocaml.lowered.OcamlBytesMutationPlan.OcamlBytesMutationPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan.OcamlBytesProducerPlanner;
+import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
+import reflaxe.ocaml.lowered.OcamlBytesReadPlan.OcamlBytesReadPlanner;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructurePlanner;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -83,21 +98,38 @@ class OcamlFunctionPlanSealer {
 	/** Plans, validates, and seals one exact function-body revision. */
 	public function seal(data:ClassFuncData):Void {
 		final binding = registry.planningBindingFor(data);
+		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
+		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
+		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		if (data.expr == null) {
-			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), new OcamlCallPlan([]),
-				callableBoundary);
+			final controls = OcamlControlPlan.notAdmitted(binding);
+			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
+				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
+				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary,
+				new OcamlAnonymousStructurePlan([], []));
 			return;
 		}
-		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
-		final calls = callPlanner.plan(data.expr);
-		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations, binding,
-			calls.preservesNullableBoolArgument, calls.producesNullableBool, calls.producesExactString);
+		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
+		final preliminaryCalls = callPlanner.plan(data.expr);
+		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localIdentities, localStorage, representations, binding,
+			preliminaryCalls.preservesNullableBoolArgument, preliminaryCalls.producesNullableBool, preliminaryCalls.producesExactString);
+		localRepresentations.requirePlanBinding(binding);
+		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
+		containerElements.requirePlanBinding(binding);
+		OcamlContainerElementPlanner.requireCompleteness(data.expr, binding, containerElements);
+		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
+		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
+		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
+		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
+		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
+		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
+		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities).plan(data.expr, callableBoundary);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, staticStorage);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, localRepresentations, localIdentities, staticStorage);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 
@@ -134,28 +166,128 @@ class OcamlFunctionPlanSealer {
 		}
 
 		visit(data.expr);
-		validateLocalRepresentationReferences(localRepresentations, binding.programRevision, data.expr.pos);
-		validateCallRepresentationReferences(calls, callableBoundary, binding.programRevision, data.expr.pos);
-		registry.sealFunction(binding, localStorage, localRepresentations, calls, callableBoundary);
+		validateLocalRepresentationReferences(localStorage, localRepresentations, binding.programRevision, data.expr.pos);
+		for (conversion in localRepresentations.conversions()) {
+			if (conversion.conversion == OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
+				context.recordEnumDynamicLocalRuntimeRequirement(conversion);
+		}
+		for (conversion in containerElements.decisions())
+			context.recordEnumDynamicContainerRuntimeRequirement(conversion);
+		validateCallRepresentationReferences(calls, callableBoundary, constructionBoundary, binding.programRevision, data.expr.pos);
+		for (call in calls.decisions()) {
+			if (call.standardIMapTarget != null)
+				context.recordStandardIMapRuntimeRequirements(call);
+		}
+		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
+		for (control in controls.decisions()) {
+			final payload = control.payload;
+			if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+				context.recordEnumThrowRuntimeRequirement(control);
+		}
+		anonymousStructures.requireRepresentations(representations);
+		for (decision in anonymousStructures.operations())
+			context.recordAnonymousStructureRuntimeRequirement(decision);
+		bytesAccesses.requireRepresentations(representations);
+		for (decision in bytesAccesses.decisions())
+			context.recordBytesAccessRuntimeRequirements(decision);
+		bytesMutations.requireRepresentations(representations);
+		for (decision in bytesMutations.decisions())
+			context.recordBytesMutationRuntimeRequirements(decision);
+		bytesProducers.requireRepresentations(representations);
+		for (decision in bytesProducers.decisions())
+			context.recordBytesProducerRuntimeRequirements(decision);
+		bytesReads.requireRepresentations(representations);
+		for (decision in bytesReads.decisions())
+			context.recordBytesReadRuntimeRequirements(decision);
+		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
+			bytesReads, calls, controls, callableBoundary, constructionBoundary, anonymousStructures);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
 	}
 
-	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String,
-			position:Position):Void {
+	function validateControlRepresentationReferences(controls:OcamlControlPlan, programRevision:String, position:Position):Void {
+		for (control in controls.decisions()) {
+			final payload = control.payload;
+			if (payload == null)
+				continue;
+			if (payload.inputSemanticTypeId == "Dynamic") {
+				if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)) {
+					fail('control "${control.id}" has an invalid Dynamic exception carrier', position);
+				}
+				continue;
+			}
+			if (OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload))
+				continue;
+			if (OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+				continue;
+			validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, programRevision,
+				'control "${control.id}" input', position);
+			validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, programRevision,
+				'control "${control.id}" output', position);
+			final nominal = payload.nominalRepresentation;
+			if (nominal == null)
+				continue;
+			final representation = try {
+				representations.require(payload.inputRepresentationId, programRevision);
+			} catch (error:Dynamic) {
+				fail(Std.string(error), position);
+			}
+			if (representation.nominalTargetModuleName != nominal.targetModuleName
+				|| representation.nominalTargetTypeName != nominal.targetTypeName
+				|| representation.nominalLayoutRevision != nominal.layoutRevision
+				|| representation.proof.id != nominal.representationProofId) {
+				fail('control "${control.id}" does not match its sealed nominal representation proof', position);
+			}
+		}
+		for (chain in controls.catchChains()) {
+			for (clause in chain.clauses) {
+				if (clause.semanticTypeId == "Dynamic" || OcamlControlPlan.isAdmittedHaxeExceptionCatchClause(clause))
+					continue;
+				validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, programRevision,
+					'control catch clause "${clause.id}" output', position);
+				final nominal = clause.nominalRepresentation;
+				if (nominal == null)
+					continue;
+				final representation = try {
+					representations.require(clause.outputRepresentationId, programRevision);
+				} catch (error:Dynamic) {
+					fail(Std.string(error), position);
+				}
+				if (representation.nominalTargetModuleName != nominal.targetModuleName
+					|| representation.nominalTargetTypeName != nominal.targetTypeName
+					|| representation.nominalLayoutRevision != nominal.layoutRevision
+					|| representation.proof.id != nominal.representationProofId) {
+					fail('control catch clause "${clause.id}" does not match its sealed nominal representation proof', position);
+				}
+			}
+		}
+	}
+
+	function validateCallRepresentationReferences(calls:OcamlCallPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			constructionBoundary:Null<OcamlCallableBoundaryPlan>, programRevision:String, position:Position):Void {
 		for (call in calls.decisions()) {
+			if (call.receiver != null)
+				validateCallValue(call.receiver, programRevision, 'call "${call.id}" receiver', position);
 			for (index in 0...call.arguments.length)
 				validateCallValue(call.arguments[index], programRevision, 'call "${call.id}" argument $index', position);
 			if (call.result != null)
 				validateCallValue(call.result, programRevision, 'call "${call.id}" result', position);
 		}
 		if (callableBoundary != null) {
-			for (index in 0...callableBoundary.arguments.length)
-				validateCallValue(callableBoundary.arguments[index], programRevision, 'callable boundary "${callableBoundary.id}" argument $index', position);
-			if (callableBoundary.result != null)
-				validateCallValue(callableBoundary.result, programRevision, 'callable boundary "${callableBoundary.id}" result', position);
+			validateBoundaryRepresentationReferences(callableBoundary, programRevision, position);
 		}
+		if (constructionBoundary != null)
+			validateBoundaryRepresentationReferences(constructionBoundary, programRevision, position);
+	}
+
+	function validateBoundaryRepresentationReferences(boundary:OcamlCallableBoundaryPlan, programRevision:String, position:Position):Void {
+		if (boundary.receiver != null)
+			validateCallValue(boundary.receiver, programRevision, 'callable boundary "${boundary.id}" receiver', position);
+		for (index in 0...boundary.arguments.length)
+			validateCallValue(boundary.arguments[index], programRevision, 'callable boundary "${boundary.id}" argument $index', position);
+		if (boundary.result != null)
+			validateCallValue(boundary.result, programRevision, 'callable boundary "${boundary.id}" result', position);
 	}
 
 	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {
@@ -179,7 +311,8 @@ class OcamlFunctionPlanSealer {
 		}
 	}
 
-	function validateLocalRepresentationReferences(plan:OcamlLocalRepresentationPlan, programRevision:String, position:Position):Void {
+	function validateLocalRepresentationReferences(storage:OcamlLocalStoragePlan, plan:OcamlLocalRepresentationPlan, programRevision:String,
+			position:Position):Void {
 		for (reference in plan.references()) {
 			final decision = try {
 				representations.require(reference.representationId, programRevision);
@@ -190,6 +323,21 @@ class OcamlFunctionPlanSealer {
 				fail('local ${reference.localId} expects ${reference.semanticTypeId} in representation domain ${reference.domain}, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
 					position);
 			}
+			if (OcamlMonomorphicClassMaterializer.isNominalClass(decision)) {
+				final storageDecision = storage.decisionFor(reference.localId);
+				if (storageDecision == null) {
+					if (decision.domain != OcamlRepresentationDomain.InternalValue) {
+						fail('immutable nominal local ${reference.localId} must consume an internal-value representation, but ${decision.id} selects ${decision.domain}',
+							position);
+					}
+				} else if (!storage.isCaptured(reference.localId)) {
+					fail('mutable nominal local ${reference.localId} is not captured, so its ${storageDecision.storage} storage remains outside the admitted class carrier slice',
+						position);
+				} else if (!storage.requiresRef(reference.localId) || decision.domain != OcamlRepresentationDomain.CapturedLocalStorage) {
+					fail('captured-and-reassigned nominal local ${reference.localId} must consume one captured-local-storage representation backed by a shared ref cell',
+						position);
+				}
+			}
 		}
 	}
 
@@ -198,6 +346,8 @@ class OcamlFunctionPlanSealer {
 			case Simple(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticSimple(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -208,6 +358,8 @@ class OcamlFunctionPlanSealer {
 			case Compound(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticCompound(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -218,6 +370,8 @@ class OcamlFunctionPlanSealer {
 			case Update(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.InstanceField, programRevision, position);
+				validateAdmittedInstanceReceiver(plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
+					programRevision, position);
 			case StaticUpdate(plan):
 				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
 					OcamlRepresentationDomain.StaticField, programRevision, position);
@@ -226,6 +380,13 @@ class OcamlFunctionPlanSealer {
 					plan.place.receiverRepresentationId, plan.place.receiverSemanticTypeId, plan.place.receiverCarrierTypeId,
 					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
 		}
+	}
+
+	function validateAdmittedInstanceReceiver(representationId:String, semanticTypeId:String, carrierTypeId:String, programRevision:String,
+			position:Position):Void {
+		if (!StringTools.startsWith(representationId, "representation:"))
+			return;
+		validateRepresentationReference(representationId, semanticTypeId, carrierTypeId, OcamlRepresentationDomain.InternalValue, programRevision, position);
 	}
 
 	function validateArrayRepresentationReferences(representationId:String, semanticTypeId:String, carrierTypeId:String, receiverRepresentationId:String,

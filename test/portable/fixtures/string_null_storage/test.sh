@@ -38,9 +38,9 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 23
-	|| report.representationScope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v14') {
+if (report.schemaVersion !== 50
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14'
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v18') {
 	fail('unexpected lowering report, representation, or call-model version')
 }
 
@@ -54,6 +54,25 @@ for (const domain of ['internal-value', 'mutable-local-storage', 'instance-field
 		|| decision.implicitDefaultPolicy !== 'runtime-null-sentinel'
 		|| decision.proof?.id !== 'nullable-string-runtime-sentinel-carrier-v1') {
 		fail(`missing complete exact String decision for ${domain}`)
+	}
+}
+
+const stringRequirements = report.runtimeRequirements.filter(entry =>
+	entry.semanticCapability === 'haxe-string-null-sentinel')
+if (stringRequirements.length !== strings.length)
+	fail('every exact String representation must retain its runtime requirement')
+for (const decision of strings) {
+	const requirement = stringRequirements.find(entry =>
+		entry.id === `${decision.id}:runtime:haxe-string-null-sentinel`)
+	if (!requirement
+		|| requirement.sourceKind !== 'representation-decision'
+		|| requirement.sourceId !== `${decision.id}@${decision.revision}`
+		|| requirement.cause !== 'representation-decision'
+		|| requirement.decisionId !== decision.id
+		|| requirement.subject?.kind !== 'haxe-type'
+		|| requirement.subject?.id !== 'String'
+		|| requirement.rootModules?.join(',') !== 'HxString') {
+		fail(`missing exact HxString dependency for ${decision.id}`)
 	}
 }
 

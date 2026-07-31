@@ -13,6 +13,15 @@ enum BuildResult {
 
 typedef BuildRunConfig = {
 	final outDir:String;
+
+	/**
+		Optional Dune-owned build state outside the generated-source directory.
+
+		Transactional source publication supplies a stable sibling path so replacing
+		the generated tree does not make every native build cold.
+	**/
+	final buildDir:Null<String>;
+
 	final exeName:String;
 	final mode:String; // "native" | "byte"
 	final duneLayout:Null<String>;
@@ -187,6 +196,11 @@ class OcamlBuildRunner {
 				finish(Err("ocaml_run cannot execute a library-only Dune layout. Build the library without -D ocaml_run, then consume it from an OCaml executable."),
 				"failed", 2);
 		}
+		if (cfg.buildDir != null && cfg.mli != null) {
+			return
+				finish(Err("External Dune build state does not yet support generated ocaml_mli interfaces. Generate interfaces before transactional publication or disable ocaml_mli."),
+				"failed", 2);
+		}
 
 		final toolchainStarted = haxe.Timer.stamp();
 		final hasNativeToolchain = hasCommand("dune") && hasCommand("ocamlc");
@@ -218,7 +232,9 @@ class OcamlBuildRunner {
 			// Force the root to the generated output directory so Gate runners can nest outputs
 			// without colliding with upstream's own dune config.
 			final duneRoot = outDirAbs;
-			final buildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+			final buildArgs = OcamlDuneBuildState.commandArguments(duneRoot, cfg.buildDir, target);
+			buildArgs.unshift("build");
+			final buildRes = runCapture("dune", buildArgs);
 			addPhase("dune_build", buildRes.elapsedMilliseconds, buildRes.code);
 			if (buildRes.code != 0) {
 				final out = truncateOutput(buildRes.output);
@@ -240,7 +256,9 @@ class OcamlBuildRunner {
 							switch (mliRes) {
 								case Ok(_):
 									// Rebuild so dune validates the newly-written interfaces.
-									final rebuildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+									final rebuildArgs = OcamlDuneBuildState.commandArguments(duneRoot, cfg.buildDir, target);
+									rebuildArgs.unshift("build");
+									final rebuildRes = runCapture("dune", rebuildArgs);
 									addPhase("mli_rebuild", rebuildRes.elapsedMilliseconds, rebuildRes.code);
 									if (rebuildRes.code != 0) {
 										final out = truncateOutput(rebuildRes.output);
@@ -284,7 +302,9 @@ class OcamlBuildRunner {
 									});
 									switch (mliRes) {
 										case Ok(_):
-											final rebuildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+											final rebuildArgs = OcamlDuneBuildState.commandArguments(duneRoot, cfg.buildDir, target);
+											rebuildArgs.unshift("build");
+											final rebuildRes = runCapture("dune", rebuildArgs);
 											addPhase("mli_rebuild", rebuildRes.elapsedMilliseconds, rebuildRes.code);
 											if (rebuildRes.code != 0) {
 												final out = truncateOutput(rebuildRes.output);
@@ -315,7 +335,9 @@ class OcamlBuildRunner {
 				}
 
 				if (cfg.run) {
-					final runRes = runCapture("dune", ["exec", "--root", duneRoot, target]);
+					final runArgs = OcamlDuneBuildState.commandArguments(duneRoot, cfg.buildDir, target);
+					runArgs.unshift("exec");
+					final runRes = runCapture("dune", runArgs);
 					addPhase("dune_exec", runRes.elapsedMilliseconds, runRes.code);
 					if (runRes.code != 0) {
 						final out = truncateOutput(runRes.output);
@@ -328,7 +350,7 @@ class OcamlBuildRunner {
 						notes.push("Built OCaml output via dune: " + target);
 					}
 				} else {
-					notes.push("Built OCaml output via dune: " + target);
+					notes.push("Built OCaml output via dune: " + target + (cfg.buildDir == null ? "" : " (build state: " + cfg.buildDir + ")"));
 				}
 			}
 		} catch (e:Dynamic) {

@@ -18,45 +18,46 @@ let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte ((Obj.m
   b
 )
 
-let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_9 = (
+let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_12 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
-      ignore (HxBytes.set buf (HxInt.add pos (!i)) ((Obj.magic self : t).readByte (Obj.magic self) ()));
-      let __old_2 = !i in let __new_3 = HxInt.add __old_2 1 in (
-        ignore (i := __new_3);
-        __old_2
+      ignore (let __bytes_access_receiver_2 = buf in let __bytes_access_arg_0_3 = HxInt.add pos (!i) in let __bytes_access_arg_1_4 = (Obj.magic self : t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_2 __bytes_access_arg_0_3 __bytes_access_arg_1_4);
+      let __old_5 = !i in let __new_6 = HxInt.add __old_5 1 in (
+        ignore (i := __new_6);
+        __old_5
       )
     )) done with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_4 -> raise (HxRuntime.Hx_return __ret_4)
-      | HxRuntime.Hx_exception (__exn_v_5, __exn_tags_6) -> if HxRuntime.tags_has __exn_tags_6 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_5 : Haxe_io_Eof.t) in (
+      | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if HxRuntime.tags_has __exn_tags_9 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_8 : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else HxRuntime.hx_throw_typed __exn_v_5 __exn_tags_6
-      | __exn_7 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_7) : Haxe_io_Eof.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_8 __exn_tags_9
+      | __exn_10 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_10) : Haxe_io_Eof.t) in (
         ignore _hx;
         if !i = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ()
-      ) else raise (__exn_7));
+      ) else raise (__exn_10));
     !i
   )
-) in Obj.magic __fallback_result_9 with
-  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
+) in Obj.magic __fallback_result_12 with
+  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (ignore (let tempNumber = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_10 = 0 in (
-      tempNumber := __assign_10;
-      __assign_10
+    | Sys_io_FileSeek.SeekBegin -> let __assign_13 = 0 in (
+      tempNumber := __assign_13;
+      __assign_13
     )
-    | Sys_io_FileSeek.SeekCur -> let __assign_11 = 1 in (
-      tempNumber := __assign_11;
-      __assign_11
+    | Sys_io_FileSeek.SeekCur -> let __assign_14 = 1 in (
+      tempNumber := __assign_14;
+      __assign_14
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_12 = 2 in (
-      tempNumber := __assign_12;
-      __assign_12
+    | Sys_io_FileSeek.SeekEnd -> let __assign_15 = 2 in (
+      tempNumber := __assign_15;
+      __assign_15
     ));
   HxFileStream.seek_in ((Obj.magic self : t).h) p (!tempNumber)
 )))
@@ -77,17 +78,17 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndi
 
 let seekKind = fun pos -> let tempResult = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_13 = 0 in (
-      tempResult := __assign_13;
-      __assign_13
+    | Sys_io_FileSeek.SeekBegin -> let __assign_16 = 0 in (
+      tempResult := __assign_16;
+      __assign_16
     )
-    | Sys_io_FileSeek.SeekCur -> let __assign_14 = 1 in (
-      tempResult := __assign_14;
-      __assign_14
+    | Sys_io_FileSeek.SeekCur -> let __assign_17 = 1 in (
+      tempResult := __assign_17;
+      __assign_17
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_15 = 2 in (
-      tempResult := __assign_15;
-      __assign_15
+    | Sys_io_FileSeek.SeekEnd -> let __assign_18 = 2 in (
+      tempResult := __assign_18;
+      __assign_18
     ));
   !tempResult
 )

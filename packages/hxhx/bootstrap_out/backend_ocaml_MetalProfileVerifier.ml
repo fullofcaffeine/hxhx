@@ -13,13 +13,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Me
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.MetalProfileVerifier" } : t)
 
-let normalizeTypeHint = fun rawTypeHint -> try let __fallback_result_38 = (
-  ignore (if rawTypeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  StringTools.replace (StringTools.replace (StringTools.replace (StringTools.trim (rawTypeHint : string) : string) (" " : string) ("" : string) : string) ("\t" : string) ("" : string) : string) ("\n" : string) ("" : string)
-) in Obj.magic __fallback_result_38 with
-  | HxRuntime.Hx_return __ret_37 -> Obj.obj __ret_37
+let normalizeTypeHint = fun (rawTypeHint : string) -> (try (
+  ignore (if rawTypeHint == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let __call_arg_0_44 = let __call_arg_0_45 = let __call_arg_0_46 = let __call_arg_0_47 = rawTypeHint in StringTools.trim __call_arg_0_47 in let __call_arg_1_48 = " " in let __call_arg_2_49 = "" in StringTools.replace __call_arg_0_46 __call_arg_1_48 __call_arg_2_49 in let __call_arg_1_50 = "\t" in let __call_arg_2_51 = "" in StringTools.replace __call_arg_0_45 __call_arg_1_50 __call_arg_2_51 in let __call_arg_1_52 = "\n" in let __call_arg_2_53 = "" in StringTools.replace __call_arg_0_44 __call_arg_1_52 __call_arg_2_53
+) with
+  | HxRuntime.Hx_return __ret_54 -> (Obj.obj __ret_54 : string) : string)
 
-let isDynamicTypeHint = fun rawTypeHint -> let normalized = (HxString.toLowerCase (normalizeTypeHint (rawTypeHint : string)) () : string) in HxString.equals normalized "dynamic" || HxString.equals normalized "null<dynamic>" || HxString.equals normalized "array<dynamic>"
+let isDynamicTypeHint = fun (rawTypeHint : string) -> (let normalized = (HxString.toLowerCase (let __call_arg_0_43 = rawTypeHint in normalizeTypeHint __call_arg_0_43) () : string) in HxString.equals normalized "dynamic" || HxString.equals normalized "null<dynamic>" || HxString.equals normalized "array<dynamic>" : bool)
 
 let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if (match callee with
@@ -59,9 +59,9 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 9 then let _g = Obj.magic (match callee with
-    | HxExpr.EField (__enum_param_39, _) -> __enum_param_39
+    | HxExpr.EField (__enum_param_55, _) -> __enum_param_55
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
-    | HxExpr.EField (_, __enum_param_40) -> __enum_param_40
+    | HxExpr.EField (_, __enum_param_56) -> __enum_param_56
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -99,99 +99,99 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_41 -> __enum_param_41
+    | HxExpr.EIdent __enum_param_57 -> __enum_param_57
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
-    | "Reflect" -> let field = (_g1 : string) in let __assign_43 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
-      tempResult := __assign_43;
-      __assign_43
+    | "Reflect" -> let field = (_g1 : string) in let __assign_59 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_59;
+      __assign_59
     )
-    | "Type" -> let field = (_g1 : string) in let __assign_44 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
-      tempResult := __assign_44;
-      __assign_44
+    | "Type" -> let field = (_g1 : string) in let __assign_60 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_60;
+      __assign_60
     )
-    | _ -> let __assign_42 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_42;
-      __assign_42
-    ) else let __assign_45 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_45;
-    __assign_45
-  ) else let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_46;
-    __assign_46
+    | _ -> let __assign_58 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_58;
+      __assign_58
+    ) else let __assign_61 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_61;
+    __assign_61
+  ) else let __assign_62 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_62;
+    __assign_62
   ));
   !tempResult
 )
 
-let summarizeRaw = fun raw -> try let __fallback_result_50 = (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("<unknown>" : string))) else ());
-  let oneLine = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) ("\r" : string) (" " : string) : string) ("\n" : string) (" " : string) : string) ("\t" : string) (" " : string) : string) in let trimmed = (StringTools.trim (oneLine : string) : string) in let tempResult = ref ("" : string) in (
-    ignore (if HxString.length trimmed > 80 then let __assign_47 = (HxString.toStdString (HxString.substr trimmed 0 80) ^ "..." : string) in (
-      tempResult := __assign_47;
-      __assign_47
-    ) else let __assign_48 = (trimmed : string) in (
-      tempResult := __assign_48;
-      __assign_48
+let summarizeRaw = fun (raw : string) -> (try (
+  ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
+  let oneLine = let __call_arg_0_63 = let __call_arg_0_64 = let __call_arg_0_65 = raw in let __call_arg_1_66 = "\r" in let __call_arg_2_67 = " " in StringTools.replace __call_arg_0_65 __call_arg_1_66 __call_arg_2_67 in let __call_arg_1_68 = "\n" in let __call_arg_2_69 = " " in StringTools.replace __call_arg_0_64 __call_arg_1_68 __call_arg_2_69 in let __call_arg_1_70 = "\t" in let __call_arg_2_71 = " " in StringTools.replace __call_arg_0_63 __call_arg_1_70 __call_arg_2_71 in let trimmed = let __call_arg_0_72 = oneLine in StringTools.trim __call_arg_0_72 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length trimmed > 80 then let __assign_73 = HxString.toStdString (HxString.substr trimmed 0 80) ^ "..." in (
+      tempResult := __assign_73;
+      __assign_73
+    ) else let __assign_74 = trimmed in (
+      tempResult := __assign_74;
+      __assign_74
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_50 with
-  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
+) with
+  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : string) : string)
 
-let formatContext = fun className fnName -> let tempResult = ref ("" : string) in (
-  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_51 = (className : string) in (
-    tempResult := __assign_51;
-    __assign_51
-  ) else let __assign_52 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
-    tempResult := __assign_52;
-    __assign_52
+let formatContext = fun (className : string) (fnName : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_76 = (className : string) in (
+    tempResult := __assign_76;
+    __assign_76
+  ) else let __assign_77 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
+    tempResult := __assign_77;
+    __assign_77
   ));
   !tempResult
-)
+) : string)
 
 let addViolation = fun violations filePath className fnName pos code construct reason migrationHint -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_53 = 0 in (
-    tempNumber := __assign_53;
-    __assign_53
-  ) else let __assign_54 = HxPos.getLine (Obj.magic pos) () in (
-    tempNumber := __assign_54;
-    __assign_54
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_78 = 0 in (
+    tempNumber := __assign_78;
+    __assign_78
+  ) else let __assign_79 = HxPos.getLine (Obj.magic pos) () in (
+    tempNumber := __assign_79;
+    __assign_79
   ));
   let line = !tempNumber in let tempNumber1 = ref (0 : int) in (
-    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_55 = 0 in (
-      tempNumber1 := __assign_55;
-      __assign_55
-    ) else let __assign_56 = HxPos.getColumn (Obj.magic pos) () in (
-      tempNumber1 := __assign_56;
-      __assign_56
+    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_80 = 0 in (
+      tempNumber1 := __assign_80;
+      __assign_80
+    ) else let __assign_81 = HxPos.getColumn (Obj.magic pos) () in (
+      tempNumber1 := __assign_81;
+      __assign_81
     ));
-    let column = !tempNumber1 in let tempString = ref ("" : string) in (
-      ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then let __assign_57 = ("<unknown>" : string) in (
-        tempString := __assign_57;
-        __assign_57
-      ) else let __assign_58 = (filePath : string) in (
-        tempString := __assign_58;
-        __assign_58
+    let column = !tempNumber1 in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if filePath == HxString.hx_null_string || HxString.length filePath = 0 then let __assign_82 = ("<unknown>" : string) in (
+        tempString := __assign_82;
+        __assign_82
+      ) else let __assign_83 = (filePath : string) in (
+        tempString := __assign_83;
+        __assign_83
       ));
-      HxArray.push violations (let __anon_59 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_59 "filePath" (Obj.repr (!tempString)));
-        ignore (HxAnon.set __anon_59 "line" (Obj.repr line));
-        ignore (HxAnon.set __anon_59 "column" (Obj.repr column));
-        ignore (HxAnon.set __anon_59 "code" (Obj.repr code));
-        ignore (HxAnon.set __anon_59 "construct" (Obj.repr construct));
-        ignore (HxAnon.set __anon_59 "context" (Obj.repr (formatContext (className : string) (fnName : string))));
-        ignore (HxAnon.set __anon_59 "reason" (Obj.repr reason));
-        ignore (HxAnon.set __anon_59 "migrationHint" (Obj.repr migrationHint));
-        __anon_59
+      HxArray.push violations (let __anonymous_value_84 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_84 "filePath" (Obj.repr (!tempString)));
+        ignore (HxAnon.set __anonymous_value_84 "line" (Obj.repr line));
+        ignore (HxAnon.set __anonymous_value_84 "column" (Obj.repr column));
+        ignore (HxAnon.set __anonymous_value_84 "code" (Obj.repr code));
+        ignore (HxAnon.set __anonymous_value_84 "construct" (Obj.repr construct));
+        ignore (HxAnon.set __anonymous_value_84 "context" (Obj.repr (let __call_arg_0_85 = className in let __call_arg_1_86 = fnName in formatContext __call_arg_0_85 __call_arg_1_86)));
+        ignore (HxAnon.set __anonymous_value_84 "reason" (Obj.repr reason));
+        ignore (HxAnon.set __anonymous_value_84 "migrationHint" (Obj.repr migrationHint));
+        __anonymous_value_84
       ))
     )
   )
 ))
 
-let verifyExplicitDynamicTypeHint = fun filePath className fnName pos label rawTypeHint violations -> ignore (try (
-  ignore (if not (isDynamicTypeHint (rawTypeHint : string)) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+let verifyExplicitDynamicTypeHint = fun filePath className fnName pos label rawTypeHint violations -> ignore (try ignore ((
+  ignore (if not (let __call_arg_0_41 = rawTypeHint in isDynamicTypeHint __call_arg_0_41) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic pos) ("dynamic_type_hint" : string) (label : string) ("`Dynamic` type hints disable metal-profile specialization and deterministic native typing" : string) ("replace `Dynamic` with a concrete type" : string)
-) with
-  | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36)
+)) with
+  | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42)
 
 let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ignore (match expr with
   | HxExpr.ENull -> ignore ()
@@ -233,9 +233,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
     ignore (if reflectionCall != Obj.magic (HxRuntime.hx_null) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("reflection_call" : string) (reflectionCall : string) ("reflection-driven calls prevent static specialization in metal mode" : string) ("replace reflection calls with static/typed APIs" : string)) else ());
     ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic callee) (Obj.magic violations));
     let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-      ignore (let __old_22 = !_g2 in let __new_23 = HxInt.add __old_22 1 in (
-        ignore (_g2 := __new_23);
-        __new_23
+      ignore (let __old_24 = !_g2 in let __new_25 = HxInt.add __old_24 1 in (
+        ignore (_g2 := __new_25);
+        __new_25
       ));
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
     )) done
@@ -252,16 +252,16 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
     ignore _p0;
     let _g2 = Obj.magic _p1 in let body = Obj.magic _g2 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic body) (Obj.magic violations)
   ))
-  | HxExpr.ETryCatchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (("ETryCatchRaw(" ^ HxString.toStdString (summarizeRaw (raw : string))) ^ ")" : string) ("raw try/catch fallback nodes cannot guarantee native metal semantics" : string) ("use statement-level try/catch with concrete catch types" : string))
-  | HxExpr.ESwitchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (("ESwitchRaw(" ^ HxString.toStdString (summarizeRaw (raw : string))) ^ ")" : string) ("raw switch fallback nodes cannot guarantee native metal semantics" : string) ("use structured switch forms that type-check without fallback nodes" : string))
+  | HxExpr.ETryCatchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (("ETryCatchRaw(" ^ HxString.toStdString (let __call_arg_0_26 = raw in summarizeRaw __call_arg_0_26)) ^ ")" : string) ("raw try/catch fallback nodes cannot guarantee native metal semantics" : string) ("use statement-level try/catch with concrete catch types" : string))
+  | HxExpr.ESwitchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (("ESwitchRaw(" ^ HxString.toStdString (let __call_arg_0_27 = raw in summarizeRaw __call_arg_0_27)) ^ ")" : string) ("raw switch fallback nodes cannot guarantee native metal semantics" : string) ("use structured switch forms that type-check without fallback nodes" : string))
   | HxExpr.ESwitch (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in (
     ignore _g1;
     let exprs = Obj.magic _g2 in (
       ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic scrutinee) (Obj.magic violations));
       let _g3 = ref 0 in while !_g3 < HxArray.length exprs do ignore (let branchExpr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g3)) in (
-        ignore (let __old_24 = !_g3 in let __new_25 = HxInt.add __old_24 1 in (
-          ignore (_g3 := __new_25);
-          __new_25
+        ignore (let __old_28 = !_g3 in let __new_29 = HxInt.add __old_28 1 in (
+          ignore (_g3 := __new_29);
+          __new_29
         ));
         verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic branchExpr) (Obj.magic violations)
       )) done
@@ -270,9 +270,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
   | HxExpr.ENew (_p0, _p1) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let args = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g3)) in (
-      ignore (let __old_26 = !_g3 in let __new_27 = HxInt.add __old_26 1 in (
-        ignore (_g3 := __new_27);
-        __new_27
+      ignore (let __old_30 = !_g3 in let __new_31 = HxInt.add __old_30 1 in (
+        ignore (_g3 := __new_31);
+        __new_31
       ));
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
     )) done
@@ -297,9 +297,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
   | HxExpr.EAnon (_p0, _p1) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let fieldExpr = Obj.magic (HxArray.get (Obj.magic fieldValues) (!_g3)) in (
-      ignore (let __old_28 = !_g3 in let __new_29 = HxInt.add __old_28 1 in (
-        ignore (_g3 := __new_29);
-        __new_29
+      ignore (let __old_32 = !_g3 in let __new_33 = HxInt.add __old_32 1 in (
+        ignore (_g3 := __new_33);
+        __new_33
       ));
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic fieldExpr) (Obj.magic violations)
     )) done
@@ -313,9 +313,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
     )
   ))
   | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let values = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let valueExpr = Obj.magic (HxArray.get (Obj.magic values) (!_g2)) in (
-    ignore (let __old_30 = !_g2 in let __new_31 = HxInt.add __old_30 1 in (
-      ignore (_g2 := __new_31);
-      __new_31
+    ignore (let __old_34 = !_g2 in let __new_35 = HxInt.add __old_34 1 in (
+      ignore (_g2 := __new_35);
+      __new_35
     ));
     verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic valueExpr) (Obj.magic violations)
   )) done)
@@ -335,7 +335,7 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
     ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("untyped_expr" : string) ("`untyped` expression" : string) ("metal profile forbids `untyped` because it bypasses typed lowering and native guarantees" : string) ("replace `untyped` with typed target abstractions or portable equivalents" : string));
     verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
   ))
-  | HxExpr.EUnsupported _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_expr" : string) (("EUnsupported(" ^ HxString.toStdString (summarizeRaw (raw : string))) ^ ")" : string) ("bootstrap fallback nodes are not valid in metal mode" : string) ("rewrite the expression to a supported typed form before using metal profile" : string))
+  | HxExpr.EUnsupported _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_expr" : string) (("EUnsupported(" ^ HxString.toStdString (let __call_arg_0_36 = raw in summarizeRaw __call_arg_0_36)) ^ ")" : string) ("bootstrap fallback nodes are not valid in metal mode" : string) ("rewrite the expression to a supported typed form before using metal profile" : string))
   | HxExpr.EReturn _p0 -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p0) in let value = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g) in (
     ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position return" : string) ("a return nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the return to statement position before selecting metal profile" : string));
     if value != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" value)) (Obj.magic violations)) else ()
@@ -343,9 +343,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
   | HxExpr.EVars _p0 -> ignore (let _g = Obj.magic _p0 in let declarations = Obj.magic _g in (
     ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position variable declaration" : string) ("a variable declaration passed as source syntax must be handled by macro expansion before metal emission" : string) ("expand the macro or move the declaration to statement position before selecting metal profile" : string));
     let _g2 = ref 0 in while !_g2 < HxArray.length declarations do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic declarations) (!_g2)) in (
-      ignore (let __old_32 = !_g2 in let __new_33 = HxInt.add __old_32 1 in (
-        ignore (_g2 := __new_33);
-        __new_33
+      ignore (let __old_37 = !_g2 in let __new_38 = HxInt.add __old_37 1 in (
+        ignore (_g2 := __new_38);
+        __new_38
       ));
       let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxExprVarDecl.getInitializer (Obj.magic declaration))) in if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
     )) done
@@ -370,9 +370,9 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
       ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position while" : string) ("a while loop nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the loop to statement position before selecting metal profile" : string));
       ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic condition) (Obj.magic violations));
       let _g4 = ref 0 in while !_g4 < HxArray.length body do ignore (let entry = Obj.magic (HxArray.get (Obj.magic body) (!_g4)) in (
-        ignore (let __old_34 = !_g4 in let __new_35 = HxInt.add __old_34 1 in (
-          ignore (_g4 := __new_35);
-          __new_35
+        ignore (let __old_39 = !_g4 in let __new_40 = HxInt.add __old_39 1 in (
+          ignore (_g4 := __new_40);
+          __new_40
         ));
         verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic entry) (Obj.magic violations)
       )) done
@@ -455,8 +455,8 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
           ignore (_g3 := __new_21);
           __new_21
         ));
-        let catchHint = (normalizeTypeHint (Obj.obj (HxAnon.get c "typeHint") : string) : string) in (
-          ignore (if HxString.length catchHint = 0 || isDynamicTypeHint (Obj.obj (HxAnon.get c "typeHint") : string) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic (HxPos.unknown ())) ("dynamic_type_hint" : string) (("catch variable `" ^ HxString.toStdString (Obj.obj (HxAnon.get c "name"))) ^ "` type" : string) ("metal catch typing must stay concrete to preserve deterministic native exception matching" : string) ("use a concrete catch type in metal profile (for example, `haxe.Exception` or a specific error type)" : string)) else ());
+        let catchHint = let __call_arg_0_22 = Obj.obj (HxAnon.get c "typeHint") in normalizeTypeHint __call_arg_0_22 in (
+          ignore (if HxString.length catchHint = 0 || (let __call_arg_0_23 = Obj.obj (HxAnon.get c "typeHint") in isDynamicTypeHint __call_arg_0_23) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic (HxPos.unknown ())) ("dynamic_type_hint" : string) (("catch variable `" ^ HxString.toStdString (Obj.obj (HxAnon.get c "name"))) ^ "` type" : string) ("metal catch typing must stay concrete to preserve deterministic native exception matching" : string) ("use a concrete catch type in metal profile (for example, `haxe.Exception` or a specific error type)" : string)) else ());
           verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic violations)
         )
       )) done
@@ -491,7 +491,7 @@ let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.m
       ));
       let fieldName = (HxFieldDecl.getName (Obj.magic field) : string) in (
         ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (("field `" ^ HxString.toStdString fieldName) ^ "` type" : string) (HxFieldDecl.getTypeHint (Obj.magic field) : string) (Obj.magic violations));
-        let fieldInit = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in if fieldInit != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" fieldInit)) (Obj.magic violations)) else ()
+        let fieldInit = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in if fieldInit != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (HxString.hx_null_string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" fieldInit)) (Obj.magic violations)) else ()
       )
     )) done);
     let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
@@ -539,13 +539,13 @@ let collectViolationSummaries = fun program -> let summaries = Obj.magic (HxArra
       ignore (_g := __new_2);
       __new_2
     ));
-    HxArray.push summaries (let __anon_3 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_3 "filePath" (Obj.repr (Obj.obj (HxAnon.get violation "filePath"))));
-      ignore (HxAnon.set __anon_3 "context" (Obj.repr (Obj.obj (HxAnon.get violation "context"))));
-      ignore (HxAnon.set __anon_3 "code" (Obj.repr (Obj.obj (HxAnon.get violation "code"))));
-      ignore (HxAnon.set __anon_3 "construct" (Obj.repr (Obj.obj (HxAnon.get violation "construct"))));
-      ignore (HxAnon.set __anon_3 "reason" (Obj.repr (Obj.obj (HxAnon.get violation "reason"))));
-      __anon_3
+    HxArray.push summaries (let __anonymous_value_3 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_3 "filePath" (Obj.repr (Obj.obj (HxAnon.get violation "filePath"))));
+      ignore (HxAnon.set __anonymous_value_3 "context" (Obj.repr (Obj.obj (HxAnon.get violation "context"))));
+      ignore (HxAnon.set __anonymous_value_3 "code" (Obj.repr (Obj.obj (HxAnon.get violation "code"))));
+      ignore (HxAnon.set __anonymous_value_3 "construct" (Obj.repr (Obj.obj (HxAnon.get violation "construct"))));
+      ignore (HxAnon.set __anonymous_value_3 "reason" (Obj.repr (Obj.obj (HxAnon.get violation "reason"))));
+      __anonymous_value_3
     ))
   )) done);
   summaries
@@ -555,19 +555,19 @@ let formatViolations = fun violations -> let lines = Obj.magic (HxArray.create (
   ignore (HxArray.push lines (("metal profile verification failed: " ^ string_of_int (HxArray.length violations)) ^ " issue(s)"));
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length violations do ignore (let v = HxArray.get (Obj.magic violations) (!_g) in (
-      ignore (let __old_60 = !_g in let __new_61 = HxInt.add __old_60 1 in (
-        ignore (_g := __new_61);
-        __new_61
+      ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
+        ignore (_g := __new_88);
+        __new_88
       ));
-      let tempString = ref ("" : string) in (
-        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_62 = (((":" ^ string_of_int (Obj.obj (HxAnon.get v "line"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get v "column")) : string) in (
-          tempString := __assign_62;
-          __assign_62
-        ) else let __assign_63 = ("" : string) in (
-          tempString := __assign_63;
-          __assign_63
+      let tempString = ref (HxString.hx_null_string : string) in (
+        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_89 = ((":" ^ string_of_int (Obj.obj (HxAnon.get v "line"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get v "column")) in (
+          tempString := __assign_89;
+          __assign_89
+        ) else let __assign_90 = "" in (
+          tempString := __assign_90;
+          __assign_90
         ));
-        let lineCol = (!tempString : string) in (
+        let lineCol = !tempString in (
           ignore (HxArray.push lines ((((((((("- " ^ HxString.toStdString (Obj.obj (HxAnon.get v "filePath"))) ^ HxString.toStdString lineCol) ^ " [") ^ HxString.toStdString (Obj.obj (HxAnon.get v "code"))) ^ "] construct: ") ^ HxString.toStdString (Obj.obj (HxAnon.get v "construct"))) ^ " (context: ") ^ HxString.toStdString (Obj.obj (HxAnon.get v "context"))) ^ ")"));
           ignore (HxArray.push lines ("  reason: " ^ HxString.toStdString (Obj.obj (HxAnon.get v "reason"))));
           HxArray.push lines ("  migration: " ^ HxString.toStdString (Obj.obj (HxAnon.get v "migrationHint")))
@@ -580,4 +580,4 @@ let formatViolations = fun violations -> let lines = Obj.magic (HxArray.create (
   )
 )
 
-let verifyProgram = fun program -> ignore (let violations = Obj.magic (collectViolations (Obj.magic program)) in if HxArray.length violations > 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (formatViolations (Obj.magic violations))) ["Dynamic"; "String"]) else ())
+let verifyProgram = fun program -> ignore (let violations = Obj.magic (collectViolations (Obj.magic program)) in if HxArray.length violations > 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (formatViolations (Obj.magic violations))) ["Dynamic"]) else ())

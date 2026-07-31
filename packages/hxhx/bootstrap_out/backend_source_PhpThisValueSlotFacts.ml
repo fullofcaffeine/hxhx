@@ -13,18 +13,18 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpThisValueSlotFacts" } : t)
 
-let isAssignmentOperator = fun op -> let tempResult = ref (false : bool) in (
+let isAssignmentOperator = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | "^=" | "|=" -> let __assign_55 = true in (
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | "^=" | "|=" -> let __assign_56 = true in (
+      tempResult := __assign_56;
+      __assign_56
+    )
+    | _ -> let __assign_55 = false in (
       tempResult := __assign_55;
       __assign_55
-    )
-    | _ -> let __assign_54 = false in (
-      tempResult := __assign_54;
-      __assign_54
     ));
   !tempResult
-)
+) : bool)
 
 let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false : bool) in (
   ignore (match expression with
@@ -195,52 +195,52 @@ let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
       | HxExpr.EWhile (_, _, _, _) -> 33
       | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 6 then let op = (_g : string) in if isAssignmentOperator (op : string) || HxString.equals op "??=" || HxString.equals op ">>>=" then let __assign_40 = true in (
-      tempResult := __assign_40;
-      __assign_40
-    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_41 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
+      | HxExpr.EContinue _ -> 35) = 6 then let op = (_g : string) in if (let __call_arg_0_40 = op in isAssignmentOperator __call_arg_0_40) || HxString.equals op "??=" || HxString.equals op ">>>=" then let __assign_41 = true in (
       tempResult := __assign_41;
       __assign_41
     ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_42 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
       tempResult := __assign_42;
       __assign_42
-    )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_43 = expressionNeedsValueSlot (Obj.magic condition) || expressionNeedsValueSlot (Obj.magic thenExpression) || expressionNeedsValueSlot (Obj.magic elseExpression) in (
+    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_43 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
       tempResult := __assign_43;
       __assign_43
     )
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_44 = expressionNeedsValueSlot (Obj.magic condition) || expressionNeedsValueSlot (Obj.magic thenExpression) || expressionNeedsValueSlot (Obj.magic elseExpression) in (
+      tempResult := __assign_44;
+      __assign_44
+    )
     | HxExpr.EAnon (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_44 = expressionListNeedsValueSlot (Obj.magic fieldValues) in (
-        tempResult := __assign_44;
-        __assign_44
-      )
-    )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpression = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpression = Obj.magic _g3 in let __assign_45 = expressionNeedsValueSlot (Obj.magic iterable) || guardExpression != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpression)) || expressionNeedsValueSlot (Obj.magic yieldExpression) in (
+      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_45 = expressionListNeedsValueSlot (Obj.magic fieldValues) in (
         tempResult := __assign_45;
         __assign_45
       )
     )
-    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_46 = expressionListNeedsValueSlot (Obj.magic values) in (
-      tempResult := __assign_46;
-      __assign_46
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpression = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpression = Obj.magic _g3 in let __assign_46 = expressionNeedsValueSlot (Obj.magic iterable) || guardExpression != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpression)) || expressionNeedsValueSlot (Obj.magic yieldExpression) in (
+        tempResult := __assign_46;
+        __assign_46
+      )
     )
-    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_47 = expressionNeedsValueSlot (Obj.magic receiver) || expressionNeedsValueSlot (Obj.magic index) in (
+    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_47 = expressionListNeedsValueSlot (Obj.magic values) in (
       tempResult := __assign_47;
       __assign_47
     )
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_48 = expressionNeedsValueSlot (Obj.magic receiver) || expressionNeedsValueSlot (Obj.magic index) in (
+      tempResult := __assign_48;
+      __assign_48
+    )
     | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_48 = expressionNeedsValueSlot (Obj.magic inner) in (
-        tempResult := __assign_48;
-        __assign_48
+      let inner = Obj.magic _g in let __assign_49 = expressionNeedsValueSlot (Obj.magic inner) in (
+        tempResult := __assign_49;
+        __assign_49
       )
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_49 = expressionNeedsValueSlot (Obj.magic inner) in (
-      tempResult := __assign_49;
-      __assign_49
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_50 = expressionNeedsValueSlot (Obj.magic inner) in (
+      tempResult := __assign_50;
+      __assign_50
     )
     | _ -> let __assign_28 = false in (
       tempResult := __assign_28;
@@ -248,20 +248,20 @@ let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false
     ));
   !tempResult
 )
-and expressionListNeedsValueSlot = fun expressions -> try let __fallback_result_53 = (
+and expressionListNeedsValueSlot = fun expressions -> try let __fallback_result_54 = (
   ignore (if expressions == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length expressions do ignore (let expression = Obj.magic (HxArray.get (Obj.magic expressions) (!_g)) in (
-      ignore (let __old_50 = !_g in let __new_51 = HxInt.add __old_50 1 in (
-        ignore (_g := __new_51);
-        __new_51
+      ignore (let __old_51 = !_g in let __new_52 = HxInt.add __old_51 1 in (
+        ignore (_g := __new_52);
+        __new_52
       ));
       if expressionNeedsValueSlot (Obj.magic expression) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_53 with
-  | HxRuntime.Hx_return __ret_52 -> Obj.obj __ret_52
+) in Obj.magic __fallback_result_54 with
+  | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
 
 let rec statementListNeedsValueSlot = fun statements -> try let __fallback_result_8 = (
   ignore (if statements == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());

@@ -91,9 +91,24 @@ package command:
 
 ```bash
 haxelib run reflaxe.ocaml build
-haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
-haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe
+haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
+
+Fresh Haxe processes remain the default. To reuse upstream Haxe 4.3.7 parsing
+and typing across builds, start a local server separately with
+`haxe --wait 6000`, then add `--connect 6000`:
+
+```bash
+haxelib run reflaxe.ocaml build --connect 6000
+haxelib run reflaxe.ocaml watch --connect 6000 \
+  --run .out.reflaxe-ocaml-dune-build/default/out.exe
+```
+
+The package accepts only a local port, `localhost:<port>`, or
+`127.0.0.1:<port>`. It does not start or stop that external server. Omit
+`--connect` for a fresh-process comparison, or restart the server to discard
+its in-memory frontend cache.
 
 `watch` discovers classpaths and included HXML files, waits for an edit batch to
 settle, then rebuilds and optionally runs the native artifact. Use repeated
@@ -101,12 +116,22 @@ settle, then rebuilds and optionally runs the native artifact. Use repeated
 output and common build/cache directories are excluded, and the post-build
 input snapshot prevents compiler output from triggering another build.
 
-Each batch starts a fresh Haxe process. Persistent Haxe-server reuse is not used
-because current Reflaxe evidence found an incomplete-output failure on that
-route. Iteration still benefits from content-stable generated files and Dune's
-incremental native build cache. `--max-builds` provides a deterministic stopping
-point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
-all options.
+Source publication is the commit point. If source generation succeeds but the
+later Dune build fails, the command fails and `--run` does not start the
+program, but the newly published `out/` tree remains available for inspection
+and the next build. Reflaxe does not claim that it rolled source back after
+Dune had already consumed that public tree. Fix the reported native-build
+error and rerun; use the separate Dune clean command below only when a cold
+native rebuild is actually required.
+
+Each fresh or server-backed request reconstructs the complete current target
+program before publication. A successful batch atomically replaces the
+generated `out/` tree, then Dune builds that public tree with reusable state in
+the stable sibling
+`.out.reflaxe-ocaml-dune-build/`. A failed source-generation batch leaves both
+the previous public source and Dune state available. `--max-builds` provides a
+deterministic stopping point for tests and automation; run
+`haxelib run reflaxe.ocaml watch --help` for all options.
 
 For a plain-language explanation of compilation servers, upstream Haxe setup,
 the current `reflaxe.ocaml` and `hxhx` defaults, editor and CI scenarios, memory
@@ -119,6 +144,23 @@ build duration. Dune currently combines OCaml typechecking, compilation, and
 linking; the report does not guess cache hits or claim separate load, startup,
 or workload-runtime timing. Use `--output <directory>` when the project does not
 emit to `out/`.
+
+The two directories have different owners:
+
+- `out/` is complete generated source and reports published by Reflaxe.
+- `.out.reflaxe-ocaml-dune-build/` is disposable native build state owned by
+  Dune.
+
+To reset only native build state, use:
+
+```bash
+dune clean --root out --build-dir .out.reflaxe-ocaml-dune-build
+```
+
+Rerunning the package build replaces generated source but preserves valid Dune
+state. If a project intentionally removes `out/`, that does not remove the Dune
+directory; run the Dune clean command as a separate explicit action when both
+need a cold reset.
 
 ## Inspect a completed build
 
@@ -140,7 +182,26 @@ active OCaml profile, and the current runtime-selection report. When the HXML co
 `-D ocaml_lowering_report` (included in the starter templates), it also shows
 the source location, semantic and carrier types, representation reason, effect
 order, and runtime requirements for assignment/update operations already on the
-typed place-lowering path. The same report inventories mutable static fields
+typed place-lowering path. Calls through the standard generic Map interface are
+also explicit. For example:
+
+```haxe
+function lookup(values:haxe.Constraints.IMap<String, Int>, key:String)
+	return values.get(key);
+```
+
+The report records that this exact call uses the string-key `HxMap` carrier,
+the `get` operation, receiver-before-key evaluation, a `Null<Int>` result, and
+the `haxe-map` runtime capability before any OCaml syntax is produced. The
+syntax writer only renders that sealed decision; it no longer infers the key
+kind or method meaning from the source receiver. This boundary currently
+covers `String`, `Int`, and non-generic class keys using object identity. It
+applies to values originating from Haxe's standard Map specializations. It
+deliberately does not claim enum-key maps, structural or type-parameter keys,
+or arbitrary user implementations of `IMap`; those need a typed interface
+conversion and dispatch contract instead of the `HxMap` carrier.
+
+The same report inventories mutable static fields
 before code generation, including where each OCaml `ref` cell is declared and
 where its Haxe initializer runs. It also records direct dependencies between
 initializers. This makes cross-type and cross-module ordering reviewable
@@ -156,14 +217,17 @@ blocked until every runtime need and native dependency has an explicit, locked
 explanation. Runtime-enabled builds now write
 `ocaml_runtime_requirement_report.json`: it traces typed assignments and
 updates, the compiler-generated type registry, declared static native runtime
-boundaries such as `HxStdio`, `HxBacktrace`, and `HxFPHelper`, and the core
-packaging rule to the exact checked runtime files that were packaged. The
-report labels itself `partial`, lists which observed module names are directly
-selected by at least one recorded compiler reason, and lists which are not.
-This name overlap does not mean every use site is explained. The existing
-runtime selection report
-therefore remains the current compiler/runtime report, not a complete
-explanation for the whole program.
+boundaries such as `HxStdio`, `HxBacktrace`, and `HxFPHelper`, typed standard
+Map operations through `HxMap` and `HxIterator`, and the core packaging rule to
+the exact checked runtime files that were packaged. Standard `StringMap`,
+`IntMap`, and `ObjectMap` calls have declaration-level explanations. Standard
+generic `IMap` calls in the admitted key families additionally have
+call-occurrence explanations tied to the sealed operation described above.
+The report labels itself `partial`, lists which observed module names are
+directly selected by at least one recorded compiler reason, and lists which are
+not. This name overlap does not mean every use site is explained. The existing
+runtime selection report therefore remains the current compiler/runtime report,
+not a complete explanation for the whole program.
 Program-wide representation, native dependency, raw/unsafe, typed binding, and
 curated export-ABI inspection remain visibly unavailable until their owning
 checked records land. The command never scans emitted OCaml or Dune text to
@@ -342,6 +406,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 
 - `-D ocaml_build=native|byte`: run dune build after emit.
 - `-D ocaml_build_timing_report`: write receipt-linked target-owned Dune phase timings (the package `build` and `watch` commands request this automatically).
+- `-D reflaxe_output_transaction`: publish the complete generated directory before Dune runs; reusable Dune state then lives in the stable sibling `.<output>.reflaxe-ocaml-dune-build`.
 - `-D ocaml_run`: run emitted executable via dune after emit.
 - `-D ocaml_no_dune`: disable dune scaffolding emission.
 - `-D ocaml_dune_layout=exe|lib|plugin`: choose dune layout.
@@ -356,6 +421,10 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`: generate `.mli` via `ocamlc -i`.
 - `-D ocaml_sourcemap=directives`: add line directives for error mapping.
 - `target.threaded` is auto-defined on OCaml target builds (`sys.thread.*` is runtime-backed via `HxThread`).
+
+Transactional output currently rejects inferred `ocaml_mli` generation because
+those interfaces would otherwise be created after source publication. Existing
+source-owned `.mli` files remain supported.
 
 ## Relationship to hxhx
 

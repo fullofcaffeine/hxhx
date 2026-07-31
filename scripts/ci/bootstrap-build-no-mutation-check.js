@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
+const childProcess = require('child_process')
 
 const repoRoot = path.resolve(__dirname, '..', '..')
 const buildScript = path.join(repoRoot, 'scripts', 'hxhx', 'build-hxhx.sh')
@@ -24,6 +26,8 @@ const copy = read(copyScript)
 const sanitize = read(sanitizeScript)
 const finalize = read(finalizeScript)
 const bootstrapPatchHelper = read(path.join(repoRoot, 'scripts', 'hxhx', 'bootstrap_patch_helper.py'))
+const bootstrapPatchHelperPath = path.join(repoRoot, 'scripts', 'hxhx', 'bootstrap_patch_helper.py')
+const bootstrapPatchPayloadDir = path.join(repoRoot, 'scripts', 'hxhx', 'bootstrap_patch_payloads')
 
 if (!fs.existsSync(finalizeScript)) {
   fail('missing scripts/hxhx/finalize-bootstrap-dir.sh')
@@ -56,11 +60,70 @@ const retiredBootstrapPatchTokens = [
   'patch_bootstrap_js_target_core_native_js_lib_externs',
   'patch-js-target-core-native-js-lib-externs',
   'js.lib extern native global repair',
+  'patch_bootstrap_stage1_std_root_termination',
+  'patch-stage1-std-root-termination',
+  'bootstrap Stage1 std-root repair',
 ]
 for (const token of retiredBootstrapPatchTokens) {
   if (finalize.includes(token) || bootstrapPatchHelper.includes(token)) {
-    fail(`retired bootstrap JsTargetCore js.lib extern patch must not be restored (found: ${token})`)
+    fail(`retired generated bootstrap repair must not be restored (found: ${token})`)
   }
+}
+
+const retiredBootstrapPatchCommands = [
+  'patch-instance-call-receiver-forwarding',
+  'patch-instance-call-this-binding',
+  'patch-instance-method-value-binding',
+  'patch-instance-call-preapplied-arity',
+  'patch-typerstage-lowercase-static-receiver-guard',
+  'patch-hxparser-uppercase-helper-call',
+]
+for (const command of retiredBootstrapPatchCommands) {
+  if (finalize.includes(command) || bootstrapPatchHelper.includes(`"${command}":`)) {
+    fail(`source-owned Stage3 instance-call behavior must not be restored as an active bootstrap repair (found: ${command})`)
+  }
+}
+
+const retiredBootstrapPatchPayloads = [
+  'root_sys_stdio.mlpatch',
+]
+for (const payload of retiredBootstrapPatchPayloads) {
+  if (finalize.includes(payload) || fs.existsSync(path.join(bootstrapPatchPayloadDir, payload))) {
+    fail(`source-owned bootstrap behavior must not be restored through a generated payload (found: ${payload})`)
+  }
+}
+
+function findEmitterShimPatchAnchor(source) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-bootstrap-anchor-'))
+  const sourcePath = path.join(tempRoot, 'EmitterStage.ml')
+  try {
+    fs.writeFileSync(sourcePath, source)
+    return childProcess.execFileSync('python3', [
+      bootstrapPatchHelperPath,
+      'find-emitter-shim-patch-anchor',
+      sourcePath
+    ], {encoding: 'utf8'})
+  } finally {
+    fs.rmSync(tempRoot, {recursive: true, force: true})
+  }
+}
+
+const directShimCall =
+  '  ignore (patchStage3MacroContextLoadShimForStage3 (outAbs : string));'
+if (findEmitterShimPatchAnchor([
+  'let patchStage3MacroContextLoadShimForStage3 = fun outAbs -> ()',
+  directShimCall
+].join('\n')) !== directShimCall) {
+  fail('bootstrap finalizer must retain the direct macro-context shim call as its payload boundary')
+}
+
+const temporaryShimCall =
+  '  ignore (let __call_arg_0_3957 = outAbs in patchStage3MacroContextLoadShimForStage3 __call_arg_0_3957);'
+if (findEmitterShimPatchAnchor([
+  'let patchStage3MacroContextLoadShimForStage3 = fun outAbs -> ()',
+  temporaryShimCall
+].join('\n')) !== temporaryShimCall) {
+  fail('bootstrap finalizer must accept numbered call-argument temporaries without guessing their suffix')
 }
 
 for (const token of forbiddenBuildTokens) {

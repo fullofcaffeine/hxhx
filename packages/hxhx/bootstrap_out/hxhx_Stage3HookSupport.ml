@@ -18,10 +18,11 @@ let runHookPhase = fun session phase hookIds output -> try let __fallback_result
     ignore (_g := __new_2);
     __old_1
   ) in (
-    ignore (try Obj.obj (HxAnon.get session "runHook") (phase : string) (HxArray.get (Obj.magic hookIds) i) with
+    ignore (try ignore (Obj.obj (HxAnon.get session "runHook") (phase : string) (HxArray.get (Obj.magic hookIds) i)) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_3 -> raise (HxRuntime.Hx_return __ret_3)
+      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_4, __exn_tags_5) -> if HxRuntime.tags_has __exn_tags_5 "String" then let e = (Obj.obj __exn_v_4 : string) in (
         ignore e;
         raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e : string)))

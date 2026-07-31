@@ -13,7 +13,7 @@
    - Nullable primitives (`Null<Int>`) are represented as `Obj.t`:
      - `HxRuntime.hx_null` for null
      - `Obj.repr <primitive>` for non-null
-   - `Std.string` delegates to `HxRuntime.dynamic_toStdString`, which understands
+   - `Std.string` delegates to `HxDynamic.toStdString`, which understands
      the backend's null/boxing representation for Dynamic values.
 
    Notes:
@@ -36,7 +36,7 @@ let is_hex_digit (c : char) : bool =
   || (c >= 'A' && c <= 'F')
 
 let string (v : Obj.t) : string =
-  HxRuntime.dynamic_toStdString v
+  HxDynamic.toStdString v
 
 let int (x : float) : int =
   (* Haxe: rounded towards 0. *)

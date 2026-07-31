@@ -94,7 +94,7 @@ let map_dyn (a : 'a t) (f : Obj.t) : Obj.t t =
 
 (* Stage3 emit-runner bridge for Array.join with dynamic payloads. *)
 let join_dyn (a : Obj.t t) (sep : string) : string =
-  HxArray.join a sep (fun v -> HxRuntime.dynamic_toStdString (Obj.repr v))
+  HxArray.join a sep (fun v -> HxDynamic.toStdString (Obj.repr v))
 
 let join_strict (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
   HxArray.join a sep to_string
@@ -107,7 +107,7 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
      then a poison value like `Obj.magic 0` becomes a "string" and the OCaml runtime will
      segfault when `Buffer.add_string` tries to treat it as a byte sequence.
 
-     Using `dynamic_toStdString` here keeps the runner alive and lets Gate2 surface the next
+     Using the shared Dynamic string conversion here keeps the runner alive and lets Gate2 surface the next
      missing semantic as a deterministic error instead of a hard crash. *)
   ignore to_string;
   join_dyn (Obj.magic a) sep

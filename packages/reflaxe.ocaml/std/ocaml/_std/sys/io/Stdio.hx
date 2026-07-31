@@ -22,10 +22,10 @@ import haxe.io.Output;
 	How
 	- This class is an OCaml-target-only std override. It uses a small OCaml runtime
 	  shim (`std/runtime/HxStdio.ml`) for byte/line IO and flushing.
-	- The compiler backend lowers:
-	  - `Sys.stdin()` → `sys.io.Stdio.stdin()`
-	  - `Sys.stdout()` → `sys.io.Stdio.stdout()`
-	  - `Sys.stderr()` → `sys.io.Stdio.stderr()`
+	- The typed `Sys` declarations route `stdin()`, `stdout()`, and `stderr()`
+	  through this generated Haxe module. Its private `NativeHxStdio` extern is the
+	  checked boundary that selects `HxStdio`; `Sys_io_Stdio` itself is generated
+	  Haxe, not an OCaml runtime module.
 
 	Notes
 	- We currently create a new wrapper instance on each call. That keeps us

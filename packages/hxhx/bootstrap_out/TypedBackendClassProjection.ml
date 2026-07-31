@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxClassDecl.t; mutable funct
 
 let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassProjection"; declaration = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null); semanticFacts = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection requires a declaration") ["Dynamic"; "String"]) else ());
+    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection requires a declaration") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
       __assign_1
@@ -42,18 +42,18 @@ let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> le
           __assign_10
         ));
         let projectedFunctions = Obj.magic (HxClassDecl.getFunctions (Obj.magic declaration2)) in (
-          ignore (if HxArray.length projectedFunctions <> HxArray.length ((Obj.magic self : t).functions) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection lost a function catalog") ["Dynamic"; "String"]) else ());
+          ignore (if HxArray.length projectedFunctions <> HxArray.length ((Obj.magic self : t).functions) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection lost a function catalog") ["Dynamic"]) else ());
           let _g = ref 0 in let _g1 = HxArray.length projectedFunctions in (
             ignore (while !_g < _g1 do ignore (let index = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
               ignore (_g := __new_12);
               __old_11
-            ) in if Obj.repr (HxArray.get (Obj.magic projectedFunctions) index) != Obj.repr (TypedBackendFunctionProjection.getDeclaration (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).functions)) index)) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection function order mismatch") ["Dynamic"; "String"]) else ()) done);
+            ) in if Obj.repr (HxArray.get (Obj.magic projectedFunctions) index) != Obj.repr (TypedBackendFunctionProjection.getDeclaration (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).functions)) index)) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection function order mismatch") ["Dynamic"]) else ()) done);
             let projectedFields = Obj.magic (HxClassDecl.getFields (Obj.magic declaration2)) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).fieldInitializers) in while !_g < HxArray.length _g1 do ignore (let hx_initializer = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
               ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
                 ignore (_g := __new_14);
                 __new_14
               ));
-              ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection cannot contain a null field initializer") ["Dynamic"; "String"]) else ());
+              ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection cannot contain a null field initializer") ["Dynamic"]) else ());
               let found = ref false in let _g2 = ref 0 in (
                 ignore (try while !_g2 < HxArray.length projectedFields do try ignore (let field = Obj.magic (HxArray.get (Obj.magic projectedFields) (!_g2)) in (
                   ignore (let __old_15 = !_g2 in let __new_16 = HxInt.add __old_15 1 in (
@@ -70,7 +70,7 @@ let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> le
                 )) with
                   | HxRuntime.Hx_continue -> () done with
                   | HxRuntime.Hx_break -> ());
-                if not (!found) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class projection lost field initializer " ^ HxString.toStdString (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic hx_initializer) ()))) ["Dynamic"; "String"]) else ()
+                if not (!found) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class projection lost field initializer " ^ HxString.toStdString (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic hx_initializer) ()))) ["Dynamic"]) else ()
               )
             )) done
           )
@@ -90,7 +90,7 @@ let getFunctions = fun self () -> HxArray.copy ((Obj.magic self : t).functions)
 let getFieldInitializers = fun self () -> HxArray.copy ((Obj.magic self : t).fieldInitializers)
 
 let requireSemanticFacts = fun self () -> (
-  ignore (if (Obj.magic self : t).semanticFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class projection has no exact semantic facts for " ^ HxString.toStdString (HxClassDecl.getName (Obj.magic ((Obj.magic self : t).declaration))))) ["Dynamic"; "String"]) else ());
+  ignore (if (Obj.magic self : t).semanticFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class projection has no exact semantic facts for " ^ HxString.toStdString (HxClassDecl.getName (Obj.magic ((Obj.magic self : t).declaration))))) ["Dynamic"]) else ());
   (Obj.magic self : t).semanticFacts
 )
 

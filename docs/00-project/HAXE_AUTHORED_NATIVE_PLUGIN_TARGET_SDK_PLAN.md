@@ -31,9 +31,16 @@ profile is available today, and it does not move a README readiness bar.
 
 The six-month checkpoint pauses implementation even though the product goal
 remains accepted. Native `hxhx` must first call the real standalone
-`reflaxe.ocaml` target through `haxe_ocaml-38gsp.1`, and Full1 must stabilize
-the baseline compiler. This avoids building transform and backend SDK contracts
-on top of a temporary second OCaml semantic implementation.
+`reflaxe.ocaml` target through `haxe_ocaml-38gsp.1`, that target must then
+complete the bounded two-generation native self-promotion proof in
+`haxe_ocaml-38gsp.2`, and Full1 must stabilize the baseline compiler. This
+avoids building transform and backend SDK contracts on top of a temporary
+second OCaml semantic implementation or an unproven native core.
+
+The exact-host redesign is recorded in
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
+It requires one target implementation and semantic contract, not one
+byte-identical native container.
 
 ## Product promise
 
@@ -148,30 +155,32 @@ Neither profile exposes a `Dynamic` service bag, a raw compiler context,
 private upstream-Haxe values, private `hxhx` objects, OCaml object identity, or
 mutable compiler globals.
 
-## 3. Shared native artifact model
+## 3. Shared semantic core and native artifact model
 
-The product target is one source tree, one semantic core, one ABI version, and
-one promoted payload for both hosts.
+The product target is one source tree, one semantic core, and one versioned
+semantic request/result contract across both hosts.
 
-The supported reference toolchain must first attempt one identical loadable
-binary. This is a proof obligation, not an assumption about OCaml dynlink.
-Stock Haxe's plugin documentation explicitly ties native plugins to the same
-OCaml and Haxe build environment.
+The supported reference toolchain runs a bounded one-container experiment.
+This is a proof obligation, not the product definition. Stock Haxe's plugin
+documentation explicitly ties native plugins to the same OCaml and Haxe build
+environment, and the two hosts can legitimately import different compiled
+interface units.
 
-If an experiment proves that the two hosts cannot load the same container
-because of an exact OCaml compiler, runtime, linker, loader, or module-digest
-constraint, only this fallback is allowed:
+The durable default permits tiny generated host shells:
 
 ```text
 stock-Haxe loader shell ─┐
-                         ├─> one versioned semantic payload/core
+                         ├─> one versioned semantic contract and target core
 hxhx loader shell ───────┘
 ```
 
-The shells may translate loading and transport only. They cannot contain a
-typed rewrite, target lowering, printer, fallback semantics, or host-specific
-copy of the plugin. Evidence must record both shell digests and either the
-identical payload digest or the reproducible native-core digest.
+The shells may perform exact preflight, loading, registration, host
+value/schema conversion, request binding, and exception/lifecycle translation
+only. They cannot contain a typed rewrite, target lowering, printer, fallback
+semantics, runtime selection, output repair, or a host-specific target
+implementation. Evidence records both shell digests, imported interface
+identities, the shared semantic source/core identity, and the one-container
+experiment result.
 
 The ABI representation should be transport-independent and stable across host
 implementations. The default design input is a canonical, versioned data
@@ -179,8 +188,8 @@ encoding with immutable snapshots, stable IDs, bounded opaque handles, and
 coarse calls. A direct in-process representation is an optimization only after
 it proves identical behavior and reset semantics against that contract.
 
-This artifact model must also survive a future repository split. The shared
-ABI, target core, and payload have one versioned source of truth; `hxhx` must be
+This artifact model must also survive a future repository split. The semantic
+contract and target core have one versioned source of truth; `hxhx` must be
 able to validate an immutable `reflaxe.ocaml` candidate without reading a
 sibling source directory. The extraction timing, candidate/pin protocol, and
 tiered downstream QA contract are defined in
@@ -345,10 +354,12 @@ plugins, update all examples/docs together, and do not retain ambiguous aliases.
 
 - Do not rebuild `hxhx`, regenerate bootstrap snapshots, or run broad repo
   guards for an ordinary plugin-source edit.
-- Compile the shared payload once, then generate only manifests or proven-thin
-  loader shells per host.
+- Compile the shared semantic core once where the exact OCaml interface graph
+  permits it; otherwise produce reproducibly derived core artifacts and only
+  generated host shells.
 - Reuse compiler and Dune caches only when their full identity matches.
-- Run independent host smokes in parallel after the shared payload is built.
+- Run independent host smokes in parallel after the semantic core and exact
+  shells are built.
 - Show phase timings for Haxe typing, Reflaxe lowering, OCaml compilation,
   linking, plugin load, host adaptation, transform/emission, and fixture run.
 - Make a cache miss explain its changed key.
@@ -501,8 +512,8 @@ plugin matrix.
 | `hxhx` large-consumer E2E | Scheduled, classified high-risk, and release-candidate runs | Treat `hxhx` as a demanding Haxe application and stress native lowering, runtime, bootstrap, macro host, cleanup, and performance independently of the compiler-plugin canary. |
 
 All four forms of the authentic compiler proof consume the same semantic target
-core and immutable candidate. They compare target-core and plugin payload
-identity, declared loader-shell differences, diagnostics, normalized generated
+core and immutable candidate. They compare target-core source and compiled
+identity, declared host-shell differences, diagnostics, normalized generated
 artifacts, and runtime behavior. Build the candidate and `hxhx` once per
 compatible matrix where possible; verify digests before reuse instead of
 silently rebuilding different inputs.
@@ -518,9 +529,9 @@ stock Haxe, focused tests, the package matrix, and upstream behavior oracles.
 | --- | --- |
 | Source identity | One Haxe semantic core digest; no host branches in transform or target semantics |
 | Stock Haxe load | Exact Haxe/OCaml/toolchain preflight, official plugin lifecycle, deterministic load failure |
-| `hxhx` load | Same ABI/payload preflight and equivalent lifecycle/service catalog |
-| Identical binary | Same loadable digest in both hosts on the reference toolchain |
-| Loader-shell fallback | Recorded failed experiment, exact incompatibility, shell-only diff, shared payload/core digest |
+| `hxhx` load | Same semantic ABI/core preflight and equivalent lifecycle/service catalog |
+| One-container experiment | Imported units, interface digests, runtime/linker constraints, load result, size, startup, and semantics for the combined container |
+| Host shells | Shell-only diff, exact host/profile identity, shared semantic source/core identity, and proof that no target semantics appear in either shell |
 | Typed snapshot | Stable IDs, semantic types, positions, deterministic projection, malformed-input negatives |
 | Patch application | All-or-nothing validation, phase authority, stale-revision rejection, downstream invalidation |
 | Server reuse | No callback/state leakage; explicit reset, cancellation, crash recovery, and cache identity |
@@ -537,7 +548,8 @@ stock Haxe, focused tests, the package matrix, and upstream behavior oracles.
 
 Invariants:
 
-- One payload never contains different semantics for stock Haxe and `hxhx`.
+- One semantic core never contains host-specific target behavior for stock Haxe
+  and `hxhx`.
 - Compiler transforms run only at declared Stage4 phases; targets run only
   after backend freeze.
 - Every request, patch, and artifact is tied to an immutable candidate and

@@ -6,11 +6,11 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable identity : TyLocalId.t; mutable kind : TyLocalDeclarationKind.tylocaldeclarationkind; mutable ty : TyType.t }
 
-let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local symbol requires a stable identity") ["Dynamic"; "String"]) else ());
-    let tempRight = ref ("" : string) in (
-      ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+    ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local symbol requires a stable identity") ["Dynamic"]) else ());
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if name2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
         tempRight := __assign_1;
         __assign_1
       ) else let __assign_2 = (name2 : string) in (
@@ -47,7 +47,7 @@ let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = ""; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); ty = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 

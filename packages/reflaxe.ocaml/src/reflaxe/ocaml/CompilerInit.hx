@@ -109,10 +109,15 @@ class CompilerInit {
 
 		final compiler = new OcamlCompiler();
 		final captureLifecycleTrace = #if macro haxe.macro.Context.defined("reflaxe_ocaml_semantic_lifecycle_trace") #else false #end;
+		// Transactional publication replaces only generated source. Native Dune
+		// state has a separate stable owner and runs after this candidate becomes
+		// the public output tree.
+		final transactionalFileOutput = #if macro haxe.macro.Context.defined("reflaxe_output_transaction") #else false #end;
 		ReflectCompiler.AddCompiler(compiler, {
 			fileOutputExtension: ".ml",
 			outputDirDefineName: "ocaml_output",
 			fileOutputType: FilePerModule,
+			transactionalFileOutput: transactionalFileOutput,
 			ignoreTypes: [],
 			reservedVarNames: [
 				"and",

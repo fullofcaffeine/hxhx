@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable statements : TypedStmt.t HxArray.t; mutable sourceFingerprint : string }
 
-let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic (HxRuntime.hx_null); sourceFingerprint = "" } : t) in (
+let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic (HxRuntime.hx_null); sourceFingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in (
     ignore (if statements2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
@@ -19,8 +19,8 @@ let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxT
       (Obj.magic self : t).statements <- __assign_4;
       __assign_4
     ));
-    let tempRight1 = ref ("" : string) in (
-      ignore (if sourceFingerprint2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
+    let tempRight1 = ref (HxString.hx_null_string : string) in (
+      ignore (if sourceFingerprint2 == HxString.hx_null_string then let __assign_5 = ("" : string) in (
         tempRight1 := __assign_5;
         __assign_5
       ) else let __assign_6 = (sourceFingerprint2 : string) in (
@@ -36,7 +36,7 @@ let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic (HxRuntime.hx_null); sourceFingerprint = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic (HxRuntime.hx_null); sourceFingerprint = HxString.hx_null_string } : t)
 
 let getStatements = fun self () -> HxArray.copy ((Obj.magic self : t).statements)
 

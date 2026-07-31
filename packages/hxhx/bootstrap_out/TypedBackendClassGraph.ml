@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable programRevision : string; mutable factsByClass : TypedBackendClassSemanticFacts.t HxMap.string_map; mutable nodesByClass : Obj.t HxMap.string_map; mutable nodes : Obj.t HxArray.t; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = ""; factsByClass = Obj.magic (HxRuntime.hx_null); nodesByClass = Obj.magic (HxRuntime.hx_null); nodes = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic (HxRuntime.hx_null); nodesByClass = Obj.magic (HxRuntime.hx_null); nodes = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProgramRevision = fun self () -> (Obj.magic self : t).programRevision
 
@@ -17,302 +17,320 @@ let getSchemaRevision = fun self () -> (
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
-let validateLineage = fun self (start : string) -> ignore (ignore (try let visited = Obj.magic (HxMap.create_string ()) in let currentIdentity = ref (start : string) in while !currentIdentity != Obj.magic (HxRuntime.hx_null) do ignore ((
-  ignore (if HxMap.exists_string visited (!currentIdentity) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph contains inheritance cycle at " ^ HxString.toStdString (!currentIdentity)) ^ " while tracing ") ^ HxString.toStdString start)) ["Dynamic"; "String"]) else ());
-  ignore (HxMap.set_string visited (!currentIdentity) true);
-  let current = HxMap.get_string ((Obj.magic self : t).nodesByClass) (!currentIdentity) in (
-    ignore (if current == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    ignore (if Obj.obj (HxAnon.get current "superTypeIdentity") != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get current "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    let __assign_39 = Obj.magic (Obj.obj (HxAnon.get current "superClassIdentity") : string) in (
-      currentIdentity := __assign_39;
-      __assign_39
+let validateLineage = fun self (start : string) -> ignore (ignore (try ignore (let visited = Obj.magic (HxMap.create_string ()) in let currentIdentity = ref (start : string) in while !currentIdentity != Obj.magic (HxRuntime.hx_null) do ignore ((
+  ignore (if HxMap.exists_string (Obj.magic visited) (!currentIdentity : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph contains inheritance cycle at " ^ HxString.toStdString (!currentIdentity)) ^ " while tracing ") ^ HxString.toStdString start)) ["Dynamic"]) else ());
+  ignore (HxMap.set_string (Obj.magic visited) (!currentIdentity : string) true);
+  let tempMaybeTypedBackendClassGraphNode = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in (
+    ignore (let __assign_61 = Obj.magic (HxMap.get_string (Obj.magic _this) (!currentIdentity : string)) in (
+      tempMaybeTypedBackendClassGraphNode := __assign_61;
+      __assign_61
+    ));
+    let current = Obj.magic (!tempMaybeTypedBackendClassGraphNode) in (
+      ignore (if current == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      ignore (if Obj.obj (HxAnon.get current "superTypeIdentity") != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get current "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      let __assign_62 = Obj.magic (Obj.obj (HxAnon.get current "superClassIdentity") : string) in (
+        currentIdentity := __assign_62;
+        __assign_62
+      )
     )
   )
-)) done with
-  | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40))
+)) done) with
+  | HxRuntime.Hx_return __ret_63 -> Obj.obj __ret_63))
 
 let sameNode = fun left right -> HxString.equals (Obj.obj (HxAnon.get left "classIdentity")) (Obj.obj (HxAnon.get right "classIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "moduleIdentity")) (Obj.obj (HxAnon.get right "moduleIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "classFactsIdentity")) (Obj.obj (HxAnon.get right "classFactsIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "superClassIdentity")) (Obj.obj (HxAnon.get right "superClassIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "superTypeIdentity")) (Obj.obj (HxAnon.get right "superTypeIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "superTypeDisplay")) (Obj.obj (HxAnon.get right "superTypeDisplay"))
 
-let copyNode = fun node -> let __anon_41 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_41 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
-  ignore (HxAnon.set __anon_41 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
-  ignore (HxAnon.set __anon_41 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
-  ignore (HxAnon.set __anon_41 "superClassIdentity" (Obj.repr (Obj.obj (HxAnon.get node "superClassIdentity"))));
-  ignore (HxAnon.set __anon_41 "superTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get node "superTypeIdentity"))));
-  ignore (HxAnon.set __anon_41 "superTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get node "superTypeDisplay"))));
-  __anon_41
+let copyNode = fun node -> let __anonymous_value_64 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_64 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
+  ignore (HxAnon.set __anonymous_value_64 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
+  ignore (HxAnon.set __anonymous_value_64 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
+  ignore (HxAnon.set __anonymous_value_64 "superClassIdentity" (Obj.repr (Obj.obj (HxAnon.get node "superClassIdentity"))));
+  ignore (HxAnon.set __anonymous_value_64 "superTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get node "superTypeIdentity"))));
+  ignore (HxAnon.set __anonymous_value_64 "superTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get node "superTypeDisplay"))));
+  __anonymous_value_64
 )
 
-let copyNodes = fun self () -> let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).nodes) in (
+let copyNodes = fun self () -> let _g = Obj.magic (let __arr_20 = HxArray.create () in __arr_20) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).nodes) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let node = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_19 = !_g1 in let __new_20 = HxInt.add __old_19 1 in (
-      ignore (_g1 := __new_20);
-      __new_20
+    ignore (let __old_21 = !_g1 in let __new_22 = HxInt.add __old_21 1 in (
+      ignore (_g1 := __new_22);
+      __new_22
     ));
     HxArray.push _g (copyNode node)
   )) done);
   _g
 )
 
-let specializeField = fun field bindings -> let semanticType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get field "semanticType"))) (Obj.magic bindings)) in let __anon_52 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_52 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get field "canonicalIdentity"))));
-  ignore (HxAnon.set __anon_52 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
-  ignore (HxAnon.set __anon_52 "semanticType" (Obj.repr semanticType));
-  ignore (HxAnon.set __anon_52 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
-  ignore (HxAnon.set __anon_52 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
-  ignore (HxAnon.set __anon_52 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic"))));
-  ignore (HxAnon.set __anon_52 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic"))));
-  ignore (HxAnon.set __anon_52 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal"))));
-  ignore (HxAnon.set __anon_52 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline"))));
-  ignore (HxAnon.set __anon_52 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer"))));
-  ignore (HxAnon.set __anon_52 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get field "propertyGet"))));
-  ignore (HxAnon.set __anon_52 "propertySet" (Obj.repr (Obj.obj (HxAnon.get field "propertySet"))));
-  ignore (HxAnon.set __anon_52 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal"))));
-  __anon_52
+let specializeField = fun field bindings -> let semanticType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get field "semanticType"))) (Obj.magic bindings)) in let __anon_76 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_76 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get field "canonicalIdentity"))));
+  ignore (HxAnon.set __anon_76 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
+  ignore (HxAnon.set __anon_76 "semanticType" (Obj.repr semanticType));
+  ignore (HxAnon.set __anon_76 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
+  ignore (HxAnon.set __anon_76 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
+  ignore (HxAnon.set __anon_76 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic"))));
+  ignore (HxAnon.set __anon_76 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic"))));
+  ignore (HxAnon.set __anon_76 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal"))));
+  ignore (HxAnon.set __anon_76 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline"))));
+  ignore (HxAnon.set __anon_76 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer"))));
+  ignore (HxAnon.set __anon_76 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get field "propertyGet"))));
+  ignore (HxAnon.set __anon_76 "propertySet" (Obj.repr (Obj.obj (HxAnon.get field "propertySet"))));
+  ignore (HxAnon.set __anon_76 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal"))));
+  __anon_76
 )
 
-let specializeMethod = fun hx_method bindings -> let returnType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get hx_method "returnSemanticType"))) (Obj.magic bindings)) in let _g = Obj.magic (let __arr_53 = HxArray.create () in __arr_53) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in (
+let specializeMethod = fun hx_method bindings -> let returnType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get hx_method "returnSemanticType"))) (Obj.magic bindings)) in let _g = Obj.magic (let __arr_77 = HxArray.create () in __arr_77) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_54 = !_g1 in let __new_55 = HxInt.add __old_54 1 in (
-      ignore (_g1 := __new_55);
-      __new_55
+    ignore (let __old_78 = !_g1 in let __new_79 = HxInt.add __old_78 1 in (
+      ignore (_g1 := __new_79);
+      __new_79
     ));
-    let semanticType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get argument "semanticType"))) (Obj.magic bindings)) in HxArray.push _g (let __anon_56 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_56 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
-      ignore (HxAnon.set __anon_56 "semanticType" (Obj.repr semanticType));
-      ignore (HxAnon.set __anon_56 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
-      ignore (HxAnon.set __anon_56 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
-      ignore (HxAnon.set __anon_56 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
-      ignore (HxAnon.set __anon_56 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
-      __anon_56
+    let semanticType = Obj.magic (TyTypeSubstitution.apply (Obj.magic (Obj.obj (HxAnon.get argument "semanticType"))) (Obj.magic bindings)) in HxArray.push _g (let __anon_80 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_80 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
+      ignore (HxAnon.set __anon_80 "semanticType" (Obj.repr semanticType));
+      ignore (HxAnon.set __anon_80 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic semanticType) ())));
+      ignore (HxAnon.set __anon_80 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic semanticType) ())));
+      ignore (HxAnon.set __anon_80 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
+      ignore (HxAnon.set __anon_80 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
+      __anon_80
     ))
   )) done);
-  let __anon_57 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_57 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "canonicalIdentity"))));
-    ignore (HxAnon.set __anon_57 "name" (Obj.repr (Obj.obj (HxAnon.get hx_method "name"))));
-    ignore (HxAnon.set __anon_57 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic"))));
-    ignore (HxAnon.set __anon_57 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get hx_method "typeParameters")))));
-    ignore (HxAnon.set __anon_57 "arguments" (Obj.repr _g));
-    ignore (HxAnon.set __anon_57 "returnSemanticType" (Obj.repr returnType));
-    ignore (HxAnon.set __anon_57 "returnTypeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic returnType) ())));
-    ignore (HxAnon.set __anon_57 "returnTypeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic returnType) ())));
-    ignore (HxAnon.set __anon_57 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic"))));
-    ignore (HxAnon.set __anon_57 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline"))));
-    ignore (HxAnon.set __anon_57 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic"))));
-    ignore (HxAnon.set __anon_57 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody"))));
-    ignore (HxAnon.set __anon_57 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor"))));
-    ignore (HxAnon.set __anon_57 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal"))));
-    __anon_57
+  let __anon_81 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_81 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "canonicalIdentity"))));
+    ignore (HxAnon.set __anon_81 "name" (Obj.repr (Obj.obj (HxAnon.get hx_method "name"))));
+    ignore (HxAnon.set __anon_81 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic"))));
+    ignore (HxAnon.set __anon_81 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get hx_method "typeParameters")))));
+    ignore (HxAnon.set __anon_81 "arguments" (Obj.repr _g));
+    ignore (HxAnon.set __anon_81 "returnSemanticType" (Obj.repr returnType));
+    ignore (HxAnon.set __anon_81 "returnTypeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic returnType) ())));
+    ignore (HxAnon.set __anon_81 "returnTypeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic returnType) ())));
+    ignore (HxAnon.set __anon_81 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic"))));
+    ignore (HxAnon.set __anon_81 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline"))));
+    ignore (HxAnon.set __anon_81 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic"))));
+    ignore (HxAnon.set __anon_81 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody"))));
+    ignore (HxAnon.set __anon_81 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor"))));
+    ignore (HxAnon.set __anon_81 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal"))));
+    __anon_81
   )
 )
 
 let specializeNode = fun node classFacts bindings -> let bindingFacts = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.getTypeParameterIds (Obj.magic classFacts) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
-      ignore (_g := __new_43);
-      __new_43
+    ignore (let __old_65 = !_g in let __new_66 = HxInt.add __old_65 1 in (
+      ignore (_g := __new_66);
+      __new_66
     ));
-    let bound = Obj.magic (HxMap.get_string bindings (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ())) in (
-      ignore (if bound == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing binding for " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"; "String"]) else ());
-      HxArray.push bindingFacts (let __anon_44 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_44 "parameterIdentity" (Obj.repr (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ())));
-        ignore (HxAnon.set __anon_44 "parameterName" (Obj.repr (TyTypeParameterId.getName (Obj.magic parameter) ())));
-        ignore (HxAnon.set __anon_44 "semanticType" (Obj.repr bound));
-        ignore (HxAnon.set __anon_44 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic bound) ())));
-        ignore (HxAnon.set __anon_44 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic bound) ())));
-        __anon_44
-      ))
+    let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in let key = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
+      ignore (let __assign_67 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic bindings) (key : string))) in (
+        tempMaybeTyType := __assign_67;
+        __assign_67
+      ));
+      let bound = Obj.magic (!tempMaybeTyType) in (
+        ignore (if bound == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing binding for " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"]) else ());
+        HxArray.push bindingFacts (let __anon_68 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_68 "parameterIdentity" (Obj.repr (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ())));
+          ignore (HxAnon.set __anon_68 "parameterName" (Obj.repr (TyTypeParameterId.getName (Obj.magic parameter) ())));
+          ignore (HxAnon.set __anon_68 "semanticType" (Obj.repr bound));
+          ignore (HxAnon.set __anon_68 "typeIdentity" (Obj.repr (TyType.getSemanticKey (Obj.magic bound) ())));
+          ignore (HxAnon.set __anon_68 "typeDisplay" (Obj.repr (TyType.getCanonicalDisplay (Obj.magic bound) ())));
+          __anon_68
+        ))
+      )
     )
   )) done);
-  let _g = Obj.magic (let __arr_45 = HxArray.create () in __arr_45) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassSemanticFacts.copyFields (Obj.magic classFacts) ()) in (
+  let _g = Obj.magic (let __arr_69 = HxArray.create () in __arr_69) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassSemanticFacts.copyFields (Obj.magic classFacts) ()) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let field = HxArray.get (Obj.magic _g2) (!_g1) in (
-      ignore (let __old_46 = !_g1 in let __new_47 = HxInt.add __old_46 1 in (
-        ignore (_g1 := __new_47);
-        __new_47
+      ignore (let __old_70 = !_g1 in let __new_71 = HxInt.add __old_70 1 in (
+        ignore (_g1 := __new_71);
+        __new_71
       ));
       HxArray.push _g (specializeField field (Obj.magic bindings))
     )) done);
-    let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_48 = HxArray.create () in __arr_48) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassSemanticFacts.copyMethods (Obj.magic classFacts) ()) in (
+    let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_72 = HxArray.create () in __arr_72) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassSemanticFacts.copyMethods (Obj.magic classFacts) ()) in (
       ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_method = HxArray.get (Obj.magic _g2) (!_g1) in (
-        ignore (let __old_49 = !_g1 in let __new_50 = HxInt.add __old_49 1 in (
-          ignore (_g1 := __new_50);
-          __new_50
+        ignore (let __old_73 = !_g1 in let __new_74 = HxInt.add __old_73 1 in (
+          ignore (_g1 := __new_74);
+          __new_74
         ));
         HxArray.push _g (specializeMethod hx_method (Obj.magic bindings))
       )) done);
-      let tempArray1 = Obj.magic _g in let __anon_51 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_51 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
-        ignore (HxAnon.set __anon_51 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
-        ignore (HxAnon.set __anon_51 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
-        ignore (HxAnon.set __anon_51 "bindings" (Obj.repr bindingFacts));
-        ignore (HxAnon.set __anon_51 "fields" (Obj.repr tempArray));
-        ignore (HxAnon.set __anon_51 "methods" (Obj.repr tempArray1));
-        __anon_51
+      let tempArray1 = Obj.magic _g in let __anon_75 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_75 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
+        ignore (HxAnon.set __anon_75 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
+        ignore (HxAnon.set __anon_75 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
+        ignore (HxAnon.set __anon_75 "bindings" (Obj.repr bindingFacts));
+        ignore (HxAnon.set __anon_75 "fields" (Obj.repr tempArray));
+        ignore (HxAnon.set __anon_75 "methods" (Obj.repr tempArray1));
+        __anon_75
       )
     )
   )
 )
 
-let copySpecializedField = fun field -> let __anon_69 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_69 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get field "canonicalIdentity"))));
-  ignore (HxAnon.set __anon_69 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
-  ignore (HxAnon.set __anon_69 "semanticType" (Obj.repr (Obj.obj (HxAnon.get field "semanticType"))));
-  ignore (HxAnon.set __anon_69 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get field "typeIdentity"))));
-  ignore (HxAnon.set __anon_69 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get field "typeDisplay"))));
-  ignore (HxAnon.set __anon_69 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic"))));
-  ignore (HxAnon.set __anon_69 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic"))));
-  ignore (HxAnon.set __anon_69 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal"))));
-  ignore (HxAnon.set __anon_69 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline"))));
-  ignore (HxAnon.set __anon_69 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer"))));
-  ignore (HxAnon.set __anon_69 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get field "propertyGet"))));
-  ignore (HxAnon.set __anon_69 "propertySet" (Obj.repr (Obj.obj (HxAnon.get field "propertySet"))));
-  ignore (HxAnon.set __anon_69 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal"))));
-  __anon_69
+let copySpecializedField = fun field -> let __anon_93 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_93 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get field "canonicalIdentity"))));
+  ignore (HxAnon.set __anon_93 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
+  ignore (HxAnon.set __anon_93 "semanticType" (Obj.repr (Obj.obj (HxAnon.get field "semanticType"))));
+  ignore (HxAnon.set __anon_93 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get field "typeIdentity"))));
+  ignore (HxAnon.set __anon_93 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get field "typeDisplay"))));
+  ignore (HxAnon.set __anon_93 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isStatic"))));
+  ignore (HxAnon.set __anon_93 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isPublic"))));
+  ignore (HxAnon.set __anon_93 "isFinal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isFinal"))));
+  ignore (HxAnon.set __anon_93 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isInline"))));
+  ignore (HxAnon.set __anon_93 "hasInitializer" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "hasInitializer"))));
+  ignore (HxAnon.set __anon_93 "propertyGet" (Obj.repr (Obj.obj (HxAnon.get field "propertyGet"))));
+  ignore (HxAnon.set __anon_93 "propertySet" (Obj.repr (Obj.obj (HxAnon.get field "propertySet"))));
+  ignore (HxAnon.set __anon_93 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "noImportGlobal"))));
+  __anon_93
 )
 
-let copySpecializedMethod = fun hx_method -> let _g = Obj.magic (let __arr_70 = HxArray.create () in __arr_70) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in (
+let copySpecializedMethod = fun hx_method -> let _g = Obj.magic (let __arr_94 = HxArray.create () in __arr_94) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_71 = !_g1 in let __new_72 = HxInt.add __old_71 1 in (
-      ignore (_g1 := __new_72);
-      __new_72
+    ignore (let __old_95 = !_g1 in let __new_96 = HxInt.add __old_95 1 in (
+      ignore (_g1 := __new_96);
+      __new_96
     ));
-    HxArray.push _g (let __anon_73 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_73 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
-      ignore (HxAnon.set __anon_73 "semanticType" (Obj.repr (Obj.obj (HxAnon.get argument "semanticType"))));
-      ignore (HxAnon.set __anon_73 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get argument "typeIdentity"))));
-      ignore (HxAnon.set __anon_73 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get argument "typeDisplay"))));
-      ignore (HxAnon.set __anon_73 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
-      ignore (HxAnon.set __anon_73 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
-      __anon_73
+    HxArray.push _g (let __anon_97 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_97 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
+      ignore (HxAnon.set __anon_97 "semanticType" (Obj.repr (Obj.obj (HxAnon.get argument "semanticType"))));
+      ignore (HxAnon.set __anon_97 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get argument "typeIdentity"))));
+      ignore (HxAnon.set __anon_97 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get argument "typeDisplay"))));
+      ignore (HxAnon.set __anon_97 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
+      ignore (HxAnon.set __anon_97 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
+      __anon_97
     ))
   )) done);
-  let __anon_74 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_74 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "canonicalIdentity"))));
-    ignore (HxAnon.set __anon_74 "name" (Obj.repr (Obj.obj (HxAnon.get hx_method "name"))));
-    ignore (HxAnon.set __anon_74 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic"))));
-    ignore (HxAnon.set __anon_74 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get hx_method "typeParameters")))));
-    ignore (HxAnon.set __anon_74 "arguments" (Obj.repr _g));
-    ignore (HxAnon.set __anon_74 "returnSemanticType" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnSemanticType"))));
-    ignore (HxAnon.set __anon_74 "returnTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnTypeIdentity"))));
-    ignore (HxAnon.set __anon_74 "returnTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnTypeDisplay"))));
-    ignore (HxAnon.set __anon_74 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic"))));
-    ignore (HxAnon.set __anon_74 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline"))));
-    ignore (HxAnon.set __anon_74 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic"))));
-    ignore (HxAnon.set __anon_74 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody"))));
-    ignore (HxAnon.set __anon_74 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor"))));
-    ignore (HxAnon.set __anon_74 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal"))));
-    __anon_74
+  let __anon_98 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_98 "canonicalIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "canonicalIdentity"))));
+    ignore (HxAnon.set __anon_98 "name" (Obj.repr (Obj.obj (HxAnon.get hx_method "name"))));
+    ignore (HxAnon.set __anon_98 "isStatic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic"))));
+    ignore (HxAnon.set __anon_98 "typeParameters" (Obj.repr (HxArray.copy (Obj.obj (HxAnon.get hx_method "typeParameters")))));
+    ignore (HxAnon.set __anon_98 "arguments" (Obj.repr _g));
+    ignore (HxAnon.set __anon_98 "returnSemanticType" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnSemanticType"))));
+    ignore (HxAnon.set __anon_98 "returnTypeIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnTypeIdentity"))));
+    ignore (HxAnon.set __anon_98 "returnTypeDisplay" (Obj.repr (Obj.obj (HxAnon.get hx_method "returnTypeDisplay"))));
+    ignore (HxAnon.set __anon_98 "isPublic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isPublic"))));
+    ignore (HxAnon.set __anon_98 "isInline" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isInline"))));
+    ignore (HxAnon.set __anon_98 "isDynamic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic"))));
+    ignore (HxAnon.set __anon_98 "hasBody" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody"))));
+    ignore (HxAnon.set __anon_98 "isEnumConstructor" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isEnumConstructor"))));
+    ignore (HxAnon.set __anon_98 "noImportGlobal" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "noImportGlobal"))));
+    __anon_98
   )
 )
 
-let copySpecializedNode = fun node -> let _g = Obj.magic (let __arr_58 = HxArray.create () in __arr_58) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "bindings")) in (
+let copySpecializedNode = fun node -> let _g = Obj.magic (let __arr_82 = HxArray.create () in __arr_82) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "bindings")) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let binding = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_59 = !_g1 in let __new_60 = HxInt.add __old_59 1 in (
-      ignore (_g1 := __new_60);
-      __new_60
+    ignore (let __old_83 = !_g1 in let __new_84 = HxInt.add __old_83 1 in (
+      ignore (_g1 := __new_84);
+      __new_84
     ));
-    HxArray.push _g (let __anon_61 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_61 "parameterIdentity" (Obj.repr (Obj.obj (HxAnon.get binding "parameterIdentity"))));
-      ignore (HxAnon.set __anon_61 "parameterName" (Obj.repr (Obj.obj (HxAnon.get binding "parameterName"))));
-      ignore (HxAnon.set __anon_61 "semanticType" (Obj.repr (Obj.obj (HxAnon.get binding "semanticType"))));
-      ignore (HxAnon.set __anon_61 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get binding "typeIdentity"))));
-      ignore (HxAnon.set __anon_61 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get binding "typeDisplay"))));
-      __anon_61
+    HxArray.push _g (let __anon_85 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_85 "parameterIdentity" (Obj.repr (Obj.obj (HxAnon.get binding "parameterIdentity"))));
+      ignore (HxAnon.set __anon_85 "parameterName" (Obj.repr (Obj.obj (HxAnon.get binding "parameterName"))));
+      ignore (HxAnon.set __anon_85 "semanticType" (Obj.repr (Obj.obj (HxAnon.get binding "semanticType"))));
+      ignore (HxAnon.set __anon_85 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get binding "typeIdentity"))));
+      ignore (HxAnon.set __anon_85 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get binding "typeDisplay"))));
+      __anon_85
     ))
   )) done);
-  let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_62 = HxArray.create () in __arr_62) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "fields")) in (
+  let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_86 = HxArray.create () in __arr_86) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "fields")) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let field = HxArray.get (Obj.magic _g2) (!_g1) in (
-      ignore (let __old_63 = !_g1 in let __new_64 = HxInt.add __old_63 1 in (
-        ignore (_g1 := __new_64);
-        __new_64
+      ignore (let __old_87 = !_g1 in let __new_88 = HxInt.add __old_87 1 in (
+        ignore (_g1 := __new_88);
+        __new_88
       ));
       HxArray.push _g (copySpecializedField field)
     )) done);
-    let tempArray1 = Obj.magic _g in let _g = Obj.magic (let __arr_65 = HxArray.create () in __arr_65) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "methods")) in (
+    let tempArray1 = Obj.magic _g in let _g = Obj.magic (let __arr_89 = HxArray.create () in __arr_89) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get node "methods")) in (
       ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_method = HxArray.get (Obj.magic _g2) (!_g1) in (
-        ignore (let __old_66 = !_g1 in let __new_67 = HxInt.add __old_66 1 in (
-          ignore (_g1 := __new_67);
-          __new_67
+        ignore (let __old_90 = !_g1 in let __new_91 = HxInt.add __old_90 1 in (
+          ignore (_g1 := __new_91);
+          __new_91
         ));
         HxArray.push _g (copySpecializedMethod hx_method)
       )) done);
-      let tempArray2 = Obj.magic _g in let __anon_68 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_68 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
-        ignore (HxAnon.set __anon_68 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
-        ignore (HxAnon.set __anon_68 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
-        ignore (HxAnon.set __anon_68 "bindings" (Obj.repr tempArray));
-        ignore (HxAnon.set __anon_68 "fields" (Obj.repr tempArray1));
-        ignore (HxAnon.set __anon_68 "methods" (Obj.repr tempArray2));
-        __anon_68
+      let tempArray2 = Obj.magic _g in let __anon_92 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_92 "classIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classIdentity"))));
+        ignore (HxAnon.set __anon_92 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get node "moduleIdentity"))));
+        ignore (HxAnon.set __anon_92 "classFactsIdentity" (Obj.repr (Obj.obj (HxAnon.get node "classFactsIdentity"))));
+        ignore (HxAnon.set __anon_92 "bindings" (Obj.repr tempArray));
+        ignore (HxAnon.set __anon_92 "fields" (Obj.repr tempArray1));
+        ignore (HxAnon.set __anon_92 "methods" (Obj.repr tempArray2));
+        __anon_92
       )
     )
   )
 )
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_75 = ("" : string) in (
-    tempResult := __assign_75;
-    __assign_75
-  ) else let __assign_76 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_76;
-    __assign_76
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_99 = "" in (
+    tempResult := __assign_99;
+    __assign_99
+  ) else let __assign_100 = let __call_arg_0_101 = value in StringTools.trim __call_arg_0_101 in (
+    tempResult := __assign_100;
+    __assign_100
   ));
   !tempResult
-)
+) : string)
 
-let findNode = fun self (classIdentity : string) -> let node = HxMap.get_string ((Obj.magic self : t).nodesByClass) (normalize (classIdentity : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if node == Obj.magic (HxRuntime.hx_null) then let __assign_21 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_21;
-    __assign_21
-  ) else let __assign_22 = Obj.magic (copyNode node) in (
-    tempResult := __assign_22;
-    __assign_22
+let findNode = fun self (classIdentity : string) -> let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in let key = let __call_arg_0_23 = classIdentity in normalize __call_arg_0_23 in let tempMaybeTypedBackendClassGraphNode = HxMap.get_string (Obj.magic _this) (key : string) in let node = tempMaybeTypedBackendClassGraphNode in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if node == Obj.magic (HxRuntime.hx_null) then let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_24;
+    __assign_24
+  ) else let __assign_25 = Obj.magic (copyNode node) in (
+    tempResult := __assign_25;
+    __assign_25
   ));
   Obj.magic (!tempResult)
 )
 
-let findClassFacts = fun self (classIdentity : string) -> HxMap.get_string ((Obj.magic self : t).factsByClass) (normalize (classIdentity : string))
+let findClassFacts = fun self (classIdentity : string) -> let _this = Obj.magic ((Obj.magic self : t).factsByClass) in let key = let __call_arg_0_26 = classIdentity in normalize __call_arg_0_26 in let tempResult = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in tempResult
 
-let traceLineage = fun self (classIdentity : string) -> try let __fallback_result_28 = let start = (normalize (classIdentity : string) : string) in (
-  ignore (if HxString.length start = 0 || not (HxMap.exists_string ((Obj.magic self : t).nodesByClass) start) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class " ^ HxString.toStdString start)) ["Dynamic"; "String"]) else ());
+let traceLineage = fun self (classIdentity : string) -> try let __fallback_result_34 = let start = let __call_arg_0_27 = classIdentity in normalize __call_arg_0_27 in let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in let tempBool = HxMap.exists_string (Obj.magic _this) (start : string) in (
+  ignore (if HxString.length start = 0 || not (tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class " ^ HxString.toStdString start)) ["Dynamic"]) else ());
   let lineage = Obj.magic (HxArray.create ()) in let currentIdentity = ref (start : string) in (
-    ignore (while !currentIdentity != Obj.magic (HxRuntime.hx_null) do ignore (let current = HxMap.get_string ((Obj.magic self : t).nodesByClass) (!currentIdentity) in (
-      ignore (if current == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_23 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_23 "nodes" (Obj.repr lineage));
-        ignore (HxAnon.set __anon_23 "complete" (HxRuntime.box_bool false));
-        ignore (HxAnon.set __anon_23 "missingParentIdentity" (Obj.repr (!currentIdentity)));
-        __anon_23
-      )))) else ());
-      ignore (HxArray.push lineage (copyNode current));
-      ignore (if Obj.obj (HxAnon.get current "superTypeIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_24 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_24 "nodes" (Obj.repr lineage));
-        ignore (HxAnon.set __anon_24 "complete" (HxRuntime.box_bool true));
-        ignore (HxAnon.set __anon_24 "missingParentIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_24
-      )))) else ());
-      ignore (if Obj.obj (HxAnon.get current "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((("typed backend class graph cannot identify nominal superclass node for " ^ HxString.toStdString (Obj.obj (HxAnon.get current "classIdentity"))) ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get current "superTypeIdentity"))) ^ ")")) ["Dynamic"; "String"]) else ());
-      let __assign_25 = Obj.magic (Obj.obj (HxAnon.get current "superClassIdentity") : string) in (
-        currentIdentity := __assign_25;
-        __assign_25
+    ignore (while !currentIdentity != Obj.magic (HxRuntime.hx_null) do ignore (let tempMaybeTypedBackendClassGraphNode = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in (
+      ignore (let __assign_28 = Obj.magic (HxMap.get_string (Obj.magic _this) (!currentIdentity : string)) in (
+        tempMaybeTypedBackendClassGraphNode := __assign_28;
+        __assign_28
+      ));
+      let current = Obj.magic (!tempMaybeTypedBackendClassGraphNode) in (
+        ignore (if current == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_29 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_29 "nodes" (Obj.repr lineage));
+          ignore (HxAnon.set __anon_29 "complete" (HxRuntime.box_bool false));
+          ignore (HxAnon.set __anon_29 "missingParentIdentity" (Obj.repr (!currentIdentity)));
+          __anon_29
+        )))) else ());
+        ignore (HxArray.push lineage (copyNode current));
+        ignore (if Obj.obj (HxAnon.get current "superTypeIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_30 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_30 "nodes" (Obj.repr lineage));
+          ignore (HxAnon.set __anon_30 "complete" (HxRuntime.box_bool true));
+          ignore (HxAnon.set __anon_30 "missingParentIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+          __anon_30
+        )))) else ());
+        ignore (if Obj.obj (HxAnon.get current "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((("typed backend class graph cannot identify nominal superclass node for " ^ HxString.toStdString (Obj.obj (HxAnon.get current "classIdentity"))) ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get current "superTypeIdentity"))) ^ ")")) ["Dynamic"]) else ());
+        let __assign_31 = Obj.magic (Obj.obj (HxAnon.get current "superClassIdentity") : string) in (
+          currentIdentity := __assign_31;
+          __assign_31
+        )
       )
     )) done);
-    let __anon_26 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_26 "nodes" (Obj.repr lineage));
-      ignore (HxAnon.set __anon_26 "complete" (HxRuntime.box_bool true));
-      ignore (HxAnon.set __anon_26 "missingParentIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      __anon_26
+    let __anon_32 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_32 "nodes" (Obj.repr lineage));
+      ignore (HxAnon.set __anon_32 "complete" (HxRuntime.box_bool true));
+      ignore (HxAnon.set __anon_32 "missingParentIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      __anon_32
     )
   )
-) in Obj.magic __fallback_result_28 with
-  | HxRuntime.Hx_return __ret_27 -> Obj.magic __ret_27
+) in Obj.magic __fallback_result_34 with
+  | HxRuntime.Hx_return __ret_33 -> Obj.magic __ret_33
 
 let requireLineage = fun self (classIdentity : string) -> let lineage = traceLineage (Obj.magic self) (classIdentity : string) in (
-  ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get lineage "complete")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing superclass " ^ HxString.toStdString (Obj.obj (HxAnon.get lineage "missingParentIdentity"))) ^ " while tracing ") ^ HxString.toStdString (normalize (classIdentity : string)))) ["Dynamic"; "String"]) else ());
-  let _g = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get lineage "nodes")) in (
+  ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get lineage "complete")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing superclass " ^ HxString.toStdString (Obj.obj (HxAnon.get lineage "missingParentIdentity"))) ^ " while tracing ") ^ HxString.toStdString (let __call_arg_0_35 = classIdentity in normalize __call_arg_0_35))) ["Dynamic"]) else ());
+  let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get lineage "nodes")) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let node = HxArray.get (Obj.magic _g2) (!_g1) in (
-      ignore (let __old_30 = !_g1 in let __new_31 = HxInt.add __old_30 1 in (
-        ignore (_g1 := __new_31);
-        __new_31
+      ignore (let __old_37 = !_g1 in let __new_38 = HxInt.add __old_37 1 in (
+        ignore (_g1 := __new_38);
+        __new_38
       ));
       HxArray.push _g (copyNode node)
     )) done);
@@ -320,23 +338,35 @@ let requireLineage = fun self (classIdentity : string) -> let lineage = traceLin
   )
 )
 
-let specializeLineage = fun self (startIdentity : string) (initialBindings : TyType.t HxMap.string_map) -> let initialBindings = ref initialBindings in let lineage = Obj.magic (requireLineage (Obj.magic self) (startIdentity : string)) in let specialized = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxArray.length lineage in (
-  ignore (try while !_g < _g1 do try ignore (let index = let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
-    ignore (_g := __new_33);
-    __old_32
-  ) in let node = HxArray.get (Obj.magic lineage) index in let classFacts = Obj.magic (HxMap.get_string ((Obj.magic self : t).factsByClass) (Obj.obj (HxAnon.get node "classIdentity"))) in (
-    ignore (if classFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"; "String"]) else ());
-    ignore (HxArray.push specialized (specializeNode node (Obj.magic classFacts) (Obj.magic (!initialBindings))));
-    ignore (if Obj.obj (HxAnon.get node "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-    let structuralSuperType = Obj.magic (TypedBackendClassSemanticFacts.getSuperType (Obj.magic classFacts) ()) in (
-      ignore (if structuralSuperType == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph is missing structural superclass type for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"; "String"]) else ());
-      let appliedSuperType = Obj.magic (TyTypeSubstitution.apply (Obj.magic structuralSuperType) (Obj.magic (!initialBindings))) in let appliedSuperIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic appliedSuperType) ()) in (
-        ignore (if appliedSuperIdentity == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic appliedSuperIdentity) ()) (Obj.obj (HxAnon.get node "superClassIdentity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting structural superclass for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"; "String"]) else ());
-        let parentFacts = Obj.magic (HxMap.get_string ((Obj.magic self : t).factsByClass) (Obj.obj (HxAnon.get node "superClassIdentity"))) in (
-          ignore (if parentFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing superclass " ^ HxString.toStdString (Obj.obj (HxAnon.get node "superClassIdentity"))) ^ " while specializing ") ^ HxString.toStdString startIdentity)) ["Dynamic"; "String"]) else ());
-          let __assign_34 = Obj.magic (TyTypeSubstitution.bind (Obj.magic (TypedBackendClassSemanticFacts.getTypeParameterIds (Obj.magic parentFacts) ())) (Obj.magic (TyType.getTypeArguments (Obj.magic appliedSuperType) ())) ((HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")) ^ " -> ") ^ HxString.toStdString (Obj.obj (HxAnon.get node "superClassIdentity")) : string)) in (
-            initialBindings := __assign_34;
-            __assign_34
+let specializeLineage = fun self (startIdentity : string) (initialBindings : TyType.t HxMap.string_map) -> let lineage = Obj.magic (requireLineage (Obj.magic self) (startIdentity : string)) in let bindings = ref (Obj.magic initialBindings) in let specialized = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxArray.length lineage in (
+  ignore (try while !_g < _g1 do try ignore (let index = let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
+    ignore (_g := __new_41);
+    __old_40
+  ) in let node = HxArray.get (Obj.magic lineage) index in let tempMaybeTypedBackendClassSemanticFacts = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendClassSemanticFacts.t) in let _this = Obj.magic ((Obj.magic self : t).factsByClass) in let key = (Obj.obj (HxAnon.get node "classIdentity") : string) in (
+    ignore (let __assign_42 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
+      tempMaybeTypedBackendClassSemanticFacts := __assign_42;
+      __assign_42
+    ));
+    let classFacts = Obj.magic (!tempMaybeTypedBackendClassSemanticFacts) in (
+      ignore (if classFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"]) else ());
+      ignore (HxArray.push specialized (specializeNode node (Obj.magic classFacts) (Obj.magic (!bindings))));
+      ignore (if Obj.obj (HxAnon.get node "superClassIdentity") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+      let structuralSuperType = Obj.magic (TypedBackendClassSemanticFacts.getSuperType (Obj.magic classFacts) ()) in (
+        ignore (if structuralSuperType == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph is missing structural superclass type for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"]) else ());
+        let appliedSuperType = Obj.magic (TyTypeSubstitution.apply (Obj.magic structuralSuperType) (Obj.magic (!bindings))) in let appliedSuperIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic appliedSuperType) ()) in (
+          ignore (if appliedSuperIdentity == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (TyNominalTypeId.getCanonicalName (Obj.magic appliedSuperIdentity) ()) (Obj.obj (HxAnon.get node "superClassIdentity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting structural superclass for " ^ HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")))) ["Dynamic"]) else ());
+          let tempMaybeTypedBackendClassSemanticFacts1 = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendClassSemanticFacts.t) in let _this = Obj.magic ((Obj.magic self : t).factsByClass) in let key = (Obj.obj (HxAnon.get node "superClassIdentity") : string) in (
+            ignore (let __assign_43 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (key : string))) in (
+              tempMaybeTypedBackendClassSemanticFacts1 := __assign_43;
+              __assign_43
+            ));
+            let parentFacts = Obj.magic (!tempMaybeTypedBackendClassSemanticFacts1) in (
+              ignore (if parentFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed backend class graph is missing superclass " ^ HxString.toStdString (Obj.obj (HxAnon.get node "superClassIdentity"))) ^ " while specializing ") ^ HxString.toStdString startIdentity)) ["Dynamic"]) else ());
+              let __assign_44 = Obj.magic (TyTypeSubstitution.bind (Obj.magic (TypedBackendClassSemanticFacts.getTypeParameterIds (Obj.magic parentFacts) ())) (Obj.magic (TyType.getTypeArguments (Obj.magic appliedSuperType) ())) ((HxString.toStdString (Obj.obj (HxAnon.get node "classIdentity")) ^ " -> ") ^ HxString.toStdString (Obj.obj (HxAnon.get node "superClassIdentity")) : string)) in (
+                bindings := __assign_44;
+                __assign_44
+              )
+            )
           )
         )
       )
@@ -344,11 +374,11 @@ let specializeLineage = fun self (startIdentity : string) (initialBindings : TyT
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let _g = Obj.magic (let __arr_35 = HxArray.create () in __arr_35) in let _g1 = ref 0 in (
+  let _g = Obj.magic (let __arr_45 = HxArray.create () in __arr_45) in let _g1 = ref 0 in (
     ignore (while !_g1 < HxArray.length specialized do ignore (let node = HxArray.get (Obj.magic specialized) (!_g1) in (
-      ignore (let __old_36 = !_g1 in let __new_37 = HxInt.add __old_36 1 in (
-        ignore (_g1 := __new_37);
-        __new_37
+      ignore (let __old_46 = !_g1 in let __new_47 = HxInt.add __old_46 1 in (
+        ignore (_g1 := __new_47);
+        __new_47
       ));
       HxArray.push _g (copySpecializedNode node)
     )) done);
@@ -356,103 +386,109 @@ let specializeLineage = fun self (startIdentity : string) (initialBindings : TyT
   )
 )
 
-let requireSpecializedLineage = fun self (classIdentity : string) -> let startIdentity = (normalize (classIdentity : string) : string) in let startFacts = Obj.magic (HxMap.get_string ((Obj.magic self : t).factsByClass) startIdentity) in (
-  ignore (if startFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString startIdentity)) ["Dynamic"; "String"]) else ());
+let requireSpecializedLineage = fun self (classIdentity : string) -> let startIdentity = let __call_arg_0_39 = classIdentity in normalize __call_arg_0_39 in let _this = Obj.magic ((Obj.magic self : t).factsByClass) in let tempMaybeTypedBackendClassSemanticFacts = Obj.magic (HxMap.get_string (Obj.magic _this) (startIdentity : string)) in let startFacts = Obj.magic tempMaybeTypedBackendClassSemanticFacts in (
+  ignore (if startFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString startIdentity)) ["Dynamic"]) else ());
   specializeLineage (Obj.magic self) (startIdentity : string) (Obj.magic (TyTypeSubstitution.identity (Obj.magic (TypedBackendClassSemanticFacts.getTypeParameterIds (Obj.magic startFacts) ())) (startIdentity : string)))
 )
 
 let requireSpecializedLineageForType = fun self (hx_type : TyType.t) -> (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph cannot specialize a null semantic type") ["Dynamic"; "String"]) else ());
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph cannot specialize a null semantic type") ["Dynamic"]) else ());
   let nominal = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
-    ignore (if nominal == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph cannot specialize non-nominal type " ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic hx_type) ()))) ["Dynamic"; "String"]) else ());
-    let startIdentity = (TyNominalTypeId.getCanonicalName (Obj.magic nominal) () : string) in let startFacts = Obj.magic (HxMap.get_string ((Obj.magic self : t).factsByClass) startIdentity) in (
-      ignore (if startFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString startIdentity)) ["Dynamic"; "String"]) else ());
+    ignore (if nominal == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph cannot specialize non-nominal type " ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic hx_type) ()))) ["Dynamic"]) else ());
+    let startIdentity = (TyNominalTypeId.getCanonicalName (Obj.magic nominal) () : string) in let _this = Obj.magic ((Obj.magic self : t).factsByClass) in let tempMaybeTypedBackendClassSemanticFacts = Obj.magic (HxMap.get_string (Obj.magic _this) (startIdentity : string)) in let startFacts = Obj.magic tempMaybeTypedBackendClassSemanticFacts in (
+      ignore (if startFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph does not contain class facts for " ^ HxString.toStdString startIdentity)) ["Dynamic"]) else ());
       specializeLineage (Obj.magic self) (startIdentity : string) (Obj.magic (TyTypeSubstitution.bind (Obj.magic (TypedBackendClassSemanticFacts.getTypeParameterIds (Obj.magic startFacts) ())) (Obj.magic (TyType.getTypeArguments (Obj.magic hx_type) ())) (TyType.getSemanticKey (Obj.magic hx_type) () : string)))
     )
   )
 )
 
-let normalizeNullable = fun value -> let normalized = (normalize (value : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if HxString.length normalized = 0 then let __assign_77 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_77;
-    __assign_77
-  ) else let __assign_78 = Obj.magic (normalized : string) in (
-    tempResult := __assign_78;
-    __assign_78
+let normalizeNullable = fun (value : string) -> (let normalized = let __call_arg_0_102 = value in normalize __call_arg_0_102 in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if HxString.length normalized = 0 then let __assign_103 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_103;
+    __assign_103
+  ) else let __assign_104 = Obj.magic (normalized : string) in (
+    tempResult := __assign_104;
+    __assign_104
   ));
   !tempResult
-)
+) : string)
 
 let addFacts = fun self (classFacts : TypedBackendClassSemanticFacts.t) -> ignore (ignore ((
-  ignore (if classFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph contains a null class fact") ["Dynamic"; "String"]) else ());
-  let classIdentity = (normalize (TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic classFacts) () : string) : string) in let moduleIdentity = (normalize (TypedBackendClassSemanticFacts.getModuleIdentity (Obj.magic classFacts) () : string) : string) in let classFactsIdentity = (normalize (TypedBackendClassSemanticFacts.getCanonicalIdentity (Obj.magic classFacts) () : string) : string) in (
-    ignore (if HxString.length classIdentity = 0 || HxString.length moduleIdentity = 0 || HxString.length classFactsIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph contains an incomplete class fact") ["Dynamic"; "String"]) else ());
-    let node = let __anon_38 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_38 "classIdentity" (Obj.repr classIdentity));
-      ignore (HxAnon.set __anon_38 "moduleIdentity" (Obj.repr moduleIdentity));
-      ignore (HxAnon.set __anon_38 "classFactsIdentity" (Obj.repr classFactsIdentity));
-      ignore (HxAnon.set __anon_38 "superClassIdentity" (Obj.repr (normalizeNullable (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic classFacts) () : string))));
-      ignore (HxAnon.set __anon_38 "superTypeIdentity" (Obj.repr (normalizeNullable (TypedBackendClassSemanticFacts.getSuperTypeIdentity (Obj.magic classFacts) () : string))));
-      ignore (HxAnon.set __anon_38 "superTypeDisplay" (Obj.repr (normalizeNullable (TypedBackendClassSemanticFacts.getSuperTypeDisplay (Obj.magic classFacts) () : string))));
-      __anon_38
+  ignore (if classFacts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph contains a null class fact") ["Dynamic"]) else ());
+  let classIdentity = let __call_arg_0_48 = TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic classFacts) () in normalize __call_arg_0_48 in let moduleIdentity = let __call_arg_0_49 = TypedBackendClassSemanticFacts.getModuleIdentity (Obj.magic classFacts) () in normalize __call_arg_0_49 in let classFactsIdentity = let __call_arg_0_50 = TypedBackendClassSemanticFacts.getCanonicalIdentity (Obj.magic classFacts) () in normalize __call_arg_0_50 in (
+    ignore (if HxString.length classIdentity = 0 || HxString.length moduleIdentity = 0 || HxString.length classFactsIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph contains an incomplete class fact") ["Dynamic"]) else ());
+    let node = let __anonymous_value_51 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_51 "classIdentity" (Obj.repr classIdentity));
+      ignore (HxAnon.set __anonymous_value_51 "moduleIdentity" (Obj.repr moduleIdentity));
+      ignore (HxAnon.set __anonymous_value_51 "classFactsIdentity" (Obj.repr classFactsIdentity));
+      ignore (HxAnon.set __anonymous_value_51 "superClassIdentity" (Obj.repr (let __call_arg_0_52 = TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic classFacts) () in normalizeNullable __call_arg_0_52)));
+      ignore (HxAnon.set __anonymous_value_51 "superTypeIdentity" (Obj.repr (let __call_arg_0_53 = TypedBackendClassSemanticFacts.getSuperTypeIdentity (Obj.magic classFacts) () in normalizeNullable __call_arg_0_53)));
+      ignore (HxAnon.set __anonymous_value_51 "superTypeDisplay" (Obj.repr (let __call_arg_0_54 = TypedBackendClassSemanticFacts.getSuperTypeDisplay (Obj.magic classFacts) () in normalizeNullable __call_arg_0_54)));
+      __anonymous_value_51
     ) in (
-      ignore (if Obj.obj (HxAnon.get node "superTypeIdentity") == Obj.magic (HxRuntime.hx_null) <> (Obj.obj (HxAnon.get node "superTypeDisplay") == Obj.magic (HxRuntime.hx_null)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains an incomplete superclass type for " ^ HxString.toStdString classIdentity)) ["Dynamic"; "String"]) else ());
+      ignore (if (let __anonymous_receiver_55 = node in Obj.obj (HxAnon.get __anonymous_receiver_55 "superTypeIdentity")) == Obj.magic (HxRuntime.hx_null) <> ((let __anonymous_receiver_56 = node in Obj.obj (HxAnon.get __anonymous_receiver_56 "superTypeDisplay")) == Obj.magic (HxRuntime.hx_null)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains an incomplete superclass type for " ^ HxString.toStdString classIdentity)) ["Dynamic"]) else ());
       let structuralSuperType = Obj.magic (TypedBackendClassSemanticFacts.getSuperType (Obj.magic classFacts) ()) in (
-        ignore (if structuralSuperType == Obj.magic (HxRuntime.hx_null) <> (Obj.obj (HxAnon.get node "superTypeIdentity") == Obj.magic (HxRuntime.hx_null)) || structuralSuperType != Obj.magic (HxRuntime.hx_null) && (not (HxString.equals (TyType.getSemanticKey (Obj.magic structuralSuperType) ()) (Obj.obj (HxAnon.get node "superTypeIdentity"))) || not (HxString.equals (TyType.getCanonicalDisplay (Obj.magic structuralSuperType) ()) (Obj.obj (HxAnon.get node "superTypeDisplay")))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting structural superclass type for " ^ HxString.toStdString classIdentity)) ["Dynamic"; "String"]) else ());
-        ignore (if HxString.equals (Obj.obj (HxAnon.get node "superClassIdentity")) classIdentity then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains self-inheritance for " ^ HxString.toStdString classIdentity)) ["Dynamic"; "String"]) else ());
-        let previous = HxMap.get_string ((Obj.magic self : t).nodesByClass) classIdentity in if previous == Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (HxMap.set_string ((Obj.magic self : t).nodesByClass) classIdentity (copyNode node));
-          HxMap.set_string ((Obj.magic self : t).factsByClass) classIdentity classFacts
-        )) else ignore (if not (sameNode previous node) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting class " ^ HxString.toStdString classIdentity)) ["Dynamic"; "String"]) else ())
+        ignore (if structuralSuperType == Obj.magic (HxRuntime.hx_null) <> ((let __anonymous_receiver_57 = node in Obj.obj (HxAnon.get __anonymous_receiver_57 "superTypeIdentity")) == Obj.magic (HxRuntime.hx_null)) || structuralSuperType != Obj.magic (HxRuntime.hx_null) && (not (HxString.equals (TyType.getSemanticKey (Obj.magic structuralSuperType) ()) (let __anonymous_receiver_58 = node in Obj.obj (HxAnon.get __anonymous_receiver_58 "superTypeIdentity"))) || not (HxString.equals (TyType.getCanonicalDisplay (Obj.magic structuralSuperType) ()) (let __anonymous_receiver_59 = node in Obj.obj (HxAnon.get __anonymous_receiver_59 "superTypeDisplay")))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting structural superclass type for " ^ HxString.toStdString classIdentity)) ["Dynamic"]) else ());
+        ignore (if HxString.equals (let __anonymous_receiver_60 = node in Obj.obj (HxAnon.get __anonymous_receiver_60 "superClassIdentity")) classIdentity then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains self-inheritance for " ^ HxString.toStdString classIdentity)) ["Dynamic"]) else ());
+        let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in let tempMaybeTypedBackendClassGraphNode = HxMap.get_string (Obj.magic _this) (classIdentity : string) in let previous = tempMaybeTypedBackendClassGraphNode in if previous == Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in let value = copyNode node in (
+          ignore (HxMap.set_string (Obj.magic _this) (classIdentity : string) value);
+          let _this = Obj.magic ((Obj.magic self : t).factsByClass) in HxMap.set_string (Obj.magic _this) (classIdentity : string) classFacts
+        )) else ignore (if not (sameNode previous node) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend class graph contains conflicting class " ^ HxString.toStdString classIdentity)) ["Dynamic"]) else ())
       )
     )
   )
 )))
 
-let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = ""; factsByClass = Obj.magic (HxRuntime.hx_null); nodesByClass = Obj.magic (HxRuntime.hx_null); nodes = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic (HxRuntime.hx_null); nodesByClass = Obj.magic (HxRuntime.hx_null); nodes = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (normalize (programRevision2 : string) : string) in (
+    ignore (let __assign_1 = (let __call_arg_0_2 = programRevision2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).programRevision <- __assign_1;
       __assign_1
     ));
-    ignore (if HxString.length ((Obj.magic self : t).programRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph requires an exact typed-program revision") ["Dynamic"; "String"]) else ());
-    ignore (let __assign_2 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).factsByClass <- __assign_2;
-      __assign_2
-    ));
+    ignore (if HxString.length ((Obj.magic self : t).programRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend class graph requires an exact typed-program revision") ["Dynamic"]) else ());
     ignore (let __assign_3 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).nodesByClass <- __assign_3;
+      (Obj.magic self : t).factsByClass <- __assign_3;
       __assign_3
     ));
+    ignore (let __assign_4 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).nodesByClass <- __assign_4;
+      __assign_4
+    ));
     ignore (if facts != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length facts do ignore (let classFacts = Obj.magic (HxArray.get (Obj.magic facts) (!_g)) in (
-      ignore (let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
-        ignore (_g := __new_5);
-        __new_5
+      ignore (let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
+        ignore (_g := __new_6);
+        __new_6
       ));
       addFacts (Obj.magic self) (Obj.magic classFacts)
     )) done) else ());
-    let _g = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in let identity = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).nodesByClass)) in (
-      ignore (while (let __iter_7 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_7)) () do ignore (let identity2 = ((let __iter_8 = identity in fun () -> HxIterator.next (Obj.magic __iter_8)) () : string) in HxArray.push _g identity2) done);
-      let tempArray = Obj.magic _g in (
-        ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-        let _g = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in let _g1 = ref 0 in (
-          ignore (while !_g1 < HxArray.length tempArray do ignore (let identity = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
-            ignore (let __old_10 = !_g1 in let __new_11 = HxInt.add __old_10 1 in (
-              ignore (_g1 := __new_11);
-              __new_11
+    let _g = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let identity = tempIterator in (
+      ignore (while (let __iter_8 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_8)) () do ignore (let identity2 = ((let __iter_9 = identity in fun () -> HxIterator.next (Obj.magic __iter_9)) () : string) in HxArray.push _g identity2) done);
+      let tempArray = Obj.magic _g in let classIdentities = Obj.magic tempArray in (
+        ignore (HxArray.sort classIdentities (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+        let _g = Obj.magic (let __arr_10 = HxArray.create () in __arr_10) in let _g1 = ref 0 in (
+          ignore (while !_g1 < HxArray.length classIdentities do ignore (let identity = (HxArray.get (Obj.magic classIdentities) (!_g1) : string) in (
+            ignore (let __old_11 = !_g1 in let __new_12 = HxInt.add __old_11 1 in (
+              ignore (_g1 := __new_12);
+              __new_12
             ));
-            HxArray.push _g (copyNode (HxMap.get_string ((Obj.magic self : t).nodesByClass) identity))
+            let tempMaybeTypedBackendClassGraphNode = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).nodesByClass) in (
+              ignore (let __assign_13 = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in (
+                tempMaybeTypedBackendClassGraphNode := __assign_13;
+                __assign_13
+              ));
+              HxArray.push _g (copyNode (Obj.magic (!tempMaybeTypedBackendClassGraphNode)))
+            )
           )) done);
           let tempRight = Obj.magic _g in (
-            ignore (let __assign_12 = Obj.magic tempRight in (
-              (Obj.magic self : t).nodes <- __assign_12;
-              __assign_12
+            ignore (let __assign_14 = Obj.magic tempRight in (
+              (Obj.magic self : t).nodes <- __assign_14;
+              __assign_14
             ));
             let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).nodes) in (
               ignore (while !_g < HxArray.length _g1 do ignore (let node = HxArray.get (Obj.magic _g1) (!_g) in (
-                ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
-                  ignore (_g := __new_14);
-                  __new_14
+                ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
+                  ignore (_g := __new_16);
+                  __new_16
                 ));
                 validateLineage (Obj.magic self) (Obj.obj (HxAnon.get node "classIdentity") : string)
               )) done);
@@ -462,9 +498,9 @@ let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.clas
                 ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).nodes))));
                 let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).nodes) in (
                   ignore (while !_g < HxArray.length _g1 do ignore (let node = HxArray.get (Obj.magic _g1) (!_g) in (
-                    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-                      ignore (_g := __new_16);
-                      __new_16
+                    ignore (let __old_17 = !_g in let __new_18 = HxInt.add __old_17 1 in (
+                      ignore (_g := __new_18);
+                      __new_18
                     ));
                     ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get node "classIdentity")));
                     ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get node "moduleIdentity")));
@@ -473,9 +509,9 @@ let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.clas
                     ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get node "superTypeIdentity")));
                     HxArray.push identityFacts (Obj.obj (HxAnon.get node "superTypeDisplay"))
                   )) done);
-                  let __assign_17 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
-                    (Obj.magic self : t).canonicalIdentity <- __assign_17;
-                    __assign_17
+                  let __assign_19 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
+                    (Obj.magic self : t).canonicalIdentity <- __assign_19;
+                    __assign_19
                   )
                 )
               )

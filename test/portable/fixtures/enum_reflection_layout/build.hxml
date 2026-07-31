@@ -1,0 +1,8 @@
+-cp ../../../oracle/reflaxe_ocaml_enum_reflection_layout_seed/src
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_lowering_report
+-D ocaml_output=out

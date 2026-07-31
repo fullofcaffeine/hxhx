@@ -51,10 +51,10 @@ class OcamlArtifactManifestTestHelper {
 		final summary:Dynamic = Reflect.field(manifest, "summary");
 		assertTrue(summary != null, "artifact manifest is missing its summary");
 		assertTrue(Reflect.field(summary, "entryCount") == entries.length, "artifact manifest entry count is stale");
-		assertTrue(Reflect.field(summary, "completeForSourceBundle") == false,
-			"current integration outputs must not claim package completeness before runtime/dependency authorities land");
+		assertTrue(Reflect.field(summary, "completeForSourceBundle") == true,
+			"current integration outputs must close every generated-source authority before replay");
 		final blockers:Array<Dynamic> = cast Reflect.field(summary, "blockers");
-		assertTrue(blockers != null && blockers.length == 2, "current artifact manifest must name both packaging prerequisites");
+		assertTrue(blockers != null && blockers.length == 0, "complete generated-source authorities must leave no replay blocker");
 		return manifest;
 	}
 

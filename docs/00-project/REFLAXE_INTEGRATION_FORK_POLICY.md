@@ -222,28 +222,141 @@ The fork then added target-neutral lifecycle and scalability repairs:
   process-wide local-variable numbers; and
 - PR #13 made pure-expression cleanup use an explicit work list, so a generated
   function with tens of thousands of sequential expressions no longer exhausts
-  the host call stack.
+  the host call stack;
+- PR #14 gave locals deterministic lexical identities across clean and warm
+  Haxe requests;
+- PR #15 made every target callback receive the complete current program; and
+- PR #16 added opt-in, target-neutral publication of one validated generated
+  directory instead of exposing files while generation is still fallible; and
+- PR #17 added an explicit target hook after that directory becomes public, so
+  external builders never have to infer lifecycle order from global Haxe
+  callback registration; and
+- the target-reuse fingerprint candidate records the final target-selected
+  program as immutable plain-value revisions, gives targets an exact
+  fail-closed reuse probe, and introduces a miss-only preparation hook without
+  skipping any target work; and
+- the target-reuse catalog candidate adds one bounded process-local owner in
+  the reusable macro-interpreter realm, with copied opaque bytes, leases,
+  least-recently-used eviction, reset, quarantine, and redacted counters. It
+  does not yet authorize a target cache hit.
 
-As of 2026-07-26, upstream `SomeRanDev/reflaxe` remains at
+As of 2026-07-31, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
-`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins reviewed
-fork commit `3454b8e2a2758d379fa37c5f0767917ccbc3c876`, published on
-`agent/haxe-ocaml-9bome-4-reference-alias`, with path-independent content digest
-`66167ad5a4c5a2fa993d39766148a41dac7f65bbc6eca33b2cef6b917a516d53`.
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
+candidate fork commit `105957964cdfe958f3f14bfee64b395e69dd253f`, published on branch
+`hxhx-agent/target-reuse-fingerprint`, with
+path-independent content digest
+`3bc59e3304d5fa5486bd2b26098c809192c2d68def1ba648c84ad0df93611020`.
+The last repository-validated rollback pin is
+`e833fec65203964d40287483e6f951d6bbaf949d` with digest
+`58cc28d20249b7f9d64b4090e41d4dd1fc2da8103f25b21311b9532564e36712`;
+restoring both values together is the bounded rollback.
 
-That patch prevents Reflaxe's generic alias-removal pass from replacing a
+Fork PR #19 makes Haxe 4.3.7's all-null abstract resolve-hook placeholder an
+explicit fingerprint fact. A missing hook, the exact host placeholder, and a
+normal field now produce different identities. Any partially populated field,
+or the placeholder in an operator/cast slot, blocks target reuse instead of
+authorizing an incomplete key. The fingerprint schema advanced so cache entries
+made before this distinction cannot match the new interpretation.
+
+Fork PR #20 handles a separate Haxe 4 compiler-server limitation. A class
+annotated with `@:rtti` can receive a different compiler-generated `__rtti`
+string on a repeated unchanged request. Because that string changes generated
+target files, Reflaxe now marks the request ineligible for exact target replay
+and reports the specific source-authority blocker. Compilation still proceeds
+normally; only reuse of an older generated bundle is forbidden.
+
+PR #17 removes a package-only lifecycle race. Repository-local builds loaded
+the Reflaxe framework before the OCaml target, but installed Haxelib builds
+could register those callbacks in the opposite order. The target's extra
+`onAfterGenerate` callback could therefore run before source publication and
+observe no pending native build. `BaseCompiler.onOutputPublished()` now runs
+directly after the framework commits the complete tree. `reflaxe.ocaml`
+overrides that hook to start Dune from the stable public root; it no longer
+depends on process-global callback order. The fork regression proves the hook
+sees the public path and leaves generated files unchanged.
+
+The pinned stack also preserves an earlier local declaration when the
+program reads that value before assigning the local again. This includes reads
+inside another variable's initializer and inside a nested block. Without that
+check, the target-neutral cleanup could turn this valid sequence:
+
+```haxe
+var value:Null<Int> = null;
+var rendered = Std.string(value);
+value = 1;
+```
+
+into a target program that still read `value` for `rendered` but no longer
+defined its initial `null` value. The fork regression covers both lexical
+shapes, and the `null_primitives` portable fixture proves the initial nullable
+values and later assignments compile, build, and run through OCaml.
+
+The previous pinned patch prevents Reflaxe's generic alias-removal pass from replacing a
 reference snapshot with a local that can later point at a different object. For
 example, `var alias = values; values = replacement;` keeps `alias` bound to the
 original array. Direct-write analysis uses typed local identities across the
 whole function; element and field mutation still permit the existing
 optimization because they do not redirect a local binding.
 
-The patch has a repository-owned review record in `haxe_ocaml-9bome.4`, passes
+That patch has a repository-owned review record in `haxe_ocaml-9bome.4`, passes
 the fork's macro, program-revision, server-revision, and runtime-build checks,
 and passes the complete 76-fixture `reflaxe.ocaml` portable corpus. It is pinned
 by immutable commit and digest while the fork pull-request lifecycle remains
 separate; the branch name is only a discovery aid and does not participate in
 dependency identity.
+
+PR #14 makes local-variable evidence stable across clean Haxe processes. Haxe's
+macro API gives each typed local a temporary numeric ID; unrelated compiler
+work can change that number without changing the user's program. Reflaxe now
+replaces the number with a function-owned lexical identity before computing
+function revisions or publishing target plans. It also validates the complete
+versioned identity shape, so a target cannot accidentally publish a numeric host
+ID converted to text.
+
+The pinned PR #14 candidate passes the fork's semantic lifecycle and
+cross-request program-revision checks plus reflaxe.ocaml's focused storage,
+representation, call, and generated-program checks. Its remote review remains a
+separate prerequisite; this pin supplies exact integration evidence and does
+not claim that the fork change is merged upstream.
+
+PR #15 fixes the next warm-server correctness boundary. Haxe's compilation
+server may reuse most typed modules, but a target still needs the complete
+current program. Reflaxe now captures Haxe's complete declaration list, waits
+until Haxe has finished DCE and body rewrites, and then regenerates one complete
+target program. The older rebuilt-class filter and partial output manifest are
+gone. The capture also restores source declaration order within each Haxe
+module because the complete callback can otherwise present secondary types in
+a different order from the earlier typed-module callback. This preserves
+upstream Haxe's front-end reuse and the target's fail-closed storage checks
+without claiming target-level delta generation.
+
+The PR #15 framework regression compares complete target trees across a clean
+process, a cold server request, an unchanged warm request, a body edit, and an
+A → B → A restoration. It is target-neutral and intentionally leaves
+add/delete/move/shadow cases, private output transactions, compiler-scale
+timing, and supported default enablement to `haxe_ocaml-850ii.33`.
+
+PR #16 closes the next failure boundary. A target that owns its complete output
+directory can generate into a private sibling, finish target-specific work, and
+publish only after Reflaxe validates the typed `_GeneratedFiles.json` receipt.
+An ordinary failure discards the candidate and keeps the previous public tree.
+Recognizable interruptions before and after each directory move are recovered;
+malformed, foreign, or ambiguous marker state fails closed.
+
+The final PR #16 candidate also cleans up private state when transaction
+initialization itself fails before the first marker is durable. Transactional
+write paths reject both slash and backslash parent traversal, so a target
+cannot escape the directory it asked Reflaxe to publish on either path style.
+
+The standalone OCaml target first enabled this only for the focused server
+experiment. The package one-shot and watch routes now use the same transaction:
+after Reflaxe publishes the complete generated directory, a later target
+callback runs Dune against that public path. Dune owns reusable state in the
+stable sibling `.<output>.reflaxe-ocaml-dune-build`, so source replacement does
+not discard native artifacts or leak a candidate path into Dune metadata.
+Transactional inferred-`.mli` generation remains rejected until interfaces can
+be produced without mutating source after publication.
 
 The earlier fork changes through PR #13 each landed through their own reviewed
 pull request. PR #13's six required checks passed, and that framework baseline

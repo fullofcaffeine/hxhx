@@ -1,7 +1,9 @@
-(* Minimal Haxe Bytes runtime for reflaxe.ocaml (WIP).
+(* Haxe Bytes runtime for reflaxe.ocaml.
 
    Representation:
-   - OCaml `bytes` (mutable byte sequence).
+   - one record containing the explicit Haxe length and one mutable OCaml
+     `bytes` value;
+   - `getData` and `ofData` preserve the native data alias.
 
    Notes:
    - Haxe `Bytes` operations throw `haxe.io.Error.OutsideBounds` on most targets.
@@ -9,78 +11,107 @@
    - This is byte-based and currently assumes Haxe `String` maps to OCaml `string`
      without additional encoding conversions. *)
 
-type t = bytes
+type data = bytes
+
+type t = {
+  length : int;
+  data : data;
+}
 
 let outside_bounds () : 'a =
   HxRuntime.hx_throw (Obj.repr "OutsideBounds")
 
+(* Haxe 4.3.7 accepts Null<Int> at these declared Int call sites. Eval and
+   Neko both reject null before mutating the Bytes value but expose different
+   target errors. The OCaml target therefore keeps its established,
+   deterministic OutsideBounds policy while preserving present Int values. *)
+let requireMultiByteInt (value : Obj.t) : int =
+  if HxRuntime.is_null value then outside_bounds () else Obj.obj value
+
 let check_range (len_total : int) (pos : int) (len : int) : unit =
   if pos < 0 || len < 0 || pos + len > len_total then outside_bounds () else ()
 
+let check_access (b : t) (pos : int) (len : int) : unit =
+  check_range b.length pos len;
+  check_range (Bytes.length b.data) pos len
+
+let create (len : int) (data : data) : t =
+  if len < 0 then outside_bounds () else { length = len; data }
+
 let alloc (len : int) : t =
-  if len < 0 then outside_bounds () else Bytes.make len '\000'
+  if len < 0 then outside_bounds ()
+  else create len (Bytes.make len '\000')
 
 let length (b : t) : int =
-  Bytes.length b
+  b.length
 
 let get (b : t) (pos : int) : int =
-  let len = Bytes.length b in
-  if pos < 0 || pos >= len then outside_bounds () else Char.code (Bytes.get b pos)
+  check_access b pos 1;
+  Char.code (Bytes.get b.data pos)
+
+let fastGet (data : data) (pos : int) : int =
+  if pos < 0 || pos >= Bytes.length data then outside_bounds ()
+  else Char.code (Bytes.get data pos)
 
 let set (b : t) (pos : int) (v : int) : unit =
-  let len = Bytes.length b in
-  if pos < 0 || pos >= len then
-    outside_bounds ()
-  else
-    let c = Char.chr (v land 0xFF) in
-    Bytes.set b pos c
+  check_access b pos 1;
+  let c = Char.chr (v land 0xFF) in
+  Bytes.set b.data pos c
 
 let blit (dst : t) (pos : int) (src : t) (srcpos : int) (len : int) : unit =
-  check_range (Bytes.length dst) pos len;
-  check_range (Bytes.length src) srcpos len;
-  if len = 0 then () else Bytes.blit src srcpos dst pos len
+  check_access dst pos len;
+  check_access src srcpos len;
+  if len = 0 then () else Bytes.blit src.data srcpos dst.data pos len
 
 let fill (b : t) (pos : int) (len : int) (value : int) : unit =
-  check_range (Bytes.length b) pos len;
+  check_access b pos len;
   let c = Char.chr (value land 0xFF) in
   for i = 0 to len - 1 do
-    Bytes.set b (pos + i) c
+    Bytes.set b.data (pos + i) c
   done
 
 let sub (b : t) (pos : int) (len : int) : t =
-  check_range (Bytes.length b) pos len;
-  Bytes.sub b pos len
+  check_access b pos len;
+  create len (Bytes.sub b.data pos len)
 
 let compare (a : t) (b : t) : int =
-  Bytes.compare a b
+  let common = min a.length b.length in
+  let rec loop i =
+    if i >= common then Stdlib.compare a.length b.length
+    else
+      let difference = get a i - get b i in
+      if difference = 0 then loop (i + 1) else difference
+  in
+  loop 0
 
 let ofString (s : string) () : t =
-  Bytes.of_string s
+  let data = Bytes.of_string s in
+  create (Bytes.length data) data
 
 let getString (b : t) (pos : int) (len : int) () : string =
-  check_range (Bytes.length b) pos len;
-  Bytes.sub_string b pos len
+  check_access b pos len;
+  Bytes.sub_string b.data pos len
 
 let toString (b : t) () : string =
-  Bytes.to_string b
+  getString b 0 b.length ()
 
-let getData (b : t) () : t =
-  b
+let getData (b : t) () : data =
+  b.data
 
-let ofData (b : t) () : t =
-  b
+let ofData (data : data) () : t =
+  create (Bytes.length data) data
 
 let getUInt16 (b : t) (pos : int) : int =
-  check_range (Bytes.length b) pos 2;
+  check_access b pos 2;
   get b pos lor (get b (pos + 1) lsl 8)
 
 let setUInt16 (b : t) (pos : int) (v : int) : unit =
-  check_range (Bytes.length b) pos 2;
+  check_access b pos 2;
   set b pos v;
   set b (pos + 1) (v lsr 8)
 
 let getInt32 (b : t) (pos : int) : int =
-  check_range (Bytes.length b) pos 4;
+  check_access b pos 4;
   let open Int32 in
   let byte i = of_int (get b (pos + i)) in
   let v =
@@ -91,7 +122,7 @@ let getInt32 (b : t) (pos : int) : int =
   Int32.to_int v
 
 let setInt32 (b : t) (pos : int) (v : int) : unit =
-  check_range (Bytes.length b) pos 4;
+  check_access b pos 4;
   let open Int32 in
   let v32 = of_int v in
   let byte shift =
@@ -102,6 +133,21 @@ let setInt32 (b : t) (pos : int) (v : int) : unit =
   set b (pos + 2) (byte 16);
   set b (pos + 3) (byte 24)
 
+(* Int64 stays a generated Haxe nominal record, so the reusable runtime cannot
+   depend on Haxe_Int64 directly. The sealed syntax adapter supplies the exact
+   constructor on reads and projects the exact low/high words once on writes.
+   This module still owns range validation and little-endian word ordering. *)
+let getInt64 (b : t) (pos : int) create =
+  check_access b pos 8;
+  let low = getInt32 b pos in
+  let high = getInt32 b (pos + 4) in
+  create high low
+
+let setInt64 (b : t) (pos : int) (low : int) (high : int) : unit =
+  check_access b pos 8;
+  setInt32 b pos low;
+  setInt32 b (pos + 4) high
+
 let getFloat (b : t) (pos : int) : float =
   let bits = Int32.of_int (getInt32 b pos) in
   Int32.float_of_bits bits
@@ -111,7 +157,7 @@ let setFloat (b : t) (pos : int) (v : float) : unit =
   setInt32 b pos (Int32.to_int bits)
 
 let getDouble (b : t) (pos : int) : float =
-  check_range (Bytes.length b) pos 8;
+  check_access b pos 8;
   let open Int64 in
   let byte i = of_int (get b (pos + i)) in
   let v =
@@ -132,7 +178,7 @@ let getDouble (b : t) (pos : int) : float =
   Int64.float_of_bits v
 
 let setDouble (b : t) (pos : int) (v : float) : unit =
-  check_range (Bytes.length b) pos 8;
+  check_access b pos 8;
   let open Int64 in
   let bits = bits_of_float v in
   let byte shift =
@@ -148,7 +194,7 @@ let setDouble (b : t) (pos : int) (v : float) : unit =
   set b (pos + 7) (byte 56)
 
 let toHex (b : t) () : string =
-  let len = Bytes.length b in
+  let len = b.length in
   let out = Bytes.create (len * 2) in
   let hex = "0123456789abcdef" in
   for i = 0 to len - 1 do

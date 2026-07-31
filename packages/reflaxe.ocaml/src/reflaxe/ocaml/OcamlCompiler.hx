@@ -1,7 +1,9 @@
 package reflaxe.ocaml;
 
 #if (macro || reflaxe_runtime)
+import haxe.io.Bytes;
 import haxe.io.Path;
+import haxe.ds.ObjectMap;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -17,17 +19,25 @@ import reflaxe.DirectToStringCompiler;
 import reflaxe.data.ClassFuncData;
 import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
+import reflaxe.lifecycle.FinalProgramFingerprintSnapshot;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.lifecycle.TargetReuseCatalog;
+import reflaxe.lifecycle.TargetReuseRequestOutcome;
+import reflaxe.lifecycle.TargetReuseRevisionComponent;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
+import reflaxe.ocaml.artifacts.OcamlSourceBundleAuthority;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlAssignOp;
@@ -40,20 +50,37 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
+import reflaxe.ocaml.runtimegen.DuneProjectEmitter.DuneProjectConfig;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
+import reflaxe.ocaml.runtimegen.OcamlDuneBuildState;
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifest;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
+import reflaxe.ocaml.reuse.OcamlTargetReuseContract;
+import reflaxe.ocaml.reuse.OcamlTargetReuseContract.OcamlTargetReuseObservation;
+import reflaxe.ocaml.reuse.OcamlTargetImplementationRevision;
+import reflaxe.ocaml.reuse.OcamlTargetReusePhaseReportWriter;
+import reflaxe.ocaml.reuse.OcamlTargetReuseTestHooks;
+import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate;
+import reflaxe.ocaml.reuse.OcamlSourceBundleCandidate.OcamlSourceBundlePackResult;
+import reflaxe.ocaml.reuse.OcamlSourceBundleReplay;
+import reflaxe.ocaml.reuse.OcamlSourceBundleReplay.OcamlSourceBundleReplayCorruption;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepresentationMaterialization;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -61,6 +88,9 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
@@ -70,6 +100,18 @@ import reflaxe.ocaml.OcamlNameTools;
 
 using StringTools;
 using reflaxe.helpers.BaseTypeHelper;
+
+private typedef PendingPublishedOutputBuild = {
+	final publicDirectory:String;
+	final buildDirectory:String;
+	final exeName:String;
+	final mode:String;
+	final duneLayout:Null<String>;
+	final run:Bool;
+	final strict:Bool;
+	final timingReport:Bool;
+	final artifacts:OcamlArtifactManifestBuilder;
+}
 
 /**
  * Minimal OCaml compiler scaffold.
@@ -91,6 +133,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
 	var checkedOutputCollisions:Bool = false;
+	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
+	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
+	var targetReuseRuntimeSourceManifest:Null<RuntimeSourceManifestSnapshot>;
+	var stagedTargetReuseCandidate:Null<OcamlSourceBundleCandidate>;
+	var targetRevisionObservationMilliseconds:Int = 0;
+	var targetMissPreparationMilliseconds:Int = 0;
+	var targetReuseLookupMilliseconds:Int = 0;
+	var targetReusePayloadValidationMilliseconds:Int = 0;
+	var targetReplayFilesMilliseconds:Int = 0;
+	var targetReplayReceiptAndManifestMilliseconds:Int = 0;
+	var targetReuseLookupRan:Bool = false;
+	var targetMissPreparationRan:Bool = false;
+	var targetReplaySucceeded:Bool = false;
+	var targetReusePayloadBytes:Null<Int>;
+	var skippedTargetGenerationWarnings:Int = 0;
+	var semanticRuntimeAuthority:Null<OcamlArtifactAuthority>;
+	var nativeSourceDeclarationAuthority:Null<OcamlArtifactAuthority>;
+	final compilerExpressionOrdinals:ObjectMap<TypedExpr, Int> = new ObjectMap();
+	var nextCompilerExpressionOrdinal:Int = 0;
 
 	#if macro
 	/**
@@ -120,6 +181,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var profileClassFilter:Null<String> = null;
 	var profileFieldFilter:Null<String> = null;
 	var profileDetail:Bool = false;
+	var profileModulePrepareStartS:Float = 0.0;
+	var profileModulePrepareName:Null<String> = null;
 	var pendingStaticStorageModuleOrder:Array<String> = [];
 	var pendingStaticStorageClassesByModule:Map<String, Array<ClassType>> = [];
 
@@ -188,6 +251,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	#if macro
 	static var haxeStdRoots:Null<Array<String>> = null;
+	static var reflaxeOcamlOwnedRoots:Null<Array<String>> = null;
 
 	static function normalizePath(p:String):String {
 		if (p == null)
@@ -229,6 +293,38 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		return false;
 	}
+
+	static function detectReflaxeOcamlOwnedRoots():Array<String> {
+		if (reflaxeOcamlOwnedRoots != null)
+			return reflaxeOcamlOwnedRoots;
+		final compilerPath = normalizePath(haxe.macro.Context.resolvePath("reflaxe/ocaml/OcamlCompiler.hx"));
+		final suffix = "src/reflaxe/ocaml/OcamlCompiler.hx/";
+		if (!StringTools.endsWith(compilerPath, suffix))
+			throw 'reflaxe.ocaml [ocaml-representation:package-root]: cannot derive the package root from "$compilerPath"';
+		final packageRoot = compilerPath.substr(0, compilerPath.length - suffix.length);
+		reflaxeOcamlOwnedRoots = [packageRoot + "src/", packageRoot + "std/"];
+		return reflaxeOcamlOwnedRoots;
+	}
+
+	/**
+		Returns whether a declaration belongs to the target implementation itself.
+
+		The first nominal carrier slice is for application classes. Target
+		compiler and target-stdlib classes retain their existing representation
+		until a separate runtime-facing contract admits them.
+	**/
+	static function isPosInReflaxeOcaml(pos:haxe.macro.Expr.Position):Bool {
+		final info = haxe.macro.Context.getPosInfos(pos);
+		var file = info.file;
+		if (!Path.isAbsolute(file))
+			file = Path.join([Sys.getCwd(), file]);
+		final normalizedFile = normalizePath(file);
+		for (root in detectReflaxeOcamlOwnedRoots()) {
+			if (StringTools.startsWith(normalizedFile, root))
+				return true;
+		}
+		return false;
+	}
 	#end
 
 	public function new() {
@@ -247,15 +343,67 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 	}
 
+	#if macro
+	/** Returns the source-level type name used by module-preparation telemetry. */
+	static function profileModuleTypeName(moduleType:ModuleType):String {
+		return switch (moduleType) {
+			case TClassDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TEnumDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TTypeDecl(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+			case TAbstract(reference):
+				final type = reference.get();
+				(type.pack ?? []).concat([type.name]).join(".");
+		};
+	}
+	#end
+
+	/**
+		Starts target telemetry before Reflaxe extracts and preprocesses fields.
+
+		`compileClassImpl` begins only after the framework has materialized every
+		field body for the class. Compiler-scale profiles therefore need this
+		earlier boundary to distinguish target rendering from typed-body transfer
+		and preprocessing.
+	**/
+	override public function setupModule(moduleType:Null<ModuleType>):Void {
+		#if macro
+		if (profileVerbose && moduleType != null) {
+			profileModulePrepareStartS = profileNowS();
+			profileModulePrepareName = profileModuleTypeName(moduleType);
+			profileLogLine("reflaxe.ocaml: module_prepare_begin name=" + profileModulePrepareName);
+		} else {
+			profileModulePrepareStartS = 0.0;
+			profileModulePrepareName = null;
+		}
+		#end
+		super.setupModule(moduleType);
+		#if macro
+		if (profileVerbose && moduleType != null) {
+			final dtMs = Std.int((profileNowS() - profileModulePrepareStartS) * 1000);
+			profileLogLine("reflaxe.ocaml: module_setup_end name=" + profileModulePrepareName + " dt_ms=" + Std.string(dtMs));
+		}
+		#end
+	}
+
 	/** Starts a fresh, revision-keyed target-plan registry for this request. */
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
+		compilerExpressionOrdinals.clear();
+		nextCompilerExpressionOrdinal = 0;
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
 		staticStoragePlan.beginProgram(revision.id);
 		ctx.beginRuntimeRequirementProgram(revision.id);
 		#if macro
 		try {
+			OcamlMonomorphicClassPlanner.plan(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, ctx, representationRegistry,
+				classType -> !isPosInHaxeStd(classType.pos) && !isPosInReflaxeOcaml(classType.pos));
 			planCallableDeclarations(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule, revision.id);
 			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
 		} catch (error:Dynamic) {
@@ -278,8 +426,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (classes == null)
 				continue;
 			for (classType in classes) {
+				if (classType.constructor != null) {
+					final declaration = OcamlCallPlanner.constructorDeclarationFor(classType, classType.constructor.get(), representationRegistry,
+						programRevision, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+					if (declaration != null)
+						functionPlanRegistry.registerCallableDeclaration(declaration);
+				}
 				for (field in classType.statics.get()) {
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, representationRegistry, programRevision,
+					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
+						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+					if (declaration != null)
+						functionPlanRegistry.registerCallableDeclaration(declaration);
+				}
+				for (field in classType.fields.get()) {
+					final declaration = OcamlCallPlanner.declarationFor(classType, field, false, representationRegistry, programRevision,
 						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
 					if (declaration != null)
 						functionPlanRegistry.registerCallableDeclaration(declaration);
@@ -295,25 +455,280 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	#if macro
 	/**
-		Precompute whole-program OCaml lowering context from Reflaxe's existing typed-module pass.
+		Performs request hygiene and validation before Reflaxe fingerprints the program.
 
-		Why:
-		- Registering another `Context.onAfterTyping` callback asks stage0 Haxe's eval/macro bridge
-		  to encode the full compiler-sized typed module graph a second time.
-		- Bootstrap profiling showed the retained-memory wall inside macro API type encoding before
-		  Reflaxe output hooks start, so this work must piggyback on Reflaxe's already-materialized
-		  `filterTypes(moduleTypes)` call.
-
-		What:
-		- Preserves virtual-dispatch and primary-type discovery, and retains the typed
-		  classes needed to build the static-storage plan once Reflaxe assigns the final
-		  program revision.
-		- Returns the input unchanged so Reflaxe's filtering semantics are untouched.
+		This boundary deliberately avoids whole-program OCaml analysis. Reflaxe first
+		reduces the final typed Haxe program and every relevant input to a stable
+		identity. An unchanged request can then find a previously validated generated
+		OCaml tree before starting the expensive work that the cached result replaces.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
-		precomputeWholeProgramContext(moduleTypes);
+		OcamlSourcePositionMapper.beginRequest();
+		pendingPublishedOutputBuild = null;
+		stagedTargetReuseCandidate = null;
+		targetReuseRuntimeSourceManifest = null;
+		semanticRuntimeAuthority = null;
+		nativeSourceDeclarationAuthority = null;
+		skippedTargetGenerationWarnings = 0;
+		final started = haxe.Timer.stamp();
+		targetReuseObservation = captureTargetReuseObservation();
+		targetRevisionObservationMilliseconds = elapsedMilliseconds(started);
+		targetMissPreparationMilliseconds = 0;
+		targetReuseLookupMilliseconds = 0;
+		targetReusePayloadValidationMilliseconds = 0;
+		targetReplayFilesMilliseconds = 0;
+		targetReplayReceiptAndManifestMilliseconds = 0;
+		targetReuseLookupRan = false;
+		targetMissPreparationRan = false;
+		targetReplaySucceeded = false;
+		targetReusePayloadBytes = null;
 		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
 		return moduleTypes;
+	}
+
+	/**
+		Runs whole-program OCaml preparation only when no exact cached result was used.
+
+		This preparation computes representation, call, storage, and runtime decisions
+		needed to generate OCaml. An exact cache hit skips it; every edited, uncertain,
+		or ineligible request runs it normally.
+	**/
+	public override function prepareFinalProgram(moduleTypes:Array<ModuleType>, snapshot:FinalProgramFingerprintSnapshot):Void {
+		final probe = targetReuseProbe;
+		if (probe == null)
+			throw "reflaxe.ocaml: miss preparation started before the target reuse probe";
+		#if macro
+		OcamlTargetReuseTestHooks.failIfExpectedHitReachedMiss();
+		if (Context.defined("reflaxe_ocaml_target_reuse_test_require_hit") && probe.requestRevision != null) {
+			final unexpectedLease = TargetReuseCatalog.shared().lookup(OcamlTargetReuseContract.NAMESPACE, probe.requestRevision);
+			if (unexpectedLease != null) {
+				unexpectedLease.close();
+				throw "reflaxe.ocaml: exact-hit fixture reached miss-only target preparation despite an exact catalog entry";
+			}
+		}
+		#end
+		if (!probe.eligible)
+			TargetReuseCatalog.shared().recordIneligible(probe.blockers());
+		targetMissPreparationRan = true;
+		final started = haxe.Timer.stamp();
+		precomputeWholeProgramContext(moduleTypes);
+		targetMissPreparationMilliseconds = elapsedMilliseconds(started);
+	}
+
+	public override function targetReuseNamespace():Null<String> {
+		return OcamlTargetReuseContract.NAMESPACE;
+	}
+
+	public override function targetReuseRevisionComponents(snapshot:FinalProgramFingerprintSnapshot):Array<TargetReuseRevisionComponent> {
+		return OcamlTargetReuseContract.revisionComponents(requireTargetReuseObservation());
+	}
+
+	public override function targetReuseBlockers(snapshot:FinalProgramFingerprintSnapshot):Array<String> {
+		return OcamlTargetReuseContract.blockers(requireTargetReuseObservation());
+	}
+
+	/**
+		Attempts to reuse the complete generated OCaml tree before ordinary generation.
+
+		A reusable entry is an immutable copy of every generated source/build file for
+		the exact typed program and configuration. The target validates its identity,
+		replays it into a fresh private output transaction, and rebuilds current
+		ownership manifests. Invalid bytes or mismatched identity are quarantined and
+		become a normal miss. Output or transaction failures remain request failures
+		instead of being hidden by a second compilation attempt.
+	**/
+	public override function tryReplayTargetReuse():Bool {
+		#if eval
+		final probe = targetReuseProbe;
+		final snapshot = finalProgramFingerprint;
+		if (probe == null || probe.requestRevision == null || snapshot == null || output == null)
+			throw "reflaxe.ocaml: exact replay started without a sealed request or output transaction";
+		final requestRevision:String = probe.requestRevision;
+		final catalog = TargetReuseCatalog.shared();
+		OcamlTargetReuseTestHooks.recordCatalogState("lookup", requestRevision, TargetReuseCatalog.sharedStats());
+		targetReuseLookupRan = true;
+		final lookupStarted = haxe.Timer.stamp();
+		final lease = catalog.lookup(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+		targetReuseLookupMilliseconds = elapsedMilliseconds(lookupStarted);
+		if (lease == null)
+			return false;
+
+		targetReusePayloadBytes = lease.payloadBytes;
+		final payload = copyTargetReusePayloadAndClose(lease);
+		var candidate:Null<OcamlSourceBundleCandidate> = null;
+		final payloadValidationStarted = haxe.Timer.stamp();
+		try {
+			candidate = OcamlSourceBundleCandidate.decode(payload);
+			final normalizedRequestRevision = OcamlArtifactManifestSchema.normalizeRevision(requestRevision, "current target request revision");
+			final normalizedProgramRevision = OcamlArtifactManifestSchema.normalizeRevision(snapshot.programRevision.id, "current program revision");
+			final normalizedConfigurationRevision = OcamlArtifactManifestSchema.normalizeRevision(requireTargetReuseObservation().sourceConfigurationRevision,
+				"current source configuration revision");
+			if (candidate.targetRequestRevision != normalizedRequestRevision
+				|| candidate.programRevision != normalizedProgramRevision
+				|| candidate.configurationRevision != normalizedConfigurationRevision
+				|| !candidate.diagnosticsEligible)
+				throw "reflaxe.ocaml: exact source bundle does not match the current request";
+		} catch (error:Dynamic) {
+			targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
+			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+			OcamlTargetReuseTestHooks.recordCatalogState("payload-rejected:" + Std.string(error), requestRevision, TargetReuseCatalog.sharedStats());
+			catalog.recordMiss("corrupt-payload");
+			return false;
+		}
+		targetReusePayloadValidationMilliseconds = elapsedMilliseconds(payloadValidationStarted);
+		OcamlTargetReuseTestHooks.failIfExpectedMissReachedHit();
+
+		try {
+			final reusable:OcamlSourceBundleCandidate = cast candidate;
+			final replay = OcamlSourceBundleReplay.run(reusable, output);
+			targetReplayFilesMilliseconds = replay.fileReplayMilliseconds;
+			targetReplayReceiptAndManifestMilliseconds = replay.receiptAndManifestMilliseconds;
+			targetReplaySucceeded = true;
+			semanticRuntimeAuthority = reusable.semanticRuntimeAuthority;
+			nativeSourceDeclarationAuthority = reusable.nativeDependenciesAuthority;
+			scheduleReplayBuild(replay.artifacts);
+			return true;
+		} catch (error:OcamlSourceBundleReplayCorruption) {
+			catalog.quarantine(OcamlTargetReuseContract.NAMESPACE, requestRevision);
+			catalog.recordMiss("corrupt-replay");
+			return false;
+		}
+		#else
+		return false;
+		#end
+	}
+
+	/**
+		Copies one cached source bundle and always releases its catalog lease.
+
+		A lease prevents reset or eviction while bytes are being copied. The returned
+		`Bytes` value belongs to this request, so decoding and replay no longer need
+		the catalog entry to stay pinned. Closing in both the success and error paths
+		prevents a failed allocation or copy from blocking later cache cleanup.
+	**/
+	static function copyTargetReusePayloadAndClose(lease:reflaxe.lifecycle.TargetReuseCatalog.TargetReuseCatalogLease):Bytes {
+		try {
+			final payload = lease.copyPayload();
+			lease.close();
+			return payload;
+		} catch (error:Dynamic) {
+			lease.close();
+			throw error;
+		}
+	}
+
+	/**
+		Makes a newly generated source tree reusable only after the request succeeds.
+
+		The process-local cache receives copied bytes and bounded size accounting, not
+		the request's typed Haxe objects, target builders, output writers, or other
+		mutable compiler state.
+	**/
+	public override function finishTargetReuseRequest(outcome:TargetReuseRequestOutcome):Void {
+		final candidate = stagedTargetReuseCandidate;
+		stagedTargetReuseCandidate = null;
+		switch (outcome) {
+			case CompiledMiss if (candidate != null):
+				final admission = TargetReuseCatalog.shared()
+					.admit(OcamlTargetReuseContract.NAMESPACE, candidate.targetRequestRevision, OcamlTargetReuseTestHooks.admissionPayload(candidate),
+						OcamlSourceBundleCandidate.ESTIMATED_CATALOG_OVERHEAD_BYTES);
+				if (admission.reason == "same-key-different-payload")
+					throw "reflaxe.ocaml: one exact target request produced different source-bundle bytes; the reuse namespace was quarantined";
+				OcamlTargetReuseTestHooks.recordCatalogState("admission", candidate.targetRequestRevision, TargetReuseCatalog.sharedStats());
+			case CompiledMiss | ExactHit | Failed:
+		}
+		writeTargetReusePhaseReport(outcome, candidate);
+		OcamlTargetReuseTestHooks.recordCompactedGcState("request-finish", TargetReuseCatalog.sharedStats());
+	}
+
+	function writeTargetReusePhaseReport(outcome:TargetReuseRequestOutcome, candidate:Null<OcamlSourceBundleCandidate>):Void {
+		final snapshot = finalProgramFingerprint;
+		final probe = targetReuseProbe;
+		final realm = targetReuseCatalogRealm;
+		final fingerprintAndKeyMilliseconds = finalProgramFingerprintAndKeyMilliseconds;
+		final lifecycleMilliseconds = targetReuseLifecycleMilliseconds;
+		if (snapshot == null
+			|| probe == null
+			|| realm == null
+			|| fingerprintAndKeyMilliseconds == null
+			|| lifecycleMilliseconds == null)
+			return;
+		final payloadBytes = candidate == null ? targetReusePayloadBytes : candidate.payloadBytes;
+		OcamlTargetReusePhaseReportWriter.tryWrite(snapshot, probe, outcome, realm, TargetReuseCatalog.sharedStats(), {
+			targetRevisionObservationMilliseconds: targetRevisionObservationMilliseconds,
+			finalProgramFingerprintAndKeyMilliseconds: fingerprintAndKeyMilliseconds,
+			targetLifecycleMilliseconds: lifecycleMilliseconds,
+			missPreparationMilliseconds: targetMissPreparationMilliseconds,
+			lookupMilliseconds: targetReuseLookupMilliseconds,
+			payloadValidationMilliseconds: targetReusePayloadValidationMilliseconds,
+			replayFilesMilliseconds: targetReplayFilesMilliseconds,
+			replayReceiptAndManifestMilliseconds: targetReplayReceiptAndManifestMilliseconds,
+			outputPublicationMilliseconds: outputPublicationMilliseconds
+		}, {
+			semanticCompilerRan: targetMissPreparationRan,
+			missPreparationRan: targetMissPreparationRan,
+			lookupRan: targetReuseLookupRan,
+			replaySucceeded: targetReplaySucceeded,
+			payloadBytes: payloadBytes
+		});
+	}
+
+	function requireTargetReuseObservation():OcamlTargetReuseObservation {
+		final observation = targetReuseObservation;
+		if (observation == null)
+			throw "reflaxe.ocaml: target reuse observation was requested before filterTypes";
+		return observation;
+	}
+
+	function captureTargetReuseObservation():OcamlTargetReuseObservation {
+		final outputDirectory = output == null ? null : output.outputDir;
+		final outputConfigured = outputDirectory != null && outputDirectory.length > 0;
+		final outputProjectName = outputConfigured ? DuneProjectEmitter.defaultProjectName(outputDirectory) : "unconfigured";
+		#if macro
+		final packageVersion = Context.definedValue("reflaxe.ocaml") ?? "unversioned";
+		final sourceConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName);
+		targetReuseRuntimeSourceManifest = Context.defined("ocaml_no_runtime") ? null : RuntimeCopier.loadCheckedSourceManifest();
+		final runtimeInputRevision = targetReuseRuntimeSourceManifest == null ? "sha256:" +
+			haxe.crypto.Sha256.encode("runtime-source-input:disabled") : targetReuseRuntimeSourceManifest.revision;
+		return {
+			packageVersion: packageVersion,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+			sourceConfigurationRevision: sourceConfigurationRevision,
+			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
+			runtimeInputRevision: runtimeInputRevision,
+			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(sourceConfigurationRevision),
+			targetImplementationRevision: OcamlTargetImplementationRevision.current(),
+			reuseEnabled: Context.defined("reflaxe_ocaml_target_reuse"),
+			transactionalOutputEnabled: Context.defined("reflaxe_output_transaction"),
+			mliEnabled: Context.defined("ocaml_mli"),
+			outputConfigured: outputConfigured,
+			progressOrTelemetryEnabled: profileEnabled,
+			loweringReportEnabled: Context.defined("ocaml_lowering_report"),
+			lifecycleTraceEnabled: Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")
+		};
+		#else
+		return {
+			packageVersion: "runtime-unversioned",
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+			sourceConfigurationRevision: OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName, []),
+			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
+			runtimeInputRevision: "sha256:" + haxe.crypto.Sha256.encode("runtime-source-input:runtime-unavailable"),
+			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(OcamlArtifactConfigurationRevision.fromValues(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
+				outputProjectName, [])),
+			targetImplementationRevision: null,
+			reuseEnabled: false,
+			transactionalOutputEnabled: false,
+			mliEnabled: false,
+			outputConfigured: outputConfigured,
+			progressOrTelemetryEnabled: false,
+			loweringReportEnabled: false,
+			lifecycleTraceEnabled: false
+		};
+		#end
+	}
+
+	static function elapsedMilliseconds(started:Float):Int {
+		return Std.int(Math.max(0, (haxe.Timer.stamp() - started) * 1000));
 	}
 
 	function precomputeWholeProgramContext(types:Array<haxe.macro.Type.ModuleType>):Void {
@@ -891,6 +1306,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 		#if macro
+		skippedTargetGenerationWarnings += 1;
 		Context.warning("reflaxe.ocaml: unable to infer a unique entrypoint module from static main candidates; set"
 			+ " -D ocaml_dune_exes=<exe>:<module> to disambiguate.",
 			Context.currentPos());
@@ -986,6 +1402,43 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return represented == null ? ocamlTypeExprFromHaxeType(type) : represented.carrierType;
 	}
 
+	/** Validates an admitted class record against its sealed nominal layout. */
+	function validateMonomorphicClassLayout(classType:ClassType, instanceTypeName:String, typeFields:Array<OcamlTypeRecordField>):Void {
+		final semanticTypeId = (classType.pack ?? []).concat([classType.name]).join(".");
+		final decision = representationRegistry.monomorphicClass(semanticTypeId);
+		if (decision == null)
+			return;
+		final targetModuleName = ctx.ocamlModuleNameForModuleId(classType.module);
+		if (decision.sourceModuleId != classType.module
+			|| decision.sourceTypeName != classType.name
+			|| decision.targetModuleName != targetModuleName
+			|| decision.targetTypeName != instanceTypeName
+			|| decision.canonicalCarrierTypeId != targetModuleName + "." + instanceTypeName) {
+			throw 'reflaxe.ocaml [ocaml-representation:class-layout-owner-mismatch]: $semanticTypeId no longer matches sealed layout ${decision.id}';
+		}
+		if (typeFields.length != decision.fields.length + 1
+			|| typeFields[0].name != "__hx_type"
+			|| printer.printType(typeFields[0].typ) != "Obj.t")
+			throw 'reflaxe.ocaml [ocaml-representation:class-layout-shape-mismatch]: $semanticTypeId no longer has the sealed runtime-header and field count';
+		for (index in 0...decision.fields.length) {
+			final planned = decision.fields[index];
+			final emitted = typeFields[index + 1];
+			final actualCarrier = printer.printType(emitted.typ);
+			if (planned.declarationOrder != index
+				|| planned.targetFieldName != emitted.name
+				|| planned.carrierTypeId != actualCarrier
+				|| !emitted.isMutable) {
+				throw 'reflaxe.ocaml [ocaml-representation:class-layout-field-mismatch]: $semanticTypeId field $index expected ${planned.targetFieldName}:${planned.carrierTypeId}, but emission selected ${emitted.name}:$actualCarrier';
+			}
+			final fieldRepresentation = representationRegistry.require(planned.representationId, decision.programRevision);
+			if (fieldRepresentation.semanticTypeId != planned.semanticTypeId
+				|| fieldRepresentation.carrierTypeId != planned.carrierTypeId
+				|| fieldRepresentation.domain != OcamlRepresentationDomain.InstanceField) {
+				throw 'reflaxe.ocaml [ocaml-representation:class-layout-field-representation-mismatch]: $semanticTypeId.${planned.sourceFieldName} no longer matches ${planned.representationId}';
+			}
+		}
+	}
+
 	/** Returns one instance field's selected implicit default or the unmigrated default mapper. */
 	function instanceFieldDefault(type:Type):OcamlExpr {
 		final represented = representedInstanceField(type);
@@ -1002,11 +1455,84 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 	}
 
+	/** Returns one stable owner for a typed class-field initializer. */
+	static function fieldInitializerOwner(classType:ClassType, field:ClassField, kind:String):String {
+		return 'field-initializer:$kind:${classType.module}|${classType.name}::${field.name}';
+	}
+
+	/**
+		Returns one request-local owner for an expression compiled outside a field or function.
+
+		Reflaxe can ask the target to compile two distinct macro-generated roots
+		that carry the same source span and the same expression structure. The
+		zero-based ordinal distinguishes those typed objects, while a repeated call
+		for the same object receives the same owner. The map is cleared when the
+		next complete program begins and is never part of a reusable cache entry.
+	**/
+	function compilerExpressionOwner(expression:TypedExpr):String {
+		var ordinal = compilerExpressionOrdinals.get(expression);
+		if (ordinal == null) {
+			ordinal = nextCompilerExpressionOrdinal++;
+			compilerExpressionOrdinals.set(expression, ordinal);
+		}
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		return 'compiler-expression:${source.file}:${source.min}:${source.max}:root:$ordinal';
+	}
+
+	/**
+		Seals occurrence-bound plans for one non-function typed root.
+
+		Class-field initializers do not belong to a function, but container
+		conversions, anonymous-object operations, and Bytes operations inside them
+		still need the same exact program, body, target-pipeline, and runtime
+		requirement evidence before syntax is built.
+	**/
+	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
+		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
+		for (conversion in plan.containerElements.decisions())
+			ctx.recordEnumDynamicContainerRuntimeRequirement(conversion);
+		for (decision in plan.anonymousStructures.operations())
+			ctx.recordAnonymousStructureRuntimeRequirement(decision);
+		for (decision in plan.bytesAccesses.decisions())
+			ctx.recordBytesAccessRuntimeRequirements(decision);
+		for (decision in plan.bytesMutations.decisions())
+			ctx.recordBytesMutationRuntimeRequirements(decision);
+		for (decision in plan.bytesProducers.decisions())
+			ctx.recordBytesProducerRuntimeRequirements(decision);
+		for (decision in plan.bytesReads.decisions())
+			ctx.recordBytesReadRuntimeRequirements(decision);
+		return plan;
+	}
+
+	/** Builds a non-function root after selecting its exact typed plans. */
+	function buildStandaloneExpression(builder:OcamlBuilder, ownerId:String, expression:TypedExpr):OcamlExpr {
+		final localIdentities = LexicalLocalIdentityPlan.build("standalone:" + ownerId, expression);
+		return builder.buildStandaloneExpr(expression, localIdentities, OcamlLocalStoragePlanner.planExpression(expression, localIdentities),
+			sealStandaloneExpression(ownerId, expression));
+	}
+
+	/** Builds a field initializer with its assignment and Bytes decisions sealed. */
+	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
+		final localIdentities = LexicalLocalIdentityPlan.build("standalone:" + ownerId, expression);
+		return builder.buildStandaloneExprForAssignment(fieldType, expression, localIdentities,
+			OcamlLocalStoragePlanner.planExpression(expression, localIdentities), sealStandaloneExpression(ownerId, expression));
+	}
+
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
 		#if macro
 		final profClassStartS = profileEnabled ? profileNowS() : 0.0;
-		profClassCount++;
 		final profClassName = (classType.pack ?? []).concat([classType.name]).join(".");
+		final profClassOrdinal = profClassCount + 1;
+		if (profileVerbose && profileModulePrepareStartS > 0.0 && profileModulePrepareName == profClassName) {
+			final dtMs = Std.int((profClassStartS - profileModulePrepareStartS) * 1000);
+			profileLogLine("reflaxe.ocaml: class_prepare_end count="
+				+ Std.string(profClassOrdinal)
+				+ " name="
+				+ profClassName
+				+ " dt_ms="
+				+ Std.string(dtMs));
+		}
+		profClassCount = profClassOrdinal;
 		final profClassMatch = profileClassFilter != null && profileClassFilter.length > 0 && profClassName == profileClassFilter;
 		profileWarnEvery("class", profClassCount, profClassName, classType.pos, 50);
 		if (profileVerbose)
@@ -1198,6 +1724,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				ctorFunc = f;
 			} else {
 				instanceMethods.push(f);
+			}
+		}
+		for (method in instanceMethods) {
+			if (method.field.name != "toString")
+				continue;
+			switch (TypeTools.follow(method.field.type)) {
+				case TFun(arguments, result) if (arguments.length == 0 && OcamlRepresentationRegistry.isExactString(result)):
+					ctx.dynamicStringifierByFullName.set(fullName, {
+						moduleId: classType.module,
+						sourceTypeName: classType.name,
+						targetMethodName: ctx.scopedValueName(classType.module, classType.name,
+							ctx.dispatchTypes.exists(fullName) ? method.field.name + "__impl" : method.field.name)
+					});
+				case _:
 			}
 		}
 
@@ -1591,11 +2131,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				params: [],
 				kind: OcamlTypeDeclKind.Record(typeFields)
 			};
+			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
 			items.push(OcamlModuleItem.IType([typeDecl], false));
 
 			// create: allocate record, run ctor body, return self
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
 			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
+			var constructionBoundary:Null<OcamlCallableBoundaryPlan> = null;
 			if (ctorFunc != null && ctorFunc.expr != null) {
 				final argInfo:Array<{
 					id:Int,
@@ -1612,11 +2154,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, functionPlanRegistry.sealedFunctionPlanFor(ctorFunc), ctorReturnType)) {
+				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
+				constructionBoundary = syntaxInput.constructionBoundary;
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
 					case _:
+				}
+				if (constructionBoundary != null) {
+					final result = constructionBoundary.result;
+					if (createParams.length != constructionBoundary.arguments.length
+						|| result == null
+						|| result.outputCarrierTypeId != instanceTypeName) {
+						throw 'reflaxe.ocaml [ocaml-call:construction-emission-mismatch]: admitted constructor "${constructionBoundary.calleeId}" does not match create(${createParams.length}) -> $instanceTypeName';
+					}
 				}
 			}
 
@@ -1658,8 +2210,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						switch (entry.kind) {
 							case "var":
 								final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
-								final value = init != null ? builder.buildStandaloneExpr(init,
-									OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(entry.field.type);
+								final value = init != null ? buildStandaloneExpression(builder, fieldInitializerOwner(classType, entry.field, "instance"),
+									init) : instanceFieldDefault(entry.field.type);
 								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case "method":
 								final info = dispatchMethodDecl.get(entry.name);
@@ -1675,8 +2227,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					for (v in instanceVarsLocal) {
 						final init = v.findDefaultExpr();
-						final value = init != null ? builder.buildStandaloneExpr(init,
-							OcamlLocalStoragePlanner.planExpression(init)) : instanceFieldDefault(v.field.type);
+						final value = init != null ? buildStandaloneExpression(builder, fieldInitializerOwner(classType, v.field, "instance"),
+							init) : instanceFieldDefault(v.field.type);
 						fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 					}
 					if (isDispatchInstance) {
@@ -1792,7 +2344,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), methodReturnType)) {
+					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -1886,7 +2439,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), staticReturnType);
+			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
@@ -1962,7 +2516,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
 				representedStatic.implicitDefault;
 			} else if (init != null) {
-				builder.buildStandaloneExprForAssignment(v.field.type, init, OcamlLocalStoragePlanner.planExpression(init));
+				buildStandaloneAssignment(builder, fieldInitializerOwner(classType, v.field, "static"), v.field.type, init);
 			} else {
 				representedStatic == null ? defaultValueForType(v.field.type) : representedStatic.implicitDefault;
 			};
@@ -2052,10 +2606,123 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.generateFiles();
 	}
 
+	/**
+		Clears post-publication native work and rejects incompatible output modes
+		before a fresh compiler request starts writing its private source tree.
+
+		`Context.error` terminates macro generation instead of behaving like an
+		ordinary target exception. Configuration errors that can be known here
+		must therefore fail before Reflaxe opens an output transaction; otherwise
+		the framework cannot run its normal candidate-abort path.
+	**/
+	public override function onCompileStart():Void {
+		pendingPublishedOutputBuild = null;
+		semanticRuntimeAuthority = null;
+		nativeSourceDeclarationAuthority = null;
+		#if macro
+		if (Context.defined("reflaxe_output_transaction") && Context.defined("ocaml_mli")) {
+			Context.error("ocaml_mli cannot run after transactional source publication yet. Disable reflaxe_output_transaction or generate checked interfaces through a separate source-owned step.",
+				Context.currentPos());
+		}
+		#end
+	}
+
+	function sealArtifactManifest(artifacts:OcamlArtifactManifestBuilder):Void {
+		final runtimeAuthority = semanticRuntimeAuthority;
+		final nativeAuthority = nativeSourceDeclarationAuthority;
+		if (runtimeAuthority == null || nativeAuthority == null)
+			throw "reflaxe.ocaml: source-bundle authorities must be sealed before the artifact manifest";
+		artifacts.seal(runtimeAuthority, nativeAuthority);
+	}
+
+	/**
+		Schedules the same fresh post-publication Dune work for an exact replay.
+
+		The cached payload owns generated source only. Build mode, run intent,
+		toolchain diagnostics, and external Dune state remain current-request work.
+	**/
+	function scheduleReplayBuild(artifacts:OcamlArtifactManifestBuilder):Void {
+		#if eval
+		if (output == null || output.outputDir == null || output.publicOutputDir == null)
+			throw "reflaxe.ocaml: exact replay cannot schedule a build without transactional output paths";
+		final noBuild = haxe.macro.Context.defined("ocaml_no_build");
+		final emitOnly = haxe.macro.Context.defined("ocaml_emit_only");
+		final shouldRun = haxe.macro.Context.defined("ocaml_run");
+		if ((noBuild || emitOnly) && !shouldRun)
+			return;
+		final privateDirectory:String = cast output.outputDir;
+		final publicDirectory:String = cast output.publicOutputDir;
+		if (Path.normalize(privateDirectory) == Path.normalize(publicDirectory))
+			throw "reflaxe.ocaml: exact replay requires a private source transaction before Dune";
+		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
+		pendingPublishedOutputBuild = {
+			publicDirectory: publicDirectory,
+			buildDirectory: OcamlDuneBuildState.forOutputDirectory(publicDirectory),
+			exeName: DuneProjectEmitter.defaultExeName(publicDirectory),
+			mode: buildMode == null ? "native" : buildMode,
+			duneLayout: haxe.macro.Context.definedValue("ocaml_dune_layout"),
+			run: shouldRun,
+			strict: buildMode != null,
+			timingReport: haxe.macro.Context.defined("ocaml_build_timing_report"),
+			artifacts: artifacts
+		};
+		#end
+	}
+
+	/**
+		Runs native work only after transactional source publication succeeds.
+
+		The public generated directory is Dune's workspace root. Reusable Dune
+		state lives in a stable sibling, so neither source replacement nor a failed
+		Reflaxe candidate can delete it or record a private transaction path.
+	**/
+	public override function onOutputPublished():Void {
+		#if eval
+		final pending = pendingPublishedOutputBuild;
+		pendingPublishedOutputBuild = null;
+		if (pending == null)
+			return;
+		if (output == null
+			|| output.outputDir == null
+			|| output.publicOutputDir == null
+			|| Path.normalize(output.outputDir) != Path.normalize(pending.publicDirectory)
+			|| Path.normalize(output.publicOutputDir) != Path.normalize(pending.publicDirectory)) {
+			throw "reflaxe.ocaml: Dune post-publication hook ran before the generated source transaction committed";
+		}
+
+		pending.artifacts.continueAtPublishedDirectory(pending.publicDirectory);
+		final result = OcamlBuildRunner.tryBuildAndMaybeRun({
+			outDir: pending.publicDirectory,
+			buildDir: pending.buildDirectory,
+			exeName: pending.exeName,
+			mode: pending.mode,
+			duneLayout: pending.duneLayout,
+			run: pending.run,
+			strict: pending.strict,
+			mli: null,
+			mliStrict: false,
+			timingReport: pending.timingReport,
+			artifacts: pending.artifacts
+		});
+		// A timing report is volatile evidence rather than source, but its digest
+		// still belongs in the target inventory that inspection validates.
+		sealArtifactManifest(pending.artifacts);
+		switch (result) {
+			case Ok(message):
+				if (message != null)
+					haxe.macro.Context.warning(message, haxe.macro.Context.currentPos());
+			case Err(message):
+				haxe.macro.Context.error(message, haxe.macro.Context.currentPos());
+		}
+		OcamlTargetReuseTestHooks.failAfterPublishedWork();
+		#end
+	}
+
 	public override function onOutputComplete() {
 		#if eval
 		if (output == null || output.outputDir == null)
 			return;
+		pendingPublishedOutputBuild = null;
 		#if macro
 		if (profileEnabled) {
 			profileInit();
@@ -2071,33 +2738,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Keep a second check before artifact sealing in case a future Reflaxe
 		// lifecycle adds output-completion work after generateFiles().
 		functionPlanRegistry.validateCallGraph();
+		final representationDecisions = representationRegistry.decisions();
+		for (decision in representationDecisions)
+			ctx.recordRepresentationRuntimeRequirements(decision);
 		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
 		final artifacts = new OcamlArtifactManifestBuilder(outDir, revision.id, artifactConfigurationRevision, artifactProfile);
-
-		function sealArtifacts():Void {
-			artifacts.seal({
-				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "recorded-runtime-requirements-partial-v3",
-				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records why typed assignments, updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
-			}, {
-				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "free-form-dune-libraries-v1",
-				revision: null,
-				message: "Native libraries and source units are not yet backed by a locked, structured dependency manifest."
-			});
-		}
 
 		// A timing report is tied to one generated-file receipt. Clear the prior
 		// revision even when this build will not run Dune or request new timing.
 		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
-			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
-				functionPlanRegistry.localConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
-				functionPlanRegistry.callableBoundaries(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationDecisions,
+				functionPlanRegistry.anonymousStructureDecisions(), functionPlanRegistry.anonymousStructureOperations(),
+				functionPlanRegistry.localConversions(), functionPlanRegistry.containerElementRequiredConversionIds(),
+				functionPlanRegistry.containerElementConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
+				functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
+				functionPlanRegistry.controlCatchChains(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
@@ -2764,21 +3423,27 @@ class OcamlCompiler extends DirectToStringCompiler {
 					lines.push("  ignore (HxType.enum_ " + ocamlStringLiteral(n) + ");");
 				}
 				for (n in enumNames) {
-					final ctors = ctx.enumConstructsByFullName.get(n);
-					if (ctors == null)
+					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
+					if (layouts == null)
 						continue;
-					lines.push("  HxType.register_enum_ctors " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(ctors) + ";");
+					for (layout in layouts) {
+						final representation = layout.carriesPayload ? ("HxType.EnumBlock " + Std.string(layout.ocamlTag)) : ("HxType.EnumImmediate "
+							+ Std.string(layout.ocamlTag));
+						lines.push("  HxType.register_enum_ctor_layout " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(layout.name) + " "
+							+ Std.string(layout.haxeIndex) + " (" + representation + ");");
+					}
 				}
 				// `Type.createEnum` / `Type.createEnumIndex` constructor registry (M10).
 				for (n in enumNames) {
-					final ctors = ctx.enumConstructsByFullName.get(n);
-					if (ctors == null)
+					final layouts = ctx.enumConstructorLayoutsByFullName.get(n);
+					if (layouts == null)
 						continue;
 					final modId = ctx.enumModuleIdByFullName.get(n);
 					if (modId == null)
 						continue;
 					final modName = moduleIdToOcamlModuleName(modId);
-					for (ctorName in ctors) {
+					for (layout in layouts) {
+						final ctorName = layout.name;
 						final key = n + ":" + ctorName;
 						final expected = ctx.enumCtorArgsByFullNameAndCtor.get(key);
 						final argsInfo = expected != null ? expected : [];
@@ -2870,6 +3535,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 					lines.push("  HxType.register_class_instance_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(inst) + ";");
 					lines.push("  HxType.register_class_static_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(stat) + ";");
 				}
+				final dynamicStringifierNames = [for (name in ctx.dynamicStringifierByFullName.keys()) name];
+				dynamicStringifierNames.sort(Reflect.compare);
+				for (name in dynamicStringifierNames) {
+					final stringifier = ctx.dynamicStringifierByFullName.get(name);
+					if (stringifier == null)
+						continue;
+					final moduleName = moduleIdToOcamlModuleName(stringifier.moduleId);
+					lines.push("  HxDynamic.register_class_stringifier " + ocamlStringLiteral(name) + " (fun value -> " + moduleName + "."
+						+ stringifier.targetMethodName + " (Obj.obj value) ());");
+				}
+				if (dynamicStringifierNames.length > 0) {
+					ctx.markRuntimeModule("HxDynamic");
+					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_STRING);
+				}
 				// `Type.getSuperClass` registry.
 				for (n in classNames) {
 					final sup = ctx.superByFullName.get(n);
@@ -2926,6 +3605,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
+		nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarationsDisabled();
 		if (!noDune) {
 			final resolvedMainModuleId = resolveMainModuleIdForDune();
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
@@ -2976,7 +3656,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				out.length > 0 ? out : null;
 			}
 
-			DuneProjectEmitter.emit(output, {
+			final duneProjectConfig:DuneProjectConfig = {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
 				mainModuleId: resolvedMainModuleId,
@@ -2987,14 +3667,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 				duneLibraries: duneLibs,
 				duneLayout: duneLayoutValue,
 				executables: executables
-			}, artifacts);
+			};
+			nativeSourceDeclarationAuthority = OcamlSourceBundleAuthority.nativeDeclarations(duneProjectConfig);
+			DuneProjectEmitter.emit(output, duneProjectConfig, artifacts);
 		}
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
+		semanticRuntimeAuthority = OcamlSourceBundleAuthority.semanticRuntimeDisabled();
 		if (!noRuntime) {
 			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
-			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(), ctx.runtimeRequirementsSorted(),
-				ctx.runtimeRequirementRevision());
+			semanticRuntimeAuthority = RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(),
+				ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision(), targetReuseRuntimeSourceManifest);
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.
@@ -3035,6 +3718,34 @@ class OcamlCompiler extends DirectToStringCompiler {
 			pruneEmptyDirectoriesRecursive(outDir);
 		}
 
+		#if macro
+		final snapshot = finalProgramFingerprint;
+		final probe = targetReuseProbe;
+		if (probe != null && probe.eligible) {
+			final runtimeAuthority = semanticRuntimeAuthority;
+			final nativeAuthority = nativeSourceDeclarationAuthority;
+			if (snapshot == null || probe == null || probe.requestRevision == null)
+				throw "reflaxe.ocaml: target source packing requires a sealed final-program probe";
+			if (runtimeAuthority == null || nativeAuthority == null)
+				throw "reflaxe.ocaml: target source packing requires complete source authority";
+			final sourceSnapshot = artifacts.snapshotSourceBundle(runtimeAuthority, nativeAuthority);
+			final diagnosticsEligible = probe.eligible && skippedTargetGenerationWarnings == 0;
+			var candidate:Null<OcamlSourceBundleCandidate> = null;
+			switch (OcamlSourceBundleCandidate.tryPack(outDir, probe.requestRevision, sourceSnapshot, diagnosticsEligible)) {
+				case Packed(packed):
+					candidate = packed;
+				case EntryBudgetExceeded(_, _):
+					TargetReuseCatalog.shared().recordMiss("entry-budget-exceeded");
+			}
+			if (probe.eligible && candidate != null)
+				if (diagnosticsEligible)
+					stagedTargetReuseCandidate = candidate;
+				else
+					TargetReuseCatalog.shared().recordMiss("target-generation-diagnostics");
+			OcamlTargetReuseTestHooks.failAfterStage();
+		}
+		#end
+
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
 		final shouldRun = haxe.macro.Context.defined("ocaml_run");
 		final noBuild = haxe.macro.Context.defined("ocaml_no_build");
@@ -3065,16 +3776,38 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final strictBuild = buildMode != null;
 		final strictAny = strictBuild || (wantsMli && mliStrict);
 
-		if (!shouldBuild && !shouldRun && buildMode == null && !wantsMli) {
-			sealArtifacts();
+		if (!shouldBuild && !shouldRun) {
+			sealArtifactManifest(artifacts);
 			return;
 		}
 
 		final exeName = DuneProjectEmitter.defaultExeName(outDir);
 		final mode = buildMode != null ? buildMode : "native";
+		final publicOutDir = output.publicOutputDir;
+		final transactionalOutput = publicOutDir != null && Path.normalize(publicOutDir) != Path.normalize(outDir);
+		if (transactionalOutput) {
+			if (wantsMli) {
+				throw "reflaxe.ocaml: transactional ocaml_mli passed the pre-generation configuration boundary";
+			}
+			final stablePublicOutDir:String = cast publicOutDir;
+			sealArtifactManifest(artifacts);
+			pendingPublishedOutputBuild = {
+				publicDirectory: stablePublicOutDir,
+				buildDirectory: OcamlDuneBuildState.forOutputDirectory(stablePublicOutDir),
+				exeName: DuneProjectEmitter.defaultExeName(stablePublicOutDir),
+				mode: mode,
+				duneLayout: duneLayoutValue,
+				run: shouldRun,
+				strict: strictAny,
+				timingReport: haxe.macro.Context.defined("ocaml_build_timing_report"),
+				artifacts: artifacts
+			};
+			return;
+		}
 
 		final result = OcamlBuildRunner.tryBuildAndMaybeRun({
 			outDir: outDir,
+			buildDir: null,
 			exeName: exeName,
 			mode: mode,
 			duneLayout: duneLayoutValue,
@@ -3094,7 +3827,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// Strict mode (ocaml_build=...) should stop compilation if build fails.
 				haxe.macro.Context.error(msg, haxe.macro.Context.currentPos());
 		}
-		sealArtifacts();
+		sealArtifactManifest(artifacts);
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();
@@ -3141,13 +3874,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.nonStdTypeRegistryEnums.set(runtimeName, true);
 		}
 		ctx.enumModuleIdByFullName.set(runtimeName, enumType.module);
-		// Enum constructor names for `Type.getEnumConstructs` (M10).
+		// Haxe declaration indices and native OCaml tags are different number
+		// spaces. Record both while the typed enum declaration is available so
+		// Dynamic reflection never has to infer source order from runtime layout.
 		{
-			final ctors = options.map(o -> {
-				final n = extractNativeString(o.field.meta);
-				n != null ? n : o.name;
-			});
-			ctx.enumConstructsByFullName.set(runtimeName, ctors);
+			var immediateTag = 0;
+			var blockTag = 0;
+			final layouts:Array<OcamlEnumConstructorLayout> = [];
+			for (option in options) {
+				final native = extractNativeString(option.field.meta);
+				final carriesPayload = option.args.length > 0;
+				final ocamlTag = if (carriesPayload) blockTag++ else immediateTag++;
+				layouts.push({
+					name: native != null ? native : option.name,
+					haxeIndex: option.field.index,
+					carriesPayload: carriesPayload,
+					ocamlTag: ocamlTag
+				});
+			}
+			layouts.sort((left, right) -> left.haxeIndex - right.haxeIndex);
+			ctx.enumConstructorLayoutsByFullName.set(runtimeName, layouts);
 		}
 		// Enum constructor signatures for `Type.createEnum` / `Type.createEnumIndex` (M10).
 		{
@@ -3218,7 +3964,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final emitSourceMap = false;
 		#end
 		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
-		final e = builder.buildStandaloneExpr(expr, OcamlLocalStoragePlanner.planExpression(expr));
+		final e = buildStandaloneExpression(builder, compilerExpressionOwner(expr), expr);
 		return printer.printExpr(e);
 	}
 
@@ -3305,6 +4051,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case TAbstract(aRef, params):
 				final a = aRef.get();
 				final aPack = a.pack ?? [];
+
+				if (OcamlRepresentationRegistry.isExactBytesData(t))
+					return OcamlTypeExpr.TIdent("bytes");
 
 				// OCaml-native surface: treat `ocaml.*` abstracts as concrete OCaml types so they can
 				// appear in generated type annotations (records, signatures, future .mli output)
@@ -3444,6 +4193,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 										.type) : OcamlTypeExpr.TIdent("Obj.t"));
 								case TInst(cRef, innerParams):
 									final c = cRef.get();
+									final mapCarrier = OcamlStandardMapCarrierContract.carrierForClass(c, innerParams, ocamlTypeExprFromHaxeType);
 									switch (c.kind) {
 										case KTypeParameter(_):
 											// Portable mode doesn't model polymorphic class parameters in OCaml.
@@ -3456,16 +4206,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 									} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
 										final elem = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
 										OcamlTypeExpr.TApp("HxArray.t", [elem]);
-									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "StringMap") {
-										final v = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
-										OcamlTypeExpr.TApp("HxMap.string_map", [v]);
-									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "IntMap") {
-										final v = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
-										OcamlTypeExpr.TApp("HxMap.int_map", [v]);
-									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "ObjectMap") {
-										final k = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
-										final v = innerParams.length > 1 ? ocamlTypeExprFromHaxeType(innerParams[1]) : OcamlTypeExpr.TIdent("Obj.t");
-										OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
+									} else if (mapCarrier != null) {
+										mapCarrier;
 									} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 										OcamlTypeExpr.TIdent("HxBytes.t");
 									} else if (c.isExtern) {
@@ -3498,6 +4240,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			case TInst(cRef, params):
 				final c = cRef.get();
+				final mapCarrier = OcamlStandardMapCarrierContract.carrierForClass(c, params, ocamlTypeExprFromHaxeType);
 				switch (c.kind) {
 					case KTypeParameter(_):
 						// Portable mode doesn't model polymorphic class parameters in OCaml.
@@ -3511,16 +4254,22 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// Haxe Array<T> -> 't HxArray.t (runtime is permissive; type is best-effort).
 					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
 					OcamlTypeExpr.TApp("HxArray.t", [elem]);
-				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "StringMap") {
-					final v = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
-					OcamlTypeExpr.TApp("HxMap.string_map", [v]);
-				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "IntMap") {
-					final v = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
-					OcamlTypeExpr.TApp("HxMap.int_map", [v]);
-				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "ObjectMap") {
-					final k = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
-					final v = params.length > 1 ? ocamlTypeExprFromHaxeType(params[1]) : OcamlTypeExpr.TIdent("Obj.t");
-					OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
+				} else if (mapCarrier != null) {
+					mapCarrier;
+				} else if (OcamlStandardIMapCallContract.isIMapClass(c) && params.length == 2) {
+					final keyKind = OcamlStandardIMapCallContract.keyKindForType(params[0]);
+					final key = ocamlTypeExprFromHaxeType(params[0]);
+					final value = ocamlTypeExprFromHaxeType(params[1]);
+					switch (keyKind) {
+						case OcamlStandardIMapKeyKind.StringKey:
+							OcamlTypeExpr.TApp("HxMap.string_map", [value]);
+						case OcamlStandardIMapKeyKind.IntKey:
+							OcamlTypeExpr.TApp("HxMap.int_map", [value]);
+						case OcamlStandardIMapKeyKind.ObjectIdentityKey:
+							OcamlTypeExpr.TApp("HxMap.obj_map", [key, value]);
+						case _:
+							OcamlTypeExpr.TIdent("Obj.t");
+					}
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 					OcamlTypeExpr.TIdent("HxBytes.t");
 				} else if (c.pack != null && c.pack.length == 1 && c.pack[0] == "ocaml" && c.name == "Ref") {

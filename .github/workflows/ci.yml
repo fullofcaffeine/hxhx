@@ -231,8 +231,8 @@ jobs:
         run: npm run test:hxhx:build-connect-retry-smoke
       - name: Validate build-hxhx server worker smoke
         run: npm run test:hxhx:build-connect-worker-smoke
-      - name: Validate Reflaxe warm-server safety gate
-        run: npm run test:hxhx:reflaxe-server-safety
+      - name: Validate supported Reflaxe warm-server routing
+        run: npm run test:hxhx:reflaxe-server-routing
       - name: Validate hxhx direct-flag CLI contract
         run: npm run test:hxhx:cli-contract
 

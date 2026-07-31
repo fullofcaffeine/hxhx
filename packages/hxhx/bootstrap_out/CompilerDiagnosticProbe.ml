@@ -43,7 +43,7 @@ let rec diagnosticScrutineeExpr = fun expression localInitializer -> let tempRes
   !tempResult
 )
 
-let patternValueType = fun pattern -> let tempResult = ref ("" : string) in (
+let patternValueType = fun pattern -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if (match pattern with
     | HxSwitchPattern.PNull -> 0
     | HxSwitchPattern.PWildcard -> 1
@@ -64,28 +64,28 @@ let patternValueType = fun pattern -> let tempResult = ref ("" : string) in (
     | HxSwitchPattern.PUnsupportedGuard _ -> 16
     | HxSwitchPattern.PBind _ -> 17
     | HxSwitchPattern.POr _ -> 18) = 6 then let _g = (match pattern with
-    | HxSwitchPattern.PEnumExtract (__enum_param_73, _) -> __enum_param_73
+    | HxSwitchPattern.PEnumExtract (__enum_param_85, _) -> __enum_param_85
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match pattern with
-      | HxSwitchPattern.PEnumExtract (_, __enum_param_74) -> __enum_param_74
+      | HxSwitchPattern.PEnumExtract (_, __enum_param_86) -> __enum_param_86
       | _ -> failwith "Unexpected enum parameter");
     match _g with
-      | "Leaf" | "Node" -> let __assign_76 = ("unit.Tree<String>" : string) in (
-        tempResult := __assign_76;
-        __assign_76
+      | "Leaf" | "Node" -> let __assign_88 = "unit.Tree<String>" in (
+        tempResult := __assign_88;
+        __assign_88
       )
-      | _ -> let __assign_75 = ("" : string) in (
-        tempResult := __assign_75;
-        __assign_75
+      | _ -> let __assign_87 = "" in (
+        tempResult := __assign_87;
+        __assign_87
       )
-  ) else let __assign_77 = ("" : string) in (
-    tempResult := __assign_77;
-    __assign_77
+  ) else let __assign_89 = "" in (
+    tempResult := __assign_89;
+    __assign_89
   ));
   !tempResult
 )
 
-let patternPayloadType = fun pattern -> let tempResult = ref ("" : string) in (
+let patternPayloadType = fun pattern -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if (match pattern with
     | HxSwitchPattern.PNull -> 0
     | HxSwitchPattern.PWildcard -> 1
@@ -106,69 +106,69 @@ let patternPayloadType = fun pattern -> let tempResult = ref ("" : string) in (
     | HxSwitchPattern.PUnsupportedGuard _ -> 16
     | HxSwitchPattern.PBind _ -> 17
     | HxSwitchPattern.POr _ -> 18) = 6 then let _g = (match pattern with
-    | HxSwitchPattern.PEnumExtract (__enum_param_78, _) -> __enum_param_78
+    | HxSwitchPattern.PEnumExtract (__enum_param_90, _) -> __enum_param_90
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match pattern with
-      | HxSwitchPattern.PEnumExtract (_, __enum_param_79) -> __enum_param_79
+      | HxSwitchPattern.PEnumExtract (_, __enum_param_91) -> __enum_param_91
       | _ -> failwith "Unexpected enum parameter");
     match _g with
-      | "Leaf" -> let __assign_81 = ("String" : string) in (
-        tempResult := __assign_81;
-        __assign_81
+      | "Leaf" -> let __assign_93 = "String" in (
+        tempResult := __assign_93;
+        __assign_93
       )
-      | "Node" -> let __assign_82 = ("unit.Tree<String>" : string) in (
-        tempResult := __assign_82;
-        __assign_82
+      | "Node" -> let __assign_94 = "unit.Tree<String>" in (
+        tempResult := __assign_94;
+        __assign_94
       )
-      | _ -> let __assign_80 = ("" : string) in (
-        tempResult := __assign_80;
-        __assign_80
+      | _ -> let __assign_92 = "" in (
+        tempResult := __assign_92;
+        __assign_92
       )
-  ) else let __assign_83 = ("" : string) in (
-    tempResult := __assign_83;
-    __assign_83
+  ) else let __assign_95 = "" in (
+    tempResult := __assign_95;
+    __assign_95
   ));
   !tempResult
 )
 
-let diagnosticBindingName = fun name -> try let __fallback_result_87 = (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let marker = HxString.indexOf name "__hx_scope_" 0 in let tempResult = ref ("" : string) in (
-    ignore (if marker < 0 then let __assign_84 = (name : string) in (
-      tempResult := __assign_84;
-      __assign_84
-    ) else let __assign_85 = (HxString.substr name 0 marker : string) in (
-      tempResult := __assign_85;
-      __assign_85
+let diagnosticBindingName = fun (name : string) -> (try (
+  ignore (if name == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let marker = HxString.indexOf name "__hx_scope_" 0 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if marker < 0 then let __assign_96 = (name : string) in (
+      tempResult := __assign_96;
+      __assign_96
+    ) else let __assign_97 = (HxString.substr name 0 marker : string) in (
+      tempResult := __assign_97;
+      __assign_97
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_87 with
-  | HxRuntime.Hx_return __ret_86 -> Obj.obj __ret_86
+) with
+  | HxRuntime.Hx_return __ret_98 -> (Obj.obj __ret_98 : string) : string)
 
-let rec collectPatternBindings = fun pattern counts order -> ignore (let add = fun name -> ignore (try (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 || HxString.equals name "_" then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let name = (diagnosticBindingName (name : string) : string) in let tempNumber = ref (0 : int) in (
-    ignore (if HxMap.exists_string counts name then let __assign_43 = HxInt.add (let __nullable_int_44 = HxMap.get_string counts name in if __nullable_int_44 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_44) 1 in (
-      tempNumber := __assign_43;
-      __assign_43
-    ) else let __assign_45 = 1 in (
-      tempNumber := __assign_45;
-      __assign_45
+let rec collectPatternBindings = fun pattern counts order -> ignore (let add = fun name -> ignore (try ignore ((
+  ignore (if name == HxString.hx_null_string || HxString.length name = 0 || HxString.equals name "_" then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let name = let __call_arg_0_43 = name in diagnosticBindingName __call_arg_0_43 in let tempNumber = ref (0 : int) in (
+    ignore (if HxMap.exists_string (Obj.magic counts) (name : string) then let __assign_44 = HxInt.add (let __nullable_int_45 = HxMap.get_string (Obj.magic counts) (name : string) in if __nullable_int_45 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_45) 1 in (
+      tempNumber := __assign_44;
+      __assign_44
+    ) else let __assign_46 = 1 in (
+      tempNumber := __assign_46;
+      __assign_46
     ));
     let value = !tempNumber in (
-      ignore (HxMap.set_string counts name value);
+      ignore (HxMap.set_string (Obj.magic counts) (name : string) value);
       if HxArray.indexOf order name 0 < 0 then ignore (HxArray.push order name) else ()
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46) in match pattern with
+)) with
+  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47) in match pattern with
   | HxSwitchPattern.PEnumExtract (_p0, _p1) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let arguments = Obj.magic _g2 in if arguments != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length arguments do ignore (let argument = Obj.magic (HxArray.get (Obj.magic arguments) (!_g3)) in (
-      ignore (let __old_47 = !_g3 in let __new_48 = HxInt.add __old_47 1 in (
-        ignore (_g3 := __new_48);
-        __new_48
+      ignore (let __old_48 = !_g3 in let __new_49 = HxInt.add __old_48 1 in (
+        ignore (_g3 := __new_49);
+        __new_49
       ));
       collectPatternBindings (Obj.magic argument) counts (Obj.magic order)
     )) done) else ()
@@ -176,21 +176,21 @@ let rec collectPatternBindings = fun pattern counts order -> ignore (let add = f
   | HxSwitchPattern.PObject (_p0, _p1) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let children = Obj.magic _g2 in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g3)) in (
-      ignore (let __old_49 = !_g3 in let __new_50 = HxInt.add __old_49 1 in (
-        ignore (_g3 := __new_50);
-        __new_50
+      ignore (let __old_50 = !_g3 in let __new_51 = HxInt.add __old_50 1 in (
+        ignore (_g3 := __new_51);
+        __new_51
       ));
       collectPatternBindings (Obj.magic child) counts (Obj.magic order)
     )) done) else ()
   ))
   | HxSwitchPattern.PCapture (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in (
-    ignore (add (name : string));
+    ignore (let __call_callee_52 = add in let __call_arg_0_53 = name in __call_callee_52 __call_arg_0_53);
     collectPatternBindings (Obj.magic inner) counts (Obj.magic order)
   ))
   | HxSwitchPattern.PArray _p0 -> ignore (let _g = Obj.magic _p0 in let children = Obj.magic _g in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g2)) in (
-    ignore (let __old_51 = !_g2 in let __new_52 = HxInt.add __old_51 1 in (
-      ignore (_g2 := __new_52);
-      __new_52
+    ignore (let __old_54 = !_g2 in let __new_55 = HxInt.add __old_54 1 in (
+      ignore (_g2 := __new_55);
+      __new_55
     ));
     collectPatternBindings (Obj.magic child) counts (Obj.magic order)
   )) done) else ())
@@ -226,11 +226,11 @@ let rec collectPatternBindings = fun pattern counts order -> ignore (let add = f
     let inner = Obj.magic _g in collectPatternBindings (Obj.magic inner) counts (Obj.magic order)
   ))
   | HxSwitchPattern.PUnsupportedGuard _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in collectPatternBindings (Obj.magic inner) counts (Obj.magic order))
-  | HxSwitchPattern.PBind _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in add (name : string))
+  | HxSwitchPattern.PBind _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in let __call_callee_56 = add in let __call_arg_0_57 = name in __call_callee_56 __call_arg_0_57)
   | HxSwitchPattern.POr _p0 -> ignore (let _g = Obj.magic _p0 in let children = Obj.magic _g in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g2)) in (
-    ignore (let __old_53 = !_g2 in let __new_54 = HxInt.add __old_53 1 in (
-      ignore (_g2 := __new_54);
-      __new_54
+    ignore (let __old_58 = !_g2 in let __new_59 = HxInt.add __old_58 1 in (
+      ignore (_g2 := __new_59);
+      __new_59
     ));
     collectPatternBindings (Obj.magic child) counts (Obj.magic order)
   )) done) else ())
@@ -292,7 +292,7 @@ let rec duplicateBindingName = fun pattern -> try let __fallback_result_41 = let
         ignore (_g := __new_36);
         __new_36
       ));
-      if let __nullable_37 = HxMap.get_string counts name in let __nullable_38 = 1 in if __nullable_37 == HxRuntime.hx_null then false else Obj.obj __nullable_37 > __nullable_38 then raise (HxRuntime.Hx_return (Obj.repr (name : string))) else ()
+      if let __nullable_37 = HxMap.get_string (Obj.magic counts) (name : string) in let __nullable_38 = 1 in if __nullable_37 == HxRuntime.hx_null then false else Obj.obj __nullable_37 > __nullable_38 then raise (HxRuntime.Hx_return (Obj.repr (name : string))) else ()
     )) done);
     let __assign_39 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_39;
@@ -303,19 +303,19 @@ let rec duplicateBindingName = fun pattern -> try let __fallback_result_41 = let
 ) in Obj.magic __fallback_result_41 with
   | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
 
-let rec collectPatternBindingTypes = fun pattern contextType out -> ignore (let setType = fun name typeName -> ignore (let name = (diagnosticBindingName (name : string) : string) in if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 && not (HxString.equals name "_") && typeName != Obj.magic (HxRuntime.hx_null) && HxString.length typeName > 0 && not (HxMap.exists_string out name) then ignore (HxMap.set_string out name typeName) else ()) in match pattern with
-  | HxSwitchPattern.PEnumExtract (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let arguments = Obj.magic _g1 in let tempString = ref ("" : string) in (
-    ignore (if HxString.equals name "Leaf" then let __assign_61 = ("String" : string) in (
-      tempString := __assign_61;
-      __assign_61
-    ) else let __assign_62 = ("unit.Tree<String>" : string) in (
-      tempString := __assign_62;
-      __assign_62
+let rec collectPatternBindingTypes = fun pattern contextType out -> ignore (let setType = fun name typeName -> ignore (let name = let __call_arg_0_66 = name in diagnosticBindingName __call_arg_0_66 in if name != HxString.hx_null_string && HxString.length name > 0 && not (HxString.equals name "_") && typeName != HxString.hx_null_string && HxString.length typeName > 0 && not (HxMap.exists_string (Obj.magic out) (name : string)) then ignore (HxMap.set_string (Obj.magic out) (name : string) typeName) else ()) in match pattern with
+  | HxSwitchPattern.PEnumExtract (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let arguments = Obj.magic _g1 in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.equals name "Leaf" then let __assign_67 = "String" in (
+      tempString := __assign_67;
+      __assign_67
+    ) else let __assign_68 = "unit.Tree<String>" in (
+      tempString := __assign_68;
+      __assign_68
     ));
-    let payloadType = (!tempString : string) in if arguments != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length arguments do ignore (let argument = Obj.magic (HxArray.get (Obj.magic arguments) (!_g2)) in (
-      ignore (let __old_63 = !_g2 in let __new_64 = HxInt.add __old_63 1 in (
-        ignore (_g2 := __new_64);
-        __new_64
+    let payloadType = !tempString in if arguments != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length arguments do ignore (let argument = Obj.magic (HxArray.get (Obj.magic arguments) (!_g2)) in (
+      ignore (let __old_69 = !_g2 in let __new_70 = HxInt.add __old_69 1 in (
+        ignore (_g2 := __new_70);
+        __new_70
       ));
       collectPatternBindingTypes (Obj.magic argument) (payloadType : string) out
     )) done) else ()
@@ -323,28 +323,28 @@ let rec collectPatternBindingTypes = fun pattern contextType out -> ignore (let 
   | HxSwitchPattern.PObject (_p0, _p1) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let children = Obj.magic _g2 in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g3)) in (
-      ignore (let __old_65 = !_g3 in let __new_66 = HxInt.add __old_65 1 in (
-        ignore (_g3 := __new_66);
-        __new_66
+      ignore (let __old_71 = !_g3 in let __new_72 = HxInt.add __old_71 1 in (
+        ignore (_g3 := __new_72);
+        __new_72
       ));
       collectPatternBindingTypes (Obj.magic child) (contextType : string) out
     )) done) else ()
   ))
-  | HxSwitchPattern.PCapture (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let tempString1 = ref ("" : string) in (
-    ignore (if HxString.length contextType > 0 then let __assign_67 = (contextType : string) in (
-      tempString1 := __assign_67;
-      __assign_67
-    ) else let __assign_68 = (patternValueType (Obj.magic inner) : string) in (
-      tempString1 := __assign_68;
-      __assign_68
+  | HxSwitchPattern.PCapture (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length contextType > 0 then let __assign_73 = (contextType : string) in (
+      tempString1 := __assign_73;
+      __assign_73
+    ) else let __assign_74 = (patternValueType (Obj.magic inner) : string) in (
+      tempString1 := __assign_74;
+      __assign_74
     ));
-    ignore (setType (name : string) (!tempString1 : string));
+    ignore (let __call_callee_75 = setType in let __call_arg_0_76 = name in let __call_arg_1_77 = !tempString1 in __call_callee_75 __call_arg_0_76 __call_arg_1_77);
     collectPatternBindingTypes (Obj.magic inner) (patternPayloadType (Obj.magic inner) : string) out
   ))
   | HxSwitchPattern.PArray _p0 -> ignore (let _g = Obj.magic _p0 in let children = Obj.magic _g in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g2)) in (
-    ignore (let __old_69 = !_g2 in let __new_70 = HxInt.add __old_69 1 in (
-      ignore (_g2 := __new_70);
-      __new_70
+    ignore (let __old_78 = !_g2 in let __new_79 = HxInt.add __old_78 1 in (
+      ignore (_g2 := __new_79);
+      __new_79
     ));
     collectPatternBindingTypes (Obj.magic child) (contextType : string) out
   )) done) else ())
@@ -380,37 +380,37 @@ let rec collectPatternBindingTypes = fun pattern contextType out -> ignore (let 
     let inner = Obj.magic _g in collectPatternBindingTypes (Obj.magic inner) (contextType : string) out
   ))
   | HxSwitchPattern.PUnsupportedGuard _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in collectPatternBindingTypes (Obj.magic inner) (contextType : string) out)
-  | HxSwitchPattern.PBind _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in setType (name : string) (contextType : string))
+  | HxSwitchPattern.PBind _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in let __call_callee_80 = setType in let __call_arg_0_81 = name in let __call_arg_1_82 = contextType in __call_callee_80 __call_arg_0_81 __call_arg_1_82)
   | HxSwitchPattern.POr _p0 -> ignore (let _g = Obj.magic _p0 in let children = Obj.magic _g in if children != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length children do ignore (let child = Obj.magic (HxArray.get (Obj.magic children) (!_g2)) in (
-    ignore (let __old_71 = !_g2 in let __new_72 = HxInt.add __old_71 1 in (
-      ignore (_g2 := __new_72);
-      __new_72
+    ignore (let __old_83 = !_g2 in let __new_84 = HxInt.add __old_83 1 in (
+      ignore (_g2 := __new_84);
+      __new_84
     ));
     collectPatternBindingTypes (Obj.magic child) (contextType : string) out
   )) done) else ())
   | _ -> ignore ())
 
-let orBindingTypeMismatchMessage = fun patterns -> try let __fallback_result_60 = (
+let orBindingTypeMismatchMessage = fun patterns -> try let __fallback_result_65 = (
   ignore (if patterns == Obj.magic (HxRuntime.hx_null) || HxArray.length patterns < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let expectedByName = HxMap.create_string () in let order = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-      ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
-        ignore (_g := __new_56);
-        __new_56
+      ignore (let __old_60 = !_g in let __new_61 = HxInt.add __old_60 1 in (
+        ignore (_g := __new_61);
+        __new_61
       ));
       let current = HxMap.create_string () in (
         ignore (collectPatternBindingTypes (Obj.magic pattern) ("unit.Tree<String>" : string) current);
         let _g2 = ref 0 in let _g1 = Obj.magic (patternBindingOrder (Obj.magic pattern)) in try while !_g2 < HxArray.length _g1 do try ignore (let name = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
-          ignore (let __old_57 = !_g2 in let __new_58 = HxInt.add __old_57 1 in (
-            ignore (_g2 := __new_58);
-            __new_58
+          ignore (let __old_62 = !_g2 in let __new_63 = HxInt.add __old_62 1 in (
+            ignore (_g2 := __new_63);
+            __new_63
           ));
-          let actual = (HxMap.get_string current name : string) in (
+          let actual = (HxMap.get_string (Obj.magic current) (name : string) : string) in (
             ignore (if actual == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-            if not (HxMap.exists_string expectedByName name) then ignore ((
-              ignore (HxMap.set_string expectedByName name actual);
+            if not (HxMap.exists_string (Obj.magic expectedByName) (name : string)) then ignore ((
+              ignore (HxMap.set_string (Obj.magic expectedByName) (name : string) actual);
               HxArray.push order name
-            )) else ignore (if not (HxString.equals (HxMap.get_string expectedByName name) actual) then raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString actual ^ " should be ") ^ HxString.toStdString (HxMap.get_string expectedByName name) : string))) else ())
+            )) else ignore (if not (HxString.equals (HxMap.get_string (Obj.magic expectedByName) (name : string)) actual) then raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString actual ^ " should be ") ^ HxString.toStdString (HxMap.get_string (Obj.magic expectedByName) (name : string)) : string))) else ())
           )
         )) with
           | HxRuntime.Hx_continue -> () done with
@@ -419,8 +419,8 @@ let orBindingTypeMismatchMessage = fun patterns -> try let __fallback_result_60 
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic __fallback_result_60 with
-  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
+) in Obj.magic __fallback_result_65 with
+  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64
 
 let orBindingMessage = fun patterns -> try let __fallback_result_28 = (
   ignore (if patterns == Obj.magic (HxRuntime.hx_null) || HxArray.length patterns < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -434,14 +434,14 @@ let orBindingMessage = fun patterns -> try let __fallback_result_28 = (
           ignore (_g2 := __new_20);
           __new_20
         ));
-        if not (HxMap.exists_string baseCounts name) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
+        if not (HxMap.exists_string (Obj.magic baseCounts) (name : string)) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
       )) done);
       let _g2 = ref 0 in while !_g2 < HxArray.length baseOrder do ignore (let name = (HxArray.get (Obj.magic baseOrder) (!_g2) : string) in (
         ignore (let __old_21 = !_g2 in let __new_22 = HxInt.add __old_21 1 in (
           ignore (_g2 := __new_22);
           __new_22
         ));
-        if not (HxMap.exists_string alternativeCounts name) || not (let __nullable_23 = HxMap.get_string alternativeCounts name in if __nullable_23 == HxRuntime.hx_null then false else Obj.obj __nullable_23 = 1) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
+        if not (HxMap.exists_string (Obj.magic alternativeCounts) (name : string)) || not (let __nullable_23 = HxMap.get_string (Obj.magic alternativeCounts) (name : string) in if __nullable_23 == HxRuntime.hx_null then false else Obj.obj __nullable_23 = 1) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
       )) done
     )) done);
     let _g = ref 0 in (
@@ -450,7 +450,7 @@ let orBindingMessage = fun patterns -> try let __fallback_result_28 = (
           ignore (_g := __new_25);
           __new_25
         ));
-        if not (let __nullable_26 = HxMap.get_string baseCounts name in if __nullable_26 == HxRuntime.hx_null then false else Obj.obj __nullable_26 = 1) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
+        if not (let __nullable_26 = HxMap.get_string (Obj.magic baseCounts) (name : string) in if __nullable_26 == HxRuntime.hx_null then false else Obj.obj __nullable_26 = 1) then raise (HxRuntime.Hx_return (Obj.repr (("Variable " ^ HxString.toStdString name) ^ " must appear exactly once in each sub-pattern" : string))) else ()
       )) done);
       orBindingTypeMismatchMessage (Obj.magic patterns)
     )
@@ -497,181 +497,181 @@ let switchInvalidBindingMessage = fun patterns -> try let __fallback_result_16 =
 ) in Obj.magic __fallback_result_16 with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
-let rec patternListHasBool = fun patterns value -> try let __fallback_result_93 = let _g = ref 0 in (
+let rec patternListHasBool = fun patterns value -> try let __fallback_result_104 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
-      ignore (_g := __new_91);
-      __new_91
+    ignore (let __old_101 = !_g in let __new_102 = HxInt.add __old_101 1 in (
+      ignore (_g := __new_102);
+      __new_102
     ));
     if patternHasBool (Obj.magic pattern) value then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_93 with
-  | HxRuntime.Hx_return __ret_92 -> Obj.obj __ret_92
+) in Obj.magic __fallback_result_104 with
+  | HxRuntime.Hx_return __ret_103 -> Obj.obj __ret_103
 and patternHasBool = fun pattern value -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PBool _p0 -> let _g = _p0 in let actual = _g in let __assign_95 = actual = value in (
-      tempResult := __assign_95;
-      __assign_95
+    | HxSwitchPattern.PBool _p0 -> let _g = _p0 in let actual = _g in let __assign_106 = actual = value in (
+      tempResult := __assign_106;
+      __assign_106
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_96 = patternHasBool (Obj.magic inner) value in (
-        tempResult := __assign_96;
-        __assign_96
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_107 = patternHasBool (Obj.magic inner) value in (
+        tempResult := __assign_107;
+        __assign_107
       )
     )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_97 = patternHasBool (Obj.magic inner) value in (
-      tempResult := __assign_97;
-      __assign_97
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_108 = patternHasBool (Obj.magic inner) value in (
+      tempResult := __assign_108;
+      __assign_108
     )
     | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_98 = Obj.magic (let __arr_99 = HxArray.create () in __arr_99) in (
-        tempArray := __assign_98;
-        __assign_98
-      ) else let __assign_100 = Obj.magic patterns in (
-        tempArray := __assign_100;
-        __assign_100
+      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_109 = Obj.magic (let __arr_110 = HxArray.create () in __arr_110) in (
+        tempArray := __assign_109;
+        __assign_109
+      ) else let __assign_111 = Obj.magic patterns in (
+        tempArray := __assign_111;
+        __assign_111
       ));
-      let __assign_101 = patternListHasBool (Obj.magic (!tempArray)) value in (
-        tempResult := __assign_101;
-        __assign_101
+      let __assign_112 = patternListHasBool (Obj.magic (!tempArray)) value in (
+        tempResult := __assign_112;
+        __assign_112
       )
     )
-    | _ -> let __assign_94 = false in (
-      tempResult := __assign_94;
-      __assign_94
+    | _ -> let __assign_105 = false in (
+      tempResult := __assign_105;
+      __assign_105
     ));
   !tempResult
 )
 
-let rec patternListHasEnumValue = fun patterns name -> try let __fallback_result_105 = let _g = ref 0 in (
+let rec patternListHasEnumValue = fun patterns name -> try let __fallback_result_116 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_102 = !_g in let __new_103 = HxInt.add __old_102 1 in (
-      ignore (_g := __new_103);
-      __new_103
+    ignore (let __old_113 = !_g in let __new_114 = HxInt.add __old_113 1 in (
+      ignore (_g := __new_114);
+      __new_114
     ));
     if patternHasEnumValue (Obj.magic pattern) (name : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_105 with
-  | HxRuntime.Hx_return __ret_104 -> Obj.obj __ret_104
+) in Obj.magic __fallback_result_116 with
+  | HxRuntime.Hx_return __ret_115 -> Obj.obj __ret_115
 and patternHasEnumValue = fun pattern name -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let value = (_g : string) in let __assign_107 = HxString.equals value name in (
-      tempResult := __assign_107;
-      __assign_107
+    | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let value = (_g : string) in let __assign_118 = HxString.equals value name in (
+      tempResult := __assign_118;
+      __assign_118
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_108 = patternHasEnumValue (Obj.magic inner) (name : string) in (
-        tempResult := __assign_108;
-        __assign_108
-      )
-    )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_109 = patternHasEnumValue (Obj.magic inner) (name : string) in (
-      tempResult := __assign_109;
-      __assign_109
-    )
-    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_110 = Obj.magic (let __arr_111 = HxArray.create () in __arr_111) in (
-        tempArray := __assign_110;
-        __assign_110
-      ) else let __assign_112 = Obj.magic patterns in (
-        tempArray := __assign_112;
-        __assign_112
-      ));
-      let __assign_113 = patternListHasEnumValue (Obj.magic (!tempArray)) (name : string) in (
-        tempResult := __assign_113;
-        __assign_113
-      )
-    )
-    | _ -> let __assign_106 = false in (
-      tempResult := __assign_106;
-      __assign_106
-    ));
-  !tempResult
-)
-
-let rec patternListHasEnumExtract = fun patterns name -> try let __fallback_result_117 = let _g = ref 0 in (
-  ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_114 = !_g in let __new_115 = HxInt.add __old_114 1 in (
-      ignore (_g := __new_115);
-      __new_115
-    ));
-    if patternHasEnumExtract (Obj.magic pattern) (name : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
-  )) done);
-  false
-) in Obj.magic __fallback_result_117 with
-  | HxRuntime.Hx_return __ret_116 -> Obj.obj __ret_116
-and patternHasEnumExtract = fun pattern name -> let tempResult = ref (false : bool) in (
-  ignore (match pattern with
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in (
-      ignore _p1;
-      let value = (_g : string) in let __assign_119 = HxString.equals value name in (
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_119 = patternHasEnumValue (Obj.magic inner) (name : string) in (
         tempResult := __assign_119;
         __assign_119
       )
     )
-    | HxSwitchPattern.PCapture (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_120 = patternHasEnumExtract (Obj.magic inner) (name : string) in (
-        tempResult := __assign_120;
-        __assign_120
-      )
-    )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_121 = patternHasEnumExtract (Obj.magic inner) (name : string) in (
-      tempResult := __assign_121;
-      __assign_121
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_120 = patternHasEnumValue (Obj.magic inner) (name : string) in (
+      tempResult := __assign_120;
+      __assign_120
     )
     | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_122 = Obj.magic (let __arr_123 = HxArray.create () in __arr_123) in (
-        tempArray := __assign_122;
-        __assign_122
-      ) else let __assign_124 = Obj.magic patterns in (
-        tempArray := __assign_124;
-        __assign_124
+      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_121 = Obj.magic (let __arr_122 = HxArray.create () in __arr_122) in (
+        tempArray := __assign_121;
+        __assign_121
+      ) else let __assign_123 = Obj.magic patterns in (
+        tempArray := __assign_123;
+        __assign_123
       ));
-      let __assign_125 = patternListHasEnumExtract (Obj.magic (!tempArray)) (name : string) in (
-        tempResult := __assign_125;
-        __assign_125
+      let __assign_124 = patternListHasEnumValue (Obj.magic (!tempArray)) (name : string) in (
+        tempResult := __assign_124;
+        __assign_124
       )
     )
-    | _ -> let __assign_118 = false in (
-      tempResult := __assign_118;
-      __assign_118
+    | _ -> let __assign_117 = false in (
+      tempResult := __assign_117;
+      __assign_117
     ));
   !tempResult
 )
 
-let rec arraySwitchNeedsBoolFalse = fun items patterns -> try let __fallback_result_134 = (
+let rec patternListHasEnumExtract = fun patterns name -> try let __fallback_result_128 = let _g = ref 0 in (
+  ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
+    ignore (let __old_125 = !_g in let __new_126 = HxInt.add __old_125 1 in (
+      ignore (_g := __new_126);
+      __new_126
+    ));
+    if patternHasEnumExtract (Obj.magic pattern) (name : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+  )) done);
+  false
+) in Obj.magic __fallback_result_128 with
+  | HxRuntime.Hx_return __ret_127 -> Obj.obj __ret_127
+and patternHasEnumExtract = fun pattern name -> let tempResult = ref (false : bool) in (
+  ignore (match pattern with
+    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in (
+      ignore _p1;
+      let value = (_g : string) in let __assign_130 = HxString.equals value name in (
+        tempResult := __assign_130;
+        __assign_130
+      )
+    )
+    | HxSwitchPattern.PCapture (_p0, _p1) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_131 = patternHasEnumExtract (Obj.magic inner) (name : string) in (
+        tempResult := __assign_131;
+        __assign_131
+      )
+    )
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_132 = patternHasEnumExtract (Obj.magic inner) (name : string) in (
+      tempResult := __assign_132;
+      __assign_132
+    )
+    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
+      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_133 = Obj.magic (let __arr_134 = HxArray.create () in __arr_134) in (
+        tempArray := __assign_133;
+        __assign_133
+      ) else let __assign_135 = Obj.magic patterns in (
+        tempArray := __assign_135;
+        __assign_135
+      ));
+      let __assign_136 = patternListHasEnumExtract (Obj.magic (!tempArray)) (name : string) in (
+        tempResult := __assign_136;
+        __assign_136
+      )
+    )
+    | _ -> let __assign_129 = false in (
+      tempResult := __assign_129;
+      __assign_129
+    ));
+  !tempResult
+)
+
+let rec arraySwitchNeedsBoolFalse = fun items patterns -> try let __fallback_result_145 = (
   ignore (if items == Obj.magic (HxRuntime.hx_null) || HxArray.length items = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-      ignore (let __old_126 = !_g in let __new_127 = HxInt.add __old_126 1 in (
-        ignore (_g := __new_127);
-        __new_127
+      ignore (let __old_137 = !_g in let __new_138 = HxInt.add __old_137 1 in (
+        ignore (_g := __new_138);
+        __new_138
       ));
       match pattern with
         | HxSwitchPattern.PCapture (_p0, _p1) -> ignore ((
           ignore _p0;
-          let _g3 = Obj.magic _p1 in let inner = Obj.magic _g3 in if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic (let __arr_128 = HxArray.create () in (
-            ignore (HxArray.push __arr_128 inner);
-            __arr_128
+          let _g3 = Obj.magic _p1 in let inner = Obj.magic _g3 in if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic (let __arr_139 = HxArray.create () in (
+            ignore (HxArray.push __arr_139 inner);
+            __arr_139
           ))) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         ))
         | HxSwitchPattern.PArray _p0 -> ignore (let _g2 = Obj.magic _p0 in let patternItems = Obj.magic _g2 in if patternItems != Obj.magic (HxRuntime.hx_null) && HxArray.length patternItems = HxArray.length items && patternListHasBool (Obj.magic patternItems) true && not (patternListHasBool (Obj.magic patternItems) false) then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
-        | HxSwitchPattern.PUnsupportedGuard _p0 -> ignore (let _g2 = Obj.magic _p0 in let inner = Obj.magic _g2 in if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic (let __arr_129 = HxArray.create () in (
-          ignore (HxArray.push __arr_129 inner);
-          __arr_129
+        | HxSwitchPattern.PUnsupportedGuard _p0 -> ignore (let _g2 = Obj.magic _p0 in let inner = Obj.magic _g2 in if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic (let __arr_140 = HxArray.create () in (
+          ignore (HxArray.push __arr_140 inner);
+          __arr_140
         ))) then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | HxSwitchPattern.POr _p0 -> ignore (let _g2 = Obj.magic _p0 in let alternatives = Obj.magic _g2 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-          ignore (if alternatives == Obj.magic (HxRuntime.hx_null) then let __assign_130 = Obj.magic (let __arr_131 = HxArray.create () in __arr_131) in (
-            tempArray := __assign_130;
-            __assign_130
-          ) else let __assign_132 = Obj.magic alternatives in (
-            tempArray := __assign_132;
-            __assign_132
+          ignore (if alternatives == Obj.magic (HxRuntime.hx_null) then let __assign_141 = Obj.magic (let __arr_142 = HxArray.create () in __arr_142) in (
+            tempArray := __assign_141;
+            __assign_141
+          ) else let __assign_143 = Obj.magic alternatives in (
+            tempArray := __assign_143;
+            __assign_143
           ));
           if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic (!tempArray)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         ))
@@ -679,200 +679,200 @@ let rec arraySwitchNeedsBoolFalse = fun items patterns -> try let __fallback_res
     )) done);
     false
   )
-) in Obj.magic __fallback_result_134 with
-  | HxRuntime.Hx_return __ret_133 -> Obj.obj __ret_133
+) in Obj.magic __fallback_result_145 with
+  | HxRuntime.Hx_return __ret_144 -> Obj.obj __ret_144
 
-let rec patternListHasGuardedLeaf = fun patterns -> try let __fallback_result_166 = let _g = ref 0 in (
+let rec patternListHasGuardedLeaf = fun patterns -> try let __fallback_result_177 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_163 = !_g in let __new_164 = HxInt.add __old_163 1 in (
-      ignore (_g := __new_164);
-      __new_164
+    ignore (let __old_174 = !_g in let __new_175 = HxInt.add __old_174 1 in (
+      ignore (_g := __new_175);
+      __new_175
     ));
     if patternIsGuardedLeaf (Obj.magic pattern) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_166 with
-  | HxRuntime.Hx_return __ret_165 -> Obj.obj __ret_165
+) in Obj.magic __fallback_result_177 with
+  | HxRuntime.Hx_return __ret_176 -> Obj.obj __ret_176
 and patternIsGuardedLeaf = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_168 = patternIsGuardedLeaf (Obj.magic inner) in (
-        tempResult := __assign_168;
-        __assign_168
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_179 = patternIsGuardedLeaf (Obj.magic inner) in (
+        tempResult := __assign_179;
+        __assign_179
       )
     )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_169 = patternHasEnumExtract (Obj.magic inner) ("Leaf" : string) in (
-      tempResult := __assign_169;
-      __assign_169
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_180 = patternHasEnumExtract (Obj.magic inner) ("Leaf" : string) in (
+      tempResult := __assign_180;
+      __assign_180
     )
-    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_170 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasGuardedLeaf (Obj.magic patterns) in (
-      tempResult := __assign_170;
-      __assign_170
+    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_181 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasGuardedLeaf (Obj.magic patterns) in (
+      tempResult := __assign_181;
+      __assign_181
     )
-    | _ -> let __assign_167 = false in (
-      tempResult := __assign_167;
-      __assign_167
+    | _ -> let __assign_178 = false in (
+      tempResult := __assign_178;
+      __assign_178
     ));
   !tempResult
 )
 
 let rec patternIsWildcardish = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PWildcard -> let __assign_172 = true in (
-      tempResult := __assign_172;
-      __assign_172
+    | HxSwitchPattern.PWildcard -> let __assign_183 = true in (
+      tempResult := __assign_183;
+      __assign_183
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_173 = patternIsWildcardish (Obj.magic inner) in (
-        tempResult := __assign_173;
-        __assign_173
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_184 = patternIsWildcardish (Obj.magic inner) in (
+        tempResult := __assign_184;
+        __assign_184
       )
     )
     | HxSwitchPattern.PBind _p0 -> (
       ignore _p0;
-      let __assign_174 = true in (
-        tempResult := __assign_174;
-        __assign_174
+      let __assign_185 = true in (
+        tempResult := __assign_185;
+        __assign_185
       )
     )
-    | _ -> let __assign_171 = false in (
-      tempResult := __assign_171;
-      __assign_171
+    | _ -> let __assign_182 = false in (
+      tempResult := __assign_182;
+      __assign_182
     ));
   !tempResult
 )
 
-let rec patternListHasLeafSpecific = fun patterns -> try let __fallback_result_148 = let _g = ref 0 in (
+let rec patternListHasLeafSpecific = fun patterns -> try let __fallback_result_159 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_145 = !_g in let __new_146 = HxInt.add __old_145 1 in (
-      ignore (_g := __new_146);
-      __new_146
+    ignore (let __old_156 = !_g in let __new_157 = HxInt.add __old_156 1 in (
+      ignore (_g := __new_157);
+      __new_157
     ));
     if patternIsLeafSpecific (Obj.magic pattern) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_148 with
-  | HxRuntime.Hx_return __ret_147 -> Obj.obj __ret_147
+) in Obj.magic __fallback_result_159 with
+  | HxRuntime.Hx_return __ret_158 -> Obj.obj __ret_158
 and patternIsLeafSpecific = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Leaf" then let arguments = Obj.magic _g1 in let __assign_150 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments = 1 && not (patternIsWildcardish (Obj.magic (HxArray.get (Obj.magic arguments) 0))) in (
-      tempResult := __assign_150;
-      __assign_150
-    ) else let __assign_151 = false in (
-      tempResult := __assign_151;
-      __assign_151
+    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Leaf" then let arguments = Obj.magic _g1 in let __assign_161 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments = 1 && not (patternIsWildcardish (Obj.magic (HxArray.get (Obj.magic arguments) 0))) in (
+      tempResult := __assign_161;
+      __assign_161
+    ) else let __assign_162 = false in (
+      tempResult := __assign_162;
+      __assign_162
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_152 = patternIsLeafSpecific (Obj.magic inner) in (
-        tempResult := __assign_152;
-        __assign_152
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_163 = patternIsLeafSpecific (Obj.magic inner) in (
+        tempResult := __assign_163;
+        __assign_163
       )
     )
-    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_153 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasLeafSpecific (Obj.magic patterns) in (
-      tempResult := __assign_153;
-      __assign_153
+    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_164 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasLeafSpecific (Obj.magic patterns) in (
+      tempResult := __assign_164;
+      __assign_164
     )
-    | _ -> let __assign_149 = false in (
-      tempResult := __assign_149;
-      __assign_149
+    | _ -> let __assign_160 = false in (
+      tempResult := __assign_160;
+      __assign_160
     ));
   !tempResult
 )
 
 let rec patternIsLeafWildcard = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Leaf" then let arguments = Obj.magic _g1 in let __assign_155 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments = 1 && patternIsWildcardish (Obj.magic (HxArray.get (Obj.magic arguments) 0)) in (
-      tempResult := __assign_155;
-      __assign_155
-    ) else let __assign_156 = false in (
-      tempResult := __assign_156;
-      __assign_156
+    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Leaf" then let arguments = Obj.magic _g1 in let __assign_166 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments = 1 && patternIsWildcardish (Obj.magic (HxArray.get (Obj.magic arguments) 0)) in (
+      tempResult := __assign_166;
+      __assign_166
+    ) else let __assign_167 = false in (
+      tempResult := __assign_167;
+      __assign_167
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_157 = patternIsLeafWildcard (Obj.magic inner) in (
-        tempResult := __assign_157;
-        __assign_157
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_168 = patternIsLeafWildcard (Obj.magic inner) in (
+        tempResult := __assign_168;
+        __assign_168
       )
     )
-    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_158 = false in (
-      tempResult := __assign_158;
-      __assign_158
+    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_169 = false in (
+      tempResult := __assign_169;
+      __assign_169
     ) else let found = ref false in let _g2 = ref 0 in (
       ignore (while !_g2 < HxArray.length patterns do ignore (let child = Obj.magic (HxArray.get (Obj.magic patterns) (!_g2)) in (
-        ignore (let __old_159 = !_g2 in let __new_160 = HxInt.add __old_159 1 in (
-          ignore (_g2 := __new_160);
-          __new_160
+        ignore (let __old_170 = !_g2 in let __new_171 = HxInt.add __old_170 1 in (
+          ignore (_g2 := __new_171);
+          __new_171
         ));
-        if patternIsLeafWildcard (Obj.magic child) then ignore (let __assign_161 = true in (
-          found := __assign_161;
-          __assign_161
+        if patternIsLeafWildcard (Obj.magic child) then ignore (let __assign_172 = true in (
+          found := __assign_172;
+          __assign_172
         )) else ()
       )) done);
-      let __assign_162 = !found in (
-        tempResult := __assign_162;
-        __assign_162
+      let __assign_173 = !found in (
+        tempResult := __assign_173;
+        __assign_173
       )
     )
-    | _ -> let __assign_154 = false in (
-      tempResult := __assign_154;
-      __assign_154
+    | _ -> let __assign_165 = false in (
+      tempResult := __assign_165;
+      __assign_165
     ));
   !tempResult
 )
 
 let rec patternListHasNodeLeafSpecificThenLeafWildcard = fun patterns -> let hasNodeLeafSpecific = ref false in let hasLeafWildcard = ref false in let _g = ref 0 in (
   ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_135 = !_g in let __new_136 = HxInt.add __old_135 1 in (
-      ignore (_g := __new_136);
-      __new_136
+    ignore (let __old_146 = !_g in let __new_147 = HxInt.add __old_146 1 in (
+      ignore (_g := __new_147);
+      __new_147
     ));
-    ignore (if patternIsNodeLeafSpecific (Obj.magic pattern) then ignore (let __assign_137 = true in (
-      hasNodeLeafSpecific := __assign_137;
-      __assign_137
+    ignore (if patternIsNodeLeafSpecific (Obj.magic pattern) then ignore (let __assign_148 = true in (
+      hasNodeLeafSpecific := __assign_148;
+      __assign_148
     )) else ());
-    if patternIsLeafWildcard (Obj.magic pattern) then ignore (let __assign_138 = true in (
-      hasLeafWildcard := __assign_138;
-      __assign_138
+    if patternIsLeafWildcard (Obj.magic pattern) then ignore (let __assign_149 = true in (
+      hasLeafWildcard := __assign_149;
+      __assign_149
     )) else ()
   )) done);
   !hasNodeLeafSpecific && !hasLeafWildcard
 )
 and patternIsNodeLeafSpecific = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Node" then let arguments = Obj.magic _g1 in let __assign_140 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments > 0 && patternIsLeafSpecific (Obj.magic (HxArray.get (Obj.magic arguments) 0)) in (
-      tempResult := __assign_140;
-      __assign_140
-    ) else let __assign_141 = false in (
-      tempResult := __assign_141;
-      __assign_141
+    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "Node" then let arguments = Obj.magic _g1 in let __assign_151 = arguments != Obj.magic (HxRuntime.hx_null) && HxArray.length arguments > 0 && patternIsLeafSpecific (Obj.magic (HxArray.get (Obj.magic arguments) 0)) in (
+      tempResult := __assign_151;
+      __assign_151
+    ) else let __assign_152 = false in (
+      tempResult := __assign_152;
+      __assign_152
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_142 = patternIsNodeLeafSpecific (Obj.magic inner) in (
-        tempResult := __assign_142;
-        __assign_142
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_153 = patternIsNodeLeafSpecific (Obj.magic inner) in (
+        tempResult := __assign_153;
+        __assign_153
       )
     )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_143 = patternIsNodeLeafSpecific (Obj.magic inner) in (
-      tempResult := __assign_143;
-      __assign_143
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_154 = patternIsNodeLeafSpecific (Obj.magic inner) in (
+      tempResult := __assign_154;
+      __assign_154
     )
-    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_144 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasNodeLeafSpecificThenLeafWildcard (Obj.magic patterns) in (
-      tempResult := __assign_144;
-      __assign_144
+    | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let __assign_155 = patterns != Obj.magic (HxRuntime.hx_null) && patternListHasNodeLeafSpecificThenLeafWildcard (Obj.magic patterns) in (
+      tempResult := __assign_155;
+      __assign_155
     )
-    | _ -> let __assign_139 = false in (
-      tempResult := __assign_139;
-      __assign_139
+    | _ -> let __assign_150 = false in (
+      tempResult := __assign_150;
+      __assign_150
     ));
   !tempResult
 )
 
-let switchNonExhaustiveMessage = fun scrutinee patterns -> try let __fallback_result_89 = (
+let switchNonExhaustiveMessage = fun scrutinee patterns -> try let __fallback_result_100 = (
   ignore (if patterns == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (match scrutinee with
     | HxExpr.EBool _p0 -> ignore ((
@@ -912,8 +912,8 @@ let switchNonExhaustiveMessage = fun scrutinee patterns -> try let __fallback_re
     | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let items = Obj.magic _g in if arraySwitchNeedsBoolFalse (Obj.magic items) (Obj.magic patterns) then raise (HxRuntime.Hx_return (Obj.repr ("Unmatched patterns: false" : string))) else ())
     | _ -> ignore ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_89 with
-  | HxRuntime.Hx_return __ret_88 -> Obj.obj __ret_88
+) in Obj.magic __fallback_result_100 with
+  | HxRuntime.Hx_return __ret_99 -> Obj.obj __ret_99
 
 let rec getErrorMessage = fun expression localInitializer -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match expression with

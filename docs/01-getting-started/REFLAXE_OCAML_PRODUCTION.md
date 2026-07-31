@@ -145,8 +145,8 @@ compile, and execute loop:
 
 ```bash
 haxelib run reflaxe.ocaml build
-haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
-haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml build --run .out.reflaxe-ocaml-dune-build/default/out.exe
+haxelib run reflaxe.ocaml watch --run .out.reflaxe-ocaml-dune-build/default/out.exe
 ```
 
 Both commands run the project's `build.hxml` by default. `watch` discovers Haxe
@@ -155,11 +155,21 @@ classpaths and included HXML files, supports additional repeated
 artifact only after a successful build. `--project` and `--hxml` select another
 project or build file; `--max-builds` gives automation a bounded stopping point.
 
-Every batch uses a fresh Haxe process because current Reflaxe evidence found an
-incomplete-output failure when a persistent Haxe server was reused. The safe
-speedup comes from content-stable generated OCaml and Dune's incremental cache.
+Every batch still uses a fresh Haxe process while the persistent-server route
+finishes its remaining evidence. The batch itself is transactional: Reflaxe
+publishes the complete generated `out/` tree first, then Dune builds the public
+tree with reusable state in `.out.reflaxe-ocaml-dune-build/`. A source-generation
+failure therefore leaves the previous public tree and native cache usable.
 Output and common cache/build directories are excluded, and a post-build input
 snapshot prevents generated files from causing a feedback loop.
+
+The source transaction ends when the complete generated tree is published.
+When a subsequent Dune build fails, the command returns that failure and does
+not run the program, while the published source remains available for
+inspection and retry. This is intentionally not presented as a rollback:
+Dune has already observed the public tree. Fix the native-build error and
+rerun; clear the separate Dune state only when diagnosing with a cold native
+build.
 
 The authoring command requests a receipt-linked timing report and prints total
 Haxe-child time, measured target subprocess time, and the native Dune duration.
@@ -207,13 +217,16 @@ source-bundle packaging as blocked because not every runtime file has a
 source-operation explanation yet, and the structured native-dependency
 inventory has not landed. Runtime-enabled builds now write
 `ocaml_runtime_requirement_report.json`, which traces typed
-assignments and updates to their checked runtime source files. It explicitly
-lists runtime references from other compiler paths as unexplained, so the
-current runtime selection is not presented as a whole-program semantic
-manifest. The place report likewise covers one migrated semantic family rather
-than a whole-program IR. Program-wide representation, native dependency,
-raw/unsafe, binding, and curated export-ABI inspection stay marked unavailable
-until their owning typed manifests exist.
+assignments and updates to their checked runtime source files. It also traces
+standard `StringMap`, `IntMap`, and `ObjectMap` declarations to the checked
+`HxMap` and `HxIterator` sources selected before OCaml syntax generation. Calls
+known only as the generic `IMap` interface are not included in that typed Map
+claim. The report explicitly lists runtime references from other compiler paths
+as unexplained, so the current runtime selection is not presented as a whole-
+program semantic manifest. The place report likewise covers one migrated
+semantic family rather than a whole-program IR. Program-wide representation,
+native dependency, raw/unsafe, binding, and curated export-ABI inspection stay
+marked unavailable until their owning typed manifests exist.
 
 `ocaml_output` is a compiler-owned directory. Do not mix handwritten OCaml or
 project files into it: the build now rejects unknown non-cache files so they
@@ -431,12 +444,23 @@ Typical generated tree:
 - `out/*.mli` when enabled
 - `out/dune`
 - `out/dune-project`
-- `out/_build/default/out.exe` after native build
+- `.out.reflaxe-ocaml-dune-build/default/out.exe` after a transactional native build
 
 Operational rule:
 
 - treat `out/` as generated output
+- treat `.out.reflaxe-ocaml-dune-build/` as disposable Dune-owned build state
 - do not hand-edit emitted `.ml` files as your source of truth
+
+Reset only native build state with:
+
+```bash
+dune clean --root out --build-dir .out.reflaxe-ocaml-dune-build
+```
+
+That leaves generated source and reports intact. Regenerating or intentionally
+removing `out/` is a separate source-publication action and does not implicitly
+delete Dune's cache.
 
 ## Choosing between upstream `haxe + reflaxe.ocaml` and `hxhx`
 

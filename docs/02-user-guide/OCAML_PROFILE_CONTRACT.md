@@ -187,11 +187,14 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
 - `ocaml_runtime_requirement_report.json`
-  - `schemaVersion` (current: `3`)
-  - `authorityStatus` (currently `partial`, because core packaging, the
-    generated type registry, declared static native runtime boundaries, and
-    typed assignment/update operations are covered, while other compiler paths
-    still rely on observations)
+  - `schemaVersion` (current: `5`)
+  - `authorityStatus` (currently `partial`, because some generated runtime uses
+    still have only module-name observations rather than one exact source
+    operation or compiler decision)
+  - `recordedSemanticCapabilities` and
+    `recordedRequirementSourceKinds`; both lists are derived from this
+    compilation's sealed requirement records rather than a manually maintained
+    global coverage summary
   - `runtimeMode` and `selectionMode`
   - `requirementRevision` and `runtimeSourceRevision`
   - `requirements`, where each entry explains what needs compatibility
@@ -221,8 +224,36 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `16`)
+  - `schemaVersion` (current: `46`)
+  - local identities use the `lexical-local-v1` form. They describe the
+    variable's stable lexical declaration inside its owning function rather
+    than exposing the Haxe macro process's temporary numeric variable ID.
+    Unchanged source therefore produces comparable local and plan evidence
+    across clean compiler processes.
   - the sealed assignment/update plans and their source locations
+  - `anonymousStructures` describes each admitted mutable anonymous-object
+    shape before OCaml text is written. It lists the exact Haxe field types,
+    OCaml storage types, aliasing and mutation rules, and the representation
+    revision that generated code must use.
+  - `anonymousStructureOperations` describes each admitted object creation,
+    field initialization, field read, plain field write, and `Int +=` field
+    update. Each entry records the source location, owning object shape, field
+    conversion, result type, runtime requirements, and observable evaluation
+    order. For example, an `Int +=` entry states that the object is evaluated
+    once, its old field is read, the right-hand side is evaluated once, Haxe
+    Int addition is applied, and the result is stored and returned. Its runtime
+    requirements therefore name both `HxAnon` for mutable field storage and
+    `HxInt` for Haxe integer arithmetic. Field names are sorted only to give a
+    stable object-shape identity; literal initializers retain their original
+    source order so their side effects do not move.
+    The proof applies to each admitted occurrence, not to every expression in
+    its function. A function may also pass an object through `Dynamic` or use
+    it in a pattern; those operations stay outside this plan even when the
+    direct literal and its initializers are recorded.
+    Signed-overflow validation uses stock Haxe eval and Neko as the 32-bit
+    behavior oracle. Stock JavaScript stores `Int` in JavaScript numbers, so
+    its `2147483647 + 1` result is `2147483648`; native OCaml intentionally
+    matches the wrapping eval/Neko result `-2147483648` through `HxInt`.
   - `callModel`, `callableBoundaries`, and `calls`, which show what each
     admitted Haxe function accepts and returns, how each source argument is
     represented before and after the call boundary, and the exact source-order
@@ -230,17 +261,79 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     `Null<Int>` parameter records one `box-exact-int-to-nullable-int`
     conversion; an existing `Null<Int>` records a carrier-preserving crossing.
     This makes the conversion inspectable before OCaml syntax is written.
+  - a call with `kind: standard-imap-method` includes
+    `standardIMapTarget`. This is the complete target decision for one call
+    whose receiver is the standard `haxe.Constraints.IMap<K, V>` interface:
+    the fixed `String`, `Int`, or non-generic class key family, selected
+    `HxMap` carrier and operation, receiver-and-argument schedule, result
+    adapter, text conversion policy when needed, and exact runtime
+    capabilities. For example, `values.get(key)` on
+    `IMap<String, Int>` records `HxMap.string_map`, `get_string`, and a
+    `Null<Int>` result before target syntax. The current record applies to
+    values originating from the standard Map specializations. Enum-key maps,
+    structural or type-parameter keys, and arbitrary user implementations are
+    not supported by this boundary; user implementations need a separate typed
+    interface conversion and dispatch contract.
+  - `controlModel`, `controls`, and `controlTargets`, which show the exact
+    function or loop affected by an admitted non-local transfer. Exact
+    `Null<Int>` and `Null<Bool>` early returns record
+    `preserve-nullable-carrier`: their existing `Obj.t` value crosses the
+    private return signal unchanged, so null and zero/false cannot collapse
+    through a second box or unchecked cast.
+    An exact `Int` or `Bool` returned early from a function whose result is the
+    matching `Null<Int>` or `Null<Bool>` instead records
+    `box-exact-int-to-nullable-carrier` or
+    `box-exact-bool-to-nullable-carrier`. The value is boxed once before the
+    private signal, and the function boundary preserves that resulting
+    `Obj.t` carrier. Existing nullable and newly converted early returns may
+    share one boundary; an incompatible mixed family fails before output.
+    A constructor-produced local of an admitted closed user class records
+    `box-and-recover-nominal-value`. Its payload names the exact OCaml record
+    type, layout revision, and representation proof selected for the complete
+    program. The compiler boxes that same reference only while the private
+    signal is in flight and recovers the registered record at the owning
+    function boundary. Class parameters, call-produced class locals, and
+    `return null` are not implied by this record and remain unadmitted.
+    Exact `Null<Int>` and `Null<Bool>` throws also use sealed control records.
+    `preserve-nullable-int-throw-carrier` sends the existing nullable Int
+    carrier unchanged. `normalize-nullable-bool-throw-carrier` preserves null
+    but converts a non-null nullable Bool once into the runtime's unambiguous
+    boxed-Bool exception carrier. Both records keep only `Dynamic` as a static
+    tag; the exception channel derives `Int` or `Bool` from the actual
+    non-null payload, so null reaches only a `Dynamic` catch.
+    A throw of one admitted whole-program-monomorphic class records
+    `box-nominal-throw-carrier` plus the exact target record name, layout
+    revision, and representation proof. Its matching class catch records
+    `recover-nominal-value`: it checks the runtime class tag and recovers that
+    exact registered record without copying the object. Only `Dynamic` is a
+    static throw tag. A real class record contributes its exact tag through
+    the existing runtime `__hx_type` marker, while a class-typed null has no
+    such marker and therefore reaches only `Dynamic`. The reported proof is
+    limited to concrete, non-extern, non-generic classes without hierarchy,
+    interfaces, or dynamic methods; it does not admit general class,
+    `haxe.Exception`, enum, abstract, or nullable-catch behavior.
+    A throw whose static type is `Dynamic` records
+    `preserve-dynamic-throw-carrier`. The source value already uses `Obj.t`,
+    so the exception channel transports that exact carrier without another
+    box. `Dynamic` is the only static tag; the runtime value may add its exact
+    primitive or admitted class tag, while null remains `Dynamic`-only. This
+    control-only record does not claim that Dynamic storage, calls, operators,
+    reflection, public ABI, or the metal profile are generally admitted.
   - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
     record each mutable static cell before type emission, including its owner,
     generated name, Haxe meaning, OCaml storage type, declaration point, and
     initialization order, and direct dependencies on other mutable static
     initializers
   - `runtimeRequirementRevision` and `runtimeRequirementCount`
-  - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need explains
-    the Haxe behavior, target decision, implementation feature, eligible
-    profiles, and checked runtime root that caused it
+  - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need and
+    every sealed standard-`IMap` call need explains the Haxe behavior, target
+    decision, implementation feature, eligible profiles, and checked runtime
+    root that caused it. Standard-`IMap` records name the exact source call and
+    may select `HxMap`, `HxIterator`, `HxArray`, `HxString`, or `HxDynamic`
+    according to the sealed operation and result adapter.
 
-The lowering report is complete for its stated assignment/update family. The
+The lowering report is complete for its stated assignment/update and admitted
+standard-`IMap` families. The
 runtime-requirement report additionally covers core packaging, the generated
 type registry, and declared static native runtime boundaries, but it is still
 not complete for the whole program. Runtime

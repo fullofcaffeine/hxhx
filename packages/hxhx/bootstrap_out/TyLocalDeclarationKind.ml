@@ -26,37 +26,37 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyLocalDeclarati
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalDeclarationKindTools" } : t)
 
-let canonicalName = fun kind -> let tempResult = ref ("" : string) in (
+let canonicalName = fun kind -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match kind with
-    | Parameter -> let __assign_1 = ("parameter" : string) in (
+    | Parameter -> let __assign_1 = "parameter" in (
       tempResult := __assign_1;
       __assign_1
     )
-    | Variable -> let __assign_2 = ("variable" : string) in (
+    | Variable -> let __assign_2 = "variable" in (
       tempResult := __assign_2;
       __assign_2
     )
-    | LoopVariable -> let __assign_3 = ("loop-variable" : string) in (
+    | LoopVariable -> let __assign_3 = "loop-variable" in (
       tempResult := __assign_3;
       __assign_3
     )
-    | CatchVariable -> let __assign_4 = ("catch-variable" : string) in (
+    | CatchVariable -> let __assign_4 = "catch-variable" in (
       tempResult := __assign_4;
       __assign_4
     )
-    | PatternVariable -> let __assign_5 = ("pattern-variable" : string) in (
+    | PatternVariable -> let __assign_5 = "pattern-variable" in (
       tempResult := __assign_5;
       __assign_5
     )
-    | LambdaParameter -> let __assign_6 = ("lambda-parameter" : string) in (
+    | LambdaParameter -> let __assign_6 = "lambda-parameter" in (
       tempResult := __assign_6;
       __assign_6
     )
-    | ComprehensionVariable -> let __assign_7 = ("comprehension-variable" : string) in (
+    | ComprehensionVariable -> let __assign_7 = "comprehension-variable" in (
       tempResult := __assign_7;
       __assign_7
     )
-    | CompilerTemporary -> let __assign_8 = ("compiler-temporary" : string) in (
+    | CompilerTemporary -> let __assign_8 = "compiler-temporary" in (
       tempResult := __assign_8;
       __assign_8
     ));

@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable modulePath : string; mutable filePath : string; mutable parsed : ParsedModule.t; mutable sourceOrigin : CompilerModuleOrigin.t; mutable conditionalCompilation : CompilerConditionalCompilationObservation.t; mutable generatedDeclarations : CompilerGeneratedDeclarationObservation.t }
 
-let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (modulePath2 : string) in (
       (Obj.magic self : t).modulePath <- __assign_1;
@@ -21,40 +21,40 @@ let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilat
       __assign_3
     ));
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerModuleOrigin.t) in (
-      ignore (if sourceOrigin2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (CompilerModuleOrigin.synthetic (modulePath2 : string)) in (
+      ignore (if sourceOrigin2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __call_arg_0_5 = modulePath2 in CompilerModuleOrigin.synthetic __call_arg_0_5) in (
         tempRight := __assign_4;
         __assign_4
-      ) else let __assign_5 = Obj.magic sourceOrigin2 in (
-        tempRight := __assign_5;
-        __assign_5
-      ));
-      ignore (let __assign_6 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).sourceOrigin <- __assign_6;
+      ) else let __assign_6 = Obj.magic sourceOrigin2 in (
+        tempRight := __assign_6;
         __assign_6
       ));
+      ignore (let __assign_7 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).sourceOrigin <- __assign_7;
+        __assign_7
+      ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : CompilerConditionalCompilationObservation.t) in (
-        ignore (if conditionalCompilation2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (CompilerConditionalCompilationObservation.empty ()) in (
-          tempRight1 := __assign_7;
-          __assign_7
-        ) else let __assign_8 = Obj.magic conditionalCompilation2 in (
+        ignore (if conditionalCompilation2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (CompilerConditionalCompilationObservation.empty ()) in (
           tempRight1 := __assign_8;
           __assign_8
-        ));
-        ignore (let __assign_9 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).conditionalCompilation <- __assign_9;
+        ) else let __assign_9 = Obj.magic conditionalCompilation2 in (
+          tempRight1 := __assign_9;
           __assign_9
         ));
+        ignore (let __assign_10 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).conditionalCompilation <- __assign_10;
+          __assign_10
+        ));
         let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : CompilerGeneratedDeclarationObservation.t) in (
-          ignore (if generatedDeclarations2 == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (CompilerGeneratedDeclarationObservation.empty ()) in (
-            tempRight2 := __assign_10;
-            __assign_10
-          ) else let __assign_11 = Obj.magic generatedDeclarations2 in (
+          ignore (if generatedDeclarations2 == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (CompilerGeneratedDeclarationObservation.empty ()) in (
             tempRight2 := __assign_11;
             __assign_11
-          ));
-          let __assign_12 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).generatedDeclarations <- __assign_12;
+          ) else let __assign_12 = Obj.magic generatedDeclarations2 in (
+            tempRight2 := __assign_12;
             __assign_12
+          ));
+          let __assign_13 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).generatedDeclarations <- __assign_13;
+            __assign_13
           )
         )
       )
@@ -63,7 +63,7 @@ let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilat
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic (HxRuntime.hx_null); sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getParsed = fun m -> (Obj.magic m : t).parsed
 

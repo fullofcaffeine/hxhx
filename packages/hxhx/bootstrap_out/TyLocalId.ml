@@ -6,9 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable canonicalKey : string }
 
-let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = "" } : t) in (
+let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (if canonicalKey2 == Obj.magic (HxRuntime.hx_null) || HxString.length canonicalKey2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a canonical key") ["Dynamic"; "String"]) else ());
+    ignore (if canonicalKey2 == HxString.hx_null_string || HxString.length canonicalKey2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a canonical key") ["Dynamic"]) else ());
     let __assign_1 = (canonicalKey2 : string) in (
       (Obj.magic self : t).canonicalKey <- __assign_1;
       __assign_1
@@ -17,64 +17,68 @@ let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyLoc
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = HxString.hx_null_string } : t)
 
-let getCanonicalKey = fun self () -> (Obj.magic self : t).canonicalKey
+let getCanonicalKey = fun self () -> ((self : t).canonicalKey : string)
 
-let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((Obj.magic self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
+let equals = fun self (other : t) -> other != Obj.magic (HxRuntime.hx_null) && HxString.equals ((self : t).canonicalKey) (getCanonicalKey (Obj.magic other) ())
 
-let toString = fun self () -> (Obj.magic self : t).canonicalKey
+let toString = fun self () -> ((self : t).canonicalKey : string)
 
-let forSourceDeclaration = fun functionIdentity declarationOrdinal kind sourceName -> let tempString = ref ("" : string) in (
-  ignore (if functionIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
+let forSourceDeclaration = fun functionIdentity declarationOrdinal kind sourceName -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if functionIdentity == HxString.hx_null_string then let __assign_2 = ("" : string) in (
     tempString := __assign_2;
     __assign_2
   ) else let __assign_3 = (functionIdentity : string) in (
     tempString := __assign_3;
     __assign_3
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if sourceName == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
+  let owner = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if sourceName == HxString.hx_null_string then let __assign_4 = ("" : string) in (
       tempString1 := __assign_4;
       __assign_4
     ) else let __assign_5 = (sourceName : string) in (
       tempString1 := __assign_5;
       __assign_5
     ));
-    ignore (if HxString.length (!tempString) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a function owner") ["Dynamic"; "String"]) else ());
-    ignore (if declarationOrdinal < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a non-negative ordinal") ["Dynamic"; "String"]) else ());
-    create ((((((((HxString.toStdString (!tempString) ^ "#local:") ^ string_of_int declarationOrdinal) ^ ":") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic kind))) ^ ":") ^ string_of_int (HxString.length (!tempString1))) ^ ":") ^ HxString.toStdString (!tempString1) : string)
+    let name = (!tempString1 : string) in (
+      ignore (if HxString.length owner = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a function owner") ["Dynamic"]) else ());
+      ignore (if declarationOrdinal < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a non-negative ordinal") ["Dynamic"]) else ());
+      create ((((((((HxString.toStdString owner ^ "#local:") ^ string_of_int declarationOrdinal) ^ ":") ^ HxString.toStdString (TyLocalDeclarationKind.canonicalName (Obj.magic kind))) ^ ":") ^ string_of_int (HxString.length name)) ^ ":") ^ HxString.toStdString name : string)
+    )
   )
 )
 
-let forCompilerTemporary = fun functionIdentity passIdentity declarationOrdinal generatedName -> let tempString = ref ("" : string) in (
-  ignore (if functionIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
+let forCompilerTemporary = fun (functionIdentity : string) (passIdentity : string) (declarationOrdinal : int) (generatedName : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if functionIdentity == HxString.hx_null_string then let __assign_6 = ("" : string) in (
     tempString := __assign_6;
     __assign_6
   ) else let __assign_7 = (functionIdentity : string) in (
     tempString := __assign_7;
     __assign_7
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if passIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_8 = ("" : string) in (
+  let owner = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if passIdentity == HxString.hx_null_string then let __assign_8 = ("" : string) in (
       tempString1 := __assign_8;
       __assign_8
     ) else let __assign_9 = (passIdentity : string) in (
       tempString1 := __assign_9;
       __assign_9
     ));
-    let tempString2 = ref ("" : string) in (
-      ignore (if generatedName == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
+    let pass = (!tempString1 : string) in let tempString2 = ref (HxString.hx_null_string : string) in (
+      ignore (if generatedName == HxString.hx_null_string then let __assign_10 = ("" : string) in (
         tempString2 := __assign_10;
         __assign_10
       ) else let __assign_11 = (generatedName : string) in (
         tempString2 := __assign_11;
         __assign_11
       ));
-      ignore (if HxString.length (!tempString) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a function owner") ["Dynamic"; "String"]) else ());
-      ignore (if HxString.length (!tempString1) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a lowering pass") ["Dynamic"; "String"]) else ());
-      ignore (if declarationOrdinal < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a non-negative ordinal") ["Dynamic"; "String"]) else ());
-      create ((((((((((HxString.toStdString (!tempString) ^ "#temporary:") ^ string_of_int (HxString.length (!tempString1))) ^ ":") ^ HxString.toStdString (!tempString1)) ^ ":") ^ string_of_int declarationOrdinal) ^ ":") ^ string_of_int (HxString.length (!tempString2))) ^ ":") ^ HxString.toStdString (!tempString2) : string)
+      let name = (!tempString2 : string) in (
+        ignore (if HxString.length owner = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a function owner") ["Dynamic"]) else ());
+        ignore (if HxString.length pass = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a lowering pass") ["Dynamic"]) else ());
+        ignore (if declarationOrdinal < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary identity requires a non-negative ordinal") ["Dynamic"]) else ());
+        create ((((((((((HxString.toStdString owner ^ "#temporary:") ^ string_of_int (HxString.length pass)) ^ ":") ^ HxString.toStdString pass) ^ ":") ^ string_of_int declarationOrdinal) ^ ":") ^ string_of_int (HxString.length name)) ^ ":") ^ HxString.toStdString name : string)
+      )
     )
   )
-)
+) : t)

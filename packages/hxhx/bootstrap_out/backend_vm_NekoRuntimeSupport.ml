@@ -13,15 +13,15 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoR
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoRuntimeSupport" } : t)
 
-let quote = fun value -> ("\"" ^ HxString.toStdString (StringTools.replace (StringTools.replace (StringTools.replace (value : string) ("\\" : string) ("\\\\" : string) : string) ("\n" : string) ("\\n" : string) : string) ("\"" : string) ("\\\"" : string))) ^ "\""
+let quote = fun (value : string) -> (("\"" ^ HxString.toStdString (let __call_arg_0_9 = let __call_arg_0_10 = let __call_arg_0_11 = value in let __call_arg_1_12 = "\\" in let __call_arg_2_13 = "\\\\" in StringTools.replace __call_arg_0_11 __call_arg_1_12 __call_arg_2_13 in let __call_arg_1_14 = "\n" in let __call_arg_2_15 = "\\n" in StringTools.replace __call_arg_0_10 __call_arg_1_14 __call_arg_2_15 in let __call_arg_1_16 = "\"" in let __call_arg_2_17 = "\\\"" in StringTools.replace __call_arg_0_9 __call_arg_1_16 __call_arg_2_17)) ^ "\"" : string)
 
-let renderStringArray = fun values -> let _g = Obj.magic (let __arr_3 = HxArray.create () in __arr_3) in let _g1 = ref 0 in (
+let renderStringArray = fun values -> let _g = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in let _g1 = ref 0 in (
   ignore (while !_g1 < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g1) : string) in (
-    ignore (let __old_4 = !_g1 in let __new_5 = HxInt.add __old_4 1 in (
-      ignore (_g1 := __new_5);
-      __new_5
+    ignore (let __old_6 = !_g1 in let __new_7 = HxInt.add __old_6 1 in (
+      ignore (_g1 := __new_7);
+      __new_7
     ));
-    HxArray.push _g (quote (value : string))
+    HxArray.push _g (let __call_arg_0_8 = value in quote __call_arg_0_8)
   )) done);
   ("$array(" ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ")"
 )
@@ -81,8 +81,8 @@ let renderPrelude = fun out classes symbolTable -> ignore ((
         ignore (_g := __new_2);
         __new_2
       ));
-      ignore (HxArray.push out (((("$objset(__hxhx_instance_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "instanceFields"))))) ^ ");"));
-      HxArray.push out (((("$objset(__hxhx_static_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "staticFields"))))) ^ ");")
+      ignore (HxArray.push out (((("$objset(__hxhx_instance_fields, $hash(" ^ HxString.toStdString (let __call_arg_0_3 = Obj.obj (HxAnon.get meta "fullName") in quote __call_arg_0_3)) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "instanceFields"))))) ^ ");"));
+      HxArray.push out (((("$objset(__hxhx_static_fields, $hash(" ^ HxString.toStdString (let __call_arg_0_4 = Obj.obj (HxAnon.get meta "fullName") in quote __call_arg_0_4)) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "staticFields"))))) ^ ");")
     )) done);
     ignore (if symbolTable == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out "var __hxhx_static_objects = $new(null);") else ignore ((
       ignore (HxArray.push out "var __hxhx_static_objects = (function() {");

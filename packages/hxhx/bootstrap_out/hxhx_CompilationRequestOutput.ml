@@ -8,17 +8,17 @@ type t = { __hx_type : Obj.t; mutable buffered : bool; mutable captured : Hxhx_C
 
 let create = fun buffered2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic (HxRuntime.hx_null); closed = false } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = buffered2 in (
-      (Obj.magic self : t).buffered <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = buffered2 in (
+      (__place_receiver_1 : t).buffered <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = Obj.magic (let __arr_3 = HxArray.create () in __arr_3) in (
-      (Obj.magic self : t).captured <- __assign_2;
-      __assign_2
+    ignore (let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
+      (Obj.magic self : t).captured <- __assign_3;
+      __assign_3
     ));
-    let __assign_4 = false in (
-      (Obj.magic self : t).closed <- __assign_4;
-      __assign_4
+    let __place_receiver_5 = self in let __place_rhs_6 = false in (
+      (__place_receiver_5 : t).closed <- __place_rhs_6;
+      __place_rhs_6
     )
   )));
   self
@@ -28,46 +28,48 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOut
 
 let events = fun self () -> HxArray.copy ((Obj.magic self : t).captured)
 
-let close = fun self () -> ignore (ignore (let __assign_5 = true in (
-  (Obj.magic self : t).closed <- __assign_5;
-  __assign_5
+let close = fun self () -> ignore (ignore (let __place_receiver_7 = self in let __place_rhs_8 = true in (
+  (__place_receiver_7 : t).closed <- __place_rhs_8;
+  __place_rhs_8
 )))
 
-let write = fun self (text : string) (isErrorStream : bool) (newline : bool) -> ignore (ignore (try (
-  ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request output is already closed") ["Dynamic"; "String"]) else ());
-  let tempString = ref ("" : string) in (
-    ignore (if text == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("null" : string) in (
-      tempString := __assign_6;
-      __assign_6
-    ) else let __assign_7 = (text : string) in (
-      tempString := __assign_7;
-      __assign_7
+let write = fun self (text : string) (isErrorStream : bool) (newline : bool) -> ignore (ignore (try ignore ((
+  ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request output is already closed") ["Dynamic"]) else ());
+  let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if text == HxString.hx_null_string then let __assign_9 = ("null" : string) in (
+      tempString := __assign_9;
+      __assign_9
+    ) else let __assign_10 = (text : string) in (
+      tempString := __assign_10;
+      __assign_10
     ));
-    ignore (if (Obj.magic self : t).buffered then ignore (let tempString1 = ref ("" : string) in (
-      ignore (if newline then let __assign_8 = ("\n" : string) in (
-        tempString1 := __assign_8;
-        __assign_8
-      ) else let __assign_9 = ("" : string) in (
-        tempString1 := __assign_9;
-        __assign_9
-      ));
-      ignore (HxArray.push ((Obj.magic self : t).captured) (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString (!tempString) ^ HxString.toStdString (!tempString1) : string) isErrorStream));
-      raise (HxRuntime.Hx_return (Obj.repr ()))
-    )) else ());
-    if isErrorStream then ignore (let stream = Obj.magic (Sys_io_Stdio.stderr ()) in (
-      ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (!tempString : string) (Obj.magic (HxRuntime.hx_null)));
-      ignore (if newline then ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) ("\n" : string) (Obj.magic (HxRuntime.hx_null))) else ());
-      (Obj.magic stream : Haxe_io_Output.t).flush (Obj.magic stream) ()
-    )) else ignore (if newline then ignore (print_endline (HxString.toStdString (!tempString))) else ignore (print_string (HxString.toStdString (!tempString))))
+    let value = (!tempString : string) in (
+      ignore (if (Obj.magic self : t).buffered then ignore (let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if newline then let __assign_11 = "\n" in (
+          tempString1 := __assign_11;
+          __assign_11
+        ) else let __assign_12 = "" in (
+          tempString1 := __assign_12;
+          __assign_12
+        ));
+        ignore (HxArray.push ((Obj.magic self : t).captured) (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString value ^ HxString.toStdString (!tempString1) : string) isErrorStream));
+        raise (HxRuntime.Hx_return (Obj.repr ()))
+      )) else ());
+      if isErrorStream then ignore (let stream = Obj.magic (Sys_io_Stdio.stderr ()) in (
+        ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (value : string) (Obj.magic (HxRuntime.hx_null)));
+        ignore (if newline then ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) ("\n" : string) (Obj.magic (HxRuntime.hx_null))) else ());
+        (Obj.magic stream : Haxe_io_Output.t).flush (Obj.magic stream) ()
+      )) else ignore (if newline then ignore (let value2 = Obj.repr value in HxSys.printlnValue value2) else ignore (let value2 = Obj.repr value in HxSys.printValue value2))
+    )
   )
-) with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10))
+)) with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13))
 
 let stdoutLine = fun self (text : string) -> ignore (ignore (write (Obj.magic self) (text : string) false true))
 
 let stderrLine = fun self (text : string) -> ignore (ignore (write (Obj.magic self) (text : string) true true))
 
-let writeStdoutLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (print_endline (HxString.toStdString text)) else ignore (stdoutLine (Obj.magic output) (text : string)))
+let writeStdoutLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (let value = Obj.repr text in HxSys.printlnValue value) else ignore (stdoutLine (Obj.magic output) (text : string)))
 
 let writeStderrLine = fun output text -> ignore (if output == Obj.magic (HxRuntime.hx_null) then ignore (let stream = Obj.magic (Sys_io_Stdio.stderr ()) in (
   ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (HxString.toStdString text ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)));

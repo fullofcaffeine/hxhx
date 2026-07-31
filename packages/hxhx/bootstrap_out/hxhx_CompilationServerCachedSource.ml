@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable key : string; mutable logicalPath : string; mutable contentRevision : string; mutable source : string; mutable retainedBytesEstimate : int }
 
-let create = fun key2 logicalPath2 contentRevision2 source2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedSource"; key = ""; logicalPath = ""; contentRevision = ""; source = ""; retainedBytesEstimate = 0 } : t) in (
+let create = fun key2 logicalPath2 contentRevision2 source2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedSource"; key = HxString.hx_null_string; logicalPath = HxString.hx_null_string; contentRevision = HxString.hx_null_string; source = HxString.hx_null_string; retainedBytesEstimate = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (key2 : string) in (
       (Obj.magic self : t).key <- __assign_1;
@@ -32,4 +32,4 @@ let create = fun key2 logicalPath2 contentRevision2 source2 retainedBytesEstimat
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedSource"; key = ""; logicalPath = ""; contentRevision = ""; source = ""; retainedBytesEstimate = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedSource"; key = HxString.hx_null_string; logicalPath = HxString.hx_null_string; contentRevision = HxString.hx_null_string; source = HxString.hx_null_string; retainedBytesEstimate = 0 } : t)

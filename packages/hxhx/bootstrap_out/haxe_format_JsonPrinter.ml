@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable buffer : StringBuf.t; mutable replacer : Obj.t; mutable indentUnit : string; mutable pretty : bool; mutable depth : int }
 
-let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic (HxRuntime.hx_null); replacer = Obj.magic (HxRuntime.hx_null); indentUnit = ""; pretty = false; depth = 0 } : t) in (
+let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic (HxRuntime.hx_null); replacer = Obj.magic (HxRuntime.hx_null); indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (StringBuf.create ()) in (
       (Obj.magic self : t).buffer <- __assign_1;
@@ -16,7 +16,7 @@ let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "hax
       (Obj.magic self : t).replacer <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref ("" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
       ignore (if space == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
         tempRight := __assign_3;
         __assign_3
@@ -28,26 +28,26 @@ let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "hax
         (Obj.magic self : t).indentUnit <- __assign_5;
         __assign_5
       ));
-      ignore (let __assign_6 = HxString.length ((Obj.magic self : t).indentUnit) > 0 in (
-        (Obj.magic self : t).pretty <- __assign_6;
-        __assign_6
+      ignore (let __place_receiver_6 = self in let __place_rhs_7 = HxString.length ((Obj.magic self : t).indentUnit) > 0 in (
+        (__place_receiver_6 : t).pretty <- __place_rhs_7;
+        __place_rhs_7
       ));
-      let __place_receiver_7 = self in let __place_rhs_8 = 0 in (
-        (__place_receiver_7 : t).depth <- __place_rhs_8;
-        __place_rhs_8
+      let __place_receiver_8 = self in let __place_rhs_9 = 0 in (
+        (__place_receiver_8 : t).depth <- __place_rhs_9;
+        __place_rhs_9
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic (HxRuntime.hx_null); replacer = Obj.magic (HxRuntime.hx_null); indentUnit = ""; pretty = false; depth = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic (HxRuntime.hx_null); replacer = Obj.magic (HxRuntime.hx_null); indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t)
 
-let appendIndent = fun self () -> ignore (ignore (try (
+let appendIndent = fun self () -> ignore (ignore (try ignore ((
   ignore (if not ((Obj.magic self : t).pretty) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (StringTools.lpad ("" : string) ((Obj.magic self : t).indentUnit : string) (HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)))))
-) with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9))
+  StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (let __call_arg_0_10 = "" in let __call_arg_1_11 = (Obj.magic self : t).indentUnit in let __call_arg_2_12 = HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)) in StringTools.lpad __call_arg_0_10 __call_arg_1_11 __call_arg_2_12))
+)) with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13))
 
 let appendNewline = fun self () -> ignore (ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 10) else ()))
 
@@ -64,119 +64,119 @@ let quote = fun self (text : string) -> ignore (ignore ((
         | 13 -> ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr "\\r"))
         | 34 -> ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr "\\\""))
         | 92 -> ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr "\\\\"))
-        | _ -> ignore (let value = code in if value >= 0 && value < 32 then ignore (let hex = (StringTools.hex value (Obj.repr 4) : string) in StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr ("\\u" ^ HxString.toStdString hex))) else ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) code))
+        | _ -> ignore (let value = code in if value >= 0 && value < 32 then ignore (let hex = let __call_arg_0_60 = value in let __call_arg_1_61 = Obj.repr 4 in StringTools.hex __call_arg_0_60 __call_arg_1_61 in StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr ("\\u" ^ HxString.toStdString hex))) else ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) code))
     )) done);
     StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 34
   )
 )))
 
-let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (let value = ref value in ignore (try (
-  ignore (if (Obj.magic self : t).replacer != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_10 = Obj.magic (Obj.obj (HxReflect.callMethod (Obj.magic (HxRuntime.hx_null)) ((Obj.magic self : t).replacer) (let __arr_11 = HxArray.create () in (
-    ignore (HxArray.push __arr_11 key);
-    ignore (HxArray.push __arr_11 (!value));
-    __arr_11
+let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (ignore (try ignore (let resolved = ref value in (
+  ignore (if (Obj.magic self : t).replacer != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_14 = Obj.magic (Obj.obj (HxReflect.callMethod (Obj.magic (HxRuntime.hx_null)) ((Obj.magic self : t).replacer) (let __arr_15 = HxArray.create () in (
+    ignore (HxArray.push __arr_15 key);
+    ignore (HxArray.push __arr_15 value);
+    __arr_15
   )))) in (
-    value := __assign_10;
-    __assign_10
+    resolved := __assign_14;
+    __assign_14
   )) else ());
-  ignore (if !value == Obj.magic (HxRuntime.hx_null) then ignore ((
+  ignore (if Obj.magic (!resolved) == Obj.magic (HxRuntime.hx_null) then ignore ((
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr "null"));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if HxReflect.isFunction (!value) then ignore ((
+  ignore (if HxReflect.isFunction (Obj.magic (!resolved)) then ignore ((
     ignore (quote (Obj.magic self) ("<fun>" : string));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if HxType.isOfType (!value) (HxType.class_ "String") then ignore ((
-    ignore (quote (Obj.magic self) (HxRuntime.dynamic_toStdString (!value) : string));
+  ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "String") then ignore ((
+    ignore (quote (Obj.magic self) (HxDynamic.toStdString (Obj.magic (!resolved)) : string));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if let __isBool_12 = !value in if __isBool_12 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_12 then ignore (let tempString = ref ("" : string) in (
-    ignore (if HxRuntime.dynamic_equals (!value) (HxRuntime.box_bool true) then let __assign_13 = ("true" : string) in (
-      tempString := __assign_13;
-      __assign_13
-    ) else let __assign_14 = ("false" : string) in (
-      tempString := __assign_14;
-      __assign_14
+  ignore (if let __isBool_16 = Obj.magic (!resolved) in if __isBool_16 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_16 then ignore (let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if HxRuntime.dynamic_equals (Obj.magic (!resolved)) (HxRuntime.box_bool true) then let __assign_17 = "true" in (
+      tempString := __assign_17;
+      __assign_17
+    ) else let __assign_18 = "false" in (
+      tempString := __assign_18;
+      __assign_18
     ));
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (!tempString)));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if let __isInt_15 = !value in if __isInt_15 == HxRuntime.hx_null then false else Obj.is_int __isInt_15 && not (HxRuntime.is_boxed_bool __isInt_15) then ignore ((
-    ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (HxRuntime.dynamic_toStdString (!value))));
+  ignore (if let __isInt_19 = Obj.magic (!resolved) in if __isInt_19 == HxRuntime.hx_null then false else Obj.is_int __isInt_19 && not (HxRuntime.is_boxed_bool __isInt_19) then ignore ((
+    ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (HxDynamic.toStdString (Obj.magic (!resolved)))));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if let __isFloat_16 = !value in if __isFloat_16 == HxRuntime.hx_null then false else Obj.is_int __isFloat_16 && not (HxRuntime.is_boxed_bool __isFloat_16) || Obj.tag __isFloat_16 = Obj.double_tag then ignore (let floatValue = Std.parseFloat (HxRuntime.dynamic_toStdString (!value) : string) in let tempString1 = ref ("" : string) in (
-    ignore (if Math.isFinite floatValue then let __assign_17 = (string_of_float floatValue : string) in (
-      tempString1 := __assign_17;
-      __assign_17
-    ) else let __assign_18 = ("null" : string) in (
-      tempString1 := __assign_18;
-      __assign_18
+  ignore (if let __isFloat_20 = Obj.magic (!resolved) in if __isFloat_20 == HxRuntime.hx_null then false else Obj.is_int __isFloat_20 && not (HxRuntime.is_boxed_bool __isFloat_20) || Obj.tag __isFloat_20 = Obj.double_tag then ignore (let floatValue = Std.parseFloat (HxDynamic.toStdString (Obj.magic (!resolved)) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if Math.isFinite floatValue then let __assign_21 = (string_of_float floatValue : string) in (
+      tempString1 := __assign_21;
+      __assign_21
+    ) else let __assign_22 = ("null" : string) in (
+      tempString1 := __assign_22;
+      __assign_22
     ));
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (!tempString1)));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if HxType.isOfType (!value) (HxType.class_ "Array") then ignore (let arrayValue = Obj.magic (Obj.obj (!value)) in (
+  ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "Array") then ignore (let arrayValue = Obj.magic (Obj.obj (Obj.magic (!resolved))) in (
     ignore (writeArray (Obj.magic self) (Obj.magic arrayValue));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (if HxType.isOfType (!value) (HxType.class_ "haxe.ds.StringMap") then ignore (let mapValue = Obj.magic (Obj.obj (!value)) in let objectValue = let __anon_19 = HxAnon.create () in __anon_19 in let field = HxIterator.of_array (HxMap.keys_string mapValue) in (
-    ignore (while (let __iter_20 = field in fun () -> HxIterator.hasNext (Obj.magic __iter_20)) () do ignore (let field2 = ((let __iter_21 = field in fun () -> HxIterator.next (Obj.magic __iter_21)) () : string) in HxAnon.set objectValue (HxString.toStdString field2) (HxMap.get_string mapValue field2)) done);
+  ignore (if HxType.isOfType (Obj.magic (!resolved)) (HxType.class_ "HxMap") then ignore (let mapValue = Obj.magic (Obj.obj (Obj.magic (!resolved))) in let objectValue = let __anon_23 = HxAnon.create () in __anon_23 in let field = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic mapValue))) in (
+    ignore (while (let __iter_24 = field in fun () -> HxIterator.hasNext (Obj.magic __iter_24)) () do ignore (let field2 = ((let __iter_25 = field in fun () -> HxIterator.next (Obj.magic __iter_25)) () : string) in HxAnon.set objectValue (HxString.toStdString field2) (HxMap.get_string (Obj.magic mapValue) (field2 : string))) done);
     ignore (writeObject (Obj.magic self) objectValue (Obj.magic (HxAnon.fields objectValue)));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let className = (HxType.getClassName (HxType.getClass (!value)) : string) in (
+  let className = (HxType.getClassName (HxType.getClass (Obj.magic (!resolved))) : string) in (
     ignore (if HxString.equals className "Date" then ignore ((
-      ignore (quote (Obj.magic self) (HxRuntime.dynamic_toStdString (!value) : string));
+      ignore (quote (Obj.magic self) (HxDynamic.toStdString (Obj.magic (!resolved)) : string));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
-    ignore (if HxReflect.isEnumValue (!value) then ignore ((
-      ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (string_of_int (HxType.enumIndex (Obj.repr (!value))))));
+    ignore (if HxReflect.isEnumValue (Obj.magic (!resolved)) then ignore ((
+      ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (string_of_int (HxType.enumIndex (Obj.repr (Obj.magic (!resolved)))))));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
-    ignore (if HxReflect.isObject (!value) then ignore ((
-      ignore (writeObject (Obj.magic self) (!value) (Obj.magic (HxAnon.fields (!value))));
+    ignore (if HxReflect.isObject (Obj.magic (!resolved)) then ignore ((
+      ignore (writeObject (Obj.magic self) (Obj.magic (!resolved)) (Obj.magic (HxAnon.fields (Obj.magic (!resolved)))));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
     quote (Obj.magic self) ("???" : string)
   )
-) with
-  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22))
-and writeArray = fun self (values : Obj.t HxArray.t) -> ignore (ignore (try (
+)) with
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26))
+and writeArray = fun self (values : Obj.t HxArray.t) -> ignore (ignore (try ignore ((
   ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 91);
   ignore (if HxArray.length values = 0 then ignore ((
     ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 93);
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (let __place_receiver_23 = self in let __place_old_24 = (__place_receiver_23 : t).depth in let __place_rhs_25 = 1 in let __place_new_26 = HxInt.add __place_old_24 __place_rhs_25 in (
-    (__place_receiver_23 : t).depth <- __place_new_26;
-    __place_new_26
+  ignore (let __place_receiver_27 = self in let __place_old_28 = (__place_receiver_27 : t).depth in let __place_rhs_29 = 1 in let __place_new_30 = HxInt.add __place_old_28 __place_rhs_29 in (
+    (__place_receiver_27 : t).depth <- __place_new_30;
+    __place_new_30
   ));
   let _g = ref 0 in let _g1 = HxArray.length values in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
-      ignore (_g := __new_28);
-      __old_27
+    ignore (while !_g < _g1 do ignore (let index = let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
+      ignore (_g := __new_32);
+      __old_31
     ) in (
       ignore (if index > 0 then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 44) else ());
       ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 10) else ());
-      ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (StringTools.lpad ("" : string) ((Obj.magic self : t).indentUnit : string) (HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)))))));
+      ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (let __call_arg_0_33 = "" in let __call_arg_1_34 = (Obj.magic self : t).indentUnit in let __call_arg_2_35 = HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)) in StringTools.lpad __call_arg_0_33 __call_arg_1_34 __call_arg_2_35))));
       writeValue (Obj.magic self) (Obj.repr index) (HxArray.get (Obj.magic values) index)
     )) done);
-    ignore (let __recv_29 = self in let __recv_typed_30 = (Obj.magic __recv_29 : t) in __recv_typed_30.depth <- HxInt.sub (__recv_typed_30.depth) 1);
+    ignore (let __recv_36 = self in let __recv_typed_37 = (Obj.magic __recv_36 : t) in __recv_typed_37.depth <- HxInt.sub (__recv_typed_37.depth) 1);
     ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 10) else ());
-    ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (StringTools.lpad ("" : string) ((Obj.magic self : t).indentUnit : string) (HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)))))));
+    ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (let __call_arg_0_38 = "" in let __call_arg_1_39 = (Obj.magic self : t).indentUnit in let __call_arg_2_40 = HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)) in StringTools.lpad __call_arg_0_38 __call_arg_1_39 __call_arg_2_40))));
     StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 93
   )
-) with
-  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31))
-and writeObject = fun self (value : Obj.t) (fields : string HxArray.t) -> ignore (ignore (try (
+)) with
+  | HxRuntime.Hx_return __ret_41 -> Obj.obj __ret_41))
+and writeObject = fun self (value : Obj.t) (fields : string HxArray.t) -> ignore (ignore (try ignore ((
   ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 123);
-  let printableFields = Obj.magic (let __arr_32 = HxArray.create () in __arr_32) in let _g = ref 0 in (
+  let printableFields = Obj.magic (let __arr_42 = HxArray.create () in __arr_42) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length fields do ignore (let field = (HxArray.get (Obj.magic fields) (!_g) : string) in (
-      ignore (let __old_33 = !_g in let __new_34 = HxInt.add __old_33 1 in (
-        ignore (_g := __new_34);
-        __new_34
+      ignore (let __old_43 = !_g in let __new_44 = HxInt.add __old_43 1 in (
+        ignore (_g := __new_44);
+        __new_44
       ));
       let current = Obj.obj (HxAnon.get value (HxString.toStdString field)) in if not (HxReflect.isFunction current) then ignore (HxArray.push printableFields field) else ()
     )) done);
@@ -184,31 +184,31 @@ and writeObject = fun self (value : Obj.t) (fields : string HxArray.t) -> ignore
       ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 125);
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
-    ignore (let __place_receiver_35 = self in let __place_old_36 = (__place_receiver_35 : t).depth in let __place_rhs_37 = 1 in let __place_new_38 = HxInt.add __place_old_36 __place_rhs_37 in (
-      (__place_receiver_35 : t).depth <- __place_new_38;
-      __place_new_38
+    ignore (let __place_receiver_45 = self in let __place_old_46 = (__place_receiver_45 : t).depth in let __place_rhs_47 = 1 in let __place_new_48 = HxInt.add __place_old_46 __place_rhs_47 in (
+      (__place_receiver_45 : t).depth <- __place_new_48;
+      __place_new_48
     ));
     let _g = ref 0 in let _g1 = HxArray.length printableFields in (
-      ignore (while !_g < _g1 do ignore (let index = let __old_39 = !_g in let __new_40 = HxInt.add __old_39 1 in (
-        ignore (_g := __new_40);
-        __old_39
+      ignore (while !_g < _g1 do ignore (let index = let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
+        ignore (_g := __new_50);
+        __old_49
       ) in let field = (HxArray.get (Obj.magic printableFields) index : string) in (
         ignore (if index > 0 then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 44) else ());
         ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 10) else ());
-        ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (StringTools.lpad ("" : string) ((Obj.magic self : t).indentUnit : string) (HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)))))));
+        ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (let __call_arg_0_51 = "" in let __call_arg_1_52 = (Obj.magic self : t).indentUnit in let __call_arg_2_53 = HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)) in StringTools.lpad __call_arg_0_51 __call_arg_1_52 __call_arg_2_53))));
         ignore (quote (Obj.magic self) (field : string));
         ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 58);
         ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 32) else ());
         writeValue (Obj.magic self) (Obj.repr field) (Obj.obj (HxAnon.get value (HxString.toStdString field)))
       )) done);
-      ignore (let __recv_41 = self in let __recv_typed_42 = (Obj.magic __recv_41 : t) in __recv_typed_42.depth <- HxInt.sub (__recv_typed_42.depth) 1);
+      ignore (let __recv_54 = self in let __recv_typed_55 = (Obj.magic __recv_54 : t) in __recv_typed_55.depth <- HxInt.sub (__recv_typed_55.depth) 1);
       ignore (if (Obj.magic self : t).pretty then ignore (StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 10) else ());
-      ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (StringTools.lpad ("" : string) ((Obj.magic self : t).indentUnit : string) (HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)))))));
+      ignore (if not ((Obj.magic self : t).pretty) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).buffer)) (Obj.repr (let __call_arg_0_56 = "" in let __call_arg_1_57 = (Obj.magic self : t).indentUnit in let __call_arg_2_58 = HxInt.mul ((Obj.magic self : t).depth) (HxString.length ((Obj.magic self : t).indentUnit)) in StringTools.lpad __call_arg_0_56 __call_arg_1_57 __call_arg_2_58))));
       StringBuf.addChar (Obj.magic ((Obj.magic self : t).buffer)) 125
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43))
+)) with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59))
 
 let print = fun o replacer2 space -> let printer = Obj.magic (create (Obj.repr replacer2) (space : string)) in (
   ignore (writeValue (Obj.magic printer) (Obj.repr "") o);

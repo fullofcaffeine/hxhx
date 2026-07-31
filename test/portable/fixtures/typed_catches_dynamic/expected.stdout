@@ -1,4 +1,7 @@
+enum_constant_same=true
+enum_payload_distinct=true
 catch_enum=A
+catch_payload=B:7
 catch_bool=true
 catch_int=123
 catch_float=1.5

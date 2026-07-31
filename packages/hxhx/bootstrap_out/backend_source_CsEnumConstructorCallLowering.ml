@@ -8,47 +8,53 @@ type t = { __hx_type : Obj.t; mutable constructors : Obj.t HxMap.string_map; mut
 
 let create = fun program noRoot2 -> let self = ({ __hx_type = HxType.class_ "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic (HxRuntime.hx_null); noRoot = false } : t) in (
   ignore (ignore ((
-    ignore (if program == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed program") ["Dynamic"; "String"]) else ());
-    ignore (let __assign_1 = noRoot2 in (
-      (Obj.magic self : t).noRoot <- __assign_1;
-      __assign_1
+    ignore (if program == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed program") ["Dynamic"]) else ());
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = noRoot2 in (
+      (__place_receiver_1 : t).noRoot <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = Obj.magic (HxMap.create_string ()) in (
-      (Obj.magic self : t).constructors <- __assign_2;
-      __assign_2
+    ignore (let __assign_3 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).constructors <- __assign_3;
+      __assign_3
     ));
     let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in while !_g < HxArray.length _g1 do ignore (let typedModule = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-        ignore (_g := __new_4);
-        __new_4
+      ignore (let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
+        ignore (_g := __new_5);
+        __new_5
       ));
       let moduleDecl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let packagePath = (HxModuleDecl.getPackagePath (Obj.magic moduleDecl) : string) in let _g2 = ref 0 in let _g3 = Obj.magic (TypedModule.getTypedClasses (Obj.magic typedModule) ()) in try while !_g2 < HxArray.length _g3 do try ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-        ignore (let __old_5 = !_g2 in let __new_6 = HxInt.add __old_5 1 in (
-          ignore (_g2 := __new_6);
-          __new_6
+        ignore (let __old_6 = !_g2 in let __new_7 = HxInt.add __old_6 1 in (
+          ignore (_g2 := __new_7);
+          __new_7
         ));
         let semanticInfo = Obj.magic (TypedClass.getSemanticInfo (Obj.magic typedClass) ()) in (
           ignore (if semanticInfo == Obj.magic (HxRuntime.hx_null) || not ((Obj.magic semanticInfo : TyNominalInfo.t).getIsEnum (Obj.magic semanticInfo) ()) then raise (HxRuntime.Hx_continue) else ());
           let sourceClass = Obj.magic (TypedClass.getSourceDeclaration (Obj.magic typedClass) ()) in let _g4 = ref 0 in let _g5 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in try while !_g4 < HxArray.length _g5 do try ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
-            ignore (let __old_7 = !_g4 in let __new_8 = HxInt.add __old_7 1 in (
-              ignore (_g4 := __new_8);
-              __new_8
+            ignore (let __old_8 = !_g4 in let __new_9 = HxInt.add __old_8 1 in (
+              ignore (_g4 := __new_9);
+              __new_9
             ));
             let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in (
               ignore (if declaration == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsEnumConstructor (Obj.magic declaration) ()) then raise (HxRuntime.Hx_continue) else ());
-              ignore (if not (TyNominalTypeId.equals (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) (Obj.magic ((Obj.magic semanticInfo : TyNominalInfo.t).getIdentity (Obj.magic semanticInfo) ()))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor owner disagrees with its containing enum") ["Dynamic"; "String"]) else ());
-              ignore (if not (HxString.equals (TyDeclarationInfo.getModulePath (Obj.magic declaration) ()) ((Obj.magic semanticInfo : TyNominalInfo.t).getModulePath (Obj.magic semanticInfo) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor module disagrees with its containing enum") ["Dynamic"; "String"]) else ());
-              let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) in let target = let __anon_9 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_9 "owner" (Obj.repr (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) ())));
-                ignore (HxAnon.set __anon_9 "modulePath" (Obj.repr (TyDeclarationInfo.getModulePath (Obj.magic declaration) ())));
-                ignore (HxAnon.set __anon_9 "declaration" (Obj.repr key));
-                ignore (HxAnon.set __anon_9 "packagePath" (Obj.repr packagePath));
-                ignore (HxAnon.set __anon_9 "className" (Obj.repr (HxClassDecl.getName (Obj.magic sourceClass))));
-                ignore (HxAnon.set __anon_9 "constructor" (Obj.repr (HxFunctionDecl.getName (Obj.magic (TypedFunction.getSourceDeclaration (Obj.magic typedFunction) ())))));
-                __anon_9
-              ) in let existing = HxMap.get_string ((Obj.magic self : t).constructors) key in (
-                ignore (if existing != Obj.magic (HxRuntime.hx_null) && (not (HxString.equals (Obj.obj (HxAnon.get existing "owner")) (Obj.obj (HxAnon.get target "owner"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "modulePath")) (Obj.obj (HxAnon.get target "modulePath"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "className")) (Obj.obj (HxAnon.get target "className"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "constructor")) (Obj.obj (HxAnon.get target "constructor")))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("C# enum-constructor catalog contains conflicting exact declaration " ^ HxString.toStdString key)) ["Dynamic"; "String"]) else ());
-                HxMap.set_string ((Obj.magic self : t).constructors) key target
+              ignore (if not (TyNominalTypeId.equals (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) (Obj.magic ((Obj.magic semanticInfo : TyNominalInfo.t).getIdentity (Obj.magic semanticInfo) ()))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor owner disagrees with its containing enum") ["Dynamic"]) else ());
+              ignore (if not (HxString.equals (TyDeclarationInfo.getModulePath (Obj.magic declaration) ()) ((Obj.magic semanticInfo : TyNominalInfo.t).getModulePath (Obj.magic semanticInfo) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed enum constructor module disagrees with its containing enum") ["Dynamic"]) else ());
+              let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) in let target = let __anonymous_value_10 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_10 "owner" (Obj.repr (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) ())));
+                ignore (HxAnon.set __anonymous_value_10 "modulePath" (Obj.repr (TyDeclarationInfo.getModulePath (Obj.magic declaration) ())));
+                ignore (HxAnon.set __anonymous_value_10 "declaration" (Obj.repr key));
+                ignore (HxAnon.set __anonymous_value_10 "packagePath" (Obj.repr packagePath));
+                ignore (HxAnon.set __anonymous_value_10 "className" (Obj.repr (HxClassDecl.getName (Obj.magic sourceClass))));
+                ignore (HxAnon.set __anonymous_value_10 "constructor" (Obj.repr (HxFunctionDecl.getName (Obj.magic (TypedFunction.getSourceDeclaration (Obj.magic typedFunction) ())))));
+                __anonymous_value_10
+              ) in let tempMaybeCsExactEnumConstructorTarget = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).constructors) in (
+                ignore (let __assign_11 = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in (
+                  tempMaybeCsExactEnumConstructorTarget := __assign_11;
+                  __assign_11
+                ));
+                let existing = Obj.magic (!tempMaybeCsExactEnumConstructorTarget) in (
+                  ignore (if existing != Obj.magic (HxRuntime.hx_null) && (not (HxString.equals (Obj.obj (HxAnon.get existing "owner")) (let __anonymous_receiver_12 = target in Obj.obj (HxAnon.get __anonymous_receiver_12 "owner"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "modulePath")) (let __anonymous_receiver_13 = target in Obj.obj (HxAnon.get __anonymous_receiver_13 "modulePath"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "className")) (let __anonymous_receiver_14 = target in Obj.obj (HxAnon.get __anonymous_receiver_14 "className"))) || not (HxString.equals (Obj.obj (HxAnon.get existing "constructor")) (let __anonymous_receiver_15 = target in Obj.obj (HxAnon.get __anonymous_receiver_15 "constructor")))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("C# enum-constructor catalog contains conflicting exact declaration " ^ HxString.toStdString key)) ["Dynamic"]) else ());
+                  let _this = Obj.magic ((Obj.magic self : t).constructors) in HxMap.set_string (Obj.magic _this) (key : string) target
+                )
               )
             )
           )) with
@@ -66,23 +72,23 @@ let create = fun program noRoot2 -> let self = ({ __hx_type = HxType.class_ "bac
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic (HxRuntime.hx_null); noRoot = false } : t)
 
 let body = fun self (projection : TypedBackendFunctionProjection.t) -> let _gthis = Obj.magic self in (
-  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed function projection") ["Dynamic"; "String"]) else ());
-  let dynamicCalls = Obj.magic (Backend_source_CsDynamicLocalCallLowering.body (Obj.magic projection)) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic dynamicCalls) (fun expression -> try let __fallback_result_12 = let exact = TypedExactEnumConstructorSource.decode (Obj.magic expression) in (
+  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed function projection") ["Dynamic"]) else ());
+  let dynamicCalls = Obj.magic (Backend_source_CsDynamicLocalCallLowering.body (Obj.magic projection)) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic dynamicCalls) (fun expression -> try let __fallback_result_18 = let exact = TypedExactEnumConstructorSource.decode (Obj.magic expression) in (
     ignore (if exact == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic expression))) else ());
-    let target = HxMap.get_string ((Obj.magic _gthis : t).constructors) (Obj.obj (HxAnon.get exact "declaration")) in (
+    let _this = Obj.magic ((Obj.magic _gthis : t).constructors) in let key = (Obj.obj (HxAnon.get exact "declaration") : string) in let tempMaybeCsExactEnumConstructorTarget = HxMap.get_string (Obj.magic _this) (key : string) in let target = tempMaybeCsExactEnumConstructorTarget in (
       ignore (if target == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("C# enum-constructor lowering cannot resolve exact declaration " ^ HxString.toStdString (Obj.obj (HxAnon.get exact "declaration")))) ["Dynamic"; "String"]) else ());
       ignore (if not (HxString.equals (Obj.obj (HxAnon.get target "owner")) (Obj.obj (HxAnon.get exact "owner"))) || not (HxString.equals (Obj.obj (HxAnon.get target "modulePath")) (Obj.obj (HxAnon.get exact "modulePath"))) || not (HxString.equals (Obj.obj (HxAnon.get target "constructor")) (Obj.obj (HxAnon.get exact "constructor"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("C# enum-constructor marker disagrees with exact declaration " ^ HxString.toStdString (Obj.obj (HxAnon.get exact "declaration")))) ["Dynamic"; "String"]) else ());
-      HxExpr.ECall (Obj.magic (HxExpr.EUnsupported ("$hxhx:cs-exact-enum-constructor" : string)), Obj.magic (let __arr_10 = HxArray.create () in (
-        ignore (HxArray.push __arr_10 (HxExpr.EString (Obj.obj (HxAnon.get target "packagePath") : string)));
-        ignore (HxArray.push __arr_10 (HxExpr.EString (Obj.obj (HxAnon.get target "className") : string)));
-        ignore (HxArray.push __arr_10 (HxExpr.EString (Obj.obj (HxAnon.get target "constructor") : string)));
-        ignore (HxArray.push __arr_10 (HxExpr.EBool ((Obj.magic _gthis : t).noRoot)));
-        ignore (HxArray.push __arr_10 (HxExpr.EArrayDecl (Obj.magic (HxArray.copy (Obj.obj (HxAnon.get exact "arguments"))))));
-        __arr_10
+      HxExpr.ECall (Obj.magic (HxExpr.EUnsupported ("$hxhx:cs-exact-enum-constructor" : string)), Obj.magic (let __arr_16 = HxArray.create () in (
+        ignore (HxArray.push __arr_16 (HxExpr.EString (Obj.obj (HxAnon.get target "packagePath") : string)));
+        ignore (HxArray.push __arr_16 (HxExpr.EString (Obj.obj (HxAnon.get target "className") : string)));
+        ignore (HxArray.push __arr_16 (HxExpr.EString (Obj.obj (HxAnon.get target "constructor") : string)));
+        ignore (HxArray.push __arr_16 (HxExpr.EBool ((Obj.magic _gthis : t).noRoot)));
+        ignore (HxArray.push __arr_16 (HxExpr.EArrayDecl (Obj.magic (HxArray.copy (Obj.obj (HxAnon.get exact "arguments"))))));
+        __arr_16
       )))
     )
-  ) in Obj.magic __fallback_result_12 with
-    | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11)
+  ) in Obj.magic __fallback_result_18 with
+    | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17)
 )
 
 let marker = fun () -> "$hxhx:cs-exact-enum-constructor"
@@ -127,9 +133,9 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 11 then let _g = Obj.magic (match expression with
-    | HxExpr.ECall (__enum_param_13, _) -> __enum_param_13
+    | HxExpr.ECall (__enum_param_19, _) -> __enum_param_19
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
-    | HxExpr.ECall (_, __enum_param_14) -> __enum_param_14
+    | HxExpr.ECall (_, __enum_param_20) -> __enum_param_20
     | _ -> failwith "Unexpected enum parameter") in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -167,7 +173,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 29 then let _g2 = (match _g with
-    | HxExpr.EUnsupported __enum_param_15 -> __enum_param_15
+    | HxExpr.EUnsupported __enum_param_21 -> __enum_param_21
     | _ -> failwith "Unexpected enum parameter" : string) in if HxArray.length _g1 = 5 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g4 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 2) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 3) in let _g7 = Obj.magic (HxArray.get (Obj.magic _g1) 4) in if (match _g3 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -205,7 +211,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 2 then let _g8 = (match _g3 with
-    | HxExpr.EString __enum_param_16 -> __enum_param_16
+    | HxExpr.EString __enum_param_22 -> __enum_param_22
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g4 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -243,7 +249,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 2 then let _g9 = (match _g4 with
-    | HxExpr.EString __enum_param_17 -> __enum_param_17
+    | HxExpr.EString __enum_param_23 -> __enum_param_23
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g5 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -281,7 +287,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 2 then let _g10 = (match _g5 with
-    | HxExpr.EString __enum_param_18 -> __enum_param_18
+    | HxExpr.EString __enum_param_24 -> __enum_param_24
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g6 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -319,7 +325,7 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 1 then let _g11 = match _g6 with
-    | HxExpr.EBool __enum_param_19 -> __enum_param_19
+    | HxExpr.EBool __enum_param_25 -> __enum_param_25
     | _ -> failwith "Unexpected enum parameter" in if (match _g7 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -357,38 +363,20 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
     | HxExpr.EWhile (_, _, _, _) -> 33
     | HxExpr.EBreak _ -> 34
     | HxExpr.EContinue _ -> 35) = 24 then let _g12 = Obj.magic (match _g7 with
-    | HxExpr.EArrayDecl __enum_param_20 -> __enum_param_20
+    | HxExpr.EArrayDecl __enum_param_26 -> __enum_param_26
     | _ -> failwith "Unexpected enum parameter") in let arguments = Obj.magic _g12 in let constructor = (_g10 : string) in let packagePath = (_g8 : string) in let className = (_g9 : string) in let noRoot2 = _g11 in let value = (_g2 : string) in if HxString.equals value "$hxhx:cs-exact-enum-constructor" then (
-    ignore (if HxString.length className = 0 || HxString.length constructor = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor marker has an incomplete target identity") ["Dynamic"; "String"]) else ());
-    let __assign_21 = Obj.magic (let __anon_22 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_22 "packagePath" (Obj.repr packagePath));
-      ignore (HxAnon.set __anon_22 "className" (Obj.repr className));
-      ignore (HxAnon.set __anon_22 "constructor" (Obj.repr constructor));
-      ignore (HxAnon.set __anon_22 "noRoot" (HxRuntime.box_bool noRoot2));
-      ignore (HxAnon.set __anon_22 "arguments" (Obj.repr (HxArray.copy arguments)));
-      __anon_22
+    ignore (if HxString.length className = 0 || HxString.length constructor = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor marker has an incomplete target identity") ["Dynamic"]) else ());
+    let __assign_27 = Obj.magic (let __anon_28 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_28 "packagePath" (Obj.repr packagePath));
+      ignore (HxAnon.set __anon_28 "className" (Obj.repr className));
+      ignore (HxAnon.set __anon_28 "constructor" (Obj.repr constructor));
+      ignore (HxAnon.set __anon_28 "noRoot" (HxRuntime.box_bool noRoot2));
+      ignore (HxAnon.set __anon_28 "arguments" (Obj.repr (HxArray.copy arguments)));
+      __anon_28
     )) in (
-      tempResult := __assign_21;
-      __assign_21
+      tempResult := __assign_27;
+      __assign_27
     )
-  ) else let __assign_23 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_23;
-    __assign_23
-  ) else let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_24;
-    __assign_24
-  ) else let __assign_25 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_25;
-    __assign_25
-  ) else let __assign_26 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_26;
-    __assign_26
-  ) else let __assign_27 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_27;
-    __assign_27
-  ) else let __assign_28 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_28;
-    __assign_28
   ) else let __assign_29 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_29;
     __assign_29
@@ -398,6 +386,24 @@ let decode = fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_nul
   ) else let __assign_31 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_31;
     __assign_31
+  ) else let __assign_32 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_32;
+    __assign_32
+  ) else let __assign_33 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_33;
+    __assign_33
+  ) else let __assign_34 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_34;
+    __assign_34
+  ) else let __assign_35 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_35;
+    __assign_35
+  ) else let __assign_36 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_36;
+    __assign_36
+  ) else let __assign_37 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_37;
+    __assign_37
   ));
   Obj.magic (!tempResult)
 )

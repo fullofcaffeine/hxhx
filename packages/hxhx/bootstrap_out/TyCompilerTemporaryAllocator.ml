@@ -6,11 +6,11 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable functionIdentity : string; mutable passIdentity : string; mutable generatedNamePrefix : string; mutable nextOrdinal : int }
 
-let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let self = ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = ""; passIdentity = ""; generatedNamePrefix = ""; nextOrdinal = 0 } : t) in (
+let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let self = ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t) in (
   ignore (ignore ((
-    ignore (if functionIdentity2 == Obj.magic (HxRuntime.hx_null) || HxString.length functionIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a function owner") ["Dynamic"; "String"]) else ());
-    ignore (if passIdentity2 == Obj.magic (HxRuntime.hx_null) || HxString.length passIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a lowering pass") ["Dynamic"; "String"]) else ());
-    ignore (if generatedNamePrefix2 == Obj.magic (HxRuntime.hx_null) || HxString.length generatedNamePrefix2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a generated-name prefix") ["Dynamic"; "String"]) else ());
+    ignore (if functionIdentity2 == HxString.hx_null_string || HxString.length functionIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a function owner") ["Dynamic"]) else ());
+    ignore (if passIdentity2 == HxString.hx_null_string || HxString.length passIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a lowering pass") ["Dynamic"]) else ());
+    ignore (if generatedNamePrefix2 == HxString.hx_null_string || HxString.length generatedNamePrefix2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a generated-name prefix") ["Dynamic"]) else ());
     ignore (let __assign_1 = (functionIdentity2 : string) in (
       (Obj.magic self : t).functionIdentity <- __assign_1;
       __assign_1
@@ -31,21 +31,21 @@ let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let sel
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = ""; passIdentity = ""; generatedNamePrefix = ""; nextOrdinal = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t)
 
 let allocate = fun self (role : string) (hx_type : TyType.t) -> (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a semantic type") ["Dynamic"; "String"]) else ());
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a semantic type") ["Dynamic"]) else ());
   let ordinal = let __place_receiver_6 = self in let __place_old_7 = (__place_receiver_6 : t).nextOrdinal in let __place_new_8 = HxInt.add __place_old_7 1 in (
     (__place_receiver_6 : t).nextOrdinal <- __place_new_8;
     __place_old_7
-  ) in let tempString = ref ("" : string) in (
-    ignore (if role == Obj.magic (HxRuntime.hx_null) || HxString.length role = 0 then let __assign_9 = ("value" : string) in (
+  ) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if role == HxString.hx_null_string || HxString.length role = 0 then let __assign_9 = ("value" : string) in (
       tempString := __assign_9;
       __assign_9
     ) else let __assign_10 = (role : string) in (
       tempString := __assign_10;
       __assign_10
     ));
-    let generatedName = (((HxString.toStdString ((Obj.magic self : t).generatedNamePrefix) ^ HxString.toStdString (!tempString)) ^ "_") ^ string_of_int ordinal : string) in TyLocalBinding.create (Obj.magic (TyLocalId.forCompilerTemporary ((Obj.magic self : t).functionIdentity : string) ((Obj.magic self : t).passIdentity : string) ordinal (generatedName : string))) (generatedName : string) (Obj.magic hx_type) (Obj.magic (TyLocalDeclarationKind.CompilerTemporary))
+    let cleanRole = (!tempString : string) in let generatedName = ((HxString.toStdString ((self : t).generatedNamePrefix) ^ HxString.toStdString cleanRole) ^ "_") ^ string_of_int ordinal in TyLocalBinding.create (Obj.magic (let __call_arg_0_11 = (self : t).functionIdentity in let __call_arg_1_12 = (self : t).passIdentity in let __call_arg_2_13 = ordinal in let __call_arg_3_14 = generatedName in TyLocalId.forCompilerTemporary __call_arg_0_11 __call_arg_1_12 __call_arg_2_13 __call_arg_3_14)) (generatedName : string) (Obj.magic hx_type) (Obj.magic (TyLocalDeclarationKind.CompilerTemporary))
   )
 )

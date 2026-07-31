@@ -6,16 +6,16 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable identity : TyLocalId.t; mutable sourceName : string; mutable hx_type : TyType.t; mutable kind : TyLocalDeclarationKind.tylocaldeclarationkind }
 
-let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic (HxRuntime.hx_null); sourceName = ""; hx_type = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic (HxRuntime.hx_null); sourceName = HxString.hx_null_string; hx_type = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires an identity") ["Dynamic"; "String"]) else ());
-    ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires a semantic type") ["Dynamic"; "String"]) else ());
+    ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires an identity") ["Dynamic"]) else ());
+    ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires a semantic type") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic identity2 in (
       (Obj.magic self : t).identity <- __assign_1;
       __assign_1
     ));
-    let tempRight = ref ("" : string) in (
-      ignore (if sourceName2 == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
+      ignore (if sourceName2 == HxString.hx_null_string then let __assign_2 = ("" : string) in (
         tempRight := __assign_2;
         __assign_2
       ) else let __assign_3 = (sourceName2 : string) in (
@@ -39,7 +39,7 @@ let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic (HxRuntime.hx_null); sourceName = ""; hx_type = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic (HxRuntime.hx_null); sourceName = HxString.hx_null_string; hx_type = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getIdentity = fun self () -> (Obj.magic self : t).identity
 

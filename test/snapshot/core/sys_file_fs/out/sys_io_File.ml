@@ -19,7 +19,7 @@ let saveContent = fun path content -> ignore (HxFile.saveContent (path : string)
 
 let getBytes = fun path -> HxBytes.ofData (HxFile.getBytes (path : string)) ()
 
-let saveBytes = fun path bytes -> ignore (HxFile.saveBytes (path : string) (HxBytes.getData bytes ()))
+let saveBytes = fun path bytes -> ignore (HxFile.saveBytes (path : string) (let __bytes_access_receiver_1 = bytes in HxBytes.getData __bytes_access_receiver_1 ()))
 
 let copy = fun srcPath dstPath -> ignore (HxFile.copy (srcPath : string) (dstPath : string))
 

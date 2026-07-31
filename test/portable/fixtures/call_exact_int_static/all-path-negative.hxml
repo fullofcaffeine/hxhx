@@ -1,0 +1,7 @@
+-cp all-path-negative-src
+-main AllPathResultControlRejected
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=all-path-negative-out

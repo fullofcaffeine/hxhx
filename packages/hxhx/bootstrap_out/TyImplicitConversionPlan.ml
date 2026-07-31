@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable kind : string; mutable actualType : TyType.t; mutable expectedType : TyType.t; mutable viaType : TyType.t; mutable score : int }
 
-let create = fun kind2 actualType2 expectedType2 viaType2 score2 -> let self = ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = ""; actualType = Obj.magic (HxRuntime.hx_null); expectedType = Obj.magic (HxRuntime.hx_null); viaType = Obj.magic (HxRuntime.hx_null); score = 0 } : t) in (
+let create = fun kind2 actualType2 expectedType2 viaType2 score2 -> let self = ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic (HxRuntime.hx_null); expectedType = Obj.magic (HxRuntime.hx_null); viaType = Obj.magic (HxRuntime.hx_null); score = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (kind2 : string) in (
       (Obj.magic self : t).kind <- __assign_1;
@@ -32,7 +32,7 @@ let create = fun kind2 actualType2 expectedType2 viaType2 score2 -> let self = (
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = ""; actualType = Obj.magic (HxRuntime.hx_null); expectedType = Obj.magic (HxRuntime.hx_null); viaType = Obj.magic (HxRuntime.hx_null); score = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic (HxRuntime.hx_null); expectedType = Obj.magic (HxRuntime.hx_null); viaType = Obj.magic (HxRuntime.hx_null); score = 0 } : t)
 
 let getScore = fun self () -> (Obj.magic self : t).score
 

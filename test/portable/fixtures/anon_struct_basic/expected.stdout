@@ -1,3 +1,7 @@
-x1
-2
+field-a,field-b,field-flag
+x1:false
+x2:true
+alias-rhs:2
+false
+true
 2

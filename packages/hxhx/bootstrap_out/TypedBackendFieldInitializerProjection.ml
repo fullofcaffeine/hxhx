@@ -6,13 +6,13 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable stableIdentity : string; mutable bodyRevision : string; mutable field : TyFieldInfo.t; mutable declaration : HxFieldDecl.t; mutable localCatalog : TypedBackendLocalCatalog.t; mutable fieldReadCatalog : TypedBackendFieldReadCatalog.t }
 
-let create = fun stableIdentity2 bodyRevision2 field2 declaration2 localCatalog2 fieldReadCatalog2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = ""; bodyRevision = ""; field = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun stableIdentity2 bodyRevision2 field2 declaration2 localCatalog2 fieldReadCatalog2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if stableIdentity2 == Obj.magic (HxRuntime.hx_null) || HxString.length stableIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires a stable identity") ["Dynamic"; "String"]) else ());
-    ignore (if bodyRevision2 == Obj.magic (HxRuntime.hx_null) || HxString.length bodyRevision2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires an exact body revision") ["Dynamic"; "String"]) else ());
-    ignore (if field2 == Obj.magic (HxRuntime.hx_null) || declaration2 == Obj.magic (HxRuntime.hx_null) || localCatalog2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires complete typed facts") ["Dynamic"; "String"]) else ());
-    ignore (if not (HxString.equals (TyFieldInfo.getName (Obj.magic field2) ()) (HxFieldDecl.getName (Obj.magic declaration2))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection received a declaration for a different field") ["Dynamic"; "String"]) else ());
-    ignore (if HxFieldDecl.getInit (Obj.magic declaration2) == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires a projected initializer") ["Dynamic"; "String"]) else ());
+    ignore (if stableIdentity2 == HxString.hx_null_string || HxString.length stableIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires a stable identity") ["Dynamic"]) else ());
+    ignore (if bodyRevision2 == HxString.hx_null_string || HxString.length bodyRevision2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires an exact body revision") ["Dynamic"]) else ());
+    ignore (if field2 == Obj.magic (HxRuntime.hx_null) || declaration2 == Obj.magic (HxRuntime.hx_null) || localCatalog2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires complete typed facts") ["Dynamic"]) else ());
+    ignore (if not (HxString.equals (TyFieldInfo.getName (Obj.magic field2) ()) (HxFieldDecl.getName (Obj.magic declaration2))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection received a declaration for a different field") ["Dynamic"]) else ());
+    ignore (if HxFieldDecl.getInit (Obj.magic declaration2) == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field initializer projection requires a projected initializer") ["Dynamic"]) else ());
     ignore (let __assign_1 = (stableIdentity2 : string) in (
       (Obj.magic self : t).stableIdentity <- __assign_1;
       __assign_1
@@ -50,7 +50,7 @@ let create = fun stableIdentity2 bodyRevision2 field2 declaration2 localCatalog2
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = ""; bodyRevision = ""; field = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic (HxRuntime.hx_null); declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getStableIdentity = fun self () -> (Obj.magic self : t).stableIdentity
 

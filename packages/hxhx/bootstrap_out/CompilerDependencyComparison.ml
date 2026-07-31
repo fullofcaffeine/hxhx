@@ -48,19 +48,19 @@ let reasonFor = fun self (modulePath : string) -> try let __fallback_result_19 =
 ) in Obj.magic __fallback_result_19 with
   | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_23 = -1 in (
-    tempResult := __assign_23;
-    __assign_23
-  ) else if left > right then let __assign_24 = 1 in (
-    tempResult := __assign_24;
-    __assign_24
-  ) else let __assign_25 = 0 in (
+let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
+  ignore (if left < right then let __assign_25 = -1 in (
     tempResult := __assign_25;
     __assign_25
+  ) else if left > right then let __assign_26 = 1 in (
+    tempResult := __assign_26;
+    __assign_26
+  ) else let __assign_27 = 0 in (
+    tempResult := __assign_27;
+    __assign_27
   ));
   !tempResult
-)
+) : int)
 
 let sortedCopy = fun values -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (let __arr_21 = HxArray.create () in __arr_21) in (
@@ -70,11 +70,13 @@ let sortedCopy = fun values -> let tempArray = ref (Obj.magic (HxRuntime.hx_null
     tempArray := __assign_22;
     __assign_22
   ));
-  ignore (HxArray.sort (!tempArray) compareText);
-  !tempArray
+  let out = Obj.magic (!tempArray) in (
+    ignore (HxArray.sort out compareText);
+    out
+  )
 )
 
-let compareInvalidations = fun left right -> compareText ((Obj.magic left : CompilerDependencyInvalidation.t).modulePath : string) ((Obj.magic right : CompilerDependencyInvalidation.t).modulePath : string)
+let compareInvalidations = fun left right -> let __call_arg_0_23 = (Obj.magic left : CompilerDependencyInvalidation.t).modulePath in let __call_arg_1_24 = (Obj.magic right : CompilerDependencyInvalidation.t).modulePath in compareText __call_arg_0_23 __call_arg_1_24
 
 let create = fun programConfigurationChanges2 sourceOriginChanges2 conditionalCompilationChanges2 generatedDeclarationChanges2 macroFileDependencyChanges2 publicInterfaceChanges2 implementationChanges2 invalidations2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyComparison"; programConfigurationChanges = Obj.magic (HxRuntime.hx_null); sourceOriginChanges = Obj.magic (HxRuntime.hx_null); conditionalCompilationChanges = Obj.magic (HxRuntime.hx_null); generatedDeclarationChanges = Obj.magic (HxRuntime.hx_null); macroFileDependencyChanges = Obj.magic (HxRuntime.hx_null); publicInterfaceChanges = Obj.magic (HxRuntime.hx_null); implementationChanges = Obj.magic (HxRuntime.hx_null); invalidations = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((

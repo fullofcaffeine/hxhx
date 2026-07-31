@@ -11,6 +11,7 @@ captured-replaced=9
 alias-stays-null=true
 coalesced=12
 refined=8
+compound=3
 switch-null=null
 switch-value=3
 effect:order:10

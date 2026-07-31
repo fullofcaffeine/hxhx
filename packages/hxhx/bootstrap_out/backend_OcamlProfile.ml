@@ -41,7 +41,7 @@ let fromDefineValue = fun raw -> try let __fallback_result_10 = (
           tempResult := __assign_8;
           __assign_8
         )
-        | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("invalid -D ocaml_profile=" ^ HxString.toStdString raw) ^ " (expected portable|metal)")) ["Dynamic"; "String"]);
+        | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("invalid -D ocaml_profile=" ^ HxString.toStdString raw) ^ " (expected portable|metal)")) ["Dynamic"]);
       !tempResult
     )
   )

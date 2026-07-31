@@ -6,12 +6,12 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable stableIdentity : string; mutable bodyRevision : string; mutable declaration : HxFunctionDecl.t; mutable localCatalog : TypedBackendLocalCatalog.t; mutable fieldReadCatalog : TypedBackendFieldReadCatalog.t; mutable parameterBindingIdentities : string HxArray.t }
 
-let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldReadCatalog2 parameterBindingIdentities2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; stableIdentity = ""; bodyRevision = ""; declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null); parameterBindingIdentities = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldReadCatalog2 parameterBindingIdentities2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null); parameterBindingIdentities = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if stableIdentity2 == Obj.magic (HxRuntime.hx_null) || HxString.length stableIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a stable identity") ["Dynamic"; "String"]) else ());
-    ignore (if bodyRevision2 == Obj.magic (HxRuntime.hx_null) || HxString.length bodyRevision2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires an exact body revision") ["Dynamic"; "String"]) else ());
-    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a declaration") ["Dynamic"; "String"]) else ());
-    ignore (if localCatalog2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a local catalog") ["Dynamic"; "String"]) else ());
+    ignore (if stableIdentity2 == HxString.hx_null_string || HxString.length stableIdentity2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a stable identity") ["Dynamic"]) else ());
+    ignore (if bodyRevision2 == HxString.hx_null_string || HxString.length bodyRevision2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires an exact body revision") ["Dynamic"]) else ());
+    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a declaration") ["Dynamic"]) else ());
+    ignore (if localCatalog2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection requires a local catalog") ["Dynamic"]) else ());
     ignore (let __assign_1 = (stableIdentity2 : string) in (
       (Obj.magic self : t).stableIdentity <- __assign_1;
       __assign_1
@@ -57,8 +57,8 @@ let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldR
             ignore (_g := __new_14);
             __new_14
           ));
-          ignore (if identity == Obj.magic (HxRuntime.hx_null) || HxString.length identity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection contains an empty parameter binding identity") ["Dynamic"; "String"]) else ());
-          ignore (if HxMap.exists_string seenParameters identity then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection contains duplicate parameter binding " ^ HxString.toStdString identity)) ["Dynamic"; "String"]) else ());
+          ignore (if identity == HxString.hx_null_string || HxString.length identity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection contains an empty parameter binding identity") ["Dynamic"]) else ());
+          ignore (if HxMap.exists_string (Obj.magic seenParameters) (identity : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection contains duplicate parameter binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
           let local = Obj.magic (TypedBackendLocalCatalog.findByIdentity (Obj.magic localCatalog2) (identity : string)) in let tempBool = ref (false : bool) in let _g2 = Obj.magic (TyLocalBinding.getKind (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ()) in (
             ignore (if (match _g2 with
               | TyLocalDeclarationKind.Parameter -> 0
@@ -75,8 +75,8 @@ let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldR
               tempBool := __assign_16;
               __assign_16
             ));
-            ignore (if local == Obj.magic (HxRuntime.hx_null) || not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection cannot find exact parameter binding " ^ HxString.toStdString identity)) ["Dynamic"; "String"]) else ());
-            HxMap.set_string seenParameters identity true
+            ignore (if local == Obj.magic (HxRuntime.hx_null) || not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection cannot find exact parameter binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
+            HxMap.set_string (Obj.magic seenParameters) (identity : string) true
           )
         )) done
       )
@@ -85,7 +85,7 @@ let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldR
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; stableIdentity = ""; bodyRevision = ""; declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null); parameterBindingIdentities = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic (HxRuntime.hx_null); localCatalog = Obj.magic (HxRuntime.hx_null); fieldReadCatalog = Obj.magic (HxRuntime.hx_null); parameterBindingIdentities = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 

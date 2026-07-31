@@ -21,7 +21,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.S
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceFunctionRenderFrameTools" } : t)
 
 let target = fun frame -> (
-  ignore (if frame == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "source function rendering requires an explicit render frame") ["Dynamic"; "String"]) else ());
+  ignore (if frame == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "source function rendering requires an explicit render frame") ["Dynamic"]) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_source_SourceNativeTarget.sourcenativetarget) in (
     ignore (match frame with
       | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in let __assign_1 = Obj.magic target__local in (
@@ -41,7 +41,7 @@ let target = fun frame -> (
 )
 
 let forPhpRenderer = fun renderer -> (
-  ignore (if renderer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP function rendering requires a request-owned renderer") ["Dynamic"; "String"]) else ());
+  ignore (if renderer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP function rendering requires a request-owned renderer") ["Dynamic"]) else ());
   let plan = Obj.magic (Backend_source_PhpFunctionBodyRenderer.getPlan (Obj.magic renderer) ()) in let scope = Obj.magic (Backend_source_PhpLexicalRenderScope.forFunction (Obj.magic plan)) in let tempPhpLexicalRenderScope = ref (Obj.magic (HxRuntime.hx_null) : Backend_source_PhpLexicalRenderScope.t) in (
     ignore (if Backend_source_PhpFunctionLoweringPlan.usesThisValueSlot (Obj.magic plan) () then let __assign_6 = Obj.magic (Backend_source_PhpLexicalRenderScope.withThisValueSlot (Obj.magic scope) true) in (
       tempPhpLexicalRenderScope := __assign_6;
@@ -54,25 +54,25 @@ let forPhpRenderer = fun renderer -> (
   )
 )
 
-let targetLabel = fun target__local -> let tempResult = ref ("" : string) in (
+let targetLabel = fun target__local -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match target__local with
-    | Backend_source_SourceNativeTarget.Python -> let __assign_8 = ("Python" : string) in (
+    | Backend_source_SourceNativeTarget.Python -> let __assign_8 = "Python" in (
       tempResult := __assign_8;
       __assign_8
     )
-    | Backend_source_SourceNativeTarget.Java -> let __assign_9 = ("Java" : string) in (
+    | Backend_source_SourceNativeTarget.Java -> let __assign_9 = "Java" in (
       tempResult := __assign_9;
       __assign_9
     )
-    | Backend_source_SourceNativeTarget.Cs -> let __assign_10 = ("C#" : string) in (
+    | Backend_source_SourceNativeTarget.Cs -> let __assign_10 = "C#" in (
       tempResult := __assign_10;
       __assign_10
     )
-    | Backend_source_SourceNativeTarget.Php -> let __assign_11 = ("PHP" : string) in (
+    | Backend_source_SourceNativeTarget.Php -> let __assign_11 = "PHP" in (
       tempResult := __assign_11;
       __assign_11
     )
-    | Backend_source_SourceNativeTarget.Lua -> let __assign_12 = ("Lua" : string) in (
+    | Backend_source_SourceNativeTarget.Lua -> let __assign_12 = "Lua" in (
       tempResult := __assign_12;
       __assign_12
     ));
@@ -81,7 +81,7 @@ let targetLabel = fun target__local -> let tempResult = ref ("" : string) in (
 
 let requirePhpRenderer = fun frame -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_source_PhpFunctionBodyRenderer.t) in (
   ignore (match frame with
-    | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot answer PHP function-state queries")) ["Dynamic"; "String"]
+    | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot answer PHP function-state queries")) ["Dynamic"]
     | PhpFunction (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let renderer = Obj.magic _g in let __assign_3 = Obj.magic renderer in (
@@ -96,7 +96,7 @@ let requirePhpProgramRenderer = fun frame -> Backend_source_PhpFunctionBodyRende
 
 let requirePhpScope = fun frame -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_source_PhpLexicalRenderScope.t) in (
   ignore (match frame with
-    | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot answer PHP lexical-scope queries")) ["Dynamic"; "String"]
+    | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot answer PHP lexical-scope queries")) ["Dynamic"]
     | PhpFunction (_p0, _p1) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let scope = Obj.magic _g2 in let __assign_4 = Obj.magic scope in (
@@ -108,10 +108,10 @@ let requirePhpScope = fun frame -> let tempResult = ref (Obj.magic (HxRuntime.hx
 )
 
 let withPhpScope = fun frame scope -> (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP function rendering requires an explicit lexical scope") ["Dynamic"; "String"]) else ());
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP function rendering requires an explicit lexical scope") ["Dynamic"]) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : sourcefunctionrenderframe) in (
     ignore (match frame with
-      | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot derive a PHP lexical scope")) ["Dynamic"; "String"]
+      | Program _p0 -> let _g = Obj.magic _p0 in let target__local = Obj.magic _g in HxType.hx_throw_typed_rtti (Obj.repr (("source " ^ HxString.toStdString (targetLabel (Obj.magic target__local))) ^ " program frame cannot derive a PHP lexical scope")) ["Dynamic"]
       | PhpFunction (_p0, _p1) -> let _g = Obj.magic _p0 in (
         ignore _p1;
         let renderer = Obj.magic _g in let __assign_5 = Obj.magic (PhpFunction (Obj.magic renderer, Obj.magic scope)) in (

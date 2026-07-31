@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -40,6 +41,24 @@ enum abstract OcamlLocalCarrierConversion(String) from String to String {
 		and short-circuit side effects.
 	**/
 	final NullableBoolTruthiness = "nullable-bool-truthiness";
+
+	/** An existing Dynamic value or null sentinel already uses `Obj.t`. */
+	final PreserveDynamicCarrier = "preserve-dynamic-carrier";
+
+	/** One concrete typed value enters the selected Dynamic carrier through `Obj.repr`. */
+	final BoxConcreteToDynamic = "box-concrete-to-dynamic";
+
+	/** Exact Bool enters Dynamic through the runtime's distinguishable Bool box. */
+	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
+
+	/**
+		An exact ordinary Haxe enum enters Dynamic through its named runtime box.
+
+		The sealed input identities name both the Haxe enum and its native OCaml
+		variant carrier. Syntax may only apply `HxEnum.box_if_needed`; it may not
+		infer the enum identity from generated target text.
+	**/
+	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
 /** The source role that requires one local-carrier conversion. */
@@ -55,6 +74,9 @@ enum abstract OcamlUnsafeOperationKind(String) from String to String {
 	final CheckedNullableIntUnwrap = "checked-nullable-int-unwrap";
 	final ObjReprExactBool = "obj-repr-exact-bool";
 	final NullableBoolTruthiness = "nullable-bool-truthiness";
+	final ObjReprConcreteToDynamic = "obj-repr-concrete-to-dynamic";
+	final BoxExactBoolToDynamic = "box-exact-bool-to-dynamic";
+	final BoxExactEnumToDynamic = "box-exact-enum-to-dynamic";
 }
 
 /** Revision-bound proof for one admitted unsafe target operation. */
@@ -80,7 +102,7 @@ typedef OcamlUnsafeOperationRecord = {
 /** One immutable answer for one initializer, assignment, or read occurrence. */
 typedef OcamlLocalConversionDecision = {
 	final id:String;
-	final localId:Int;
+	final localId:String;
 	final role:OcamlLocalConversionRole;
 	final source:OcamlLoweredSourceSpan;
 	final inputSemanticTypeId:String;
@@ -101,7 +123,7 @@ typedef OcamlLocalConversionDecision = {
 
 /** One function-local reference to a program-owned representation decision. */
 typedef OcamlLocalRepresentationReference = {
-	final localId:Int;
+	final localId:String;
 	final representationId:String;
 	final semanticTypeId:String;
 	final domain:OcamlRepresentationDomain;
@@ -118,7 +140,7 @@ enum OcamlLocalRepresentationChoice {
 
 /** One explicit representation and local-carrier conversion choice for a local. */
 typedef OcamlLocalRepresentationDecision = {
-	final localId:Int;
+	final localId:String;
 	final choice:OcamlLocalRepresentationChoice;
 	final initializerConversion:OcamlLocalCarrierConversion;
 	final assignmentConversion:OcamlLocalCarrierConversion;
@@ -136,7 +158,7 @@ typedef OcamlLocalRepresentationDecision = {
 **/
 class OcamlLocalRepresentationPlan {
 	final orderedDecisions:Array<OcamlLocalRepresentationDecision>;
-	final decisionsByLocalId:Map<Int, OcamlLocalRepresentationDecision> = [];
+	final decisionsByLocalId:Map<String, OcamlLocalRepresentationDecision> = [];
 	final orderedConversions:Array<OcamlLocalConversionDecision>;
 	final conversionsById:Map<String, OcamlLocalConversionDecision> = [];
 
@@ -148,9 +170,10 @@ class OcamlLocalRepresentationPlan {
 
 	public function new(decisions:Array<OcamlLocalRepresentationDecision>, ?conversions:Array<OcamlLocalConversionDecision>) {
 		orderedDecisions = decisions.map(copyDecision);
-		orderedDecisions.sort((left, right) -> left.localId - right.localId);
+		orderedDecisions.sort((left, right) -> Reflect.compare(left.localId, right.localId));
 		var admitted = 0;
 		for (decision in orderedDecisions) {
+			requireReusableLocalId(decision.localId);
 			if (decisionsByLocalId.exists(decision.localId))
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-choice]: local ${decision.localId} has more than one representation choice';
 			decisionsByLocalId.set(decision.localId, decision);
@@ -171,6 +194,7 @@ class OcamlLocalRepresentationPlan {
 		orderedConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		var unsafeCount = 0;
 		for (conversion in orderedConversions) {
+			requireReusableLocalId(conversion.localId);
 			if (conversionsById.exists(conversion.id)) {
 				final existing = conversionsById.get(conversion.id);
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-conversion]: occurrence "${conversion.id}" identifies both local ${existing.localId} ${existing.role} at ${existing.source.file}:${existing.source.min}-${existing.source.max} and local ${conversion.localId} ${conversion.role} at ${conversion.source.file}:${conversion.source.min}-${conversion.source.max}';
@@ -181,8 +205,10 @@ class OcamlLocalRepresentationPlan {
 			switch (localDecision.choice) {
 				case ProgramDecision(_, semanticTypeId, _) if (semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>"):
 					validateNullablePrimitiveConversion(conversion, semanticTypeId);
+				case ProgramDecision(_, "Dynamic", _):
+					validateDynamicConversion(conversion);
 				case ProgramDecision(_, semanticTypeId, _):
-					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${conversion.id}" selects a nullable-primitive conversion for $semanticTypeId';
+					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${conversion.id}" selects a migrated carrier conversion for $semanticTypeId';
 				case Unmigrated(_):
 					throw 'reflaxe.ocaml [ocaml-representation:unmigrated-occurrence-conversion]: occurrence "${conversion.id}" belongs to an unmigrated local';
 			}
@@ -202,13 +228,13 @@ class OcamlLocalRepresentationPlan {
 		source role, and normalized source span. It never depends on a traversal
 		counter, local name, or rendered expression text.
 	**/
-	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:Int, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
+	public static function occurrenceId(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole, source:OcamlLoweredSourceSpan):String {
 		return "local-conversion:" + Sha256.encode([
 			binding.functionId,
 			binding.programRevision,
 			binding.bodyRevision,
 			binding.pipelineRevision,
-			Std.string(localId),
+			localId,
 			(role : String),
 			source.file,
 			Std.string(source.min),
@@ -216,8 +242,28 @@ class OcamlLocalRepresentationPlan {
 		].join("\n")).substr(0, 32);
 	}
 
-	/** Resolves one occurrence without reclassifying the conversion it needs. */
-	public function conversionFor(binding:OcamlFunctionPlanBinding, localId:Int, role:OcamlLocalConversionRole,
+	/**
+		Requires every retained occurrence to belong to one sealed function body.
+
+		A conversion is not reusable merely because its enum and carrier fields
+		look valid. Its function, program, body, and target-pipeline revisions must
+		match the function being sealed. This check runs before runtime reasons or
+		OCaml syntax can consume the plan.
+	**/
+	public function requirePlanBinding(binding:OcamlFunctionPlanBinding):Void {
+		for (conversion in orderedConversions) {
+			if (conversion.functionId != binding.functionId
+				|| conversion.programRevision != binding.programRevision
+				|| conversion.bodyRevision != binding.bodyRevision
+				|| conversion.pipelineRevision != binding.pipelineRevision) {
+				throw 'reflaxe.ocaml [ocaml-representation:stale-local-conversion-binding]: occurrence "${conversion.id}" belongs to ${conversion.functionId}/${conversion.bodyRevision}/${conversion.pipelineRevision}, expected ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+			}
+			requireCanonicalConversionIdentity(conversion);
+		}
+	}
+
+	/** Resolves one occurrence by its reusable lexical identity. */
+	public function conversionFor(binding:OcamlFunctionPlanBinding, localId:String, role:OcamlLocalConversionRole,
 			source:OcamlLoweredSourceSpan):Null<OcamlLocalConversionDecision> {
 		final decision = conversionsById.get(occurrenceId(binding, localId, role, source));
 		return decision == null ? null : copyConversion(decision);
@@ -237,31 +283,31 @@ class OcamlLocalRepresentationPlan {
 	}
 
 	/** Returns the sealed program-decision or explicit-unmigrated choice. */
-	public function choiceFor(localId:Int):Null<OcamlLocalRepresentationChoice> {
+	public function choiceFor(localId:String):Null<OcamlLocalRepresentationChoice> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : copyChoice(decision.choice);
 	}
 
 	/** Returns the sealed initializer conversion for one planned local. */
-	public function initializerConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function initializerConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.initializerConversion;
 	}
 
 	/** Returns the sealed whole-value assignment conversion for one planned local. */
-	public function assignmentConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function assignmentConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.assignmentConversion;
 	}
 
 	/** Returns the sealed conversion applied when syntax reads one planned local. */
-	public function readConversionFor(localId:Int):Null<OcamlLocalCarrierConversion> {
+	public function readConversionFor(localId:String):Null<OcamlLocalCarrierConversion> {
 		final decision = decisionsByLocalId.get(localId);
 		return decision == null ? null : decision.readConversion;
 	}
 
 	/** Returns a defensive copy of one local's registry reference. */
-	public function referenceFor(localId:Int):Null<OcamlLocalRepresentationReference> {
+	public function referenceFor(localId:String):Null<OcamlLocalRepresentationReference> {
 		final choice = choiceFor(localId);
 		return switch (choice) {
 			case ProgramDecision(representationId, semanticTypeId, domain): {
@@ -302,6 +348,12 @@ class OcamlLocalRepresentationPlan {
 		};
 	}
 
+	static function requireReusableLocalId(localId:String):Void {
+		if (!LexicalLocalIdentityPlan.isReusableId(localId)) {
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-lexical-local-identity]: "$localId" is not one complete reusable lexical-local identity';
+		}
+	}
+
 	static function copyChoice(choice:OcamlLocalRepresentationChoice):OcamlLocalRepresentationChoice {
 		return switch (choice) {
 			case ProgramDecision(representationId, semanticTypeId, domain): ProgramDecision(representationId, semanticTypeId, domain);
@@ -320,30 +372,7 @@ class OcamlLocalRepresentationPlan {
 	}
 
 	static function validateNullablePrimitiveConversion(decision:OcamlLocalConversionDecision, semanticTypeId:String):Void {
-		if (decision.id.length == 0
-			|| decision.reason.length == 0
-			|| decision.proofId.length == 0
-			|| decision.proofClaim.length == 0
-			|| decision.functionId.length == 0
-			|| decision.programRevision.length == 0
-			|| decision.bodyRevision.length == 0
-			|| decision.pipelineRevision.length == 0)
-			throw "reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: identity, reason, proof, and revision binding must be non-empty";
-		if (decision.source.file.length == 0 || decision.source.min < 0 || decision.source.max < decision.source.min)
-			throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-source]: occurrence "${decision.id}" has an invalid normalized source span';
-		switch (decision.role) {
-			case Initializer, Assignment, Read:
-			case other:
-				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-role]: occurrence "${decision.id}" uses unsupported role "$other"';
-		}
-		if (decision.profileEligibility.length == 0)
-			throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: occurrence "${decision.id}" has no eligible profile';
-		final profiles:Map<String, Bool> = [];
-		for (profile in decision.profileEligibility) {
-			if (profile.length == 0 || profiles.exists(profile))
-				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-profile]: occurrence "${decision.id}" has an empty or duplicate profile';
-			profiles.set(profile, true);
-		}
+		validateConversionCommon(decision);
 		switch (decision.conversion) {
 			case PreserveNullableIntCarrier:
 				requireConversionShape(decision, "Null<Int>", "Obj.t", "Null<Int>", "Obj.t");
@@ -365,16 +394,103 @@ class OcamlLocalRepresentationPlan {
 			case NullableBoolTruthiness:
 				requireConversionShape(decision, "Null<Bool>", "Obj.t", "Bool", "bool");
 				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.NullableBoolTruthiness);
+			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic:
+				throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${decision.id}" selects a Dynamic conversion for $semanticTypeId';
 			case LegacyCoercion, Identity:
 				throw 'reflaxe.ocaml [ocaml-representation:invalid-nullable-primitive-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact $semanticTypeId conversion';
 		}
 		final conversionFamily = switch (decision.conversion) {
 			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt: "Null<Int>";
 			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, NullableBoolTruthiness: "Null<Bool>";
+			case PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic, BoxExactEnumToDynamic: "Dynamic";
 			case LegacyCoercion, Identity: semanticTypeId;
 		}
 		if (conversionFamily != semanticTypeId)
 			throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${decision.id}" selects a $conversionFamily conversion for $semanticTypeId';
+	}
+
+	/** Rejects a Dynamic occurrence that does not preserve or box one exact carrier. */
+	static function validateDynamicConversion(decision:OcamlLocalConversionDecision):Void {
+		validateConversionCommon(decision);
+		if (decision.role != OcamlLocalConversionRole.Initializer)
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-dynamic-conversion-role]: occurrence "${decision.id}" must initialize one immutable Dynamic local';
+		switch (decision.conversion) {
+			case PreserveDynamicCarrier:
+				requireConversionShape(decision, "Dynamic", "Obj.t", "Dynamic", "Obj.t");
+				if (decision.unsafeOperation != null)
+					throw 'reflaxe.ocaml [ocaml-representation:unexpected-unsafe-operation]: Dynamic carrier-preserving occurrence "${decision.id}" must not claim an unsafe target operation';
+			case BoxConcreteToDynamic:
+				if (decision.inputSemanticTypeId.length == 0
+					|| decision.inputSemanticTypeId == "Dynamic"
+					|| decision.inputCarrierTypeId.length == 0
+					|| decision.outputSemanticTypeId != "Dynamic"
+					|| decision.outputCarrierTypeId != "Obj.t") {
+					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-carrier]: Dynamic occurrence "${decision.id}" does not describe one concrete typed carrier entering Dynamic/Obj.t';
+				}
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.ObjReprConcreteToDynamic);
+			case BoxExactBoolToDynamic:
+				requireConversionShape(decision, "Bool", "bool", "Dynamic", "Obj.t");
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.BoxExactBoolToDynamic);
+			case BoxExactEnumToDynamic:
+				OcamlEnumDynamicCarrier.requireIdentity(decision.inputSemanticTypeId, decision.inputCarrierTypeId);
+				if (decision.outputSemanticTypeId != "Dynamic"
+					|| decision.outputCarrierTypeId != OcamlEnumDynamicCarrier.DYNAMIC_CARRIER) {
+					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-carrier]: enum Dynamic occurrence "${decision.id}" must produce Dynamic/${OcamlEnumDynamicCarrier.DYNAMIC_CARRIER}';
+				}
+				requireUnsafeOperation(decision, OcamlUnsafeOperationKind.BoxExactEnumToDynamic);
+			case LegacyCoercion, Identity, PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, PreserveNullableBoolCarrier,
+				BoxExactBoolToNullableBool, NullableBoolTruthiness:
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-dynamic-conversion]: occurrence "${decision.id}" uses ${decision.conversion} instead of an exact Dynamic conversion';
+		}
+	}
+
+	/** Checks fields shared by every occurrence-bound carrier conversion. */
+	static function validateConversionCommon(decision:OcamlLocalConversionDecision):Void {
+		if (decision.id.length == 0
+			|| decision.reason.length == 0
+			|| decision.proofId.length == 0
+			|| decision.proofClaim.length == 0
+			|| decision.functionId.length == 0
+			|| decision.programRevision.length == 0
+			|| decision.bodyRevision.length == 0
+			|| decision.pipelineRevision.length == 0) {
+			throw "reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: identity, reason, proof, and revision binding must be non-empty";
+		}
+		if (decision.source.file.length == 0 || decision.source.min < 0 || decision.source.max < decision.source.min)
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-source]: occurrence "${decision.id}" has an invalid normalized source span';
+		if (decision.profileEligibility.length == 0)
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion]: occurrence "${decision.id}" has no eligible profile';
+		final profiles:Map<String, Bool> = [];
+		for (profile in decision.profileEligibility) {
+			if (profile.length == 0 || profiles.exists(profile))
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-profile]: occurrence "${decision.id}" has an empty or duplicate profile';
+			profiles.set(profile, true);
+		}
+		switch (decision.role) {
+			case Initializer, Assignment, Read:
+			case other:
+				throw 'reflaxe.ocaml [ocaml-representation:invalid-local-conversion-role]: occurrence "${decision.id}" uses unsupported role "$other"';
+		}
+		requireCanonicalConversionIdentity(decision);
+	}
+
+	/**
+		Recomputes the occurrence identity from the immutable fields it authenticates.
+
+		Without this check, a stale ID could be paired with coherently forged source
+		or revision fields in both the conversion and its unsafe-operation record.
+		Cross-record agreement would then look valid even though the ID described a
+		different source occurrence.
+	**/
+	static function requireCanonicalConversionIdentity(decision:OcamlLocalConversionDecision):Void {
+		final expected = occurrenceId({
+			functionId: decision.functionId,
+			programRevision: decision.programRevision,
+			bodyRevision: decision.bodyRevision,
+			pipelineRevision: decision.pipelineRevision
+		}, decision.localId, decision.role, decision.source);
+		if (decision.id != expected)
+			throw 'reflaxe.ocaml [ocaml-representation:noncanonical-local-conversion]: occurrence "${decision.id}" does not match its retained function, revisions, local, role, and source; expected "$expected"';
 	}
 
 	static function requireConversionShape(decision:OcamlLocalConversionDecision, inputSemanticTypeId:String, inputCarrierTypeId:String,

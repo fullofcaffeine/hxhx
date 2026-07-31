@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable programRevision : string; mutable knownTypeNames : string HxArray.t; mutable abstractTypeNames : string HxArray.t; mutable emittedTypeNames : Obj.t HxArray.t; mutable duplicateTypeNames : string HxArray.t; mutable interfaceTypeNames : string HxArray.t; mutable knownTypeNameIndex : bool HxMap.string_map; mutable abstractTypeNameIndex : bool HxMap.string_map; mutable emittedTypeNameIndex : string HxMap.string_map; mutable duplicateTypeNameIndex : bool HxMap.string_map; mutable interfaceTypeNameIndex : bool HxMap.string_map; mutable canonicalIdentity : string }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpProgramRenderFacts"; programRevision = ""; knownTypeNames = Obj.magic (HxRuntime.hx_null); abstractTypeNames = Obj.magic (HxRuntime.hx_null); emittedTypeNames = Obj.magic (HxRuntime.hx_null); duplicateTypeNames = Obj.magic (HxRuntime.hx_null); interfaceTypeNames = Obj.magic (HxRuntime.hx_null); knownTypeNameIndex = Obj.magic (HxRuntime.hx_null); abstractTypeNameIndex = Obj.magic (HxRuntime.hx_null); emittedTypeNameIndex = Obj.magic (HxRuntime.hx_null); duplicateTypeNameIndex = Obj.magic (HxRuntime.hx_null); interfaceTypeNameIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpProgramRenderFacts"; programRevision = HxString.hx_null_string; knownTypeNames = Obj.magic (HxRuntime.hx_null); abstractTypeNames = Obj.magic (HxRuntime.hx_null); emittedTypeNames = Obj.magic (HxRuntime.hx_null); duplicateTypeNames = Obj.magic (HxRuntime.hx_null); interfaceTypeNames = Obj.magic (HxRuntime.hx_null); knownTypeNameIndex = Obj.magic (HxRuntime.hx_null); abstractTypeNameIndex = Obj.magic (HxRuntime.hx_null); emittedTypeNameIndex = Obj.magic (HxRuntime.hx_null); duplicateTypeNameIndex = Obj.magic (HxRuntime.hx_null); interfaceTypeNameIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProgramRevision = fun self () -> (Obj.magic self : t).programRevision
 
@@ -17,30 +17,30 @@ let getSchemaRevision = fun self () -> (
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
-let isKnownType = fun self (name : string) -> HxMap.exists_string ((Obj.magic self : t).knownTypeNameIndex) name
+let isKnownType = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).knownTypeNameIndex) in let tempResult = HxMap.exists_string (Obj.magic _this) (name : string) in tempResult
 
-let isAbstractType = fun self (name : string) -> HxMap.exists_string ((Obj.magic self : t).abstractTypeNameIndex) name
+let isAbstractType = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).abstractTypeNameIndex) in let tempResult = HxMap.exists_string (Obj.magic _this) (name : string) in tempResult
 
-let findEmittedTypeName = fun self (name : string) -> HxMap.get_string ((Obj.magic self : t).emittedTypeNameIndex) name
+let findEmittedTypeName = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).emittedTypeNameIndex) in let tempResult = (HxMap.get_string (Obj.magic _this) (name : string) : string) in tempResult
 
-let isDuplicateTypeName = fun self (name : string) -> HxMap.exists_string ((Obj.magic self : t).duplicateTypeNameIndex) name
+let isDuplicateTypeName = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).duplicateTypeNameIndex) in let tempResult = HxMap.exists_string (Obj.magic _this) (name : string) in tempResult
 
-let isInterfaceTypeName = fun self (name : string) -> HxMap.exists_string ((Obj.magic self : t).interfaceTypeNameIndex) name
+let isInterfaceTypeName = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).interfaceTypeNameIndex) in let tempResult = HxMap.exists_string (Obj.magic _this) (name : string) in tempResult
 
 let copyKnownTypeNames = fun self () -> HxArray.copy ((Obj.magic self : t).knownTypeNames)
 
 let copyAbstractTypeNames = fun self () -> HxArray.copy ((Obj.magic self : t).abstractTypeNames)
 
-let copyEmittedTypeNames = fun self () -> let _g = Obj.magic (let __arr_53 = HxArray.create () in __arr_53) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).emittedTypeNames) in (
+let copyEmittedTypeNames = fun self () -> let _g = Obj.magic (let __arr_64 = HxArray.create () in __arr_64) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).emittedTypeNames) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let fact = HxArray.get (Obj.magic _g2) (!_g1) in (
-    ignore (let __old_54 = !_g1 in let __new_55 = HxInt.add __old_54 1 in (
-      ignore (_g1 := __new_55);
-      __new_55
+    ignore (let __old_65 = !_g1 in let __new_66 = HxInt.add __old_65 1 in (
+      ignore (_g1 := __new_66);
+      __new_66
     ));
-    HxArray.push _g (let __anon_56 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_56 "lookup" (Obj.repr (Obj.obj (HxAnon.get fact "lookup"))));
-      ignore (HxAnon.set __anon_56 "emitted" (Obj.repr (Obj.obj (HxAnon.get fact "emitted"))));
-      __anon_56
+    HxArray.push _g (let __anonymous_value_67 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_67 "lookup" (Obj.repr (Obj.obj (HxAnon.get fact "lookup"))));
+      ignore (HxAnon.set __anonymous_value_67 "emitted" (Obj.repr (Obj.obj (HxAnon.get fact "emitted"))));
+      __anonymous_value_67
     ))
   )) done);
   _g
@@ -50,71 +50,73 @@ let copyDuplicateTypeNames = fun self () -> HxArray.copy ((Obj.magic self : t).d
 
 let copyInterfaceTypeNames = fun self () -> HxArray.copy ((Obj.magic self : t).interfaceTypeNames)
 
-let hasAbstractMarker = fun cls -> try let __fallback_result_75 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
+let hasAbstractMarker = fun cls -> try let __fallback_result_86 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let metadata = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
-      ignore (_g := __new_73);
-      __new_73
+    ignore (let __old_83 = !_g in let __new_84 = HxInt.add __old_83 1 in (
+      ignore (_g := __new_84);
+      __new_84
     ));
     if HxString.equals metadata "__hxhx_abstract" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_75 with
-  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
+) in Obj.magic __fallback_result_86 with
+  | HxRuntime.Hx_return __ret_85 -> Obj.obj __ret_85
 
 let sameProjectedType = fun left right -> HxString.equals (Obj.obj (HxAnon.get left "moduleIdentity")) (Obj.obj (HxAnon.get right "moduleIdentity")) && HxString.equals (Obj.obj (HxAnon.get left "packagePath")) (Obj.obj (HxAnon.get right "packagePath")) && HxString.equals (Obj.obj (HxAnon.get left "moduleName")) (Obj.obj (HxAnon.get right "moduleName")) && HxString.equals (Obj.obj (HxAnon.get left "rawName")) (Obj.obj (HxAnon.get right "rawName")) && HxString.equals (Obj.obj (HxAnon.get left "shortName")) (Obj.obj (HxAnon.get right "shortName")) && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isAbstract") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isAbstract") && HxRuntime.unbox_bool_or_obj (HxAnon.get left "isInterface") = HxRuntime.unbox_bool_or_obj (HxAnon.get right "isInterface")
 
-let qualifiedModuleType = fun hx_type -> let tempResult = ref ("" : string) in (
-  ignore (if HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName")) then let __assign_76 = (Obj.obj (HxAnon.get hx_type "moduleIdentity") : string) in (
-    tempResult := __assign_76;
-    __assign_76
-  ) else let __assign_77 = ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "moduleIdentity")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string) in (
-    tempResult := __assign_77;
-    __assign_77
+let qualifiedModuleType = fun hx_type -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName")) then let __assign_87 = (Obj.obj (HxAnon.get hx_type "moduleIdentity") : string) in (
+    tempResult := __assign_87;
+    __assign_87
+  ) else let __assign_88 = ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "moduleIdentity")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string) in (
+    tempResult := __assign_88;
+    __assign_88
   ));
   !tempResult
 )
 
-let resolveEmittedCandidates = fun self (candidates : Obj.t HxArray.t HxMap.string_map) -> ignore (ignore (let _g = Obj.magic (let __arr_57 = HxArray.create () in __arr_57) in let lookup = HxIterator.of_array (HxMap.keys_string candidates) in (
-  ignore (while (let __iter_58 = lookup in fun () -> HxIterator.hasNext (Obj.magic __iter_58)) () do ignore (let lookup2 = ((let __iter_59 = lookup in fun () -> HxIterator.next (Obj.magic __iter_59)) () : string) in HxArray.push _g lookup2) done);
-  let tempArray = Obj.magic _g in (
-    ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-    let _g = ref 0 in try while !_g < HxArray.length tempArray do try ignore (let lookup = (HxArray.get (Obj.magic tempArray) (!_g) : string) in (
-      ignore (let __old_60 = !_g in let __new_61 = HxInt.add __old_60 1 in (
-        ignore (_g := __new_61);
-        __new_61
+let resolveEmittedCandidates = fun self (candidates : Obj.t HxArray.t HxMap.string_map) -> ignore (ignore (let _g = Obj.magic (let __arr_68 = HxArray.create () in __arr_68) in let lookup = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic candidates))) in (
+  ignore (while (let __iter_69 = lookup in fun () -> HxIterator.hasNext (Obj.magic __iter_69)) () do ignore (let lookup2 = ((let __iter_70 = lookup in fun () -> HxIterator.next (Obj.magic __iter_70)) () : string) in HxArray.push _g lookup2) done);
+  let tempArray = Obj.magic _g in let lookups = Obj.magic tempArray in (
+    ignore (HxArray.sort lookups (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+    let _g = ref 0 in try while !_g < HxArray.length lookups do try ignore (let lookup = (HxArray.get (Obj.magic lookups) (!_g) : string) in (
+      ignore (let __old_71 = !_g in let __new_72 = HxInt.add __old_71 1 in (
+        ignore (_g := __new_72);
+        __new_72
       ));
-      let values = Obj.magic (HxMap.get_string candidates lookup) in let exactEmitted = Obj.magic (HxMap.create_string ()) in let allEmitted = Obj.magic (HxMap.create_string ()) in let _g2 = ref 0 in (
+      let values = Obj.magic (HxMap.get_string (Obj.magic candidates) (lookup : string)) in let exactEmitted = Obj.magic (HxMap.create_string ()) in let allEmitted = Obj.magic (HxMap.create_string ()) in let _g2 = ref 0 in (
         ignore (while !_g2 < HxArray.length values do ignore (let candidate = HxArray.get (Obj.magic values) (!_g2) in (
-          ignore (let __old_62 = !_g2 in let __new_63 = HxInt.add __old_62 1 in (
-            ignore (_g2 := __new_63);
-            __new_63
+          ignore (let __old_73 = !_g2 in let __new_74 = HxInt.add __old_73 1 in (
+            ignore (_g2 := __new_74);
+            __new_74
           ));
-          ignore (HxMap.set_string allEmitted (Obj.obj (HxAnon.get candidate "emitted")) (Obj.obj (HxAnon.get candidate "type")));
-          if HxRuntime.unbox_bool_or_obj (HxAnon.get candidate "exact") then ignore (HxMap.set_string exactEmitted (Obj.obj (HxAnon.get candidate "emitted")) (Obj.obj (HxAnon.get candidate "type"))) else ()
+          let key = (Obj.obj (HxAnon.get candidate "emitted") : string) in let value = Obj.obj (HxAnon.get candidate "type") in (
+            ignore (HxMap.set_string (Obj.magic allEmitted) (key : string) value);
+            if HxRuntime.unbox_bool_or_obj (HxAnon.get candidate "exact") then ignore (let key = (Obj.obj (HxAnon.get candidate "emitted") : string) in let value = Obj.obj (HxAnon.get candidate "type") in HxMap.set_string (Obj.magic exactEmitted) (key : string) value) else ()
+          )
         )) done);
-        let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __arr_64 = HxArray.create () in __arr_64) in let emitted = HxIterator.of_array (HxMap.keys_string exactEmitted) in (
-          ignore (while (let __iter_65 = emitted in fun () -> HxIterator.hasNext (Obj.magic __iter_65)) () do ignore (let emitted2 = ((let __iter_66 = emitted in fun () -> HxIterator.next (Obj.magic __iter_66)) () : string) in HxArray.push _g2 emitted2) done);
-          ignore (let __assign_67 = Obj.magic _g2 in (
-            tempArray1 := __assign_67;
-            __assign_67
+        let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __arr_75 = HxArray.create () in __arr_75) in let emitted = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic exactEmitted))) in (
+          ignore (while (let __iter_76 = emitted in fun () -> HxIterator.hasNext (Obj.magic __iter_76)) () do ignore (let emitted2 = ((let __iter_77 = emitted in fun () -> HxIterator.next (Obj.magic __iter_77)) () : string) in HxArray.push _g2 emitted2) done);
+          ignore (let __assign_78 = Obj.magic _g2 in (
+            tempArray1 := __assign_78;
+            __assign_78
           ));
           let exactNames = Obj.magic (!tempArray1) in (
             ignore (HxArray.sort exactNames (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-            ignore (if HxArray.length exactNames > 1 then ignore (let first = HxMap.get_string exactEmitted (HxArray.get (Obj.magic exactNames) 0) in let second = HxMap.get_string exactEmitted (HxArray.get (Obj.magic exactNames) 1) in HxType.hx_throw_typed_rtti (Obj.repr ((((((((("PHP program render facts assign conflicting emitted names to " ^ HxString.toStdString lookup) ^ ": ") ^ HxString.toStdString (HxArray.get (Obj.magic exactNames) 0)) ^ " for ") ^ HxString.toStdString (qualifiedModuleType first)) ^ " and ") ^ HxString.toStdString (HxArray.get (Obj.magic exactNames) 1)) ^ " for ") ^ HxString.toStdString (qualifiedModuleType second))) ["Dynamic"; "String"]) else ());
-            ignore (if HxArray.length exactNames = 1 then ignore ((
-              ignore (HxMap.set_string ((Obj.magic self : t).emittedTypeNameIndex) lookup (HxArray.get (Obj.magic exactNames) 0));
+            ignore (if HxArray.length exactNames > 1 then ignore (let first = HxMap.get_string (Obj.magic exactEmitted) (HxArray.get (Obj.magic exactNames) 0 : string) in let second = HxMap.get_string (Obj.magic exactEmitted) (HxArray.get (Obj.magic exactNames) 1 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((((((((("PHP program render facts assign conflicting emitted names to " ^ HxString.toStdString lookup) ^ ": ") ^ HxString.toStdString (HxArray.get (Obj.magic exactNames) 0)) ^ " for ") ^ HxString.toStdString (qualifiedModuleType first)) ^ " and ") ^ HxString.toStdString (HxArray.get (Obj.magic exactNames) 1)) ^ " for ") ^ HxString.toStdString (qualifiedModuleType second))) ["Dynamic"]) else ());
+            ignore (if HxArray.length exactNames = 1 then ignore (let _this = Obj.magic ((Obj.magic self : t).emittedTypeNameIndex) in (
+              ignore (HxMap.set_string (Obj.magic _this) (lookup : string) (HxArray.get (Obj.magic exactNames) 0));
               raise (HxRuntime.Hx_continue)
             )) else ());
-            let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __arr_68 = HxArray.create () in __arr_68) in let emitted = HxIterator.of_array (HxMap.keys_string allEmitted) in (
-              ignore (while (let __iter_69 = emitted in fun () -> HxIterator.hasNext (Obj.magic __iter_69)) () do ignore (let emitted2 = ((let __iter_70 = emitted in fun () -> HxIterator.next (Obj.magic __iter_70)) () : string) in HxArray.push _g2 emitted2) done);
-              ignore (let __assign_71 = Obj.magic _g2 in (
-                tempArray2 := __assign_71;
-                __assign_71
+            let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __arr_79 = HxArray.create () in __arr_79) in let emitted = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic allEmitted))) in (
+              ignore (while (let __iter_80 = emitted in fun () -> HxIterator.hasNext (Obj.magic __iter_80)) () do ignore (let emitted2 = ((let __iter_81 = emitted in fun () -> HxIterator.next (Obj.magic __iter_81)) () : string) in HxArray.push _g2 emitted2) done);
+              ignore (let __assign_82 = Obj.magic _g2 in (
+                tempArray2 := __assign_82;
+                __assign_82
               ));
               let names = Obj.magic (!tempArray2) in (
                 ignore (HxArray.sort names (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-                if HxArray.length names = 1 then ignore (HxMap.set_string ((Obj.magic self : t).emittedTypeNameIndex) lookup (HxArray.get (Obj.magic names) 0)) else ()
+                if HxArray.length names = 1 then ignore (let _this = Obj.magic ((Obj.magic self : t).emittedTypeNameIndex) in HxMap.set_string (Obj.magic _this) (lookup : string) (HxArray.get (Obj.magic names) 0)) else ()
               )
             )
           )
@@ -126,25 +128,27 @@ let resolveEmittedCandidates = fun self (candidates : Obj.t HxArray.t HxMap.stri
   )
 )))
 
-let emittedNameFor = fun hx_type duplicateShortName -> try let __fallback_result_79 = (
+let emittedNameFor = fun hx_type duplicateShortName -> try let __fallback_result_92 = (
   ignore (if not (duplicateShortName) || HxString.length (Obj.obj (HxAnon.get hx_type "moduleName")) = 0 || HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName")) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get hx_type "shortName") : string))) else ());
-  Backend_source_PhpName.typeIdentifier ((HxString.toStdString (Backend_source_PhpName.typeIdentifier (Obj.obj (HxAnon.get hx_type "moduleName") : string)) ^ "_") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "shortName")) : string)
-) in Obj.magic __fallback_result_79 with
-  | HxRuntime.Hx_return __ret_78 -> Obj.obj __ret_78
+  let __call_arg_0_89 = (HxString.toStdString (let __call_arg_0_90 = Obj.obj (HxAnon.get hx_type "moduleName") in Backend_source_PhpName.typeIdentifier __call_arg_0_90) ^ "_") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "shortName")) in Backend_source_PhpName.typeIdentifier __call_arg_0_89
+) in Obj.magic __fallback_result_92 with
+  | HxRuntime.Hx_return __ret_91 -> Obj.obj __ret_91
 
-let addSourceTypeSpellings = fun out name -> ignore (try (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (HxMap.set_string out name true);
-  ignore (HxMap.set_string out (Backend_source_SourceIdentifier.sanitize (name : string)) true);
-  let parts = Obj.magic (HxString.split name ".") in if HxArray.length parts > 0 then ignore (let shortName = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in (
-    ignore (HxMap.set_string out shortName true);
-    HxMap.set_string out (Backend_source_SourceIdentifier.sanitize (shortName : string)) true
-  )) else ()
-) with
-  | HxRuntime.Hx_return __ret_80 -> Obj.obj __ret_80)
+let addSourceTypeSpellings = fun out name -> ignore (try ignore ((
+  ignore (if name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (HxMap.set_string (Obj.magic out) (name : string) true);
+  let key = let __call_arg_0_93 = name in Backend_source_SourceIdentifier.sanitize __call_arg_0_93 in (
+    ignore (HxMap.set_string (Obj.magic out) (key : string) true);
+    let parts = Obj.magic (HxString.split name ".") in if HxArray.length parts > 0 then ignore (let shortName = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in (
+      ignore (HxMap.set_string (Obj.magic out) (shortName : string) true);
+      let key = let __call_arg_0_94 = shortName in Backend_source_SourceIdentifier.sanitize __call_arg_0_94 in HxMap.set_string (Obj.magic out) (key : string) true
+    )) else ()
+  )
+)) with
+  | HxRuntime.Hx_return __ret_95 -> Obj.obj __ret_95)
 
-let sortedBoolKeys = fun values -> let _g = Obj.magic (let __arr_84 = HxArray.create () in __arr_84) in let value = HxIterator.of_array (HxMap.keys_string values) in (
-  ignore (while (let __iter_85 = value in fun () -> HxIterator.hasNext (Obj.magic __iter_85)) () do ignore (let value2 = ((let __iter_86 = value in fun () -> HxIterator.next (Obj.magic __iter_86)) () : string) in HxArray.push _g value2) done);
+let sortedBoolKeys = fun values -> let _g = Obj.magic (let __arr_100 = HxArray.create () in __arr_100) in let value = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic values))) in (
+  ignore (while (let __iter_101 = value in fun () -> HxIterator.hasNext (Obj.magic __iter_101)) () do ignore (let value2 = ((let __iter_102 = value in fun () -> HxIterator.next (Obj.magic __iter_102)) () : string) in HxArray.push _g value2) done);
   ignore (HxArray.sort _g (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
   _g
 )
@@ -153,173 +157,183 @@ let addIdentitySection = fun out label values -> ignore ((
   ignore (HxArray.push out label);
   ignore (HxArray.push out (string_of_int (HxArray.length values)));
   let _g = ref 0 in while !_g < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g) : string) in (
-    ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
-      ignore (_g := __new_88);
-      __new_88
+    ignore (let __old_103 = !_g in let __new_104 = HxInt.add __old_103 1 in (
+      ignore (_g := __new_104);
+      __new_104
     ));
     HxArray.push out value
   )) done
 ))
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_89 = ("" : string) in (
-    tempResult := __assign_89;
-    __assign_89
-  ) else let __assign_90 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_90;
-    __assign_90
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_105 = "" in (
+    tempResult := __assign_105;
+    __assign_105
+  ) else let __assign_106 = let __call_arg_0_107 = value in StringTools.trim __call_arg_0_107 in (
+    tempResult := __assign_106;
+    __assign_106
   ));
   !tempResult
-)
+) : string)
 
-let addEmittedCandidate = fun out lookup emitted hx_type exact -> ignore (try let clean = (normalize (lookup : string) : string) in (
+let addEmittedCandidate = fun out lookup emitted hx_type exact -> ignore (try ignore (let clean = let __call_arg_0_96 = lookup in normalize __call_arg_0_96 in (
   ignore (if HxString.length clean = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let candidate = let __anon_81 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_81 "emitted" (Obj.repr emitted));
-    ignore (HxAnon.set __anon_81 "type" hx_type);
-    ignore (HxAnon.set __anon_81 "exact" (HxRuntime.box_bool exact));
-    __anon_81
-  ) in let previous = Obj.magic (HxMap.get_string out clean) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out clean (let __arr_82 = HxArray.create () in (
-    ignore (HxArray.push __arr_82 candidate);
-    __arr_82
+  let candidate = let __anon_97 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_97 "emitted" (Obj.repr emitted));
+    ignore (HxAnon.set __anon_97 "type" hx_type);
+    ignore (HxAnon.set __anon_97 "exact" (HxRuntime.box_bool exact));
+    __anon_97
+  ) in let previous = Obj.magic (HxMap.get_string (Obj.magic out) (clean : string)) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic out) (clean : string) (let __arr_98 = HxArray.create () in (
+    ignore (HxArray.push __arr_98 candidate);
+    __arr_98
   ))) else ignore (HxArray.push previous candidate)
-) with
-  | HxRuntime.Hx_return __ret_83 -> Obj.obj __ret_83)
+)) with
+  | HxRuntime.Hx_return __ret_99 -> Obj.obj __ret_99)
 
-let create = fun programRevision2 modules -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpProgramRenderFacts"; programRevision = ""; knownTypeNames = Obj.magic (HxRuntime.hx_null); abstractTypeNames = Obj.magic (HxRuntime.hx_null); emittedTypeNames = Obj.magic (HxRuntime.hx_null); duplicateTypeNames = Obj.magic (HxRuntime.hx_null); interfaceTypeNames = Obj.magic (HxRuntime.hx_null); knownTypeNameIndex = Obj.magic (HxRuntime.hx_null); abstractTypeNameIndex = Obj.magic (HxRuntime.hx_null); emittedTypeNameIndex = Obj.magic (HxRuntime.hx_null); duplicateTypeNameIndex = Obj.magic (HxRuntime.hx_null); interfaceTypeNameIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun programRevision2 modules -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpProgramRenderFacts"; programRevision = HxString.hx_null_string; knownTypeNames = Obj.magic (HxRuntime.hx_null); abstractTypeNames = Obj.magic (HxRuntime.hx_null); emittedTypeNames = Obj.magic (HxRuntime.hx_null); duplicateTypeNames = Obj.magic (HxRuntime.hx_null); interfaceTypeNames = Obj.magic (HxRuntime.hx_null); knownTypeNameIndex = Obj.magic (HxRuntime.hx_null); abstractTypeNameIndex = Obj.magic (HxRuntime.hx_null); emittedTypeNameIndex = Obj.magic (HxRuntime.hx_null); duplicateTypeNameIndex = Obj.magic (HxRuntime.hx_null); interfaceTypeNameIndex = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (normalize (programRevision2 : string) : string) in (
+    ignore (let __assign_1 = (let __call_arg_0_2 = programRevision2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).programRevision <- __assign_1;
       __assign_1
     ));
-    ignore (if HxString.length ((Obj.magic self : t).programRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts require an exact typed-program revision") ["Dynamic"; "String"]) else ());
+    ignore (if HxString.length ((Obj.magic self : t).programRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts require an exact typed-program revision") ["Dynamic"]) else ());
     let typesByIdentity = Obj.magic (HxMap.create_string ()) in (
       ignore (if modules != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length modules do ignore (let moduleInput = HxArray.get (Obj.magic modules) (!_g) in (
-        ignore (let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
-          ignore (_g := __new_3);
-          __new_3
+        ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+          ignore (_g := __new_4);
+          __new_4
         ));
-        ignore (if moduleInput == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get moduleInput "projection") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts contain a null module projection") ["Dynamic"; "String"]) else ());
-        let moduleIdentity = (normalize (Obj.obj (HxAnon.get moduleInput "moduleIdentity") : string) : string) in (
-          ignore (if HxString.length moduleIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts require an exact module identity") ["Dynamic"; "String"]) else ());
-          let tempString = ref ("" : string) in (
-            ignore (if HxString.indexOf moduleIdentity "." 0 < 0 then let __assign_4 = (moduleIdentity : string) in (
-              tempString := __assign_4;
-              __assign_4
-            ) else let __assign_5 = (HxString.substr moduleIdentity (HxInt.add (HxString.lastIndexOf moduleIdentity "." (HxString.length moduleIdentity)) 1) (-1) : string) in (
-              tempString := __assign_5;
-              __assign_5
+        ignore (if moduleInput == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get moduleInput "projection") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts contain a null module projection") ["Dynamic"]) else ());
+        let moduleIdentity = let __call_arg_0_5 = Obj.obj (HxAnon.get moduleInput "moduleIdentity") in normalize __call_arg_0_5 in (
+          ignore (if HxString.length moduleIdentity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts require an exact module identity") ["Dynamic"]) else ());
+          let tempString = ref (HxString.hx_null_string : string) in (
+            ignore (if HxString.indexOf moduleIdentity "." 0 < 0 then let __assign_6 = (moduleIdentity : string) in (
+              tempString := __assign_6;
+              __assign_6
+            ) else let __assign_7 = (HxString.substr moduleIdentity (HxInt.add (HxString.lastIndexOf moduleIdentity "." (HxString.length moduleIdentity)) 1) (-1) : string) in (
+              tempString := __assign_7;
+              __assign_7
             ));
-            let moduleName = (!tempString : string) in let declaration = Obj.magic (TypedBackendModuleProjection.getDeclaration (Obj.magic (Obj.obj (HxAnon.get moduleInput "projection"))) ()) in let packagePath = (normalize (HxModuleDecl.getPackagePath (Obj.magic declaration) : string) : string) in let _g2 = ref 0 in let _g1 = Obj.magic (TypedBackendModuleProjection.getClasses (Obj.magic (Obj.obj (HxAnon.get moduleInput "projection"))) ()) in while !_g2 < HxArray.length _g1 do ignore (let projectedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
-              ignore (let __old_6 = !_g2 in let __new_7 = HxInt.add __old_6 1 in (
-                ignore (_g2 := __new_7);
-                __new_7
+            let moduleName = (!tempString : string) in let declaration = Obj.magic (TypedBackendModuleProjection.getDeclaration (Obj.magic (Obj.obj (HxAnon.get moduleInput "projection"))) ()) in let packagePath = let __call_arg_0_8 = HxModuleDecl.getPackagePath (Obj.magic declaration) in normalize __call_arg_0_8 in let _g2 = ref 0 in let _g1 = Obj.magic (TypedBackendModuleProjection.getClasses (Obj.magic (Obj.obj (HxAnon.get moduleInput "projection"))) ()) in while !_g2 < HxArray.length _g1 do ignore (let projectedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
+              ignore (let __old_9 = !_g2 in let __new_10 = HxInt.add __old_9 1 in (
+                ignore (_g2 := __new_10);
+                __new_10
               ));
-              ignore (if projectedClass == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts contain a null class projection") ["Dynamic"; "String"]) else ());
-              let cls = Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic projectedClass) ()) in let rawName = (normalize (HxClassDecl.getName (Obj.magic cls) : string) : string) in let identity = (CompilerCacheIdentity.encode (Obj.magic (let __arr_8 = HxArray.create () in (
-                ignore (HxArray.push __arr_8 "php-projected-type-v1");
-                ignore (HxArray.push __arr_8 moduleIdentity);
-                ignore (HxArray.push __arr_8 rawName);
-                __arr_8
-              ))) : string) in let fact = let __anon_9 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_9 "identity" (Obj.repr identity));
-                ignore (HxAnon.set __anon_9 "moduleIdentity" (Obj.repr moduleIdentity));
-                ignore (HxAnon.set __anon_9 "packagePath" (Obj.repr packagePath));
-                ignore (HxAnon.set __anon_9 "moduleName" (Obj.repr moduleName));
-                ignore (HxAnon.set __anon_9 "rawName" (Obj.repr rawName));
-                ignore (HxAnon.set __anon_9 "shortName" (Obj.repr (Backend_source_PhpName.typeIdentifier (rawName : string))));
-                ignore (HxAnon.set __anon_9 "isAbstract" (HxRuntime.box_bool (hasAbstractMarker (Obj.magic cls))));
-                ignore (HxAnon.set __anon_9 "isInterface" (HxRuntime.box_bool (HxClassDecl.getIsInterface (Obj.magic cls))));
-                __anon_9
-              ) in let previous = HxMap.get_string typesByIdentity identity in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string typesByIdentity identity fact) else ignore (if not (sameProjectedType previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program render facts contain conflicting projected type " ^ HxString.toStdString (qualifiedModuleType fact))) ["Dynamic"; "String"]) else ())
+              ignore (if projectedClass == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program render facts contain a null class projection") ["Dynamic"]) else ());
+              let cls = Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic projectedClass) ()) in let rawName = let __call_arg_0_11 = HxClassDecl.getName (Obj.magic cls) in normalize __call_arg_0_11 in let identity = (CompilerCacheIdentity.encode (Obj.magic (let __arr_12 = HxArray.create () in (
+                ignore (HxArray.push __arr_12 "php-projected-type-v1");
+                ignore (HxArray.push __arr_12 moduleIdentity);
+                ignore (HxArray.push __arr_12 rawName);
+                __arr_12
+              ))) : string) in let fact = let __anonymous_value_13 = HxAnon.create () in (
+                ignore (HxAnon.set __anonymous_value_13 "identity" (Obj.repr identity));
+                ignore (HxAnon.set __anonymous_value_13 "moduleIdentity" (Obj.repr moduleIdentity));
+                ignore (HxAnon.set __anonymous_value_13 "packagePath" (Obj.repr packagePath));
+                ignore (HxAnon.set __anonymous_value_13 "moduleName" (Obj.repr moduleName));
+                ignore (HxAnon.set __anonymous_value_13 "rawName" (Obj.repr rawName));
+                ignore (HxAnon.set __anonymous_value_13 "shortName" (Obj.repr (let __call_arg_0_14 = rawName in Backend_source_PhpName.typeIdentifier __call_arg_0_14)));
+                ignore (HxAnon.set __anonymous_value_13 "isAbstract" (HxRuntime.box_bool (hasAbstractMarker (Obj.magic cls))));
+                ignore (HxAnon.set __anonymous_value_13 "isInterface" (HxRuntime.box_bool (HxClassDecl.getIsInterface (Obj.magic cls))));
+                __anonymous_value_13
+              ) in let previous = HxMap.get_string (Obj.magic typesByIdentity) (identity : string) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic typesByIdentity) (identity : string) fact) else ignore (if not (sameProjectedType previous fact) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program render facts contain conflicting projected type " ^ HxString.toStdString (qualifiedModuleType fact))) ["Dynamic"]) else ())
             )) done
           )
         )
       )) done) else ());
-      let _g = Obj.magic (let __arr_10 = HxArray.create () in __arr_10) in let identity = HxIterator.of_array (HxMap.keys_string typesByIdentity) in (
-        ignore (while (let __iter_11 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_11)) () do ignore (let identity2 = ((let __iter_12 = identity in fun () -> HxIterator.next (Obj.magic __iter_12)) () : string) in HxArray.push _g identity2) done);
-        let tempArray = Obj.magic _g in (
-          ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-          let _g = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let _g1 = ref 0 in (
-            ignore (while !_g1 < HxArray.length tempArray do ignore (let identity = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
-              ignore (let __old_14 = !_g1 in let __new_15 = HxInt.add __old_14 1 in (
-                ignore (_g1 := __new_15);
-                __new_15
+      let _g = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in let identity = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic typesByIdentity))) in (
+        ignore (while (let __iter_16 = identity in fun () -> HxIterator.hasNext (Obj.magic __iter_16)) () do ignore (let identity2 = ((let __iter_17 = identity in fun () -> HxIterator.next (Obj.magic __iter_17)) () : string) in HxArray.push _g identity2) done);
+        let tempArray = Obj.magic _g in let typeIdentities = Obj.magic tempArray in (
+          ignore (HxArray.sort typeIdentities (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+          let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let _g1 = ref 0 in (
+            ignore (while !_g1 < HxArray.length typeIdentities do ignore (let identity = (HxArray.get (Obj.magic typeIdentities) (!_g1) : string) in (
+              ignore (let __old_19 = !_g1 in let __new_20 = HxInt.add __old_19 1 in (
+                ignore (_g1 := __new_20);
+                __new_20
               ));
-              HxArray.push _g (HxMap.get_string typesByIdentity identity)
+              HxArray.push _g (HxMap.get_string (Obj.magic typesByIdentity) (identity : string))
             )) done);
-            let tempArray1 = Obj.magic _g in let shortNameCounts = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
-              ignore (while !_g < HxArray.length tempArray1 do ignore (let hx_type = HxArray.get (Obj.magic tempArray1) (!_g) in (
-                ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
-                  ignore (_g := __new_17);
-                  __new_17
+            let tempArray1 = Obj.magic _g in let types = Obj.magic tempArray1 in let shortNameCounts = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
+              ignore (while !_g < HxArray.length types do ignore (let hx_type = HxArray.get (Obj.magic types) (!_g) in (
+                ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
+                  ignore (_g := __new_22);
+                  __new_22
                 ));
-                let tempNumber = ref (0 : int) in (
-                  ignore (if HxMap.exists_string shortNameCounts (Obj.obj (HxAnon.get hx_type "shortName")) then let __assign_18 = HxInt.add (let __nullable_int_19 = HxMap.get_string shortNameCounts (Obj.obj (HxAnon.get hx_type "shortName")) in if __nullable_int_19 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_19) 1 in (
-                    tempNumber := __assign_18;
-                    __assign_18
-                  ) else let __assign_20 = 1 in (
-                    tempNumber := __assign_20;
-                    __assign_20
+                let key = (Obj.obj (HxAnon.get hx_type "shortName") : string) in let tempNumber = ref (0 : int) in let tempBool = ref (false : bool) in let key2 = (Obj.obj (HxAnon.get hx_type "shortName") : string) in (
+                  ignore (let __assign_23 = HxMap.exists_string (Obj.magic shortNameCounts) (key2 : string) in (
+                    tempBool := __assign_23;
+                    __assign_23
                   ));
-                  HxMap.set_string shortNameCounts (Obj.obj (HxAnon.get hx_type "shortName")) (!tempNumber)
+                  ignore (if !tempBool then let tempLeft = ref (HxRuntime.hx_null : Obj.t) in let key2 = (Obj.obj (HxAnon.get hx_type "shortName") : string) in (
+                    ignore (let __assign_24 = HxMap.get_string (Obj.magic shortNameCounts) (key2 : string) in (
+                      tempLeft := __assign_24;
+                      __assign_24
+                    ));
+                    let __assign_25 = HxInt.add (HxRuntime.nullable_int_unwrap (!tempLeft)) 1 in (
+                      tempNumber := __assign_25;
+                      __assign_25
+                    )
+                  ) else let __assign_26 = 1 in (
+                    tempNumber := __assign_26;
+                    __assign_26
+                  ));
+                  let value = !tempNumber in HxMap.set_string (Obj.magic shortNameCounts) (key : string) value
                 )
               )) done);
-              ignore (let __assign_21 = Obj.magic (HxMap.create_string ()) in (
-                (Obj.magic self : t).knownTypeNameIndex <- __assign_21;
-                __assign_21
+              ignore (let __assign_27 = Obj.magic (HxMap.create_string ()) in (
+                (Obj.magic self : t).knownTypeNameIndex <- __assign_27;
+                __assign_27
               ));
-              ignore (let __assign_22 = Obj.magic (HxMap.create_string ()) in (
-                (Obj.magic self : t).abstractTypeNameIndex <- __assign_22;
-                __assign_22
+              ignore (let __assign_28 = Obj.magic (HxMap.create_string ()) in (
+                (Obj.magic self : t).abstractTypeNameIndex <- __assign_28;
+                __assign_28
               ));
-              ignore (let __assign_23 = Obj.magic (HxMap.create_string ()) in (
-                (Obj.magic self : t).emittedTypeNameIndex <- __assign_23;
-                __assign_23
+              ignore (let __assign_29 = Obj.magic (HxMap.create_string ()) in (
+                (Obj.magic self : t).emittedTypeNameIndex <- __assign_29;
+                __assign_29
               ));
-              ignore (let __assign_24 = Obj.magic (HxMap.create_string ()) in (
-                (Obj.magic self : t).duplicateTypeNameIndex <- __assign_24;
-                __assign_24
+              ignore (let __assign_30 = Obj.magic (HxMap.create_string ()) in (
+                (Obj.magic self : t).duplicateTypeNameIndex <- __assign_30;
+                __assign_30
               ));
-              ignore (let __assign_25 = Obj.magic (HxMap.create_string ()) in (
-                (Obj.magic self : t).interfaceTypeNameIndex <- __assign_25;
-                __assign_25
+              ignore (let __assign_31 = Obj.magic (HxMap.create_string ()) in (
+                (Obj.magic self : t).interfaceTypeNameIndex <- __assign_31;
+                __assign_31
               ));
-              let emittedCandidates = Obj.magic (HxMap.create_string ()) in let emittedTypeOwners = Obj.magic (HxMap.create_string ()) in let name = ("Int" : string) in (
+              let emittedCandidates = Obj.magic (HxMap.create_string ()) in let emittedTypeOwners = Obj.magic (HxMap.create_string ()) in let name = "Int" in (
                 ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                let name = ("String" : string) in (
+                let name = "String" in (
                   ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                  let name = ("Bool" : string) in (
+                  let name = "Bool" in (
                     ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                    let name = ("Float" : string) in (
+                    let name = "Float" in (
                       ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                      let name = ("Array" : string) in (
+                      let name = "Array" in (
                         ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                        let name = ("Class" : string) in (
+                        let name = "Class" in (
                           ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                          let name = ("Enum" : string) in (
+                          let name = "Enum" in (
                             ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                            let name = ("Dynamic" : string) in (
+                            let name = "Dynamic" in (
                               ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                              let name = ("Date" : string) in (
+                              let name = "Date" in (
                                 ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                let name = ("Math" : string) in (
+                                let name = "Math" in (
                                   ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                  let name = ("Xml" : string) in (
+                                  let name = "Xml" in (
                                     ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                    let name = ("haxe.ds.StringMap" : string) in (
+                                    let name = "haxe.ds.StringMap" in (
                                       ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                      let name = ("haxe.ds.List" : string) in (
+                                      let name = "haxe.ds.List" in (
                                         ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                        let name = ("List" : string) in (
+                                        let name = "List" in (
                                           ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (name : string));
-                                          let shortName = HxIterator.of_array (HxMap.keys_string shortNameCounts) in (
-                                            ignore (while (let __iter_26 = shortName in fun () -> HxIterator.hasNext (Obj.magic __iter_26)) () do ignore (let shortName2 = ((let __iter_27 = shortName in fun () -> HxIterator.next (Obj.magic __iter_27)) () : string) in if let __nullable_28 = HxMap.get_string shortNameCounts shortName2 in let __nullable_29 = 1 in if __nullable_28 == HxRuntime.hx_null then false else Obj.obj __nullable_28 > __nullable_29 then ignore (HxMap.set_string ((Obj.magic self : t).duplicateTypeNameIndex) shortName2 true) else ()) done);
+                                          let shortName = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic shortNameCounts))) in (
+                                            ignore (while (let __iter_32 = shortName in fun () -> HxIterator.hasNext (Obj.magic __iter_32)) () do ignore (let shortName2 = ((let __iter_33 = shortName in fun () -> HxIterator.next (Obj.magic __iter_33)) () : string) in if let __nullable_34 = HxMap.get_string (Obj.magic shortNameCounts) (shortName2 : string) in let __nullable_35 = 1 in if __nullable_34 == HxRuntime.hx_null then false else Obj.obj __nullable_34 > __nullable_35 then ignore (let _this = Obj.magic ((Obj.magic self : t).duplicateTypeNameIndex) in HxMap.set_string (Obj.magic _this) (shortName2 : string) true) else ()) done);
                                             let _g = ref 0 in (
-                                              ignore (while !_g < HxArray.length tempArray1 do ignore (let hx_type = HxArray.get (Obj.magic tempArray1) (!_g) in (
-                                                ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
-                                                  ignore (_g := __new_31);
-                                                  __new_31
+                                              ignore (while !_g < HxArray.length types do ignore (let hx_type = HxArray.get (Obj.magic types) (!_g) in (
+                                                ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
+                                                  ignore (_g := __new_37);
+                                                  __new_37
                                                 ));
                                                 ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) (Obj.obj (HxAnon.get hx_type "rawName") : string));
                                                 ignore (if HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) > 0 then ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).knownTypeNameIndex)) ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "packagePath")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string)) else ());
@@ -327,81 +341,99 @@ let create = fun programRevision2 modules -> let self = ({ __hx_type = HxType.cl
                                                   ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).abstractTypeNameIndex)) (Obj.obj (HxAnon.get hx_type "rawName") : string));
                                                   if HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) > 0 then ignore (addSourceTypeSpellings (Obj.magic ((Obj.magic self : t).abstractTypeNameIndex)) ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "packagePath")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string)) else ()
                                                 )) else ());
-                                                let emittedName = (emittedNameFor hx_type (HxMap.exists_string ((Obj.magic self : t).duplicateTypeNameIndex) (Obj.obj (HxAnon.get hx_type "shortName"))) : string) in let emittedIdentity = (HxString.toLowerCase emittedName () : string) in let previousEmittedOwner = HxMap.get_string emittedTypeOwners emittedIdentity in (
-                                                  ignore (if previousEmittedOwner == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string emittedTypeOwners emittedIdentity hx_type) else ignore (if not (HxString.equals (Obj.obj (HxAnon.get previousEmittedOwner "identity")) (Obj.obj (HxAnon.get hx_type "identity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("PHP program render facts assign emitted type " ^ HxString.toStdString emittedName) ^ " to both ") ^ HxString.toStdString (qualifiedModuleType previousEmittedOwner)) ^ " and ") ^ HxString.toStdString (qualifiedModuleType hx_type))) ["Dynamic"; "String"]) else ()));
-                                                  let tempString1 = ref ("" : string) in (
-                                                    ignore (if HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) = 0 then let __assign_32 = (Obj.obj (HxAnon.get hx_type "rawName") : string) in (
-                                                      tempString1 := __assign_32;
-                                                      __assign_32
-                                                    ) else let __assign_33 = ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "packagePath")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string) in (
-                                                      tempString1 := __assign_33;
-                                                      __assign_33
-                                                    ));
-                                                    let fullName = (!tempString1 : string) in let exactTypeName = (qualifiedModuleType hx_type : string) in let genericKeys = Obj.magic (let __arr_34 = HxArray.create () in (
-                                                      ignore (HxArray.push __arr_34 (Obj.obj (HxAnon.get hx_type "rawName")));
-                                                      ignore (HxArray.push __arr_34 (Obj.obj (HxAnon.get hx_type "shortName")));
-                                                      ignore (HxArray.push __arr_34 fullName);
-                                                      ignore (HxArray.push __arr_34 (Backend_source_PhpName.typePath (fullName : string)));
-                                                      __arr_34
-                                                    )) in let includeShortName = let __nullable_35 = HxMap.get_string shortNameCounts (Obj.obj (HxAnon.get hx_type "shortName")) in if __nullable_35 == HxRuntime.hx_null then false else Obj.obj __nullable_35 = 1 in let _g2 = ref 0 in (
-                                                      ignore (try while !_g2 < HxArray.length genericKeys do try ignore (let key = (HxArray.get (Obj.magic genericKeys) (!_g2) : string) in (
-                                                        ignore (let __old_36 = !_g2 in let __new_37 = HxInt.add __old_36 1 in (
-                                                          ignore (_g2 := __new_37);
-                                                          __new_37
+                                                let tempBool1 = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).duplicateTypeNameIndex) in let key = (Obj.obj (HxAnon.get hx_type "shortName") : string) in (
+                                                  ignore (let __assign_38 = HxMap.exists_string (Obj.magic _this) (key : string) in (
+                                                    tempBool1 := __assign_38;
+                                                    __assign_38
+                                                  ));
+                                                  let emittedName = (emittedNameFor hx_type (!tempBool1) : string) in let emittedIdentity = (HxString.toLowerCase emittedName () : string) in let previousEmittedOwner = HxMap.get_string (Obj.magic emittedTypeOwners) (emittedIdentity : string) in (
+                                                    ignore (if previousEmittedOwner == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic emittedTypeOwners) (emittedIdentity : string) hx_type) else ignore (if not (HxString.equals (Obj.obj (HxAnon.get previousEmittedOwner "identity")) (Obj.obj (HxAnon.get hx_type "identity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("PHP program render facts assign emitted type " ^ HxString.toStdString emittedName) ^ " to both ") ^ HxString.toStdString (qualifiedModuleType previousEmittedOwner)) ^ " and ") ^ HxString.toStdString (qualifiedModuleType hx_type))) ["Dynamic"]) else ()));
+                                                    let tempString1 = ref (HxString.hx_null_string : string) in (
+                                                      ignore (if HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) = 0 then let __assign_39 = (Obj.obj (HxAnon.get hx_type "rawName") : string) in (
+                                                        tempString1 := __assign_39;
+                                                        __assign_39
+                                                      ) else let __assign_40 = ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "packagePath")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string) in (
+                                                        tempString1 := __assign_40;
+                                                        __assign_40
+                                                      ));
+                                                      let fullName = (!tempString1 : string) in let exactTypeName = (qualifiedModuleType hx_type : string) in let genericKeys = Obj.magic (let __arr_41 = HxArray.create () in (
+                                                        ignore (HxArray.push __arr_41 (Obj.obj (HxAnon.get hx_type "rawName")));
+                                                        ignore (HxArray.push __arr_41 (Obj.obj (HxAnon.get hx_type "shortName")));
+                                                        ignore (HxArray.push __arr_41 fullName);
+                                                        ignore (HxArray.push __arr_41 (let __call_arg_0_42 = fullName in Backend_source_PhpName.typePath __call_arg_0_42));
+                                                        __arr_41
+                                                      )) in let tempLeft1 = ref (HxRuntime.hx_null : Obj.t) in let key = (Obj.obj (HxAnon.get hx_type "shortName") : string) in (
+                                                        ignore (let __assign_43 = HxMap.get_string (Obj.magic shortNameCounts) (key : string) in (
+                                                          tempLeft1 := __assign_43;
+                                                          __assign_43
                                                         ));
-                                                        let clean = (normalize (key : string) : string) in (
-                                                          ignore (if HxString.length clean = 0 then raise (HxRuntime.Hx_continue) else ());
-                                                          ignore (if (HxString.equals clean (Obj.obj (HxAnon.get hx_type "rawName")) || HxString.equals clean (Obj.obj (HxAnon.get hx_type "shortName"))) && not (includeShortName) then raise (HxRuntime.Hx_continue) else ());
-                                                          addEmittedCandidate (Obj.magic emittedCandidates) (clean : string) (emittedName : string) hx_type (HxString.equals clean fullName && HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName")))
+                                                        let includeShortName = let __nullable_44 = !tempLeft1 in if __nullable_44 == HxRuntime.hx_null then false else Obj.obj __nullable_44 = 1 in let _g2 = ref 0 in (
+                                                          ignore (try while !_g2 < HxArray.length genericKeys do try ignore (let key = (HxArray.get (Obj.magic genericKeys) (!_g2) : string) in (
+                                                            ignore (let __old_45 = !_g2 in let __new_46 = HxInt.add __old_45 1 in (
+                                                              ignore (_g2 := __new_46);
+                                                              __new_46
+                                                            ));
+                                                            let clean = let __call_arg_0_47 = key in normalize __call_arg_0_47 in (
+                                                              ignore (if HxString.length clean = 0 then raise (HxRuntime.Hx_continue) else ());
+                                                              ignore (if (HxString.equals clean (Obj.obj (HxAnon.get hx_type "rawName")) || HxString.equals clean (Obj.obj (HxAnon.get hx_type "shortName"))) && not (includeShortName) then raise (HxRuntime.Hx_continue) else ());
+                                                              addEmittedCandidate (Obj.magic emittedCandidates) (clean : string) (emittedName : string) hx_type (HxString.equals clean fullName && HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName")))
+                                                            )
+                                                          )) with
+                                                            | HxRuntime.Hx_continue -> () done with
+                                                            | HxRuntime.Hx_break -> ());
+                                                          ignore (addEmittedCandidate (Obj.magic emittedCandidates) (exactTypeName : string) (emittedName : string) hx_type true);
+                                                          ignore (addEmittedCandidate (Obj.magic emittedCandidates) (emittedName : string) (emittedName : string) hx_type true);
+                                                          ignore (if HxString.length (Obj.obj (HxAnon.get hx_type "moduleName")) > 0 && not (HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName"))) then ignore (let moduleLocalType = (HxString.toStdString (Obj.obj (HxAnon.get hx_type "moduleName")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) in addEmittedCandidate (Obj.magic emittedCandidates) (moduleLocalType : string) (emittedName : string) hx_type (HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) = 0)) else ());
+                                                          if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_type "isInterface") then ignore (let _this = Obj.magic ((Obj.magic self : t).interfaceTypeNameIndex) in HxMap.set_string (Obj.magic _this) (emittedName : string) true) else ()
                                                         )
-                                                      )) with
-                                                        | HxRuntime.Hx_continue -> () done with
-                                                        | HxRuntime.Hx_break -> ());
-                                                      ignore (addEmittedCandidate (Obj.magic emittedCandidates) (exactTypeName : string) (emittedName : string) hx_type true);
-                                                      ignore (addEmittedCandidate (Obj.magic emittedCandidates) (emittedName : string) (emittedName : string) hx_type true);
-                                                      ignore (if HxString.length (Obj.obj (HxAnon.get hx_type "moduleName")) > 0 && not (HxString.equals (Obj.obj (HxAnon.get hx_type "rawName")) (Obj.obj (HxAnon.get hx_type "moduleName"))) then ignore (let moduleLocalType = ((HxString.toStdString (Obj.obj (HxAnon.get hx_type "moduleName")) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get hx_type "rawName")) : string) in addEmittedCandidate (Obj.magic emittedCandidates) (moduleLocalType : string) (emittedName : string) hx_type (HxString.length (Obj.obj (HxAnon.get hx_type "packagePath")) = 0)) else ());
-                                                      if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_type "isInterface") then ignore (HxMap.set_string ((Obj.magic self : t).interfaceTypeNameIndex) emittedName true) else ()
+                                                      )
                                                     )
                                                   )
                                                 )
                                               )) done);
                                               ignore (resolveEmittedCandidates (Obj.magic self) (Obj.magic emittedCandidates));
-                                              ignore (let __assign_38 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).knownTypeNameIndex))) in (
-                                                (Obj.magic self : t).knownTypeNames <- __assign_38;
-                                                __assign_38
+                                              ignore (let __assign_48 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).knownTypeNameIndex))) in (
+                                                (Obj.magic self : t).knownTypeNames <- __assign_48;
+                                                __assign_48
                                               ));
-                                              ignore (let __assign_39 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).abstractTypeNameIndex))) in (
-                                                (Obj.magic self : t).abstractTypeNames <- __assign_39;
-                                                __assign_39
+                                              ignore (let __assign_49 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).abstractTypeNameIndex))) in (
+                                                (Obj.magic self : t).abstractTypeNames <- __assign_49;
+                                                __assign_49
                                               ));
-                                              ignore (let __assign_40 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).duplicateTypeNameIndex))) in (
-                                                (Obj.magic self : t).duplicateTypeNames <- __assign_40;
-                                                __assign_40
+                                              ignore (let __assign_50 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).duplicateTypeNameIndex))) in (
+                                                (Obj.magic self : t).duplicateTypeNames <- __assign_50;
+                                                __assign_50
                                               ));
-                                              ignore (let __assign_41 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).interfaceTypeNameIndex))) in (
-                                                (Obj.magic self : t).interfaceTypeNames <- __assign_41;
-                                                __assign_41
+                                              ignore (let __assign_51 = Obj.magic (sortedBoolKeys (Obj.magic ((Obj.magic self : t).interfaceTypeNameIndex))) in (
+                                                (Obj.magic self : t).interfaceTypeNames <- __assign_51;
+                                                __assign_51
                                               ));
-                                              let _g = Obj.magic (let __arr_42 = HxArray.create () in __arr_42) in let lookup = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).emittedTypeNameIndex)) in (
-                                                ignore (while (let __iter_43 = lookup in fun () -> HxIterator.hasNext (Obj.magic __iter_43)) () do ignore (let lookup2 = ((let __iter_44 = lookup in fun () -> HxIterator.next (Obj.magic __iter_44)) () : string) in HxArray.push _g lookup2) done);
-                                                let tempArray2 = Obj.magic _g in (
-                                                  ignore (HxArray.sort tempArray2 (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-                                                  let _g = Obj.magic (let __arr_45 = HxArray.create () in __arr_45) in let _g1 = ref 0 in (
-                                                    ignore (while !_g1 < HxArray.length tempArray2 do ignore (let lookup = (HxArray.get (Obj.magic tempArray2) (!_g1) : string) in (
-                                                      ignore (let __old_46 = !_g1 in let __new_47 = HxInt.add __old_46 1 in (
-                                                        ignore (_g1 := __new_47);
-                                                        __new_47
+                                              let _g = Obj.magic (let __arr_52 = HxArray.create () in __arr_52) in let _this = Obj.magic ((Obj.magic self : t).emittedTypeNameIndex) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let lookup = tempIterator in (
+                                                ignore (while (let __iter_53 = lookup in fun () -> HxIterator.hasNext (Obj.magic __iter_53)) () do ignore (let lookup2 = ((let __iter_54 = lookup in fun () -> HxIterator.next (Obj.magic __iter_54)) () : string) in HxArray.push _g lookup2) done);
+                                                let tempArray2 = Obj.magic _g in let emittedLookups = Obj.magic tempArray2 in (
+                                                  ignore (HxArray.sort emittedLookups (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+                                                  let _g = Obj.magic (let __arr_55 = HxArray.create () in __arr_55) in let _g1 = ref 0 in (
+                                                    ignore (while !_g1 < HxArray.length emittedLookups do ignore (let lookup = (HxArray.get (Obj.magic emittedLookups) (!_g1) : string) in (
+                                                      ignore (let __old_56 = !_g1 in let __new_57 = HxInt.add __old_56 1 in (
+                                                        ignore (_g1 := __new_57);
+                                                        __new_57
                                                       ));
-                                                      HxArray.push _g (let __anon_48 = HxAnon.create () in (
-                                                        ignore (HxAnon.set __anon_48 "lookup" (Obj.repr lookup));
-                                                        ignore (HxAnon.set __anon_48 "emitted" (Obj.repr (HxMap.get_string ((Obj.magic self : t).emittedTypeNameIndex) lookup)));
-                                                        __anon_48
-                                                      ))
+                                                      let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in let _this = Obj.magic ((Obj.magic self : t).emittedTypeNameIndex) in (
+                                                        ignore (let __assign_58 = Obj.magic (HxMap.get_string (Obj.magic _this) (lookup : string) : string) in (
+                                                          tempMaybeString := __assign_58;
+                                                          __assign_58
+                                                        ));
+                                                        HxArray.push _g (let __anonymous_value_59 = HxAnon.create () in (
+                                                          ignore (HxAnon.set __anonymous_value_59 "lookup" (Obj.repr lookup));
+                                                          ignore (HxAnon.set __anonymous_value_59 "emitted" (Obj.repr (!tempMaybeString)));
+                                                          __anonymous_value_59
+                                                        ))
+                                                      )
                                                     )) done);
                                                     let tempRight = Obj.magic _g in (
-                                                      ignore (let __assign_49 = Obj.magic tempRight in (
-                                                        (Obj.magic self : t).emittedTypeNames <- __assign_49;
-                                                        __assign_49
+                                                      ignore (let __assign_60 = Obj.magic tempRight in (
+                                                        (Obj.magic self : t).emittedTypeNames <- __assign_60;
+                                                        __assign_60
                                                       ));
                                                       let identityFacts = Obj.magic (HxArray.create ()) in (
                                                         ignore (HxArray.push identityFacts (getSchemaRevision (Obj.magic self) ()));
@@ -412,18 +444,18 @@ let create = fun programRevision2 modules -> let self = ({ __hx_type = HxType.cl
                                                         ignore (HxArray.push identityFacts (string_of_int (HxArray.length ((Obj.magic self : t).emittedTypeNames))));
                                                         let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).emittedTypeNames) in (
                                                           ignore (while !_g < HxArray.length _g1 do ignore (let fact = HxArray.get (Obj.magic _g1) (!_g) in (
-                                                            ignore (let __old_50 = !_g in let __new_51 = HxInt.add __old_50 1 in (
-                                                              ignore (_g := __new_51);
-                                                              __new_51
+                                                            ignore (let __old_61 = !_g in let __new_62 = HxInt.add __old_61 1 in (
+                                                              ignore (_g := __new_62);
+                                                              __new_62
                                                             ));
                                                             ignore (HxArray.push identityFacts (Obj.obj (HxAnon.get fact "lookup")));
                                                             HxArray.push identityFacts (Obj.obj (HxAnon.get fact "emitted"))
                                                           )) done);
                                                           ignore (addIdentitySection (Obj.magic identityFacts) ("duplicate" : string) (Obj.magic ((Obj.magic self : t).duplicateTypeNames)));
                                                           ignore (addIdentitySection (Obj.magic identityFacts) ("interface" : string) (Obj.magic ((Obj.magic self : t).interfaceTypeNames)));
-                                                          let __assign_52 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
-                                                            (Obj.magic self : t).canonicalIdentity <- __assign_52;
-                                                            __assign_52
+                                                          let __assign_63 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
+                                                            (Obj.magic self : t).canonicalIdentity <- __assign_63;
+                                                            __assign_63
                                                           )
                                                         )
                                                       )

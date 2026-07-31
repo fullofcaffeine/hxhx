@@ -1,0 +1,2 @@
+inline_value result=42 events=argument,inline
+inline_void events=argument,inline_void

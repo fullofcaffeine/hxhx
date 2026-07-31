@@ -21,8 +21,8 @@ const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_a
 const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
 const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const expectedHaxeVersion = '4.3.7'
-const expectedReflaxeCommit = '3454b8e2a2758d379fa37c5f0767917ccbc3c876'
-const expectedReflaxeContentSha256 = '66167ad5a4c5a2fa993d39766148a41dac7f65bbc6eca33b2cef6b917a516d53'
+const expectedReflaxeCommit = '105957964cdfe958f3f14bfee64b395e69dd253f'
+const expectedReflaxeContentSha256 = '3bc59e3304d5fa5486bd2b26098c809192c2d68def1ba648c84ad0df93611020'
 const summary = {
 	schemaVersion: 1,
 	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',
@@ -198,10 +198,10 @@ function generatedSourceRevision(outputDirectory) {
 	if (manifest.schemaVersion !== 1 || manifest.model !== 'reflaxe-ocaml-artifact-manifest') {
 		fail('generated OCaml output has an unsupported artifact manifest')
 	}
-	if (manifest.summary?.completeForSourceBundle !== false
+	if (manifest.summary?.completeForSourceBundle !== true
 		|| !Array.isArray(manifest.summary?.blockers)
-		|| manifest.summary.blockers.length !== 2) {
-		fail('generated artifact manifest did not preserve the current runtime/dependency packaging blockers')
+		|| manifest.summary.blockers.length !== 0) {
+		fail('generated artifact manifest did not close every generated-source replay authority')
 	}
 	const timing = manifest.entries?.find(entry => entry.path === 'ocaml_build_timing_report.json')
 	if (!timing || timing.stability !== 'volatile' || timing.includeInSourceBundle !== false) {
@@ -605,7 +605,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		haxelibBinary,
 		[
 			'run', 'reflaxe.ocaml', 'build', '--project', scaffoldRoot,
-			'--run', 'out/_build/default/out.exe'
+			'--run', '.out.reflaxe-ocaml-dune-build/default/out.exe'
 		],
 		{cwd: appRoot, env}
 	))
@@ -629,12 +629,12 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 10
+	if (scaffoldInspectionReport.schemaVersion !== 30
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
-		|| scaffoldInspectionReport.artifactManifest?.completeForSourceBundle !== false
-		|| scaffoldInspectionReport.artifactManifest?.blockers?.length !== 2
+		|| scaffoldInspectionReport.artifactManifest?.completeForSourceBundle !== true
+		|| scaffoldInspectionReport.artifactManifest?.blockers?.length !== 0
 		|| scaffoldInspectionReport.buildTiming?.status !== 'present'
 		|| scaffoldInspectionReport.buildTiming?.nativeBuildRan !== true
 		|| !Number.isInteger(scaffoldInspectionReport.buildTiming?.duneBuildMilliseconds)
@@ -643,7 +643,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
 		|| scaffoldInspectionReport.representation?.status !== 'present'
-		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10'
+		|| scaffoldInspectionReport.representation?.scope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14'
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
 		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
 		|| !scaffoldInspectionReport.representation.decisions?.some(decision =>
@@ -683,7 +683,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	if (!scaffoldLibraryBuild.stdout.includes('REFLAXE_OCAML_BUILD:PASS')
 		|| !scaffoldLibraryDune.includes('(library')
 		|| scaffoldLibraryDune.includes('(executable')
-		|| !fs.existsSync(path.join(scaffoldLibraryRoot, 'out/_build/default/out.cmxa'))) {
+		|| !fs.existsSync(path.join(scaffoldLibraryRoot, '.out.reflaxe-ocaml-dune-build/default/out.cmxa'))) {
 		fail('installed library scaffold did not produce a library-only native Dune build')
 	}
 	summary.tooling.scaffoldLibraryPassed = true
@@ -700,9 +700,9 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	summary.tooling.buildCommandPassed = true
 	summary.externalApplication.compilePassed = compile.status === 0
 	const emittedRoot = path.join(appRoot, 'out')
-	const executable = path.join(emittedRoot, '_build/default/out.exe')
+	const executable = path.join(appRoot, '.out.reflaxe-ocaml-dune-build/default/out.exe')
 	if (!fs.existsSync(executable)) {
-		fail('native build did not produce out/_build/default/out.exe')
+		fail('native build did not produce .out.reflaxe-ocaml-dune-build/default/out.exe')
 	}
 	summary.externalApplication.nativeBuildPassed = true
 	summary.externalApplication.emittedSourceSha256 = generatedSourceRevision(emittedRoot)

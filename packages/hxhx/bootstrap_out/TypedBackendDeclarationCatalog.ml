@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxModuleDecl.t; mutable func
 
 let create = fun declaration2 functions2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendDeclarationCatalog"; declaration = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend declaration catalog requires a module declaration") ["Dynamic"; "String"]) else ());
+    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend declaration catalog requires a module declaration") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
       __assign_1

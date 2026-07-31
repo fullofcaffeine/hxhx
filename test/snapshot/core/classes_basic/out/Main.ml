@@ -13,9 +13,9 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> ignore (let p = Obj.magic (Point.create 1 2) in (
-  ignore (Point.incX (Obj.magic p) ());
-  ignore (Point.add (Obj.magic p) 3 4);
-  ignore (Point.sum (Obj.magic p) ());
+let main = fun () -> ignore (let p = Point.create 1 2 in (
+  ignore (let __call_receiver_1 = p in Point.incX __call_receiver_1 ());
+  ignore (let __call_receiver_2 = p in let __call_arg_0_3 = 3 in let __call_arg_1_4 = 4 in Point.add __call_receiver_2 __call_arg_0_3 __call_arg_1_4);
+  ignore (let __call_receiver_5 = p in Point.sum __call_receiver_5 ());
   ()
 ))

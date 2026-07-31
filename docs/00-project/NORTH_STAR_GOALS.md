@@ -18,8 +18,9 @@ The short version:
 4. Make Haxe easy to bend without breaking Haxe: extensions should be pluggable, removable, and isolated from the baseline compiler contract.
 5. Make it practical to create full Haxe-family compiler variations in Haxe when a project needs a real fork or dialect.
 6. Make Reflaxe compilers easy to prototype as Reflaxe targets and then promote
-   into one native plugin ABI and payload usable by both upstream Haxe and
-   `hxhx`, or into a builtin `hxhx` target without rewriting the target core.
+   one semantic target core through a versioned native contract usable by both
+   upstream Haxe and `hxhx`, or as a builtin `hxhx` target, without rewriting
+   target semantics.
 
 ## Goal 1: Stable `reflaxe.ocaml`
 
@@ -33,12 +34,16 @@ Current planning owners:
 - standalone upstream-Haxe product: `haxe_ocaml-s7jry`
   (completed foundation/proof: `haxe.ocaml-ro10`; completed isolated package
   and same-ZIP host proofs: `haxe_ocaml-s7jry.1` and `.2`; active installed
-  package performance owner: `haxe_ocaml-s7jry.3`; new release-safety blockers:
-  place/evaluation lowering `haxe_ocaml-9v1va` and semantic fail-closed runtime
-  ownership `haxe_ocaml-0uwin`)
+  package performance owner: `haxe_ocaml-s7jry.3`; completed semantic
+  foundations: place/evaluation `haxe_ocaml-9v1va`,
+  representation/storage/capture `haxe_ocaml-9bome`, and calls/conversions
+  `haxe_ocaml-taef5`; remaining release-safety owners: control effects
+  `haxe_ocaml-w32h3` and fail-closed runtime ownership
+  `haxe_ocaml-0uwin`)
 - `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
   (completed definition foundation: `haxe.ocaml-n5ae`; authentic shared-target
-  hard cut: `haxe_ocaml-38gsp.1`)
+  hard cut: `haxe_ocaml-38gsp.1`; bounded two-generation native
+  self-promotion: `haxe_ocaml-38gsp.2`)
 - repository extraction decision: `haxe_ocaml-ipm6h`; keep the monorepo for
   now, prepare an artifact-based boundary, and split only after the technical
   gates and a measured product/maintenance trigger pass. After a split,
@@ -195,7 +200,9 @@ surface, cold/warm/one-file author-loop measurements, generated-code and runtime
 inventories, and behavior-correct native comparisons. The owning work is split
 deliberately: `haxe_ocaml-1hd2w`, `haxe_ocaml-850ii`, and the focused
 `haxe_ocaml-850ii.21` receipt own iteration;
-`haxe_ocaml-taef5` and `haxe_ocaml-v8a9b` own typed interop;
+`haxe_ocaml-taef5` owns the represented ordinary-Haxe call foundation, while
+`haxe_ocaml-v8a9b` owns target-native labels, imported OCaml call shapes, typed
+adapters, and native dependencies;
 `haxe_ocaml-9bome`, `haxe_ocaml-h5jta.1`, and `haxe_ocaml-i69n4` own generated
 representation/quality and comparable native evidence; `haxe_ocaml-bxwut`
 owns an authentic promoted compiler workload. Goal 6 and M22 own the shared
@@ -513,18 +520,26 @@ Current planning owner:
 
 Reflaxe should stay the fast prototyping layer for compiler targets. Once a target is stable, there should be a clear path to promote it into native forms:
 
-- one shared native plugin ABI and promoted payload for stock Haxe and `hxhx`,
+- one shared semantic target contract and target core for stock Haxe and
+  `hxhx`,
 - an `hxhx` builtin target path,
 - a reusable target core that can be packaged in more than one host shape
   without rewriting the backend.
 
-The packaging goal is one identical plugin binary on the supported reference
-toolchain. This is a requirement to attempt and prove, not an assumption that
-OCaml dynlink identity is portable. If a measured OCaml compiler, runtime,
-linker, or loader constraint makes one container impossible, stock Haxe and
-`hxhx` may use different thin loader shells around the same versioned payload
-or reproducibly derived native core. Those shells are packaging adapters only:
-they must not contain target lowering, printing, mutation, or result semantics.
+The supported reference toolchain must test one combined native container, but
+container identity is not the product invariant. OCaml interface digests,
+linked modules, runtime identity, and loader behavior may require exact
+host-specific shells. Those shells are activation and transport adapters only:
+they must not contain target lowering, printing, runtime selection, mutation,
+output repair, or other target semantics. The shared Haxe source/core identity,
+semantic request/result contract, diagnostics, artifacts, and behavior are the
+required convergence proof.
+
+Typed access to ordinary OCaml libraries is an orthogonal
+`reflaxe.ocaml`-owned capability. Exact stock-Haxe eval bindings and `hxhx`
+compiler services are host profiles; neither is the target's semantic core.
+See
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 The product bet is Haxe-first compiler authoring with native deployment. A
 target author should be able to write compiler/backend logic in Haxe, keep the
@@ -588,10 +603,12 @@ Current planning owners:
 Post-Full1 milestone M22 is owned by `haxe_ocaml-bomhr`. Its purpose is to
 turn the existing promotion proofs into a supported Haxe-first target-authoring
 SDK. `reflaxe.ocaml` supplies native execution for ordinary Haxe-authored target
-code. Stock Haxe and `hxhx` must expose one versioned plugin ABI and load the
-same promoted payload. `hxhx` may additionally advertise typed, versioned
+code. Stock Haxe and `hxhx` must expose one versioned semantic target contract
+and run one target-core source identity. Exact host shells may differ in
+preflight, activation, schema conversion, and lifecycle, but they may not own
+target semantics. `hxhx` may additionally advertise typed, versioned
 privileged backend facts and services through capability negotiation on that
-same ABI.
+same contract.
 
 M22 keeps four dimensions separate:
 
@@ -602,9 +619,10 @@ M22 keeps four dimensions separate:
 
 Both plugin hosts provide the host-neutral baseline. A target that requires an
 additional service which one host does not provide must fail before execution;
-it must not select a different target implementation. Identical plugin
-packaging is the default product goal. Evidence-gated loader-shell differences
-are the only fallback and do not relax payload, ABI, or behavior parity.
+it must not select a different target implementation. One combined native
+container remains a required feasibility experiment, not the product
+definition. Exact generated host shells do not relax semantic ABI, target-core,
+diagnostic, artifact, or behavior parity.
 
 Host conditionals and native externs stay in composition roots and adapters.
 They do not spread through semantic lowering or printers. The accepted
@@ -630,11 +648,16 @@ gain typed-program mutation authority from that shared substrate.
 M22 is planning only today. Current stock-Haxe eval-host and `hxhx` native
 plugin artifacts remain host-specific and are not interchangeable. The new
 shared ABI requirement adds no present SDK capability or support statement.
-Implementation is explicitly deferred until Full1 and
-`haxe_ocaml-38gsp.1` prove that native `hxhx` can use the real standalone
-target implementation. This prevents the SDK from freezing a second target
+Implementation is explicitly deferred until Full1,
+`haxe_ocaml-38gsp.1` proves that native `hxhx` can use the real standalone
+target implementation, and `haxe_ocaml-38gsp.2` proves bounded two-generation
+native self-promotion. This prevents the SDK from freezing a second target
 input, service model, or artifact contract around the temporary Stage3
-semantic path.
+semantic path or an unproven native core.
+
+The exact-host package, raw-plugin parity, lifecycle, and provenance decision
+is recorded in
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
 
 ## Operating Rule
 

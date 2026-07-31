@@ -13,19 +13,19 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.S
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceIdentifier" } : t)
 
-let sanitize = fun name -> let tempString = ref ("" : string) in (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then let __assign_1 = ("Main" : string) in (
+let sanitize = fun (name : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if name == HxString.hx_null_string || HxString.length name = 0 then let __assign_1 = ("Main" : string) in (
     tempString := __assign_1;
     __assign_1
   ) else let __assign_2 = (name : string) in (
     tempString := __assign_2;
     __assign_2
   ));
-  let output = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length (!tempString) in (
+  let source = (!tempString : string) in let output = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length source in (
     ignore (while !_g < _g1 do ignore (let index = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
       ignore (_g := __new_4);
       __old_3
-    ) in let character = (HxString.charAt (!tempString) index : string) in let allowed = character >= "A" && character <= "Z" || character >= "a" && character <= "z" || character >= "0" && character <= "9" || HxString.equals character "_" in let tempString1 = ref ("" : string) in (
+    ) in let character = (HxString.charAt source index : string) in let allowed = character >= "A" && character <= "Z" || character >= "a" && character <= "z" || character >= "0" && character <= "9" || HxString.equals character "_" in let tempString1 = ref (HxString.hx_null_string : string) in (
       ignore (if allowed then let __assign_5 = (character : string) in (
         tempString1 := __assign_5;
         __assign_5
@@ -37,4 +37,4 @@ let sanitize = fun name -> let tempString = ref ("" : string) in (
     )) done);
     StringBuf.toString (Obj.magic output) ()
   )
-)
+) : string)

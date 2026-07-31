@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxModuleDecl.t; mutable clas
 
 let create = fun declaration2 classes2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendModuleProjection"; declaration = Obj.magic (HxRuntime.hx_null); classes = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection requires a declaration") ["Dynamic"; "String"]) else ());
+    ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection requires a declaration") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
       __assign_1
@@ -26,11 +26,11 @@ let create = fun declaration2 classes2 -> let self = ({ __hx_type = HxType.class
         __assign_5
       ));
       let projectedClasses = Obj.magic (HxModuleDecl.getClasses (Obj.magic declaration2)) in (
-        ignore (if HxArray.length projectedClasses <> HxArray.length ((Obj.magic self : t).classes) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection lost a class catalog") ["Dynamic"; "String"]) else ());
+        ignore (if HxArray.length projectedClasses <> HxArray.length ((Obj.magic self : t).classes) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection lost a class catalog") ["Dynamic"]) else ());
         let _g = ref 0 in let _g1 = HxArray.length projectedClasses in while !_g < _g1 do ignore (let index = let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
           ignore (_g := __new_7);
           __old_6
-        ) in if Obj.repr (HxArray.get (Obj.magic projectedClasses) index) != Obj.repr (TypedBackendClassProjection.getDeclaration (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).classes)) index)) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection class order mismatch") ["Dynamic"; "String"]) else ()) done
+        ) in if Obj.repr (HxArray.get (Obj.magic projectedClasses) index) != Obj.repr (TypedBackendClassProjection.getDeclaration (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).classes)) index)) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection class order mismatch") ["Dynamic"]) else ()) done
       )
     )
   )));

@@ -230,7 +230,7 @@ and expressionNode = fun value transform -> let tempHxExpr = ref (Obj.magic (HxR
       tempHxExpr := __assign_45;
       __assign_45
     ));
-  transform (Obj.magic (!tempHxExpr))
+  let rebuilt = Obj.magic (!tempHxExpr) in transform (Obj.magic rebuilt)
 )
 
 let rec statementNode = fun statement transform -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt) in (
@@ -376,7 +376,7 @@ let rec statementNode = fun statement transform -> let tempResult = ref (Obj.mag
 )
 
 let body = fun statements transform -> (
-  ignore (if transform == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "source function body rewriter requires an expression transform") ["Dynamic"; "String"]) else ());
+  ignore (if transform == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "source function body rewriter requires an expression transform") ["Dynamic"]) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
     ignore (if statements == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempResult := __assign_1;

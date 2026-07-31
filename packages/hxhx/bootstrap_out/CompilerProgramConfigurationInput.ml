@@ -6,70 +6,72 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable observedInputRevision : string }
 
-let create = fun name2 observedInputRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = ""; observedInputRevision = "" } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun name2 observedInputRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if name2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = (StringTools.trim (name2 : string) : string) in (
+    ) else let __assign_2 = let __call_arg_0_3 = name2 in StringTools.trim __call_arg_0_3 in (
       tempRight := __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = (!tempRight : string) in (
-      (Obj.magic self : t).name <- __assign_3;
-      __assign_3
+    ignore (let __assign_4 = (!tempRight : string) in (
+      (Obj.magic self : t).name <- __assign_4;
+      __assign_4
     ));
-    let tempRight1 = ref ("" : string) in (
-      ignore (if observedInputRevision2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
-        tempRight1 := __assign_4;
-        __assign_4
-      ) else let __assign_5 = (observedInputRevision2 : string) in (
+    let tempRight1 = ref (HxString.hx_null_string : string) in (
+      ignore (if observedInputRevision2 == HxString.hx_null_string then let __assign_5 = ("" : string) in (
         tempRight1 := __assign_5;
         __assign_5
-      ));
-      ignore (let __assign_6 = (!tempRight1 : string) in (
-        (Obj.magic self : t).observedInputRevision <- __assign_6;
+      ) else let __assign_6 = (observedInputRevision2 : string) in (
+        tempRight1 := __assign_6;
         __assign_6
       ));
-      ignore (if HxString.length ((Obj.magic self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input name is required") ["Dynamic"; "String"]) else ());
-      if HxString.length ((Obj.magic self : t).observedInputRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input revision is required") ["Dynamic"; "String"]) else ()
+      ignore (let __assign_7 = (!tempRight1 : string) in (
+        (Obj.magic self : t).observedInputRevision <- __assign_7;
+        __assign_7
+      ));
+      ignore (if HxString.length ((self : t).name) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input name is required") ["Dynamic"]) else ());
+      if HxString.length ((self : t).observedInputRevision) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input revision is required") ["Dynamic"]) else ()
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = ""; observedInputRevision = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t)
 
-let getObservedInputRevision = fun self () -> (Obj.magic self : t).observedInputRevision
+let getObservedInputRevision = fun self () -> ((self : t).observedInputRevision : string)
 
-let canonicalKey = fun self () -> CompilerCacheIdentity.encode (Obj.magic (let __arr_7 = HxArray.create () in (
-  ignore (HxArray.push __arr_7 "compiler-program-configuration-fact-v1");
-  ignore (HxArray.push __arr_7 ((Obj.magic self : t).name));
-  ignore (HxArray.push __arr_7 ((Obj.magic self : t).observedInputRevision));
-  __arr_7
-)))
+let canonicalKey = fun self () -> (CompilerCacheIdentity.encode (Obj.magic (let __arr_8 = HxArray.create () in (
+  ignore (HxArray.push __arr_8 "compiler-program-configuration-fact-v1");
+  ignore (HxArray.push __arr_8 ((self : t).name));
+  ignore (HxArray.push __arr_8 ((self : t).observedInputRevision));
+  __arr_8
+))) : string)
 
-let reportSafeName = fun value -> let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length value in (
-  ignore (while !_g < _g1 do ignore (let index = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-    ignore (_g := __new_12);
-    __old_11
-  ) in let code = HxString.charCodeAt value index in let safe = (let __nullable_13 = code in let __nullable_14 = 97 in if __nullable_13 == HxRuntime.hx_null then false else Obj.obj __nullable_13 >= __nullable_14) && (let __nullable_15 = code in let __nullable_16 = 122 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 <= __nullable_16) || (let __nullable_17 = code in let __nullable_18 = 65 in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 >= __nullable_18) && (let __nullable_19 = code in let __nullable_20 = 90 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 <= __nullable_20) || (let __nullable_21 = code in let __nullable_22 = 48 in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 >= __nullable_22) && (let __nullable_23 = code in let __nullable_24 = 57 in if __nullable_23 == HxRuntime.hx_null then false else Obj.obj __nullable_23 <= __nullable_24) || (let __nullable_25 = code in if __nullable_25 == HxRuntime.hx_null then false else Obj.obj __nullable_25 = 95) || (let __nullable_26 = code in if __nullable_26 == HxRuntime.hx_null then false else Obj.obj __nullable_26 = 45) || (let __nullable_27 = code in if __nullable_27 == HxRuntime.hx_null then false else Obj.obj __nullable_27 = 46) || (let __nullable_28 = code in if __nullable_28 == HxRuntime.hx_null then false else Obj.obj __nullable_28 = 58) in if safe then ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_29 = code in if __nullable_int_29 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_29)) else ignore (StringBuf.add (Obj.magic out) (Obj.repr ("%" ^ HxString.toStdString (HxString.toLowerCase (StringTools.hex (let __nullable_int_30 = code in if __nullable_int_30 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_30) (Obj.repr 4)) ()))))) done);
+let reportSafeName = fun (value : string) -> (let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length value in (
+  ignore (while !_g < _g1 do ignore (let index = let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
+    ignore (_g := __new_16);
+    __old_15
+  ) in let code = HxString.charCodeAt value index in let safe = (let __nullable_17 = code in let __nullable_18 = 97 in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 >= __nullable_18) && (let __nullable_19 = code in let __nullable_20 = 122 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 <= __nullable_20) || (let __nullable_21 = code in let __nullable_22 = 65 in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 >= __nullable_22) && (let __nullable_23 = code in let __nullable_24 = 90 in if __nullable_23 == HxRuntime.hx_null then false else Obj.obj __nullable_23 <= __nullable_24) || (let __nullable_25 = code in let __nullable_26 = 48 in if __nullable_25 == HxRuntime.hx_null then false else Obj.obj __nullable_25 >= __nullable_26) && (let __nullable_27 = code in let __nullable_28 = 57 in if __nullable_27 == HxRuntime.hx_null then false else Obj.obj __nullable_27 <= __nullable_28) || (let __nullable_29 = code in if __nullable_29 == HxRuntime.hx_null then false else Obj.obj __nullable_29 = 95) || (let __nullable_30 = code in if __nullable_30 == HxRuntime.hx_null then false else Obj.obj __nullable_30 = 45) || (let __nullable_31 = code in if __nullable_31 == HxRuntime.hx_null then false else Obj.obj __nullable_31 = 46) || (let __nullable_32 = code in if __nullable_32 == HxRuntime.hx_null then false else Obj.obj __nullable_32 = 58) in if safe then ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_33 = code in if __nullable_int_33 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_33)) else ignore (StringBuf.add (Obj.magic out) (Obj.repr ("%" ^ HxString.toStdString (HxString.toLowerCase (let __call_arg_0_34 = HxRuntime.nullable_int_unwrap code in let __call_arg_1_35 = Obj.repr 4 in StringTools.hex __call_arg_0_34 __call_arg_1_35) ()))))) done);
   StringBuf.toString (Obj.magic out) ()
-)
+) : string)
 
-let fromValue = fun name2 value -> let tempString = ref ("" : string) in (
-  ignore (if name2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = ("" : string) in (
-    tempString := __assign_8;
-    __assign_8
-  ) else let __assign_9 = (StringTools.trim (name2 : string) : string) in (
+let fromValue = fun (name2 : string) (value : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if name2 == HxString.hx_null_string then let __assign_9 = "" in (
     tempString := __assign_9;
     __assign_9
+  ) else let __assign_10 = let __call_arg_0_11 = name2 in StringTools.trim __call_arg_0_11 in (
+    tempString := __assign_10;
+    __assign_10
   ));
-  ignore (if HxString.length (!tempString) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input name is required") ["Dynamic"; "String"]) else ());
-  let revision = (Haxe_crypto_Sha256.encode (CompilerCacheIdentity.encode (Obj.magic (let __arr_10 = HxArray.create () in (
-    ignore (HxArray.push __arr_10 "compiler-program-configuration-input-v1");
-    ignore (HxArray.push __arr_10 (!tempString));
-    ignore (HxArray.push __arr_10 value);
-    __arr_10
-  ))) : string) : string) in create (reportSafeName (!tempString : string) : string) (revision : string)
-)
+  let normalizedName = !tempString in (
+    ignore (if HxString.length normalizedName = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler configuration input name is required") ["Dynamic"]) else ());
+    let revision = let __call_arg_0_12 = CompilerCacheIdentity.encode (Obj.magic (let __arr_13 = HxArray.create () in (
+      ignore (HxArray.push __arr_13 "compiler-program-configuration-input-v1");
+      ignore (HxArray.push __arr_13 normalizedName);
+      ignore (HxArray.push __arr_13 value);
+      __arr_13
+    ))) in Haxe_crypto_Sha256.encode __call_arg_0_12 in create (let __call_arg_0_14 = normalizedName in reportSafeName __call_arg_0_14 : string) (revision : string)
+  )
+) : t)

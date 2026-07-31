@@ -13,46 +13,46 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequestCodec" } : t)
 
-let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = ref 0 in let _g1 = HxBytes.length payload in (
-  ignore (try while !_g < _g1 do try ignore (let i = let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
-    ignore (_g := __new_2);
-    __old_1
-  ) in if HxBytes.get payload i = 1 then ignore ((
-    ignore (let __assign_3 = i in (
-      sep := __assign_3;
-      __assign_3
+let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = ref 0 in let _g1 = let __bytes_receiver_1 = payload in HxBytes.length __bytes_receiver_1 in (
+  ignore (try while !_g < _g1 do try ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
+    ignore (_g := __new_3);
+    __old_2
+  ) in if (let __bytes_access_receiver_4 = payload in let __bytes_access_arg_0_5 = i in HxBytes.get __bytes_access_receiver_4 __bytes_access_arg_0_5) = 1 then ignore ((
+    ignore (let __assign_6 = i in (
+      sep := __assign_6;
+      __assign_6
     ));
     raise (HxRuntime.Hx_break)
   )) else ()) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
-    ignore (if !sep = -1 then let __assign_4 = Obj.magic payload in (
-      tempBytes := __assign_4;
-      __assign_4
-    ) else let __assign_5 = Obj.magic (HxBytes.sub payload 0 (!sep)) in (
-      tempBytes := __assign_5;
-      __assign_5
+    ignore (if !sep = -1 then let __assign_7 = Obj.magic payload in (
+      tempBytes := __assign_7;
+      __assign_7
+    ) else let __assign_8 = Obj.magic (let __bytes_receiver_9 = payload in let __bytes_arg_0_10 = 0 in let __bytes_arg_1_11 = !sep in HxBytes.sub __bytes_receiver_9 __bytes_arg_0_10 __bytes_arg_1_11) in (
+      tempBytes := __assign_8;
+      __assign_8
     ));
-    let tempMaybeBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
-      ignore (if !sep = -1 then let __assign_6 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-        tempMaybeBytes := __assign_6;
-        __assign_6
-      ) else let __assign_7 = Obj.magic (Obj.magic (HxBytes.sub payload (HxInt.add (!sep) 1) (HxInt.sub (HxBytes.length payload) (HxInt.add (!sep) 1)))) in (
-        tempMaybeBytes := __assign_7;
-        __assign_7
+    let argsBytes = Obj.magic (!tempBytes) in let tempMaybeBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
+      ignore (if !sep = -1 then let __assign_12 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempMaybeBytes := __assign_12;
+        __assign_12
+      ) else let __assign_13 = Obj.magic (Obj.magic (let __bytes_receiver_14 = payload in let __bytes_arg_0_15 = HxInt.add (!sep) 1 in let __bytes_arg_1_16 = HxInt.sub (let __bytes_receiver_17 = payload in HxBytes.length __bytes_receiver_17) (HxInt.add (!sep) 1) in HxBytes.sub __bytes_receiver_14 __bytes_arg_0_15 __bytes_arg_1_16)) in (
+        tempMaybeBytes := __assign_13;
+        __assign_13
       ));
-      let stdinBytes = Obj.magic (!tempMaybeBytes) in let rawArgs = (HxBytes.getString (!tempBytes) 0 (HxBytes.length (!tempBytes)) () : string) in let args = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split rawArgs "\n") in (
+      let stdinBytes = Obj.magic (!tempMaybeBytes) in let rawArgs = (let __bytes_receiver_18 = argsBytes in let __bytes_arg_0_19 = 0 in let __bytes_arg_1_20 = let __bytes_receiver_21 = argsBytes in HxBytes.length __bytes_receiver_21 in HxBytes.getString __bytes_receiver_18 __bytes_arg_0_19 __bytes_arg_1_20 () : string) in let args = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split rawArgs "\n") in (
         ignore (try while !_g < HxArray.length _g1 do try ignore (let line0 = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-          ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-            ignore (_g := __new_9);
-            __new_9
+          ignore (let __old_22 = !_g in let __new_23 = HxInt.add __old_22 1 in (
+            ignore (_g := __new_23);
+            __new_23
           ));
           let line = ref (line0 : string) in (
             ignore (if HxString.length (!line) = 0 then raise (HxRuntime.Hx_continue) else ());
-            ignore (if let __nullable_10 = HxString.charCodeAt (!line) (HxInt.sub (HxString.length (!line)) 1) in if __nullable_10 == HxRuntime.hx_null then false else Obj.obj __nullable_10 = 13 then ignore (let __assign_11 = (HxString.substr (!line) 0 (HxInt.sub (HxString.length (!line)) 1) : string) in (
-              line := __assign_11;
-              __assign_11
+            ignore (if let __nullable_24 = HxString.charCodeAt (!line) (HxInt.sub (HxString.length (!line)) 1) in if __nullable_24 == HxRuntime.hx_null then false else Obj.obj __nullable_24 = 13 then ignore (let __assign_25 = (HxString.substr (!line) 0 (HxInt.sub (HxString.length (!line)) 1) : string) in (
+              line := __assign_25;
+              __assign_25
             )) else ());
             if HxString.length (!line) > 0 then ignore (HxArray.push args (!line)) else ()
           )
@@ -69,9 +69,9 @@ let decodeString = fun requestId baseArgs payload -> decode requestId (Obj.magic
 
 let encodeReply = fun reply -> let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_CompilationServerReply.events (Obj.magic reply) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let event = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
-      ignore (_g := __new_13);
-      __new_13
+    ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+      ignore (_g := __new_27);
+      __new_27
     ));
     if (Obj.magic event : Hxhx_CompilationRequestOutputEvent.t).isErrorStream then ignore (StringBuf.add (Obj.magic out) (Obj.repr ((Obj.magic event : Hxhx_CompilationRequestOutputEvent.t).text))) else ignore ((
       ignore (StringBuf.addChar (Obj.magic out) 1);

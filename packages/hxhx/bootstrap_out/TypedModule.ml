@@ -40,7 +40,7 @@ let findBackendFunctionProjection = fun self (backendClass : HxClassDecl.t) (bac
           __new_24
         ));
         if HxString.equals (TypedBackendFunctionProjection.getStableIdentity (Obj.magic projectedFunction) ()) stableIdentity then ignore ((
-          ignore (if !selected != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection contains duplicate stable function identity " ^ HxString.toStdString stableIdentity)) ["Dynamic"; "String"]) else ());
+          ignore (if !selected != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection contains duplicate stable function identity " ^ HxString.toStdString stableIdentity)) ["Dynamic"]) else ());
           ignore (let __assign_25 = Obj.magic (Obj.magic projectedClass) in (
             selectedClass := __assign_25;
             __assign_25
@@ -52,7 +52,7 @@ let findBackendFunctionProjection = fun self (backendClass : HxClassDecl.t) (bac
         )) else ()
       )) done
     )) done);
-    ignore (if !selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection lost stable function identity " ^ HxString.toStdString stableIdentity)) ["Dynamic"; "String"]) else ());
+    ignore (if !selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection lost stable function identity " ^ HxString.toStdString stableIdentity)) ["Dynamic"]) else ());
     let __anon_27 = HxAnon.create () in (
       ignore (HxAnon.set __anon_27 "module" (Obj.repr moduleProjection));
       ignore (HxAnon.set __anon_27 "classProjection" (Obj.repr (!selectedClass)));
@@ -80,15 +80,15 @@ let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
   )) done
 )))
 
-let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed2) ()) in let packagePath = (StringTools.trim (HxModuleDecl.getPackagePath (Obj.magic declaration) : string) : string) in let fileName = (Haxe_io_Path.withoutExtension (Haxe_io_Path.withoutDirectory (ParsedModule.getFilePath (Obj.magic parsed2) () : string) : string) : string) in let tempString = ref ("" : string) in (
-  ignore (if HxString.length packagePath = 0 then let __assign_34 = (fileName : string) in (
-    tempString := __assign_34;
-    __assign_34
-  ) else let __assign_35 = ((HxString.toStdString packagePath ^ ".") ^ HxString.toStdString fileName : string) in (
-    tempString := __assign_35;
-    __assign_35
+let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed2) ()) in let packagePath = let __call_arg_0_34 = HxModuleDecl.getPackagePath (Obj.magic declaration) in StringTools.trim __call_arg_0_34 in let fileName = let __call_arg_0_35 = let __call_arg_0_36 = ParsedModule.getFilePath (Obj.magic parsed2) () in Haxe_io_Path.withoutDirectory __call_arg_0_36 in Haxe_io_Path.withoutExtension __call_arg_0_35 in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if HxString.length packagePath = 0 then let __assign_37 = fileName in (
+    tempString := __assign_37;
+    __assign_37
+  ) else let __assign_38 = (HxString.toStdString packagePath ^ ".") ^ HxString.toStdString fileName in (
+    tempString := __assign_38;
+    __assign_38
   ));
-  CompilerModuleOrigin.synthetic (!tempString : string)
+  let __call_arg_0_39 = !tempString in CompilerModuleOrigin.synthetic __call_arg_0_39
 )
 
 let create = fun parsed2 env2 typedClasses2 revision2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; sourceOrigin = Obj.magic (HxRuntime.hx_null); conditionalCompilation = Obj.magic (HxRuntime.hx_null); generatedDeclarations = Obj.magic (HxRuntime.hx_null); backendDeclarationCatalog = Obj.magic (HxRuntime.hx_null); backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t) in (

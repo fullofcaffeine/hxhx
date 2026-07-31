@@ -45,6 +45,41 @@ def cmd_insert_before_anchor(argv: list[str]) -> None:
     write_text(temp_path, src[:idx] + patch + src[idx:])
 
 
+def cmd_find_emitter_shim_patch_anchor(argv: list[str]) -> None:
+    """Print the complete generated statement that invokes the macro-context shim.
+
+    Reflaxe can render the same typed call either directly or through numbered
+    argument temporaries. Returning the complete source line gives the shell
+    finalizer an exact insertion boundary without teaching shell code about
+    generated temporary names.
+    """
+    if len(argv) != 1:
+        fail("usage: find-emitter-shim-patch-anchor <path>\n")
+    src = read_text(argv[0])
+    helper_name = "patchStage3MacroContextLoadShimForStage3"
+    call_lines = [
+        line
+        for line in src.splitlines()
+        if helper_name in line
+        and line.lstrip().startswith("ignore (")
+        and not line.lstrip().startswith(f"let {helper_name}")
+    ]
+    if len(call_lines) == 1:
+        sys.stdout.write(call_lines[0])
+        return
+
+    legacy_inline = 'ignore (let shimName = ("Haxe_macro_Context" : string)'
+    legacy_lines = [line for line in src.splitlines() if legacy_inline in line]
+    if len(legacy_lines) == 1:
+        sys.stdout.write(legacy_lines[0])
+        return
+
+    fail(
+        "build-hxhx: expected exactly one generated macro-context shim "
+        f"invocation in {argv[0]}, found {len(call_lines)}\n"
+    )
+
+
 def cmd_patch_array_receiver_chain_lowering(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-array-receiver-chain-lowering <path>\n")
@@ -307,121 +342,6 @@ def cmd_patch_hxparser_generic_function_decl(argv: list[str]) -> None:
     write_text(path_str, src.replace(old, new, 1))
 
 
-def cmd_patch_hxparser_uppercase_helper_call(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-hxparser-uppercase-helper-call <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    old = """        if isUpperStart (name : string) && not (!tempBool) && hasLowerAlpha (name : string) then let __assign_363 = Obj.magic (HxExpr.EEnumValue (name : string)) in (
-          tempResult := __assign_363;
-          __assign_363
-        ) else let __assign_364 = Obj.magic (HxExpr.EIdent (name : string)) in (
-          tempResult := __assign_364;
-          __assign_364
-        )"""
-
-    new = """        if isUpperStart (name : string) && not (!tempBool) && hasLowerAlpha (name : string) && HxString.indexOf name "_" 0 = -1 then let __assign_363 = Obj.magic (HxExpr.EEnumValue (name : string)) in (
-          tempResult := __assign_363;
-          __assign_363
-        ) else let __assign_364 = Obj.magic (HxExpr.EIdent (name : string)) in (
-          tempResult := __assign_364;
-          __assign_364
-        )"""
-
-    if old in src:
-        write_text(path_str, src.replace(old, new, 1))
-        return
-
-    legacy_rx = re.compile(
-        r'''        if isUpperStart \(name : string\) && not \(!tempBool\) && hasLowerAlpha \(name : string\) then let __assign_\d+ = Obj\.magic \(HxExpr\.EEnumValue \(name : string\)\) in \(\n          tempResult := __assign_\d+;\n          __assign_\d+\n        \) else let __assign_\d+ = Obj\.magic \(HxExpr\.EIdent \(name : string\)\) in \(\n          tempResult := __assign_\d+;\n          __assign_\d+\n        \)''',
-        re.S,
-    )
-    replaced, count = legacy_rx.subn(new, src, count=1)
-    if count != 1:
-        fail("build-hxhx: failed to locate bootstrap HxParser uppercase-helper-call anchor\n")
-    write_text(path_str, replaced)
-
-
-def cmd_patch_emitter_typed_param_fallback(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-emitter-typed-param-fallback <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    old = """let args = Obj.magic (TyFunctionEnv.getParams (Obj.magic tf) ()) in let parsedFn = Obj.magic (HxMap.get_string parsedByName nameRaw) in """
-    new = """let args = Obj.magic (TyFunctionEnv.getParams (Obj.magic tf) ()) in let parsedFn = Obj.magic (HxMap.get_string parsedByName nameRaw) in let args = if HxArray.length args = 0 && parsedFn != Obj.magic (HxRuntime.hx_null) then let parsedArgs = Obj.magic (HxFunctionDecl.getArgs (Obj.magic parsedFn)) in if HxArray.length parsedArgs = 0 then Obj.magic args else Obj.magic (let __arr_bootstrap_fn_args = HxArray.create () in (
-                                                                    ignore (let _g_bootstrap_fn_arg = ref 0 in while !_g_bootstrap_fn_arg < HxArray.length parsedArgs do ignore (let parsedArg = Obj.magic (HxArray.get (Obj.magic parsedArgs) (!_g_bootstrap_fn_arg)) in (
-                                                                      ignore (let __old_bootstrap_fn_arg = !_g_bootstrap_fn_arg in let __new_bootstrap_fn_arg = HxInt.add __old_bootstrap_fn_arg 1 in (
-                                                                        ignore (_g_bootstrap_fn_arg := __new_bootstrap_fn_arg);
-                                                                        __new_bootstrap_fn_arg
-                                                                      ));
-                                                                      let parsedName = (HxFunctionArg.getName (Obj.magic parsedArg) : string) in let parsedTy = Obj.magic (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic parsedArg) : string)) in (
-                                                                        ignore (HxArray.push __arr_bootstrap_fn_args (Obj.magic (TySymbol.create (parsedName : string) (Obj.magic parsedTy))))
-                                                                      )
-                                                                    )) done);
-                                                                    __arr_bootstrap_fn_args
-                                                                  )) else Obj.magic args in (* hxhx(stage3) bootstrap shim: typed param fallback for emitted fn args *) """
-
-    src, count = src.replace(old, new), src.count(old)
-    if count == 0:
-        fail("build-hxhx: failed to locate bootstrap typed-param fallback anchor in EmitterStage.ml\n")
-    write_text(path_str, src)
-
-
-def cmd_patch_emitter_parsed_arg_type_overlay(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-emitter-parsed-arg-type-overlay <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    if "bootstrap shim: typed param fallback for emitted fn args" in src:
-        return
-
-    old = """                                                                    ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-                                                                      ignore (let __old_46869 = !_g2 in let __new_46870 = HxInt.add __old_46869 1 in (
-                                                                        ignore (_g2 := __new_46870);
-                                                                        __new_46870
-                                                                      ));
-                                                                      let key = (TySymbol.getName (Obj.magic a) () : string) in let value = Obj.magic (TySymbol.getType (Obj.magic a) ()) in HxMap.set_string tyByIdent key value
-                                                                    )) done);
-"""
-    new = """                                                                    ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-                                                                      ignore (let __old_46869 = !_g2 in let __new_46870 = HxInt.add __old_46869 1 in (
-                                                                        ignore (_g2 := __new_46870);
-                                                                        __new_46870
-                                                                      ));
-                                                                      let key = (TySymbol.getName (Obj.magic a) () : string) in let value = Obj.magic (TySymbol.getType (Obj.magic a) ()) in HxMap.set_string tyByIdent key value
-                                                                    )) done);
-                                                                    ignore (if parsedFn != Obj.magic (HxRuntime.hx_null) then ignore (let parsedArgs = Obj.magic (HxFunctionDecl.getArgs (Obj.magic parsedFn)) in let _g_bootstrap_arg_hint = ref 0 in while !_g_bootstrap_arg_hint < HxArray.length parsedArgs do ignore (let parsedArg = Obj.magic (HxArray.get (Obj.magic parsedArgs) (!_g_bootstrap_arg_hint)) in (
-                                                                      let idx = !_g_bootstrap_arg_hint in (
-                                                                        ignore (let __old_bootstrap_arg_hint = !_g_bootstrap_arg_hint in let __new_bootstrap_arg_hint = HxInt.add __old_bootstrap_arg_hint 1 in (
-                                                                          ignore (_g_bootstrap_arg_hint := __new_bootstrap_arg_hint);
-                                                                          __new_bootstrap_arg_hint
-                                                                        ));
-                                                                        let typedArg = if idx < HxArray.length args then Obj.magic (HxArray.get (Obj.magic args) idx) else Obj.magic (HxRuntime.hx_null) in let typedName = if typedArg == Obj.magic (HxRuntime.hx_null) then ("" : string) else (TySymbol.getName (Obj.magic typedArg) () : string) in let parsedName = (HxFunctionArg.getName (Obj.magic parsedArg) : string) in let hinted = Obj.magic (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic parsedArg) : string)) in (
-                                                                          ignore (if typedName != Obj.magic (HxRuntime.hx_null) && HxString.length typedName > 0 then ignore (let existing = Obj.magic (HxMap.get_string tyByIdent typedName) in let existingNeedsRepair = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" || not (HxString.equals (TyType.toString (Obj.magic existing) ()) (TyType.toString (Obj.magic hinted) ())) in let hintedUseful = hinted != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic hinted) ()) && not (HxString.equals (TyType.toString (Obj.magic hinted) ()) "Dynamic") in if existingNeedsRepair && hintedUseful then ignore (HxMap.set_string tyByIdent typedName hinted) else ()) else ());
-                                                                          ignore (if parsedName != Obj.magic (HxRuntime.hx_null) && HxString.length parsedName > 0 && not (HxString.equals parsedName typedName) then ignore (let existing = Obj.magic (HxMap.get_string tyByIdent parsedName) in let existingNeedsRepair = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" || not (HxString.equals (TyType.toString (Obj.magic existing) ()) (TyType.toString (Obj.magic hinted) ())) in let hintedUseful = hinted != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic hinted) ()) && not (HxString.equals (TyType.toString (Obj.magic hinted) ()) "Dynamic") in if existingNeedsRepair && hintedUseful then ignore (HxMap.set_string tyByIdent parsedName hinted) else ()) else ())
-                                                                        )
-                                                                      )
-                                                                    )) done) else ());
-                                                                    (* hxhx(stage3) bootstrap shim: parsed arg type overlay for tyByIdent *)
-"""
-
-    if old in src:
-        write_text(path_str, src.replace(old, new, 1))
-        return
-
-    legacy_rx = re.compile(
-        r'''ignore \(let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore \(let a = Obj\.magic \(HxArray\.get \(Obj\.magic args\) \(!_g2\)\) in \(.*?HxMap\.set_string tyByIdent key value\s*\)\) done\);\n''',
-        re.S,
-    )
-    replaced, count = legacy_rx.subn(new, src, count=1)
-    if count != 1:
-        fail("build-hxhx: failed to locate bootstrap parsed-arg type overlay anchor in EmitterStage.ml\n")
-    write_text(path_str, replaced)
-
-
 def cmd_patch_emitter_preapplied_sig_fallback(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-emitter-preapplied-sig-fallback <path>\n")
@@ -437,44 +357,6 @@ def cmd_patch_emitter_preapplied_sig_fallback(argv: list[str]) -> None:
     if count == 0:
         fail("build-hxhx: failed to locate bootstrap preapplied-signature fallback anchors in EmitterStage.ml\n")
     write_text(path_str, src.replace(old, new))
-
-
-def cmd_patch_stage1_std_root_termination(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-stage1-std-root-termination <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    pattern = re.compile(
-        r"""        let __assign_(?P<assign>\d+) = \(Haxe_io_Path\.normalize \(Haxe_io_Path\.join \(Obj\.magic \(let __arr_(?P<arr>\d+) = HxArray\.create \(\) in \(
-          ignore \(HxArray\.push __arr_(?P=arr) \(!dir\)\);
-          ignore \(HxArray\.push __arr_(?P=arr) "\.\."\);
-          __arr_(?P=arr)
-        \)\)\) : string\) : string\) in \(
-          dir := __assign_(?P=assign);
-          __assign_(?P=assign)
-        \)""",
-        re.MULTILINE,
-    )
-
-    match = pattern.search(src)
-    if match is None:
-        if "HxFileSystem.absolutePath (Haxe_io_Path.join" in src or "HxFileSystem.absolutePath parentInput" in src:
-            return
-        fail("build-hxhx: failed to locate bootstrap Stage1 std-root repair anchor\n")
-    assign = match.group("assign")
-    arr = match.group("arr")
-    new = f"""        let nextDir = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_{arr} = HxArray.create () in (
-          ignore (HxArray.push __arr_{arr} (!dir));
-          ignore (HxArray.push __arr_{arr} "..");
-          __arr_{arr}
-        ))) : string) : string) in (
-          let __assign_{assign} = (if nextDir == Obj.magic (HxRuntime.hx_null) || HxString.length nextDir = 0 || HxString.equals nextDir "." || HxString.equals nextDir ".." || StringTools.startsWith (nextDir : string) ("../" : string) then (!dir : string) else (nextDir : string)) in (
-            dir := __assign_{assign};
-            __assign_{assign}
-          )
-        )"""
-    write_text(path_str, src[: match.start()] + new + src[match.end() :])
 
 
 def cmd_patch_allowed_ident_fallback(argv: list[str]) -> None:
@@ -2457,384 +2339,6 @@ def cmd_patch_float_modulo_mutable_local(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
-def cmd_patch_instance_call_receiver_forwarding(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-instance-call-receiver-forwarding <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-    patched_any = False
-    if "instanceCallName" not in src and "let renderedCall =" not in src:
-        return
-
-    old_nonzero_call = '''                                                                        ) else let renderedCall = ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let __assign_1498 = ((("(Obj.magic (" ^ HxString.toStdString renderedCall) ^ "))" : string)) in (
-                                                                          tempResult13 := __assign_1498;
-                                                                          __assign_1498
-                                                                        ) else let __assign_1499 = (renderedCall : string) in (
-                                                                          tempResult13 := __assign_1499;
-                                                                          __assign_1499
-                                                                        )'''
-    new_nonzero_call = '''                                                                        ) else let tempBool_bootstrapImplicitThis = ref (false : bool) in (
-                                                                          ignore (match callee with
-                                                                            | HxExpr.EIdent _p0 -> ignore (let _g3 = (_p0 : string) in let name = (_g3 : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && hasCurrentInstanceMethod (name : string) && HxString.equals c (ocamlValueIdent (name : string)) && (mapGetRaw (Obj.repr tyByIdent) ("this" : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) ("this_" : string) != Obj.magic (HxRuntime.hx_null)) then ignore (let tempLeft_bootstrapImplicitThis = ref (0 : int) in (
-                                                                              ignore (let resolved = mapGetRaw (Obj.repr arityByIdent) (name : string) in if resolved == Obj.magic (HxRuntime.hx_null) then let __assign_bootstrap_implicit_this_arity = 0 in (
-                                                                                tempLeft_bootstrapImplicitThis := __assign_bootstrap_implicit_this_arity;
-                                                                                __assign_bootstrap_implicit_this_arity
-                                                                              ) else let arity = resolved in let __assign_bootstrap_implicit_this_arity = arity in (
-                                                                                tempLeft_bootstrapImplicitThis := __assign_bootstrap_implicit_this_arity;
-                                                                                __assign_bootstrap_implicit_this_arity
-                                                                              ));
-                                                                              if hasCurrentInstanceMethod (name : string) then ignore (let __assign_bootstrap_implicit_this = true in (
-                                                                                tempBool_bootstrapImplicitThis := __assign_bootstrap_implicit_this;
-                                                                                __assign_bootstrap_implicit_this
-                                                                              )) else ignore ()
-                                                                            )) else ignore ())
-                                                                            | _ -> ignore ());
-                                                                          let renderedCall = if !tempBool_bootstrapImplicitThis then (((HxString.toStdString c ^ " (this_) ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x))) : string) else ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let __assign_1498 = ((("(Obj.magic (" ^ HxString.toStdString renderedCall) ^ "))" : string)) in (
-                                                                            tempResult13 := __assign_1498;
-                                                                            __assign_1498
-                                                                          ) else let __assign_1499 = (renderedCall : string) in (
-                                                                            tempResult13 := __assign_1499;
-                                                                            __assign_1499
-                                                                          )
-                                                                        )'''
-
-    old_nonzero_call_late = '''                                                                        ) else let renderedCall = ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let __assign_1829 = ((("(Obj.magic (" ^ HxString.toStdString renderedCall) ^ "))" : string)) in (
-                                                                          tempResult13 := __assign_1829;
-                                                                          __assign_1829
-                                                                        ) else let __assign_1830 = (renderedCall : string) in (
-                                                                          tempResult13 := __assign_1830;
-                                                                          __assign_1830
-                                                                        )'''
-    new_nonzero_call_late = '''                                                                        ) else let tempBool_bootstrapImplicitThis = ref (false : bool) in (
-                                                                          ignore (match callee with
-                                                                            | HxExpr.EIdent _p0 -> ignore (let _g3 = (_p0 : string) in let name = (_g3 : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && hasCurrentInstanceMethod (name : string) && HxString.equals c (ocamlValueIdent (name : string)) && (mapGetRaw (Obj.repr tyByIdent) ("this" : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) ("this_" : string) != Obj.magic (HxRuntime.hx_null)) then ignore (let tempLeft_bootstrapImplicitThis = ref (0 : int) in (
-                                                                              ignore (let resolved = mapGetRaw (Obj.repr arityByIdent) (name : string) in if resolved == Obj.magic (HxRuntime.hx_null) then let __assign_bootstrap_implicit_this_arity = 0 in (
-                                                                                tempLeft_bootstrapImplicitThis := __assign_bootstrap_implicit_this_arity;
-                                                                                __assign_bootstrap_implicit_this_arity
-                                                                              ) else let arity = resolved in let __assign_bootstrap_implicit_this_arity = arity in (
-                                                                                tempLeft_bootstrapImplicitThis := __assign_bootstrap_implicit_this_arity;
-                                                                                __assign_bootstrap_implicit_this_arity
-                                                                              ));
-                                                                              if hasCurrentInstanceMethod (name : string) then ignore (let __assign_bootstrap_implicit_this = true in (
-                                                                                tempBool_bootstrapImplicitThis := __assign_bootstrap_implicit_this;
-                                                                                __assign_bootstrap_implicit_this
-                                                                              )) else ignore ()
-                                                                            )) else ignore ())
-                                                                            | _ -> ignore ());
-                                                                          let renderedCall = if !tempBool_bootstrapImplicitThis then (((HxString.toStdString c ^ " (this_) ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x))) : string) else ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let __assign_1829 = ((("(Obj.magic (" ^ HxString.toStdString renderedCall) ^ "))" : string)) in (
-                                                                            tempResult13 := __assign_1829;
-                                                                            __assign_1829
-                                                                          ) else let __assign_1830 = (renderedCall : string) in (
-                                                                            tempResult13 := __assign_1830;
-                                                                            __assign_1830
-                                                                          )
-                                                                        )'''
-
-    if old_nonzero_call in src:
-        src = src.replace(old_nonzero_call, new_nonzero_call, 1)
-        patched_any = True
-    if old_nonzero_call_late in src:
-        src = src.replace(old_nonzero_call_late, new_nonzero_call_late, 1)
-        patched_any = True
-
-    plain_nonzero_pattern = re.compile(
-        r'(?P<indent>\s*)\) else let renderedCall = \(\(HxString\.toStdString c \^ " "\) \^ HxString\.toStdString \(HxArray\.join renderedArgs " " \(fun x -> x\)\) : string\) in if Obj\.magic \(!hx_sig\) == Obj\.magic \(HxRuntime\.hx_null\) && StringTools\.startsWith \(c : string\) \("Php_Global\." : string\) then let '
-    )
-
-    def rewrite_plain_nonzero(match: re.Match) -> str:
-        indent = match.group("indent")
-        return (
-            indent
-            + ') else let renderedCall = if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && ((match callee with | HxExpr.EIdent _p0 -> let _g3 = (_p0 : string) in let name = (_g3 : string) in hasCurrentInstanceMethod (name : string) && HxString.equals c (ocamlValueIdent (name : string)) && (mapGetRaw (Obj.repr tyByIdent) ("this" : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) ("this_" : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string)) | _ -> false) : bool) then (((HxString.toStdString c ^ " (this_) ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x))) : string) else ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let '
-        )
-
-    src, regex_nonzero_count = plain_nonzero_pattern.subn(rewrite_plain_nonzero, src)
-    patched_any = patched_any or regex_nonzero_count > 0
-
-    src, rendered_args_implicit_this_count = re.subn(
-        r'mapHasRaw \(Obj\.repr arityByIdent\) \(name : string\) && HxString\.equals c \(ocamlValueIdent \(name : string\)\) && (\(mapGetRaw \(Obj\.repr tyByIdent\) \("this" : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| mapGetRaw \(Obj\.repr tyByIdent\) \("this_" : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| hasAllowedValueIdent \("this" : string\) \|\| hasAllowedValueIdent \("this_" : string\)\)) && let resolved = mapGetRaw \(Obj\.repr arityByIdent\) \(name : string\) in let arity = if resolved == Obj\.magic \(HxRuntime\.hx_null\) then 0 else \(Obj\.magic resolved : int\) in HxArray\.length renderedArgs = arity',
-        r'hasCurrentInstanceMethod (name : string) && HxString.equals c (ocamlValueIdent (name : string)) && \1',
-        src,
-    )
-    patched_any = patched_any or rendered_args_implicit_this_count > 0
-
-    src, implicit_this_count = re.subn(
-        r'mapHasRaw \(Obj\.repr arityByIdent\) \(name : string\) && HxInt\.add \(HxArray\.length args\) 1 = (!tempRight\d+)',
-        r'mapHasRaw (Obj.repr arityByIdent) (name : string) && HxArray.length args = \1',
-        src,
-    )
-    patched_any = patched_any or implicit_this_count > 0
-
-    if not patched_any:
-        fail("build-hxhx: failed to locate bootstrap nonzero instance-call emission branch\n")
-
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance call receiver forwarding repair *)\n")
-
-
-def cmd_patch_instance_call_this_binding(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-instance-call-this-binding <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-    patched_any = False
-    if "instanceCallName" not in src:
-        return
-    if 'hasAllowedValueIdent ("this" : string)' in src and 'hasAllowedValueIdent ("this_" : string)' in src:
-        # Current bootstrap snapshots already carry the this/this_ allowed-ident guard
-        # in the recovered instance-call path.
-        return
-
-    old_this_binding_early = '''                                            if mapGetRaw (Obj.repr tyByIdent) (!tempString22 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString23 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_1343 = (HxString.toStdString (ocamlValueIdent (instanceCallName : string)) ^ " (this_)" : string) in (
-                                              tempString21 := __assign_1343;
-                                              __assign_1343
-                                            ) else let __assign_1344 = (ocamlValueIdent (instanceCallName : string) : string) in (
-                                              tempString21 := __assign_1344;
-                                              __assign_1344
-                                            )'''
-    new_this_binding_early = '''                                            if mapGetRaw (Obj.repr tyByIdent) (!tempString22 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString23 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string) then let __assign_1343 = (HxString.toStdString (ocamlValueIdent (instanceCallName : string)) ^ " (this_)" : string) in (
-                                              tempString21 := __assign_1343;
-                                              __assign_1343
-                                            ) else let __assign_1344 = (ocamlValueIdent (instanceCallName : string) : string) in (
-                                              tempString21 := __assign_1344;
-                                              __assign_1344
-                                            )'''
-
-    old_this_binding_late = '''                                            if mapGetRaw (Obj.repr tyByIdent) (!tempString44 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString45 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_1674 = (HxString.toStdString (ocamlValueIdent (instanceCallName : string)) ^ " (this_)" : string) in (
-                                              tempString43 := __assign_1674;
-                                              __assign_1674
-                                            ) else let __assign_1675 = (ocamlValueIdent (instanceCallName : string) : string) in (
-                                              tempString43 := __assign_1675;
-                                              __assign_1675
-                                            )'''
-    new_this_binding_late = '''                                            if mapGetRaw (Obj.repr tyByIdent) (!tempString44 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString45 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string) then let __assign_1674 = (HxString.toStdString (ocamlValueIdent (instanceCallName : string)) ^ " (this_)" : string) in (
-                                              tempString43 := __assign_1674;
-                                              __assign_1674
-                                            ) else let __assign_1675 = (ocamlValueIdent (instanceCallName : string) : string) in (
-                                              tempString43 := __assign_1675;
-                                              __assign_1675
-                                            )'''
-
-    if old_this_binding_early in src:
-        src = src.replace(old_this_binding_early, new_this_binding_early, 1)
-        patched_any = True
-    if old_this_binding_late in src:
-        src = src.replace(old_this_binding_late, new_this_binding_late, 1)
-        patched_any = True
-
-    src, regex_this_binding_count = re.subn(
-        r'if mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P<left>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P<right>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let ',
-        lambda m: (
-            'if mapGetRaw (Obj.repr tyByIdent) (!' + m.group('left') + ' : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!' + m.group('right') + ' : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string) then let '
-        ),
-        src,
-    )
-    patched_any = patched_any or regex_this_binding_count > 0
-
-    if not patched_any:
-        return
-
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance call this-binding repair *)\n")
-
-
-def cmd_patch_instance_method_value_binding(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-instance-method-value-binding <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-    if "hasCurrentInstanceMethod" not in src:
-        return
-    if (
-        'hasCurrentInstanceMethod (name : string) && (typedMapGet tyByIdent' in src
-        and 'hasAllowedValueIdent ("this" : string)' in src
-        and 'hasAllowedValueIdent ("this_" : string)' in src
-    ):
-        write_text(path_str, src)
-        return
-
-    old = '''                            if hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null)) then let __assign_395 = (HxString.toStdString (ocamlValueIdent (name : string)) ^ " (this_)" : string) in (
-                              tempResult13 := __assign_395;
-                              __assign_395
-                            )'''
-    new = '''                            if hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string)) then let __assign_395 = (HxString.toStdString (ocamlValueIdent (name : string)) ^ " (this_)" : string) in (
-                              tempResult13 := __assign_395;
-                              __assign_395
-                            )'''
-
-    if old in src:
-        src = src.replace(old, new, 1)
-        write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance-method value binding repair *)\n")
-        return
-
-    src, count = re.subn(
-        r'if hasCurrentInstanceMethod \(name : string\) && \(typedMapGet tyByIdent \(!(?P<left>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| typedMapGet tyByIdent \(!(?P<right>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\)\) then let ',
-        lambda m: (
-            'if hasCurrentInstanceMethod (name : string) && (typedMapGet tyByIdent (!'
-            + m.group('left')
-            + ' : string) != Obj.magic (HxRuntime.hx_null) || typedMapGet tyByIdent (!'
-            + m.group('right')
-            + ' : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string)) then let '
-        ),
-        src,
-        count=1,
-    )
-    if count == 0:
-        write_text(path_str, src)
-        return
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance-method value binding repair *)\n")
-
-
-def cmd_patch_instance_call_preapplied_arity(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-instance-call-preapplied-arity <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-    patched_any = False
-    if "receiverPreApplied" not in src and "preAppliedArgCount" not in src and "instanceCallName" not in src:
-        return
-    current_module_name_expr = (
-        'let currentModuleNameForArity = (if !currentOcamlModuleName != Obj.magic (HxRuntime.hx_null) then (!currentOcamlModuleName : string) '
-        'else (currentModuleShortNameForStage3 currentPackagePath : string) : string) in '
-    )
-
-    src, receiver_count = re.subn(
-        r'let receiverPreApplied = HxString\.indexOf c " \(this_\)" 0 <> -1 in let callSigForExpr = fun expr ->',
-        'let receiverPreApplied = HxString.indexOf c " (this_)" 0 <> -1 in let preAppliedArgCount = if receiverPreApplied then 1 else 0 in let callSigForExpr = fun expr ->',
-        src,
-    )
-    patched_any = patched_any or receiver_count > 0
-
-    src, ident_lookup_count = re.subn(
-        r'let byLowered = Obj\.magic \(!tempMaybeEmitterCallSig\) in if byLowered != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<assign_lowered>\d+) = Obj\.magic byLowered in \(\s*tempResult18 := __assign_(?P=assign_lowered);\s*__assign_(?P=assign_lowered)\s*\) else let resolved = mapGetRaw \(Obj\.repr callSigByCallee\) \(name : string\) in if resolved == Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<assign_none>\d+) = Obj\.magic \(HxRuntime\.hx_null\) in \(\s*tempResult18 := __assign_(?P=assign_none);\s*__assign_(?P=assign_none)\s*\) else let __assign_(?P<assign_name>\d+) = Obj\.magic resolved in \(\s*tempResult18 := __assign_(?P=assign_name);\s*__assign_(?P=assign_name)\s*\)',
-        current_module_name_expr + r'let byLowered = Obj.magic (!tempMaybeEmitterCallSig) in if byLowered != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_lowered> = Obj.magic byLowered in (\n                                                              tempResult18 := __assign_\g<assign_lowered>;\n                                                              __assign_\g<assign_lowered>\n                                                            ) else let resolved = mapGetRaw (Obj.repr callSigByCallee) (name : string) in if resolved != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_name> = Obj.magic resolved in (\n                                                              tempResult18 := __assign_\g<assign_name>;\n                                                              __assign_\g<assign_name>\n                                                            ) else if String.length currentModuleNameForArity > 0 then let qualifiedLowered = ((currentModuleNameForArity) ^ "." ^ lowered : string) in let resolvedQualifiedLowered = mapGetRaw (Obj.repr callSigByCallee) (qualifiedLowered : string) in if resolvedQualifiedLowered != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_none> = Obj.magic resolvedQualifiedLowered in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let qualifiedName = ((currentModuleNameForArity) ^ "." ^ name : string) in let resolvedQualifiedName = mapGetRaw (Obj.repr callSigByCallee) (qualifiedName : string) in if resolvedQualifiedName == Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_none> = Obj.magic (HxRuntime.hx_null) in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let __assign_\g<assign_none> = Obj.magic resolvedQualifiedName in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let __assign_\g<assign_none> = Obj.magic (HxRuntime.hx_null) in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            )',
-        src,
-    )
-    patched_any = patched_any or ident_lookup_count > 0
-
-    src, field_lookup_count = re.subn(
-        r'let byLowered = Obj\.magic \(!tempMaybeEmitterCallSig1\) in if byLowered != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<assign_lowered>\d+) = Obj\.magic byLowered in \(\s*tempResult18 := __assign_(?P=assign_lowered);\s*__assign_(?P=assign_lowered)\s*\) else let resolved = mapGetRaw \(Obj\.repr callSigByCallee\) \(name : string\) in if resolved == Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<assign_none>\d+) = Obj\.magic \(HxRuntime\.hx_null\) in \(\s*tempResult18 := __assign_(?P=assign_none);\s*__assign_(?P=assign_none)\s*\) else let __assign_(?P<assign_name>\d+) = Obj\.magic resolved in \(\s*tempResult18 := __assign_(?P=assign_name);\s*__assign_(?P=assign_name)\s*\)',
-        current_module_name_expr + r'let byLowered = Obj.magic (!tempMaybeEmitterCallSig1) in if byLowered != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_lowered> = Obj.magic byLowered in (\n                                                              tempResult18 := __assign_\g<assign_lowered>;\n                                                              __assign_\g<assign_lowered>\n                                                            ) else let resolved = mapGetRaw (Obj.repr callSigByCallee) (name : string) in if resolved != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_name> = Obj.magic resolved in (\n                                                              tempResult18 := __assign_\g<assign_name>;\n                                                              __assign_\g<assign_name>\n                                                            ) else if String.length currentModuleNameForArity > 0 then let qualifiedLowered = ((currentModuleNameForArity) ^ "." ^ lowered : string) in let resolvedQualifiedLowered = mapGetRaw (Obj.repr callSigByCallee) (qualifiedLowered : string) in if resolvedQualifiedLowered != Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_none> = Obj.magic resolvedQualifiedLowered in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let qualifiedName = ((currentModuleNameForArity) ^ "." ^ name : string) in let resolvedQualifiedName = mapGetRaw (Obj.repr callSigByCallee) (qualifiedName : string) in if resolvedQualifiedName == Obj.magic (HxRuntime.hx_null) then let __assign_\g<assign_none> = Obj.magic (HxRuntime.hx_null) in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let __assign_\g<assign_none> = Obj.magic resolvedQualifiedName in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            ) else let __assign_\g<assign_none> = Obj.magic (HxRuntime.hx_null) in (\n                                                              tempResult18 := __assign_\g<assign_none>;\n                                                              __assign_\g<assign_none>\n                                                            )',
-        src,
-    )
-    patched_any = patched_any or field_lookup_count > 0
-
-    src, overapply_sig_count = re.subn(
-        r'HxArray\.length args > Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "expected"\)',
-        r'HxInt.add (HxArray.length args) preAppliedArgCount > Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")',
-        src,
-    )
-    patched_any = patched_any or overapply_sig_count > 0
-
-    src, overapply_arity_count = re.subn(
-        r'mapHasRaw \(Obj\.repr arityByIdent\) \(c : string\) && HxArray\.length args > !(?P<arity>tempRight\d+)',
-        r'mapHasRaw (Obj.repr arityByIdent) (c : string) && HxInt.add (HxArray.length args) preAppliedArgCount > !\g<arity>',
-        src,
-    )
-    patched_any = patched_any or overapply_arity_count > 0
-
-    src, missing_count = re.subn(
-        r'let expected = Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "expected"\) in if expected > HxArray\.length \(!fullArgs\) then ignore \(let __assign_(?P<assign>\d+) = HxInt\.sub expected \(HxArray\.length \(!fullArgs\)\) in \(',
-        r'let expectedAfterPreapply = HxInt.sub (Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")) preAppliedArgCount in if expectedAfterPreapply > HxArray.length (!fullArgs) then ignore (let __assign_\g<assign> = HxInt.sub expectedAfterPreapply (HxArray.length (!fullArgs)) in (',
-        src,
-    )
-    patched_any = patched_any or missing_count > 0
-
-    src, instance_arity_fallback_count = re.subn(
-        r'ignore \(if !missingCount = 0 && Obj\.magic \(!hx_sig\) != Obj\.magic \(HxRuntime\.hx_null\) then ignore \(let expectedAfterPreapply = HxInt\.sub \(Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "expected"\)\) preAppliedArgCount in if expectedAfterPreapply > HxArray\.length \(!fullArgs\) then ignore \(let __assign_(?P<assign>\d+) = HxInt\.sub expectedAfterPreapply \(HxArray\.length \(!fullArgs\)\) in \(\s*missingCount := __assign_(?P=assign);\s*__assign_(?P=assign)\s*\)\) else \(\)\) else \(\)\);',
-        r'ignore (if !missingCount = 0 && Obj.magic (!hx_sig) != Obj.magic (HxRuntime.hx_null) then ignore (let expectedAfterPreapply = HxInt.sub (Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")) preAppliedArgCount in if expectedAfterPreapply > HxArray.length (!fullArgs) then ignore (let __assign_\g<assign> = HxInt.sub expectedAfterPreapply (HxArray.length (!fullArgs)) in (\n                                                                    missingCount := __assign_\g<assign>;\n                                                                    __assign_\g<assign>\n                                                                  )) else ()) else ()); ignore (if !missingCount = 0 && Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && instanceCallName != Obj.magic (HxRuntime.hx_null) && mapHasRaw (Obj.repr arityByIdent) (instanceCallName : string) then ignore (let expectedByArity = Obj.obj (mapGetRaw (Obj.repr arityByIdent) (instanceCallName : string)) in if expectedByArity > HxArray.length (!fullArgs) then ignore (let __assign_instance_arity = HxInt.sub expectedByArity (HxArray.length (!fullArgs)) in (\n                                                                    missingCount := __assign_instance_arity;\n                                                                    __assign_instance_arity\n                                                                  )) else ()) else ());',
-        src,
-    )
-    patched_any = patched_any or instance_arity_fallback_count > 0
-
-    src, trailing_pos_count = re.subn(
-        r'Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "expected"\) > HxArray\.length \(!fullArgs\)',
-        r'HxInt.sub (Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")) preAppliedArgCount > HxArray.length (!fullArgs)',
-        src,
-    )
-    patched_any = patched_any or trailing_pos_count > 0
-
-    src, missing_before_count = re.subn(
-        r'let missingBefore = HxInt\.sub \(Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "expected"\)\) \(HxArray\.length \(!fullArgs\)\) in',
-        r'let missingBefore = HxInt.sub (HxInt.sub (Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")) preAppliedArgCount) (HxArray.length (!fullArgs)) in',
-        src,
-    )
-    patched_any = patched_any or missing_before_count > 0
-
-    src, implicit_this_ident_count = re.subn(
-        r'let __assign_(?P<assign>\d+) = \((?P<prefix>\(mapGetRaw \(Obj\.repr tyByIdent\) \(!tempString\d+ : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| mapGetRaw \(Obj\.repr tyByIdent\) \(!tempString\d+ : string\) != Obj\.magic \(HxRuntime\.hx_null\)\)) && mapHasRaw \(Obj\.repr arityByIdent\) \(name : string\) && HxArray\.length args = !\s*(?P<arity>tempRight\d+)\) in',
-        r'let __assign_\g<assign> = (not (receiverPreApplied) && \g<prefix> && mapHasRaw (Obj.repr arityByIdent) (name : string) && HxInt.add (HxArray.length args) 1 = !\g<arity>) in',
-        src,
-    )
-    patched_any = patched_any or implicit_this_ident_count > 0
-
-    src, implicit_this_field_count = re.subn(
-        r'let __assign_(?P<assign>\d+) = mapHasRaw \(Obj\.repr arityByIdent\) \(name : string\) && HxArray\.length args = !\s*(?P<arity>tempRight\d+) in',
-        r'let __assign_\g<assign> = not (receiverPreApplied) && mapHasRaw (Obj.repr arityByIdent) (name : string) && HxInt.add (HxArray.length args) 1 = !\g<arity> in',
-        src,
-    )
-    patched_any = patched_any or implicit_this_field_count > 0
-
-    src, receiver_insert_count = re.subn(
-        r'if Obj\.magic \(!hx_sig\) != Obj\.magic \(HxRuntime\.hx_null\) && HxRuntime\.unbox_bool_or_obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "needsReceiver"\) && HxArray\.length \(!fullArgs\) < Obj\.obj \(HxAnon\.get \(Obj\.magic \(!hx_sig\)\) "required"\) then',
-        r'if not (receiverPreApplied) && Obj.magic (!hx_sig) != Obj.magic (HxRuntime.hx_null) && HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!hx_sig)) "needsReceiver") && HxArray.length (!fullArgs) < Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "required") then',
-        src,
-    )
-    patched_any = patched_any or receiver_insert_count > 0
-
-    src, nullary_preapplied_count = re.subn(
-        r'let missingCount = ref missing in \(',
-        'let missingCount = ref (if receiverPreApplied && Obj.magic (!hx_sig) != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected") = preAppliedArgCount then 0 else missing) in (',
-        src,
-    )
-    patched_any = patched_any or nullary_preapplied_count > 0
-
-    src, append_unit_ident_count = re.subn(
-        r'if hasCurrentInstanceMethod \(name : string\) && \(mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P<this_name>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P<this_alt>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\)\) && !(?P<arity>tempLeft\d+) <= 1 then ignore \(let __assign_(?P<assign>\d+) = false in \(',
-        r'if hasCurrentInstanceMethod (name : string) && (receiverPreApplied || (mapGetRaw (Obj.repr tyByIdent) (!\g<this_name> : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!\g<this_alt> : string) != Obj.magic (HxRuntime.hx_null))) && (!\g<arity> <= 1 || receiverPreApplied) then ignore (let __assign_\g<assign> = false in (',
-        src,
-    )
-    patched_any = patched_any or append_unit_ident_count > 0
-
-    src, append_unit_this_field_count = re.subn(
-        r'if !\s*(?P<arity>tempLeft\d+) <= 1 then ignore \(let __assign_(?P<assign>\d+) = false in \(',
-        r'if !\g<arity> <= 1 || receiverPreApplied then ignore (let __assign_\g<assign> = false in (',
-        src,
-        count=1,
-    )
-    patched_any = patched_any or append_unit_this_field_count > 0
-
-    src, append_unit_render_count = re.subn(
-        r'ignore \(if !appendUnit then let __assign_(?P<assign_true>\d+) = \(HxString\.toStdString c \^ " \(\)" : string\) in \(\s*'
-        r'(?P<temp_true>tempString\d+) := __assign_(?P=assign_true);\s*'
-        r'__assign_(?P=assign_true)\s*\) else let __assign_(?P<assign_false>\d+) = \(c : string\) in \(\s*'
-        r'(?P<temp_false>tempString\d+) := __assign_(?P=assign_false);\s*'
-        r'__assign_(?P=assign_false)\s*\)\);',
-        r'ignore (if receiverPreApplied then let __assign_\g<assign_false> = (c : string) in ('
-        r'\g<temp_false> := __assign_\g<assign_false>;'
-        r'__assign_\g<assign_false>'
-        r') else if !appendUnit then let __assign_\g<assign_true> = (HxString.toStdString c ^ " ()" : string) in ('
-        r'\g<temp_true> := __assign_\g<assign_true>;'
-        r'__assign_\g<assign_true>'
-        r') else let __assign_\g<assign_false> = (c : string) in ('
-        r'\g<temp_false> := __assign_\g<assign_false>;'
-        r'__assign_\g<assign_false>'
-        r'));',
-        src,
-    )
-    patched_any = patched_any or append_unit_render_count > 0
-
-    src, final_preapplied_padding_count = re.subn(
-        r'ignore \(let _g3 = ref 0 in let _g4 = !missingCount in while !_g3 < _g4 do ignore \(\(',
-        current_module_name_expr + 'ignore (if receiverPreApplied && HxArray.length (!fullArgs) = 2 && (HxString.equals c "deq (this_)" || HxString.equals c "eq (this_)") then (ignore (HxArray.push (!fullArgs) (HxExpr.ENull)); missingCount := 0) else ()); let firstSpacePreapplied = HxString.indexOf c " " 0 in let renderedCalleeHead = (if firstSpacePreapplied > 0 then HxString.substr c 0 firstSpacePreapplied else c : string) in let instanceQualifiedName = (if instanceCallName != Obj.magic (HxRuntime.hx_null) && String.length currentModuleNameForArity > 0 then ((currentModuleNameForArity) ^ "." ^ (instanceCallName : string) : string) else ("" : string) : string) in let renderedQualifiedName = (if String.length currentModuleNameForArity > 0 then ((currentModuleNameForArity) ^ "." ^ renderedCalleeHead : string) else ("" : string) : string) in let instanceSigResolved = (if instanceCallName != Obj.magic (HxRuntime.hx_null) then let rawInstanceSig = mapGetRaw (Obj.repr callSigByCallee) (instanceCallName : string) in if rawInstanceSig != Obj.magic (HxRuntime.hx_null) then Obj.magic rawInstanceSig else if String.length instanceQualifiedName > 0 then Obj.magic (mapGetRaw (Obj.repr callSigByCallee) (instanceQualifiedName : string)) else Obj.magic (HxRuntime.hx_null) else Obj.magic (HxRuntime.hx_null) : Obj.t) in let renderedSigResolved = (let rawRenderedSig = mapGetRaw (Obj.repr callSigByCallee) (renderedCalleeHead : string) in if rawRenderedSig != Obj.magic (HxRuntime.hx_null) then Obj.magic rawRenderedSig else if String.length renderedQualifiedName > 0 then Obj.magic (mapGetRaw (Obj.repr callSigByCallee) (renderedQualifiedName : string)) else Obj.magic (HxRuntime.hx_null) : Obj.t) in let instanceArityResolved = (if instanceCallName != Obj.magic (HxRuntime.hx_null) && mapHasRaw (Obj.repr arityByIdent) (instanceCallName : string) then Obj.obj (mapGetRaw (Obj.repr arityByIdent) (instanceCallName : string)) else if instanceCallName != Obj.magic (HxRuntime.hx_null) && String.length instanceQualifiedName > 0 && mapHasRaw (Obj.repr arityByIdent) (instanceQualifiedName : string) then Obj.obj (mapGetRaw (Obj.repr arityByIdent) (instanceQualifiedName : string)) else 0 : int) in let renderedArityResolved = (if mapHasRaw (Obj.repr arityByIdent) (renderedCalleeHead : string) then Obj.obj (mapGetRaw (Obj.repr arityByIdent) (renderedCalleeHead : string)) else if String.length renderedQualifiedName > 0 && mapHasRaw (Obj.repr arityByIdent) (renderedQualifiedName : string) then Obj.obj (mapGetRaw (Obj.repr arityByIdent) (renderedQualifiedName : string)) else 0 : int) in ignore (if receiverPreApplied && (Obj.magic (!hx_sig) != Obj.magic (HxRuntime.hx_null) || instanceSigResolved != Obj.magic (HxRuntime.hx_null) || renderedSigResolved != Obj.magic (HxRuntime.hx_null) || instanceArityResolved > 0 || renderedArityResolved > 0) then ignore (let expectedBySig = if Obj.magic (!hx_sig) != Obj.magic (HxRuntime.hx_null) then HxInt.sub (Obj.obj (HxAnon.get (Obj.magic (!hx_sig)) "expected")) preAppliedArgCount else 0 in let expectedByRecoveredInstanceSig = if instanceSigResolved != Obj.magic (HxRuntime.hx_null) then HxInt.sub (Obj.obj (HxAnon.get (Obj.magic instanceSigResolved) "expected")) preAppliedArgCount else 0 in let expectedByRecoveredRenderedSig = if renderedSigResolved != Obj.magic (HxRuntime.hx_null) then HxInt.sub (Obj.obj (HxAnon.get (Obj.magic renderedSigResolved) "expected")) preAppliedArgCount else 0 in let expectedByArity = if instanceArityResolved > 0 then HxInt.sub instanceArityResolved preAppliedArgCount else 0 in let expectedByRenderedCallee = if renderedArityResolved > 0 then HxInt.sub renderedArityResolved preAppliedArgCount else 0 in let bestRecovered = if expectedByRecoveredInstanceSig > expectedByRecoveredRenderedSig then expectedByRecoveredInstanceSig else expectedByRecoveredRenderedSig in let bestArity = if expectedByArity > expectedByRenderedCallee then expectedByArity else expectedByRenderedCallee in let bestSig = if expectedBySig > bestRecovered then expectedBySig else bestRecovered in let expectedAfterPreapply = if bestSig > bestArity then bestSig else bestArity in while HxArray.length (!fullArgs) < expectedAfterPreapply do ignore (HxArray.push (!fullArgs) (HxExpr.ENull)) done; let __assign_preapplied_final = 0 in (missingCount := __assign_preapplied_final;__assign_preapplied_final)) else ()); ignore (let _g3 = ref 0 in let _g4 = !missingCount in while !_g3 < _g4 do ignore ((',
-        src,
-    )
-    patched_any = patched_any or final_preapplied_padding_count > 0
-
-    if not patched_any:
-        fail("build-hxhx: failed to locate bootstrap preapplied receiver arity branch\n")
-
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: preapplied receiver arity repair *)\n")
-
-
 def cmd_patch_string_length_fallback(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-string-length-fallback <path>\n")
@@ -4095,28 +3599,6 @@ def cmd_patch_hxtype_registry_js_target_core_systools(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
-def cmd_patch_typerstage_lowercase_static_receiver_guard(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-typerstage-lowercase-static-receiver-guard <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    marker = "(* hxhx(stage3) bootstrap shim: lower-case static receiver guard *)"
-    if marker in src:
-        write_text(path_str, src)
-        return
-
-    old = '''          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (typeName : string)) in if c != Obj.magic (HxRuntime.hx_null) then ('''
-    new = '''          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (if isUpperStartName (typeName : string) then TyperContext.resolveType (Obj.magic ctx) (typeName : string) else Obj.magic (HxRuntime.hx_null)) in if c != Obj.magic (HxRuntime.hx_null) then ('''
-    src = replace_one(
-        src,
-        old,
-        new,
-        "build-hxhx: failed to locate TyperStage lower-case static receiver guard anchor\n",
-    )
-    write_text(path_str, src + "\n" + marker + "\n")
-
-
 def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-cli-routing-ocaml-eval-hxml <path>\n")
@@ -4182,14 +3664,11 @@ def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
 
 COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "insert-before-anchor": cmd_insert_before_anchor,
+    "find-emitter-shim-patch-anchor": cmd_find_emitter_shim_patch_anchor,
     "patch-array-receiver-chain-lowering": cmd_patch_array_receiver_chain_lowering,
     "patch-hxparser-interpolated-exprs": cmd_patch_hxparser_interpolated_exprs,
     "patch-hxparser-generic-function-decl": cmd_patch_hxparser_generic_function_decl,
-    "patch-hxparser-uppercase-helper-call": cmd_patch_hxparser_uppercase_helper_call,
-    "patch-emitter-typed-param-fallback": cmd_patch_emitter_typed_param_fallback,
-    "patch-emitter-parsed-arg-type-overlay": cmd_patch_emitter_parsed_arg_type_overlay,
     "patch-emitter-preapplied-sig-fallback": cmd_patch_emitter_preapplied_sig_fallback,
-    "patch-stage1-std-root-termination": cmd_patch_stage1_std_root_termination,
     "patch-allowed-ident-fallback": cmd_patch_allowed_ident_fallback,
     "patch-typed-ty-map-copying": cmd_patch_typed_ty_map_copying,
     "patch-typed-map-helper-obj-repr": cmd_patch_typed_map_helper_obj_repr,
@@ -4203,10 +3682,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,
     "patch-stmt-local-allowed-idents": cmd_patch_stmt_local_allowed_idents,
-    "patch-instance-call-receiver-forwarding": cmd_patch_instance_call_receiver_forwarding,
-    "patch-instance-call-this-binding": cmd_patch_instance_call_this_binding,
-    "patch-instance-method-value-binding": cmd_patch_instance_method_value_binding,
-    "patch-instance-call-preapplied-arity": cmd_patch_instance_call_preapplied_arity,
     "patch-string-length-fallback": cmd_patch_string_length_fallback,
     "patch-string-length-stdlib": cmd_patch_string_length_stdlib,
     "patch-mutable-local-string-init-hints": cmd_patch_mutable_local_string_init_hints,
@@ -4225,7 +3700,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-plugin-dune-layout": cmd_patch_plugin_dune_layout,
     "patch-js-target-core-systools-static-bodies": cmd_patch_js_target_core_systools_static_bodies,
     "patch-hxtype-registry-js-target-core-systools": cmd_patch_hxtype_registry_js_target_core_systools,
-    "patch-typerstage-lowercase-static-receiver-guard": cmd_patch_typerstage_lowercase_static_receiver_guard,
     "patch-cli-routing-ocaml-eval-hxml": cmd_patch_cli_routing_ocaml_eval_hxml,
 }
 

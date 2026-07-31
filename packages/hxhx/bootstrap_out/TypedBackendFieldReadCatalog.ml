@@ -13,11 +13,11 @@ let create = fun reads -> let self = ({ __hx_type = HxType.class_ "TypedBackendF
         ignore (_g := __new_2);
         __new_2
       ));
-      ignore (if read == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read catalog cannot contain a null projection") ["Dynamic"; "String"]) else ());
-      let name = (TypedBackendFieldReadProjection.getProjectedName (Obj.magic read) () : string) in let existing = Obj.magic (HxMap.get_string exactReads name) in if existing == Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (HxMap.set_string exactReads name read);
+      ignore (if read == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read catalog cannot contain a null projection") ["Dynamic"]) else ());
+      let name = (TypedBackendFieldReadProjection.getProjectedName (Obj.magic read) () : string) in let existing = Obj.magic (HxMap.get_string (Obj.magic exactReads) (name : string)) in if existing == Obj.magic (HxRuntime.hx_null) then ignore ((
+        ignore (HxMap.set_string (Obj.magic exactReads) (name : string) read);
         HxArray.push names name
-      )) else ignore (if not (HxString.equals (TypedBackendFieldReadProjection.getCanonicalIdentity (Obj.magic existing) ()) (TypedBackendFieldReadProjection.getCanonicalIdentity (Obj.magic read) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conflicting typed field-read facts for transport name " ^ HxString.toStdString name)) ["Dynamic"; "String"]) else ())
+      )) else ignore (if not (HxString.equals (TypedBackendFieldReadProjection.getCanonicalIdentity (Obj.magic existing) ()) (TypedBackendFieldReadProjection.getCanonicalIdentity (Obj.magic read) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conflicting typed field-read facts for transport name " ^ HxString.toStdString name)) ["Dynamic"]) else ())
     )) done) else ());
     ignore (HxArray.sort names (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
     ignore (let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
@@ -33,10 +33,10 @@ let create = fun reads -> let self = ({ __hx_type = HxType.class_ "TypedBackendF
         ignore (_g := __new_7);
         __new_7
       ));
-      let read = Obj.magic (HxMap.get_string exactReads name) in (
-        ignore (if read == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read catalog lost a normalized projection") ["Dynamic"; "String"]) else ());
+      let read = Obj.magic (HxMap.get_string (Obj.magic exactReads) (name : string)) in (
+        ignore (if read == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read catalog lost a normalized projection") ["Dynamic"]) else ());
         ignore (HxArray.push ((Obj.magic self : t).entries) read);
-        HxMap.set_string ((Obj.magic self : t).byProjectedName) name read
+        let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in HxMap.set_string (Obj.magic _this) (name : string) read
       )
     )) done
   )));
@@ -59,10 +59,10 @@ let getReservedProjectedNames = fun self () -> let _g = Obj.magic (let __arr_8 =
 )
 
 let findByProjectedName = fun self (projectedName : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendFieldReadProjection.t) in (
-  ignore (if projectedName == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if projectedName == HxString.hx_null_string then let __assign_11 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_11;
     __assign_11
-  ) else let __assign_12 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).byProjectedName) projectedName)) in (
+  ) else let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let __assign_12 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (projectedName : string))) in (
     tempResult := __assign_12;
     __assign_12
   ));

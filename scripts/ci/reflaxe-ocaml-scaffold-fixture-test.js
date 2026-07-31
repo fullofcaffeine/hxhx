@@ -55,7 +55,7 @@ try {
 
 	const appBuild = runCli([
 		'build', '--project', appRoot,
-		'--run', 'out/_build/default/out.exe'
+		'--run', '.out.reflaxe-ocaml-dune-build/default/out.exe'
 	])
 	assert.strictEqual(appBuild.status, 0, appBuild.stderr || appBuild.stdout)
 	assert(appBuild.stdout.includes('Hello from Fixture App via reflaxe.ocaml!'))
@@ -63,14 +63,23 @@ try {
 	assert(appBuild.stdout.includes('REFLAXE_OCAML_NATIVE_TIMING:PRESENT'))
 	assert(appBuild.stdout.includes('typecheck + compile + link combined'))
 	assert(appBuild.stdout.includes('REFLAXE_OCAML_RUN:PASS'))
+	const publicMainBeforeInvalidConnect = fs.readFileSync(path.join(appRoot, 'out/Main.ml'), 'utf8')
+	const invalidConnect = runCli(['build', '--project', appRoot, '--connect', 'example.com:6000'])
+	assert.strictEqual(invalidConnect.status, 2)
+	assert(invalidConnect.stderr.includes('--connect accepts only a local port'))
+	assert.strictEqual(fs.readFileSync(path.join(appRoot, 'out/Main.ml'), 'utf8'), publicMainBeforeInvalidConnect)
+	const watchHelp = runCli(['watch', '--help'])
+	assert.strictEqual(watchHelp.status, 0, watchHelp.stderr || watchHelp.stdout)
+	assert(watchHelp.stdout.includes('--connect <[host:]port>'))
+	assert(watchHelp.stdout.includes('Server reuse is explicit and local-only'))
 	const appInspect = runCli(['inspect', '--project', appRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(appInspect.status, 0, appInspect.stderr || appInspect.stdout)
 	const appInspection = JSON.parse(appInspect.stdout)
-	assert.strictEqual(appInspection.schemaVersion, 10)
+	assert.strictEqual(appInspection.schemaVersion, 30)
 	assert.strictEqual(appInspection.summary.valid, true)
 	assert.strictEqual(appInspection.artifactManifest.status, 'present')
-	assert.strictEqual(appInspection.artifactManifest.completeForSourceBundle, false)
-	assert.strictEqual(appInspection.artifactManifest.blockers.length, 2)
+	assert.strictEqual(appInspection.artifactManifest.completeForSourceBundle, true)
+	assert.strictEqual(appInspection.artifactManifest.blockers.length, 0)
 	assert.strictEqual(appInspection.buildTiming.status, 'present')
 	assert.strictEqual(appInspection.buildTiming.buildStatus, 'passed')
 	assert.strictEqual(appInspection.buildTiming.nativeBuildRan, true)
@@ -79,7 +88,7 @@ try {
 	assert.strictEqual(appInspection.buildTiming.duneCacheHitsMeasured, false)
 	assert.strictEqual(appInspection.lowering.status, 'present')
 	assert.strictEqual(appInspection.representation.status, 'present')
-	assert.strictEqual(appInspection.representation.scope, 'exact-int-bool-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-v10')
+	assert.strictEqual(appInspection.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14')
 	assert(appInspection.summary.representationDecisionCount > 0)
 	assert.strictEqual(appInspection.lowering.staticStorage.length, appInspection.summary.staticStorageCount)
 	assert(!appInspection.unavailable.some(capability => capability.id === 'program-representation'))
@@ -105,7 +114,7 @@ try {
 	const dune = fs.readFileSync(path.join(libraryRoot, 'out/dune'), 'utf8')
 	assert(dune.includes('(library'))
 	assert(!dune.includes('(executable'))
-	assert(fs.existsSync(path.join(libraryRoot, 'out/_build/default/out.cmxa')))
+	assert(fs.existsSync(path.join(libraryRoot, '.out.reflaxe-ocaml-dune-build/default/out.cmxa')))
 
 	const bindingRoot = path.join(tempRoot, 'fixture-binding')
 	const refusedBinding = runCli(['new', 'binding', bindingRoot])

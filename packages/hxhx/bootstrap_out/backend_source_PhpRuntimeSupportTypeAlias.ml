@@ -13,37 +13,37 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.P
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpRuntimeSupportTypeAlias" } : t)
 
-let qualifiedName = fun path -> try let __fallback_result_8 = let tempString = ref ("" : string) in (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let qualifiedName = fun (path : string) -> (try let __fallback_result_10 = let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if path == HxString.hx_null_string then let __assign_1 = "" in (
     tempString := __assign_1;
     __assign_1
-  ) else let __assign_2 = (StringTools.trim (path : string) : string) in (
+  ) else let __assign_2 = let __call_arg_0_3 = path in StringTools.trim __call_arg_0_3 in (
     tempString := __assign_2;
     __assign_2
   ));
-  let tempBool = ref (false : bool) in (
-    ignore (match !tempString with
-      | "haxe.Json" | "haxe.Resource" | "haxe.Serializer" | "haxe.Template" | "haxe.Unserializer" | "haxe.crypto.Base64" | "haxe.crypto.BaseCode" | "haxe.crypto.Md5" | "haxe.crypto.Sha1" | "haxe.ds.GenericStack" | "haxe.io.Bytes" | "haxe.io.BytesInput" | "haxe.io.BytesOutput" | "haxe.rtti.Meta" | "php.Syntax" -> let __assign_4 = true in (
+  let clean = !tempString in let tempBool = ref (false : bool) in (
+    ignore (match clean with
+      | "haxe.Json" | "haxe.Resource" | "haxe.Serializer" | "haxe.Template" | "haxe.Unserializer" | "haxe.crypto.Base64" | "haxe.crypto.BaseCode" | "haxe.crypto.Md5" | "haxe.crypto.Sha1" | "haxe.ds.GenericStack" | "haxe.io.Bytes" | "haxe.io.BytesInput" | "haxe.io.BytesOutput" | "haxe.rtti.Meta" | "php.Syntax" -> let __assign_5 = true in (
+        tempBool := __assign_5;
+        __assign_5
+      )
+      | _ -> let __assign_4 = false in (
         tempBool := __assign_4;
         __assign_4
-      )
-      | _ -> let __assign_3 = false in (
-        tempBool := __assign_3;
-        __assign_3
       ));
     let supported = !tempBool in (
       ignore (if not (supported) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let qualified = (Backend_source_PhpName.typePath (!tempString : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if HxString.indexOf qualified "\\" 0 < 0 then let __assign_5 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_5;
-          __assign_5
-        ) else let __assign_6 = Obj.magic ("\\" ^ HxString.toStdString qualified : string) in (
-          tempResult := __assign_6;
-          __assign_6
+      let qualified = let __call_arg_0_6 = clean in Backend_source_PhpName.typePath __call_arg_0_6 in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if HxString.indexOf qualified "\\" 0 < 0 then let __assign_7 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_7;
+          __assign_7
+        ) else let __assign_8 = Obj.magic ("\\" ^ HxString.toStdString qualified : string) in (
+          tempResult := __assign_8;
+          __assign_8
         ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_8 with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+) in Obj.magic __fallback_result_10 with
+  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9 : string)

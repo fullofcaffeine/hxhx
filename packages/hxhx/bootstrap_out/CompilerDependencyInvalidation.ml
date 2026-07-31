@@ -6,37 +6,37 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable modulePath : string; mutable reasonPath : string HxArray.t }
 
-let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = ""; reasonPath = Obj.magic (HxRuntime.hx_null) } : t) in (
-  ignore (ignore (let tempRight = ref ("" : string) in (
-    ignore (if modulePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
+    ignore (if modulePath2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = (StringTools.trim (modulePath2 : string) : string) in (
+    ) else let __assign_2 = let __call_arg_0_3 = modulePath2 in StringTools.trim __call_arg_0_3 in (
       tempRight := __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = (!tempRight : string) in (
-      (Obj.magic self : t).modulePath <- __assign_3;
-      __assign_3
+    ignore (let __assign_4 = (!tempRight : string) in (
+      (Obj.magic self : t).modulePath <- __assign_4;
+      __assign_4
     ));
     let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if reasonPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
-        tempRight1 := __assign_4;
-        __assign_4
-      ) else let __assign_6 = Obj.magic (HxArray.copy reasonPath2) in (
-        tempRight1 := __assign_6;
-        __assign_6
-      ));
-      ignore (let __assign_7 = Obj.magic (!tempRight1) in (
-        (Obj.magic self : t).reasonPath <- __assign_7;
+      ignore (if reasonPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
+        tempRight1 := __assign_5;
+        __assign_5
+      ) else let __assign_7 = Obj.magic (HxArray.copy reasonPath2) in (
+        tempRight1 := __assign_7;
         __assign_7
       ));
-      if HxString.length ((Obj.magic self : t).modulePath) = 0 || HxArray.length ((Obj.magic self : t).reasonPath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler invalidation requires a module and at least one reason") ["Dynamic"; "String"]) else ()
+      ignore (let __assign_8 = Obj.magic (!tempRight1) in (
+        (Obj.magic self : t).reasonPath <- __assign_8;
+        __assign_8
+      ));
+      if HxString.length ((Obj.magic self : t).modulePath) = 0 || HxArray.length ((Obj.magic self : t).reasonPath) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler invalidation requires a module and at least one reason") ["Dynamic"]) else ()
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = ""; reasonPath = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic (HxRuntime.hx_null) } : t)
 
 let describe = fun self () -> (HxString.toStdString ((Obj.magic self : t).modulePath) ^ ": ") ^ HxString.toStdString (HxArray.join ((Obj.magic self : t).reasonPath) " -> " (fun x -> x))

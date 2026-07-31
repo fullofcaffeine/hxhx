@@ -31,25 +31,25 @@ let getThisCaptureName = fun self () -> (Obj.magic self : t).thisCaptureName
 
 let getPreferredEnumOwnerIdentity = fun self () -> (Obj.magic self : t).preferredEnumOwnerIdentity
 
-let fromPlanned = fun local -> let __anon_34 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_34 "targetName" (Obj.repr (Obj.obj (HxAnon.get local "targetName"))));
-  ignore (HxAnon.set __anon_34 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get local "bindingIdentity"))));
-  ignore (HxAnon.set __anon_34 "sourceName" (Obj.repr (Obj.obj (HxAnon.get local "sourceName"))));
-  ignore (HxAnon.set __anon_34 "semanticType" (Obj.repr (Obj.obj (HxAnon.get local "semanticType"))));
-  ignore (HxAnon.set __anon_34 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get local "typeIdentity"))));
-  ignore (HxAnon.set __anon_34 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get local "typeDisplay"))));
-  ignore (HxAnon.set __anon_34 "targetTypeHint" (Obj.repr (Obj.obj (HxAnon.get local "targetTypeHint"))));
-  ignore (HxAnon.set __anon_34 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get local "declarationKind"))))));
-  ignore (HxAnon.set __anon_34 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get local "isRestCarrier"))));
-  ignore (HxAnon.set __anon_34 "isTargetSynthetic" (HxRuntime.box_bool false));
-  __anon_34
+let fromPlanned = fun local -> let __anon_47 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_47 "targetName" (Obj.repr (Obj.obj (HxAnon.get local "targetName"))));
+  ignore (HxAnon.set __anon_47 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get local "bindingIdentity"))));
+  ignore (HxAnon.set __anon_47 "sourceName" (Obj.repr (Obj.obj (HxAnon.get local "sourceName"))));
+  ignore (HxAnon.set __anon_47 "semanticType" (Obj.repr (Obj.obj (HxAnon.get local "semanticType"))));
+  ignore (HxAnon.set __anon_47 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get local "typeIdentity"))));
+  ignore (HxAnon.set __anon_47 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get local "typeDisplay"))));
+  ignore (HxAnon.set __anon_47 "targetTypeHint" (Obj.repr (Obj.obj (HxAnon.get local "targetTypeHint"))));
+  ignore (HxAnon.set __anon_47 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get local "declarationKind"))))));
+  ignore (HxAnon.set __anon_47 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get local "isRestCarrier"))));
+  ignore (HxAnon.set __anon_47 "isTargetSynthetic" (HxRuntime.box_bool false));
+  __anon_47
 )
 
 let rootLocals = fun plan2 -> let out = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (Backend_source_PhpFunctionLoweringPlan.copyLocals (Obj.magic plan2) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let local = HxArray.get (Obj.magic _g1) (!_g) in (
-    ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
-      ignore (_g := __new_31);
-      __new_31
+    ignore (let __old_43 = !_g in let __new_44 = HxInt.add __old_43 1 in (
+      ignore (_g := __new_44);
+      __new_44
     ));
     let tempBool = ref (false : bool) in let _g2 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get local "declarationKind"))) in (
       ignore (if (match _g2 with
@@ -60,44 +60,50 @@ let rootLocals = fun plan2 -> let out = Obj.magic (HxMap.create_string ()) in le
         | TyLocalDeclarationKind.PatternVariable -> 4
         | TyLocalDeclarationKind.LambdaParameter -> 5
         | TyLocalDeclarationKind.ComprehensionVariable -> 6
-        | TyLocalDeclarationKind.CompilerTemporary -> 7) = 0 then let __assign_32 = true in (
-        tempBool := __assign_32;
-        __assign_32
-      ) else let __assign_33 = false in (
-        tempBool := __assign_33;
-        __assign_33
+        | TyLocalDeclarationKind.CompilerTemporary -> 7) = 0 then let __assign_45 = true in (
+        tempBool := __assign_45;
+        __assign_45
+      ) else let __assign_46 = false in (
+        tempBool := __assign_46;
+        __assign_46
       ));
-      if !tempBool then ignore (HxMap.set_string out (Obj.obj (HxAnon.get local "targetName")) (fromPlanned local)) else ()
+      if !tempBool then ignore (let key = (Obj.obj (HxAnon.get local "targetName") : string) in let value = fromPlanned local in HxMap.set_string (Obj.magic out) (key : string) value) else ()
     )
   )) done);
   out
 )
 
-let copyLocal = fun fact -> let __anon_35 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_35 "targetName" (Obj.repr (Obj.obj (HxAnon.get fact "targetName"))));
-  ignore (HxAnon.set __anon_35 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "bindingIdentity"))));
-  ignore (HxAnon.set __anon_35 "sourceName" (Obj.repr (Obj.obj (HxAnon.get fact "sourceName"))));
-  ignore (HxAnon.set __anon_35 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
-  ignore (HxAnon.set __anon_35 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
-  ignore (HxAnon.set __anon_35 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
-  ignore (HxAnon.set __anon_35 "targetTypeHint" (Obj.repr (Obj.obj (HxAnon.get fact "targetTypeHint"))));
-  ignore (HxAnon.set __anon_35 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get fact "declarationKind"))))));
-  ignore (HxAnon.set __anon_35 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isRestCarrier"))));
-  ignore (HxAnon.set __anon_35 "isTargetSynthetic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isTargetSynthetic"))));
-  __anon_35
+let copyLocal = fun fact -> let __anon_48 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_48 "targetName" (Obj.repr (Obj.obj (HxAnon.get fact "targetName"))));
+  ignore (HxAnon.set __anon_48 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "bindingIdentity"))));
+  ignore (HxAnon.set __anon_48 "sourceName" (Obj.repr (Obj.obj (HxAnon.get fact "sourceName"))));
+  ignore (HxAnon.set __anon_48 "semanticType" (Obj.repr (Obj.obj (HxAnon.get fact "semanticType"))));
+  ignore (HxAnon.set __anon_48 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get fact "typeIdentity"))));
+  ignore (HxAnon.set __anon_48 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get fact "typeDisplay"))));
+  ignore (HxAnon.set __anon_48 "targetTypeHint" (Obj.repr (Obj.obj (HxAnon.get fact "targetTypeHint"))));
+  ignore (HxAnon.set __anon_48 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get fact "declarationKind"))))));
+  ignore (HxAnon.set __anon_48 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isRestCarrier"))));
+  ignore (HxAnon.set __anon_48 "isTargetSynthetic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "isTargetSynthetic"))));
+  __anon_48
 )
 
-let copyLocals = fun self () -> let _g = Obj.magic (let __arr_22 = HxArray.create () in __arr_22) in let name = HxIterator.of_array (HxMap.keys_string ((Obj.magic self : t).locals)) in (
-  ignore (while (let __iter_23 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_23)) () do ignore (let name2 = ((let __iter_24 = name in fun () -> HxIterator.next (Obj.magic __iter_24)) () : string) in HxArray.push _g name2) done);
-  let tempArray = Obj.magic _g in (
-    ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
-    let _g = Obj.magic (let __arr_25 = HxArray.create () in __arr_25) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length tempArray do ignore (let name = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
-        ignore (let __old_26 = !_g1 in let __new_27 = HxInt.add __old_26 1 in (
-          ignore (_g1 := __new_27);
-          __new_27
+let copyLocals = fun self () -> let _g = Obj.magic (let __arr_33 = HxArray.create () in __arr_33) in let _this = Obj.magic ((Obj.magic self : t).locals) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let name = tempIterator in (
+  ignore (while (let __iter_34 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_34)) () do ignore (let name2 = ((let __iter_35 = name in fun () -> HxIterator.next (Obj.magic __iter_35)) () : string) in HxArray.push _g name2) done);
+  let tempArray = Obj.magic _g in let names = Obj.magic tempArray in (
+    ignore (HxArray.sort names (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+    let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in (
+      ignore (while !_g1 < HxArray.length names do ignore (let name = (HxArray.get (Obj.magic names) (!_g1) : string) in (
+        ignore (let __old_37 = !_g1 in let __new_38 = HxInt.add __old_37 1 in (
+          ignore (_g1 := __new_38);
+          __new_38
         ));
-        HxArray.push _g (copyLocal (HxMap.get_string ((Obj.magic self : t).locals) name))
+        let tempMaybePhpLexicalLocalFact = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic ((Obj.magic self : t).locals) in (
+          ignore (let __assign_39 = Obj.magic (HxMap.get_string (Obj.magic _this) (name : string)) in (
+            tempMaybePhpLexicalLocalFact := __assign_39;
+            __assign_39
+          ));
+          HxArray.push _g (copyLocal (Obj.magic (!tempMaybePhpLexicalLocalFact)))
+        )
       )) done);
       let tempResult = Obj.magic _g in tempResult
     )
@@ -106,48 +112,48 @@ let copyLocals = fun self () -> let _g = Obj.magic (let __arr_22 = HxArray.creat
 
 let copyTargetTypeHints = fun self () -> let out = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (copyLocals (Obj.magic self) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let local = HxArray.get (Obj.magic _g1) (!_g) in (
-    ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
-      ignore (_g := __new_29);
-      __new_29
+    ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
+      ignore (_g := __new_41);
+      __new_41
     ));
-    HxMap.set_string out (Obj.obj (HxAnon.get local "targetName")) (Obj.obj (HxAnon.get local "targetTypeHint"))
+    let key = (Obj.obj (HxAnon.get local "targetName") : string) in let value = (Obj.obj (HxAnon.get local "targetTypeHint") : string) in HxMap.set_string (Obj.magic out) (key : string) value
   )) done);
   out
 )
 
-let copyLocalWithHint = fun fact targetTypeHint -> let copy = copyLocal fact in let __anon_36 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_36 "targetName" (Obj.repr (Obj.obj (HxAnon.get copy "targetName"))));
-  ignore (HxAnon.set __anon_36 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "bindingIdentity"))));
-  ignore (HxAnon.set __anon_36 "sourceName" (Obj.repr (Obj.obj (HxAnon.get copy "sourceName"))));
-  ignore (HxAnon.set __anon_36 "semanticType" (Obj.repr (Obj.obj (HxAnon.get copy "semanticType"))));
-  ignore (HxAnon.set __anon_36 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "typeIdentity"))));
-  ignore (HxAnon.set __anon_36 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get copy "typeDisplay"))));
-  ignore (HxAnon.set __anon_36 "targetTypeHint" (Obj.repr targetTypeHint));
-  ignore (HxAnon.set __anon_36 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get copy "declarationKind"))))));
-  ignore (HxAnon.set __anon_36 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get copy "isRestCarrier"))));
-  ignore (HxAnon.set __anon_36 "isTargetSynthetic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get copy "isTargetSynthetic"))));
-  __anon_36
+let copyLocalWithHint = fun fact targetTypeHint -> let copy = copyLocal fact in let __anon_49 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_49 "targetName" (Obj.repr (Obj.obj (HxAnon.get copy "targetName"))));
+  ignore (HxAnon.set __anon_49 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "bindingIdentity"))));
+  ignore (HxAnon.set __anon_49 "sourceName" (Obj.repr (Obj.obj (HxAnon.get copy "sourceName"))));
+  ignore (HxAnon.set __anon_49 "semanticType" (Obj.repr (Obj.obj (HxAnon.get copy "semanticType"))));
+  ignore (HxAnon.set __anon_49 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "typeIdentity"))));
+  ignore (HxAnon.set __anon_49 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get copy "typeDisplay"))));
+  ignore (HxAnon.set __anon_49 "targetTypeHint" (Obj.repr targetTypeHint));
+  ignore (HxAnon.set __anon_49 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get copy "declarationKind"))))));
+  ignore (HxAnon.set __anon_49 "isRestCarrier" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get copy "isRestCarrier"))));
+  ignore (HxAnon.set __anon_49 "isTargetSynthetic" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get copy "isTargetSynthetic"))));
+  __anon_49
 )
 
 let copyLocalMap = fun values -> let out = Obj.magic (HxMap.create_string ()) in (
-  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (HxMap.pairs_string values) in while (let __iter_37 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_37)) () do ignore (let _g2 = (let __iter_38 = _g in fun () -> HxIterator.next (Obj.magic __iter_38)) () in let name = (fst _g2 : string) in let fact = snd _g2 in HxMap.set_string out name (copyLocal fact)) done) else ());
+  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic values))) in while (let __iter_50 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_50)) () do ignore (let _g2 = (let __iter_51 = _g in fun () -> HxIterator.next (Obj.magic __iter_51)) () in let name = (fst _g2 : string) in let fact = snd _g2 in let value = copyLocal fact in HxMap.set_string (Obj.magic out) (name : string) value) done) else ());
   out
 )
 
 let copyExprMap = fun values -> let out = Obj.magic (HxMap.create_string ()) in (
-  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (HxMap.pairs_string values) in while (let __iter_39 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_39)) () do ignore (let _g2 = (let __iter_40 = _g in fun () -> HxIterator.next (Obj.magic __iter_40)) () in let name = (fst _g2 : string) in let expression = Obj.magic (snd _g2) in HxMap.set_string out name expression) done) else ());
+  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic values))) in while (let __iter_52 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_52)) () do ignore (let _g2 = (let __iter_53 = _g in fun () -> HxIterator.next (Obj.magic __iter_53)) () in let name = (fst _g2 : string) in let expression = Obj.magic (snd _g2) in HxMap.set_string (Obj.magic out) (name : string) expression) done) else ());
   out
 )
 
 let copyInitializers = fun self () -> copyExprMap (Obj.magic ((Obj.magic self : t).initializers))
 
 let copyBoolMap = fun values -> let out = Obj.magic (HxMap.create_string ()) in (
-  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (HxMap.pairs_string values) in while (let __iter_41 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_41)) () do ignore (let _g2 = (let __iter_42 = _g in fun () -> HxIterator.next (Obj.magic __iter_42)) () in let name = (fst _g2 : string) in let enabled = snd _g2 in HxMap.set_string out name enabled) done) else ());
+  ignore (if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic values))) in while (let __iter_54 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_54)) () do ignore (let _g2 = (let __iter_55 = _g in fun () -> HxIterator.next (Obj.magic __iter_55)) () in let name = (fst _g2 : string) in let enabled = snd _g2 in HxMap.set_string (Obj.magic out) (name : string) enabled) done) else ());
   out
 )
 
-let sortedBoolKeys = fun values -> let _g = Obj.magic (let __arr_43 = HxArray.create () in __arr_43) in let _g1 = HxIterator.of_array (HxMap.pairs_string values) in (
-  ignore (while (let __iter_44 = _g1 in fun () -> HxIterator.hasNext (Obj.magic __iter_44)) () do ignore (let _g2 = (let __iter_45 = _g1 in fun () -> HxIterator.next (Obj.magic __iter_45)) () in let name = (fst _g2 : string) in let enabled = snd _g2 in if enabled then ignore (HxArray.push _g name) else ()) done);
+let sortedBoolKeys = fun values -> let _g = Obj.magic (let __arr_56 = HxArray.create () in __arr_56) in let _g1 = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic values))) in (
+  ignore (while (let __iter_57 = _g1 in fun () -> HxIterator.hasNext (Obj.magic __iter_57)) () do ignore (let _g2 = (let __iter_58 = _g1 in fun () -> HxIterator.next (Obj.magic __iter_58)) () in let name = (fst _g2 : string) in let enabled = snd _g2 in if enabled then ignore (HxArray.push _g name) else ()) done);
   ignore (HxArray.sort _g (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
   _g
 )
@@ -156,57 +162,57 @@ let copyReferenceCaptures = fun self () -> sortedBoolKeys (Obj.magic ((Obj.magic
 
 let copyOptionalLambdaArguments = fun self () -> sortedBoolKeys (Obj.magic ((Obj.magic self : t).optionalLambdaArguments))
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_46 = ("" : string) in (
-    tempResult := __assign_46;
-    __assign_46
-  ) else let __assign_47 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_47;
-    __assign_47
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_61 = "" in (
+    tempResult := __assign_61;
+    __assign_61
+  ) else let __assign_62 = let __call_arg_0_63 = value in StringTools.trim __call_arg_0_63 in (
+    tempResult := __assign_62;
+    __assign_62
   ));
   !tempResult
-)
+) : string)
 
-let findLocal = fun self (targetName : string) -> let fact = HxMap.get_string ((Obj.magic self : t).locals) (normalize (targetName : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_20;
-    __assign_20
-  ) else let __assign_21 = Obj.magic (copyLocal fact) in (
-    tempResult := __assign_21;
-    __assign_21
+let findLocal = fun self (targetName : string) -> let _this = Obj.magic ((Obj.magic self : t).locals) in let key = let __call_arg_0_30 = targetName in normalize __call_arg_0_30 in let tempMaybePhpLexicalLocalFact = HxMap.get_string (Obj.magic _this) (key : string) in let fact = tempMaybePhpLexicalLocalFact in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if fact == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_31;
+    __assign_31
+  ) else let __assign_32 = Obj.magic (copyLocal fact) in (
+    tempResult := __assign_32;
+    __assign_32
   ));
   Obj.magic (!tempResult)
 )
 
-let requireTargetName = fun value -> let normalized = (normalize (value : string) : string) in (
-  ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical scope requires a target local name") ["Dynamic"; "String"]) else ());
+let requireTargetName = fun (value : string) -> (let normalized = let __call_arg_0_59 = value in normalize __call_arg_0_59 in (
+  ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical scope requires a target local name") ["Dynamic"]) else ());
+  normalized
+) : string)
+
+let requireActiveLocal = fun self (targetName : string) -> let normalized = let __call_arg_0_42 = targetName in requireTargetName __call_arg_0_42 in let _this = Obj.magic ((Obj.magic self : t).locals) in let tempBool = HxMap.exists_string (Obj.magic _this) (normalized : string) in (
+  ignore (if not (tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot find active local " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
   normalized
 )
 
-let requireActiveLocal = fun self (targetName : string) -> let normalized = (requireTargetName (targetName : string) : string) in (
-  ignore (if not (HxMap.exists_string ((Obj.magic self : t).locals) normalized) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot find active local " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
+let requireIdentity = fun (value : string) -> (let normalized = let __call_arg_0_60 = value in normalize __call_arg_0_60 in (
+  ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical scope requires a non-empty semantic identity") ["Dynamic"]) else ());
   normalized
-)
+) : string)
 
-let requireIdentity = fun value -> let normalized = (normalize (value : string) : string) in (
-  ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical scope requires a non-empty semantic identity") ["Dynamic"; "String"]) else ());
-  normalized
-)
-
-let normalizeNullable = fun value -> let normalized = (normalize (value : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if HxString.length normalized = 0 then let __assign_48 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_48;
-    __assign_48
-  ) else let __assign_49 = Obj.magic (normalized : string) in (
-    tempResult := __assign_49;
-    __assign_49
+let normalizeNullable = fun (value : string) -> (let normalized = let __call_arg_0_64 = value in normalize __call_arg_0_64 in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if HxString.length normalized = 0 then let __assign_65 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_65;
+    __assign_65
+  ) else let __assign_66 = Obj.magic (normalized : string) in (
+    tempResult := __assign_66;
+    __assign_66
   ));
   !tempResult
-)
+) : string)
 
 let create = fun plan2 kind2 depth2 locals2 initializers2 referenceCaptures2 optionalLambdaArguments2 thisValueSlot2 thisCaptureName2 preferredEnumOwnerIdentity2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpLexicalRenderScope"; plan = Obj.magic (HxRuntime.hx_null); kind = Obj.magic (HxRuntime.hx_null); depth = 0; locals = Obj.magic (HxRuntime.hx_null); initializers = Obj.magic (HxRuntime.hx_null); referenceCaptures = Obj.magic (HxRuntime.hx_null); optionalLambdaArguments = Obj.magic (HxRuntime.hx_null); thisValueSlot = false; thisCaptureName = Obj.magic (HxRuntime.hx_null); preferredEnumOwnerIdentity = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if plan2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical render scope requires an exact function plan") ["Dynamic"; "String"]) else ());
+    ignore (if plan2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical render scope requires an exact function plan") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic plan2 in (
       (Obj.magic self : t).plan <- __assign_1;
       __assign_1
@@ -219,7 +225,7 @@ let create = fun plan2 kind2 depth2 locals2 initializers2 referenceCaptures2 opt
       (__place_receiver_3 : t).depth <- __place_rhs_4;
       __place_rhs_4
     ));
-    ignore (if (Obj.magic self : t).depth < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical render scope requires a non-negative depth") ["Dynamic"; "String"]) else ());
+    ignore (if (Obj.magic self : t).depth < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical render scope requires a non-negative depth") ["Dynamic"]) else ());
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxMap.string_map) in (
       ignore (if locals2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (rootLocals (Obj.magic plan2)) in (
         tempRight := __assign_5;
@@ -244,17 +250,17 @@ let create = fun plan2 kind2 depth2 locals2 initializers2 referenceCaptures2 opt
         (Obj.magic self : t).optionalLambdaArguments <- __assign_10;
         __assign_10
       ));
-      ignore (let __assign_11 = thisValueSlot2 in (
-        (Obj.magic self : t).thisValueSlot <- __assign_11;
-        __assign_11
+      ignore (let __place_receiver_11 = self in let __place_rhs_12 = thisValueSlot2 in (
+        (__place_receiver_11 : t).thisValueSlot <- __place_rhs_12;
+        __place_rhs_12
       ));
-      ignore (let __assign_12 = (normalizeNullable (thisCaptureName2 : string) : string) in (
-        (Obj.magic self : t).thisCaptureName <- __assign_12;
-        __assign_12
-      ));
-      let __assign_13 = (normalizeNullable (preferredEnumOwnerIdentity2 : string) : string) in (
-        (Obj.magic self : t).preferredEnumOwnerIdentity <- __assign_13;
+      ignore (let __assign_13 = (let __call_arg_0_14 = thisCaptureName2 in normalizeNullable __call_arg_0_14 : string) in (
+        (Obj.magic self : t).thisCaptureName <- __assign_13;
         __assign_13
+      ));
+      let __assign_15 = (let __call_arg_0_16 = preferredEnumOwnerIdentity2 in normalizeNullable __call_arg_0_16 : string) in (
+        (Obj.magic self : t).preferredEnumOwnerIdentity <- __assign_15;
+        __assign_15
       )
     )
   )));
@@ -270,103 +276,107 @@ let derive = fun self (childKind : phplexicalscopekind) -> let tempBool = ref (f
     | Loop -> 2
     | Catch -> 3
     | SwitchCase -> 4
-    | Lambda -> 5) = 0 then let __assign_14 = true in (
-    tempBool := __assign_14;
-    __assign_14
-  ) else let __assign_15 = false in (
-    tempBool := __assign_15;
-    __assign_15
+    | Lambda -> 5) = 0 then let __assign_17 = true in (
+    tempBool := __assign_17;
+    __assign_17
+  ) else let __assign_18 = false in (
+    tempBool := __assign_18;
+    __assign_18
   ));
-  ignore (if childKind == Obj.magic (HxRuntime.hx_null) || !tempBool then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical child scope requires block, loop, catch, switch-case, or lambda kind") ["Dynamic"; "String"]) else ());
+  ignore (if childKind == Obj.magic (HxRuntime.hx_null) || !tempBool then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical child scope requires block, loop, catch, switch-case, or lambda kind") ["Dynamic"]) else ());
   copyState (Obj.magic self) (Obj.magic childKind) (HxInt.add ((Obj.magic self : t).depth) 1) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
 )
 
-let withPlannedLocal = fun self (targetName : string) -> let normalized = (normalize (targetName : string) : string) in let planned = Backend_source_PhpFunctionLoweringPlan.findLocalByTargetName (Obj.magic ((Obj.magic self : t).plan)) (normalized : string) in (
-  ignore (if planned == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("PHP lexical scope cannot find planned local " ^ HxString.toStdString normalized) ^ " in ") ^ HxString.toStdString (Backend_source_PhpFunctionLoweringPlan.getFunctionIdentity (Obj.magic ((Obj.magic self : t).plan)) ()))) ["Dynamic"; "String"]) else ());
-  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let existing = HxMap.get_string nextLocals normalized in (
-    ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (Obj.obj (HxAnon.get existing "bindingIdentity")) (Obj.obj (HxAnon.get planned "bindingIdentity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace active local " ^ HxString.toStdString normalized) ^ " with a different binding")) ["Dynamic"; "String"]) else ());
-    ignore (HxMap.set_string nextLocals normalized (fromPlanned planned));
-    copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
+let withPlannedLocal = fun self (targetName : string) -> let normalized = let __call_arg_0_19 = targetName in normalize __call_arg_0_19 in let planned = Backend_source_PhpFunctionLoweringPlan.findLocalByTargetName (Obj.magic ((Obj.magic self : t).plan)) (normalized : string) in (
+  ignore (if planned == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("PHP lexical scope cannot find planned local " ^ HxString.toStdString normalized) ^ " in ") ^ HxString.toStdString (Backend_source_PhpFunctionLoweringPlan.getFunctionIdentity (Obj.magic ((Obj.magic self : t).plan)) ()))) ["Dynamic"]) else ());
+  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let existing = HxMap.get_string (Obj.magic nextLocals) (normalized : string) in (
+    ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (Obj.obj (HxAnon.get existing "bindingIdentity")) (Obj.obj (HxAnon.get planned "bindingIdentity"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace active local " ^ HxString.toStdString normalized) ^ " with a different binding")) ["Dynamic"]) else ());
+    let value = fromPlanned planned in (
+      ignore (HxMap.set_string (Obj.magic nextLocals) (normalized : string) value);
+      copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
+    )
   )
 )
 
-let withSyntheticLocal = fun self (targetName : string) (targetTypeHint : string) -> let normalized = (requireTargetName (targetName : string) : string) in (
-  ignore (if Backend_source_PhpFunctionLoweringPlan.findLocalByTargetName (Obj.magic ((Obj.magic self : t).plan)) (normalized : string) != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace planned local " ^ HxString.toStdString normalized) ^ " with a target-synthetic local")) ["Dynamic"; "String"]) else ());
-  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let existing = HxMap.get_string nextLocals normalized in (
-    ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isTargetSynthetic")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace exact local " ^ HxString.toStdString normalized) ^ " with a target-synthetic local")) ["Dynamic"; "String"]) else ());
-    ignore (HxMap.set_string nextLocals normalized (let __anon_16 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_16 "targetName" (Obj.repr normalized));
-      ignore (HxAnon.set __anon_16 "bindingIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      ignore (HxAnon.set __anon_16 "sourceName" (Obj.repr ""));
-      ignore (HxAnon.set __anon_16 "semanticType" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      ignore (HxAnon.set __anon_16 "typeIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-      ignore (HxAnon.set __anon_16 "typeDisplay" (Obj.repr ""));
-      ignore (HxAnon.set __anon_16 "targetTypeHint" (Obj.repr (normalize (targetTypeHint : string))));
-      ignore (HxAnon.set __anon_16 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (TyLocalDeclarationKind.CompilerTemporary))));
-      ignore (HxAnon.set __anon_16 "isRestCarrier" (HxRuntime.box_bool false));
-      ignore (HxAnon.set __anon_16 "isTargetSynthetic" (HxRuntime.box_bool true));
-      __anon_16
-    )));
-    copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
+let withSyntheticLocal = fun self (targetName : string) (targetTypeHint : string) -> let normalized = let __call_arg_0_20 = targetName in requireTargetName __call_arg_0_20 in (
+  ignore (if Backend_source_PhpFunctionLoweringPlan.findLocalByTargetName (Obj.magic ((Obj.magic self : t).plan)) (normalized : string) != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace planned local " ^ HxString.toStdString normalized) ^ " with a target-synthetic local")) ["Dynamic"]) else ());
+  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let existing = HxMap.get_string (Obj.magic nextLocals) (normalized : string) in (
+    ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isTargetSynthetic")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP lexical scope cannot replace exact local " ^ HxString.toStdString normalized) ^ " with a target-synthetic local")) ["Dynamic"]) else ());
+    let value = let __anon_21 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_21 "targetName" (Obj.repr normalized));
+      ignore (HxAnon.set __anon_21 "bindingIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      ignore (HxAnon.set __anon_21 "sourceName" (Obj.repr ""));
+      ignore (HxAnon.set __anon_21 "semanticType" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      ignore (HxAnon.set __anon_21 "typeIdentity" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      ignore (HxAnon.set __anon_21 "typeDisplay" (Obj.repr ""));
+      ignore (HxAnon.set __anon_21 "targetTypeHint" (Obj.repr (let __call_arg_0_22 = targetTypeHint in normalize __call_arg_0_22)));
+      ignore (HxAnon.set __anon_21 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (TyLocalDeclarationKind.CompilerTemporary))));
+      ignore (HxAnon.set __anon_21 "isRestCarrier" (HxRuntime.box_bool false));
+      ignore (HxAnon.set __anon_21 "isTargetSynthetic" (HxRuntime.box_bool true));
+      __anon_21
+    ) in (
+      ignore (HxMap.set_string (Obj.magic nextLocals) (normalized : string) value);
+      copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
+    )
   )
 )
 
-let withTargetTypeHint = fun self (targetName : string) (targetTypeHint : string) -> try let __fallback_result_18 = let normalized = (requireTargetName (targetName : string) : string) in let incoming = (normalize (targetTypeHint : string) : string) in let existing = HxMap.get_string ((Obj.magic self : t).locals) normalized in (
-  ignore (if existing == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot add a type hint for inactive local " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
+let withTargetTypeHint = fun self (targetName : string) (targetTypeHint : string) -> try let __fallback_result_26 = let normalized = let __call_arg_0_23 = targetName in requireTargetName __call_arg_0_23 in let incoming = let __call_arg_0_24 = targetTypeHint in normalize __call_arg_0_24 in let _this = Obj.magic ((Obj.magic self : t).locals) in let tempMaybePhpLexicalLocalFact = HxMap.get_string (Obj.magic _this) (normalized : string) in let existing = tempMaybePhpLexicalLocalFact in (
+  ignore (if existing == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot add a type hint for inactive local " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
   ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isTargetSynthetic")) && Obj.obj (HxAnon.get existing "semanticType") != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic (Obj.obj (HxAnon.get existing "semanticType"))) ()) && not (TyType.isNoNormalCompletion (Obj.magic (Obj.obj (HxAnon.get existing "semanticType"))) ()) then ignore ((
     ignore (if HxString.equals incoming (Obj.obj (HxAnon.get existing "targetTypeHint")) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic self))) else ());
-    HxType.hx_throw_typed_rtti (Obj.repr ((("PHP lexical scope cannot replace exact type " ^ HxString.toStdString (Obj.obj (HxAnon.get existing "typeDisplay"))) ^ " for ") ^ HxString.toStdString normalized)) ["Dynamic"; "String"]
+    HxType.hx_throw_typed_rtti (Obj.repr ((("PHP lexical scope cannot replace exact type " ^ HxString.toStdString (Obj.obj (HxAnon.get existing "typeDisplay"))) ^ " for ") ^ HxString.toStdString normalized)) ["Dynamic"]
   )) else ());
-  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isRestCarrier") && not (HxString.equals incoming (Obj.obj (HxAnon.get existing "targetTypeHint"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot replace rest-array carrier for " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
-  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in (
-    ignore (HxMap.set_string nextLocals normalized (copyLocalWithHint existing (incoming : string)));
+  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isRestCarrier") && not (HxString.equals incoming (Obj.obj (HxAnon.get existing "targetTypeHint"))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope cannot replace rest-array carrier for " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
+  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let value = copyLocalWithHint existing (incoming : string) in (
+    ignore (HxMap.set_string (Obj.magic nextLocals) (normalized : string) value);
     copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
   )
-) in Obj.magic __fallback_result_18 with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+) in Obj.magic __fallback_result_26 with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
 
 let withInitializer = fun self (targetName : string) (hx_initializer : HxExpr.hxexpr) -> let normalized = (requireActiveLocal (Obj.magic self) (targetName : string) : string) in (
-  ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope requires an initializer expression for " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
+  ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope requires an initializer expression for " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
   let nextInitializers = Obj.magic (copyExprMap (Obj.magic ((Obj.magic self : t).initializers))) in (
-    ignore (HxMap.set_string nextInitializers normalized hx_initializer);
+    ignore (HxMap.set_string (Obj.magic nextInitializers) (normalized : string) hx_initializer);
     copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic nextInitializers) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
   )
 )
 
 let withReferenceCapture = fun self (targetName : string) -> let normalized = (requireActiveLocal (Obj.magic self) (targetName : string) : string) in let nextCaptures = Obj.magic (copyBoolMap (Obj.magic ((Obj.magic self : t).referenceCaptures))) in (
-  ignore (HxMap.set_string nextCaptures normalized true);
+  ignore (HxMap.set_string (Obj.magic nextCaptures) (normalized : string) true);
   copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic nextCaptures) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
 )
 
 let withOptionalLambdaArgument = fun self (targetName : string) -> let normalized = (requireActiveLocal (Obj.magic self) (targetName : string) : string) in let nextOptional = Obj.magic (copyBoolMap (Obj.magic ((Obj.magic self : t).optionalLambdaArguments))) in (
-  ignore (HxMap.set_string nextOptional normalized true);
+  ignore (HxMap.set_string (Obj.magic nextOptional) (normalized : string) true);
   copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic nextOptional) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
 )
 
-let withRestCarrier = fun self (targetName : string) -> let normalized = (requireActiveLocal (Obj.magic self) (targetName : string) : string) in let existing = HxMap.get_string ((Obj.magic self : t).locals) normalized in (
-  ignore (if existing == Obj.magic (HxRuntime.hx_null) || HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isTargetSynthetic") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope requires an exact planned rest parameter " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
-  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let copy = copyLocal existing in (
-    ignore (HxMap.set_string nextLocals normalized (let __anon_19 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_19 "targetName" (Obj.repr (Obj.obj (HxAnon.get copy "targetName"))));
-      ignore (HxAnon.set __anon_19 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "bindingIdentity"))));
-      ignore (HxAnon.set __anon_19 "sourceName" (Obj.repr (Obj.obj (HxAnon.get copy "sourceName"))));
-      ignore (HxAnon.set __anon_19 "semanticType" (Obj.repr (Obj.obj (HxAnon.get copy "semanticType"))));
-      ignore (HxAnon.set __anon_19 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "typeIdentity"))));
-      ignore (HxAnon.set __anon_19 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get copy "typeDisplay"))));
-      ignore (HxAnon.set __anon_19 "targetTypeHint" (Obj.repr "Array<RestValue>"));
-      ignore (HxAnon.set __anon_19 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get copy "declarationKind"))))));
-      ignore (HxAnon.set __anon_19 "isRestCarrier" (HxRuntime.box_bool true));
-      ignore (HxAnon.set __anon_19 "isTargetSynthetic" (HxRuntime.box_bool false));
-      __anon_19
-    )));
+let withRestCarrier = fun self (targetName : string) -> let normalized = (requireActiveLocal (Obj.magic self) (targetName : string) : string) in let _this = Obj.magic ((Obj.magic self : t).locals) in let tempMaybePhpLexicalLocalFact = HxMap.get_string (Obj.magic _this) (normalized : string) in let existing = tempMaybePhpLexicalLocalFact in (
+  ignore (if existing == Obj.magic (HxRuntime.hx_null) || HxRuntime.unbox_bool_or_obj (HxAnon.get existing "isTargetSynthetic") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP lexical scope requires an exact planned rest parameter " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
+  let nextLocals = Obj.magic (copyLocalMap (Obj.magic ((Obj.magic self : t).locals))) in let copy = copyLocal existing in let value = let __anon_27 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_27 "targetName" (Obj.repr (Obj.obj (HxAnon.get copy "targetName"))));
+    ignore (HxAnon.set __anon_27 "bindingIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "bindingIdentity"))));
+    ignore (HxAnon.set __anon_27 "sourceName" (Obj.repr (Obj.obj (HxAnon.get copy "sourceName"))));
+    ignore (HxAnon.set __anon_27 "semanticType" (Obj.repr (Obj.obj (HxAnon.get copy "semanticType"))));
+    ignore (HxAnon.set __anon_27 "typeIdentity" (Obj.repr (Obj.obj (HxAnon.get copy "typeIdentity"))));
+    ignore (HxAnon.set __anon_27 "typeDisplay" (Obj.repr (Obj.obj (HxAnon.get copy "typeDisplay"))));
+    ignore (HxAnon.set __anon_27 "targetTypeHint" (Obj.repr "Array<RestValue>"));
+    ignore (HxAnon.set __anon_27 "declarationKind" (HxEnum.box_if_needed "TyLocalDeclarationKind" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "TyLocalDeclarationKind" (HxAnon.get copy "declarationKind"))))));
+    ignore (HxAnon.set __anon_27 "isRestCarrier" (HxRuntime.box_bool true));
+    ignore (HxAnon.set __anon_27 "isTargetSynthetic" (HxRuntime.box_bool false));
+    __anon_27
+  ) in (
+    ignore (HxMap.set_string (Obj.magic nextLocals) (normalized : string) value);
     copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic nextLocals) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
   )
 )
 
 let withThisValueSlot = fun self (enabled : bool) -> copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) enabled ((Obj.magic self : t).thisCaptureName : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
 
-let withThisCapture = fun self (targetName : string) -> copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) (requireTargetName (targetName : string) : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
+let withThisCapture = fun self (targetName : string) -> copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) (let __call_arg_0_28 = targetName in requireTargetName __call_arg_0_28 : string) ((Obj.magic self : t).preferredEnumOwnerIdentity : string)
 
-let withPreferredEnumOwner = fun self (ownerIdentity : string) -> copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) (requireIdentity (ownerIdentity : string) : string)
+let withPreferredEnumOwner = fun self (ownerIdentity : string) -> copyState (Obj.magic self) (Obj.magic ((Obj.magic self : t).kind)) ((Obj.magic self : t).depth) (Obj.magic ((Obj.magic self : t).locals)) (Obj.magic ((Obj.magic self : t).initializers)) (Obj.magic ((Obj.magic self : t).referenceCaptures)) (Obj.magic ((Obj.magic self : t).optionalLambdaArguments)) ((Obj.magic self : t).thisValueSlot) ((Obj.magic self : t).thisCaptureName : string) (let __call_arg_0_29 = ownerIdentity in requireIdentity __call_arg_0_29 : string)
 
 let forFunction = fun plan2 -> create (Obj.magic plan2) (Obj.magic Function) 0 (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) false (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))

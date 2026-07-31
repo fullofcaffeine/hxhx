@@ -83,4 +83,12 @@ void-bool-source
 void-string-source
 void-callee=21,true,ready
 void-calls-complete
+nullable-string-call=source:ready
+checked-result-exact=13
+checked-result-fallback=5
+checked-argument=21
+dynamic-result=27
+all-path-zero=0
+all-path-one=1
+all-path-missing=true
 instance=6

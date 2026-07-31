@@ -14,11 +14,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyTypeSubstituti
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeSubstitution" } : t)
 
 let parameterIdentities = fun hx_type -> (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "semantic type parameter scan received a null type") ["Dynamic"; "String"]) else ());
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "semantic type parameter scan received a null type") ["Dynamic"]) else ());
   let found = Obj.magic (HxMap.create_string ()) in let visit = ref (Obj.magic (HxRuntime.hx_null) : TyType.t -> unit) in (
-    ignore (let __assign_4 = Obj.magic (fun current -> ignore (try let parameter = Obj.magic (TyType.getTypeParameterIdentity (Obj.magic current) ()) in (
-      ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (HxMap.set_string found (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) ()) parameter);
+    ignore (let __assign_4 = Obj.magic (fun current -> ignore (try ignore (let parameter = Obj.magic (TyType.getTypeParameterIdentity (Obj.magic current) ()) in (
+      ignore (if parameter != Obj.magic (HxRuntime.hx_null) then ignore (let key = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
+        ignore (HxMap.set_string (Obj.magic found) (key : string) parameter);
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (if TyType.isNullable (Obj.magic current) () then ignore ((
@@ -52,25 +52,25 @@ let parameterIdentities = fun hx_type -> (
         ));
         (!visit) (Obj.magic argument)
       )) done
-    ) with
+    )) with
       | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11)) in (
       visit := __assign_4;
       __assign_4
     ));
     ignore ((!visit) (Obj.magic hx_type));
-    let _g = Obj.magic (let __arr_12 = HxArray.create () in __arr_12) in let key = HxIterator.of_array (HxMap.keys_string found) in (
+    let _g = Obj.magic (let __arr_12 = HxArray.create () in __arr_12) in let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic found))) in (
       ignore (while (let __iter_13 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_13)) () do ignore (let key2 = ((let __iter_14 = key in fun () -> HxIterator.next (Obj.magic __iter_14)) () : string) in HxArray.push _g key2) done);
-      let tempArray = Obj.magic _g in (
-        ignore (HxArray.sort tempArray (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
+      let tempArray = Obj.magic _g in let keys = Obj.magic tempArray in (
+        ignore (HxArray.sort keys (fun left right -> HxReflect.compare (Obj.repr left) (Obj.repr right)));
         let _g = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in let _g1 = ref 0 in (
-          ignore (while !_g1 < HxArray.length tempArray do ignore (let key = (HxArray.get (Obj.magic tempArray) (!_g1) : string) in (
+          ignore (while !_g1 < HxArray.length keys do ignore (let key = (HxArray.get (Obj.magic keys) (!_g1) : string) in (
             ignore (let __old_16 = !_g1 in let __new_17 = HxInt.add __old_16 1 in (
               ignore (_g1 := __new_17);
               __new_17
             ));
-            HxArray.push _g (HxMap.get_string found key)
+            HxArray.push _g (HxMap.get_string (Obj.magic found) (key : string))
           )) done);
-          let tempArray1 = Obj.magic _g in tempArray1
+          let tempArray1 = Obj.magic _g in let out = Obj.magic tempArray1 in out
         )
       )
     )
@@ -88,49 +88,49 @@ let parameterNames = fun hx_type -> let _g = Obj.magic (let __arr_1 = HxArray.cr
   _g
 )
 
-let rec apply = fun hx_type bindings -> try let __fallback_result_46 = (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "semantic type substitution received a null type") ["Dynamic"; "String"]) else ());
+let rec apply = fun hx_type bindings -> try let __fallback_result_47 = (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "semantic type substitution received a null type") ["Dynamic"]) else ());
   ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then ignore (let parameter = Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ()) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_32;
-      __assign_32
-    ) else let __assign_33 = Obj.magic (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
+    ignore (if parameter == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempMaybeString := __assign_33;
       __assign_33
+    ) else let __assign_34 = Obj.magic (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
+      tempMaybeString := __assign_34;
+      __assign_34
     ));
     let parameterKey = (!tempMaybeString : string) in (
-      ignore (if parameterKey != Obj.magic (HxRuntime.hx_null) && bindings != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string bindings parameterKey then ignore (let bound = Obj.magic (HxMap.get_string bindings parameterKey) in (
-        ignore (if bound == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution contains a null binding for " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ()))) ["Dynamic"; "String"]) else ());
+      ignore (if parameterKey != Obj.magic (HxRuntime.hx_null) && bindings != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic bindings) (parameterKey : string) then ignore (let bound = Obj.magic (HxMap.get_string (Obj.magic bindings) (parameterKey : string)) in (
+        ignore (if bound == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution contains a null binding for " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ()))) ["Dynamic"]) else ());
         raise (HxRuntime.Hx_return (Obj.repr bound))
       )) else ());
       raise (HxRuntime.Hx_return (Obj.repr hx_type))
     )
   )) else ());
   ignore (if TyType.isNullable (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.nullable (Obj.magic (apply (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (Obj.magic bindings))) (Obj.magic (HxRuntime.hx_null)))))) else ());
-  ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore (let result = Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ()) in let _g = Obj.magic (let __arr_34 = HxArray.create () in __arr_34) in let _g1 = ref 0 in let _g2 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
+  ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore (let result = Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ()) in let _g = Obj.magic (let __arr_35 = HxArray.create () in __arr_35) in let _g1 = ref 0 in let _g2 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-      ignore (let __old_35 = !_g1 in let __new_36 = HxInt.add __old_35 1 in (
-        ignore (_g1 := __new_36);
-        __new_36
+      ignore (let __old_36 = !_g1 in let __new_37 = HxInt.add __old_36 1 in (
+        ignore (_g1 := __new_37);
+        __new_37
       ));
       HxArray.push _g (apply (Obj.magic argument) (Obj.magic bindings))
     )) done);
     let tempArray = Obj.magic _g in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-      ignore (if result == Obj.magic (HxRuntime.hx_null) then let __assign_37 = Obj.magic (TyType.unknown ()) in (
-        tempTyType := __assign_37;
-        __assign_37
-      ) else let __assign_38 = Obj.magic (apply (Obj.magic result) (Obj.magic bindings)) in (
+      ignore (if result == Obj.magic (HxRuntime.hx_null) then let __assign_38 = Obj.magic (TyType.unknown ()) in (
         tempTyType := __assign_38;
         __assign_38
+      ) else let __assign_39 = Obj.magic (apply (Obj.magic result) (Obj.magic bindings)) in (
+        tempTyType := __assign_39;
+        __assign_39
       ));
       raise (HxRuntime.Hx_return (Obj.repr (TyType.functionType (Obj.magic tempArray) (Obj.magic (!tempTyType)) (Obj.magic (HxRuntime.hx_null)))))
     )
   )) else ());
-  ignore (if TyType.isAnonymous (Obj.magic hx_type) () then ignore (let _g = Obj.magic (let __arr_39 = HxArray.create () in __arr_39) in let _g1 = ref 0 in let _g2 = Obj.magic (TyType.getAnonymousFieldTypes (Obj.magic hx_type) ()) in (
+  ignore (if TyType.isAnonymous (Obj.magic hx_type) () then ignore (let _g = Obj.magic (let __arr_40 = HxArray.create () in __arr_40) in let _g1 = ref 0 in let _g2 = Obj.magic (TyType.getAnonymousFieldTypes (Obj.magic hx_type) ()) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let fieldType = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-      ignore (let __old_40 = !_g1 in let __new_41 = HxInt.add __old_40 1 in (
-        ignore (_g1 := __new_41);
-        __new_41
+      ignore (let __old_41 = !_g1 in let __new_42 = HxInt.add __old_41 1 in (
+        ignore (_g1 := __new_42);
+        __new_42
       ));
       HxArray.push _g (apply (Obj.magic fieldType) (Obj.magic bindings))
     )) done);
@@ -138,34 +138,34 @@ let rec apply = fun hx_type bindings -> try let __fallback_result_46 = (
   )) else ());
   let arguments = Obj.magic (TyType.getTypeArguments (Obj.magic hx_type) ()) in (
     ignore (if HxArray.length arguments = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hx_type))) else ());
-    let _g = Obj.magic (let __arr_42 = HxArray.create () in __arr_42) in let _g1 = ref 0 in (
+    let _g = Obj.magic (let __arr_43 = HxArray.create () in __arr_43) in let _g1 = ref 0 in (
       ignore (while !_g1 < HxArray.length arguments do ignore (let argument = Obj.magic (HxArray.get (Obj.magic arguments) (!_g1)) in (
-        ignore (let __old_43 = !_g1 in let __new_44 = HxInt.add __old_43 1 in (
-          ignore (_g1 := __new_44);
-          __new_44
+        ignore (let __old_44 = !_g1 in let __new_45 = HxInt.add __old_44 1 in (
+          ignore (_g1 := __new_45);
+          __new_45
         ));
         HxArray.push _g (apply (Obj.magic argument) (Obj.magic bindings))
       )) done);
-      let tempArray2 = Obj.magic _g in let nominalIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
-        ignore (if nominalIdentity != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.nominal (Obj.magic nominalIdentity) (Obj.magic tempArray2) (Obj.magic (HxRuntime.hx_null)))))) else ());
-        ignore (if TyType.isUnresolved (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.unresolved (TyType.getUnresolvedPath (Obj.magic hx_type) () : string) (Obj.magic tempArray2) (Obj.magic (HxRuntime.hx_null)))))) else ());
-        HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution cannot rebuild type " ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic hx_type) ()))) ["Dynamic"; "String"]
+      let tempArray2 = Obj.magic _g in let substitutedArguments = Obj.magic tempArray2 in let nominalIdentity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
+        ignore (if nominalIdentity != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.nominal (Obj.magic nominalIdentity) (Obj.magic substitutedArguments) (Obj.magic (HxRuntime.hx_null)))))) else ());
+        ignore (if TyType.isUnresolved (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.unresolved (TyType.getUnresolvedPath (Obj.magic hx_type) () : string) (Obj.magic substitutedArguments) (Obj.magic (HxRuntime.hx_null)))))) else ());
+        HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution cannot rebuild type " ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic hx_type) ()))) ["Dynamic"]
       )
     )
   )
-) in Obj.magic __fallback_result_46 with
-  | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45
+) in Obj.magic __fallback_result_47 with
+  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_47 = ("" : string) in (
-    tempResult := __assign_47;
-    __assign_47
-  ) else let __assign_48 = (StringTools.trim (value : string) : string) in (
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_48 = "" in (
     tempResult := __assign_48;
     __assign_48
+  ) else let __assign_49 = let __call_arg_0_50 = value in StringTools.trim __call_arg_0_50 in (
+    tempResult := __assign_49;
+    __assign_49
   ));
   !tempResult
-)
+) : string)
 
 let bind = fun parameters arguments context -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TyTypeParameterId.t HxArray.t) in (
   ignore (if parameters == Obj.magic (HxRuntime.hx_null) then let __assign_18 = Obj.magic (let __arr_19 = HxArray.create () in __arr_19) in (
@@ -175,7 +175,7 @@ let bind = fun parameters arguments context -> let tempArray = ref (Obj.magic (H
     tempArray := __assign_20;
     __assign_20
   ));
-  let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
+  let actualParameters = Obj.magic (!tempArray) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
     ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_21 = Obj.magic (let __arr_22 = HxArray.create () in __arr_22) in (
       tempArray1 := __assign_21;
       __assign_21
@@ -183,17 +183,17 @@ let bind = fun parameters arguments context -> let tempArray = ref (Obj.magic (H
       tempArray1 := __assign_23;
       __assign_23
     ));
-    let owner = (normalize (context : string) : string) in (
-      ignore (if HxArray.length (!tempArray) <> HxArray.length (!tempArray1) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("semantic type substitution arity mismatch for " ^ HxString.toStdString owner) ^ ": expected ") ^ string_of_int (HxArray.length (!tempArray))) ^ " arguments but received ") ^ string_of_int (HxArray.length (!tempArray1)))) ["Dynamic"; "String"]) else ());
-      let bindings = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = HxArray.length (!tempArray) in (
-        ignore (while !_g < _g1 do ignore (let index = let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-          ignore (_g := __new_25);
-          __old_24
-        ) in let parameter = Obj.magic (HxArray.get (Obj.magic (!tempArray)) index) in let argument = Obj.magic (HxArray.get (Obj.magic (!tempArray1)) index) in (
-          ignore (if parameter == Obj.magic (HxRuntime.hx_null) || argument == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution contains an incomplete binding for " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+    let actualArguments = Obj.magic (!tempArray1) in let owner = let __call_arg_0_24 = context in normalize __call_arg_0_24 in (
+      ignore (if HxArray.length actualParameters <> HxArray.length actualArguments then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("semantic type substitution arity mismatch for " ^ HxString.toStdString owner) ^ ": expected ") ^ string_of_int (HxArray.length actualParameters)) ^ " arguments but received ") ^ string_of_int (HxArray.length actualArguments))) ["Dynamic"]) else ());
+      let bindings = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = HxArray.length actualParameters in (
+        ignore (while !_g < _g1 do ignore (let index = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+          ignore (_g := __new_26);
+          __old_25
+        ) in let parameter = Obj.magic (HxArray.get (Obj.magic actualParameters) index) in let argument = Obj.magic (HxArray.get (Obj.magic actualArguments) index) in (
+          ignore (if parameter == Obj.magic (HxRuntime.hx_null) || argument == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("semantic type substitution contains an incomplete binding for " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
           let parameterKey = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in (
-            ignore (if HxMap.exists_string bindings parameterKey then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("semantic type substitution contains duplicate parameter " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " for ") ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-            HxMap.set_string bindings parameterKey argument
+            ignore (if HxMap.exists_string (Obj.magic bindings) (parameterKey : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("semantic type substitution contains duplicate parameter " ^ HxString.toStdString (TyTypeParameterId.getName (Obj.magic parameter) ())) ^ " for ") ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+            HxMap.set_string (Obj.magic bindings) (parameterKey : string) argument
           )
         )) done);
         bindings
@@ -203,21 +203,21 @@ let bind = fun parameters arguments context -> let tempArray = ref (Obj.magic (H
 )
 
 let identity = fun parameters context -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TyTypeParameterId.t HxArray.t) in (
-  ignore (if parameters == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in (
-    tempArray := __assign_26;
-    __assign_26
-  ) else let __assign_28 = Obj.magic parameters in (
-    tempArray := __assign_28;
-    __assign_28
+  ignore (if parameters == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (let __arr_28 = HxArray.create () in __arr_28) in (
+    tempArray := __assign_27;
+    __assign_27
+  ) else let __assign_29 = Obj.magic parameters in (
+    tempArray := __assign_29;
+    __assign_29
   ));
-  let _g = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length (!tempArray) do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic (!tempArray)) (!_g1)) in (
-      ignore (let __old_30 = !_g1 in let __new_31 = HxInt.add __old_30 1 in (
-        ignore (_g1 := __new_31);
-        __new_31
+  let actualParameters = Obj.magic (!tempArray) in let _g = Obj.magic (let __arr_30 = HxArray.create () in __arr_30) in let _g1 = ref 0 in (
+    ignore (while !_g1 < HxArray.length actualParameters do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic actualParameters) (!_g1)) in (
+      ignore (let __old_31 = !_g1 in let __new_32 = HxInt.add __old_31 1 in (
+        ignore (_g1 := __new_32);
+        __new_32
       ));
       HxArray.push _g (TyType.typeParameter (Obj.magic parameter))
     )) done);
-    bind (Obj.magic (!tempArray)) (Obj.magic _g) (context : string)
+    bind (Obj.magic actualParameters) (Obj.magic _g) (context : string)
   )
 )

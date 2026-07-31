@@ -1,5 +1,10 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Type;
+import haxe.macro.Type.TypedExpr;
+import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.FunctionBodyRevision;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -12,10 +17,25 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
+import reflaxe.ocaml.lowered.OcamlBytesProducerPlan;
+import reflaxe.ocaml.lowered.OcamlBytesReadPlan;
+import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
+import reflaxe.ocaml.lowered.OcamlControlPlan;
+import reflaxe.ocaml.lowered.OcamlControlFlowFacts;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+
+using reflaxe.helpers.ClassFieldHelper;
 
 /**
 	Checks typed-call registry invariants and the pre-write lifecycle boundary.
@@ -57,6 +77,10 @@ class CallPlanFixture {
 	static inline final FUNCTION_VALUE_CALL_ID = "call:function-value-fixture";
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALLEE_ID = "function-value:optional-string-fixture";
 	static inline final OPTIONAL_STRING_FUNCTION_VALUE_CALL_ID = "call:optional-string-function-value-fixture";
+	static inline final CONSTRUCTOR_CALLEE_ID = "Counter|Counter::new";
+	static inline final CONSTRUCTOR_CALL_ID = "call:constructor-fixture";
+	static inline final STANDARD_IMAP_SET_CALL_ID = "call:standard-imap-set-fixture";
+	static inline final STANDARD_IMAP_TO_STRING_CALL_ID = "call:standard-imap-to-string-fixture";
 
 	static function value(index:Int):OcamlCallValuePlan {
 		return {
@@ -71,6 +95,22 @@ class CallPlanFixture {
 			conversion: OcamlCallCarrierConversion.Identity,
 			proofId: "identity-call-carrier-v1",
 			proofClaim: "fixture identity"
+		};
+	}
+
+	static function nominalCounterValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Counter",
+			inputCarrierTypeId: "counter_t",
+			inputRepresentationId: "representation:Counter:internal-value",
+			outputSemanticTypeId: "Counter",
+			outputCarrierTypeId: "counter_t",
+			outputRepresentationId: "representation:Counter:internal-value",
+			conversion: OcamlCallCarrierConversion.Identity,
+			proofId: "identity-call-carrier-v1",
+			proofClaim: "fixture exact nominal Counter carrier"
 		};
 	}
 
@@ -173,6 +213,39 @@ class CallPlanFixture {
 		};
 	}
 
+	static function dynamicValue(index:Int, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Dynamic",
+			inputCarrierTypeId: "Obj.t",
+			inputRepresentationId: "representation:Dynamic:internal-value",
+			outputSemanticTypeId: "Dynamic",
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: "representation:Dynamic:internal-value",
+			conversion: conversion,
+			proofId: conversion == OcamlCallCarrierConversion.Identity ? "identity-call-carrier-v1" : "dynamic-call-carrier-preserve-v1",
+			proofClaim: "fixture Dynamic carrier"
+		};
+	}
+
+	/** Creates one closed concrete-to-Dynamic call-argument crossing. */
+	static function dynamicBoxValue(index:Int, semanticTypeId:String, carrierTypeId:String, conversion:OcamlCallCarrierConversion):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: semanticTypeId,
+			inputCarrierTypeId: carrierTypeId,
+			inputRepresentationId: 'representation:$semanticTypeId:internal-value',
+			outputSemanticTypeId: "Dynamic",
+			outputCarrierTypeId: "Obj.t",
+			outputRepresentationId: "representation:Dynamic:internal-value",
+			conversion: conversion,
+			proofId: conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic ? "dynamic-call-box-bool-v1" : "dynamic-call-box-concrete-v1",
+			proofClaim: "fixture concrete-to-Dynamic call crossing"
+		};
+	}
+
 	static function optionalStringValue(index:Int, omitted:Bool = false):OcamlCallValuePlan {
 		final selected = stringValue(index);
 		return {
@@ -239,8 +312,9 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable occurrence must select preserve or box";
-			case PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString:
+			case CheckedUnboxNullableInt, PreserveNullableBoolCarrier, BoxExactBoolToNullableBool, MaterializeOmittedNullableInt,
+				MaterializeOmittedNullableBool, MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic,
+				BoxExactBoolToDynamic:
 				throw "fixture nullable Int occurrence received a nullable Bool conversion";
 		};
 	}
@@ -293,9 +367,25 @@ class CallPlanFixture {
 				};
 			case Identity:
 				throw "fixture nullable Bool occurrence must select preserve or box";
-			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
-				MaterializeOmittedString, MaterializeExplicitNullString:
+			case PreserveNullableIntCarrier, BoxExactIntToNullableInt, CheckedUnboxNullableInt, MaterializeOmittedNullableInt, MaterializeOmittedNullableBool,
+				MaterializeOmittedString, MaterializeExplicitNullString, PreserveDynamicCarrier, BoxConcreteToDynamic, BoxExactBoolToDynamic:
 				throw "fixture nullable Bool occurrence received a nullable Int conversion";
+		};
+	}
+
+	static function checkedNullableIntValue(index:Int):OcamlCallValuePlan {
+		return {
+			index: index,
+			parameterOptional: false,
+			inputSemanticTypeId: "Null<Int>",
+			inputCarrierTypeId: "Obj.t",
+			inputRepresentationId: "representation:Null<Int>:internal-value",
+			outputSemanticTypeId: "Int",
+			outputCarrierTypeId: "int",
+			outputRepresentationId: "representation:Int:internal-value",
+			conversion: OcamlCallCarrierConversion.CheckedUnboxNullableInt,
+			proofId: "nullable-int-call-checked-unbox-v1",
+			proofClaim: "fixture checked nullable Int result"
 		};
 	}
 
@@ -307,6 +397,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -314,6 +405,27 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			programRevision: PROGRAM_REVISION,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+	}
+
+	static function constructorDeclaration():OcamlCallableDeclarationPlan {
+		return {
+			id: "construction-declaration:fixture",
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact one-argument construction",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture exact one-argument construction",
 			programRevision: PROGRAM_REVISION,
 			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
 		};
@@ -327,6 +439,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), value(1)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -347,6 +460,7 @@ class CallPlanFixture {
 			sourceTypeName: "ZeroArgCalls",
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -367,6 +481,7 @@ class CallPlanFixture {
 			sourceTypeName: "NullableCalls",
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
@@ -387,6 +502,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [boolValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
@@ -407,6 +523,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableBoolValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableBoolValue(-1),
@@ -427,6 +544,7 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
@@ -447,6 +565,7 @@ class CallPlanFixture {
 			sourceTypeName: "OptionalCalls",
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [optionalNullableValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -467,6 +586,7 @@ class CallPlanFixture {
 			sourceTypeName: "VoidCalls",
 			sourceFieldName: "withArguments",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), boolValue(1), stringValue(2)],
 			resultKind: OcamlCallResultKind.EffectOnlyVoid,
 			result: null,
@@ -497,6 +617,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -505,6 +626,31 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision
+		};
+	}
+
+	static function constructorCall(caller:OcamlFunctionPlanBinding):OcamlCallDecision {
+		return {
+			id: CONSTRUCTOR_CALL_ID,
+			source: {file: "CallPlanFixture.hx", min: 50, max: 51},
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(CONSTRUCTOR_CALL_ID, 1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture exact one-argument construction occurrence",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture exact one-argument construction occurrence",
 			functionId: caller.functionId,
 			programRevision: caller.programRevision,
 			bodyRevision: caller.bodyRevision,
@@ -521,6 +667,7 @@ class CallPlanFixture {
 			sourceTypeName: "",
 			sourceFieldName: "",
 			kind: OcamlCallKind.TypedFunctionValue,
+			receiver: null,
 			arguments: [value(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -546,6 +693,7 @@ class CallPlanFixture {
 			sourceTypeName: "",
 			sourceFieldName: "",
 			kind: OcamlCallKind.TypedFunctionValue,
+			receiver: null,
 			arguments: arguments,
 			resultKind: OcamlCallResultKind.Value,
 			result: stringValue(-1),
@@ -575,6 +723,7 @@ class CallPlanFixture {
 			sourceTypeName: "",
 			sourceFieldName: "",
 			kind: OcamlCallKind.TypedFunctionValue,
+			receiver: null,
 			arguments: arguments,
 			resultKind: resultKind,
 			result: result,
@@ -599,6 +748,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), value(1)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -623,6 +773,7 @@ class CallPlanFixture {
 			sourceTypeName: "ZeroArgCalls",
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -647,6 +798,7 @@ class CallPlanFixture {
 			sourceTypeName: "NullableCalls",
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableArgument(0, conversion)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
@@ -671,6 +823,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [boolValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
@@ -695,6 +848,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableBoolArgument(0, conversion)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableBoolValue(-1),
@@ -720,6 +874,7 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [
 				value(0),
 				nullableBoolArgument(1, boolConversion),
@@ -750,6 +905,7 @@ class CallPlanFixture {
 			sourceTypeName: "OptionalCalls",
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [omitted ? omittedOptionalNullableValue(0) : suppliedOptionalNullableValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -774,6 +930,7 @@ class CallPlanFixture {
 			sourceTypeName: "VoidCalls",
 			sourceFieldName: "withArguments",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), boolValue(1), stringValue(2)],
 			resultKind: OcamlCallResultKind.EffectOnlyVoid,
 			result: null,
@@ -789,6 +946,63 @@ class CallPlanFixture {
 		};
 	}
 
+	static function standardIMapTarget(operation:OcamlStandardIMapOperation):OcamlStandardIMapCallTarget {
+		final formatted = operation == OcamlStandardIMapOperation.ToString;
+		return {
+			operation: operation,
+			keyKind: OcamlStandardIMapKeyKind.StringKey,
+			receiverSemanticTypeId: "haxe.IMap<String, Int>",
+			receiverCarrierId: "HxMap.string_map",
+			keySemanticTypeId: "String",
+			valueSemanticTypeId: "Int",
+			argumentSemanticTypeIds: operation == OcamlStandardIMapOperation.Set ? ["String", "Int"] : [],
+			resultSemanticTypeId: operation == OcamlStandardIMapOperation.Set ? "Void" : "String",
+			runtimeModule: "HxMap",
+			runtimeFunction: operation == OcamlStandardIMapOperation.Set ? "set_string" : "pairs_string",
+			resultForm: formatted ? OcamlStandardIMapResultForm.FormattedEntries : OcamlStandardIMapResultForm.Direct,
+			iteratorModule: formatted ? "HxIterator" : null,
+			iteratorFunction: formatted ? "of_array" : null,
+			keyStringifier: formatted ? OcamlStandardIMapStringifier.ExactString : null,
+			valueStringifier: formatted ? OcamlStandardIMapStringifier.ExactInt : null,
+			runtimeCapabilities: formatted ? ["haxe-map", "haxe-iterator", "haxe-array", "haxe-string-text"] : ["haxe-map"],
+			proofId: OcamlStandardIMapCallContract.PROOF_ID,
+			proofClaim: "fixture standard IMap typed target"
+		};
+	}
+
+	static function standardIMapCall(caller:OcamlFunctionPlanBinding, operation:OcamlStandardIMapOperation):OcamlCallDecision {
+		final target = standardIMapTarget(operation);
+		final id = operation == OcamlStandardIMapOperation.Set ? STANDARD_IMAP_SET_CALL_ID : STANDARD_IMAP_TO_STRING_CALL_ID;
+		final sourceFieldName = OcamlStandardIMapCallContract.sourceFieldName(operation);
+		return {
+			id: id,
+			source: {
+				file: "CallPlanFixture.hx",
+				min: operation == OcamlStandardIMapOperation.Set ? 52 : 54,
+				max: operation == OcamlStandardIMapOperation.Set ? 53 : 55
+			},
+			calleeId: 'haxe.Constraints|haxe.IMap::$sourceFieldName',
+			sourceModuleId: "haxe.Constraints",
+			sourceTypeName: "IMap",
+			sourceFieldName: sourceFieldName,
+			kind: OcamlCallKind.StandardIMapMethod,
+			receiver: null,
+			arguments: [],
+			resultKind: operation == OcamlStandardIMapOperation.Set ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, target.argumentSemanticTypeIds.length, [], false, true),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture standard IMap typed target",
+			proofId: OcamlStandardIMapCallContract.PROOF_ID,
+			proofClaim: target.proofClaim,
+			functionId: caller.functionId,
+			programRevision: caller.programRevision,
+			bodyRevision: caller.bodyRevision,
+			pipelineRevision: caller.pipelineRevision,
+			standardIMapTarget: target
+		};
+	}
+
 	static function copyCall(source:OcamlCallDecision, ?calleeId:String, ?kind:OcamlCallKind, ?arguments:Array<OcamlCallValuePlan>,
 			?result:OcamlCallValuePlan, ?bodyRevision:String, ?evaluationSchedule:Array<OcamlCallEvaluationStep>,
 			?resultKind:OcamlCallResultKind):OcamlCallDecision {
@@ -800,6 +1014,7 @@ class CallPlanFixture {
 			sourceTypeName: source.sourceTypeName,
 			sourceFieldName: source.sourceFieldName,
 			kind: kind ?? source.kind,
+			receiver: null,
 			arguments: arguments ?? source.arguments.map(OcamlCallPlan.copyValue),
 			resultKind: resultKind ?? source.resultKind,
 			result: result ?? OcamlCallPlan.copyOptionalValue(source.result),
@@ -811,7 +1026,8 @@ class CallPlanFixture {
 			functionId: source.functionId,
 			programRevision: source.programRevision,
 			bodyRevision: bodyRevision ?? source.bodyRevision,
-			pipelineRevision: source.pipelineRevision
+			pipelineRevision: source.pipelineRevision,
+			standardIMapTarget: source.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(source.standardIMapTarget)
 		};
 	}
 
@@ -823,6 +1039,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "increment",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -830,6 +1047,29 @@ class CallPlanFixture {
 			reason: "fixture",
 			proofId: OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID,
 			proofClaim: "fixture",
+			functionId: callee.functionId,
+			programRevision: callee.programRevision,
+			bodyRevision: callee.bodyRevision,
+			pipelineRevision: callee.pipelineRevision
+		};
+	}
+
+	static function constructorBoundary(callee:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+		return {
+			id: "construction-boundary:fixture",
+			calleeId: CONSTRUCTOR_CALLEE_ID,
+			sourceModuleId: "Counter",
+			sourceTypeName: "Counter",
+			sourceFieldName: "new",
+			kind: OcamlCallKind.DirectHaxeConstructor,
+			receiver: null,
+			arguments: [value(0)],
+			resultKind: OcamlCallResultKind.Value,
+			result: nominalCounterValue(-1),
+			profileEligibility: ["metal", "portable"],
+			reason: "fixture allocation, exact constructor body, and nominal instance result",
+			proofId: OcamlCallPlan.DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID,
+			proofClaim: "fixture allocation, exact constructor body, and nominal instance result",
 			functionId: callee.functionId,
 			programRevision: callee.programRevision,
 			bodyRevision: callee.bodyRevision,
@@ -845,6 +1085,7 @@ class CallPlanFixture {
 			sourceTypeName: "Arithmetic",
 			sourceFieldName: "add",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), value(1)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -867,6 +1108,7 @@ class CallPlanFixture {
 			sourceTypeName: "ZeroArgCalls",
 			sourceFieldName: "exactCount",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -889,6 +1131,7 @@ class CallPlanFixture {
 			sourceTypeName: "NullableCalls",
 			sourceFieldName: "identity",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
@@ -911,6 +1154,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "negate",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [boolValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: boolValue(-1),
@@ -933,6 +1177,7 @@ class CallPlanFixture {
 			sourceTypeName: "BoolCalls",
 			sourceFieldName: "identityNullable",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [nullableBoolValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: result ?? nullableBoolValue(-1),
@@ -955,6 +1200,7 @@ class CallPlanFixture {
 			sourceTypeName: "MixedCalls",
 			sourceFieldName: "choose",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), nullableBoolValue(1), boolValue(2), nullableValue(3)],
 			resultKind: OcamlCallResultKind.Value,
 			result: nullableValue(-1),
@@ -977,6 +1223,7 @@ class CallPlanFixture {
 			sourceTypeName: "OptionalCalls",
 			sourceFieldName: "optionalInt",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [optionalNullableValue(0)],
 			resultKind: OcamlCallResultKind.Value,
 			result: value(-1),
@@ -999,6 +1246,7 @@ class CallPlanFixture {
 			sourceTypeName: "VoidCalls",
 			sourceFieldName: "withArguments",
 			kind: OcamlCallKind.DirectStaticHaxeMethod,
+			receiver: null,
 			arguments: [value(0), boolValue(1), stringValue(2)],
 			resultKind: OcamlCallResultKind.EffectOnlyVoid,
 			result: null,
@@ -1013,9 +1261,66 @@ class CallPlanFixture {
 		};
 	}
 
-	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan,
-			callable:Null<OcamlCallableBoundaryPlan>):Void {
-		registry.sealFunction(owner, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]), calls, callable);
+	static function seal(registry:OcamlFunctionPlanRegistry, owner:OcamlFunctionPlanBinding, calls:OcamlCallPlan, callable:Null<OcamlCallableBoundaryPlan>,
+			?construction:Null<OcamlCallableBoundaryPlan>):Void {
+		final localIdentities = LexicalLocalIdentityPlan.build(owner.functionId, null);
+		registry.sealFunction(owner, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities), new OcamlLocalRepresentationPlan([]),
+			new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
+			new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable, construction);
+	}
+
+	/** Returns one real typed method body for the syntax-handoff lifecycle test. */
+	static function syntaxInputData():ClassFuncData {
+		return switch (Context.getType("SyntaxInputFixture")) {
+			case TInst(classReference, _):
+				final classType = classReference.get();
+				final field = Lambda.find(classType.fields.get(), candidate -> candidate.name == "calculate");
+				if (field == null)
+					Context.error("The syntax-input fixture has no calculate method.", Context.currentPos());
+				final data = field.findFuncData(classType, false);
+				if (data == null || data.expr == null)
+					Context.error("The syntax-input fixture calculate method has no typed body.", Context.currentPos());
+				data;
+			case _:
+				Context.error("The syntax-input fixture did not type as a class.", Context.currentPos());
+		}
+	}
+
+	/**
+		Proves the syntax handoff observes one final body exactly once.
+
+		The same test then replaces the body after sealing and checks that the
+		remaining observation still rejects the stale plan. This guards the
+		performance cut without weakening the exact-body safety boundary.
+	**/
+	static function assertFunctionSyntaxInputUsesOneObservation():Void {
+		final data = syntaxInputData();
+		data.bindProgramRevision(PROGRAM_REVISION);
+		final registry = new OcamlFunctionPlanRegistry();
+		registry.beginProgram(PROGRAM_REVISION);
+		final binding = registry.planningBindingFor(data);
+		final externalLocals = data.tfunc == null ? [] : data.tfunc.args.map(argument -> argument.v);
+		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
+		registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities),
+			new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
+			new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
+
+		FunctionBodyRevision.resetDigestCallCount();
+		final syntaxInput = registry.functionSyntaxInputFor(data);
+		if (FunctionBodyRevision.getDigestCallCount() != 1)
+			Context.error("One syntax handoff observed the final typed body more than once.", Context.currentPos());
+		if (syntaxInput.plan.binding.functionId != binding.functionId || syntaxInput.localIdentities.ownerId != binding.functionId)
+			Context.error("The syntax handoff returned facts for a different function.", Context.currentPos());
+		if (syntaxInput.constructionBoundary != null)
+			Context.error("An ordinary method received a constructor boundary.", Context.currentPos());
+
+		final sealedBody = data.expr;
+		data.setExpr({
+			expr: TBlock([sealedBody]),
+			pos: sealedBody.pos,
+			t: sealedBody.t
+		});
+		expectThrows("planned-body-revision-mismatch", () -> registry.functionSyntaxInputFor(data));
 	}
 
 	static function expectThrows(code:String, operation:Void->Void):Void {
@@ -1060,7 +1365,63 @@ class CallPlanFixture {
 			sys.FileSystem.deleteDirectory(outputDirectory);
 	}
 
+	/** Extracts one typed anonymous-function body for structural control tests. */
+	static function typedFunctionBody(expression:Expr):TypedExpr {
+		final typed = Context.typeExpr(expression);
+		return switch (typed.expr) {
+			case TFunction(func):
+				func.expr;
+			case _:
+				Context.error("Expected the control-flow fixture to type as an anonymous function.", expression.pos);
+		}
+	}
+
 	public static macro function run():Expr {
+		assertFunctionSyntaxInputUsesOneObservation();
+
+		final directReturn = typedFunctionBody(macro function():Int {
+			return 1;
+		});
+		final bothIfBranchesReturn = typedFunctionBody(macro function(flag:Bool):Int {
+			if (flag)
+				return 1;
+			else
+				return 2;
+		});
+		final switchWithDefaultReturns = typedFunctionBody(macro function(value:Int):Int {
+			switch (value) {
+				case 0:
+					return 1;
+				default:
+					return 2;
+			}
+		});
+		final tryAndCatchReturn = typedFunctionBody(macro function():Int {
+			try {
+				return 1;
+			} catch (_:Dynamic) {
+				return 2;
+			}
+		});
+		final partialReturn = typedFunctionBody(macro function(flag:Bool):Void {
+			if (flag)
+				return;
+			final ignored = 0;
+		});
+		final loopReturn = typedFunctionBody(macro function():Void {
+			while (true)
+				return;
+		});
+		if (!OcamlControlFlowFacts.definitelyReturns(directReturn)
+			|| !OcamlControlFlowFacts.definitelyReturns(bothIfBranchesReturn)
+			|| !OcamlControlFlowFacts.definitelyReturns(switchWithDefaultReturns)
+			|| !OcamlControlFlowFacts.definitelyReturns(tryAndCatchReturn)) {
+			Context.error("A structurally complete explicit-return fixture was not recognized.", Context.currentPos());
+		}
+		if (OcamlControlFlowFacts.definitelyReturns(partialReturn) || OcamlControlFlowFacts.definitelyReturns(loopReturn)) {
+			Context.error("A fall-through or loop-only fixture was incorrectly treated as an all-path explicit return.", Context.currentPos());
+		}
+
 		final stringArgument = stringValue(0);
 		OcamlCallPlan.requireCallValue(stringArgument, 0, "exact String fixture");
 		final wrongStringCarrier = OcamlCallPlan.copyValue(stringArgument);
@@ -1072,9 +1433,113 @@ class CallPlanFixture {
 		final missingStringProof = OcamlCallPlan.copyValue(stringArgument);
 		Reflect.setField(missingStringProof, "proofId", "");
 		expectThrows("invalid index or empty conversion proof", () -> OcamlCallPlan.requireCallValue(missingStringProof, 0, "missing String proof fixture"));
+		final dynamicBoundaryValue = dynamicValue(0, OcamlCallCarrierConversion.Identity);
+		OcamlCallPlan.requireCallValue(dynamicBoundaryValue, 0, "Dynamic boundary fixture");
+		final dynamicCallValue = dynamicValue(0, OcamlCallCarrierConversion.PreserveDynamicCarrier);
+		OcamlCallPlan.requireCallValue(dynamicCallValue, 0, "Dynamic call fixture");
+		final wrongDynamicCarrier = OcamlCallPlan.copyValue(dynamicCallValue);
+		Reflect.setField(wrongDynamicCarrier, "outputCarrierTypeId", "string");
+		expectThrows("must preserve one exact Dynamic Obj.t carrier",
+			() -> OcamlCallPlan.requireCallValue(wrongDynamicCarrier, 0, "wrong Dynamic carrier fixture"));
+		final wrongDynamicProof = OcamlCallPlan.copyValue(dynamicCallValue);
+		Reflect.setField(wrongDynamicProof, "proofId", "identity-call-carrier-v1");
+		expectThrows("must preserve one exact Dynamic Obj.t carrier",
+			() -> OcamlCallPlan.requireCallValue(wrongDynamicProof, 0, "wrong Dynamic proof fixture"));
+		final boxedDynamicInt = dynamicBoxValue(0, "Int", "int", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicString = dynamicBoxValue(0, "String", "string", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicNominal = dynamicBoxValue(0, "Box", "box_t", OcamlCallCarrierConversion.BoxConcreteToDynamic);
+		final boxedDynamicBool = dynamicBoxValue(0, "Bool", "bool", OcamlCallCarrierConversion.BoxExactBoolToDynamic);
+		for (value in [boxedDynamicInt, boxedDynamicString, boxedDynamicNominal, boxedDynamicBool])
+			OcamlCallPlan.requireCallValue(value, 0, "concrete-to-Dynamic fixture");
+		final dynamicBoxAsResult = OcamlCallPlan.copyValue(boxedDynamicInt);
+		Reflect.setField(dynamicBoxAsResult, "index", -1);
+		expectThrows("must box one admitted non-Bool value",
+			() -> OcamlCallPlan.requireCallValue(dynamicBoxAsResult, -1, "Dynamic box used as result fixture"));
+		final dynamicBoolWrongProof = OcamlCallPlan.copyValue(boxedDynamicBool);
+		Reflect.setField(dynamicBoolWrongProof, "proofId", "dynamic-call-box-concrete-v1");
+		expectThrows("distinguishable runtime Bool carrier",
+			() -> OcamlCallPlan.requireCallValue(dynamicBoolWrongProof, 0, "wrong Dynamic Bool proof fixture"));
+		final checkedResult = checkedNullableIntValue(-1);
+		OcamlCallPlan.requireCallValue(checkedResult, -1, "checked nullable Int result fixture");
+		final checkedArgument = checkedNullableIntValue(0);
+		OcamlCallPlan.requireCallValue(checkedArgument, 0, "checked nullable Int argument fixture");
+		final checkedResultWrongInputCarrier = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongInputCarrier, "inputCarrierTypeId", "int");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongInputCarrier, -1, "wrong checked result input carrier fixture"));
+		final checkedResultWrongOutputSemantic = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongOutputSemantic, "outputSemanticTypeId", "Null<Int>");
+		expectThrows("invalid-plan",
+			() -> OcamlCallPlan.requireCallValue(checkedResultWrongOutputSemantic, -1, "wrong checked result output semantic fixture"));
+		final checkedResultWrongOutputCarrier = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongOutputCarrier, "outputCarrierTypeId", "Obj.t");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongOutputCarrier, -1, "wrong checked result output carrier fixture"));
+		final checkedResultWrongProof = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultWrongProof, "proofId", "nullable-int-call-box-v1");
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultWrongProof, -1, "wrong checked result proof fixture"));
+		final checkedResultAsReceiver = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultAsReceiver, "index", -2);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultAsReceiver, -2, "checked result used as receiver fixture"));
+		final checkedResultAsOptional = OcamlCallPlan.copyValue(checkedResult);
+		Reflect.setField(checkedResultAsOptional, "parameterOptional", true);
+		expectThrows("invalid-plan", () -> OcamlCallPlan.requireCallValue(checkedResultAsOptional, -1, "checked optional result fixture"));
 
 		final caller = binding("Main|Main::main", "body:caller");
 		final callee = binding("Arithmetic|Arithmetic::increment", "body:callee");
+		final genericClassKey = Context.typeExpr(macro([] : Array<Int>)).t;
+		if (OcamlStandardIMapCallContract.keyKindForType(genericClassKey) != null)
+			Context.error("The standard IMap target admitted a generic class key as object identity.", Context.currentPos());
+		final exactObjectKey = Context.typeExpr(macro new StringBuf()).t;
+		if (OcamlStandardIMapCallContract.keyKindForType(exactObjectKey) != OcamlStandardIMapKeyKind.ObjectIdentityKey)
+			Context.error("The standard IMap target rejected a non-generic class key.", Context.currentPos());
+		final selectedStandardIMapSet = standardIMapCall(caller, OcamlStandardIMapOperation.Set);
+		final selectedStandardIMapToString = standardIMapCall(caller, OcamlStandardIMapOperation.ToString);
+		OcamlCallPlan.requireCall(selectedStandardIMapSet);
+		OcamlCallPlan.requireCall(selectedStandardIMapToString);
+		final standardIMapPlan = new OcamlCallPlan([selectedStandardIMapSet, selectedStandardIMapToString]);
+		final copiedStandardIMapSet = standardIMapPlan.decisions()[0];
+		if (copiedStandardIMapSet.standardIMapTarget == null)
+			Context.error("The sealed call plan dropped its standard IMap target.", Context.currentPos());
+		Reflect.setField(selectedStandardIMapSet.standardIMapTarget, "runtimeFunction", "get_string");
+		if (copiedStandardIMapSet.standardIMapTarget.runtimeFunction != "set_string")
+			Context.error("The sealed call plan retained a mutable standard IMap target.", Context.currentPos());
+		final standardIMapRegistry = new OcamlFunctionPlanRegistry();
+		standardIMapRegistry.beginProgram(PROGRAM_REVISION);
+		seal(standardIMapRegistry, caller, standardIMapPlan, null);
+		standardIMapRegistry.validateCallGraph();
+
+		final wrongStandardIMapRuntime = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapRuntime.standardIMapTarget, "runtimeFunction", "get_string");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapRuntime));
+		final wrongStandardIMapKeyType = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapKeyType.standardIMapTarget, "keySemanticTypeId", "Int");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapKeyType));
+		final wrongStandardIMapArguments = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapArguments.standardIMapTarget, "argumentSemanticTypeIds", ["Int", "String"]);
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapArguments));
+		final wrongStandardIMapResultType = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapResultType.standardIMapTarget, "resultSemanticTypeId", "Bool");
+		expectThrows("disagrees with its selected carrier", () -> OcamlCallPlan.requireCall(wrongStandardIMapResultType));
+		final wrongStandardIMapSourceField = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapSourceField, "sourceFieldName", "get");
+		expectThrows("incomplete or conflicting", () -> OcamlCallPlan.requireCall(wrongStandardIMapSourceField));
+		final missingStandardIMapReceiverStep = copyCall(copiedStandardIMapSet, null, null, null, null, null,
+			copiedStandardIMapSet.evaluationSchedule.slice(1));
+		expectThrows("invalid evaluation schedule", () -> OcamlCallPlan.requireCall(missingStandardIMapReceiverStep));
+		final wrongStandardIMapReceiverSlot = copyCall(copiedStandardIMapSet);
+		Reflect.setField(wrongStandardIMapReceiverSlot.evaluationSchedule[0], "slotId", "call-receiver-slot:wrong");
+		expectThrows("invalid receiver materialization", () -> OcamlCallPlan.requireCall(wrongStandardIMapReceiverSlot));
+		final wrongStandardIMapResult = copyCall(copiedStandardIMapSet, null, null, null, null, null, null, OcamlCallResultKind.Value);
+		expectThrows("disagrees with its typed result", () -> OcamlCallPlan.requireCall(wrongStandardIMapResult));
+		final wrongStandardIMapCapabilities = copyCall(selectedStandardIMapToString);
+		Reflect.setField(wrongStandardIMapCapabilities.standardIMapTarget, "runtimeCapabilities", ["haxe-map", "haxe-iterator", "haxe-array"]);
+		expectThrows("runtime-capability inventory", () -> OcamlCallPlan.requireCall(wrongStandardIMapCapabilities));
+		final wrongStandardIMapStringifier = copyCall(selectedStandardIMapToString);
+		Reflect.setField(wrongStandardIMapStringifier.standardIMapTarget, "keyStringifier", OcamlStandardIMapStringifier.DynamicObject);
+		expectThrows("stringifiers that disagree", () -> OcamlCallPlan.requireCall(wrongStandardIMapStringifier));
+		final ordinaryCallWithStandardIMapTarget = call(caller);
+		Reflect.setField(ordinaryCallWithStandardIMapTarget, "standardIMapTarget", standardIMapTarget(OcamlStandardIMapOperation.Set));
+		expectThrows("non-IMap call", () -> OcamlCallPlan.requireCall(ordinaryCallWithStandardIMapTarget));
+
 		final localBlock = Context.typeExpr(macro {
 			final localIdentityValue = 1;
 			localIdentityValue;
@@ -1179,6 +1644,51 @@ class CallPlanFixture {
 		seal(registry, caller, new OcamlCallPlan([selectedCall]), null);
 		seal(registry, callee, new OcamlCallPlan([]), boundary(callee));
 		registry.validateCallGraph();
+
+		final constructorCaller = binding("Main|Main::construct", "body:constructor-caller");
+		final constructorDefinition = binding(CONSTRUCTOR_CALLEE_ID, "body:constructor-definition");
+		final selectedConstructorCall = constructorCall(constructorCaller);
+		final constructorRegistry = new OcamlFunctionPlanRegistry();
+		constructorRegistry.beginProgram(PROGRAM_REVISION);
+		if (constructorRegistry.hasConstructorDeclaration(CONSTRUCTOR_CALLEE_ID))
+			Context.error("The constructor hard-cut guard reported an unregistered constructor.", Context.currentPos());
+		constructorRegistry.registerCallableDeclaration(constructorDeclaration());
+		if (!constructorRegistry.hasConstructorDeclaration(CONSTRUCTOR_CALLEE_ID))
+			Context.error("The constructor hard-cut guard did not expose the registered constructor.", Context.currentPos());
+		if (registry.hasConstructorDeclaration(CALLEE_ID))
+			Context.error("The constructor hard-cut guard incorrectly selected an ordinary method.", Context.currentPos());
+		constructorRegistry.requireCallableDeclaration(selectedConstructorCall);
+		seal(constructorRegistry, constructorCaller, new OcamlCallPlan([selectedConstructorCall]), null);
+		seal(constructorRegistry, constructorDefinition, new OcamlCallPlan([]), null, constructorBoundary(constructorDefinition));
+		constructorRegistry.validateCallGraph();
+
+		final primitiveConstructorResult = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(primitiveConstructorResult, "result", value(-1));
+		expectThrows("no sealed nominal constructor result", () -> OcamlCallPlan.requireCallableDeclarationPlan(primitiveConstructorResult));
+		final optionalConstructorArgument = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(optionalConstructorArgument.arguments[0], "parameterOptional", true);
+		expectThrows("one-required-argument constructor slice", () -> OcamlCallPlan.requireCallableDeclarationPlan(optionalConstructorArgument));
+		final boolConstructorArgument = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(boolConstructorArgument, "arguments", [boolValue(0)]);
+		expectThrows("first exact Int constructor-argument slice", () -> OcamlCallPlan.requireCallableDeclarationPlan(boolConstructorArgument));
+		final wrongConstructorProof = OcamlCallPlan.copyDeclaration(constructorDeclaration());
+		Reflect.setField(wrongConstructorProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
+		expectThrows("mismatched direct-constructor signature proof", () -> OcamlCallPlan.requireCallableDeclarationPlan(wrongConstructorProof));
+		final reorderedConstructorSchedule = copyCall(selectedConstructorCall);
+		reorderedConstructorSchedule.evaluationSchedule.reverse();
+		expectThrows("invalid argument materialization", () -> constructorRegistry.requireCallableDeclaration(reorderedConstructorSchedule));
+		final staleConstructorBoundary = constructorBoundary(constructorDefinition);
+		Reflect.setField(staleConstructorBoundary, "bodyRevision", "body:stale-constructor-definition");
+		final staleConstructorRegistry = new OcamlFunctionPlanRegistry();
+		staleConstructorRegistry.beginProgram(PROGRAM_REVISION);
+		staleConstructorRegistry.registerCallableDeclaration(constructorDeclaration());
+		expectThrows("stale-callable-binding",
+			() -> seal(staleConstructorRegistry, constructorDefinition, new OcamlCallPlan([]), null, staleConstructorBoundary));
+		final missingConstructorBoundaryRegistry = new OcamlFunctionPlanRegistry();
+		missingConstructorBoundaryRegistry.beginProgram(PROGRAM_REVISION);
+		missingConstructorBoundaryRegistry.registerCallableDeclaration(constructorDeclaration());
+		seal(missingConstructorBoundaryRegistry, constructorCaller, new OcamlCallPlan([selectedConstructorCall]), null);
+		expectThrows("missing-callable", () -> missingConstructorBoundaryRegistry.validateCallGraph());
 
 		final twoArgumentCallee = binding("Arithmetic|Arithmetic::add", "body:two-argument-callee");
 		final selectedTwoArgumentCall = twoArgumentCall(caller);

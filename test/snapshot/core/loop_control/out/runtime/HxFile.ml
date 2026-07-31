@@ -19,7 +19,7 @@ let saveContent (path : string) (content : string) : unit =
     ~finally:(fun () -> close_out_noerr oc)
     (fun () -> output_string oc content)
 
-let getBytes (path : string) : HxBytes.t =
+let getBytes (path : string) : HxBytes.data =
   let ic = open_in_bin path in
   Fun.protect
     ~finally:(fun () -> close_in_noerr ic)
@@ -30,7 +30,7 @@ let getBytes (path : string) : HxBytes.t =
       b
     )
 
-let saveBytes (path : string) (bytes : HxBytes.t) : unit =
+let saveBytes (path : string) (bytes : HxBytes.data) : unit =
   let oc = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr oc)
@@ -53,4 +53,3 @@ let copy (srcPath : string) (dstPath : string) : unit =
           loop ()
         )
     )
-

@@ -14,25 +14,25 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodyInvaria
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyInvariant" } : t)
 
 let assertBinding = fun binding owner -> ignore ((
-  ignore (if binding == Obj.magic (HxRuntime.hx_null) || TyLocalBinding.getIdentity (Obj.magic binding) () == Obj.magic (HxRuntime.hx_null) || HxString.length (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding has an empty identity in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-  if TyLocalBinding.getType (Obj.magic binding) () == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding has no semantic type in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()
+  ignore (if binding == Obj.magic (HxRuntime.hx_null) || TyLocalBinding.getIdentity (Obj.magic binding) () == Obj.magic (HxRuntime.hx_null) || HxString.length (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding has an empty identity in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+  if TyLocalBinding.getType (Obj.magic binding) () == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding has no semantic type in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()
 ))
 
 let assertBindingNames = fun bindings names owner -> ignore ((
-  ignore (if HxArray.length bindings <> HxArray.length names then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding/name count mismatch in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+  ignore (if HxArray.length bindings <> HxArray.length names then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding/name count mismatch in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
   let _g = ref 0 in let _g1 = HxArray.length bindings in while !_g < _g1 do ignore (let index = let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
     ignore (_g := __new_2);
     __old_1
   ) in (
     ignore (assertBinding (Obj.magic (HxArray.get (Obj.magic bindings) index)) (owner : string));
-    if not (HxString.equals (TyLocalBinding.getSourceName (Obj.magic (HxArray.get (Obj.magic bindings) index)) ()) (HxArray.get (Obj.magic names) index)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding/name mismatch in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()
+    if not (HxString.equals (TyLocalBinding.getSourceName (Obj.magic (HxArray.get (Obj.magic bindings) index)) ()) (HxArray.get (Obj.magic names) index)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding/name mismatch in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()
   )) done
 ))
 
-let scrubQuotedAndCommentText = fun raw -> try let __fallback_result_24 = (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) || HxString.length raw = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+let scrubQuotedAndCommentText = fun (raw : string) -> (try (
+  ignore (if raw == HxString.hx_null_string || HxString.length raw = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let out = Obj.magic (StringBuf.create ()) in let index = ref 0 in let quote = ref ("" : string) in let escaped = ref false in let lineComment = ref false in let blockComment = ref false in (
-    ignore (try while !index < HxString.length raw do try ignore (let current = (HxString.charAt raw (!index) : string) in let tempString = ref ("" : string) in (
+    ignore (try while !index < HxString.length raw do try ignore (let current = (HxString.charAt raw (!index) : string) in let tempString = ref (HxString.hx_null_string : string) in (
       ignore (if HxInt.add (!index) 1 < HxString.length raw then let __assign_3 = (HxString.charAt raw (HxInt.add (!index) 1) : string) in (
         tempString := __assign_3;
         __assign_3
@@ -123,62 +123,62 @@ let scrubQuotedAndCommentText = fun raw -> try let __fallback_result_24 = (
       | HxRuntime.Hx_break -> ());
     StringBuf.toString (Obj.magic out) ()
   )
-) in Obj.magic __fallback_result_24 with
-  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
+) with
+  | HxRuntime.Hx_return __ret_23 -> (Obj.obj __ret_23 : string) : string)
 
-let opaqueContainsSemanticSyntax = fun raw -> try let __fallback_result_26 = let clean = (scrubQuotedAndCommentText (raw : string) : string) in let token = ("++" : string) in (
+let opaqueContainsSemanticSyntax = fun (raw : string) -> (try let clean = let __call_arg_0_24 = raw in scrubQuotedAndCommentText __call_arg_0_24 in let token = "++" in (
   ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  let token = ("--" : string) in (
+  let token = "--" in (
     ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-    let token = ("+=" : string) in (
+    let token = "+=" in (
       ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-      let token = ("-=" : string) in (
+      let token = "-=" in (
         ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-        let token = ("*=" : string) in (
+        let token = "*=" in (
           ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-          let token = ("/=" : string) in (
+          let token = "/=" in (
             ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-            let token = ("%=" : string) in (
+            let token = "%=" in (
               ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-              let token = ("&=" : string) in (
+              let token = "&=" in (
                 ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                let token = ("|=" : string) in (
+                let token = "|=" in (
                   ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                  let token = ("^=" : string) in (
+                  let token = "^=" in (
                     ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                    let token = ("<<=" : string) in (
+                    let token = "<<=" in (
                       ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                      let token = (">>=" : string) in (
+                      let token = ">>=" in (
                         ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                        let token = (">>>=" : string) in (
+                        let token = ">>>=" in (
                           ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                          let op = ("+" : string) in (
+                          let op = "+" in (
                             ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                            let op = ("-" : string) in (
+                            let op = "-" in (
                               ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                              let op = ("*" : string) in (
+                              let op = "*" in (
                                 ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                let op = ("/" : string) in (
+                                let op = "/" in (
                                   ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                  let op = ("%" : string) in (
+                                  let op = "%" in (
                                     ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                    let op = ("!" : string) in (
+                                    let op = "!" in (
                                       ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                      let op = ("~" : string) in (
+                                      let op = "~" in (
                                         ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                        let op = ("=" : string) in (
+                                        let op = "=" in (
                                           ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                          let op = ("<" : string) in (
+                                          let op = "<" in (
                                             ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                            let op = (">" : string) in (
+                                            let op = ">" in (
                                               ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                              let op = ("&" : string) in (
+                                              let op = "&" in (
                                                 ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                                let op = ("|" : string) in (
+                                                let op = "|" in (
                                                   ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                                  let op = ("^" : string) in (
+                                                  let op = "^" in (
                                                     ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-                                                    let op = ("[" : string) in (
+                                                    let op = "[" in (
                                                       ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
                                                       false
                                                     )
@@ -207,79 +207,79 @@ let opaqueContainsSemanticSyntax = fun raw -> try let __fallback_result_26 = let
       )
     )
   )
-) in Obj.magic __fallback_result_26 with
-  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
+) with
+  | HxRuntime.Hx_return __ret_25 -> (Obj.obj __ret_25 : bool) : bool)
 
 let rec assertExpr = fun expression owner -> ignore ((
-  ignore (if expression == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed body contains a null expression in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+  ignore (if expression == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed body contains a null expression in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
   let _g = ref 0 in let _g1 = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
-        ignore (_g := __new_28);
-        __new_28
+      ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+        ignore (_g := __new_27);
+        __new_27
       ));
       assertExpr (Obj.magic child) (owner : string)
     )) done);
     ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Call then ignore (let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic expression) ()) in (
-      ignore (if declaration != Obj.magic (HxRuntime.hx_null) && HxString.length (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed call contains an empty declaration identity in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-      let extensionProvider = Obj.magic (TypedExpr.getExtensionProvider (Obj.magic expression) ()) in if extensionProvider != Obj.magic (HxRuntime.hx_null) && (declaration == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed extension call must carry an exact static declaration in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()
-    )) else ignore (if TypedExpr.getExtensionProvider (Obj.magic expression) () != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("non-call typed expression carries an extension provider in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()));
+      ignore (if declaration != Obj.magic (HxRuntime.hx_null) && HxString.length (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed call contains an empty declaration identity in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+      let extensionProvider = Obj.magic (TypedExpr.getExtensionProvider (Obj.magic expression) ()) in if extensionProvider != Obj.magic (HxRuntime.hx_null) && (declaration == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed extension call must carry an exact static declaration in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()
+    )) else ignore (if TypedExpr.getExtensionProvider (Obj.magic expression) () != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("non-call typed expression carries an extension provider in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()));
     let localBindings = Obj.magic (TypedExpr.getLocalBindings (Obj.magic expression) ()) in let _g = ref 0 in (
       ignore (while !_g < HxArray.length localBindings do ignore (let binding = Obj.magic (HxArray.get (Obj.magic localBindings) (!_g)) in (
-        ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
-          ignore (_g := __new_30);
-          __new_30
+        ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
+          ignore (_g := __new_29);
+          __new_29
         ));
         assertBinding (Obj.magic binding) (owner : string)
       )) done);
       ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.LocalRead then ignore ((
-        ignore (if HxArray.length localBindings <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local read must carry exactly one binding in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+        ignore (if HxArray.length localBindings <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed local read must carry exactly one binding in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+        assertBindingNames (Obj.magic localBindings) (Obj.magic (let __arr_30 = HxArray.create () in (
+          ignore (HxArray.push __arr_30 (HxArray.get (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) 0));
+          __arr_30
+        ))) (owner : string)
+      )) else ());
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Temporary then ignore ((
+        ignore (if HxArray.length localBindings <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed temporary must carry exactly one binding in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
         assertBindingNames (Obj.magic localBindings) (Obj.magic (let __arr_31 = HxArray.create () in (
           ignore (HxArray.push __arr_31 (HxArray.get (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) 0));
           __arr_31
         ))) (owner : string)
       )) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Temporary then ignore ((
-        ignore (if HxArray.length localBindings <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed temporary must carry exactly one binding in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-        assertBindingNames (Obj.magic localBindings) (Obj.magic (let __arr_32 = HxArray.create () in (
-          ignore (HxArray.push __arr_32 (HxArray.get (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) 0));
-          __arr_32
-        ))) (owner : string)
-      )) else ());
-      ignore (if (TypedExpr.getTag (Obj.magic expression) () = TypedExpr.VariableDeclaration || TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ArrayComprehension) && HxArray.length localBindings > 0 then ignore (assertBindingNames (Obj.magic localBindings) (Obj.magic (let __arr_33 = HxArray.create () in (
-        ignore (HxArray.push __arr_33 (HxArray.get (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) 0));
-        __arr_33
+      ignore (if (TypedExpr.getTag (Obj.magic expression) () = TypedExpr.VariableDeclaration || TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ArrayComprehension) && HxArray.length localBindings > 0 then ignore (assertBindingNames (Obj.magic localBindings) (Obj.magic (let __arr_32 = HxArray.create () in (
+        ignore (HxArray.push __arr_32 (HxArray.get (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) 0));
+        __arr_32
       ))) (owner : string)) else ());
       ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Lambda && HxArray.length localBindings > 0 then ignore (assertBindingNames (Obj.magic localBindings) (Obj.magic (TypedExpr.getTexts (Obj.magic expression) ())) (owner : string)) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Temporary then ignore (if HxArray.length (TypedExpr.getTexts (Obj.magic expression) ()) <> 2 || HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed temporary has an invalid structural payload in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ReturnExpr && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) > 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed return expression has more than one value in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.WhileExpr && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) < 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed while expression is missing its condition in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.WhileExpr && not (TypedExpr.getBoolValue (Obj.magic expression) ()) && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) <> 2 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed while expression without braces must have exactly one body expression in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-      ignore (if (TypedExpr.getTag (Obj.magic expression) () = TypedExpr.BreakExpr || TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ContinueExpr) && not (TyType.isNoNormalCompletion (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed loop-control expression must not claim to produce a runtime value in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Temporary then ignore (if HxArray.length (TypedExpr.getTexts (Obj.magic expression) ()) <> 2 || HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed temporary has an invalid structural payload in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()) else ());
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ReturnExpr && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) > 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed return expression has more than one value in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.WhileExpr && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) < 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed while expression is missing its condition in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.WhileExpr && not (TypedExpr.getBoolValue (Obj.magic expression) ()) && HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) <> 2 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed while expression without braces must have exactly one body expression in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+      ignore (if (TypedExpr.getTag (Obj.magic expression) () = TypedExpr.BreakExpr || TypedExpr.getTag (Obj.magic expression) () = TypedExpr.ContinueExpr) && not (TyType.isNoNormalCompletion (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) ()) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed loop-control expression must not claim to produce a runtime value in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
       ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.VariableDeclarations then ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in while !_g < HxArray.length _g1 do ignore (let declaration = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_34 = !_g in let __new_35 = HxInt.add __old_34 1 in (
-          ignore (_g := __new_35);
-          __new_35
+        ignore (let __old_33 = !_g in let __new_34 = HxInt.add __old_33 1 in (
+          ignore (_g := __new_34);
+          __new_34
         ));
-        if TypedExpr.getTag (Obj.magic declaration) () <> TypedExpr.VariableDeclaration then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed variable declaration list contains a non-declaration child in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ()
+        if TypedExpr.getTag (Obj.magic declaration) () <> TypedExpr.VariableDeclaration then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed variable declaration list contains a non-declaration child in " ^ HxString.toStdString owner)) ["Dynamic"]) else ()
       )) done) else ());
-      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.VariableDeclaration && (HxArray.length (TypedExpr.getTexts (Obj.magic expression) ()) <> 2 || HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) > 1) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed variable declaration has an invalid structural payload in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-      if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Opaque then ignore (let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let tempString = ref ("" : string) in (
-        ignore (if HxArray.length texts = 0 then let __assign_36 = ("" : string) in (
+      ignore (if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.VariableDeclaration && (HxArray.length (TypedExpr.getTexts (Obj.magic expression) ()) <> 2 || HxArray.length (TypedExpr.getExpressions (Obj.magic expression) ()) > 1) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed variable declaration has an invalid structural payload in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
+      if TypedExpr.getTag (Obj.magic expression) () = TypedExpr.Opaque then ignore (let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let tempString = ref (HxString.hx_null_string : string) in (
+        ignore (if HxArray.length texts = 0 then let __assign_35 = ("" : string) in (
+          tempString := __assign_35;
+          __assign_35
+        ) else let __assign_36 = (HxArray.get (Obj.magic texts) 0 : string) in (
           tempString := __assign_36;
           __assign_36
-        ) else let __assign_37 = (HxArray.get (Obj.magic texts) 0 : string) in (
-          tempString := __assign_37;
-          __assign_37
         ));
-        let raw = (!tempString : string) in if opaqueContainsSemanticSyntax (raw : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed body opaque expression can hide operator or mutation semantics in " ^ HxString.toStdString owner) ^ ": ") ^ HxString.toStdString raw)) ["Dynamic"; "String"]) else ()
+        let raw = (!tempString : string) in if let __call_arg_0_37 = raw in opaqueContainsSemanticSyntax __call_arg_0_37 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed body opaque expression can hide operator or mutation semantics in " ^ HxString.toStdString owner) ^ ": ") ^ HxString.toStdString raw)) ["Dynamic"]) else ()
       )) else ()
     )
   )
 ))
 
-let rec assertStmt = fun statement owner -> ignore (try (
-  ignore (if statement == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed body contains a null statement in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
+let rec assertStmt = fun statement owner -> ignore (try ignore ((
+  ignore (if statement == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed body contains a null statement in " ^ HxString.toStdString owner)) ["Dynamic"]) else ());
   let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let expression = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
       ignore (let __old_38 = !_g in let __new_39 = HxInt.add __old_38 1 in (
@@ -312,14 +312,14 @@ let rec assertStmt = fun statement owner -> ignore (try (
       )
     )
   )
-) with
+)) with
   | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45)
 
 let assertFunction = fun typedFunction -> ignore (let owner = (TypedFunction.getStableIdentity (Obj.magic typedFunction) () : string) in let declared = Obj.magic (HxMap.create_string ()) in let register = fun binding -> ignore ((
   ignore (assertBinding (Obj.magic binding) (owner : string));
-  let key = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let existing = Obj.magic (HxMap.get_string declared key) in (
+  let key = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let existing = Obj.magic (HxMap.get_string (Obj.magic declared) (key : string)) in (
     ignore (if existing != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (TyLocalBinding.getCanonicalIdentity (Obj.magic existing) ()) (TyLocalBinding.getCanonicalIdentity (Obj.magic binding) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed local identity has conflicting facts in " ^ HxString.toStdString owner) ^ ": ") ^ HxString.toStdString key)) ["Dynamic"; "String"]) else ());
-    HxMap.set_string declared key binding
+    HxMap.set_string (Obj.magic declared) (key : string) binding
   )
 )) in let environment = Obj.magic (TypedFunction.getEnvironment (Obj.magic typedFunction) ()) in (
   ignore (if environment != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = Obj.magic (TyFunctionEnv.getParams (Obj.magic environment) ()) in while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -385,12 +385,18 @@ let assertFunction = fun typedFunction -> ignore (let owner = (TypedFunction.get
               ignore (_g := __new_62);
               __new_62
             ));
-            if not (HxMap.exists_string declared (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed local read references an undeclared identity in " ^ HxString.toStdString owner) ^ ": ") ^ HxString.toStdString (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ()))) ["Dynamic"; "String"]) else ()
+            let tempBool = ref (false : bool) in let key = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in (
+              ignore (let __assign_63 = HxMap.exists_string (Obj.magic declared) (key : string) in (
+                tempBool := __assign_63;
+                __assign_63
+              ));
+              if not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("typed local read references an undeclared identity in " ^ HxString.toStdString owner) ^ ": ") ^ HxString.toStdString (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ()))) ["Dynamic"; "String"]) else ()
+            )
           )) done) else ());
           let _g = ref 0 in let _g1 = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-            ignore (let __old_63 = !_g in let __new_64 = HxInt.add __old_63 1 in (
-              ignore (_g := __new_64);
-              __new_64
+            ignore (let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
+              ignore (_g := __new_65);
+              __new_65
             ));
             (!assertExpressionReads) (Obj.magic child)
           )) done
@@ -399,38 +405,38 @@ let assertFunction = fun typedFunction -> ignore (let owner = (TypedFunction.get
           __assign_60
         ));
         let assertStatementReads = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t -> unit) in (
-          ignore (let __assign_65 = Obj.magic (fun statement -> ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
+          ignore (let __assign_66 = Obj.magic (fun statement -> ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let expression = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-              ignore (let __old_66 = !_g in let __new_67 = HxInt.add __old_66 1 in (
-                ignore (_g := __new_67);
-                __new_67
+              ignore (let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
+                ignore (_g := __new_68);
+                __new_68
               ));
               (!assertExpressionReads) (Obj.magic expression)
             )) done);
             let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-              ignore (let __old_68 = !_g in let __new_69 = HxInt.add __old_68 1 in (
-                ignore (_g := __new_69);
-                __new_69
+              ignore (let __old_69 = !_g in let __new_70 = HxInt.add __old_69 1 in (
+                ignore (_g := __new_70);
+                __new_70
               ));
               (!assertStatementReads) (Obj.magic child)
             )) done
           ))) in (
-            assertStatementReads := __assign_65;
-            __assign_65
+            assertStatementReads := __assign_66;
+            __assign_66
           ));
           let _g = ref 0 in let _g1 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let statement = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-              ignore (let __old_70 = !_g in let __new_71 = HxInt.add __old_70 1 in (
-                ignore (_g := __new_71);
-                __new_71
+              ignore (let __old_71 = !_g in let __new_72 = HxInt.add __old_71 1 in (
+                ignore (_g := __new_72);
+                __new_72
               ));
               ignore ((!collectStatement) (Obj.magic statement));
               assertStmt (Obj.magic statement) (owner : string)
             )) done);
             let _g = ref 0 in let _g1 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in while !_g < HxArray.length _g1 do ignore (let statement = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-              ignore (let __old_72 = !_g in let __new_73 = HxInt.add __old_72 1 in (
-                ignore (_g := __new_73);
-                __new_73
+              ignore (let __old_73 = !_g in let __new_74 = HxInt.add __old_73 1 in (
+                ignore (_g := __new_74);
+                __new_74
               ));
               (!assertStatementReads) (Obj.magic statement)
             )) done
@@ -441,20 +447,20 @@ let assertFunction = fun typedFunction -> ignore (let owner = (TypedFunction.get
   )
 ))
 
-let assertClasses = fun classes -> ignore (try (
+let assertClasses = fun classes -> ignore (try ignore ((
   ignore (if classes == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let _g = ref 0 in while !_g < HxArray.length classes do ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic classes) (!_g)) in (
-    ignore (let __old_74 = !_g in let __new_75 = HxInt.add __old_74 1 in (
-      ignore (_g := __new_75);
-      __new_75
+    ignore (let __old_75 = !_g in let __new_76 = HxInt.add __old_75 1 in (
+      ignore (_g := __new_76);
+      __new_76
     ));
     let _g2 = ref 0 in let _g1 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g1 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
-      ignore (let __old_76 = !_g2 in let __new_77 = HxInt.add __old_76 1 in (
-        ignore (_g2 := __new_77);
-        __new_77
+      ignore (let __old_77 = !_g2 in let __new_78 = HxInt.add __old_77 1 in (
+        ignore (_g2 := __new_78);
+        __new_78
       ));
       assertFunction (Obj.magic typedFunction)
     )) done
   )) done
-) with
-  | HxRuntime.Hx_return __ret_78 -> Obj.obj __ret_78)
+)) with
+  | HxRuntime.Hx_return __ret_79 -> Obj.obj __ret_79)

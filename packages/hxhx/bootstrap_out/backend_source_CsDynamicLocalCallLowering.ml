@@ -49,7 +49,7 @@ let rec dependsOnExactDynamicLocal = fun expression locals -> let tempResult = r
 )
 
 let body = fun projection -> (
-  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# Dynamic local-call lowering requires a typed function projection") ["Dynamic"; "String"]) else ());
+  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C# Dynamic local-call lowering requires a typed function projection") ["Dynamic"]) else ());
   let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection) ()) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic (HxFunctionDecl.getBody (Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic projection) ())))) (fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
     ignore (if (match expression with
       | HxExpr.ENull -> 0

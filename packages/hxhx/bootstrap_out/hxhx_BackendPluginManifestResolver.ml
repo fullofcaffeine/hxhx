@@ -13,184 +13,187 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.BackendPlug
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.BackendPluginManifestResolver" } : t)
 
-let normalizePath = fun manifestPath -> let tempResult = ref ("" : string) in (
-  ignore (if manifestPath == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let normalizePath = fun manifestPath -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if manifestPath == HxString.hx_null_string then let __assign_1 = "" in (
     tempResult := __assign_1;
     __assign_1
-  ) else let __assign_2 = (StringTools.trim (manifestPath : string) : string) in (
+  ) else let __assign_2 = let __call_arg_0_3 = manifestPath in StringTools.trim __call_arg_0_3 in (
     tempResult := __assign_2;
     __assign_2
   ));
   !tempResult
 )
 
-let fail = fun manifestPath message -> let tempString = ref ("" : string) in (
-  ignore (if manifestPath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
-    tempString := __assign_3;
-    __assign_3
-  ) else let __assign_4 = (StringTools.trim (manifestPath : string) : string) in (
+let fail = fun manifestPath message -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if manifestPath == HxString.hx_null_string then let __assign_4 = "" in (
     tempString := __assign_4;
     __assign_4
+  ) else let __assign_5 = let __call_arg_0_6 = manifestPath in StringTools.trim __call_arg_0_6 in (
+    tempString := __assign_5;
+    __assign_5
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if HxString.length (!tempString) = 0 then let __assign_5 = ("<unknown-manifest>" : string) in (
-      tempString1 := __assign_5;
-      __assign_5
-    ) else let __assign_6 = (!tempString : string) in (
-      tempString1 := __assign_6;
-      __assign_6
+  let source = !tempString in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if HxString.length source = 0 then let __assign_7 = "<unknown-manifest>" in (
+      tempString1 := __assign_7;
+      __assign_7
+    ) else let __assign_8 = source in (
+      tempString1 := __assign_8;
+      __assign_8
     ));
-    HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString (!tempString1)) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+    let label = !tempString1 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
   )
 )
 
-let providerTypeNamesForManifest = fun manifest sourceLabel -> try let __fallback_result_14 = (
+let providerTypeNamesForManifest = fun manifest sourceLabel -> try let __fallback_result_17 = (
   ignore (let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
-    | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_11 = HxArray.create () in (
-      ignore (HxArray.push __arr_11 (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry")));
-      __arr_11
+    | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_14 = HxArray.create () in (
+      ignore (HxArray.push __arr_14 (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry")));
+      __arr_14
     )))))
     | "ocaml-dynlink" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string)))))
-    | _ -> ignore (let message = (("unsupported backend kind `" ^ "<unsupported>") ^ "`" : string) in let tempString = ref ("" : string) in (
-      ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
-        tempString := __assign_7;
-        __assign_7
-      ) else let __assign_8 = (StringTools.trim (sourceLabel : string) : string) in (
-        tempString := __assign_8;
-        __assign_8
+    | _ -> ignore (let message = ("unsupported backend kind `" ^ "<unsupported>") ^ "`" in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if sourceLabel == HxString.hx_null_string then let __assign_9 = "" in (
+        tempString := __assign_9;
+        __assign_9
+      ) else let __assign_10 = let __call_arg_0_11 = sourceLabel in StringTools.trim __call_arg_0_11 in (
+        tempString := __assign_10;
+        __assign_10
       ));
-      let source = (!tempString : string) in let tempString1 = ref ("" : string) in (
-        ignore (if HxString.length source = 0 then let __assign_9 = ("<unknown-manifest>" : string) in (
-          tempString1 := __assign_9;
-          __assign_9
-        ) else let __assign_10 = (source : string) in (
-          tempString1 := __assign_10;
-          __assign_10
+      let source = !tempString in let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.length source = 0 then let __assign_12 = "<unknown-manifest>" in (
+          tempString1 := __assign_12;
+          __assign_12
+        ) else let __assign_13 = source in (
+          tempString1 := __assign_13;
+          __assign_13
         ));
-        let label = (!tempString1 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+        let label = !tempString1 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
       )
     )));
-  let __arr_12 = HxArray.create () in __arr_12
-) in Obj.magic __fallback_result_14 with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+  let __arr_15 = HxArray.create () in __arr_15
+) in Obj.magic __fallback_result_17 with
+  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
 
-let providerTypeNamesForManifestPath = fun manifestPath -> let tempString = ref ("" : string) in (
-  ignore (if manifestPath == Obj.magic (HxRuntime.hx_null) then let __assign_15 = ("" : string) in (
-    tempString := __assign_15;
-    __assign_15
-  ) else let __assign_16 = (StringTools.trim (manifestPath : string) : string) in (
-    tempString := __assign_16;
-    __assign_16
+let providerTypeNamesForManifestPath = fun manifestPath -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if manifestPath == HxString.hx_null_string then let __assign_18 = "" in (
+    tempString := __assign_18;
+    __assign_18
+  ) else let __assign_19 = let __call_arg_0_20 = manifestPath in StringTools.trim __call_arg_0_20 in (
+    tempString := __assign_19;
+    __assign_19
   ));
-  ignore (if HxString.length (!tempString) = 0 then ignore (let tempString1 = ref ("" : string) in (
-    ignore (if manifestPath == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("" : string) in (
-      tempString1 := __assign_17;
-      __assign_17
-    ) else let __assign_18 = (StringTools.trim (manifestPath : string) : string) in (
-      tempString1 := __assign_18;
-      __assign_18
-    ));
-    let source = (!tempString1 : string) in let tempString2 = ref ("" : string) in (
-      ignore (if HxString.length source = 0 then let __assign_19 = ("<unknown-manifest>" : string) in (
-        tempString2 := __assign_19;
-        __assign_19
-      ) else let __assign_20 = (source : string) in (
-        tempString2 := __assign_20;
-        __assign_20
+  let normalized = !tempString in (
+    ignore (if HxString.length normalized = 0 then ignore (let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if manifestPath == HxString.hx_null_string then let __assign_21 = "" in (
+        tempString1 := __assign_21;
+        __assign_21
+      ) else let __assign_22 = let __call_arg_0_23 = manifestPath in StringTools.trim __call_arg_0_23 in (
+        tempString1 := __assign_22;
+        __assign_22
       ));
-      let label = (!tempString2 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path is required")) ["Dynamic"; "String"]
-    )
-  )) else ());
-  ignore (if not (HxFileSystem.exists (!tempString)) then ignore (let tempString3 = ref ("" : string) in (
-    ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_21 = ("" : string) in (
-      tempString3 := __assign_21;
-      __assign_21
-    ) else let __assign_22 = (StringTools.trim (!tempString : string) : string) in (
-      tempString3 := __assign_22;
-      __assign_22
-    ));
-    let source = (!tempString3 : string) in let tempString4 = ref ("" : string) in (
-      ignore (if HxString.length source = 0 then let __assign_23 = ("<unknown-manifest>" : string) in (
-        tempString4 := __assign_23;
-        __assign_23
-      ) else let __assign_24 = (source : string) in (
-        tempString4 := __assign_24;
-        __assign_24
-      ));
-      let label = (!tempString4 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path not found")) ["Dynamic"; "String"]
-    )
-  )) else ());
-  ignore (if HxFileSystem.isDirectory (!tempString) then ignore (let tempString5 = ref ("" : string) in (
-    ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
-      tempString5 := __assign_25;
-      __assign_25
-    ) else let __assign_26 = (StringTools.trim (!tempString : string) : string) in (
-      tempString5 := __assign_26;
-      __assign_26
-    ));
-    let source = (!tempString5 : string) in let tempString6 = ref ("" : string) in (
-      ignore (if HxString.length source = 0 then let __assign_27 = ("<unknown-manifest>" : string) in (
-        tempString6 := __assign_27;
+      let source = !tempString1 in let tempString2 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.length source = 0 then let __assign_24 = "<unknown-manifest>" in (
+          tempString2 := __assign_24;
+          __assign_24
+        ) else let __assign_25 = source in (
+          tempString2 := __assign_25;
+          __assign_25
+        ));
+        let label = !tempString2 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path is required")) ["Dynamic"]
+      )
+    )) else ());
+    ignore (if not (HxFileSystem.exists (normalized : string)) then ignore (let tempString3 = ref (HxString.hx_null_string : string) in (
+      ignore (if normalized == HxString.hx_null_string then let __assign_26 = "" in (
+        tempString3 := __assign_26;
+        __assign_26
+      ) else let __assign_27 = let __call_arg_0_28 = normalized in StringTools.trim __call_arg_0_28 in (
+        tempString3 := __assign_27;
         __assign_27
-      ) else let __assign_28 = (source : string) in (
-        tempString6 := __assign_28;
-        __assign_28
       ));
-      let label = (!tempString6 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path must point to a file")) ["Dynamic"; "String"]
-    )
-  )) else ());
-  let tempString7 = ref ("" : string) in (
-    ignore (try let __assign_29 = (HxFile.getContent (!tempString : string) : string) in (
-      tempString7 := __assign_29;
-      __assign_29
-    ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_30 -> raise (HxRuntime.Hx_return __ret_30)
-      | HxRuntime.Hx_exception (__exn_v_31, __exn_tags_32) -> if true then let error = (if HxRuntime.tags_has __exn_tags_32 "haxe.Exception" then Obj.obj __exn_v_31 else Obj.magic (Haxe_ValueException.create __exn_v_31 (Obj.magic (HxRuntime.hx_null)) __exn_v_31) : Haxe_Exception.t) in (
-        ignore error;
-        let message = ("failed to read manifest: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string) in let tempString8 = ref ("" : string) in (
-          ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_33 = ("" : string) in (
-            tempString8 := __assign_33;
-            __assign_33
-          ) else let __assign_34 = (StringTools.trim (!tempString : string) : string) in (
-            tempString8 := __assign_34;
-            __assign_34
-          ));
-          let source = (!tempString8 : string) in let tempString9 = ref ("" : string) in (
-            ignore (if HxString.length source = 0 then let __assign_35 = ("<unknown-manifest>" : string) in (
-              tempString9 := __assign_35;
-              __assign_35
-            ) else let __assign_36 = (source : string) in (
-              tempString9 := __assign_36;
+      let source = !tempString3 in let tempString4 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.length source = 0 then let __assign_29 = "<unknown-manifest>" in (
+          tempString4 := __assign_29;
+          __assign_29
+        ) else let __assign_30 = source in (
+          tempString4 := __assign_30;
+          __assign_30
+        ));
+        let label = !tempString4 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path not found")) ["Dynamic"]
+      )
+    )) else ());
+    ignore (if HxFileSystem.isDirectory (normalized : string) then ignore (let tempString5 = ref (HxString.hx_null_string : string) in (
+      ignore (if normalized == HxString.hx_null_string then let __assign_31 = "" in (
+        tempString5 := __assign_31;
+        __assign_31
+      ) else let __assign_32 = let __call_arg_0_33 = normalized in StringTools.trim __call_arg_0_33 in (
+        tempString5 := __assign_32;
+        __assign_32
+      ));
+      let source = !tempString5 in let tempString6 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxString.length source = 0 then let __assign_34 = "<unknown-manifest>" in (
+          tempString6 := __assign_34;
+          __assign_34
+        ) else let __assign_35 = source in (
+          tempString6 := __assign_35;
+          __assign_35
+        ));
+        let label = !tempString6 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ "path must point to a file")) ["Dynamic"]
+      )
+    )) else ());
+    let tempString7 = ref (HxString.hx_null_string : string) in (
+      ignore (try let __assign_45 = (HxFile.getContent (normalized : string) : string) in (
+        tempString7 := __assign_45;
+        __assign_45
+      ) with
+        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_41 -> raise (HxRuntime.Hx_return __ret_41)
+        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_42, __exn_tags_43) -> if true then let error = (if HxRuntime.tags_has __exn_tags_43 "haxe.Exception" then Obj.obj __exn_v_42 else Obj.magic (Haxe_ValueException.create __exn_v_42 (Obj.magic (HxRuntime.hx_null)) __exn_v_42) : Haxe_Exception.t) in (
+          ignore error;
+          let message = "failed to read manifest: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in let tempString8 = ref (HxString.hx_null_string : string) in (
+            ignore (if normalized == HxString.hx_null_string then let __assign_36 = "" in (
+              tempString8 := __assign_36;
               __assign_36
+            ) else let __assign_37 = let __call_arg_0_38 = normalized in StringTools.trim __call_arg_0_38 in (
+              tempString8 := __assign_37;
+              __assign_37
             ));
-            let label = (!tempString9 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+            let source = !tempString8 in let tempString9 = ref (HxString.hx_null_string : string) in (
+              ignore (if HxString.length source = 0 then let __assign_39 = "<unknown-manifest>" in (
+                tempString9 := __assign_39;
+                __assign_39
+              ) else let __assign_40 = source in (
+                tempString9 := __assign_40;
+                __assign_40
+              ));
+              let label = !tempString9 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+            )
           )
-        )
-      ) else HxRuntime.hx_throw_typed __exn_v_31 __exn_tags_32
-      | __exn_37 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_37) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_37) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_37)) : Haxe_Exception.t) in (
-        ignore error;
-        let message = ("failed to read manifest: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string) in let tempString8 = ref ("" : string) in (
-          ignore (if !tempString == Obj.magic (HxRuntime.hx_null) then let __assign_38 = ("" : string) in (
-            tempString8 := __assign_38;
-            __assign_38
-          ) else let __assign_39 = (StringTools.trim (!tempString : string) : string) in (
-            tempString8 := __assign_39;
-            __assign_39
-          ));
-          let source = (!tempString8 : string) in let tempString9 = ref ("" : string) in (
-            ignore (if HxString.length source = 0 then let __assign_40 = ("<unknown-manifest>" : string) in (
-              tempString9 := __assign_40;
-              __assign_40
-            ) else let __assign_41 = (source : string) in (
-              tempString9 := __assign_41;
-              __assign_41
+        ) else HxRuntime.hx_throw_typed __exn_v_42 __exn_tags_43
+        | __exn_44 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_44) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_44) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_44)) : Haxe_Exception.t) in (
+          ignore error;
+          let message = "failed to read manifest: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in let tempString8 = ref (HxString.hx_null_string : string) in (
+            ignore (if normalized == HxString.hx_null_string then let __assign_36 = "" in (
+              tempString8 := __assign_36;
+              __assign_36
+            ) else let __assign_37 = let __call_arg_0_38 = normalized in StringTools.trim __call_arg_0_38 in (
+              tempString8 := __assign_37;
+              __assign_37
             ));
-            let label = (!tempString9 : string) in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"; "String"]
+            let source = !tempString8 in let tempString9 = ref (HxString.hx_null_string : string) in (
+              ignore (if HxString.length source = 0 then let __assign_39 = "<unknown-manifest>" in (
+                tempString9 := __assign_39;
+                __assign_39
+              ) else let __assign_40 = source in (
+                tempString9 := __assign_40;
+                __assign_40
+              ));
+              let label = !tempString9 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
+            )
           )
-        )
-      ) else raise (__exn_37));
-    let manifest = Backend_plugin_BackendPluginManifestParser.parse (!tempString7 : string) (!tempString : string) in providerTypeNamesForManifest manifest (!tempString : string)
+        ) else raise (__exn_44));
+      let raw = (!tempString7 : string) in let manifest = Backend_plugin_BackendPluginManifestParser.parse (raw : string) (normalized : string) in providerTypeNamesForManifest manifest (normalized : string)
+    )
   )
 )

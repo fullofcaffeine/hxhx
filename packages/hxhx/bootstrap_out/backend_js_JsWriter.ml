@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable out : StringBuf.t; mutable indent : int; mutable unit : string }
 
-let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t) in (
+let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).indent <- __place_rhs_2;
@@ -16,7 +16,7 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
       (Obj.magic self : t).out <- __assign_3;
       __assign_3
     ));
-    let tempRight = ref ("" : string) in (
+    let tempRight = ref (HxString.hx_null_string : string) in (
       ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("  " : string) in (
         tempRight := __assign_4;
         __assign_4
@@ -33,7 +33,7 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = HxString.hx_null_string } : t)
 
 let pushIndent = fun self () -> ignore (ignore (let __place_receiver_7 = self in let __place_old_8 = (__place_receiver_7 : t).indent in let __place_rhs_9 = 1 in let __place_new_10 = HxInt.add __place_old_8 __place_rhs_9 in (
   (__place_receiver_7 : t).indent <- __place_new_10;
@@ -50,8 +50,8 @@ let writeln = fun self (line : string) -> ignore (ignore (let _g = ref 0 in let 
     ));
     StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr ((Obj.magic self : t).unit))
   )) done);
-  let tempString = ref ("" : string) in (
-    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_15 = ("" : string) in (
+  let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if line == HxString.hx_null_string then let __assign_15 = ("" : string) in (
       tempString := __assign_15;
       __assign_15
     ) else let __assign_16 = (line : string) in (

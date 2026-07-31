@@ -6,10 +6,10 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable projectedName : string; mutable field : TyFieldInfo.t; mutable canonicalIdentity : string }
 
-let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = ""; field = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t) in (
+let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
-    ignore (if projectedName2 == Obj.magic (HxRuntime.hx_null) || HxString.length projectedName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires a transport name") ["Dynamic"; "String"]) else ());
-    ignore (if field2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires exact field information") ["Dynamic"; "String"]) else ());
+    ignore (if projectedName2 == HxString.hx_null_string || HxString.length projectedName2 = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires a transport name") ["Dynamic"]) else ());
+    ignore (if field2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires exact field information") ["Dynamic"]) else ());
     ignore (let __assign_1 = (projectedName2 : string) in (
       (Obj.magic self : t).projectedName <- __assign_1;
       __assign_1
@@ -36,7 +36,7 @@ let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.class
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = ""; field = Obj.magic (HxRuntime.hx_null); canonicalIdentity = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic (HxRuntime.hx_null); canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProjectedName = fun self () -> (Obj.magic self : t).projectedName
 

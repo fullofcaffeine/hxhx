@@ -22,194 +22,236 @@ let isDuplicateTypeName = fun self (name : string) -> Backend_source_PhpProgramR
 
 let isInterfaceTypeName = fun self (name : string) -> Backend_source_PhpProgramRenderFacts.isInterfaceTypeName (Obj.magic ((Obj.magic self : t).programFacts)) (name : string)
 
-let findClassBaseType = fun self (candidates : string HxArray.t) -> try let __fallback_result_20 = let _g = ref 0 in (
+let findClassBaseType = fun self (candidates : string HxArray.t) -> try let __fallback_result_25 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length candidates do ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-    ignore (let __old_17 = !_g in let __new_18 = HxInt.add __old_17 1 in (
-      ignore (_g := __new_18);
-      __new_18
+    ignore (let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
+      ignore (_g := __new_21);
+      __new_21
     ));
-    if candidate != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "classBaseTypes")) candidate then raise (HxRuntime.Hx_return (Obj.repr (HxMap.get_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "classBaseTypes")) candidate : string))) else ()
+    let tempRight = ref (false : bool) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "classBaseTypes")) in (
+      ignore (let __assign_22 = HxMap.exists_string (Obj.magic _this) (candidate : string) in (
+        tempRight := __assign_22;
+        __assign_22
+      ));
+      if candidate != HxString.hx_null_string && !tempRight then ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "classBaseTypes")) in (
+        ignore (let __assign_23 = Obj.magic (HxMap.get_string (Obj.magic _this) (candidate : string) : string) in (
+          tempResult := __assign_23;
+          __assign_23
+        ));
+        raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+      )) else ()
+    )
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_20 with
-  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
+) in Obj.magic __fallback_result_25 with
+  | HxRuntime.Hx_return __ret_24 -> Obj.obj __ret_24
 
-let hasEnumOwner = fun self (candidates : string HxArray.t) -> try let __fallback_result_30 = let _g = ref 0 in (
+let hasEnumOwner = fun self (candidates : string HxArray.t) -> try let __fallback_result_38 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length candidates do ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-    ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
-      ignore (_g := __new_28);
-      __new_28
+    ignore (let __old_34 = !_g in let __new_35 = HxInt.add __old_34 1 in (
+      ignore (_g := __new_35);
+      __new_35
     ));
-    if candidate != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumConstructorsByEnum")) candidate then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+    let tempRight = ref (false : bool) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumConstructorsByEnum")) in (
+      ignore (let __assign_36 = HxMap.exists_string (Obj.magic _this) (candidate : string) in (
+        tempRight := __assign_36;
+        __assign_36
+      ));
+      if candidate != HxString.hx_null_string && !tempRight then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+    )
   )) done);
   false
-) in Obj.magic __fallback_result_30 with
-  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
+) in Obj.magic __fallback_result_38 with
+  | HxRuntime.Hx_return __ret_37 -> Obj.obj __ret_37
 
-let findEnumAbstractValue = fun self (candidates : string HxArray.t) -> try let __fallback_result_35 = let _g = ref 0 in (
+let findEnumAbstractValue = fun self (candidates : string HxArray.t) -> try let __fallback_result_45 = let _g = ref 0 in (
   ignore (try while !_g < HxArray.length candidates do try ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-    ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
-      ignore (_g := __new_32);
-      __new_32
+    ignore (let __old_39 = !_g in let __new_40 = HxInt.add __old_39 1 in (
+      ignore (_g := __new_40);
+      __new_40
     ));
-    ignore (if candidate == Obj.magic (HxRuntime.hx_null) || HxMap.exists_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "ambiguousEnumAbstractValues")) candidate then raise (HxRuntime.Hx_continue) else ());
-    let fact = HxMap.get_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumAbstractValues")) candidate in if fact != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_33 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_33 "typeName" (Obj.repr (Obj.obj (HxAnon.get fact "typeName"))));
-      ignore (HxAnon.set __anon_33 "fieldName" (Obj.repr (Obj.obj (HxAnon.get fact "fieldName"))));
-      __anon_33
-    )))) else ()
+    let tempRight = ref (false : bool) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "ambiguousEnumAbstractValues")) in (
+      ignore (let __assign_41 = HxMap.exists_string (Obj.magic _this) (candidate : string) in (
+        tempRight := __assign_41;
+        __assign_41
+      ));
+      ignore (if candidate == HxString.hx_null_string || !tempRight then raise (HxRuntime.Hx_continue) else ());
+      let tempMaybePhpProgramEnumAbstractValueFact = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumAbstractValues")) in (
+        ignore (let __assign_42 = Obj.magic (HxMap.get_string (Obj.magic _this) (candidate : string)) in (
+          tempMaybePhpProgramEnumAbstractValueFact := __assign_42;
+          __assign_42
+        ));
+        let fact = Obj.magic (!tempMaybePhpProgramEnumAbstractValueFact) in if fact != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_43 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_43 "typeName" (Obj.repr (Obj.obj (HxAnon.get fact "typeName"))));
+          ignore (HxAnon.set __anonymous_value_43 "fieldName" (Obj.repr (Obj.obj (HxAnon.get fact "fieldName"))));
+          __anonymous_value_43
+        )))) else ()
+      )
+    )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_35 with
-  | HxRuntime.Hx_return __ret_34 -> Obj.magic __ret_34
+) in Obj.magic __fallback_result_45 with
+  | HxRuntime.Hx_return __ret_44 -> Obj.magic __ret_44
 
-let findInner = fun maps candidates -> try let __fallback_result_43 = (
+let findInner = fun maps candidates -> try let __fallback_result_53 = (
   ignore (if maps == Obj.magic (HxRuntime.hx_null) || candidates == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length candidates do ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-      ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
-        ignore (_g := __new_41);
-        __new_41
+      ignore (let __old_50 = !_g in let __new_51 = HxInt.add __old_50 1 in (
+        ignore (_g := __new_51);
+        __new_51
       ));
-      if candidate != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string maps candidate then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxMap.get_string maps candidate)))) else ()
+      if candidate != HxString.hx_null_string && HxMap.exists_string (Obj.magic maps) (candidate : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxMap.get_string (Obj.magic maps) (candidate : string))))) else ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic __fallback_result_43 with
-  | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
+) in Obj.magic __fallback_result_53 with
+  | HxRuntime.Hx_return __ret_52 -> Obj.obj __ret_52
 
-let hasInstanceMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string methods name
+let hasInstanceMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic methods) (name : string)
 
-let findInstanceMethodArguments = fun self (candidates : string HxArray.t) (name : string) -> try let __fallback_result_10 = let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceMethodArgumentsByType"))) (Obj.magic candidates)) in (
+let findInstanceMethodArguments = fun self (candidates : string HxArray.t) (name : string) -> try let __fallback_result_13 = let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceMethodArgumentsByType"))) (Obj.magic candidates)) in (
   ignore (if methods == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let arguments = Obj.magic (HxMap.get_string methods name) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
-    ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempResult := __assign_7;
-      __assign_7
-    ) else let __assign_8 = Obj.magic (Obj.magic (HxArray.copy arguments)) in (
-      tempResult := __assign_8;
-      __assign_8
+  let arguments = Obj.magic (HxMap.get_string (Obj.magic methods) (name : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
+    ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempResult := __assign_10;
+      __assign_10
+    ) else let __assign_11 = Obj.magic (Obj.magic (HxArray.copy arguments)) in (
+      tempResult := __assign_11;
+      __assign_11
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_13 with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
-let hasInstanceField = fun self (candidates : string HxArray.t) (name : string) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceFieldsByType"))) (Obj.magic candidates)) in fields != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string fields name
+let hasInstanceField = fun self (candidates : string HxArray.t) (name : string) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceFieldsByType"))) (Obj.magic candidates)) in fields != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic fields) (name : string)
 
 let findInstanceFieldType = fun self (candidates : string HxArray.t) (name : string) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceFieldTypeHintsByType"))) (Obj.magic candidates)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if fields == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_11;
-    __assign_11
-  ) else let __assign_12 = Obj.magic (HxMap.get_string fields name : string) in (
-    tempResult := __assign_12;
-    __assign_12
-  ));
-  !tempResult
-)
-
-let hasDynamicMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "dynamicMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string methods name
-
-let hasStaticMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "staticMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string methods name
-
-let findGenericStaticFunction = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "genericStaticFunctionsByType"))) (Obj.magic candidates)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t) in (
-  ignore (if methods == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if fields == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_14;
+    __assign_14
+  ) else let __assign_15 = Obj.magic (HxMap.get_string (Obj.magic fields) (name : string) : string) in (
     tempResult := __assign_15;
     __assign_15
-  ) else let __assign_16 = Obj.magic (Obj.magic (HxMap.get_string methods name)) in (
-    tempResult := __assign_16;
-    __assign_16
   ));
   !tempResult
 )
 
-let hasStaticCallableField = fun self (candidates : string HxArray.t) (name : string) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "staticCallableFieldsByType"))) (Obj.magic candidates)) in fields != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string fields name
+let hasDynamicMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "dynamicMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic methods) (name : string)
+
+let hasStaticMethod = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "staticMethodsByType"))) (Obj.magic candidates)) in methods != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic methods) (name : string)
+
+let findGenericStaticFunction = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "genericStaticFunctionsByType"))) (Obj.magic candidates)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t) in (
+  ignore (if methods == Obj.magic (HxRuntime.hx_null) then let __assign_18 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_18;
+    __assign_18
+  ) else let __assign_19 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic methods) (name : string))) in (
+    tempResult := __assign_19;
+    __assign_19
+  ));
+  !tempResult
+)
+
+let hasStaticCallableField = fun self (candidates : string HxArray.t) (name : string) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "staticCallableFieldsByType"))) (Obj.magic candidates)) in fields != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic fields) (name : string)
 
 let findStringExtensionOwner = fun self (candidates : string HxArray.t) (name : string) -> let methods = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "stringExtensionMethodsByClass"))) (Obj.magic candidates)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if methods == Obj.magic (HxRuntime.hx_null) then let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_21;
-    __assign_21
-  ) else let __assign_22 = Obj.magic (HxMap.get_string methods name : string) in (
-    tempResult := __assign_22;
-    __assign_22
+  ignore (if methods == Obj.magic (HxRuntime.hx_null) then let __assign_26 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_26;
+    __assign_26
+  ) else let __assign_27 = Obj.magic (HxMap.get_string (Obj.magic methods) (name : string) : string) in (
+    tempResult := __assign_27;
+    __assign_27
   ));
   !tempResult
 )
 
-let findOverloads = fun maps candidates name -> try let __fallback_result_39 = let methods = Obj.magic (findInner (Obj.magic maps) (Obj.magic candidates)) in (
+let findOverloads = fun maps candidates name -> try let __fallback_result_49 = let methods = Obj.magic (findInner (Obj.magic maps) (Obj.magic candidates)) in (
   ignore (if methods == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let overloads = Obj.magic (HxMap.get_string methods name) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
-    ignore (if overloads == Obj.magic (HxRuntime.hx_null) then let __assign_36 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempResult := __assign_36;
-      __assign_36
-    ) else let __assign_37 = Obj.magic (Obj.magic (HxArray.copy overloads)) in (
-      tempResult := __assign_37;
-      __assign_37
+  let overloads = Obj.magic (HxMap.get_string (Obj.magic methods) (name : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
+    ignore (if overloads == Obj.magic (HxRuntime.hx_null) then let __assign_46 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempResult := __assign_46;
+      __assign_46
+    ) else let __assign_47 = Obj.magic (Obj.magic (HxArray.copy overloads)) in (
+      tempResult := __assign_47;
+      __assign_47
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_39 with
-  | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
+) in Obj.magic __fallback_result_49 with
+  | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48
 
 let findStaticOverloads = fun self (candidates : string HxArray.t) (name : string) -> findOverloads (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "staticOverloadsByType"))) (Obj.magic candidates) (name : string)
 
 let findInstanceOverloads = fun self (candidates : string HxArray.t) (name : string) -> findOverloads (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceOverloadsByType"))) (Obj.magic candidates) (name : string)
 
-let copyStringMap = fun source -> let out = Obj.magic (HxMap.create_string ()) in let key = HxIterator.of_array (HxMap.keys_string source) in (
-  ignore (while (let __iter_44 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_44)) () do ignore (let key2 = ((let __iter_45 = key in fun () -> HxIterator.next (Obj.magic __iter_45)) () : string) in HxMap.set_string out key2 (HxMap.get_string source key2)) done);
+let copyStringMap = fun source -> let out = Obj.magic (HxMap.create_string ()) in let key = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic source))) in (
+  ignore (while (let __iter_54 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_54)) () do ignore (let key2 = ((let __iter_55 = key in fun () -> HxIterator.next (Obj.magic __iter_55)) () : string) in let value = HxMap.get_string (Obj.magic source) (key2 : string) in HxMap.set_string (Obj.magic out) (key2 : string) value) done);
   out
 )
 
 let copyInstanceFieldTypes = fun self (candidates : string HxArray.t) -> let fields = Obj.magic (findInner (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "instanceFieldTypeHintsByType"))) (Obj.magic candidates)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
-  ignore (if fields == Obj.magic (HxRuntime.hx_null) then let __assign_13 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_13;
-    __assign_13
-  ) else let __assign_14 = Obj.magic (Obj.magic (copyStringMap (Obj.magic fields))) in (
-    tempResult := __assign_14;
-    __assign_14
+  ignore (if fields == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_16;
+    __assign_16
+  ) else let __assign_17 = Obj.magic (Obj.magic (copyStringMap (Obj.magic fields))) in (
+    tempResult := __assign_17;
+    __assign_17
   ));
   !tempResult
 )
 
-let copyEnumConstructor = fun fact -> let __anon_46 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_46 "enumName" (Obj.repr (Obj.obj (HxAnon.get fact "enumName"))));
-  ignore (HxAnon.set __anon_46 "constructorName" (Obj.repr (Obj.obj (HxAnon.get fact "constructorName"))));
-  ignore (HxAnon.set __anon_46 "hasArguments" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasArguments"))));
-  __anon_46
+let copyEnumConstructor = fun fact -> let __anonymous_value_56 = HxAnon.create () in (
+  ignore (HxAnon.set __anonymous_value_56 "enumName" (Obj.repr (Obj.obj (HxAnon.get fact "enumName"))));
+  ignore (HxAnon.set __anonymous_value_56 "constructorName" (Obj.repr (Obj.obj (HxAnon.get fact "constructorName"))));
+  ignore (HxAnon.set __anonymous_value_56 "hasArguments" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get fact "hasArguments"))));
+  __anonymous_value_56
 )
 
-let findEnumConstructor = fun self (candidates : string HxArray.t) -> try let __fallback_result_26 = let _g = ref 0 in (
+let findEnumConstructor = fun self (candidates : string HxArray.t) -> try let __fallback_result_33 = let _g = ref 0 in (
   ignore (try while !_g < HxArray.length candidates do try ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-    ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
-      ignore (_g := __new_24);
-      __new_24
+    ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
+      ignore (_g := __new_29);
+      __new_29
     ));
-    ignore (if candidate == Obj.magic (HxRuntime.hx_null) || HxMap.exists_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "ambiguousEnumConstructors")) candidate then raise (HxRuntime.Hx_continue) else ());
-    let fact = HxMap.get_string (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumConstructors")) candidate in if fact != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (copyEnumConstructor fact))) else ()
+    let tempRight = ref (false : bool) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "ambiguousEnumConstructors")) in (
+      ignore (let __assign_30 = HxMap.exists_string (Obj.magic _this) (candidate : string) in (
+        tempRight := __assign_30;
+        __assign_30
+      ));
+      ignore (if candidate == HxString.hx_null_string || !tempRight then raise (HxRuntime.Hx_continue) else ());
+      let tempMaybePhpProgramEnumConstructorFact = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let _this = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).legacy) "enumConstructors")) in (
+        ignore (let __assign_31 = Obj.magic (HxMap.get_string (Obj.magic _this) (candidate : string)) in (
+          tempMaybePhpProgramEnumConstructorFact := __assign_31;
+          __assign_31
+        ));
+        let fact = Obj.magic (!tempMaybePhpProgramEnumConstructorFact) in if fact != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (copyEnumConstructor fact))) else ()
+      )
+    )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_26 with
-  | HxRuntime.Hx_return __ret_25 -> Obj.magic __ret_25
+) in Obj.magic __fallback_result_33 with
+  | HxRuntime.Hx_return __ret_32 -> Obj.magic __ret_32
 
-let normalize = fun value -> let tempResult = ref ("" : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_47 = ("" : string) in (
-    tempResult := __assign_47;
-    __assign_47
-  ) else let __assign_48 = (StringTools.trim (value : string) : string) in (
-    tempResult := __assign_48;
-    __assign_48
+let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if value == HxString.hx_null_string then let __assign_57 = "" in (
+    tempResult := __assign_57;
+    __assign_57
+  ) else let __assign_58 = let __call_arg_0_59 = value in StringTools.trim __call_arg_0_59 in (
+    tempResult := __assign_58;
+    __assign_58
   ));
   !tempResult
-)
+) : string)
 
 let create = fun programFacts2 modules classGraph2 legacy2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpProgramBodyRenderer"; programFacts = Obj.magic (HxRuntime.hx_null); moduleFactsByIdentity = Obj.magic (HxRuntime.hx_null); classGraph = Obj.magic (HxRuntime.hx_null); legacy = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
-    ignore (if programFacts2 == Obj.magic (HxRuntime.hx_null) || classGraph2 == Obj.magic (HxRuntime.hx_null) || legacy2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer requires complete program facts") ["Dynamic"; "String"]) else ());
-    ignore (if not (HxString.equals (Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) ()) (TypedBackendClassGraph.getProgramRevision (Obj.magic classGraph2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer received facts from different typed-program revisions") ["Dynamic"; "String"]) else ());
+    ignore (if programFacts2 == Obj.magic (HxRuntime.hx_null) || classGraph2 == Obj.magic (HxRuntime.hx_null) || legacy2 == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer requires complete program facts") ["Dynamic"]) else ());
+    ignore (if not (HxString.equals (Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) ()) (TypedBackendClassGraph.getProgramRevision (Obj.magic classGraph2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer received facts from different typed-program revisions") ["Dynamic"]) else ());
     ignore (let __assign_1 = Obj.magic programFacts2 in (
       (Obj.magic self : t).programFacts <- __assign_1;
       __assign_1
@@ -226,25 +268,31 @@ let create = fun programFacts2 modules classGraph2 legacy2 -> let self = ({ __hx
       (Obj.magic self : t).moduleFactsByIdentity <- __assign_4;
       __assign_4
     ));
-    ignore (if modules == Obj.magic (HxRuntime.hx_null) || HxArray.length modules = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer requires at least one exact module fact") ["Dynamic"; "String"]) else ());
+    ignore (if modules == Obj.magic (HxRuntime.hx_null) || HxArray.length modules = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer requires at least one exact module fact") ["Dynamic"]) else ());
     let _g = ref 0 in while !_g < HxArray.length modules do ignore (let input = HxArray.get (Obj.magic modules) (!_g) in (
       ignore (let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
         ignore (_g := __new_6);
         __new_6
       ));
-      ignore (if input == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input "facts") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer contains a null module fact") ["Dynamic"; "String"]) else ());
-      let moduleIdentity = (normalize (Obj.obj (HxAnon.get input "moduleIdentity") : string) : string) in (
-        ignore (if HxString.length moduleIdentity = 0 || not (HxString.equals (Backend_source_PhpModuleRenderFacts.getModuleIdentity (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ()) moduleIdentity) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer contains a mismatched module identity") ["Dynamic"; "String"]) else ());
-        ignore (if not (HxString.equals (Backend_source_PhpModuleRenderFacts.getProgramRevision (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ()) (Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP program renderer received module " ^ HxString.toStdString moduleIdentity) ^ " from a different typed program")) ["Dynamic"; "String"]) else ());
-        let previous = Obj.magic (HxMap.get_string ((Obj.magic self : t).moduleFactsByIdentity) moduleIdentity) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string ((Obj.magic self : t).moduleFactsByIdentity) moduleIdentity (Obj.obj (HxAnon.get input "facts"))) else ignore (if not (HxString.equals (Backend_source_PhpModuleRenderFacts.getCanonicalIdentity (Obj.magic previous) ()) (Backend_source_PhpModuleRenderFacts.getCanonicalIdentity (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program renderer contains conflicting module facts for " ^ HxString.toStdString moduleIdentity)) ["Dynamic"; "String"]) else ())
+      ignore (if input == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input "facts") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer contains a null module fact") ["Dynamic"]) else ());
+      let moduleIdentity = let __call_arg_0_7 = Obj.obj (HxAnon.get input "moduleIdentity") in normalize __call_arg_0_7 in (
+        ignore (if HxString.length moduleIdentity = 0 || not (HxString.equals (Backend_source_PhpModuleRenderFacts.getModuleIdentity (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ()) moduleIdentity) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer contains a mismatched module identity") ["Dynamic"]) else ());
+        ignore (if not (HxString.equals (Backend_source_PhpModuleRenderFacts.getProgramRevision (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ()) (Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("PHP program renderer received module " ^ HxString.toStdString moduleIdentity) ^ " from a different typed program")) ["Dynamic"]) else ());
+        let tempMaybePhpModuleRenderFacts = ref (Obj.magic (HxRuntime.hx_null) : Backend_source_PhpModuleRenderFacts.t) in let _this = Obj.magic ((Obj.magic self : t).moduleFactsByIdentity) in (
+          ignore (let __assign_8 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (moduleIdentity : string))) in (
+            tempMaybePhpModuleRenderFacts := __assign_8;
+            __assign_8
+          ));
+          let previous = Obj.magic (!tempMaybePhpModuleRenderFacts) in if previous == Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).moduleFactsByIdentity) in let value = Obj.magic (Obj.obj (HxAnon.get input "facts")) in HxMap.set_string (Obj.magic _this) (moduleIdentity : string) value) else ignore (if not (HxString.equals (Backend_source_PhpModuleRenderFacts.getCanonicalIdentity (Obj.magic previous) ()) (Backend_source_PhpModuleRenderFacts.getCanonicalIdentity (Obj.magic (Obj.obj (HxAnon.get input "facts"))) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program renderer contains conflicting module facts for " ^ HxString.toStdString moduleIdentity)) ["Dynamic"]) else ())
+        )
       )
     )) done
   )));
   self
 )
 
-let requireModuleFacts = fun self (moduleIdentity : string) -> let normalized = (normalize (moduleIdentity : string) : string) in let facts = Obj.magic (HxMap.get_string ((Obj.magic self : t).moduleFactsByIdentity) normalized) in (
-  ignore (if facts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program renderer cannot find exact module facts for " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
+let requireModuleFacts = fun self (moduleIdentity : string) -> let normalized = let __call_arg_0_9 = moduleIdentity in normalize __call_arg_0_9 in let _this = Obj.magic ((Obj.magic self : t).moduleFactsByIdentity) in let tempMaybePhpModuleRenderFacts = Obj.magic (HxMap.get_string (Obj.magic _this) (normalized : string)) in let facts = Obj.magic tempMaybePhpModuleRenderFacts in (
+  ignore (if facts == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("PHP program renderer cannot find exact module facts for " ^ HxString.toStdString normalized)) ["Dynamic"]) else ());
   facts
 )
 

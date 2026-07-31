@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable lookupIdentity : string; mutable observationRevision : string; mutable filePath : string; mutable selectedClassPathIndex : int; mutable usedSecondaryTypeFallback : bool }
 
-let create = fun lookupIdentity2 observationRevision2 filePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleResolution"; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false } : t) in (
+let create = fun lookupIdentity2 observationRevision2 filePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleResolution"; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (lookupIdentity2 : string) in (
       (Obj.magic self : t).lookupIdentity <- __assign_1;
@@ -24,17 +24,17 @@ let create = fun lookupIdentity2 observationRevision2 filePath2 selectedClassPat
       (__place_receiver_4 : t).selectedClassPathIndex <- __place_rhs_5;
       __place_rhs_5
     ));
-    let __assign_6 = usedSecondaryTypeFallback2 in (
-      (Obj.magic self : t).usedSecondaryTypeFallback <- __assign_6;
-      __assign_6
+    let __place_receiver_6 = self in let __place_rhs_7 = usedSecondaryTypeFallback2 in (
+      (__place_receiver_6 : t).usedSecondaryTypeFallback <- __place_rhs_7;
+      __place_rhs_7
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleResolution"; lookupIdentity = ""; observationRevision = ""; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleResolution"; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic (HxRuntime.hx_null); selectedClassPathIndex = 0; usedSecondaryTypeFallback = false } : t)
 
 let toOrigin = fun self (requestedModulePath : string) -> (
-  ignore (if (Obj.magic self : t).filePath == Obj.magic (HxRuntime.hx_null) || (Obj.magic self : t).selectedClassPathIndex < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing module resolution has no source origin") ["Dynamic"; "String"]) else ());
+  ignore (if (Obj.magic self : t).filePath == Obj.magic (HxRuntime.hx_null) || (Obj.magic self : t).selectedClassPathIndex < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing module resolution has no source origin") ["Dynamic"]) else ());
   CompilerModuleOrigin.create (requestedModulePath : string) ((Obj.magic self : t).selectedClassPathIndex) ((Obj.magic self : t).usedSecondaryTypeFallback) (Obj.magic (HxRuntime.hx_null))
 )

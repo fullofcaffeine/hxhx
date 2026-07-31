@@ -12,16 +12,16 @@ let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 -> 
       (Obj.magic self : t).declaration <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = requiresOwnerQualification2 in (
-      (Obj.magic self : t).requiresOwnerQualification <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_2 = self in let __place_rhs_3 = requiresOwnerQualification2 in (
+      (__place_receiver_2 : t).requiresOwnerQualification <- __place_rhs_3;
+      __place_rhs_3
     ));
-    ignore (let __assign_3 = Obj.magic extensionProvider2 in (
-      (Obj.magic self : t).extensionProvider <- __assign_3;
-      __assign_3
+    ignore (let __assign_4 = Obj.magic extensionProvider2 in (
+      (Obj.magic self : t).extensionProvider <- __assign_4;
+      __assign_4
     ));
-    ignore (if requiresOwnerQualification2 && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact static declaration") ["Dynamic"; "String"]) else ());
-    if extensionProvider2 != Obj.magic (HxRuntime.hx_null) && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "extension call resolution requires an exact static declaration") ["Dynamic"; "String"]) else ()
+    ignore (if requiresOwnerQualification2 && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "owner-qualified call resolution requires an exact static declaration") ["Dynamic"]) else ());
+    if extensionProvider2 != Obj.magic (HxRuntime.hx_null) && (declaration2 == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration2) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "extension call resolution requires an exact static declaration") ["Dynamic"]) else ()
   )));
   self
 )

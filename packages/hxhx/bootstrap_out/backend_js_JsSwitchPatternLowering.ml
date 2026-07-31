@@ -13,66 +13,66 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsSwi
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsSwitchPatternLowering" } : t)
 
-let lowerGuardBindingValue = fun name bindings -> try let __fallback_result_87 = (
+let lowerGuardBindingValue = fun name bindings -> try let __fallback_result_94 = (
   ignore (if bindings != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length bindings do ignore (let binding = HxArray.get (Obj.magic bindings) (!_g) in (
-    ignore (let __old_84 = !_g in let __new_85 = HxInt.add __old_84 1 in (
-      ignore (_g := __new_85);
-      __new_85
+    ignore (let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
+      ignore (_g := __new_91);
+      __new_91
     ));
     if HxString.equals (Obj.obj (HxAnon.get binding "name")) name then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get binding "expr") : string))) else ()
   )) done) else ());
-  Backend_js_JsNameMangler.identifier (name : string)
-) in Obj.magic __fallback_result_87 with
-  | HxRuntime.Hx_return __ret_86 -> Obj.obj __ret_86
+  let __call_arg_0_92 = name in Backend_js_JsNameMangler.identifier __call_arg_0_92
+) in Obj.magic __fallback_result_94 with
+  | HxRuntime.Hx_return __ret_93 -> Obj.obj __ret_93
 
 let copyBindings = fun bindings -> let out = Obj.magic (HxArray.create ()) in (
   ignore (if bindings != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length bindings do ignore (let binding = HxArray.get (Obj.magic bindings) (!_g) in (
-    ignore (let __old_97 = !_g in let __new_98 = HxInt.add __old_97 1 in (
-      ignore (_g := __new_98);
-      __new_98
+    ignore (let __old_104 = !_g in let __new_105 = HxInt.add __old_104 1 in (
+      ignore (_g := __new_105);
+      __new_105
     ));
-    HxArray.push out (let __anon_99 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_99 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
-      ignore (HxAnon.set __anon_99 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
-      __anon_99
+    HxArray.push out (let __anonymous_value_106 = HxAnon.create () in (
+      ignore (HxAnon.set __anonymous_value_106 "name" (Obj.repr (Obj.obj (HxAnon.get binding "name"))));
+      ignore (HxAnon.set __anonymous_value_106 "expr" (Obj.repr (Obj.obj (HxAnon.get binding "expr"))));
+      __anonymous_value_106
     ))
   )) done) else ());
   out
 )
 
-let mergeCommonBindings = fun existing next -> try let __fallback_result_96 = (
+let mergeCommonBindings = fun existing next -> try let __fallback_result_103 = (
   ignore (if existing == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (copyBindings (Obj.magic next))))) else ());
-  ignore (if next == Obj.magic (HxRuntime.hx_null) || HxArray.length existing <> HxArray.length next then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_88 = HxArray.create () in __arr_88)))) else ());
+  ignore (if next == Obj.magic (HxRuntime.hx_null) || HxArray.length existing <> HxArray.length next then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_95 = HxArray.create () in __arr_95)))) else ());
   let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length existing do ignore (let binding = HxArray.get (Obj.magic existing) (!_g) in (
-      ignore (let __old_89 = !_g in let __new_90 = HxInt.add __old_89 1 in (
-        ignore (_g := __new_90);
-        __new_90
+      ignore (let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
+        ignore (_g := __new_97);
+        __new_97
       ));
       let found = ref false in let _g2 = ref 0 in (
         ignore (try while !_g2 < HxArray.length next do try ignore (let candidate = HxArray.get (Obj.magic next) (!_g2) in (
-          ignore (let __old_91 = !_g2 in let __new_92 = HxInt.add __old_91 1 in (
-            ignore (_g2 := __new_92);
-            __new_92
+          ignore (let __old_98 = !_g2 in let __new_99 = HxInt.add __old_98 1 in (
+            ignore (_g2 := __new_99);
+            __new_99
           ));
           if HxString.equals (Obj.obj (HxAnon.get candidate "name")) (Obj.obj (HxAnon.get binding "name")) && HxString.equals (Obj.obj (HxAnon.get candidate "expr")) (Obj.obj (HxAnon.get binding "expr")) then ignore ((
-            ignore (let __assign_93 = true in (
-              found := __assign_93;
-              __assign_93
+            ignore (let __assign_100 = true in (
+              found := __assign_100;
+              __assign_100
             ));
             raise (HxRuntime.Hx_break)
           )) else ()
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        ignore (if not (!found) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_94 = HxArray.create () in __arr_94)))) else ());
+        ignore (if not (!found) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_101 = HxArray.create () in __arr_101)))) else ());
         HxArray.push out binding
       )
     )) done);
     out
   )
-) in Obj.magic __fallback_result_96 with
-  | HxRuntime.Hx_return __ret_95 -> Obj.obj __ret_95
+) in Obj.magic __fallback_result_103 with
+  | HxRuntime.Hx_return __ret_102 -> Obj.obj __ret_102
 
 let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (match pattern with
@@ -92,11 +92,11 @@ let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxR
       tempResult := __assign_4;
       __assign_4
     )
-    | HxSwitchPattern.PBool _p0 -> let _g = _p0 in let value = _g in let tempString = ref ("" : string) in (
-      ignore (if value then let __assign_7 = ("true" : string) in (
+    | HxSwitchPattern.PBool _p0 -> let _g = _p0 in let value = _g in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if value then let __assign_7 = "true" in (
         tempString := __assign_7;
         __assign_7
-      ) else let __assign_8 = ("false" : string) in (
+      ) else let __assign_8 = "false" in (
         tempString := __assign_8;
         __assign_8
       ));
@@ -110,69 +110,61 @@ let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxR
       )
     )
     | HxSwitchPattern.PString _p0 -> let _g = (_p0 : string) in let value = (_g : string) in let __assign_12 = Obj.magic (let __anon_13 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_13 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (value : string)))));
-      ignore (HxAnon.set __anon_13 "bindings" (Obj.repr (let __arr_14 = HxArray.create () in __arr_14)));
+      ignore (HxAnon.set __anon_13 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (let __call_arg_0_14 = value in Backend_js_JsNameMangler.quoteString __call_arg_0_14))));
+      ignore (HxAnon.set __anon_13 "bindings" (Obj.repr (let __arr_15 = HxArray.create () in __arr_15)));
       __anon_13
     )) in (
       tempResult := __assign_12;
       __assign_12
     )
-    | HxSwitchPattern.PInt _p0 -> let _g = _p0 in let value = _g in let __assign_15 = Obj.magic (let __anon_16 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_16 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (string_of_int value))));
-      ignore (HxAnon.set __anon_16 "bindings" (Obj.repr (let __arr_17 = HxArray.create () in __arr_17)));
-      __anon_16
+    | HxSwitchPattern.PInt _p0 -> let _g = _p0 in let value = _g in let __assign_16 = Obj.magic (let __anon_17 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_17 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (string_of_int value))));
+      ignore (HxAnon.set __anon_17 "bindings" (Obj.repr (let __arr_18 = HxArray.create () in __arr_18)));
+      __anon_17
     )) in (
-      tempResult := __assign_15;
-      __assign_15
+      tempResult := __assign_16;
+      __assign_16
     )
-    | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_18 = Obj.magic (let __anon_19 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_19 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (name : string)))));
-      ignore (HxAnon.set __anon_19 "bindings" (Obj.repr (let __arr_20 = HxArray.create () in __arr_20)));
-      __anon_19
+    | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_19 = Obj.magic (let __anon_20 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_20 "cond" (Obj.repr ((HxString.toStdString scrutineeVar ^ " === ") ^ HxString.toStdString (let __call_arg_0_21 = name in Backend_js_JsNameMangler.quoteString __call_arg_0_21))));
+      ignore (HxAnon.set __anon_20 "bindings" (Obj.repr (let __arr_22 = HxArray.create () in __arr_22)));
+      __anon_20
     )) in (
-      tempResult := __assign_18;
-      __assign_18
+      tempResult := __assign_19;
+      __assign_19
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let args = Obj.magic _g1 in let __assign_21 = Obj.magic (lowerEnumExtract (name : string) (Obj.magic args) (scrutineeVar : string)) in (
-      tempResult := __assign_21;
-      __assign_21
+    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let args = Obj.magic _g1 in let __assign_23 = Obj.magic (lowerEnumExtract (name : string) (Obj.magic args) (scrutineeVar : string)) in (
+      tempResult := __assign_23;
+      __assign_23
     )
-    | HxSwitchPattern.PObject (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fieldNames = Obj.magic _g in let fieldPatterns = Obj.magic _g1 in let __assign_22 = Obj.magic (lowerObject (Obj.magic fieldNames) (Obj.magic fieldPatterns) (scrutineeVar : string)) in (
-      tempResult := __assign_22;
-      __assign_22
+    | HxSwitchPattern.PObject (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fieldNames = Obj.magic _g in let fieldPatterns = Obj.magic _g1 in let __assign_24 = Obj.magic (lowerObject (Obj.magic fieldNames) (Obj.magic fieldPatterns) (scrutineeVar : string)) in (
+      tempResult := __assign_24;
+      __assign_24
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let inner = Obj.magic _g1 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let bindings = Obj.magic (copyBindings (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) in (
-      ignore (HxArray.push bindings (let __anon_23 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_23 "name" (Obj.repr name));
-        ignore (HxAnon.set __anon_23 "expr" (Obj.repr scrutineeVar));
-        __anon_23
+      ignore (HxArray.push bindings (let __anonymous_value_25 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_25 "name" (Obj.repr name));
+        ignore (HxAnon.set __anonymous_value_25 "expr" (Obj.repr scrutineeVar));
+        __anonymous_value_25
       )));
-      let __assign_24 = Obj.magic (let __anon_25 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_25 "cond" (Obj.repr (Obj.obj (HxAnon.get lowered "cond"))));
-        ignore (HxAnon.set __anon_25 "bindings" (Obj.repr bindings));
-        __anon_25
+      let __assign_26 = Obj.magic (let __anon_27 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_27 "cond" (Obj.repr (Obj.obj (HxAnon.get lowered "cond"))));
+        ignore (HxAnon.set __anon_27 "bindings" (Obj.repr bindings));
+        __anon_27
       )) in (
-        tempResult := __assign_24;
-        __assign_24
+        tempResult := __assign_26;
+        __assign_26
       )
     )
-    | HxSwitchPattern.PArray _p0 -> let _g = Obj.magic _p0 in let items = Obj.magic _g in let __assign_26 = Obj.magic (lowerArray (Obj.magic items) (scrutineeVar : string)) in (
-      tempResult := __assign_26;
-      __assign_26
-    )
-    | HxSwitchPattern.PExtractor (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let extractorText = (_g : string) in let resultPattern = Obj.magic _g1 in let __assign_27 = Obj.magic (lowerExtractor (extractorText : string) (Obj.magic resultPattern) (scrutineeVar : string)) in (
-      tempResult := __assign_27;
-      __assign_27
-    )
-    | HxSwitchPattern.PLengthGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = _p2 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let length = _g2 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = ((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ ".length === ") ^ string_of_int length : string) in let __assign_28 = Obj.magic (let __anon_29 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_29 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
-      ignore (HxAnon.set __anon_29 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-      __anon_29
-    )) in (
+    | HxSwitchPattern.PArray _p0 -> let _g = Obj.magic _p0 in let items = Obj.magic _g in let __assign_28 = Obj.magic (lowerArray (Obj.magic items) (scrutineeVar : string)) in (
       tempResult := __assign_28;
       __assign_28
     )
-    | HxSwitchPattern.PStartsWithGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = (_p2 : string) in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let prefix = (_g2 : string) in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = (((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ ".startsWith(") ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (prefix : string))) ^ ")" : string) in let __assign_30 = Obj.magic (let __anon_31 = HxAnon.create () in (
+    | HxSwitchPattern.PExtractor (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let extractorText = (_g : string) in let resultPattern = Obj.magic _g1 in let __assign_29 = Obj.magic (lowerExtractor (extractorText : string) (Obj.magic resultPattern) (scrutineeVar : string)) in (
+      tempResult := __assign_29;
+      __assign_29
+    )
+    | HxSwitchPattern.PLengthGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = _p2 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let length = _g2 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = (HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ ".length === ") ^ string_of_int length in let __assign_30 = Obj.magic (let __anon_31 = HxAnon.create () in (
       ignore (HxAnon.set __anon_31 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
       ignore (HxAnon.set __anon_31 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
       __anon_31
@@ -180,223 +172,231 @@ let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxR
       tempResult := __assign_30;
       __assign_30
     )
-    | HxSwitchPattern.PIntEqualsGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = _p2 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let value = _g2 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = ((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ " === ") ^ HxString.toStdString (string_of_int value) : string) in let __assign_32 = Obj.magic (let __anon_33 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_33 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
-      ignore (HxAnon.set __anon_33 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-      __anon_33
+    | HxSwitchPattern.PStartsWithGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = (_p2 : string) in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let prefix = (_g2 : string) in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = ((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ ".startsWith(") ^ HxString.toStdString (let __call_arg_0_32 = prefix in Backend_js_JsNameMangler.quoteString __call_arg_0_32)) ^ ")" in let __assign_33 = Obj.magic (let __anon_34 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_34 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
+      ignore (HxAnon.set __anon_34 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+      __anon_34
     )) in (
-      tempResult := __assign_32;
-      __assign_32
+      tempResult := __assign_33;
+      __assign_33
     )
-    | HxSwitchPattern.PIntCompareGuard (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = (_p2 : string) in let _g3 = _p3 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let op = (_g2 : string) in let value = _g3 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = ((((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (string_of_int value) : string) in let __assign_34 = Obj.magic (let __anon_35 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_35 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
-      ignore (HxAnon.set __anon_35 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-      __anon_35
+    | HxSwitchPattern.PIntEqualsGuard (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = _p2 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let value = _g2 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = (HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ " === ") ^ HxString.toStdString (string_of_int value) in let __assign_35 = Obj.magic (let __anon_36 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_36 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
+      ignore (HxAnon.set __anon_36 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+      __anon_36
     )) in (
-      tempResult := __assign_34;
-      __assign_34
+      tempResult := __assign_35;
+      __assign_35
+    )
+    | HxSwitchPattern.PIntCompareGuard (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = (_p2 : string) in let _g3 = _p3 in let inner = Obj.magic _g in let bindingName = (_g1 : string) in let op = (_g2 : string) in let value = _g3 in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let guardCond = (((HxString.toStdString (lowerGuardBindingValue (bindingName : string) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings")))) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (string_of_int value) in let __assign_37 = Obj.magic (let __anon_38 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_38 "cond" (Obj.repr (((("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && (") ^ HxString.toStdString guardCond) ^ ")")));
+      ignore (HxAnon.set __anon_38 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+      __anon_38
+    )) in (
+      tempResult := __assign_37;
+      __assign_37
     )
     | HxSwitchPattern.PParsedIntSwitchGuard (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       ignore _p2;
       ignore _p3;
-      let inner = Obj.magic _g in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let __assign_36 = Obj.magic (let __anon_37 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_37 "cond" (Obj.repr (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && false")));
-        ignore (HxAnon.set __anon_37 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-        __anon_37
+      let inner = Obj.magic _g in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let __assign_39 = Obj.magic (let __anon_40 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_40 "cond" (Obj.repr (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && false")));
+        ignore (HxAnon.set __anon_40 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+        __anon_40
       )) in (
-        tempResult := __assign_36;
-        __assign_36
+        tempResult := __assign_39;
+        __assign_39
       )
     )
-    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let __assign_38 = Obj.magic (let __anon_39 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_39 "cond" (Obj.repr (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && false")));
-      ignore (HxAnon.set __anon_39 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-      __anon_39
+    | HxSwitchPattern.PUnsupportedGuard _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let lowered = lower (Obj.magic inner) (scrutineeVar : string) in let __assign_41 = Obj.magic (let __anon_42 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_42 "cond" (Obj.repr (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") && false")));
+      ignore (HxAnon.set __anon_42 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+      __anon_42
     )) in (
-      tempResult := __assign_38;
-      __assign_38
+      tempResult := __assign_41;
+      __assign_41
     )
-    | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_40 = Obj.magic (let __anon_41 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_41 "cond" (Obj.repr "true"));
-      ignore (HxAnon.set __anon_41 "bindings" (Obj.repr (let __arr_42 = HxArray.create () in (
-        ignore (HxArray.push __arr_42 (let __anon_43 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_43 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_43 "expr" (Obj.repr scrutineeVar));
-          __anon_43
+    | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_43 = Obj.magic (let __anon_44 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_44 "cond" (Obj.repr "true"));
+      ignore (HxAnon.set __anon_44 "bindings" (Obj.repr (let __arr_45 = HxArray.create () in (
+        ignore (HxArray.push __arr_45 (let __anonymous_value_46 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_46 "name" (Obj.repr name));
+          ignore (HxAnon.set __anonymous_value_46 "expr" (Obj.repr scrutineeVar));
+          __anonymous_value_46
         )));
-        __arr_42
+        __arr_45
       ))));
-      __anon_41
+      __anon_44
     )) in (
-      tempResult := __assign_40;
-      __assign_40
+      tempResult := __assign_43;
+      __assign_43
     )
     | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let patterns = Obj.magic _g in let parts = Obj.magic (HxArray.create ()) in let commonBindings = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : Obj.t HxArray.t) in let _g2 = ref 0 in (
       ignore (while !_g2 < HxArray.length patterns do ignore (let p = Obj.magic (HxArray.get (Obj.magic patterns) (!_g2)) in (
-        ignore (let __old_44 = !_g2 in let __new_45 = HxInt.add __old_44 1 in (
-          ignore (_g2 := __new_45);
-          __new_45
+        ignore (let __old_47 = !_g2 in let __new_48 = HxInt.add __old_47 1 in (
+          ignore (_g2 := __new_48);
+          __new_48
         ));
         let lowered = lower (Obj.magic p) (scrutineeVar : string) in (
           ignore (HxArray.push parts (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ")"));
-          let __assign_46 = Obj.magic (Obj.magic (mergeCommonBindings (Obj.magic (!commonBindings)) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings"))))) in (
-            commonBindings := __assign_46;
-            __assign_46
+          let __assign_49 = Obj.magic (Obj.magic (mergeCommonBindings (Obj.magic (!commonBindings)) (Obj.magic (Obj.obj (HxAnon.get lowered "bindings"))))) in (
+            commonBindings := __assign_49;
+            __assign_49
           )
         )
       )) done);
-      let tempString1 = ref ("" : string) in (
-        ignore (if HxArray.length parts = 0 then let __assign_47 = ("false" : string) in (
-          tempString1 := __assign_47;
-          __assign_47
-        ) else let __assign_48 = (HxArray.join parts " || " (fun x -> x) : string) in (
-          tempString1 := __assign_48;
-          __assign_48
+      let tempString1 = ref (HxString.hx_null_string : string) in (
+        ignore (if HxArray.length parts = 0 then let __assign_50 = ("false" : string) in (
+          tempString1 := __assign_50;
+          __assign_50
+        ) else let __assign_51 = (HxArray.join parts " || " (fun x -> x) : string) in (
+          tempString1 := __assign_51;
+          __assign_51
         ));
         let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-          ignore (if !commonBindings == Obj.magic (HxRuntime.hx_null) then let __assign_49 = Obj.magic (let __arr_50 = HxArray.create () in __arr_50) in (
-            tempArray := __assign_49;
-            __assign_49
-          ) else let __assign_51 = Obj.magic (!commonBindings) in (
-            tempArray := __assign_51;
-            __assign_51
-          ));
-          let __assign_52 = Obj.magic (let __anon_53 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_53 "cond" (Obj.repr (!tempString1)));
-            ignore (HxAnon.set __anon_53 "bindings" (Obj.repr (!tempArray)));
-            __anon_53
-          )) in (
-            tempResult := __assign_52;
+          ignore (if !commonBindings == Obj.magic (HxRuntime.hx_null) then let __assign_52 = Obj.magic (let __arr_53 = HxArray.create () in __arr_53) in (
+            tempArray := __assign_52;
             __assign_52
+          ) else let __assign_54 = Obj.magic (!commonBindings) in (
+            tempArray := __assign_54;
+            __assign_54
+          ));
+          let __assign_55 = Obj.magic (let __anon_56 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_56 "cond" (Obj.repr (!tempString1)));
+            ignore (HxAnon.set __anon_56 "bindings" (Obj.repr (!tempArray)));
+            __anon_56
+          )) in (
+            tempResult := __assign_55;
+            __assign_55
           )
         )
       )
     ));
   Obj.magic (!tempResult)
 )
-and lowerEnumExtract = fun name args scrutineeVar -> let conds = Obj.magic (let __arr_54 = HxArray.create () in (
-  ignore (HxArray.push __arr_54 (HxString.toStdString scrutineeVar ^ " != null"));
-  ignore (HxArray.push __arr_54 (("typeof " ^ HxString.toStdString scrutineeVar) ^ " === \"object\""));
-  ignore (HxArray.push __arr_54 ((HxString.toStdString scrutineeVar ^ ".__hx_ctor === ") ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (name : string))));
-  ignore (HxArray.push __arr_54 (("Array.isArray(" ^ HxString.toStdString scrutineeVar) ^ ".__hx_params)"));
-  __arr_54
+and lowerEnumExtract = fun name args scrutineeVar -> let conds = Obj.magic (let __arr_57 = HxArray.create () in (
+  ignore (HxArray.push __arr_57 (HxString.toStdString scrutineeVar ^ " != null"));
+  ignore (HxArray.push __arr_57 (("typeof " ^ HxString.toStdString scrutineeVar) ^ " === \"object\""));
+  ignore (HxArray.push __arr_57 ((HxString.toStdString scrutineeVar ^ ".__hx_ctor === ") ^ HxString.toStdString (let __call_arg_0_58 = name in Backend_js_JsNameMangler.quoteString __call_arg_0_58)));
+  ignore (HxArray.push __arr_57 (("Array.isArray(" ^ HxString.toStdString scrutineeVar) ^ ".__hx_params)"));
+  __arr_57
 )) in let bindings = Obj.magic (HxArray.create ()) in (
-  ignore (if args != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = HxArray.length args in while !_g < _g1 do ignore (let i = let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
-    ignore (_g := __new_56);
-    __old_55
-  ) in let paramExpr = (((HxString.toStdString scrutineeVar ^ ".__hx_params[") ^ string_of_int i) ^ "]" : string) in let lowered = lower (Obj.magic (HxArray.get (Obj.magic args) i)) (paramExpr : string) in (
+  ignore (if args != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = HxArray.length args in while !_g < _g1 do ignore (let i = let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
+    ignore (_g := __new_60);
+    __old_59
+  ) in let paramExpr = ((HxString.toStdString scrutineeVar ^ ".__hx_params[") ^ string_of_int i) ^ "]" in let lowered = lower (Obj.magic (HxArray.get (Obj.magic args) i)) (paramExpr : string) in (
     ignore (if not (HxString.equals (Obj.obj (HxAnon.get lowered "cond")) "true") then ignore (HxArray.push conds (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ")")) else ());
     let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get lowered "bindings")) in while !_g2 < HxArray.length _g3 do ignore (let binding = HxArray.get (Obj.magic _g3) (!_g2) in (
-      ignore (let __old_57 = !_g2 in let __new_58 = HxInt.add __old_57 1 in (
-        ignore (_g2 := __new_58);
-        __new_58
+      ignore (let __old_61 = !_g2 in let __new_62 = HxInt.add __old_61 1 in (
+        ignore (_g2 := __new_62);
+        __new_62
       ));
       HxArray.push bindings binding
     )) done
   )) done) else ());
-  let __anon_59 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_59 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
-    ignore (HxAnon.set __anon_59 "bindings" (Obj.repr bindings));
-    __anon_59
+  let __anon_63 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_63 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
+    ignore (HxAnon.set __anon_63 "bindings" (Obj.repr bindings));
+    __anon_63
   )
 )
-and lowerObject = fun fieldNames fieldPatterns scrutineeVar -> let conds = Obj.magic (let __arr_60 = HxArray.create () in (
-  ignore (HxArray.push __arr_60 (HxString.toStdString scrutineeVar ^ " != null"));
-  ignore (HxArray.push __arr_60 (("typeof " ^ HxString.toStdString scrutineeVar) ^ " === \"object\""));
-  __arr_60
+and lowerObject = fun fieldNames fieldPatterns scrutineeVar -> let conds = Obj.magic (let __arr_64 = HxArray.create () in (
+  ignore (HxArray.push __arr_64 (HxString.toStdString scrutineeVar ^ " != null"));
+  ignore (HxArray.push __arr_64 (("typeof " ^ HxString.toStdString scrutineeVar) ^ " === \"object\""));
+  __arr_64
 )) in let bindings = Obj.magic (HxArray.create ()) in (
   ignore (if fieldNames != Obj.magic (HxRuntime.hx_null) && fieldPatterns != Obj.magic (HxRuntime.hx_null) then ignore (let tempNumber = ref (0 : int) in (
-    ignore (if HxArray.length fieldNames < HxArray.length fieldPatterns then let __assign_61 = HxArray.length fieldNames in (
-      tempNumber := __assign_61;
-      __assign_61
-    ) else let __assign_62 = HxArray.length fieldPatterns in (
-      tempNumber := __assign_62;
-      __assign_62
+    ignore (if HxArray.length fieldNames < HxArray.length fieldPatterns then let __assign_65 = HxArray.length fieldNames in (
+      tempNumber := __assign_65;
+      __assign_65
+    ) else let __assign_66 = HxArray.length fieldPatterns in (
+      tempNumber := __assign_66;
+      __assign_66
     ));
-    let count = !tempNumber in let _g = ref 0 in let _g1 = count in while !_g < _g1 do ignore (let i = let __old_63 = !_g in let __new_64 = HxInt.add __old_63 1 in (
-      ignore (_g := __new_64);
-      __old_63
-    ) in let fieldExpr = ((HxString.toStdString scrutineeVar ^ ".") ^ HxString.toStdString (Backend_js_JsNameMangler.identifier (HxArray.get (Obj.magic fieldNames) i : string)) : string) in let lowered = lower (Obj.magic (HxArray.get (Obj.magic fieldPatterns) i)) (fieldExpr : string) in (
+    let count = !tempNumber in let _g = ref 0 in let _g1 = count in while !_g < _g1 do ignore (let i = let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
+      ignore (_g := __new_68);
+      __old_67
+    ) in let fieldExpr = (HxString.toStdString scrutineeVar ^ ".") ^ HxString.toStdString (let __call_arg_0_69 = HxArray.get (Obj.magic fieldNames) i in Backend_js_JsNameMangler.identifier __call_arg_0_69) in let lowered = lower (Obj.magic (HxArray.get (Obj.magic fieldPatterns) i)) (fieldExpr : string) in (
       ignore (if not (HxString.equals (Obj.obj (HxAnon.get lowered "cond")) "true") then ignore (HxArray.push conds (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ")")) else ());
       let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get lowered "bindings")) in while !_g2 < HxArray.length _g3 do ignore (let binding = HxArray.get (Obj.magic _g3) (!_g2) in (
-        ignore (let __old_65 = !_g2 in let __new_66 = HxInt.add __old_65 1 in (
-          ignore (_g2 := __new_66);
-          __new_66
+        ignore (let __old_70 = !_g2 in let __new_71 = HxInt.add __old_70 1 in (
+          ignore (_g2 := __new_71);
+          __new_71
         ));
         HxArray.push bindings binding
       )) done
     )) done
   )) else ());
-  let __anon_67 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_67 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
-    ignore (HxAnon.set __anon_67 "bindings" (Obj.repr bindings));
-    __anon_67
+  let __anon_72 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_72 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
+    ignore (HxAnon.set __anon_72 "bindings" (Obj.repr bindings));
+    __anon_72
   )
 )
 and lowerArray = fun items scrutineeVar -> let tempNumber = ref (0 : int) in (
-  ignore (if items == Obj.magic (HxRuntime.hx_null) then let __assign_68 = 0 in (
-    tempNumber := __assign_68;
-    __assign_68
-  ) else let __assign_69 = HxArray.length items in (
-    tempNumber := __assign_69;
-    __assign_69
+  ignore (if items == Obj.magic (HxRuntime.hx_null) then let __assign_73 = 0 in (
+    tempNumber := __assign_73;
+    __assign_73
+  ) else let __assign_74 = HxArray.length items in (
+    tempNumber := __assign_74;
+    __assign_74
   ));
-  let count = !tempNumber in let conds = Obj.magic (let __arr_70 = HxArray.create () in (
-    ignore (HxArray.push __arr_70 (("Array.isArray(" ^ HxString.toStdString scrutineeVar) ^ ")"));
-    ignore (HxArray.push __arr_70 ((HxString.toStdString scrutineeVar ^ ".length === ") ^ string_of_int count));
-    __arr_70
+  let count = !tempNumber in let conds = Obj.magic (let __arr_75 = HxArray.create () in (
+    ignore (HxArray.push __arr_75 (("Array.isArray(" ^ HxString.toStdString scrutineeVar) ^ ")"));
+    ignore (HxArray.push __arr_75 ((HxString.toStdString scrutineeVar ^ ".length === ") ^ string_of_int count));
+    __arr_75
   )) in let bindings = Obj.magic (HxArray.create ()) in (
-    ignore (if items != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = HxArray.length items in while !_g < _g1 do ignore (let i = let __old_71 = !_g in let __new_72 = HxInt.add __old_71 1 in (
-      ignore (_g := __new_72);
-      __old_71
-    ) in let itemExpr = (((HxString.toStdString scrutineeVar ^ "[") ^ string_of_int i) ^ "]" : string) in let lowered = lower (Obj.magic (HxArray.get (Obj.magic items) i)) (itemExpr : string) in (
+    ignore (if items != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = HxArray.length items in while !_g < _g1 do ignore (let i = let __old_76 = !_g in let __new_77 = HxInt.add __old_76 1 in (
+      ignore (_g := __new_77);
+      __old_76
+    ) in let itemExpr = ((HxString.toStdString scrutineeVar ^ "[") ^ string_of_int i) ^ "]" in let lowered = lower (Obj.magic (HxArray.get (Obj.magic items) i)) (itemExpr : string) in (
       ignore (if not (HxString.equals (Obj.obj (HxAnon.get lowered "cond")) "true") then ignore (HxArray.push conds (("(" ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ")")) else ());
       let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get lowered "bindings")) in while !_g2 < HxArray.length _g3 do ignore (let binding = HxArray.get (Obj.magic _g3) (!_g2) in (
-        ignore (let __old_73 = !_g2 in let __new_74 = HxInt.add __old_73 1 in (
-          ignore (_g2 := __new_74);
-          __new_74
+        ignore (let __old_78 = !_g2 in let __new_79 = HxInt.add __old_78 1 in (
+          ignore (_g2 := __new_79);
+          __new_79
         ));
         HxArray.push bindings binding
       )) done
     )) done) else ());
-    let __anon_75 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_75 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
-      ignore (HxAnon.set __anon_75 "bindings" (Obj.repr bindings));
-      __anon_75
+    let __anon_80 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_80 "cond" (Obj.repr (HxArray.join conds " && " (fun x -> x))));
+      ignore (HxAnon.set __anon_80 "bindings" (Obj.repr bindings));
+      __anon_80
     )
   )
 )
-and lowerExtractor = fun extractorText resultPattern scrutineeVar -> try let __fallback_result_83 = let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (let _g = (StringTools.trim (extractorText : string) : string) in match _g with
-    | "Std.parseInt(_)" -> let __assign_77 = Obj.magic (("parseInt(" ^ HxString.toStdString scrutineeVar) ^ ", 10)" : string) in (
-      tempMaybeString := __assign_77;
-      __assign_77
+and lowerExtractor = fun extractorText resultPattern scrutineeVar -> try let __fallback_result_89 = let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (let _g = let __call_arg_0_81 = extractorText in StringTools.trim __call_arg_0_81 in match _g with
+    | "Std.parseInt(_)" -> let __assign_83 = Obj.magic (("parseInt(" ^ HxString.toStdString scrutineeVar) ^ ", 10)" : string) in (
+      tempMaybeString := __assign_83;
+      __assign_83
     )
-    | "_.slice(0, 1)" | "_.slice(0,1)" -> let __assign_78 = Obj.magic (HxString.toStdString scrutineeVar ^ ".slice(0, 1)" : string) in (
-      tempMaybeString := __assign_78;
-      __assign_78
+    | "_.slice(0, 1)" | "_.slice(0,1)" -> let __assign_84 = Obj.magic (HxString.toStdString scrutineeVar ^ ".slice(0, 1)" : string) in (
+      tempMaybeString := __assign_84;
+      __assign_84
     )
-    | _ -> let __assign_76 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_76;
-      __assign_76
+    | _ -> let __assign_82 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_82;
+      __assign_82
     ));
-  let tempString = ref ("" : string) in (
-    ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_79 = (scrutineeVar : string) in (
-      tempString := __assign_79;
-      __assign_79
-    ) else let __assign_80 = (!tempMaybeString : string) in (
-      tempString := __assign_80;
-      __assign_80
+  let applied = (!tempMaybeString : string) in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if applied == Obj.magic (HxRuntime.hx_null) then let __assign_85 = (scrutineeVar : string) in (
+      tempString := __assign_85;
+      __assign_85
+    ) else let __assign_86 = (applied : string) in (
+      tempString := __assign_86;
+      __assign_86
     ));
     let lowered = lower (Obj.magic resultPattern) (!tempString : string) in (
-      ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_81 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_81 "cond" (Obj.repr "false"));
-        ignore (HxAnon.set __anon_81 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
-        __anon_81
+      ignore (if applied == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_87 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_87 "cond" (Obj.repr "false"));
+        ignore (HxAnon.set __anon_87 "bindings" (Obj.repr (Obj.obj (HxAnon.get lowered "bindings"))));
+        __anon_87
       )))) else ());
       lowered
     )
   )
-) in Obj.magic __fallback_result_83 with
-  | HxRuntime.Hx_return __ret_82 -> Obj.magic __ret_82
+) in Obj.magic __fallback_result_89 with
+  | HxRuntime.Hx_return __ret_88 -> Obj.magic __ret_88

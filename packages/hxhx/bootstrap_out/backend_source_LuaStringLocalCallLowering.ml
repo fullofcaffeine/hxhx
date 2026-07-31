@@ -13,67 +13,67 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.L
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaStringLocalCallLowering" } : t)
 
-let stringHelper = fun field argumentCount -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+let stringHelper = fun (field : string) (argumentCount : int) -> (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match field with
-    | "contains" -> if argumentCount = 1 then let __assign_13 = Obj.magic ("__hxhx_string_contains" : string) in (
-      tempResult := __assign_13;
-      __assign_13
-    ) else let __assign_14 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_14;
-      __assign_14
-    )
-    | "indexOf" -> if argumentCount = 1 || argumentCount = 2 then let __assign_15 = Obj.magic ("__hxhx_string_index_of" : string) in (
+    | "contains" -> if argumentCount = 1 then let __assign_15 = Obj.magic ("__hxhx_string_contains" : string) in (
       tempResult := __assign_15;
       __assign_15
     ) else let __assign_16 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_16;
       __assign_16
     )
-    | "startsWith" -> if argumentCount = 1 then let __assign_17 = Obj.magic ("__hxhx_string_starts_with" : string) in (
+    | "indexOf" -> if argumentCount = 1 || argumentCount = 2 then let __assign_17 = Obj.magic ("__hxhx_string_index_of" : string) in (
       tempResult := __assign_17;
       __assign_17
     ) else let __assign_18 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_18;
       __assign_18
     )
-    | "substr" -> if argumentCount = 1 || argumentCount = 2 then let __assign_19 = Obj.magic ("__hxhx_string_substr" : string) in (
+    | "startsWith" -> if argumentCount = 1 then let __assign_19 = Obj.magic ("__hxhx_string_starts_with" : string) in (
       tempResult := __assign_19;
       __assign_19
     ) else let __assign_20 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_20;
       __assign_20
     )
-    | "toLowerCase" -> if argumentCount = 0 then let __assign_21 = Obj.magic ("__hxhx_string_to_lower_case" : string) in (
+    | "substr" -> if argumentCount = 1 || argumentCount = 2 then let __assign_21 = Obj.magic ("__hxhx_string_substr" : string) in (
       tempResult := __assign_21;
       __assign_21
     ) else let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_22;
       __assign_22
     )
-    | "toUpperCase" -> if argumentCount = 0 then let __assign_23 = Obj.magic ("__hxhx_string_to_upper_case" : string) in (
+    | "toLowerCase" -> if argumentCount = 0 then let __assign_23 = Obj.magic ("__hxhx_string_to_lower_case" : string) in (
       tempResult := __assign_23;
       __assign_23
     ) else let __assign_24 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_24;
       __assign_24
     )
-    | _ -> let __assign_12 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_12;
-      __assign_12
+    | "toUpperCase" -> if argumentCount = 0 then let __assign_25 = Obj.magic ("__hxhx_string_to_upper_case" : string) in (
+      tempResult := __assign_25;
+      __assign_25
+    ) else let __assign_26 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_26;
+      __assign_26
+    )
+    | _ -> let __assign_14 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_14;
+      __assign_14
     ));
   !tempResult
-)
+) : string)
 
 let isStringType = fun hx_type -> hx_type != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) ()) "primitive:String"
 
 let rec dependsOnExactStringValue = fun expression locals fields -> let tempResult = ref (false : bool) in (
   ignore (match expression with
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let local = Obj.magic (TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string)) in if local != Obj.magic (HxRuntime.hx_null) then let __assign_26 = isStringType (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) in (
-      tempResult := __assign_26;
-      __assign_26
-    ) else let field = Obj.magic (TypedBackendFieldReadCatalog.findByProjectedName (Obj.magic fields) (name : string)) in let __assign_27 = field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.getIsStatic (Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic field) ())) () && isStringType (Obj.magic (TyFieldInfo.getType (Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic field) ())) ())) in (
-      tempResult := __assign_27;
-      __assign_27
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let local = Obj.magic (TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string)) in if local != Obj.magic (HxRuntime.hx_null) then let __assign_28 = isStringType (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) in (
+      tempResult := __assign_28;
+      __assign_28
+    ) else let field = Obj.magic (TypedBackendFieldReadCatalog.findByProjectedName (Obj.magic fields) (name : string)) in let __assign_29 = field != Obj.magic (HxRuntime.hx_null) && TyFieldInfo.getIsStatic (Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic field) ())) () && isStringType (Obj.magic (TyFieldInfo.getType (Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic field) ())) ())) in (
+      tempResult := __assign_29;
+      __assign_29
     )
     | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
@@ -114,52 +114,52 @@ let rec dependsOnExactStringValue = fun expression locals fields -> let tempResu
         | HxExpr.EWhile (_, _, _, _) -> 33
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
-        | HxExpr.EIdent __enum_param_28 -> __enum_param_28
-        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_lua_string_concat" then let __assign_29 = true in (
-        tempResult := __assign_29;
-        __assign_29
-      ) else let __assign_30 = false in (
-        tempResult := __assign_30;
-        __assign_30
-      ) else let __assign_31 = false in (
+        | HxExpr.EIdent __enum_param_30 -> __enum_param_30
+        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_lua_string_concat" then let __assign_31 = true in (
         tempResult := __assign_31;
         __assign_31
+      ) else let __assign_32 = false in (
+        tempResult := __assign_32;
+        __assign_32
+      ) else let __assign_33 = false in (
+        tempResult := __assign_33;
+        __assign_33
       )
     )
     | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_32 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
-        tempResult := __assign_32;
-        __assign_32
+      let inner = Obj.magic _g in let __assign_34 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
+        tempResult := __assign_34;
+        __assign_34
       )
     )
-    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if HxString.equals _g "+" then let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_33 = dependsOnExactStringValue (Obj.magic left) (Obj.magic locals) (Obj.magic fields) || dependsOnExactStringValue (Obj.magic right) (Obj.magic locals) (Obj.magic fields) in (
-      tempResult := __assign_33;
-      __assign_33
-    ) else let __assign_34 = false in (
-      tempResult := __assign_34;
-      __assign_34
-    )
-    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let inner = Obj.magic _g in let __assign_35 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
-        tempResult := __assign_35;
-        __assign_35
-      )
-    )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_36 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
+    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if HxString.equals _g "+" then let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_35 = dependsOnExactStringValue (Obj.magic left) (Obj.magic locals) (Obj.magic fields) || dependsOnExactStringValue (Obj.magic right) (Obj.magic locals) (Obj.magic fields) in (
+      tempResult := __assign_35;
+      __assign_35
+    ) else let __assign_36 = false in (
       tempResult := __assign_36;
       __assign_36
     )
-    | _ -> let __assign_25 = false in (
-      tempResult := __assign_25;
-      __assign_25
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_37 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
+        tempResult := __assign_37;
+        __assign_37
+      )
+    )
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_38 = dependsOnExactStringValue (Obj.magic inner) (Obj.magic locals) (Obj.magic fields) in (
+      tempResult := __assign_38;
+      __assign_38
+    )
+    | _ -> let __assign_27 = false in (
+      tempResult := __assign_27;
+      __assign_27
     ));
   !tempResult
 )
 
 let body = fun projection -> (
-  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Lua String local lowering requires a typed function projection") ["Dynamic"; "String"]) else ());
+  ignore (if projection == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Lua String local lowering requires a typed function projection") ["Dynamic"]) else ());
   let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection) ()) in let fields = Obj.magic (TypedBackendFunctionProjection.getFieldReadCatalog (Obj.magic projection) ()) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic (HxFunctionDecl.getBody (Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic projection) ())))) (fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
     ignore (match expression with
       | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
@@ -202,32 +202,32 @@ let body = fun projection -> (
         | HxExpr.EField (__enum_param_2, _) -> __enum_param_2
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_3) -> __enum_param_3
-        | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let field = (_g3 : string) in let arguments = Obj.magic _g1 in let helper = (stringHelper (field : string) (HxArray.length arguments) : string) in if helper != Obj.magic (HxRuntime.hx_null) && dependsOnExactStringValue (Obj.magic receiver) (Obj.magic locals) (Obj.magic fields) then let __assign_4 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent (helper : string)), Obj.magic (HxArray.concat (let __arr_5 = HxArray.create () in (
-        ignore (HxArray.push __arr_5 receiver);
-        __arr_5
+        | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let field = (_g3 : string) in let arguments = Obj.magic _g1 in let helper = (let __call_arg_0_4 = field in let __call_arg_1_5 = HxArray.length arguments in stringHelper __call_arg_0_4 __call_arg_1_5 : string) in if helper != Obj.magic (HxRuntime.hx_null) && dependsOnExactStringValue (Obj.magic receiver) (Obj.magic locals) (Obj.magic fields) then let __assign_6 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent (helper : string)), Obj.magic (HxArray.concat (let __arr_7 = HxArray.create () in (
+        ignore (HxArray.push __arr_7 receiver);
+        __arr_7
       )) arguments))) in (
-        tempResult := __assign_4;
-        __assign_4
-      ) else let __assign_6 = Obj.magic expression in (
         tempResult := __assign_6;
         __assign_6
-      ) else let __assign_7 = Obj.magic expression in (
-        tempResult := __assign_7;
-        __assign_7
-      )
-      | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if HxString.equals _g "+" then let left = Obj.magic _g1 in let right = Obj.magic _g2 in if dependsOnExactStringValue (Obj.magic left) (Obj.magic locals) (Obj.magic fields) || dependsOnExactStringValue (Obj.magic right) (Obj.magic locals) (Obj.magic fields) then let __assign_8 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_lua_string_concat" : string)), Obj.magic (let __arr_9 = HxArray.create () in (
-        ignore (HxArray.push __arr_9 left);
-        ignore (HxArray.push __arr_9 right);
-        __arr_9
-      )))) in (
+      ) else let __assign_8 = Obj.magic expression in (
         tempResult := __assign_8;
         __assign_8
-      ) else let __assign_10 = Obj.magic expression in (
+      ) else let __assign_9 = Obj.magic expression in (
+        tempResult := __assign_9;
+        __assign_9
+      )
+      | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if HxString.equals _g "+" then let left = Obj.magic _g1 in let right = Obj.magic _g2 in if dependsOnExactStringValue (Obj.magic left) (Obj.magic locals) (Obj.magic fields) || dependsOnExactStringValue (Obj.magic right) (Obj.magic locals) (Obj.magic fields) then let __assign_10 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_lua_string_concat" : string)), Obj.magic (let __arr_11 = HxArray.create () in (
+        ignore (HxArray.push __arr_11 left);
+        ignore (HxArray.push __arr_11 right);
+        __arr_11
+      )))) in (
         tempResult := __assign_10;
         __assign_10
-      ) else let __assign_11 = Obj.magic expression in (
-        tempResult := __assign_11;
-        __assign_11
+      ) else let __assign_12 = Obj.magic expression in (
+        tempResult := __assign_12;
+        __assign_12
+      ) else let __assign_13 = Obj.magic expression in (
+        tempResult := __assign_13;
+        __assign_13
       )
       | _ -> let __assign_1 = Obj.magic expression in (
         tempResult := __assign_1;

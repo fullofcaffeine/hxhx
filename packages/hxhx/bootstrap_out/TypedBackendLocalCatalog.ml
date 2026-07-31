@@ -13,16 +13,16 @@ let create = fun bindings reservedProjectedNames -> let self = ({ __hx_type = Hx
         ignore (_g := __new_2);
         __new_2
       ));
-      ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog cannot reserve an empty transport name") ["Dynamic"; "String"]) else ());
-      HxMap.set_string reservedNames name true
+      ignore (if name == HxString.hx_null_string || HxString.length name = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog cannot reserve an empty transport name") ["Dynamic"]) else ());
+      HxMap.set_string (Obj.magic reservedNames) (name : string) true
     )) done) else ());
     ignore (if bindings != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length bindings do ignore (let binding = Obj.magic (HxArray.get (Obj.magic bindings) (!_g)) in (
       ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
         ignore (_g := __new_4);
         __new_4
       ));
-      ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog cannot contain a null binding") ["Dynamic"; "String"]) else ());
-      let identity = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let tempString = ref ("" : string) in (
+      ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog cannot contain a null binding") ["Dynamic"]) else ());
+      let identity = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let tempString = ref (HxString.hx_null_string : string) in (
         ignore (if HxString.length (TyLocalBinding.getSourceName (Obj.magic binding) ()) = 0 then let __assign_5 = ("local" : string) in (
           tempString := __assign_5;
           __assign_5
@@ -31,11 +31,11 @@ let create = fun bindings reservedProjectedNames -> let self = ({ __hx_type = Hx
           __assign_6
         ));
         let sourceName = (!tempString : string) in (
-          ignore (HxMap.set_string sourceNames sourceName true);
-          let existing = Obj.magic (HxMap.get_string exactBindings identity) in if existing == Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (HxMap.set_string exactBindings identity binding);
+          ignore (HxMap.set_string (Obj.magic sourceNames) (sourceName : string) true);
+          let existing = Obj.magic (HxMap.get_string (Obj.magic exactBindings) (identity : string)) in if existing == Obj.magic (HxRuntime.hx_null) then ignore ((
+            ignore (HxMap.set_string (Obj.magic exactBindings) (identity : string) binding);
             HxArray.push identities identity
-          )) else ignore (if not (HxString.equals (TyLocalBinding.getCanonicalIdentity (Obj.magic existing) ()) (TyLocalBinding.getCanonicalIdentity (Obj.magic binding) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conflicting typed local facts for " ^ HxString.toStdString identity)) ["Dynamic"; "String"]) else ())
+          )) else ignore (if not (HxString.equals (TyLocalBinding.getCanonicalIdentity (Obj.magic existing) ()) (TyLocalBinding.getCanonicalIdentity (Obj.magic binding) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("conflicting typed local facts for " ^ HxString.toStdString identity)) ["Dynamic"]) else ())
         )
       )
     )) done) else ());
@@ -55,9 +55,9 @@ let create = fun bindings reservedProjectedNames -> let self = ({ __hx_type = Hx
     let _g = ref 0 in let _g1 = HxArray.length identities in while !_g < _g1 do ignore (let index = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
       ignore (_g := __new_12);
       __old_11
-    ) in let binding = Obj.magic (HxMap.get_string exactBindings (HxArray.get (Obj.magic identities) index)) in (
-      ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog lost a normalized binding") ["Dynamic"; "String"]) else ());
-      let tempString1 = ref ("" : string) in (
+    ) in let binding = Obj.magic (HxMap.get_string (Obj.magic exactBindings) (HxArray.get (Obj.magic identities) index : string)) in (
+      ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend local catalog lost a normalized binding") ["Dynamic"]) else ());
+      let tempString1 = ref (HxString.hx_null_string : string) in (
         ignore (if HxString.length (TyLocalBinding.getSourceName (Obj.magic binding) ()) = 0 then let __assign_13 = ("local" : string) in (
           tempString1 := __assign_13;
           __assign_13
@@ -66,20 +66,29 @@ let create = fun bindings reservedProjectedNames -> let self = ({ __hx_type = Hx
           __assign_14
         ));
         let sourceName = (!tempString1 : string) in let projectedName__local = ref (sourceName : string) in let suffix = ref 0 in (
-          ignore (while HxMap.exists_string ((Obj.magic self : t).byProjectedName) (!projectedName__local) || HxMap.exists_string reservedNames (!projectedName__local) || !suffix > 0 && HxMap.exists_string sourceNames (!projectedName__local) do ignore ((
-            ignore (let __old_15 = !suffix in let __new_16 = HxInt.add __old_15 1 in (
-              ignore (suffix := __new_16);
-              __old_15
+          ignore (try while true do try ignore (let tempLeft = ref (false : bool) in let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in (
+            ignore (let __assign_15 = HxMap.exists_string (Obj.magic _this) (!projectedName__local : string) in (
+              tempLeft := __assign_15;
+              __assign_15
             ));
-            let __assign_17 = ((HxString.toStdString sourceName ^ "_") ^ string_of_int (!suffix) : string) in (
-              projectedName__local := __assign_17;
-              __assign_17
+            ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!tempLeft || HxMap.exists_string (Obj.magic reservedNames) (!projectedName__local : string) || !suffix > 0 && HxMap.exists_string (Obj.magic sourceNames) (!projectedName__local : string)))) then raise (HxRuntime.Hx_break) else ());
+            ignore (let __old_16 = !suffix in let __new_17 = HxInt.add __old_16 1 in (
+              ignore (suffix := __new_17);
+              __old_16
+            ));
+            let __assign_18 = ((HxString.toStdString sourceName ^ "_") ^ string_of_int (!suffix) : string) in (
+              projectedName__local := __assign_18;
+              __assign_18
             )
-          )) done);
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ());
           let entry = Obj.magic (TypedBackendLocalProjection.create (!projectedName__local : string) (Obj.magic binding)) in (
             ignore (HxArray.push ((Obj.magic self : t).entries) entry);
-            ignore (HxMap.set_string ((Obj.magic self : t).byIdentity) (HxArray.get (Obj.magic identities) index) entry);
-            HxMap.set_string ((Obj.magic self : t).byProjectedName) (!projectedName__local) entry
+            let _this = Obj.magic ((Obj.magic self : t).byIdentity) in (
+              ignore (HxMap.set_string (Obj.magic _this) (HxArray.get (Obj.magic identities) index : string) entry);
+              let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in HxMap.set_string (Obj.magic _this) (!projectedName__local : string) entry
+            )
           )
         )
       )
@@ -93,32 +102,32 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalCatalog";
 let getEntries = fun self () -> HxArray.copy ((Obj.magic self : t).entries)
 
 let projectedName = fun self (binding : TyLocalBinding.t) -> (
-  ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend projection requested a null local binding") ["Dynamic"; "String"]) else ());
-  let identity = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let entry = Obj.magic (HxMap.get_string ((Obj.magic self : t).byIdentity) identity) in (
-    ignore (if entry == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection is missing local binding " ^ HxString.toStdString identity)) ["Dynamic"; "String"]) else ());
-    ignore (if not (HxString.equals (TyLocalBinding.getCanonicalIdentity (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic entry) ())) ()) (TyLocalBinding.getCanonicalIdentity (Obj.magic binding) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection received stale local facts for " ^ HxString.toStdString identity)) ["Dynamic"; "String"]) else ());
+  ignore (if binding == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend projection requested a null local binding") ["Dynamic"]) else ());
+  let identity = (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () : string) in let _this = Obj.magic ((Obj.magic self : t).byIdentity) in let tempMaybeTypedBackendLocalProjection = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in let entry = Obj.magic tempMaybeTypedBackendLocalProjection in (
+    ignore (if entry == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection is missing local binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
+    ignore (if not (HxString.equals (TyLocalBinding.getCanonicalIdentity (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic entry) ())) ()) (TyLocalBinding.getCanonicalIdentity (Obj.magic binding) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend projection received stale local facts for " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
     TypedBackendLocalProjection.getProjectedName (Obj.magic entry) ()
   )
 )
 
 let findByProjectedName = fun self (projectedName__local : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendLocalProjection.t) in (
-  ignore (if projectedName__local == Obj.magic (HxRuntime.hx_null) then let __assign_18 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_18;
-    __assign_18
-  ) else let __assign_19 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).byProjectedName) projectedName__local)) in (
+  ignore (if projectedName__local == HxString.hx_null_string then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_19;
     __assign_19
+  ) else let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let __assign_20 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (projectedName__local : string))) in (
+    tempResult := __assign_20;
+    __assign_20
   ));
   !tempResult
 )
 
 let findByIdentity = fun self (bindingIdentity : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendLocalProjection.t) in (
-  ignore (if bindingIdentity == Obj.magic (HxRuntime.hx_null) then let __assign_20 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_20;
-    __assign_20
-  ) else let __assign_21 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).byIdentity) bindingIdentity)) in (
+  ignore (if bindingIdentity == HxString.hx_null_string then let __assign_21 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_21;
     __assign_21
+  ) else let _this = Obj.magic ((Obj.magic self : t).byIdentity) in let __assign_22 = Obj.magic (Obj.magic (HxMap.get_string (Obj.magic _this) (bindingIdentity : string))) in (
+    tempResult := __assign_22;
+    __assign_22
   ));
   !tempResult
 )

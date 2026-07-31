@@ -16,6 +16,7 @@ const packageJsonPath = 'package.json'
 const kpiWorkflowPath = '.github/workflows/hxhx-kpi-report.yml'
 const bootstrapWorkflowPath = '.github/workflows/bootstrap-regen-bench.yml'
 const artifactComparisonRunnerPath = 'scripts/hxhx/bench-kpi-artifact-comparison.sh'
+const compilerScaleServerRunnerPath = 'scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh'
 
 function fail(message) {
   console.error(`[native-iteration-latency-contract-check] ERROR: ${message}`)
@@ -73,6 +74,7 @@ function main() {
   const kpiWorkflow = readText(kpiWorkflowPath)
   const bootstrapWorkflow = readText(bootstrapWorkflowPath)
   const artifactComparisonRunner = readText(artifactComparisonRunnerPath)
+  const compilerScaleServerRunner = readText(compilerScaleServerRunnerPath)
 
   for (const snippet of [
     'NATIVE_ITERATION_LATENCY_POLICY:PASS',
@@ -88,6 +90,8 @@ function main() {
     'scripts/hxhx/bench-stage0-free-build.sh',
     'scripts/ci/native-plugin-loop-benchmark-report.js',
     'scripts/hxhx/bench-native-plugin-loop.sh',
+    'scripts/ci/compiler-scale-reflaxe-server-evidence.js',
+    'scripts/hxhx/run-compiler-scale-reflaxe-server-proof.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
     'README `Goals status` table'
@@ -102,6 +106,7 @@ function main() {
   requireIncludes(packageJsonPath, packageJson, 'hxhx-kpi-artifact-comparison-fixture-test.js')
   requireIncludes(packageJsonPath, packageJson, 'native-plugin-loop-benchmark-report-fixture-test.js')
   requireIncludes(packageJsonPath, packageJson, 'stage0-free-build-benchmark-report-fixture-test.js')
+  requireIncludes(packageJsonPath, packageJson, 'compiler-scale-reflaxe-server-evidence-fixture-test.js')
   for (const snippet of [
     'compare_native:',
     'scripts/hxhx/bench-kpi-artifact-comparison.sh',
@@ -125,6 +130,15 @@ function main() {
     'scripts/ci/hxhx-kpi-artifact-comparison.js'
   ]) {
     requireIncludes(artifactComparisonRunnerPath, artifactComparisonRunner, snippet)
+  }
+  for (const snippet of [
+    '--profile-only',
+    'count_owned_pids_after_stop',
+    'owned-pids 2>/dev/null || true',
+    'REFLAXE_OCAML_PROGRESS_FILE="$SERVER_PROGRESS_FILE"',
+    '$REPORT_DIR/logs/$label.elapsed-ms'
+  ]) {
+    requireIncludes(compilerScaleServerRunnerPath, compilerScaleServerRunner, snippet)
   }
 
   const policy = extractPolicyJson(contract)
@@ -175,6 +189,13 @@ function main() {
     if (policy.activeEvidenceLoop.stage0FreeBuildReportSchema !== 'hxhx.stage0-free-build.v1') {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
+    if (policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema
+        !== 'hxhx.compiler-scale-reflaxe-server.v2') {
+      fail(
+        'policy.activeEvidenceLoop.compilerScaleReflaxeServerReportSchema ' +
+        'must be hxhx.compiler-scale-reflaxe-server.v2'
+      )
+    }
     if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v2') {
       fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v2')
     }
@@ -200,6 +221,9 @@ function main() {
       'stage0FreeBuildReportRunner',
       'nativePluginLoopReportValidator',
       'nativePluginLoopReportRunner',
+      'compilerScaleReflaxeServerEvidence',
+      'compilerScaleReflaxeServerFixture',
+      'compilerScaleReflaxeServerRunner',
       'localCapacityPreflight',
       'localCapacityPreflightFixture',
       'localCapacityQueue',

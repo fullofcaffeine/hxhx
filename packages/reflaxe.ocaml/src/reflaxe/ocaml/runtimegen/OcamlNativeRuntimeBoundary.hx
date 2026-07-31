@@ -9,6 +9,7 @@ import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlTypedDeclarationIdentity;
 
 using StringTools;
 
@@ -22,14 +23,25 @@ using StringTools;
 **/
 class OcamlNativeRuntimeBoundary {
 	public static inline final METADATA = ":ocamlRuntime";
-	static inline final REAL_PATH_METADATA = ":realPath";
 
 	/**
-		Records class- and field-level declarations for one emitted static extern
-		field. Repeated uses of the same declaration produce the same immutable
-		requirement.
+		Reports whether a native extern callable declares a checked runtime
+		capability on either its class or field.
+
+		This check keeps the generic native-constructor path closed: an arbitrary
+		`@:native` constructor is not enough to opt into a reflaxe.ocaml runtime
+		module.
 	**/
-	public static function recordUsedStaticExtern(context:CompilationContext, classType:ClassType, field:ClassField, nativeSymbol:String):Void {
+	public static function hasDeclaredRuntimeCapability(classType:ClassType, field:ClassField):Bool {
+		return classType.meta.has(METADATA) || field.meta.has(METADATA);
+	}
+
+	/**
+		Records class- and field-level declarations for one emitted extern
+		callable, including constructors and static functions. Repeated uses of
+		the same declaration produce the same immutable requirement.
+	**/
+	public static function recordUsedExternCallable(context:CompilationContext, classType:ClassType, field:ClassField, nativeSymbol:String):Void {
 		final capabilities = new Array<String>();
 		final seen:Map<String, Bool> = [];
 		collectCapabilities(classType.meta, "extern class", capabilities, seen);
@@ -39,8 +51,8 @@ class OcamlNativeRuntimeBoundary {
 			return;
 
 		final rewrittenTypePath = (classType.pack ?? []).concat([classType.name]).join(".");
-		final sourceTypePath = sourceIdentity(classType.meta, rewrittenTypePath, "extern class");
-		final sourceFieldName = sourceIdentity(field.meta, field.name, "extern field");
+		final sourceTypePath = OcamlTypedDeclarationIdentity.canonicalSourceName(classType.meta, rewrittenTypePath, "an extern class");
+		final sourceFieldName = OcamlTypedDeclarationIdentity.canonicalSourceName(field.meta, field.name, "an extern field");
 		final boundaryId = classType.module + "::" + sourceTypePath + "." + sourceFieldName;
 		for (capability in capabilities) {
 			try {
@@ -49,31 +61,6 @@ class OcamlNativeRuntimeBoundary {
 				fail(Std.string(error), field.pos);
 			}
 		}
-	}
-
-	/**
-		Returns the canonical Haxe declaration name retained in `:realPath` before
-		`@:native` rewrites the typed class or field name. Falling back keeps
-		ordinary, non-renamed externs stable without requiring internal metadata.
-	**/
-	static function sourceIdentity(meta:MetaAccess, fallback:String, owner:String):String {
-		var sourceName:Null<String> = null;
-		for (entry in meta.get()) {
-			if (entry.name != REAL_PATH_METADATA)
-				continue;
-			if (entry.params == null || entry.params.length != 1)
-				fail('$REAL_PATH_METADATA on an $owner requires exactly one constant source name.', entry.pos);
-			final candidate = switch (entry.params[0].expr) {
-				case EConst(CString(value)): value.trim();
-				case _: fail('$REAL_PATH_METADATA on an $owner requires a constant source name.', entry.params[0].pos);
-			};
-			if (candidate.length == 0)
-				fail('$REAL_PATH_METADATA on an $owner must not use an empty source name.', entry.pos);
-			if (sourceName != null)
-				fail('$REAL_PATH_METADATA repeats on the same $owner.', entry.pos);
-			sourceName = candidate;
-		}
-		return sourceName ?? fallback;
 	}
 
 	static function collectCapabilities(meta:MetaAccess, owner:String, out:Array<String>, seen:Map<String, Bool>):Void {

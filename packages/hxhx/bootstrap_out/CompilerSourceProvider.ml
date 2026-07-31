@@ -65,7 +65,7 @@ let finish = fun self (requestSucceeded : bool) -> ignore (ignore ((Obj.magic se
 let report = fun self () -> (Obj.magic self : t).reportCallback ()
 
 let fromCallbacks = fun resolveModule__local readSource__local parseFilteredSource__local readDirectory__local isFile__local prepareFinish__local finish__local report__local -> (
-  ignore (if resolveModule__local == Obj.magic (HxRuntime.hx_null) || readSource__local == Obj.magic (HxRuntime.hx_null) || parseFilteredSource__local == Obj.magic (HxRuntime.hx_null) || readDirectory__local == Obj.magic (HxRuntime.hx_null) || isFile__local == Obj.magic (HxRuntime.hx_null) || finish__local == Obj.magic (HxRuntime.hx_null) || prepareFinish__local == Obj.magic (HxRuntime.hx_null) || report__local == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler source provider callbacks must all be present") ["Dynamic"; "String"]) else ());
+  ignore (if resolveModule__local == Obj.magic (HxRuntime.hx_null) || readSource__local == Obj.magic (HxRuntime.hx_null) || parseFilteredSource__local == Obj.magic (HxRuntime.hx_null) || readDirectory__local == Obj.magic (HxRuntime.hx_null) || isFile__local == Obj.magic (HxRuntime.hx_null) || finish__local == Obj.magic (HxRuntime.hx_null) || prepareFinish__local == Obj.magic (HxRuntime.hx_null) || report__local == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler source provider callbacks must all be present") ["Dynamic"]) else ());
   let provider = Obj.magic (create ()) in (
     ignore (let __assign_9 = resolveModule__local in (
       (Obj.magic provider : t).resolveModuleCallback <- __assign_9;

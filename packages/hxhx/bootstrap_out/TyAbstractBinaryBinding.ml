@@ -78,8 +78,8 @@ let collect = fun index leftType rightType op -> let out = Obj.magic (HxArray.cr
               ignore (_g2 := __new_15);
               __new_15
             ));
-            let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in if not (HxMap.exists_string seen key) then ignore ((
-              ignore (HxMap.set_string seen key true);
+            let key = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in if not (HxMap.exists_string (Obj.magic seen) (key : string)) then ignore ((
+              ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
               HxArray.push out candidate
             )) else ()
           )) done
@@ -191,9 +191,9 @@ let best = fun matches__local op leftType rightType filePath position requiresWr
         ));
         if Obj.obj (HxAnon.get hx_match "score") = !bestScore then ignore (HxArray.push _g hx_match) else ()
       )) done);
-      let tempArray = Obj.magic _g in (
-        ignore (if HxArray.length tempArray > 1 then ignore (let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in (
-          ignore (while !_g1 < HxArray.length tempArray do ignore (let winner = HxArray.get (Obj.magic tempArray) (!_g1) in (
+      let tempArray = Obj.magic _g in let winners = Obj.magic tempArray in (
+        ignore (if HxArray.length winners > 1 then ignore (let _g = Obj.magic (let __arr_36 = HxArray.create () in __arr_36) in let _g1 = ref 0 in (
+          ignore (while !_g1 < HxArray.length winners do ignore (let winner = HxArray.get (Obj.magic winners) (!_g1) in (
             ignore (let __old_37 = !_g1 in let __new_38 = HxInt.add __old_37 1 in (
               ignore (_g1 := __new_38);
               __new_38
@@ -202,47 +202,47 @@ let best = fun matches__local op leftType rightType filePath position requiresWr
           )) done);
           let tempArray1 = Obj.magic _g in let identities = Obj.magic tempArray1 in HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) ((((((("Ambiguous abstract binary operator " ^ HxString.toStdString op) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic leftType) ())) ^ " and ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic rightType) ())) ^ "; candidates: ") ^ HxString.toStdString (HxArray.join identities ", " (fun x -> x)) : string))) ["Dynamic"; "TyperError"]
         )) else ());
-        let winner = HxArray.get (Obj.magic tempArray) 0 in TyBoundAbstractBinaryOperator.create (op : string) (Obj.magic (Obj.obj (HxAnon.get winner "info"))) (HxRuntime.unbox_bool_or_obj (HxAnon.get winner "reverseArguments")) requiresWriteback (Obj.magic (Obj.obj (HxAnon.get winner "sourceLeftConversion"))) (Obj.magic (Obj.obj (HxAnon.get winner "sourceRightConversion"))) (Obj.magic (Obj.obj (HxAnon.get winner "resultConversion")))
+        let winner = HxArray.get (Obj.magic winners) 0 in TyBoundAbstractBinaryOperator.create (op : string) (Obj.magic (Obj.obj (HxAnon.get winner "info"))) (HxRuntime.unbox_bool_or_obj (HxAnon.get winner "reverseArguments")) requiresWriteback (Obj.magic (Obj.obj (HxAnon.get winner "sourceLeftConversion"))) (Obj.magic (Obj.obj (HxAnon.get winner "sourceRightConversion"))) (Obj.magic (Obj.obj (HxAnon.get winner "resultConversion")))
       )
     )
   )
 ) in Obj.magic __fallback_result_40 with
   | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39
 
-let noApplicable = fun op leftType rightType candidates filePath position -> let detail = ref ("" : string) in (
-  ignore (if HxArray.length candidates = 1 then ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates) 0) in let __assign_41 = ((((("; candidate " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) ())) ^ " requires ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic candidate) ())) ())) ^ " and ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic candidate) ())) ()) : string) in (
+let noApplicable = fun op leftType rightType candidates filePath position -> let detail = ref "" in (
+  ignore (if HxArray.length candidates = 1 then ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates) 0) in let __assign_41 = (((("; candidate " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) ())) ^ " requires ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic candidate) ())) ())) ^ " and ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic candidate) ())) ()) in (
     detail := __assign_41;
     __assign_41
   )) else ());
   TyperError.create (filePath : string) (Obj.magic position) (((((("No applicable abstract binary operator " ^ HxString.toStdString op) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic leftType) ())) ^ " and ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic rightType) ())) ^ HxString.toStdString (!detail) : string)
 )
 
-let permitsOrdinaryFallback = fun op leftType rightType -> try let __fallback_result_43 = (
-  ignore (if HxBinaryOperatorTools.permitsOrdinaryAbstractFallback (op : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+let permitsOrdinaryFallback = fun op leftType rightType -> try let __fallback_result_44 = (
+  ignore (if let __call_arg_0_42 = op in HxBinaryOperatorTools.permitsOrdinaryAbstractFallback __call_arg_0_42 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals op "+" && (leftType != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.getDisplay (Obj.magic leftType) ()) "String" || rightType != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.getDisplay (Obj.magic rightType) ()) "String")
-) in Obj.magic __fallback_result_43 with
-  | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
+) in Obj.magic __fallback_result_44 with
+  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
 
-let select = fun index leftType rightType op filePath position -> try let __fallback_result_48 = (
-  ignore (if index == Obj.magic (HxRuntime.hx_null) || leftType == Obj.magic (HxRuntime.hx_null) || rightType == Obj.magic (HxRuntime.hx_null) || not (HxBinaryOperatorTools.isAbstractOverloadable (op : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+let select = fun index leftType rightType op filePath position -> try let __fallback_result_51 = (
+  ignore (if index == Obj.magic (HxRuntime.hx_null) || leftType == Obj.magic (HxRuntime.hx_null) || rightType == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_45 = op in HxBinaryOperatorTools.isAbstractOverloadable __call_arg_0_45) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   ignore (if not (hasAbstractOperand (Obj.magic index) (Obj.magic leftType) (Obj.magic rightType)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let explicitCandidates = Obj.magic (collect (Obj.magic index) (Obj.magic leftType) (Obj.magic rightType) (op : string)) in let explicit = Obj.magic (best (Obj.magic (matches (Obj.magic index) (Obj.magic explicitCandidates) (Obj.magic leftType) (Obj.magic rightType) (filePath : string) (Obj.magic position))) (op : string) (Obj.magic leftType) (Obj.magic rightType) (filePath : string) (Obj.magic position) false) in (
     ignore (if explicit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (validateBodyless (Obj.magic index) (Obj.magic explicit) (filePath : string))))) else ());
-    let baseOperator = (HxBinaryOperatorTools.baseOperator (op : string) : string) in (
+    let baseOperator = (let __call_arg_0_46 = op in HxBinaryOperatorTools.baseOperator __call_arg_0_46 : string) in (
       ignore (if baseOperator != Obj.magic (HxRuntime.hx_null) then ignore (let baseCandidates = Obj.magic (collect (Obj.magic index) (Obj.magic leftType) (Obj.magic rightType) (baseOperator : string)) in let baseMatches = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (matches (Obj.magic index) (Obj.magic baseCandidates) (Obj.magic leftType) (Obj.magic rightType) (filePath : string) (Obj.magic position)) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let hx_match = HxArray.get (Obj.magic _g1) (!_g) in (
-          ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
-            ignore (_g := __new_45);
-            __new_45
+          ignore (let __old_47 = !_g in let __new_48 = HxInt.add __old_47 1 in (
+            ignore (_g := __new_48);
+            __new_48
           ));
-          let resultConversion = Obj.magic (TyImplicitConversionPlan.select (Obj.magic index) (Obj.magic leftType) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic (Obj.obj (HxAnon.get hx_match "info"))) ()))) in if resultConversion != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push baseMatches (let __anon_46 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_46 "info" (Obj.repr (Obj.obj (HxAnon.get hx_match "info"))));
-            ignore (HxAnon.set __anon_46 "reverseArguments" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_match "reverseArguments"))));
-            ignore (HxAnon.set __anon_46 "score" (Obj.repr (Obj.obj (HxAnon.get hx_match "score"))));
-            ignore (HxAnon.set __anon_46 "sourceLeftConversion" (Obj.repr (Obj.obj (HxAnon.get hx_match "sourceLeftConversion"))));
-            ignore (HxAnon.set __anon_46 "sourceRightConversion" (Obj.repr (Obj.obj (HxAnon.get hx_match "sourceRightConversion"))));
-            ignore (HxAnon.set __anon_46 "resultConversion" (Obj.repr resultConversion));
-            __anon_46
+          let resultConversion = Obj.magic (TyImplicitConversionPlan.select (Obj.magic index) (Obj.magic leftType) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic (Obj.obj (HxAnon.get hx_match "info"))) ()))) in if resultConversion != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push baseMatches (let __anon_49 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_49 "info" (Obj.repr (Obj.obj (HxAnon.get hx_match "info"))));
+            ignore (HxAnon.set __anon_49 "reverseArguments" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_match "reverseArguments"))));
+            ignore (HxAnon.set __anon_49 "score" (Obj.repr (Obj.obj (HxAnon.get hx_match "score"))));
+            ignore (HxAnon.set __anon_49 "sourceLeftConversion" (Obj.repr (Obj.obj (HxAnon.get hx_match "sourceLeftConversion"))));
+            ignore (HxAnon.set __anon_49 "sourceRightConversion" (Obj.repr (Obj.obj (HxAnon.get hx_match "sourceRightConversion"))));
+            ignore (HxAnon.set __anon_49 "resultConversion" (Obj.repr resultConversion));
+            __anon_49
           ))) else ()
         )) done);
         let fallback = Obj.magic (best (Obj.magic baseMatches) (op : string) (Obj.magic leftType) (Obj.magic rightType) (filePath : string) (Obj.magic position) true) in (
@@ -255,5 +255,5 @@ let select = fun index leftType rightType op filePath position -> try let __fall
       HxType.hx_throw_typed_rtti (Obj.repr (noApplicable (op : string) (Obj.magic leftType) (Obj.magic rightType) (Obj.magic explicitCandidates) (filePath : string) (Obj.magic position))) ["Dynamic"; "TyperError"]
     )
   )
-) in Obj.magic __fallback_result_48 with
-  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
+) in Obj.magic __fallback_result_51 with
+  | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50

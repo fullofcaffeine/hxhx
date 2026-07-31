@@ -13,32 +13,32 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedExactCallSo
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExactCallSource" } : t)
 
-let encodeInstance = fun owner declaration hx_method resultType receiver arguments -> let tempString = ref ("" : string) in (
-  ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+let encodeInstance = fun owner declaration hx_method resultType receiver arguments -> let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if owner == HxString.hx_null_string then let __assign_1 = ("" : string) in (
     tempString := __assign_1;
     __assign_1
   ) else let __assign_2 = (owner : string) in (
     tempString := __assign_2;
     __assign_2
   ));
-  let tempString1 = ref ("" : string) in (
-    ignore (if declaration == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
+  let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if declaration == HxString.hx_null_string then let __assign_3 = ("" : string) in (
       tempString1 := __assign_3;
       __assign_3
     ) else let __assign_4 = (declaration : string) in (
       tempString1 := __assign_4;
       __assign_4
     ));
-    let tempString2 = ref ("" : string) in (
-      ignore (if hx_method == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
+    let tempString2 = ref (HxString.hx_null_string : string) in (
+      ignore (if hx_method == HxString.hx_null_string then let __assign_5 = ("" : string) in (
         tempString2 := __assign_5;
         __assign_5
       ) else let __assign_6 = (hx_method : string) in (
         tempString2 := __assign_6;
         __assign_6
       ));
-      let tempString3 = ref ("" : string) in (
-        ignore (if resultType == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
+      let tempString3 = ref (HxString.hx_null_string : string) in (
+        ignore (if resultType == HxString.hx_null_string then let __assign_7 = ("" : string) in (
           tempString3 := __assign_7;
           __assign_7
         ) else let __assign_8 = (resultType : string) in (

@@ -13,49 +13,49 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CSharpNoEmitDiag
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CSharpNoEmitDiagnostics" } : t)
 
-let hasNamedPackage = fun lines -> try let __fallback_result_22 = let _g = ref 0 in (
+let hasNamedPackage = fun lines -> try let __fallback_result_46 = let _g = ref 0 in (
   ignore (try while !_g < HxArray.length lines do try ignore (let line = (HxArray.get (Obj.magic lines) (!_g) : string) in (
-    ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
-      ignore (_g := __new_20);
-      __new_20
+    ignore (let __old_38 = !_g in let __new_39 = HxInt.add __old_38 1 in (
+      ignore (_g := __new_39);
+      __new_39
     ));
-    let trimmed = (StringTools.trim (line : string) : string) in (
-      ignore (if HxString.length trimmed = 0 || StringTools.startsWith (trimmed : string) ("//" : string) then raise (HxRuntime.Hx_continue) else ());
-      ignore (if not (StringTools.startsWith (trimmed : string) ("package" : string)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    let trimmed = let __call_arg_0_40 = line in StringTools.trim __call_arg_0_40 in (
+      ignore (if HxString.length trimmed = 0 || (let __call_arg_0_41 = trimmed in let __call_arg_1_42 = "//" in StringTools.startsWith __call_arg_0_41 __call_arg_1_42) then raise (HxRuntime.Hx_continue) else ());
+      ignore (if not (let __call_arg_0_43 = trimmed in let __call_arg_1_44 = "package" in StringTools.startsWith __call_arg_0_43 __call_arg_1_44) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
       raise (HxRuntime.Hx_return (Obj.repr (not (HxString.equals trimmed "package;") && HxString.length trimmed > HxInt.add (HxString.length "package") 1)))
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   false
-) in Obj.magic __fallback_result_22 with
-  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
+) in Obj.magic __fallback_result_46 with
+  | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45
 
-let isTypeDeclarationLine = fun trimmed -> StringTools.startsWith (trimmed : string) ("class " : string) || StringTools.startsWith (trimmed : string) ("enum " : string) || StringTools.startsWith (trimmed : string) ("abstract " : string) || StringTools.startsWith (trimmed : string) ("typedef " : string) || StringTools.startsWith (trimmed : string) ("interface " : string)
+let isTypeDeclarationLine = fun (trimmed : string) -> ((let __call_arg_0_61 = trimmed in let __call_arg_1_62 = "class " in StringTools.startsWith __call_arg_0_61 __call_arg_1_62) || (let __call_arg_0_63 = trimmed in let __call_arg_1_64 = "enum " in StringTools.startsWith __call_arg_0_63 __call_arg_1_64) || (let __call_arg_0_65 = trimmed in let __call_arg_1_66 = "abstract " in StringTools.startsWith __call_arg_0_65 __call_arg_1_66) || (let __call_arg_0_67 = trimmed in let __call_arg_1_68 = "typedef " in StringTools.startsWith __call_arg_0_67 __call_arg_1_68) || (let __call_arg_0_69 = trimmed in let __call_arg_1_70 = "interface " in StringTools.startsWith __call_arg_0_69 __call_arg_1_70) : bool)
 
-let nextSignificantTypeLineIndex = fun lines metadataIndex -> try let __fallback_result_30 = let idx = ref (HxInt.add metadataIndex 1) in (
-  ignore (try while !idx < HxArray.length lines do try ignore (let trimmed = (StringTools.trim (HxArray.get (Obj.magic lines) (!idx) : string) : string) in (
-    ignore (if HxString.length trimmed = 0 || StringTools.startsWith (trimmed : string) ("//" : string) then ignore ((
-      ignore (let __old_23 = !idx in let __new_24 = HxInt.add __old_23 1 in (
-        ignore (idx := __new_24);
-        __old_23
+let nextSignificantTypeLineIndex = fun lines metadataIndex -> try let __fallback_result_60 = let idx = ref (HxInt.add metadataIndex 1) in (
+  ignore (try while !idx < HxArray.length lines do try ignore (let trimmed = let __call_arg_0_47 = HxArray.get (Obj.magic lines) (!idx) in StringTools.trim __call_arg_0_47 in (
+    ignore (if HxString.length trimmed = 0 || (let __call_arg_0_48 = trimmed in let __call_arg_1_49 = "//" in StringTools.startsWith __call_arg_0_48 __call_arg_1_49) then ignore ((
+      ignore (let __old_50 = !idx in let __new_51 = HxInt.add __old_50 1 in (
+        ignore (idx := __new_51);
+        __old_50
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (if StringTools.startsWith (trimmed : string) ("@:" : string) then ignore ((
-      ignore (let __old_25 = !idx in let __new_26 = HxInt.add __old_25 1 in (
-        ignore (idx := __new_26);
-        __old_25
+    ignore (if let __call_arg_0_52 = trimmed in let __call_arg_1_53 = "@:" in StringTools.startsWith __call_arg_0_52 __call_arg_1_53 then ignore ((
+      ignore (let __old_54 = !idx in let __new_55 = HxInt.add __old_54 1 in (
+        ignore (idx := __new_55);
+        __old_54
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
     let tempResult = ref (0 : int) in (
-      ignore (if isTypeDeclarationLine (trimmed : string) then let __assign_27 = !idx in (
-        tempResult := __assign_27;
-        __assign_27
-      ) else let __assign_28 = -1 in (
-        tempResult := __assign_28;
-        __assign_28
+      ignore (if let __call_arg_0_56 = trimmed in isTypeDeclarationLine __call_arg_0_56 then let __assign_57 = !idx in (
+        tempResult := __assign_57;
+        __assign_57
+      ) else let __assign_58 = -1 in (
+        tempResult := __assign_58;
+        __assign_58
       ));
       raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
     )
@@ -63,121 +63,121 @@ let nextSignificantTypeLineIndex = fun lines metadataIndex -> try let __fallback
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   -1
-) in Obj.magic __fallback_result_30 with
-  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
 
-let diagnosticFileName = fun filePath -> try let __fallback_result_41 = (
-  ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("<unknown>" : string))) else ());
-  Haxe_io_Path.withoutDirectory (filePath : string)
-) in Obj.magic __fallback_result_41 with
-  | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
+let diagnosticFileName = fun (filePath : string) -> (try (
+  ignore (if filePath == HxString.hx_null_string || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
+  let __call_arg_0_87 = filePath in Haxe_io_Path.withoutDirectory __call_arg_0_87
+) with
+  | HxRuntime.Hx_return __ret_88 -> (Obj.obj __ret_88 : string) : string)
 
-let incompatibleConstraintDiagnosticForLine = fun filePath line lineNumber -> try let __fallback_result_39 = (
-  ignore (if line == Obj.magic (HxRuntime.hx_null) || HxString.indexOf line "class " 0 < 0 || HxString.indexOf line "<" 0 < 0 || HxString.indexOf line ">" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+let incompatibleConstraintDiagnosticForLine = fun (filePath : string) (line : string) (lineNumber : int) -> (try let __fallback_result_86 = (
+  ignore (if line == HxString.hx_null_string || HxString.indexOf line "class " 0 < 0 || HxString.indexOf line "<" 0 < 0 || HxString.indexOf line ">" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let hasStruct = HxString.indexOf line "CsStruct" 0 >= 0 in let hasClass = HxString.indexOf line "CsClass" 0 >= 0 in let hasUnmanaged = HxString.indexOf line "CsUnmanaged" 0 >= 0 in let hasConstructible = HxString.indexOf line "Constructible" 0 >= 0 in (
     ignore (if not (hasStruct) && not (hasClass) && not (hasUnmanaged) && not (hasConstructible) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let tempString = ref ("" : string) in (
-      ignore (if hasStruct && hasConstructible then let __assign_34 = ("The new() constraint cannot be combined with the struct constraint." : string) in (
-        tempString := __assign_34;
-        __assign_34
-      ) else if hasStruct && hasClass then let __assign_35 = ("The class constraint cannot be combined with the struct constraint." : string) in (
-        tempString := __assign_35;
-        __assign_35
-      ) else if hasStruct && hasUnmanaged then let __assign_36 = ("The unmanaged constraint cannot be combined with the struct constraint." : string) in (
-        tempString := __assign_36;
-        __assign_36
-      ) else if hasUnmanaged && hasConstructible then let __assign_37 = ("The unmanaged constraint cannot be combined with the new() constraint." : string) in (
-        tempString := __assign_37;
-        __assign_37
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if hasStruct && hasConstructible then let __assign_80 = "The new() constraint cannot be combined with the struct constraint." in (
+        tempString := __assign_80;
+        __assign_80
+      ) else if hasStruct && hasClass then let __assign_81 = "The class constraint cannot be combined with the struct constraint." in (
+        tempString := __assign_81;
+        __assign_81
+      ) else if hasStruct && hasUnmanaged then let __assign_82 = "The unmanaged constraint cannot be combined with the struct constraint." in (
+        tempString := __assign_82;
+        __assign_82
+      ) else if hasUnmanaged && hasConstructible then let __assign_83 = "The unmanaged constraint cannot be combined with the new() constraint." in (
+        tempString := __assign_83;
+        __assign_83
       ) else raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))));
-      let startColumn = HxInt.add (HxString.indexOf line "class " 0) 1 in let endColumn = HxInt.add (HxString.length line) 1 in (((((((HxString.toStdString (diagnosticFileName (filePath : string)) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString (!tempString)
+      let message = !tempString in let startColumn = HxInt.add (HxString.indexOf line "class " 0) 1 in let endColumn = HxInt.add (HxString.length line) 1 in (((((((HxString.toStdString (let __call_arg_0_84 = filePath in diagnosticFileName __call_arg_0_84) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString message
     )
   )
-) in Obj.magic __fallback_result_39 with
-  | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
+) in Obj.magic __fallback_result_86 with
+  | HxRuntime.Hx_return __ret_85 -> Obj.obj __ret_85 : string)
 
-let appendIncompatibleConstraintDiagnostics = fun parsed diagnostics -> ignore (try (
+let appendIncompatibleConstraintDiagnostics = fun parsed diagnostics -> ignore (try ignore ((
   ignore (if parsed == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let source = (ParsedModule.getSource (Obj.magic parsed) () : string) in (
-    ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    let lines = Obj.magic (HxString.split source "\n") in let _g = ref 0 in let _g1 = HxArray.length lines in while !_g < _g1 do ignore (let idx = let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
-      ignore (_g := __new_32);
-      __old_31
-    ) in let diagnostic = (incompatibleConstraintDiagnosticForLine (ParsedModule.getFilePath (Obj.magic parsed) () : string) (HxArray.get (Obj.magic lines) idx : string) (HxInt.add idx 1) : string) in if diagnostic != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push diagnostics diagnostic) else ()) done
+    ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    let lines = Obj.magic (HxString.split source "\n") in let _g = ref 0 in let _g1 = HxArray.length lines in while !_g < _g1 do ignore (let idx = let __old_74 = !_g in let __new_75 = HxInt.add __old_74 1 in (
+      ignore (_g := __new_75);
+      __old_74
+    ) in let diagnostic = (let __call_arg_0_76 = ParsedModule.getFilePath (Obj.magic parsed) () in let __call_arg_1_77 = HxArray.get (Obj.magic lines) idx in let __call_arg_2_78 = HxInt.add idx 1 in incompatibleConstraintDiagnosticForLine __call_arg_0_76 __call_arg_1_77 __call_arg_2_78 : string) in if diagnostic != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push diagnostics diagnostic) else ()) done
   )
-) with
-  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33)
+)) with
+  | HxRuntime.Hx_return __ret_79 -> Obj.obj __ret_79)
 
-let diagnosticPath = fun filePath -> try let __fallback_result_44 = (
-  ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("<unknown>" : string))) else ());
-  let normalizedPath = (Haxe_io_Path.normalize (filePath : string) : string) in let normalizedCwd = (Haxe_io_Path.normalize (HxSys.getCwd () : string) : string) in (
-    ignore (if StringTools.startsWith (normalizedPath : string) (normalizedCwd : string) then ignore (let relativePath = ref (HxString.substr normalizedPath (HxString.length normalizedCwd) (-1) : string) in (
-      ignore (if StringTools.startsWith (!relativePath : string) ("/" : string) then ignore (let __assign_42 = (HxString.substr (!relativePath) 1 (-1) : string) in (
-        relativePath := __assign_42;
-        __assign_42
+let diagnosticPath = fun (filePath : string) -> (try (
+  ignore (if filePath == HxString.hx_null_string || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
+  let normalizedPath = let __call_arg_0_89 = filePath in Haxe_io_Path.normalize __call_arg_0_89 in let normalizedCwd = let __call_arg_0_90 = HxSys.getCwd () in Haxe_io_Path.normalize __call_arg_0_90 in (
+    ignore (if let __call_arg_0_91 = normalizedPath in let __call_arg_1_92 = normalizedCwd in StringTools.startsWith __call_arg_0_91 __call_arg_1_92 then ignore (let relativePath = ref (HxString.substr normalizedPath (HxString.length normalizedCwd) (-1) : string) in (
+      ignore (if let __call_arg_0_93 = !relativePath in let __call_arg_1_94 = "/" in StringTools.startsWith __call_arg_0_93 __call_arg_1_94 then ignore (let __assign_95 = (HxString.substr (!relativePath) 1 (-1) : string) in (
+        relativePath := __assign_95;
+        __assign_95
       )) else ());
-      if HxString.length (!relativePath) > 0 then raise (HxRuntime.Hx_return (Obj.repr (!relativePath : string))) else ()
+      if HxString.length (!relativePath) > 0 then raise (HxRuntime.Hx_return (Obj.repr (!relativePath))) else ()
     )) else ());
     normalizedPath
   )
-) in Obj.magic __fallback_result_44 with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
+) with
+  | HxRuntime.Hx_return __ret_96 -> (Obj.obj __ret_96 : string) : string)
 
-let assemblyMetadataDiagnostic = fun filePath lineNumber line message -> let trimmed = (StringTools.trim (line : string) : string) in let startColumn = HxInt.add (HxString.indexOf line trimmed 0) 1 in let endColumn = HxInt.add (HxString.length line) 1 in (((((((HxString.toStdString (diagnosticPath (filePath : string)) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString message
+let assemblyMetadataDiagnostic = fun (filePath : string) (lineNumber : int) (line : string) (message : string) -> (let trimmed = let __call_arg_0_71 = line in StringTools.trim __call_arg_0_71 in let startColumn = HxInt.add (HxString.indexOf line trimmed 0) 1 in let endColumn = HxInt.add (HxString.length line) 1 in (((((((HxString.toStdString (let __call_arg_0_72 = filePath in diagnosticPath __call_arg_0_72) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString message : string)
 
-let appendAssemblyMetadataDiagnostics = fun parsed diagnostics -> ignore (try (
+let appendAssemblyMetadataDiagnostics = fun parsed diagnostics -> ignore (try ignore ((
   ignore (if parsed == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let source = (ParsedModule.getSource (Obj.magic parsed) () : string) in (
-    ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 || HxString.indexOf source "@:cs.assembly" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-    let lines = Obj.magic (HxString.split source "\n") in let isTopLevelModule = not (hasNamedPackage (Obj.magic lines)) in let seenType = ref false in let _g = ref 0 in let _g1 = HxArray.length lines in try while !_g < _g1 do try ignore (let idx = let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-      ignore (_g := __new_16);
-      __old_15
-    ) in let line = (HxArray.get (Obj.magic lines) idx : string) in let trimmed = (StringTools.trim (line : string) : string) in (
-      ignore (if isTypeDeclarationLine (trimmed : string) then ignore ((
-        ignore (let __assign_17 = true in (
-          seenType := __assign_17;
-          __assign_17
+    ignore (if source == HxString.hx_null_string || HxString.length source = 0 || HxString.indexOf source "@:cs.assembly" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    let lines = Obj.magic (HxString.split source "\n") in let isTopLevelModule = not (hasNamedPackage (Obj.magic lines)) in let seenType = ref false in let _g = ref 0 in let _g1 = HxArray.length lines in try while !_g < _g1 do try ignore (let idx = let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
+      ignore (_g := __new_21);
+      __old_20
+    ) in let line = (HxArray.get (Obj.magic lines) idx : string) in let trimmed = let __call_arg_0_22 = line in StringTools.trim __call_arg_0_22 in (
+      ignore (if let __call_arg_0_23 = trimmed in isTypeDeclarationLine __call_arg_0_23 then ignore ((
+        ignore (let __assign_24 = true in (
+          seenType := __assign_24;
+          __assign_24
         ));
         raise (HxRuntime.Hx_continue)
       )) else ());
       let typeLineIndex = nextSignificantTypeLineIndex (Obj.magic lines) idx in (
-        ignore (if HxString.indexOf line "@:cs.assemblyMeta" 0 >= 0 && typeLineIndex >= 0 && isTopLevelModule then ignore (HxArray.push diagnostics (assemblyMetadataDiagnostic (ParsedModule.getFilePath (Obj.magic parsed) () : string) (HxInt.add typeLineIndex 1) (HxArray.get (Obj.magic lines) typeLineIndex : string) ("@:cs.assemblyMeta cannot be used on top level modules" : string))) else ());
+        ignore (if HxString.indexOf line "@:cs.assemblyMeta" 0 >= 0 && typeLineIndex >= 0 && isTopLevelModule then ignore (HxArray.push diagnostics (let __call_arg_0_25 = ParsedModule.getFilePath (Obj.magic parsed) () in let __call_arg_1_26 = HxInt.add typeLineIndex 1 in let __call_arg_2_27 = HxArray.get (Obj.magic lines) typeLineIndex in let __call_arg_3_28 = "@:cs.assemblyMeta cannot be used on top level modules" in assemblyMetadataDiagnostic __call_arg_0_25 __call_arg_1_26 __call_arg_2_27 __call_arg_3_28)) else ());
         if HxString.indexOf line "@:cs.assemblyStrict" 0 >= 0 && typeLineIndex >= 0 then ignore ((
-          ignore (if !seenType then ignore (HxArray.push diagnostics (assemblyMetadataDiagnostic (ParsedModule.getFilePath (Obj.magic parsed) () : string) (HxInt.add typeLineIndex 1) (HxArray.get (Obj.magic lines) typeLineIndex : string) ("@:cs.assemblyStrict can only be used on the first class of a module" : string))) else ());
-          if isTopLevelModule then ignore (HxArray.push diagnostics (assemblyMetadataDiagnostic (ParsedModule.getFilePath (Obj.magic parsed) () : string) (HxInt.add typeLineIndex 1) (HxArray.get (Obj.magic lines) typeLineIndex : string) ("@:cs.assemblyStrict cannot be used on top level modules" : string))) else ()
+          ignore (if !seenType then ignore (HxArray.push diagnostics (let __call_arg_0_29 = ParsedModule.getFilePath (Obj.magic parsed) () in let __call_arg_1_30 = HxInt.add typeLineIndex 1 in let __call_arg_2_31 = HxArray.get (Obj.magic lines) typeLineIndex in let __call_arg_3_32 = "@:cs.assemblyStrict can only be used on the first class of a module" in assemblyMetadataDiagnostic __call_arg_0_29 __call_arg_1_30 __call_arg_2_31 __call_arg_3_32)) else ());
+          if isTopLevelModule then ignore (HxArray.push diagnostics (let __call_arg_0_33 = ParsedModule.getFilePath (Obj.magic parsed) () in let __call_arg_1_34 = HxInt.add typeLineIndex 1 in let __call_arg_2_35 = HxArray.get (Obj.magic lines) typeLineIndex in let __call_arg_3_36 = "@:cs.assemblyStrict cannot be used on top level modules" in assemblyMetadataDiagnostic __call_arg_0_33 __call_arg_1_34 __call_arg_2_35 __call_arg_3_36)) else ()
         )) else ()
       )
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ()
   )
-) with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18)
+)) with
+  | HxRuntime.Hx_return __ret_37 -> Obj.obj __ret_37)
 
-let usingMetadataDiagnostic = fun filePath lineNumber line -> let marker = ("@:cs.using" : string) in let startColumn = HxInt.add (HxString.indexOf line marker 0) 1 in let endColumn = HxInt.add startColumn (HxString.length marker) in ((((((HxString.toStdString (diagnosticPath (filePath : string)) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : @:cs.using can only be used on the first type of a module"
+let usingMetadataDiagnostic = fun (filePath : string) (lineNumber : int) (line : string) -> (let marker = "@:cs.using" in let startColumn = HxInt.add (HxString.indexOf line marker 0) 1 in let endColumn = HxInt.add startColumn (HxString.length marker) in ((((((HxString.toStdString (let __call_arg_0_73 = filePath in diagnosticPath __call_arg_0_73) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : @:cs.using can only be used on the first type of a module" : string)
 
-let appendUsingMetadataDiagnostics = fun parsed diagnostics -> ignore (try (
+let appendUsingMetadataDiagnostics = fun parsed diagnostics -> ignore (try ignore ((
   ignore (if parsed == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let source = (ParsedModule.getSource (Obj.magic parsed) () : string) in (
-    ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 || HxString.indexOf source "@:cs.using" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    ignore (if source == HxString.hx_null_string || HxString.length source = 0 || HxString.indexOf source "@:cs.using" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let lines = Obj.magic (HxString.split source "\n") in let seenType = ref false in let _g = ref 0 in let _g1 = HxArray.length lines in try while !_g < _g1 do try ignore (let idx = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
       ignore (_g := __new_12);
       __old_11
-    ) in let line = (HxArray.get (Obj.magic lines) idx : string) in let trimmed = (StringTools.trim (line : string) : string) in (
-      ignore (if isTypeDeclarationLine (trimmed : string) then ignore ((
-        ignore (let __assign_13 = true in (
-          seenType := __assign_13;
-          __assign_13
+    ) in let line = (HxArray.get (Obj.magic lines) idx : string) in let trimmed = let __call_arg_0_13 = line in StringTools.trim __call_arg_0_13 in (
+      ignore (if let __call_arg_0_14 = trimmed in isTypeDeclarationLine __call_arg_0_14 then ignore ((
+        ignore (let __assign_15 = true in (
+          seenType := __assign_15;
+          __assign_15
         ));
         raise (HxRuntime.Hx_continue)
       )) else ());
-      if !seenType && HxString.indexOf line "@:cs.using" 0 >= 0 && nextSignificantTypeLineIndex (Obj.magic lines) idx >= 0 then ignore (HxArray.push diagnostics (usingMetadataDiagnostic (ParsedModule.getFilePath (Obj.magic parsed) () : string) (HxInt.add idx 1) (line : string))) else ()
+      if !seenType && HxString.indexOf line "@:cs.using" 0 >= 0 && nextSignificantTypeLineIndex (Obj.magic lines) idx >= 0 then ignore (HxArray.push diagnostics (let __call_arg_0_16 = ParsedModule.getFilePath (Obj.magic parsed) () in let __call_arg_1_17 = HxInt.add idx 1 in let __call_arg_2_18 = line in usingMetadataDiagnostic __call_arg_0_16 __call_arg_1_17 __call_arg_2_18)) else ()
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ()
   )
-) with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14)
+)) with
+  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19)
 
 let diagnosticForResolved = fun resolved -> try let __fallback_result_8 = (
   ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

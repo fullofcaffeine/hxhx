@@ -2,10 +2,12 @@
 
 - Status: accepted planning contract; implementation deferred until Full1 and
   the authentic shared-target hard cut; no SDK capability or support claim
-- Date: 2026-07-15; shared-host ABI amendment accepted 2026-07-18
+- Date: 2026-07-15; shared-host ABI amendment accepted 2026-07-18;
+  exact-host/profile redesign accepted 2026-07-29
 - Owner: `haxe_ocaml-bomhr`
 - Architecture contract: `haxe_ocaml-bomhr.1`
-- Prerequisites: `haxe.ocaml-f1cl`, `haxe_ocaml-38gsp`
+- Prerequisites: `haxe.ocaml-f1cl`, `haxe_ocaml-38gsp.1`,
+  `haxe_ocaml-38gsp.2`
 - Related owners: `haxe_ocaml-h5jta`, `haxe_ocaml-h5jta.1`,
   `haxe_ocaml-850ii`, `haxe.ocaml-vary.2`
 
@@ -20,20 +22,30 @@ Stage3 OCaml emitter. `haxe_ocaml-38gsp.1` must first prove that native `hxhx`
 feeds the actual standalone `reflaxe.ocaml` target implementation, and Full1
 must satisfy the existing prerequisite. This prevents M22 from freezing host
 services or a program envelope around a temporary second semantic target.
+`haxe_ocaml-38gsp.2` must then prove that the real target can compile and run
+itself as a stage0-free native artifact. M22 product implementation starts
+only after both target proofs and Full1.
+
+The focused native-host review is recorded in
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.
+It changes the packaging invariant: M22 requires one semantic target core and
+one versioned semantic contract, not one byte-identical `.cmxs` container.
 
 ## 1. Plain-language goal
 
 A target author should be able to start with normal Haxe and portable Reflaxe,
 keep one target implementation, compile that implementation to native OCaml
-with `reflaxe.ocaml`, and run one promoted plugin payload inside either stock
-Haxe or `hxhx`. The same target core can also run inside `hxhx` as a builtin.
+with `reflaxe.ocaml`, and run that same semantic core inside either stock Haxe
+or `hxhx`. The same core can also run inside `hxhx` as a builtin.
 
-The default packaging goal is one identical native plugin binary for both
-hosts. If an experiment proves that OCaml compiler, runtime, linker, or loader
-identity makes one container impossible, M22 may generate thin host-specific
-loader shells around one shared payload or reproducibly derived native core.
-The shells may adapt loading and ABI transport only; they cannot own target
-semantics.
+The product invariant is one Haxe source/core identity and one versioned
+semantic request/result contract. A single byte-identical native plugin
+container remains a required feasibility experiment, not a required product
+shape. OCaml compilation-unit digests, linked modules, runtime identity, or
+loader behavior may require tiny generated host-specific shells. Such shells
+may adapt preflight, loading, registration, value/schema conversion, and
+lifecycle only; they cannot own target lowering, printing, diagnostics,
+runtime selection, or output repair.
 
 Native execution alone does not give target code privileged compiler
 information. M22 adds a narrow, typed, versioned way for `hxhx` to provide
@@ -62,6 +74,54 @@ lose capability.
 
 M22 closes that product gap with semantic contracts rather than a general
 compiler-context object.
+
+## 2.1 Four ownership boundaries
+
+M22 uses three semantic host layers and one orthogonal native-language layer:
+
+1. generic Reflaxe owns the portable target request, immutable program/facts
+   snapshot, capability vocabulary, result, and lifecycle;
+2. exact stock-Haxe profiles own version-pinned eval-value conversion,
+   registration, host preflight, and request binding;
+3. `hxhx` owns its compatible baseline adapter plus negotiated immutable facts
+   and bounded actions; and
+4. `reflaxe.ocaml` owns typed access to ordinary OCaml libraries and checked
+   adapters independently of the compiler host.
+
+The fourth boundary is native interoperability, not compiler privilege.
+Compiling a target to OCaml permits calls to linked OCaml libraries. Compiler
+facts still arrive through the portable request or negotiated host services.
+
+### Useful native-plugin parity
+
+M22 does not promise every private symbol that handwritten OCaml can import.
+It promises parity within an explicit supported profile. For each admitted
+capability, one handwritten OCaml reference and one Haxe-authored plugin
+compiled through `reflaxe.ocaml` must agree on observable behavior, safety
+checks, lifecycle, diagnostics, failures, and the declared performance class.
+
+Every inspected capability is classified as an exact typed binding, a checked
+adapter, a versioned host fact/action, an isolated helper operation,
+research-only exact-host access, or rejected. Raw mutable compiler contexts,
+`Obj.t`, `Obj.magic` as a public escape, private generator registration, and
+unbounded callbacks are rejected.
+
+### Exact stock-Haxe profiles
+
+Stock native integration is tied to an exact host profile, not only a Haxe
+version string. The profile includes the Haxe build, OCaml compiler/runtime,
+imported module/interface digests, linked packages, platform/architecture,
+plugin ABI, Reflaxe identity, target contract, service catalog, core, shell,
+generator, and provenance identities.
+
+Haxe 4.3.7 and a future final Haxe 5 use separately generated namespaces and
+packages. A development Haxe 5 snapshot may exercise profile extraction and
+compatibility diffing, but it cannot establish final Haxe 5 support.
+
+The initial distribution policy is deterministic local generation or a
+user-compiled exact adapter. Shipping a profile derived from private compiler
+interfaces requires a separate provenance/licensing decision and qualified
+legal review.
 
 ## 3. Current source anchors and exact gaps
 
@@ -112,8 +172,8 @@ would hide important compatibility differences.
 
 ### Activation and packaging
 
-- stock-Haxe native plugin;
-- `hxhx` native plugin using the same payload;
+- stock-Haxe exact native eval shell plus the shared semantic core;
+- `hxhx` native plugin shell plus the shared semantic core;
 - `hxhx` builtin;
 - evaluated upstream Haxe/Reflaxe development adapter.
 
@@ -128,8 +188,8 @@ The supported named presets are therefore combinations:
 | --- | --- | --- | --- |
 | `evaluated-host-neutral` | evaluated | host-neutral | upstream Reflaxe adapter |
 | `native-host-neutral` | native | host-neutral | native artifact without privileged services |
-| `stock-haxe-plugin` | native | host-neutral or negotiated supported capabilities | stock-Haxe plugin |
-| `hxhx-integrated-plugin` | native | capability-integrated | `hxhx` plugin using the same payload |
+| `stock-haxe-plugin` | native | host-neutral or negotiated supported capabilities | exact stock-Haxe eval shell |
+| `hxhx-integrated-plugin` | native | capability-integrated | `hxhx` plugin shell |
 | `hxhx-integrated-builtin` | native | capability-integrated | `hxhx` builtin |
 | `unsafe-exact-host` | native | unversioned/internal research only | quarantined adapter |
 
@@ -140,14 +200,19 @@ The unsafe preset is not a supported SDK surface.
 
 ```text
 stock Haxe program/facts + services ────┐
-                                        ├─> one native plugin payload ─> one Haxe TargetCore
-hxhx program/facts + services ──────────┘                              └─> artifacts/build plan
+                                        ├─> one semantic request contract
+hxhx program/facts + services ──────────┘              |
+                                                       v
+                                            one Haxe TargetCore
+                                                       |
+                                                       v
+                                             artifacts/build plan
 
 same TargetCore execution forms:
 - evaluated host-neutral development
 - native host-neutral via reflaxe.ocaml
-- stock-Haxe native plugin
-- hxhx native plugin using the same payload
+- stock-Haxe exact native shell
+- hxhx native plugin shell
 - hxhx builtin
 ```
 
@@ -311,8 +376,8 @@ Preflight identity includes:
 - target-core ID/version;
 - host kind, version/commit, and artifact fingerprint;
 - OS, architecture, OCaml version, artifact kind, source digest, and profile;
-- shared plugin payload, optional loader shell, and emitted artifact digests
-  plus provenance.
+- target-core source/compiled identity, host-shell identity, and emitted
+  artifact digests plus provenance.
 
 Source-distributed native rebuild/cache keys include every compatibility input
 above. A cache hit cannot cross an unproven host/toolchain identity.
@@ -320,23 +385,28 @@ above. A cache hit cannot cross an unproven host/toolchain identity.
 ## 11. Stock-Haxe plugin and packaging policy
 
 Upstream Haxe remains the stable host-neutral development and behavior
-baseline. M22 also requires a native stock-Haxe plugin host for the same ABI and
-payload used by `hxhx`.
+baseline. M22 also requires a native stock-Haxe eval host for the same semantic
+contract and target core used by `hxhx`.
 
 The stock-Haxe host uses `eval.vm.Context.loadPlugin` and the real
 macro/Reflaxe lifecycle. It does not register a new Haxe platform. Target
 selection and invocation remain an adapter concern at the existing Reflaxe
-activation seam, while target semantics stay in the shared payload.
+activation seam, while target semantics stay in the shared core.
 
-- Haxe version, OCaml version, ABI version, and host fingerprint are checked.
+- Exact Haxe build, OCaml toolchain/runtime, imported interface digests, ABI,
+  shell/core identity, platform, and host fingerprint are checked before
+  Dynlink.
 - Handwritten OCaml is limited to host conversion, loading, and transport glue.
-- The Haxe target core and promoted payload remain one implementation.
-- The supported reference toolchain must first attempt to load one identical
-  plugin binary in both hosts.
-- A different loader shell is allowed only after an evidence record identifies
-  the exact OCaml compiler, runtime, linker, or loader incompatibility.
-- Any loader shell must open the same payload digest or a reproducibly derived
-  native core digest and must pass the same conformance fixtures.
+- The Haxe target core and semantic contract remain one implementation.
+- The supported reference toolchain runs a bounded experiment that compares
+  one combined `.cmxs`, one shared core plus two shells, and reproducibly
+  derived host artifacts.
+- Host-specific shells are acceptable when they contain only exact preflight,
+  activation, schema/value conversion, lifecycle binding, and error
+  translation. The experiment, not product readiness, decides whether one
+  container is useful.
+- Every shell records the same target-core source identity and proves the same
+  canonical request/result behavior.
 - Private upstream-Haxe AST values and private `hxhx` objects never cross the
   ABI.
 - If stock Haxe lacks a required negotiated capability, loading fails before
@@ -360,7 +430,14 @@ The IDs below are the canonical Beads owners for M22 implementation and proof.
 | M22.5 Host-neutral and integrated adapters | `haxe_ocaml-seg17` | P1 | M22.4 |
 | M22.6 Prove one privileged semantic fact | `haxe_ocaml-u6q8k` | P1 | M22.3, M22.4, M22.5 |
 | M22.7 Manifest/service negotiation v2 | `haxe_ocaml-le0ox` | P1 | M22.2, M22.4 |
-| M22.8 Shared stock-Haxe/`hxhx` native plugin ABI | `haxe_ocaml-c4czv` | P0 | M22.5, M22.6, M22.7; required |
+| M22.8 Shared semantic core across exact stock-Haxe and `hxhx` hosts | `haxe_ocaml-c4czv` | P0 | Full1, `38gsp.1`, `38gsp.2`, M22.5, M22.6, M22.7; required |
+| Exact stock-host profile generator/diff | `haxe_ocaml-v8a9b.1` | P1 | typed OCaml interop owner; research may precede Full1 |
+| Raw handwritten/Haxe-authored plugin parity | `haxe_ocaml-c4czv.2` | P1 | exact profile generator |
+| Stock eval lifecycle/reset safety | `haxe_ocaml-c4czv.3` | P1 | raw-plugin parity fixture |
+| Four-lane shared-core conformance | `haxe_ocaml-c4czv.4` | P1 | `38gsp.1`, `38gsp.2`, M22.5, parity, lifecycle |
+| One-container feasibility experiment | `haxe_ocaml-c4czv.5` | P2 | four-lane conformance |
+| Exact-profile licensing/distribution decision | `haxe_ocaml-c4czv.6` | P1 | profile generator and container evidence |
+| Canonical ABI fuzz/replay | `haxe_ocaml-c4czv.7` | P1 | M22.2 and four-lane canonical path |
 | M22.9 Real Haxe-authored compiler proof | `haxe_ocaml-bxwut` | P1 | M22.5, M22.6, M22.7 |
 | M22.10 Author-loop measurement | `haxe_ocaml-i69n4` | P2 | M22.9 |
 | M22.11 Scaffolding, migration, and support matrix | `haxe_ocaml-zof2e` | P1 | M22.7, M22.9 |
@@ -379,16 +456,17 @@ M22.1 + Full1 --> M22.3
 M22.2 + M22.3 --> M22.4 --> M22.5
 M22.3 + M22.4 + M22.5 --> M22.6
 M22.2 + M22.4 --> M22.7
-M22.5 + M22.6 + M22.7 --> M22.8
+Full1 + 38gsp.1 + 38gsp.2 + M22.5 + M22.6 + M22.7 --> M22.8
 M22.5 + M22.6 + M22.7 --> M22.9 --> M22.10
 M22.7 + M22.9 --> M22.11
-M22.6 + M22.8 + M22.9 + M22.10 + M22.11 + haxe_ocaml-38gsp --> M22.12
+M22.6 + M22.8 + M22.9 + M22.10 + M22.11 --> M22.12
 ```
 
-Beads representation note: the installed CLI does not allow task
-`haxe_ocaml-38gsp` to block epic `haxe_ocaml-bomhr`. The epic therefore relates
-to that prerequisite, while the enforceable blocking edge is
-`haxe_ocaml-157t1` (M22.12) to `haxe_ocaml-38gsp`. No duplicate epic was created.
+Beads representation note: Full1 blocks the M22 epic directly. The authentic
+target hard cut and native self-promotion are task prerequisites for M22
+implementation and are enforced on the first shared-host product task and
+aggregate where the tracker permits those edges. Full1 itself does not depend
+on either OCaml target task.
 
 ## 14. Proof and evidence matrix
 
@@ -397,8 +475,8 @@ to that prerequisite, while the enforceable blocking edge is
 | One target core | Source/core identity plus guard showing no host imports or semantic conditionals. |
 | Evaluated vs native host-neutral parity | Same fixture and target-core version; byte equality where deterministic, otherwise a declared deterministic normalizer plus runtime equality. |
 | Plugin vs builtin parity | Same request/facts/service catalog and target core; normalized artifact and runtime equality. |
-| Stock Haxe vs `hxhx` plugin parity | Same ABI, payload digest, target-core identity, declaration decisions, diagnostics, normalized emitted artifacts, and runtime behavior. |
-| Loader-shell fallback | Failed identical-binary experiment plus exact incompatibility, shell digests, shared payload or reproducible-core digest, and proof that shells contain no target semantics. |
+| Stock Haxe vs `hxhx` plugin parity | Same semantic ABI, target-core source identity, canonical request/result behavior, declaration decisions, diagnostics, normalized emitted artifacts, and runtime behavior. |
+| Host-shell boundary | Shell and core digests, imported-interface identities, one-container experiment results, and proof that shells contain no target semantics. |
 | Required semantic service | Positive negotiated case and pre-execution failures for missing, stale, malformed, and wrong-version data. |
 | Optional services | Proven semantics-preserving fallback or tooling-only disablement. |
 | Real target | Pinned external or repo-owned nontrivial compiler family; no toy-only closure. |
@@ -407,9 +485,8 @@ to that prerequisite, while the enforceable blocking edge is
 
 Every proof summary records candidate commit, run/attempt, execution form,
 service access, activation, stage0 policy, host fingerprint, service catalog
-digest, ABI versions, target-core identity, shared plugin payload digest,
-loader-shell digest where applicable, emitted artifact digest, and runtime
-result.
+digest, ABI versions, target-core source and compiled identities, host-shell
+digest, emitted artifact digest, and runtime result.
 
 ## 15. Performance method
 
@@ -464,8 +541,9 @@ M22 does not authorize:
   baseline diagnostics, or core semantics;
 - pre-backend phase providers hidden inside backend services;
 - conditionals scattered through semantic lowering or printers;
-- assuming that one `.cmxs` works in both hosts without the required identical-
-  binary experiment and exact OCaml/Haxe/toolchain compatibility evidence;
+- treating one byte-identical `.cmxs` as the semantic product requirement;
+- skipping the bounded one-container experiment and exact
+  OCaml/Haxe/interface/toolchain identity report;
 - permanent v1/v2 ABI compatibility;
 - sandboxed untrusted native plugins;
 - a performance claim without controlled evidence;
