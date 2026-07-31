@@ -55,4 +55,4 @@ for route in interp js neko; do
 	run_route "$route"
 done
 
-echo "REFLAXE_OCAML_ENUM_REFLECTION_ORACLE:PASS routes=3 cases=20"
+echo "REFLAXE_OCAML_ENUM_REFLECTION_ORACLE:PASS routes=3 cases=22"

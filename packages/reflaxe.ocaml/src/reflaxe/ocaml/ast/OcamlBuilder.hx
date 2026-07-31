@@ -147,8 +147,9 @@ class OcamlBuilder {
 	var currentLocalStoragePlan:Null<OcamlLocalStoragePlan> = null;
 	var currentLocalRepresentationPlan:Null<OcamlLocalRepresentationPlan> = null;
 	var currentContainerElementPlan:Null<OcamlContainerElementPlan> = null;
-	// The current request's host-ID adapter is deliberately separate from the
-	// sealed plans, which retain only reusable lexical identities.
+	// The current request's host-ID adapter is separate because it maps host
+	// variables to stable lexical identities. Other sealed plans may also retain
+	// exact typed nodes, but every such lookup is cleared with the request.
 	var currentLocalIdentities:Null<LexicalLocalIdentityPlan> = null;
 	// Current function return type while lowering a function body.
 	var currentFunctionReturnType:Null<Type> = null;
@@ -1135,11 +1136,12 @@ class OcamlBuilder {
 	**/
 	function buildArrayLiteralElement(container:TypedExpr, item:TypedExpr, elementIndex:Int):OcamlExpr {
 		final binding = currentFunctionPlanBinding;
-		if (binding == null)
-			return buildExpr(item);
 		final plan = currentContainerElementPlan;
-		if (plan == null)
+		if (plan == null) {
+			if (binding == null)
+				return buildExpr(item);
 			return containerElementInvariant("sealed function reached array syntax without its container-element plan", container.pos);
+		}
 		final conversion = switch (plan.syntaxLookup(container, elementIndex)) {
 			case Unknown:
 				return containerElementInvariant("typed array element is absent from the sealed request-local syntax lookup", item.pos);
@@ -7265,6 +7267,7 @@ class OcamlBuilder {
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
+		final previousContainerElementPlan = currentContainerElementPlan;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
@@ -7273,6 +7276,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
@@ -7281,6 +7285,7 @@ class OcamlBuilder {
 		final result = buildExpr(expression);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
+		currentContainerElementPlan = previousContainerElementPlan;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
@@ -7299,6 +7304,7 @@ class OcamlBuilder {
 			expressionPlan:OcamlSealedStandaloneExpressionPlan):OcamlExpr {
 		final previousStoragePlan = currentLocalStoragePlan;
 		final previousLocalIdentities = currentLocalIdentities;
+		final previousContainerElementPlan = currentContainerElementPlan;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
@@ -7307,6 +7313,7 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
@@ -7315,6 +7322,7 @@ class OcamlBuilder {
 		final result = coerceForAssignment(lhsType, rhs);
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
+		currentContainerElementPlan = previousContainerElementPlan;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;

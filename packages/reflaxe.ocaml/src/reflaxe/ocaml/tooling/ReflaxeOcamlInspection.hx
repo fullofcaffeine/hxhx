@@ -60,6 +60,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v62";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v1";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -1942,6 +1943,8 @@ class ReflaxeOcamlInspection {
 					unsafeOperationId: requiredString(unsafe, "id")
 				};
 				if (seen.exists(result.id)) throw 'Container-element conversion report contains duplicate identity "${result.id}".';
+				final expectedPipelineRevision = StringTools.startsWith(result.functionId,
+					"standalone:") ? STANDALONE_EXPRESSION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
 				if (result.role != "array-literal-dynamic-element"
 					|| result.containerOrdinal < 0
 					|| result.elementIndex < 0
@@ -1962,7 +1965,7 @@ class ReflaxeOcamlInspection {
 					|| result.functionId.length == 0
 					|| result.programRevision.length == 0
 					|| result.bodyRevision.length == 0
-					|| result.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION) {
+					|| result.pipelineRevision != expectedPipelineRevision) {
 					throw 'Container-element conversion "${result.id}" has an invalid exact enum-to-Dynamic array contract.';
 				}
 				final canonicalId = containerElementOccurrenceId(result);

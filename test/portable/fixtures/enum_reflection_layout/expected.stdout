@@ -15,6 +15,8 @@ dynamic:Delta:3:dynamic,4
 dynamic:Echo:4:
 array-dynamic:Alpha:0:
 array-dynamic:Delta:3:array,6
+static-array-dynamic:Alpha:0:
+static-array-dynamic:Delta:3:static,7
 constructors:Alpha,Bravo,Charlie,Delta,Echo
 factory-name:Delta:3:made,5
 factory-index:Charlie:2:

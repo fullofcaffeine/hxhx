@@ -20,12 +20,19 @@ const generated = fs.readFileSync(path.join(fixtureRoot, 'out', 'Main.ml'), 'utf
 
 const conversions = lowering.containerElementConversions
 assert.equal(lowering.schemaVersion, 50)
-assert.equal(conversions.length, 2, 'the two enum values entering Array<Dynamic> should each have one sealed conversion')
-assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 1])
-assert.deepEqual(conversions.map(entry => entry.containerOrdinal), [0, 0],
-	'the two elements should share the first structural array occurrence')
+assert.equal(conversions.length, 4,
+	'the method-local and static-initializer enum values should each have one sealed conversion')
+assert.deepEqual(conversions.map(entry => entry.elementIndex).sort(), [0, 0, 1, 1])
+assert.deepEqual(conversions.map(entry => entry.containerOrdinal), [0, 0, 0, 0],
+	'each pair should share the first structural array occurrence in its own typed root')
+const standaloneConversions = conversions.filter(entry => entry.functionId.startsWith('standalone:field-initializer:'))
+const functionConversions = conversions.filter(entry => !entry.functionId.startsWith('standalone:'))
+assert.equal(standaloneConversions.length, 2,
+	'the static field initializer should publish both independently planned conversions')
+assert.equal(functionConversions.length, 2,
+	'the method body should continue to publish both independently planned conversions')
 assert.deepEqual(lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id),
-	'the independent typed-body inventory should require exactly the two sealed conversions')
+	'the independent typed-body inventories should require exactly the four sealed conversions')
 
 for (const conversion of conversions) {
 	assert.equal(conversion.role, 'array-literal-dynamic-element')
@@ -59,8 +66,15 @@ const functionEnd = generated.indexOf('let factoryCases', functionStart)
 assert(functionStart >= 0 && functionEnd > functionStart, 'generated output lost the dynamic array fixture boundary')
 const dynamicArraySyntax = generated.slice(functionStart, functionEnd)
 const generatedBoxes = dynamicArraySyntax.match(/HxEnum\.box_if_needed "MixedShape" \(Obj\.repr/g) || []
-assert.equal(generatedBoxes.length, conversions.length,
-	'generated syntax should apply exactly the two sealed array-element conversions')
+assert.equal(generatedBoxes.length, functionConversions.length,
+	'method syntax should apply exactly its two sealed array-element conversions')
+const staticStart = generated.indexOf('let staticDynamicValues')
+const staticEnd = generated.indexOf('let staticDynamicArrayCases', staticStart)
+assert(staticStart >= 0 && staticEnd > staticStart, 'generated output lost the static array initializer boundary')
+const staticArraySyntax = generated.slice(staticStart, staticEnd)
+const generatedStaticBoxes = staticArraySyntax.match(/HxEnum\.box_if_needed "MixedShape" \(Obj\.repr/g) || []
+assert.equal(generatedStaticBoxes.length, standaloneConversions.length,
+	'static initializer syntax should apply exactly its two sealed array-element conversions')
 
 /**
  * Runs the public inspection command against one output directory.
@@ -153,6 +167,11 @@ try {
 	expectLoweringRejection('a stale container structural ordinal', /does not match its retained function/, report => {
 		report.containerElementConversions[0].containerOrdinal += 1
 	})
+	expectLoweringRejection('a standalone conversion using the function pipeline revision',
+		/invalid exact enum-to-Dynamic array contract/, report => {
+			const standalone = report.containerElementConversions.find(entry => entry.functionId.startsWith('standalone:'))
+			standalone.pipelineRevision = 'ocaml-function-plans-v62'
+		})
 	expectLoweringRejection('a corrupt container carrier', /invalid exact enum-to-Dynamic array contract/, report => {
 		report.containerElementConversions[0].inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'
 	})

@@ -193,6 +193,7 @@ class BytesReadPlanFixture {
 				bodyRevision: firstStandalone.binding.bodyRevision + ":changed",
 				pipelineRevision: firstStandalone.binding.pipelineRevision
 			},
+			containerElements: firstStandalone.containerElements,
 			anonymousStructures: firstStandalone.anonymousStructures,
 			bytesAccesses: firstStandalone.bytesAccesses,
 			bytesMutations: firstStandalone.bytesMutations,

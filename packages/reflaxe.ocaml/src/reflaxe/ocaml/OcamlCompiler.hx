@@ -1458,12 +1458,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/**
 		Seals occurrence-bound plans for one non-function typed root.
 
-		Class-field initializers do not belong to a function, but anonymous-object
-		and Bytes operations inside them still need the same exact program, body,
-		target-pipeline, and runtime-requirement evidence before syntax is built.
+		Class-field initializers do not belong to a function, but container
+		conversions, anonymous-object operations, and Bytes operations inside them
+		still need the same exact program, body, target-pipeline, and runtime
+		requirement evidence before syntax is built.
 	**/
 	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
 		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
+		for (conversion in plan.containerElements.decisions())
+			ctx.recordEnumDynamicContainerRuntimeRequirement(conversion);
 		for (decision in plan.anonymousStructures.operations())
 			ctx.recordAnonymousStructureRuntimeRequirement(decision);
 		for (decision in plan.bytesAccesses.decisions())

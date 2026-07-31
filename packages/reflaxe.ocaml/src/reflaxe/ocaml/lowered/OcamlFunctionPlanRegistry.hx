@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
+import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan.OcamlBytesAccessPlanner;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
@@ -47,7 +48,13 @@ typedef OcamlSealedPlacePlan = {
 	final operation:OcamlLoweredPlaceOperation;
 }
 
-/** All target-owned decisions sealed for one exact final function body. */
+/**
+	All request-local target decisions sealed for one exact final function body.
+
+	Some plans keep exact typed-expression keys so syntax can consume the
+	decision chosen for that request without reconstructing an occurrence from
+	source positions. Callers must not retain this object across requests.
+**/
 typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
@@ -87,6 +94,7 @@ typedef OcamlFunctionSyntaxInput = {
 **/
 typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
+	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
@@ -117,6 +125,7 @@ private typedef OcamlSealedFunctionRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v1";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -125,6 +134,8 @@ class OcamlFunctionPlanRegistry {
 	final declaredCallableByCallee:StringMap<OcamlCallableDeclarationPlan> = new StringMap();
 	final callableByCallee:StringMap<OcamlCallableBoundaryPlan> = new StringMap();
 	final originByProtection:StringMap<String> = new StringMap();
+	final standaloneContainerElementsById:StringMap<OcamlContainerElementDecision> = new StringMap();
+	final standaloneRequiredContainerElementIds:StringMap<Bool> = new StringMap();
 	final standaloneAnonymousStructuresById:StringMap<OcamlAnonymousStructureDecision> = new StringMap();
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
 
@@ -141,6 +152,8 @@ class OcamlFunctionPlanRegistry {
 		declaredCallableByCallee.clear();
 		callableByCallee.clear();
 		originByProtection.clear();
+		standaloneContainerElementsById.clear();
+		standaloneRequiredContainerElementIds.clear();
 		standaloneAnonymousStructuresById.clear();
 		standaloneAnonymousOperationsById.clear();
 	}
@@ -195,11 +208,14 @@ class OcamlFunctionPlanRegistry {
 	public function sealStandaloneExpression(ownerId:String, expression:TypedExpr,
 			representations:OcamlRepresentationRegistry):OcamlSealedStandaloneExpressionPlan {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
+		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(expression);
+		containerElements.requirePlanBinding(binding);
+		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
 		anonymousStructures.requireRepresentations(representations);
 		bytesAccesses.requirePlanBinding(binding);
@@ -210,15 +226,38 @@ class OcamlFunctionPlanRegistry {
 		bytesProducers.requireRepresentations(representations);
 		bytesReads.requirePlanBinding(binding);
 		bytesReads.requireRepresentations(representations);
+		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
 		return {
 			binding: binding,
+			containerElements: containerElements,
 			anonymousStructures: anonymousStructures,
 			bytesAccesses: bytesAccesses,
 			bytesMutations: bytesMutations,
 			bytesProducers: bytesProducers,
 			bytesReads: bytesReads
 		};
+	}
+
+	/**
+		Keeps report-safe conversion copies from roots emitted outside functions.
+
+		The syntax-facing plan retains exact typed-expression keys for this request.
+		The registry publishes only copied decision records, so reports do not keep
+		host compiler objects alive or depend on a later body walk.
+	**/
+	function recordStandaloneContainerElements(plan:OcamlContainerElementPlan):Void {
+		for (decision in plan.decisions()) {
+			final existing = standaloneContainerElementsById.get(decision.id);
+			if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(decision))
+				throw 'reflaxe.ocaml [ocaml-container-element:conflicting-standalone-conversion]: standalone conversion "${decision.id}" changed within one compilation request';
+			standaloneContainerElementsById.set(decision.id, decision);
+		}
+		for (id in plan.requiredConversionIds()) {
+			if (standaloneRequiredContainerElementIds.exists(id))
+				throw 'reflaxe.ocaml [ocaml-container-element:duplicate-standalone-required-conversion]: standalone occurrence "$id" was recorded more than once';
+			standaloneRequiredContainerElementIds.set(id, true);
+		}
 	}
 
 	/**
@@ -258,6 +297,8 @@ class OcamlFunctionPlanRegistry {
 		final expected = standaloneBinding(plan.binding.functionId, expression);
 		if (!sameBinding(plan.binding, expected))
 			throw 'reflaxe.ocaml [ocaml-bytes:stale-standalone-plan]: standalone root "${plan.binding.functionId}" was sealed for ${plan.binding.bodyRevision}, but syntax received ${expected.bodyRevision}';
+		plan.containerElements.requirePlanBinding(expected);
+		OcamlContainerElementPlanner.requireCompleteness(expression, expected, plan.containerElements);
 		plan.anonymousStructures.requirePlanBinding(expected);
 		plan.anonymousStructures.requireRepresentations(representations);
 		plan.bytesAccesses.requirePlanBinding(expected);
@@ -281,7 +322,7 @@ class OcamlFunctionPlanRegistry {
 			functionId: functionId,
 			programRevision: programRevision,
 			bodyRevision: FunctionBodyRevision.initial(expression).id,
-			pipelineRevision: PIPELINE_REVISION
+			pipelineRevision: STANDALONE_PIPELINE_REVISION
 		};
 	}
 
@@ -326,9 +367,11 @@ class OcamlFunctionPlanRegistry {
 	/**
 		Returns the request-local lookup that lets syntax consume a stable plan.
 
-		This adapter is intentionally outside `OcamlSealedFunctionPlan`: it may
-		retain host compiler variables and allocation IDs for the current request,
-		while the sealed plan remains host-neutral and reusable.
+		This adapter remains separate because it maps the active host's variable
+		objects to stable lexical identities. The sealed function plan is also
+		request-local: its container-element lookup keeps exact typed-expression
+		keys so syntax cannot confuse macro-generated nodes with equal positions.
+		Only copied decision records and generated source bundles may outlive it.
 	**/
 	public function requestLocalIdentitiesFor(data:ClassFuncData):LexicalLocalIdentityPlan {
 		return requiredSealedFunctionRecord(data).localIdentities;
@@ -751,6 +794,8 @@ class OcamlFunctionPlanRegistry {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
 		final conversions:Array<OcamlContainerElementDecision> = [];
+		for (conversion in standaloneContainerElementsById)
+			conversions.push(conversion);
 		for (functionId in functionIds) {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed != null) {
@@ -774,6 +819,10 @@ class OcamlFunctionPlanRegistry {
 		functionIds.sort(Reflect.compare);
 		final required:Array<String> = [];
 		final seen:StringMap<Bool> = new StringMap();
+		for (id in standaloneRequiredContainerElementIds.keys()) {
+			seen.set(id, true);
+			required.push(id);
+		}
 		for (functionId in functionIds) {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed == null)
@@ -794,6 +843,8 @@ class OcamlFunctionPlanRegistry {
 		final functionIds = [for (functionId in sealedFunctions.keys()) functionId];
 		functionIds.sort(Reflect.compare);
 		final operations:Array<OcamlUnsafeOperationRecord> = [];
+		for (conversion in standaloneContainerElementsById)
+			operations.push(conversion.unsafeOperation);
 		for (functionId in functionIds) {
 			final sealed = sealedFunctions.get(functionId);
 			if (sealed != null) {

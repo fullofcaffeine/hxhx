@@ -12,6 +12,8 @@ enum MixedShape {
 
 /** Freezes upstream Haxe 4.3.7 enum reflection and factory behavior. */
 class Main {
+	static final staticDynamicValues:Array<Dynamic> = [MixedShape.Alpha, MixedShape.Delta("static", 7)];
+
 	static function line(value:String):Void {
 		#if js
 		js.Syntax.code("console.log({0})", value);
@@ -67,6 +69,11 @@ class Main {
 			line("array-dynamic:" + describe(value));
 	}
 
+	static function staticDynamicArrayCases():Void {
+		for (value in staticDynamicValues)
+			line("static-array-dynamic:" + describe(value));
+	}
+
 	static function factoryCases():Void {
 		final enumType:Dynamic = MixedShape;
 		line("constructors:" + Type.getEnumConstructs(enumType).join(","));
@@ -82,6 +89,7 @@ class Main {
 		typedCases();
 		dynamicCases();
 		dynamicArrayCases();
+		staticDynamicArrayCases();
 		factoryCases();
 	}
 }
