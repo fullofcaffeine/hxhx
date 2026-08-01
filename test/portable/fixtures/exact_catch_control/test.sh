@@ -5,11 +5,13 @@ ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
 REPORT_COPY="$(mktemp)"
+MANIFEST_FILE="out/ocaml_artifact_manifest.json"
+MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
+trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION"' EXIT
 
-if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
+if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
 	echo "Missing generated exact-catch source or lowering report" >&2
 	exit 1
 fi
@@ -149,6 +151,7 @@ if (nativeStart < 0
 NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
+cp "$MANIFEST_FILE" "$MANIFEST_COPY"
 haxe build.hxml
 if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	echo "The exact same typed program produced a different catch-control report" >&2
@@ -173,18 +176,17 @@ if (report.schemaVersion !== 30
 }
 NODE
 
-node - "$REPORT_FILE" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
+node - "$REPORT_FILE" <<'NODE'
 const fs = require('fs')
-const { resealControlRevision } = require(process.argv[3])
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const chain = report.controlCatches.find(candidate => candidate.clauses.length > 1)
 if (!chain)
 	throw new Error('missing multi-clause catch chain to corrupt')
 chain.clauses[0].bodyResultPolicy = 'infer-in-printer'
-resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
 
 if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
@@ -199,5 +201,6 @@ if ! grep -q "Control catch clause" "$TAMPER_INSPECTION"; then
 	exit 1
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
+cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
 echo "REFLAXE_OCAML_EXACT_CATCH_CONTROL_FIXTURE:PASS chains=10"

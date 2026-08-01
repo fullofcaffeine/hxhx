@@ -135,9 +135,8 @@ expect_invalid() {
 	local expected="$2"
 	rm -rf "$INVALID_OUTPUT"
 	cp -R out "$INVALID_OUTPUT"
-node - "$INVALID_OUTPUT/ocaml_lowering_report.json" "$mutation" "$ROOT/test/portable/helpers/control-report-revision.js" <<'NODE'
+node - "$INVALID_OUTPUT/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const fs = require('fs')
-const { resealControlRevision } = require(process.argv[4])
 const path = process.argv[2]
 const mutation = process.argv[3]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -195,10 +194,15 @@ switch (mutation) {
 	default:
 		throw new Error(`unknown mutation ${mutation}`)
 }
-if (['carrier', 'tags', 'proof', 'revision'].includes(mutation))
-	resealControlRevision(report)
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
+	if [[ "$mutation" == "source" || "$mutation" == "function" || "$mutation" == "enum" ]]; then
+		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+			--preserve-control-revision "$INVALID_OUTPUT/ocaml_lowering_report.json"
+	else
+		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+			"$INVALID_OUTPUT/ocaml_lowering_report.json"
+	fi
 	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 		--macro 'nullSafety("reflaxe.ocaml")' \
 		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \

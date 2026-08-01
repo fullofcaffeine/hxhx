@@ -5,12 +5,14 @@ ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
 REPORT_COPY="$(mktemp)"
+MANIFEST_FILE="out/ocaml_artifact_manifest.json"
+MANIFEST_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 TAMPER_INSPECTION="$(mktemp)"
 UNSUPPORTED_OUTPUT="$(mktemp)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION" "$UNSUPPORTED_OUTPUT"' EXIT
+trap 'rm -f "$REPORT_COPY" "$MANIFEST_COPY" "$INSPECTION_COPY" "$TAMPER_INSPECTION" "$UNSUPPORTED_OUTPUT"' EXIT
 
-if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
+if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$MANIFEST_FILE" ]; then
 	echo "Missing generated nullable-return source or lowering report" >&2
 	exit 1
 fi
@@ -194,6 +196,7 @@ for (const [name, next] of [
 NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
+cp "$MANIFEST_FILE" "$MANIFEST_COPY"
 haxe build.hxml
 if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	echo "The exact same typed program produced a different nullable-return report" >&2
@@ -252,7 +255,7 @@ if (!control)
 control.payload.conversion = 'preserve-nullable-carrier'
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-haxe -cp "$ROOT/scripts/ci" --run RecomputeLoweringControlRevision "$REPORT_FILE"
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision "$REPORT_FILE"
 
 if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
@@ -267,6 +270,7 @@ if ! grep -q "exact-value, nominal, nullable-carrier, or primitive-to-nullable p
 	exit 1
 fi
 cp "$REPORT_COPY" "$REPORT_FILE"
+cp "$MANIFEST_COPY" "$MANIFEST_FILE"
 
 rm -rf unsupported_out
 if haxe unsupported.hxml >"$UNSUPPORTED_OUTPUT" 2>&1; then

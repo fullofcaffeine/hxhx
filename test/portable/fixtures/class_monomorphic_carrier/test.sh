@@ -364,7 +364,7 @@ if (control?.payload?.nominalRepresentation == null) {
 control.payload.nominalRepresentation.layoutRevision = `sha256:${'0'.repeat(64)}`
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-haxe -cp "$repo_root/scripts/ci" --run RecomputeLoweringControlRevision \
+haxe -cp "$repo_root/scripts/ci" -cp "$repo_root/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
 	"$invalid_control_nominal_output/ocaml_lowering_report.json"
 if (
 	cd "$repo_root"
