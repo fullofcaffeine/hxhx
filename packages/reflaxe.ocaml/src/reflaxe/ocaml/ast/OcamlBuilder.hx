@@ -62,6 +62,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
@@ -2427,7 +2428,7 @@ class OcamlBuilder {
 			case TUnop(op, postFix, inner):
 				buildUnop(op, postFix, inner, e.t);
 			case TFunction(tfunc):
-				buildFunction(tfunc);
+				buildFunction(e, tfunc);
 			case TIf(cond, eif, eelse):
 				if (eelse == null) {
 					// Haxe `if (cond) stmt;` is statement-typed (Void). Ensure both branches are `unit`
@@ -7692,13 +7693,43 @@ class OcamlBuilder {
 		return OcamlExpr.EFun(params, body);
 	}
 
-	public function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
+	/**
+			Builds one function literal from its parent-approved planning disposition.
+			An admitted literal receives its own return-control plan and callable
+			boundary, so an early `return 6` raises and recovers the exact `Int` carrier
+			without an unchecked fallback cast. A `null` plan is allowed only when the
+			parent catalog explicitly recorded that this literal is outside the first
+			nested-function slice.
+		**/
+	public function buildFunction(expression:TypedExpr, tfunc:haxe.macro.Type.TFunc):OcamlExpr {
 		final storagePlan = currentLocalStoragePlan;
 		if (storagePlan == null)
 			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
+		final parentBinding = currentFunctionPlanBinding;
+		final nestedPlan:Null<OcamlSealedNestedFunctionPlan> = parentBinding == null ? null : functionPlanRegistry.nestedFunctionPlanFor(expression,
+			parentBinding);
+		final callableBoundary = nestedPlan == null ? null : nestedPlan.callableBoundary;
 
 		// Determine parameters and wrap mutated parameters as refs inside the body.
-		final params = tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
+		if (callableBoundary != null) {
+			if (tfunc.args.length != callableBoundary.arguments.length) {
+				return
+					callPlanInvariant('nested callable boundary "${callableBoundary.id}" has ${callableBoundary.arguments.length} planned parameters but ${tfunc.args.length} typed parameters',
+					tfunc.expr.pos);
+			}
+			for (index in 0...tfunc.args.length)
+				requireCallValue(callableBoundary.arguments[index], index, 'nested callable boundary "${callableBoundary.id}" argument $index', tfunc.expr.pos);
+			if (callableBoundary.result != null)
+				requireCallValue(callableBoundary.result, -1, 'nested callable boundary "${callableBoundary.id}" result', tfunc.expr.pos);
+		}
+		final params = if (callableBoundary == null) {
+			tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
+		} else {
+			[
+				for (index in 0...tfunc.args.length)
+					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(tfunc.args[index].v.name)), callableOutputType(callableBoundary.arguments[index], tfunc.expr.pos))
+			];
+		};
 
 		for (a in tfunc.args) {
 			final stableId = stableLocalId(a.v.id, tfunc.expr.pos);
@@ -7710,12 +7741,15 @@ class OcamlBuilder {
 		}
 
 		final previousControlPlan = currentControlPlan;
+		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
-		currentControlPlan = null;
+		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
+		if (nestedPlan != null)
+			currentFunctionPlanBinding = nestedPlan.binding;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
-		final needsReturnCatch = containsNestedReturnInFunctionBody(tfunc.expr);
+		final needsReturnCatch = nestedPlan == null ? containsNestedReturnInFunctionBody(tfunc.expr) : nestedPlan.controls.hasReturnTransfers();
 		final functionReturnType:Type = switch (tfunc.t) {
 			case TFun(_, ret): ret;
 			case _: tfunc.t;
@@ -7723,7 +7757,7 @@ class OcamlBuilder {
 		final prevFunctionReturnType = currentFunctionReturnType;
 		final previousCallableBoundary = currentCallableBoundary;
 		currentFunctionReturnType = functionReturnType;
-		currentCallableBoundary = null;
+		currentCallableBoundary = callableBoundary;
 
 		var body:OcamlExpr = switch (unwrap(tfunc.expr).expr) {
 			case TReturn(ret):
@@ -7736,13 +7770,19 @@ class OcamlBuilder {
 
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
+			final plannedReturn = nestedPlan == null ? null : nestedPlan.controls.returnBoundaryDecision();
+			if (nestedPlan != null && plannedReturn == null)
+				return controlPlanInvariant("an admitted nested return plan has no sealed return-boundary decision", tfunc.expr.pos);
 			final returnCase:OcamlMatchCase = {
 				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 				guard: null,
-				expr: returnPayloadToFunctionType(returnVar, functionReturnType)
+				expr: plannedReturn == null ? returnPayloadToFunctionType(returnVar,
+					functionReturnType) : buildPlannedReturnBoundary(plannedReturn, returnVar, tfunc.expr.pos)
 			};
 			final fallbackBody = if (isVoidType(functionReturnType)) {
 				exprAsStatement(body);
+			} else if (nestedPlan != null) {
+				body;
 			} else {
 				final fallbackResultName = freshTmp("fallback_result");
 				OcamlExpr.ELet(fallbackResultName, body,
@@ -7752,6 +7792,12 @@ class OcamlBuilder {
 		}
 		if (isVoidType(functionReturnType)) {
 			body = exprAsStatement(body);
+		} else if (callableBoundary != null) {
+			if (callableBoundary.resultKind != OcamlCallResultKind.Value || callableBoundary.result == null)
+				return callPlanInvariant('nested callable boundary "${callableBoundary.id}" has no represented result for its value-returning typed function',
+					tfunc.expr.pos);
+			body = buildPlannedFunctionResult(callableBoundary.result, body, tfunc.expr.pos);
+			body = OcamlExpr.EAnnot(body, callableOutputType(callableBoundary.result, tfunc.expr.pos));
 		}
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).
@@ -7766,6 +7812,7 @@ class OcamlBuilder {
 
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentCallableBoundary = previousCallableBoundary;
+		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentControlPlan = previousControlPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;

@@ -60,6 +60,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
 	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v62";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v1";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -497,8 +498,9 @@ class ReflaxeOcamlInspection {
 				throw 'Control report contains duplicate identity "${control.id}".';
 			if (control.sourceFile.length == 0 || control.sourceMin < 0 || control.sourceMax < control.sourceMin)
 				throw 'Control decision "${control.id}" has an invalid source span.';
-			if (control.pipelineRevision != FUNCTION_PLAN_PIPELINE_REVISION) {
-				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$FUNCTION_PLAN_PIPELINE_REVISION".';
+			final expectedPipelineRevision = control.functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
+			if (control.pipelineRevision != expectedPipelineRevision) {
+				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$expectedPipelineRevision" for function "${control.functionId}".';
 			}
 			final payload = control.payload;
 			switch (control.kind) {

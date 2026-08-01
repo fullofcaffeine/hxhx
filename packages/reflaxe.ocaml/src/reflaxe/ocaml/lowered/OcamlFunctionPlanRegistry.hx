@@ -2,7 +2,9 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import haxe.ds.ObjectMap;
 import haxe.ds.StringMap;
+import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
@@ -86,6 +88,22 @@ typedef OcamlFunctionSyntaxInput = {
 }
 
 /**
+	The return-control facts sealed for one nested function literal.
+
+	This is request-local because `controls` keeps exact typed-expression keys for
+	the active compiler request. The copied decisions can appear in reports, but
+	the plan object itself must be discarded when `beginProgram` starts the next
+	request.
+**/
+typedef OcamlSealedNestedFunctionPlan = {
+	final occurrenceId:String;
+	final parentBinding:OcamlFunctionPlanBinding;
+	final binding:OcamlFunctionPlanBinding;
+	final callableBoundary:OcamlCallableBoundaryPlan;
+	final controls:OcamlControlPlan;
+}
+
+/**
 	All target-owned decisions sealed for one exact non-function expression root.
 
 	`binding.functionId` contains a stable root identity even though the shared
@@ -115,6 +133,22 @@ private typedef OcamlSealedFunctionRecord = {
 }
 
 /**
+	One nested literal observed while sealing its parent function.
+
+	`plan == null` is an explicit deferral, not a missing plan. Keeping that
+	distinction lets syntax use the legacy path only for a literal the planner
+	actually saw and deliberately left outside the first exact-Int slice.
+**/
+private typedef OcamlNestedFunctionRecord = {
+	final parentBinding:OcamlFunctionPlanBinding;
+	final bodyExternalLocals:Array<TVar>;
+	final observedBodyRevision:String;
+	final occurrenceId:Null<String>;
+	final plan:Null<OcamlSealedNestedFunctionPlan>;
+	final deferredReason:Null<String>;
+}
+
+/**
 	Owns revision-bound lowered plans between final typed preprocessing and syntax.
 
 	A new compilation request clears the registry. Each function is planned and
@@ -125,12 +159,16 @@ private typedef OcamlSealedFunctionRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v1";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
 	final originsByFunction:StringMap<Array<String>> = new StringMap();
 	final sealedFunctions:StringMap<OcamlSealedFunctionRecord> = new StringMap();
+	final nestedFunctionsByExpression:ObjectMap<TypedExpr, OcamlNestedFunctionRecord> = new ObjectMap();
+	final nestedFunctionsByOccurrence:StringMap<OcamlSealedNestedFunctionPlan> = new StringMap();
+	final nestedFunctionsByFunctionId:StringMap<OcamlSealedNestedFunctionPlan> = new StringMap();
 	final declaredCallableByCallee:StringMap<OcamlCallableDeclarationPlan> = new StringMap();
 	final callableByCallee:StringMap<OcamlCallableBoundaryPlan> = new StringMap();
 	final originByProtection:StringMap<String> = new StringMap();
@@ -149,6 +187,9 @@ class OcamlFunctionPlanRegistry {
 		plansByOrigin.clear();
 		originsByFunction.clear();
 		sealedFunctions.clear();
+		nestedFunctionsByExpression.clear();
+		nestedFunctionsByOccurrence.clear();
+		nestedFunctionsByFunctionId.clear();
 		declaredCallableByCallee.clear();
 		callableByCallee.clear();
 		originByProtection.clear();
@@ -156,6 +197,133 @@ class OcamlFunctionPlanRegistry {
 		standaloneRequiredContainerElementIds.clear();
 		standaloneAnonymousStructuresById.clear();
 		standaloneAnonymousOperationsById.clear();
+	}
+
+	/**
+		Records one nested literal that is outside the current exact-Int slice.
+
+		Syntax may retain its older behavior only after this explicit observation.
+		If no row exists, planning and syntax did not see the same final body and the
+		request fails instead of guessing.
+	**/
+	public function deferNestedFunction(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding, bodyExternalLocals:Array<TVar>,
+			observedBodyRevision:String, reason:String):Void {
+		requireCurrentParentBinding(parentBinding);
+		if (reason.length == 0)
+			throw "reflaxe.ocaml [ocaml-nested-function:missing-deferral-reason]: a deferred nested function requires a reason";
+		if (observedBodyRevision.length == 0)
+			throw "reflaxe.ocaml [ocaml-nested-function:missing-body-revision]: a deferred nested function requires the exact observed body revision";
+		if (nestedFunctionsByExpression.exists(expression))
+			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-occurrence]: one typed function literal was observed more than once in parent "${parentBinding.functionId}"';
+		nestedFunctionsByExpression.set(expression, {
+			parentBinding: copyBinding(parentBinding),
+			bodyExternalLocals: bodyExternalLocals.copy(),
+			observedBodyRevision: observedBodyRevision,
+			occurrenceId: null,
+			plan: null,
+			deferredReason: reason
+		});
+	}
+
+	/**
+		Seals one exact-Int nested function before target syntax starts.
+
+		The parent binding proves which final method owns the literal. The nested
+		binding proves which lexical occurrence and body revision own its return
+		decisions. Neither identity may be substituted by another parent or request.
+	**/
+	public function sealNestedFunction(expression:TypedExpr, bodyExternalLocals:Array<TVar>, observedBodyRevision:String,
+			plan:OcamlSealedNestedFunctionPlan):Void {
+		requireCurrentParentBinding(plan.parentBinding);
+		if (nestedFunctionsByExpression.exists(expression))
+			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-occurrence]: one typed function literal was sealed more than once in parent "${plan.parentBinding.functionId}"';
+		if (plan.occurrenceId.length == 0 || plan.binding.functionId.length == 0)
+			throw "reflaxe.ocaml [ocaml-nested-function:missing-identity]: a sealed nested function requires stable occurrence and function identities";
+		if (plan.binding.programRevision != plan.parentBinding.programRevision
+			|| plan.binding.pipelineRevision != NESTED_FUNCTION_PIPELINE_REVISION
+			|| !StringTools.startsWith(plan.binding.functionId, plan.parentBinding.functionId + "|nested-function|")) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:binding-mismatch]: nested function "${plan.binding.functionId}" does not belong to parent "${plan.parentBinding.functionId}"';
+		}
+		if (nestedFunctionsByOccurrence.exists(plan.occurrenceId))
+			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-identity]: nested occurrence "${plan.occurrenceId}" was sealed more than once';
+		if (nestedFunctionsByFunctionId.exists(plan.binding.functionId))
+			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-identity]: nested function "${plan.binding.functionId}" was sealed more than once';
+		if (observedBodyRevision != plan.binding.bodyRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: nested function "${plan.binding.functionId}" was planned for ${plan.binding.bodyRevision}, but its exact typed body is $observedBodyRevision';
+		OcamlCallPlan.requireCallableBoundary(plan.callableBoundary);
+		requireBoundaryBinding(plan.callableBoundary, plan.binding);
+		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
+			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
+			|| plan.callableBoundary.result == null
+			|| plan.callableBoundary.result.outputSemanticTypeId != "Int") {
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the first exact-Int callable slice';
+		}
+		plan.controls.requirePlanBinding(plan.binding);
+		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
+			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
+		if (plan.controls.catchOccurrenceCount() != 0)
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains a catch outside the first return-only slice';
+		for (decision in plan.controls.decisions()) {
+			if (decision.kind != reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return)
+				throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains control outside the first return-only slice';
+		}
+		final stored:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: plan.occurrenceId,
+			parentBinding: copyBinding(plan.parentBinding),
+			binding: copyBinding(plan.binding),
+			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
+			controls: plan.controls
+		};
+		nestedFunctionsByExpression.set(expression, {
+			parentBinding: copyBinding(plan.parentBinding),
+			bodyExternalLocals: bodyExternalLocals.copy(),
+			observedBodyRevision: observedBodyRevision,
+			occurrenceId: plan.occurrenceId,
+			plan: stored,
+			deferredReason: null
+		});
+		nestedFunctionsByOccurrence.set(plan.occurrenceId, stored);
+		nestedFunctionsByFunctionId.set(plan.binding.functionId, stored);
+	}
+
+	/**
+		Returns the plan chosen for one exact typed function occurrence.
+
+		A `null` result means the planner explicitly deferred this occurrence. A
+		missing row, changed parent, or stale request is an error because falling back
+		there would let syntax choose behavior the planner never authorized.
+	**/
+	public function nestedFunctionPlanFor(expression:TypedExpr, parentBinding:OcamlFunctionPlanBinding):Null<OcamlSealedNestedFunctionPlan> {
+		requireCurrentParentBinding(parentBinding);
+		final record = nestedFunctionsByExpression.get(expression);
+		if (record == null)
+			throw 'reflaxe.ocaml [ocaml-nested-function:unobserved-occurrence]: a function literal in parent "${parentBinding.functionId}" reached syntax without a planning disposition';
+		if (!sameBinding(record.parentBinding, parentBinding))
+			throw 'reflaxe.ocaml [ocaml-nested-function:parent-mismatch]: a function literal planned for "${record.parentBinding.functionId}" was requested by "${parentBinding.functionId}"';
+		final observedBodyRevision = observeNestedBodyRevision(expression, record.bodyExternalLocals);
+		if (observedBodyRevision != record.observedBodyRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: a function literal in parent "${parentBinding.functionId}" changed from ${record.observedBodyRevision} to $observedBodyRevision after planning';
+		return record.plan;
+	}
+
+	function requireCurrentParentBinding(binding:OcamlFunctionPlanBinding):Void {
+		if (binding.programRevision != currentProgramRevision)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-parent]: parent "${binding.functionId}" does not belong to current program $currentProgramRevision';
+		if (binding.pipelineRevision == PIPELINE_REVISION)
+			return;
+		if (binding.pipelineRevision == NESTED_FUNCTION_PIPELINE_REVISION) {
+			final nestedParent = nestedFunctionsByFunctionId.get(binding.functionId);
+			if (nestedParent != null && sameBinding(nestedParent.binding, binding))
+				return;
+		}
+		throw 'reflaxe.ocaml [ocaml-nested-function:stale-parent]: parent "${binding.functionId}" has no current sealed ordinary or nested function binding';
+	}
+
+	static function observeNestedBodyRevision(expression:TypedExpr, bodyExternalLocals:Array<TVar>):String {
+		return switch (expression.expr) {
+			case TFunction(tfunc): FunctionBodyRevision.initial(tfunc.expr, bodyExternalLocals).id;
+			case _: throw "reflaxe.ocaml [ocaml-nested-function:not-a-function]: a nested-function catalog entry no longer contains a typed function literal";
+		}
 	}
 
 	/** Records how one early protection identity became one final plan origin. */
@@ -382,6 +550,15 @@ class OcamlFunctionPlanRegistry {
 			&& left.programRevision == right.programRevision
 			&& left.bodyRevision == right.bodyRevision
 			&& left.pipelineRevision == right.pipelineRevision;
+	}
+
+	static function copyBinding(binding:OcamlFunctionPlanBinding):OcamlFunctionPlanBinding {
+		return {
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision
+		};
 	}
 
 	/** Returns the stable origin selected by the typed place planner. */
@@ -640,6 +817,10 @@ class OcamlFunctionPlanRegistry {
 					controls.push(decision);
 			}
 		}
+		for (nested in nestedFunctionsByOccurrence) {
+			for (decision in nested.controls.decisions())
+				controls.push(decision);
+		}
 		controls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return controls;
 	}
@@ -656,6 +837,10 @@ class OcamlFunctionPlanRegistry {
 					targets.push(target);
 			}
 		}
+		for (nested in nestedFunctionsByOccurrence) {
+			for (target in nested.controls.loopTargets())
+				targets.push(target);
+		}
 		targets.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return targets;
 	}
@@ -671,6 +856,10 @@ class OcamlFunctionPlanRegistry {
 				for (chain in sealed.plan.controls.catchChains())
 					chains.push(chain);
 			}
+		}
+		for (nested in nestedFunctionsByOccurrence) {
+			for (chain in nested.controls.catchChains())
+				chains.push(chain);
 		}
 		chains.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return chains;

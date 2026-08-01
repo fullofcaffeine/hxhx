@@ -822,12 +822,20 @@ class OcamlCallPlan {
 		}
 	}
 
-	/** Rejects a corrupted final callable boundary before publication. */
+	/**
+		Rejects a corrupted final callable boundary before publication.
+
+		A callable boundary records the parameter and result carriers that one
+		function definition accepts. Ordinary methods use a declaration identity;
+		a nested function literal instead uses its parent-scoped lexical identity.
+		Both forms are validated here so syntax never has to infer the signature.
+	**/
 	public static function requireCallableBoundary(boundary:OcamlCallableBoundaryPlan):Void {
 		if (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod
 			&& boundary.kind != OcamlCallKind.DirectInstanceHaxeMethod
-			&& boundary.kind != OcamlCallKind.DirectHaxeConstructor)
-			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" cannot describe a computed function value';
+			&& boundary.kind != OcamlCallKind.DirectHaxeConstructor
+			&& boundary.kind != OcamlCallKind.TypedFunctionValue)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: callable boundary "${boundary.id}" has unsupported kind ${boundary.kind}';
 		requireCallCommon(boundary.calleeId, boundary.sourceModuleId, boundary.sourceTypeName, boundary.sourceFieldName, boundary.kind, boundary.arguments,
 			boundary.resultKind, boundary.result, boundary.profileEligibility, boundary.reason, boundary.proofId, boundary.proofClaim,
 			boundary.programRevision, boundary.pipelineRevision, 'callable boundary "${boundary.id}"', boundary.receiver);
@@ -1222,6 +1230,65 @@ class OcamlCallPlanner {
 			reason: declaration.reason + resultReason,
 			proofId: declaration.proofId,
 			proofClaim: declaration.proofClaim,
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision
+		};
+	}
+
+	/**
+		Selects the independently typed boundary for an exact-Int function literal.
+
+		The caller supplies a binding whose function ID already names the literal's
+		stable lexical occurrence. This first slice deliberately requires at least
+		one parameter and an exact `Int` result; zero-argument literals and other
+		result carriers stay on their existing path until they have the same stable
+		identity and validation evidence.
+	**/
+	public function boundaryForNestedExactInt(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
+		if (tfunc.args.length == 0)
+			return null;
+		final functionType:Type = switch (TypeTools.follow(tfunc.t)) {
+			case TFun(_, _): tfunc.t;
+			case _:
+				TFun([
+					for (argument in tfunc.args)
+						{name: argument.v.name, opt: argument.value != null, t: argument.v.t}
+				], tfunc.t);
+		};
+		final signature = selectAdmittedSignature(functionType, null, representations);
+		if (signature == null || signature.resultKind != OcamlCallResultKind.Value || signature.resultSemanticTypeId != "Int")
+			return null;
+		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
+		for (argument in signature.arguments) {
+			final representation = representationForSemanticType(argument.semanticTypeId, representations);
+			if (representation == null)
+				return null;
+			argumentRepresentations.push(representation);
+		}
+		final resultRepresentation = signature.resultType == null ? null : representationFor(signature.resultType, representations);
+		if (resultRepresentation == null || resultRepresentation.semanticTypeId != "Int")
+			return null;
+		final proof = functionValueProof(signature);
+		return {
+			id: "nested-callable-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
+			calleeId: binding.functionId,
+			sourceModuleId: "",
+			sourceTypeName: "",
+			sourceFieldName: "",
+			kind: OcamlCallKind.TypedFunctionValue,
+			receiver: null,
+			arguments: [
+				for (index in 0...argumentRepresentations.length)
+					identityValue(index, argumentRepresentations[index], signature.arguments[index].optional)
+			],
+			resultKind: OcamlCallResultKind.Value,
+			result: identityValue(-1, resultRepresentation),
+			profileEligibility: ["metal", "portable"],
+			reason: "The final typed function literal has a parent-scoped lexical identity, represented parameters, and one exact Int result. Its nested return plan and generated closure consume this same boundary.",
+			proofId: proof.id,
+			proofClaim: proof.claim,
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,

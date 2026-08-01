@@ -567,6 +567,19 @@ class OcamlControlPlan {
 		return orderedCatchChains.map(copyCatchChain);
 	}
 
+	/**
+		Returns how many `try` expressions the planner classified, including ones
+		that deliberately remain on the older catch path.
+
+		This differs from `catchChains().length`: that list contains only admitted
+		catch plans. A caller defining a catch-free slice must also reject an
+		explicit legacy disposition, because either form means the function contains
+		a `try` expression.
+	**/
+	public function catchOccurrenceCount():Int {
+		return catchOccurrenceFingerprints.length;
+	}
+
 	/** Whether syntax must install the sealed private return-signal boundary. */
 	public function hasReturnTransfers():Bool {
 		return Lambda.exists(ordered, decision -> decision.kind == OcamlControlTransferKind.Return);
@@ -2328,7 +2341,7 @@ class OcamlControlPlanner {
 
 	function admittedBoundaryPayload(boundary:Null<OcamlCallableBoundaryPlan>):Null<OcamlCallValuePlan> {
 		if (boundary == null
-			|| boundary.kind != OcamlCallKind.DirectStaticHaxeMethod
+			|| (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod && boundary.kind != OcamlCallKind.TypedFunctionValue)
 			|| boundary.resultKind != OcamlCallResultKind.Value
 			|| boundary.result == null) {
 			return null;

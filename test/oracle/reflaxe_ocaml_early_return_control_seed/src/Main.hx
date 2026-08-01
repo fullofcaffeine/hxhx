@@ -74,6 +74,42 @@ class Main {
 		return 9;
 	}
 
+	/**
+		Exercises two independently planned function literals and an outer capture.
+
+		The inner function returns through its own private signal. The outer function
+		then returns that result through a different signal, so confusing either
+		function's parent identity changes the observable result or fails generation.
+	**/
+	static function deepNestedClosure():Int {
+		final captured = 2;
+		final outer = function(enabled:Bool):Int {
+			final inner = function(innerEnabled:Bool):Int {
+				if (innerEnabled)
+					return 12 + captured;
+				return 0;
+			};
+			if (enabled)
+				return inner(true);
+			return 0;
+		};
+		return outer(true);
+	}
+
+	/** Keeps nested `try`/`catch` behavior on the explicit legacy path in this first slice. */
+	static function nestedCatchClosure():Int {
+		final local = function(enabled:Bool):Int {
+			try {
+				if (enabled)
+					return 15;
+			} catch (_:Dynamic) {
+				return -1;
+			}
+			return 0;
+		};
+		return local(true);
+	}
+
 	static function main() {
 		printLine("branch0=" + branch(0));
 		printLine("branch1=" + branch(1));
@@ -89,6 +125,8 @@ class Main {
 		printLine("stringNull1=" + (nullableStringCarrier(true) == null));
 		printLine("stringNull0=" + nullableStringCarrier(false));
 		printLine("closure=" + nestedClosure());
+		printLine("deepClosure=" + deepNestedClosure());
+		printLine("catchClosure=" + nestedCatchClosure());
 		printLine("OK early_return_control");
 	}
 }

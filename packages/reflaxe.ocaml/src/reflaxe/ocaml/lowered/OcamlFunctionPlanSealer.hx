@@ -2,9 +2,11 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Position;
+import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
+import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -24,6 +26,7 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructurePlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlPlanner;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
@@ -126,6 +129,7 @@ class OcamlFunctionPlanSealer {
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities).plan(data.expr, callableBoundary);
+		sealNestedFunctions(data.expr, binding, localIdentities);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -204,6 +208,132 @@ class OcamlFunctionPlanSealer {
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
+	}
+
+	/**
+		Seals the first nested-function return family without inventing another AST path schema.
+
+		The target-neutral lexical-local plan already gives every function parameter
+		a stable structural path. For a literal with at least one parameter, removing
+		the final `nested-function-argument:0` segment yields the literal's stable
+		occurrence path. That path is parent-scoped, so equal-looking closures in two
+		methods cannot share return targets. Literals outside the first exact-Int,
+		return-only slice receive an explicit deferral row for syntax to consume.
+	**/
+	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan):Void {
+		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
+			switch (expression.expr) {
+				case TFunction(tfunc):
+					final bodyExternalLocals = nestedBodyExternalLocals(tfunc, localIdentities);
+					final observedBodyRevision = FunctionBodyRevision.initial(tfunc.expr, bodyExternalLocals).id;
+					var childParentBinding = lexicalParentBinding;
+					final path = nestedFunctionPath(tfunc, localIdentities);
+					if (path == null) {
+						registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
+							"The first stable nested-function identity slice requires at least one typed parameter.");
+					} else {
+						final occurrenceId = "nested-function-occurrence:"
+							+ haxe.crypto.Sha256.encode(lexicalParentBinding.functionId + "|" + path).substr(0, 32);
+						final nestedFunctionId = lexicalParentBinding.functionId
+							+ "|nested-function|"
+							+ haxe.crypto.Sha256.encode(lexicalParentBinding.functionId + "|" + path).substr(0, 24);
+						final nestedBinding:OcamlFunctionPlanBinding = {
+							functionId: nestedFunctionId,
+							programRevision: lexicalParentBinding.programRevision,
+							bodyRevision: observedBodyRevision,
+							pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
+						};
+						final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedExactInt(tfunc);
+						if (boundary == null) {
+							registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
+								"The typed function literal is outside the first exact-Int callable boundary.");
+						} else {
+							final emptyLocalRepresentations = new OcamlLocalRepresentationPlan([]);
+							final controls = new OcamlControlPlanner(representations, emptyLocalRepresentations, nestedBinding,
+								localIdentities).plan(tfunc.expr, boundary);
+							final onlyReturnTransfers = Lambda.foreach(controls.decisions(),
+								decision -> decision.kind == reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return);
+							if (!controls.returnFamilyAdmitted || !controls.hasReturnTransfers() || !onlyReturnTransfers
+								|| controls.catchOccurrenceCount() != 0) {
+								registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
+									"The typed function literal is outside the first exact-Int, return-only, catch-free control slice.");
+							} else {
+								validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
+								validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);
+								final plan:OcamlSealedNestedFunctionPlan = {
+									occurrenceId: occurrenceId,
+									parentBinding: lexicalParentBinding,
+									binding: nestedBinding,
+									callableBoundary: boundary,
+									controls: controls
+								};
+								registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan);
+								childParentBinding = nestedBinding;
+							}
+						}
+					}
+					TypedExprTools.iter(tfunc.expr, child -> visit(child, childParentBinding));
+				case _:
+					TypedExprTools.iter(expression, child -> visit(child, lexicalParentBinding));
+			}
+		}
+		visit(body, parentBinding);
+	}
+
+	/**
+		Returns the parameters and captured outer locals needed to fingerprint one
+		nested body without using process-local Haxe variable numbers.
+
+		The function's own parameters come first in signature order. Captures then
+		use the enclosing lexical plan's stable source path, so compiling unrelated
+		code first cannot change the body revision. Locals declared inside this
+		function or a deeper literal are not captures.
+	**/
+	static function nestedBodyExternalLocals(tfunc:haxe.macro.Type.TFunc, localIdentities:LexicalLocalIdentityPlan):Array<TVar> {
+		final declared:Map<Int, Bool> = [];
+		final referenced:Map<Int, TVar> = [];
+		for (argument in tfunc.args)
+			declared.set(argument.v.id, true);
+		function collect(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TLocal(local):
+					referenced.set(local.id, local);
+				case TVar(local, _):
+					declared.set(local.id, true);
+				case TFunction(nested):
+					for (argument in nested.args)
+						declared.set(argument.v.id, true);
+				case TFor(local, _, _):
+					declared.set(local.id, true);
+				case TTry(_, catches):
+					for (caught in catches)
+						declared.set(caught.v.id, true);
+				case _:
+			}
+			TypedExprTools.iter(expression, collect);
+		}
+		collect(tfunc.expr);
+		final captures:Array<TVar> = [];
+		for (hostId => local in referenced)
+			if (!declared.exists(hostId))
+				captures.push(local);
+		captures.sort((left, right) -> Reflect.compare(localIdentities.require(left).path, localIdentities.require(right).path));
+		return tfunc.args.map(argument -> argument.v).concat(captures);
+	}
+
+	static function nestedFunctionPath(tfunc:haxe.macro.Type.TFunc, localIdentities:LexicalLocalIdentityPlan):Null<String> {
+		if (tfunc.args.length == 0)
+			return null;
+		final suffix = "/nested-function-argument:0";
+		final firstPath = localIdentities.require(tfunc.args[0].v).path;
+		if (!StringTools.endsWith(firstPath, suffix))
+			return null;
+		final path = firstPath.substr(0, firstPath.length - suffix.length);
+		for (index in 1...tfunc.args.length) {
+			if (localIdentities.require(tfunc.args[index].v).path != path + "/nested-function-argument:" + index)
+				return null;
+		}
+		return path;
 	}
 
 	function validateControlRepresentationReferences(controls:OcamlControlPlan, programRevision:String, position:Position):Void {

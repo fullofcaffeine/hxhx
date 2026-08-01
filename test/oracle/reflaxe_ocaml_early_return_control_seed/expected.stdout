@@ -12,4 +12,6 @@ string0=late
 stringNull1=true
 stringNull0=value
 closure=8
+deepClosure=14
+catchClosure=15
 OK early_return_control

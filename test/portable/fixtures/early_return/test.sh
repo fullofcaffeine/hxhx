@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 18) {
-	fail(`expected 18 exact-value return decisions, got ${returnControls.length}`)
+if (returnControls.length !== 21) {
+	fail(`expected 21 exact-value return decisions, including three nested function literals, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -51,7 +51,8 @@ const expectedByFunction = new Map([
 ])
 for (const [name, expectedCount] of expectedByFunction) {
 	const decisions = returnControls.filter(control =>
-		control.functionId.includes(`|function|${name}|`))
+		control.functionId.includes(`|function|${name}|`)
+		&& !control.functionId.includes('|nested-function|'))
 	if (decisions.length !== expectedCount) {
 		fail(`expected ${expectedCount} sealed ${name} return decisions, got ${decisions.length}`)
 	}
@@ -59,6 +60,25 @@ for (const [name, expectedCount] of expectedByFunction) {
 if (returnControls.some(control =>
 	control.functionId.includes('|function|local|'))) {
 	fail('the outer method control plan incorrectly claimed the nested function literal')
+}
+const nestedFunctionControls = returnControls.filter(control =>
+	control.functionId.includes('|function|nestedClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (nestedFunctionControls.length !== 1) {
+	fail(`expected one independently sealed nested-function return decision, got ${nestedFunctionControls.length}`)
+}
+const deepNestedFunctionControls = returnControls.filter(control =>
+	control.functionId.includes('|function|deepNestedClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (deepNestedFunctionControls.length !== 2
+	|| !deepNestedFunctionControls.some(control =>
+		control.functionId.split('|nested-function|').length - 1 === 2)) {
+	fail('the two-level closure did not preserve an independently sealed child under its admitted nested parent')
+}
+if (returnControls.some(control =>
+	control.functionId.includes('|function|nestedCatchClosure|')
+	&& control.functionId.includes('|nested-function|'))) {
+	fail('the first return-only nested slice incorrectly admitted a function containing try/catch')
 }
 
 const ids = new Set()
@@ -81,7 +101,9 @@ for (const control of returnControls) {
 		|| control.source.max < control.source.min
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
-		|| control.pipelineRevision !== 'ocaml-function-plans-v62') {
+		|| (control.functionId.includes('|nested-function|')
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v1'
+			: control.pipelineRevision !== 'ocaml-function-plans-v62')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -147,13 +169,26 @@ if (!nullableStringBody.includes('Obj.repr (HxString.hx_null_string)')
 	fail('the exact-String boundary did not preserve the existing runtime null-sentinel carrier')
 }
 const closureStart = source.indexOf('let nestedClosure =')
-const closureEnd = source.indexOf('\nlet main =', closureStart)
+const closureEnd = source.indexOf('\nlet deepNestedClosure =', closureStart)
 const closureBody = source.slice(closureStart, closureEnd)
 if (!closureBody.includes('let local = fun')
-	|| !closureBody.includes('__fallback_result')
 	|| !closureBody.includes('HxRuntime.Hx_return')
+	|| !closureBody.includes('Obj.repr')
+	|| !closureBody.includes('Obj.obj')
+	|| closureBody.includes('__fallback_result')
+	|| closureBody.includes('Obj.magic')
 	|| !closureBody.includes(': int)')) {
-	fail('the nested function literal was not kept on its independent legacy boundary while the outer exact-value return used its sealed plan')
+	fail('the nested function literal did not consume its independent exact-Int return plan')
+}
+const deepClosureStart = source.indexOf('let deepNestedClosure =')
+const deepClosureEnd = source.indexOf('\nlet nestedCatchClosure =', deepClosureStart)
+const deepClosureBody = source.slice(deepClosureStart, deepClosureEnd)
+if ((deepClosureBody.match(/HxRuntime\.Hx_return/g) ?? []).length < 4
+	|| !deepClosureBody.includes('Obj.repr')
+	|| !deepClosureBody.includes('Obj.obj')
+	|| deepClosureBody.includes('__fallback_result')
+	|| deepClosureBody.includes('Obj.magic')) {
+	fail('the two-level nested functions did not consume their separate exact-Int return plans')
 }
 NODE
 
@@ -177,10 +212,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 18
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 21
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 18 validated exact-value control decisions')
+	throw new Error('public inspection did not expose the 21 validated exact-value control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=18"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=21"
