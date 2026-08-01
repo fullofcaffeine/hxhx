@@ -240,13 +240,13 @@ The fork then added target-neutral lifecycle and scalability repairs:
   least-recently-used eviction, reset, quarantine, and redacted counters. It
   does not yet authorize a target cache hit.
 
-As of 2026-07-31, upstream `SomeRanDev/reflaxe` remains at
+As of 2026-08-01, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `105957964cdfe958f3f14bfee64b395e69dd253f`, published on branch
+candidate fork commit `6ca210f526007ff6f4a44694b169538eba4f969c`, published on branch
 `hxhx-agent/target-reuse-fingerprint`, with
 path-independent content digest
-`3bc59e3304d5fa5486bd2b26098c809192c2d68def1ba648c84ad0df93611020`.
+`593d8603829d1fb99d814191c7b9c136cc6b9e92cb653b4d7942e0de2415b9e0`.
 The last repository-validated rollback pin is
 `e833fec65203964d40287483e6f951d6bbaf949d` with digest
 `58cc28d20249b7f9d64b4090e41d4dd1fc2da8103f25b21311b9532564e36712`;
@@ -265,6 +265,15 @@ string on a repeated unchanged request. Because that string changes generated
 target files, Reflaxe now marks the request ineligible for exact target replay
 and reports the specific source-authority blocker. Compilation still proceeds
 normally; only reuse of an older generated bundle is forbidden.
+
+The pinned stack also preserves lazy `&&` and `||` evaluation when the generic
+expression normalizer must turn a right-side block, assignment, or increment
+into statements. Those statements now stay inside a conditional branch rather
+than moving before the left-side guard. This matters for ordinary Haxe code
+such as `value != null && map.exists(value.key())`: when `value` is null,
+`value.key()` is not called. A focused Reflaxe typed-tree regression covers both
+operators, and the `null_bool_local_truthiness` portable fixture compiles and
+runs the nested `StringMap.exists` case through OCaml.
 
 PR #17 removes a package-only lifecycle race. Repository-local builds loaded
 the Reflaxe framework before the OCaml target, but installed Haxelib builds

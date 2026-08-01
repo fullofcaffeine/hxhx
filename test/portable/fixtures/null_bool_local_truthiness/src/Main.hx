@@ -1,3 +1,23 @@
+class ShortCircuitProbe {
+	public static var calls = 0;
+
+	public function new() {}
+
+	public function touch():Bool {
+		calls++;
+		return true;
+	}
+
+	public function key():String {
+		calls++;
+		return "probe";
+	}
+
+	public static function accept(value:Bool):Bool {
+		return value;
+	}
+}
+
 class Main {
 	static var effects = 0;
 
@@ -119,6 +139,29 @@ class Main {
 		log("true-and=" + (trueFlag && observed("and-true", true)));
 		var falseFlag:Null<Bool> = false;
 		log("false-or=" + (falseFlag || observed("or-false", true)));
+
+		var absentProbe:Null<ShortCircuitProbe> = null;
+		log("guarded-method-and=" + (absentProbe != null && ShortCircuitProbe.accept(absentProbe.touch())));
+		log("guarded-method-or=" + (absentProbe == null || ShortCircuitProbe.accept(absentProbe.touch())));
+		log("guarded-method-calls=" + ShortCircuitProbe.calls);
+		var presentProbe:Null<ShortCircuitProbe> = new ShortCircuitProbe();
+		log("present-method-and=" + (presentProbe != null && ShortCircuitProbe.accept(presentProbe.touch())));
+		log("present-method-calls=" + ShortCircuitProbe.calls);
+		var guardedLoopProbe:Null<ShortCircuitProbe> = null;
+		var guardedLoopRuns = 0;
+		while (guardedLoopProbe != null && ShortCircuitProbe.accept(guardedLoopProbe.touch())) {
+			guardedLoopRuns++;
+		}
+		log("guarded-loop-runs=" + guardedLoopRuns);
+		log("guarded-loop-calls=" + ShortCircuitProbe.calls);
+		var seen = new haxe.ds.StringMap<Bool>();
+		var mappedLoopProbe:Null<ShortCircuitProbe> = null;
+		var mappedLoopRuns = 0;
+		while (mappedLoopProbe != null && !seen.exists(mappedLoopProbe.key())) {
+			mappedLoopRuns++;
+		}
+		log("mapped-guarded-loop-runs=" + mappedLoopRuns);
+		log("mapped-guarded-loop-calls=" + ShortCircuitProbe.calls);
 
 		var loop:Null<Bool> = true;
 		var loopCount = 0;

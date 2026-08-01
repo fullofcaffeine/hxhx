@@ -82,13 +82,22 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic (HxRuntime.hx_null); mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic (HxRuntime.hx_null); resources = Obj.magic (HxRuntime.hx_null); nativeLibraryPaths = Obj.magic (HxRuntime.hx_null) } : t)
 
-let hasDefine = fun self (name : string) -> let _this = Obj.magic ((Obj.magic self : t).defines) in let tempRight = HxMap.exists_string (Obj.magic _this) (name : string) in name != HxString.hx_null_string && HxString.length name > 0 && tempRight
+let hasDefine = fun self (name : string) -> let tempShortCircuit = ref (false : bool) in (
+  ignore (if name != HxString.hx_null_string && HxString.length name > 0 then let _this = Obj.magic ((Obj.magic self : t).defines) in let __assign_21 = HxMap.exists_string (Obj.magic _this) (name : string) in (
+    tempShortCircuit := __assign_21;
+    __assign_21
+  ) else let __assign_22 = false in (
+    tempShortCircuit := __assign_22;
+    __assign_22
+  ));
+  !tempShortCircuit
+)
 
-let defineValue = fun self (name : string) -> try let __fallback_result_22 = (
+let defineValue = fun self (name : string) -> try let __fallback_result_24 = (
   ignore (if name == HxString.hx_null_string || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let _this = Obj.magic ((Obj.magic self : t).defines) in let tempResult = (HxMap.get_string (Obj.magic _this) (name : string) : string) in tempResult
-) in Obj.magic __fallback_result_22 with
-  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
+) in Obj.magic __fallback_result_24 with
+  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
 let ensureOcamlProfileDefine = fun self () -> let profile = (Backend_OcamlProfile.fromDefineValue (defineValue (Obj.magic self) ("ocaml_profile" : string) : string) : string) in let _this = Obj.magic ((Obj.magic self : t).defines) in (
   ignore (HxMap.set_string (Obj.magic _this) ("ocaml_profile" : string) profile);

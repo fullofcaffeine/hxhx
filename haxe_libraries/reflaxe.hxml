@@ -1,8 +1,8 @@
 # Lix selects the exact Git commit. The content digest lets package checks also
 # prove that the downloaded files are the reviewed framework bytes.
-# @reflaxe-content-sha256: 3bc59e3304d5fa5486bd2b26098c809192c2d68def1ba648c84ad0df93611020
-# @install: lix --silent download "gh://github.com/fullofcaffeine/reflaxe#105957964cdfe958f3f14bfee64b395e69dd253f" into reflaxe/4.0.0-beta/github/105957964cdfe958f3f14bfee64b395e69dd253f
--cp ${HAXE_LIBCACHE}/reflaxe/4.0.0-beta/github/105957964cdfe958f3f14bfee64b395e69dd253f/src/
+# @reflaxe-content-sha256: 593d8603829d1fb99d814191c7b9c136cc6b9e92cb653b4d7942e0de2415b9e0
+# @install: lix --silent download "gh://github.com/fullofcaffeine/reflaxe#6ca210f526007ff6f4a44694b169538eba4f969c" into reflaxe/4.0.0-beta/github/6ca210f526007ff6f4a44694b169538eba4f969c
+-cp ${HAXE_LIBCACHE}/reflaxe/4.0.0-beta/github/6ca210f526007ff6f4a44694b169538eba4f969c/src/
 -D reflaxe=4.0.0-beta
 --macro nullSafety("reflaxe")
 --macro reflaxe.ReflectCompiler.Start()

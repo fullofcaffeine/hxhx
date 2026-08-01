@@ -26,7 +26,7 @@ let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.cl
           ));
           if provider == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed module directive cannot contain a missing provider") ["Dynamic"]) else ()
         )) done);
-        let tempBool = ref (false : bool) in let tempBool1 = ref (false : bool) in (
+        let tempBool = ref (false : bool) in let tempShortCircuit = ref (false : bool) in let tempBool1 = ref (false : bool) in (
           ignore (if (match kind2 with
             | TyModuleDirectiveKind.TypeImport -> 0
             | TyModuleDirectiveKind.StaticMemberImport _ -> 1
@@ -40,79 +40,81 @@ let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.cl
             tempBool1 := __assign_7;
             __assign_7
           ));
-          let tempBool2 = ref (false : bool) in (
+          ignore (if !tempBool1 then let __assign_8 = true in (
+            tempShortCircuit := __assign_8;
+            __assign_8
+          ) else if (match kind2 with
+            | TyModuleDirectiveKind.TypeImport -> 0
+            | TyModuleDirectiveKind.StaticMemberImport _ -> 1
+            | TyModuleDirectiveKind.StaticWildcardImport -> 2
+            | TyModuleDirectiveKind.PackageWildcardImport -> 3
+            | TyModuleDirectiveKind.UsingType -> 4
+            | TyModuleDirectiveKind.Unresolved -> 5) = 4 then let __assign_9 = true in (
+            tempShortCircuit := __assign_9;
+            __assign_9
+          ) else let __assign_10 = false in (
+            tempShortCircuit := __assign_10;
+            __assign_10
+          ));
+          ignore (if !tempShortCircuit then let __assign_11 = HxArray.length selected > 0 in (
+            tempBool := __assign_11;
+            __assign_11
+          ) else let tempShortCircuit1 = ref (false : bool) in let tempBool2 = ref (false : bool) in (
             ignore (if (match kind2 with
               | TyModuleDirectiveKind.TypeImport -> 0
               | TyModuleDirectiveKind.StaticMemberImport _ -> 1
               | TyModuleDirectiveKind.StaticWildcardImport -> 2
               | TyModuleDirectiveKind.PackageWildcardImport -> 3
               | TyModuleDirectiveKind.UsingType -> 4
-              | TyModuleDirectiveKind.Unresolved -> 5) = 4 then let __assign_8 = true in (
-              tempBool2 := __assign_8;
-              __assign_8
-            ) else let __assign_9 = false in (
-              tempBool2 := __assign_9;
-              __assign_9
-            ));
-            ignore (if !tempBool1 || !tempBool2 then let __assign_10 = HxArray.length selected > 0 in (
-              tempBool := __assign_10;
-              __assign_10
-            ) else let tempBool3 = ref (false : bool) in (
-              ignore (if (match kind2 with
-                | TyModuleDirectiveKind.TypeImport -> 0
-                | TyModuleDirectiveKind.StaticMemberImport _ -> 1
-                | TyModuleDirectiveKind.StaticWildcardImport -> 2
-                | TyModuleDirectiveKind.PackageWildcardImport -> 3
-                | TyModuleDirectiveKind.UsingType -> 4
-                | TyModuleDirectiveKind.Unresolved -> 5) = 1 then (
-                ignore (match kind2 with
-                  | TyModuleDirectiveKind.StaticMemberImport __enum_param_11 -> __enum_param_11
-                  | _ -> failwith "Unexpected enum parameter");
-                let __assign_12 = true in (
-                  tempBool3 := __assign_12;
-                  __assign_12
-                )
-              ) else let __assign_13 = false in (
-                tempBool3 := __assign_13;
+              | TyModuleDirectiveKind.Unresolved -> 5) = 1 then (
+              ignore (match kind2 with
+                | TyModuleDirectiveKind.StaticMemberImport __enum_param_12 -> __enum_param_12
+                | _ -> failwith "Unexpected enum parameter");
+              let __assign_13 = true in (
+                tempBool2 := __assign_13;
                 __assign_13
-              ));
-              let tempBool4 = ref (false : bool) in (
-                ignore (if (match kind2 with
-                  | TyModuleDirectiveKind.TypeImport -> 0
-                  | TyModuleDirectiveKind.StaticMemberImport _ -> 1
-                  | TyModuleDirectiveKind.StaticWildcardImport -> 2
-                  | TyModuleDirectiveKind.PackageWildcardImport -> 3
-                  | TyModuleDirectiveKind.UsingType -> 4
-                  | TyModuleDirectiveKind.Unresolved -> 5) = 2 then let __assign_14 = true in (
-                  tempBool4 := __assign_14;
-                  __assign_14
-                ) else let __assign_15 = false in (
-                  tempBool4 := __assign_15;
-                  __assign_15
-                ));
-                if !tempBool3 || !tempBool4 then let __assign_16 = HxArray.length selected = 1 in (
-                  tempBool := __assign_16;
-                  __assign_16
-                ) else let __assign_17 = HxArray.length selected = 0 in (
-                  tempBool := __assign_17;
-                  __assign_17
-                )
               )
+            ) else let __assign_14 = false in (
+              tempBool2 := __assign_14;
+              __assign_14
             ));
-            let providerCountIsValid = !tempBool in (
-              ignore (if not (providerCountIsValid) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed module directive provider count does not match its resolved kind") ["Dynamic"]) else ());
-              ignore (let __assign_18 = Obj.magic source2 in (
-                (Obj.magic self : t).source <- __assign_18;
-                __assign_18
-              ));
-              ignore (let __assign_19 = Obj.magic kind2 in (
-                (Obj.magic self : t).kind <- __assign_19;
-                __assign_19
-              ));
-              let __assign_20 = Obj.magic selected in (
-                (Obj.magic self : t).providers <- __assign_20;
-                __assign_20
-              )
+            ignore (if !tempBool2 then let __assign_15 = true in (
+              tempShortCircuit1 := __assign_15;
+              __assign_15
+            ) else if (match kind2 with
+              | TyModuleDirectiveKind.TypeImport -> 0
+              | TyModuleDirectiveKind.StaticMemberImport _ -> 1
+              | TyModuleDirectiveKind.StaticWildcardImport -> 2
+              | TyModuleDirectiveKind.PackageWildcardImport -> 3
+              | TyModuleDirectiveKind.UsingType -> 4
+              | TyModuleDirectiveKind.Unresolved -> 5) = 2 then let __assign_16 = true in (
+              tempShortCircuit1 := __assign_16;
+              __assign_16
+            ) else let __assign_17 = false in (
+              tempShortCircuit1 := __assign_17;
+              __assign_17
+            ));
+            if !tempShortCircuit1 then let __assign_18 = HxArray.length selected = 1 in (
+              tempBool := __assign_18;
+              __assign_18
+            ) else let __assign_19 = HxArray.length selected = 0 in (
+              tempBool := __assign_19;
+              __assign_19
+            )
+          ));
+          let providerCountIsValid = !tempBool in (
+            ignore (if not (providerCountIsValid) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed module directive provider count does not match its resolved kind") ["Dynamic"]) else ());
+            ignore (let __assign_20 = Obj.magic source2 in (
+              (Obj.magic self : t).source <- __assign_20;
+              __assign_20
+            ));
+            ignore (let __assign_21 = Obj.magic kind2 in (
+              (Obj.magic self : t).kind <- __assign_21;
+              __assign_21
+            ));
+            let __assign_22 = Obj.magic selected in (
+              (Obj.magic self : t).providers <- __assign_22;
+              __assign_22
             )
           )
         )
@@ -131,41 +133,41 @@ let getKind = fun self () -> (Obj.magic self : t).kind
 let getProviders = fun self () -> HxArray.copy ((Obj.magic self : t).providers)
 
 let getSingleProvider = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
-  ignore (if HxArray.length ((Obj.magic self : t).providers) = 1 then let __assign_21 = Obj.magic (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).providers)) 0)) in (
-    tempResult := __assign_21;
-    __assign_21
-  ) else let __assign_22 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_22;
-    __assign_22
+  ignore (if HxArray.length ((Obj.magic self : t).providers) = 1 then let __assign_23 = Obj.magic (Obj.magic (HxArray.get (Obj.magic ((Obj.magic self : t).providers)) 0)) in (
+    tempResult := __assign_23;
+    __assign_23
+  ) else let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_24;
+    __assign_24
   ));
   !tempResult
 )
 
-let getImportedTypeLocalName = fun self (provider : TyNominalTypeId.t) -> try let __fallback_result_33 = let tempBool = ref (false : bool) in let _g = Obj.magic ((Obj.magic self : t).kind) in (
+let getImportedTypeLocalName = fun self (provider : TyNominalTypeId.t) -> try let __fallback_result_35 = let tempBool = ref (false : bool) in let _g = Obj.magic ((Obj.magic self : t).kind) in (
   ignore (if (match _g with
     | TyModuleDirectiveKind.TypeImport -> 0
     | TyModuleDirectiveKind.StaticMemberImport _ -> 1
     | TyModuleDirectiveKind.StaticWildcardImport -> 2
     | TyModuleDirectiveKind.PackageWildcardImport -> 3
     | TyModuleDirectiveKind.UsingType -> 4
-    | TyModuleDirectiveKind.Unresolved -> 5) = 0 then let __assign_23 = true in (
-    tempBool := __assign_23;
-    __assign_23
-  ) else let __assign_24 = false in (
-    tempBool := __assign_24;
-    __assign_24
+    | TyModuleDirectiveKind.Unresolved -> 5) = 0 then let __assign_25 = true in (
+    tempBool := __assign_25;
+    __assign_25
+  ) else let __assign_26 = false in (
+    tempBool := __assign_26;
+    __assign_26
   ));
   ignore (if not (!tempBool) || provider == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let selected = ref false in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).providers) in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let candidate = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-        ignore (_g := __new_26);
-        __new_26
+      ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+        ignore (_g := __new_28);
+        __new_28
       ));
       if TyNominalTypeId.equals (Obj.magic candidate) (Obj.magic provider) then ignore ((
-        ignore (let __assign_27 = true in (
-          selected := __assign_27;
-          __assign_27
+        ignore (let __assign_29 = true in (
+          selected := __assign_29;
+          __assign_29
         ));
         raise (HxRuntime.Hx_break)
       )) else ()
@@ -175,26 +177,26 @@ let getImportedTypeLocalName = fun self (provider : TyNominalTypeId.t) -> try le
     ignore (if not (!selected) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (let _g = Obj.magic (HxModuleDirective.getKind (Obj.magic ((Obj.magic self : t).source))) in match _g with
-        | HxModuleDirectiveKind.ImportNormal -> let canonical = (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string) in let dot = HxString.lastIndexOf canonical "." (HxString.length canonical) in if dot < 0 then let __assign_28 = Obj.magic (canonical : string) in (
-          tempResult := __assign_28;
-          __assign_28
-        ) else let __assign_29 = Obj.magic (HxString.substr canonical (HxInt.add dot 1) (-1) : string) in (
-          tempResult := __assign_29;
-          __assign_29
-        )
-        | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_30 = Obj.magic (alias : string) in (
+        | HxModuleDirectiveKind.ImportNormal -> let canonical = (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string) in let dot = HxString.lastIndexOf canonical "." (HxString.length canonical) in if dot < 0 then let __assign_30 = Obj.magic (canonical : string) in (
           tempResult := __assign_30;
           __assign_30
-        )
-        | _ -> let __assign_31 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        ) else let __assign_31 = Obj.magic (HxString.substr canonical (HxInt.add dot 1) (-1) : string) in (
           tempResult := __assign_31;
           __assign_31
+        )
+        | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_32 = Obj.magic (alias : string) in (
+          tempResult := __assign_32;
+          __assign_32
+        )
+        | _ -> let __assign_33 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_33;
+          __assign_33
         ));
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_33 with
-  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
+) in Obj.magic __fallback_result_35 with
+  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34
 
 let getStaticLocalName = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (let _g = Obj.magic ((Obj.magic self : t).kind) in if (match _g with
@@ -205,52 +207,52 @@ let getStaticLocalName = fun self () -> let tempResult = ref (Obj.magic (HxRunti
     | TyModuleDirectiveKind.UsingType -> 4
     | TyModuleDirectiveKind.Unresolved -> 5) = 1 then (
     ignore (match _g with
-      | TyModuleDirectiveKind.StaticMemberImport __enum_param_34 -> __enum_param_34
+      | TyModuleDirectiveKind.StaticMemberImport __enum_param_36 -> __enum_param_36
       | _ -> failwith "Unexpected enum parameter");
-    let __assign_35 = Obj.magic (HxModuleDirective.getImportedLocalName (Obj.magic ((Obj.magic self : t).source)) : string) in (
-      tempResult := __assign_35;
-      __assign_35
+    let __assign_37 = Obj.magic (HxModuleDirective.getImportedLocalName (Obj.magic ((Obj.magic self : t).source)) : string) in (
+      tempResult := __assign_37;
+      __assign_37
     )
-  ) else let __assign_36 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_36;
-    __assign_36
+  ) else let __assign_38 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_38;
+    __assign_38
   ));
   !tempResult
 )
 
-let canonicalIdentity = fun self () -> let _g = Obj.magic (let __arr_37 = HxArray.create () in __arr_37) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).providers) in (
+let canonicalIdentity = fun self () -> let _g = Obj.magic (let __arr_39 = HxArray.create () in __arr_39) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).providers) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let provider = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-    ignore (let __old_38 = !_g1 in let __new_39 = HxInt.add __old_38 1 in (
-      ignore (_g1 := __new_39);
-      __new_39
+    ignore (let __old_40 = !_g1 in let __new_41 = HxInt.add __old_40 1 in (
+      ignore (_g1 := __new_41);
+      __new_41
     ));
     HxArray.push _g (TyNominalTypeId.getCanonicalName (Obj.magic provider) ())
   )) done);
   let tempArray = Obj.magic _g in let providerNames = Obj.magic tempArray in let providerSet = (HxArray.join providerNames "," (fun x -> x) : string) in let tempString = ref (HxString.hx_null_string : string) in (
     ignore (let _g = Obj.magic ((Obj.magic self : t).kind) in match _g with
-      | TyModuleDirectiveKind.TypeImport -> let __assign_40 = "types:" ^ HxString.toStdString providerSet in (
-        tempString := __assign_40;
-        __assign_40
-      )
-      | TyModuleDirectiveKind.StaticMemberImport _p0 -> let _g2 = (_p0 : string) in let memberName = (_g2 : string) in let __assign_41 = (("static-member:" ^ HxString.toStdString providerSet) ^ ":") ^ HxString.toStdString memberName in (
-        tempString := __assign_41;
-        __assign_41
-      )
-      | TyModuleDirectiveKind.StaticWildcardImport -> let __assign_42 = "static-all:" ^ HxString.toStdString providerSet in (
+      | TyModuleDirectiveKind.TypeImport -> let __assign_42 = "types:" ^ HxString.toStdString providerSet in (
         tempString := __assign_42;
         __assign_42
       )
-      | TyModuleDirectiveKind.PackageWildcardImport -> let __assign_43 = "package-all:" ^ HxString.toStdString (HxModuleDirective.getPath (Obj.magic ((Obj.magic self : t).source))) in (
+      | TyModuleDirectiveKind.StaticMemberImport _p0 -> let _g2 = (_p0 : string) in let memberName = (_g2 : string) in let __assign_43 = (("static-member:" ^ HxString.toStdString providerSet) ^ ":") ^ HxString.toStdString memberName in (
         tempString := __assign_43;
         __assign_43
       )
-      | TyModuleDirectiveKind.UsingType -> let __assign_44 = "using-types:" ^ HxString.toStdString providerSet in (
+      | TyModuleDirectiveKind.StaticWildcardImport -> let __assign_44 = "static-all:" ^ HxString.toStdString providerSet in (
         tempString := __assign_44;
         __assign_44
       )
-      | TyModuleDirectiveKind.Unresolved -> let __assign_45 = "unresolved" in (
+      | TyModuleDirectiveKind.PackageWildcardImport -> let __assign_45 = "package-all:" ^ HxString.toStdString (HxModuleDirective.getPath (Obj.magic ((Obj.magic self : t).source))) in (
         tempString := __assign_45;
         __assign_45
+      )
+      | TyModuleDirectiveKind.UsingType -> let __assign_46 = "using-types:" ^ HxString.toStdString providerSet in (
+        tempString := __assign_46;
+        __assign_46
+      )
+      | TyModuleDirectiveKind.Unresolved -> let __assign_47 = "unresolved" in (
+        tempString := __assign_47;
+        __assign_47
       ));
     let resolved = !tempString in (HxString.toStdString (HxModuleDirective.canonicalIdentity (Obj.magic ((Obj.magic self : t).source))) ^ "=>") ^ HxString.toStdString resolved
   )

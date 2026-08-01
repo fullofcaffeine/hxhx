@@ -59,23 +59,32 @@ let create = fun stableIdentity2 bodyRevision2 declaration2 localCatalog2 fieldR
           ));
           ignore (if identity == HxString.hx_null_string || HxString.length identity = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "typed backend function projection contains an empty parameter binding identity") ["Dynamic"]) else ());
           ignore (if HxMap.exists_string (Obj.magic seenParameters) (identity : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection contains duplicate parameter binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
-          let local = Obj.magic (TypedBackendLocalCatalog.findByIdentity (Obj.magic localCatalog2) (identity : string)) in let tempBool = ref (false : bool) in let _g2 = Obj.magic (TyLocalBinding.getKind (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ()) in (
-            ignore (if (match _g2 with
-              | TyLocalDeclarationKind.Parameter -> 0
-              | TyLocalDeclarationKind.Variable -> 1
-              | TyLocalDeclarationKind.LoopVariable -> 2
-              | TyLocalDeclarationKind.CatchVariable -> 3
-              | TyLocalDeclarationKind.PatternVariable -> 4
-              | TyLocalDeclarationKind.LambdaParameter -> 5
-              | TyLocalDeclarationKind.ComprehensionVariable -> 6
-              | TyLocalDeclarationKind.CompilerTemporary -> 7) = 0 then let __assign_15 = true in (
-              tempBool := __assign_15;
+          let local = Obj.magic (TypedBackendLocalCatalog.findByIdentity (Obj.magic localCatalog2) (identity : string)) in let tempShortCircuit = ref (false : bool) in (
+            ignore (if local == Obj.magic (HxRuntime.hx_null) then let __assign_15 = true in (
+              tempShortCircuit := __assign_15;
               __assign_15
-            ) else let __assign_16 = false in (
-              tempBool := __assign_16;
-              __assign_16
+            ) else let tempBool = ref (false : bool) in let _g2 = Obj.magic (TyLocalBinding.getKind (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ()) in (
+              ignore (if (match _g2 with
+                | TyLocalDeclarationKind.Parameter -> 0
+                | TyLocalDeclarationKind.Variable -> 1
+                | TyLocalDeclarationKind.LoopVariable -> 2
+                | TyLocalDeclarationKind.CatchVariable -> 3
+                | TyLocalDeclarationKind.PatternVariable -> 4
+                | TyLocalDeclarationKind.LambdaParameter -> 5
+                | TyLocalDeclarationKind.ComprehensionVariable -> 6
+                | TyLocalDeclarationKind.CompilerTemporary -> 7) = 0 then let __assign_16 = true in (
+                tempBool := __assign_16;
+                __assign_16
+              ) else let __assign_17 = false in (
+                tempBool := __assign_17;
+                __assign_17
+              ));
+              let __assign_18 = not (!tempBool) in (
+                tempShortCircuit := __assign_18;
+                __assign_18
+              )
             ));
-            ignore (if local == Obj.magic (HxRuntime.hx_null) || not (!tempBool) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection cannot find exact parameter binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
+            ignore (if !tempShortCircuit then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed backend function projection cannot find exact parameter binding " ^ HxString.toStdString identity)) ["Dynamic"]) else ());
             HxMap.set_string (Obj.magic seenParameters) (identity : string) true
           )
         )) done

@@ -31,6 +31,15 @@ effect:and-true:true
 true-and=true
 effect:or-false:true
 false-or=true
+guarded-method-and=false
+guarded-method-or=true
+guarded-method-calls=0
+present-method-and=true
+present-method-calls=1
+guarded-loop-runs=0
+guarded-loop-calls=1
+mapped-guarded-loop-runs=0
+mapped-guarded-loop-calls=1
 loop-count=1
 effect:ordered:true
 ordered-condition=true

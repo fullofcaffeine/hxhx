@@ -1099,7 +1099,7 @@ let scannedStaticBodyIsSafe = fun fnName stmts -> try let __fallback_result_704 
 ) in Obj.magic __fallback_result_704 with
   | HxRuntime.Hx_return __ret_703 -> Obj.obj __ret_703
 
-let scanNextToken = fun source start -> try let __fallback_result_929 = let len = HxString.length source in let i = ref start in (
+let scanNextToken = fun source start -> try let __fallback_result_931 = let len = HxString.length source in let i = ref start in (
   ignore (try while !i < len do try ignore (let c = HxString.charCodeAt source (!i) in let tempBool = ref (false : bool) in let c2 = let __nullable_int_895 = c in if __nullable_int_895 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_895 in (
     ignore (let __assign_896 = c2 = 9 || c2 = 10 || c2 = 13 || c2 = 32 in (
       tempBool := __assign_896;
@@ -1164,70 +1164,76 @@ let scanNextToken = fun source start -> try let __fallback_result_929 = let len 
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      ignore (try while true do try ignore (let tempRight = ref (false : bool) in let c2 = let __nullable_int_914 = HxString.charCodeAt source (!i) in if __nullable_int_914 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_914 in (
-        ignore (let __assign_915 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 || c2 >= 48 && c2 <= 57 in (
-          tempRight := __assign_915;
+      ignore (try while true do try ignore (let tempShortCircuit = ref (false : bool) in (
+        ignore (if !i < len then let c2 = let __nullable_int_914 = HxString.charCodeAt source (!i) in if __nullable_int_914 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_914 in let __assign_915 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 || c2 >= 48 && c2 <= 57 in (
+          tempShortCircuit := __assign_915;
           __assign_915
+        ) else let __assign_916 = false in (
+          tempShortCircuit := __assign_916;
+          __assign_916
         ));
-        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < len && !tempRight))) then raise (HxRuntime.Hx_break) else ());
+        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!tempShortCircuit))) then raise (HxRuntime.Hx_break) else ());
         i := HxInt.add (!i) 1
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let tempBool1 = ref (false : bool) in let c2 = let __nullable_int_916 = c in if __nullable_int_916 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_916 in (
-      ignore (let __assign_917 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 in (
-        tempBool1 := __assign_917;
-        __assign_917
+    let tempBool1 = ref (false : bool) in let c2 = let __nullable_int_917 = c in if __nullable_int_917 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_917 in (
+      ignore (let __assign_918 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 in (
+        tempBool1 := __assign_918;
+        __assign_918
       ));
       ignore (if !tempBool1 then ignore (let startIdent = !i in (
         ignore (i := HxInt.add (!i) 1);
-        ignore (try while true do try ignore (let tempRight1 = ref (false : bool) in let c2 = let __nullable_int_918 = HxString.charCodeAt source (!i) in if __nullable_int_918 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_918 in (
-          ignore (let __assign_919 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 || c2 >= 48 && c2 <= 57 in (
-            tempRight1 := __assign_919;
-            __assign_919
+        ignore (try while true do try ignore (let tempShortCircuit1 = ref (false : bool) in (
+          ignore (if !i < len then let c2 = let __nullable_int_919 = HxString.charCodeAt source (!i) in if __nullable_int_919 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_919 in let __assign_920 = c2 >= 65 && c2 <= 90 || c2 >= 97 && c2 <= 122 || c2 = 95 || c2 >= 48 && c2 <= 57 in (
+            tempShortCircuit1 := __assign_920;
+            __assign_920
+          ) else let __assign_921 = false in (
+            tempShortCircuit1 := __assign_921;
+            __assign_921
           ));
-          ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < len && !tempRight1))) then raise (HxRuntime.Hx_break) else ());
+          ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!tempShortCircuit1))) then raise (HxRuntime.Hx_break) else ());
           i := HxInt.add (!i) 1
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_920 = HxAnon.create () in (
-          ignore (HxAnon.set __anonymous_value_920 "isIdent" (HxRuntime.box_bool true));
-          ignore (HxAnon.set __anonymous_value_920 "text" (Obj.repr (HxString.substr source startIdent (HxInt.sub (!i) startIdent))));
-          ignore (HxAnon.set __anonymous_value_920 "nextPos" (Obj.repr (!i)));
-          ignore (HxAnon.set __anonymous_value_920 "startPos" (Obj.repr startIdent));
-          __anonymous_value_920
+        raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_922 = HxAnon.create () in (
+          ignore (HxAnon.set __anonymous_value_922 "isIdent" (HxRuntime.box_bool true));
+          ignore (HxAnon.set __anonymous_value_922 "text" (Obj.repr (HxString.substr source startIdent (HxInt.sub (!i) startIdent))));
+          ignore (HxAnon.set __anonymous_value_922 "nextPos" (Obj.repr (!i)));
+          ignore (HxAnon.set __anonymous_value_922 "startPos" (Obj.repr startIdent));
+          __anonymous_value_922
         ))))
       )) else ());
-      ignore (if (let __nullable_921 = c in if __nullable_921 == HxRuntime.hx_null then false else Obj.obj __nullable_921 = 46) && HxInt.add (!i) 2 < len && (let __nullable_922 = HxString.charCodeAt source (HxInt.add (!i) 1) in if __nullable_922 == HxRuntime.hx_null then false else Obj.obj __nullable_922 = 46) && (let __nullable_923 = HxString.charCodeAt source (HxInt.add (!i) 2) in if __nullable_923 == HxRuntime.hx_null then false else Obj.obj __nullable_923 = 46) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_924 = HxAnon.create () in (
-        ignore (HxAnon.set __anonymous_value_924 "isIdent" (HxRuntime.box_bool false));
-        ignore (HxAnon.set __anonymous_value_924 "text" (Obj.repr "..."));
-        ignore (HxAnon.set __anonymous_value_924 "nextPos" (Obj.repr (HxInt.add (!i) 3)));
-        ignore (HxAnon.set __anonymous_value_924 "startPos" (Obj.repr (!i)));
-        __anonymous_value_924
+      ignore (if (let __nullable_923 = c in if __nullable_923 == HxRuntime.hx_null then false else Obj.obj __nullable_923 = 46) && HxInt.add (!i) 2 < len && (let __nullable_924 = HxString.charCodeAt source (HxInt.add (!i) 1) in if __nullable_924 == HxRuntime.hx_null then false else Obj.obj __nullable_924 = 46) && (let __nullable_925 = HxString.charCodeAt source (HxInt.add (!i) 2) in if __nullable_925 == HxRuntime.hx_null then false else Obj.obj __nullable_925 = 46) then raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_926 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_926 "isIdent" (HxRuntime.box_bool false));
+        ignore (HxAnon.set __anonymous_value_926 "text" (Obj.repr "..."));
+        ignore (HxAnon.set __anonymous_value_926 "nextPos" (Obj.repr (HxInt.add (!i) 3)));
+        ignore (HxAnon.set __anonymous_value_926 "startPos" (Obj.repr (!i)));
+        __anonymous_value_926
       )))) else ());
-      raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_925 = HxAnon.create () in (
-        ignore (HxAnon.set __anonymous_value_925 "isIdent" (HxRuntime.box_bool false));
-        ignore (HxAnon.set __anonymous_value_925 "text" (Obj.repr (HxString.fromCharCode (let __nullable_int_926 = c in if __nullable_int_926 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_926))));
-        ignore (HxAnon.set __anonymous_value_925 "nextPos" (Obj.repr (HxInt.add (!i) 1)));
-        ignore (HxAnon.set __anonymous_value_925 "startPos" (Obj.repr (!i)));
-        __anonymous_value_925
+      raise (HxRuntime.Hx_return (Obj.repr (let __anonymous_value_927 = HxAnon.create () in (
+        ignore (HxAnon.set __anonymous_value_927 "isIdent" (HxRuntime.box_bool false));
+        ignore (HxAnon.set __anonymous_value_927 "text" (Obj.repr (HxString.fromCharCode (let __nullable_int_928 = c in if __nullable_int_928 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_928))));
+        ignore (HxAnon.set __anonymous_value_927 "nextPos" (Obj.repr (HxInt.add (!i) 1)));
+        ignore (HxAnon.set __anonymous_value_927 "startPos" (Obj.repr (!i)));
+        __anonymous_value_927
       ))))
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let __anonymous_value_927 = HxAnon.create () in (
-    ignore (HxAnon.set __anonymous_value_927 "isIdent" (HxRuntime.box_bool false));
-    ignore (HxAnon.set __anonymous_value_927 "text" (Obj.repr ""));
-    ignore (HxAnon.set __anonymous_value_927 "nextPos" (Obj.repr len));
-    ignore (HxAnon.set __anonymous_value_927 "startPos" (Obj.repr len));
-    __anonymous_value_927
+  let __anonymous_value_929 = HxAnon.create () in (
+    ignore (HxAnon.set __anonymous_value_929 "isIdent" (HxRuntime.box_bool false));
+    ignore (HxAnon.set __anonymous_value_929 "text" (Obj.repr ""));
+    ignore (HxAnon.set __anonymous_value_929 "nextPos" (Obj.repr len));
+    ignore (HxAnon.set __anonymous_value_929 "startPos" (Obj.repr len));
+    __anonymous_value_929
   )
-) in Obj.magic __fallback_result_929 with
-  | HxRuntime.Hx_return __ret_928 -> Obj.magic __ret_928
+) in Obj.magic __fallback_result_931 with
+  | HxRuntime.Hx_return __ret_930 -> Obj.magic __ret_930
 
 let scanModuleStaticFields = fun source -> try let __fallback_result_43 = let out = Obj.magic (HxArray.create ()) in (
   ignore (if source == HxString.hx_null_string || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());

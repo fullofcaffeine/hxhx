@@ -494,6 +494,16 @@ class TypedBodyBuilder {
 		return TySwitchPatternBindings.declare(environment, pattern, baseType);
 	}
 
+	/**
+		Build one typed expression while replaying the local declarations recorded by
+		the typer.
+
+		Child expressions must be built in the same explicit order used by
+		`TyperStage`. Building two children as arguments to one constructor is unsafe:
+		Haxe targets may evaluate those arguments in different orders, which can make
+		a native compiler consume an inner lambda's local identity before the outer
+		lambda identity that typing recorded first.
+	**/
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
 			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
@@ -540,9 +550,10 @@ class TypedBodyBuilder {
 				} else {
 					final resolution = callResolver == null
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment);
-					TypedExpr.call(buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), resolution.getDeclaration(),
-						nodeType, position, resolution.getRequiresOwnerQualification(), resolution.getExtensionProvider());
+					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+					TypedExpr.call(typedCallee, typedArguments, resolution.getDeclaration(), nodeType, position, resolution.getRequiresOwnerQualification(),
+						resolution.getExtensionProvider());
 				}
 			case EReturn(inner):
 				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver,
@@ -627,18 +638,22 @@ class TypedBodyBuilder {
 				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType,
 					position);
 			case EBinop("=", left, right):
-				TypedExpr.assign(buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.assign(typedLeft, typedRight, nodeType, position);
 			case EBinop(op, left, right) if (isCompoundAssignment(op)):
-				TypedExpr.compoundAssign(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.compoundAssign(op, typedLeft, typedRight, nodeType, position);
 			case EBinop(op, left, right):
-				TypedExpr.binary(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.binary(op, typedLeft, typedRight, nodeType, position);
 			case ETernary(condition, whenTrue, whenFalse):
-				TypedExpr.ternary(buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedCondition = buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedWhenTrue = buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedWhenFalse = buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.ternary(typedCondition, typedWhenTrue, typedWhenFalse, nodeType, position);
 			case EAnon(fieldNames, fieldValues):
 				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(),
 					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
@@ -659,11 +674,13 @@ class TypedBodyBuilder {
 			case EArrayDecl(values):
 				TypedExpr.arrayDecl(buildExpressions(values, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EArrayAccess(array, index):
-				TypedExpr.arrayAccess(buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedArray = buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedIndex = buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.arrayAccess(typedArray, typedIndex, nodeType, position);
 			case ERange(start, end):
-				TypedExpr.range(buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
-					buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
+				final typedStart = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
+				TypedExpr.range(typedStart, typedEnd, nodeType, position);
 			case ECast(inner, typeHint):
 				TypedExpr.castValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), typeHint, nodeType,
 					position);

@@ -44,40 +44,47 @@ let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Compile
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilerJsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t)
 
 let skipWhitespace = fun self () -> ignore (ignore (try ignore (while (self : t).index < (self : t).length do ignore (let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
-  ignore (let __assign_71 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
-    tempNumber := __assign_71;
-    __assign_71
+  ignore (let __assign_73 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+    tempNumber := __assign_73;
+    __assign_73
   ));
   let code = !tempNumber in match code with
-    | 9 | 10 | 13 | 32 -> ignore (let __place_receiver_72 = self in let __place_old_73 = (__place_receiver_72 : t).index in let __place_new_74 = HxInt.add __place_old_73 1 in (
-      (__place_receiver_72 : t).index <- __place_new_74;
-      __place_old_73
+    | 9 | 10 | 13 | 32 -> ignore (let __place_receiver_74 = self in let __place_old_75 = (__place_receiver_74 : t).index in let __place_new_76 = HxInt.add __place_old_75 1 in (
+      (__place_receiver_74 : t).index <- __place_new_76;
+      __place_old_75
     ))
     | _ -> raise (HxRuntime.Hx_return (Obj.repr ()))
 )) done) with
-  | HxRuntime.Hx_return __ret_75 -> Obj.obj __ret_75))
+  | HxRuntime.Hx_return __ret_77 -> Obj.obj __ret_77))
 
 let isEof = fun self () -> (self : t).index >= (self : t).length
 
 let peekCode = fun self () -> let s = ((self : t).input : string) in let index2 = (self : t).index in let tempResult = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in tempResult
 
 let nextCode = fun self () -> let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
-  ignore (let __place_receiver_76 = self in let __place_old_77 = (__place_receiver_76 : t).index in let __place_new_78 = HxInt.add __place_old_77 1 in (
-    (__place_receiver_76 : t).index <- __place_new_78;
-    __place_old_77
+  ignore (let __place_receiver_78 = self in let __place_old_79 = (__place_receiver_78 : t).index in let __place_new_80 = HxInt.add __place_old_79 1 in (
+    (__place_receiver_78 : t).index <- __place_new_80;
+    __place_old_79
   ));
   code
 )
 
-let consumeIf = fun self (expected : int) -> (try let __fallback_result_83 = let s = ((self : t).input : string) in let index2 = (self : t).index in let tempLeft = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
-  ignore (if (self : t).index >= (self : t).length || tempLeft <> expected then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (let __place_receiver_79 = self in let __place_old_80 = (__place_receiver_79 : t).index in let __place_new_81 = HxInt.add __place_old_80 1 in (
-    (__place_receiver_79 : t).index <- __place_new_81;
-    __place_old_80
+let consumeIf = fun self (expected : int) -> (try let __fallback_result_87 = let tempShortCircuit = ref (false : bool) in (
+  ignore (if (self : t).index >= (self : t).length then let __assign_81 = true in (
+    tempShortCircuit := __assign_81;
+    __assign_81
+  ) else let s = ((self : t).input : string) in let index2 = (self : t).index in let tempLeft = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let __assign_82 = tempLeft <> expected in (
+    tempShortCircuit := __assign_82;
+    __assign_82
+  ));
+  ignore (if !tempShortCircuit then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (let __place_receiver_83 = self in let __place_old_84 = (__place_receiver_83 : t).index in let __place_new_85 = HxInt.add __place_old_84 1 in (
+    (__place_receiver_83 : t).index <- __place_new_85;
+    __place_old_84
   ));
   true
-) in Obj.magic __fallback_result_83 with
-  | HxRuntime.Hx_return __ret_82 -> Obj.obj __ret_82 : bool)
+) in Obj.magic __fallback_result_87 with
+  | HxRuntime.Hx_return __ret_86 -> Obj.obj __ret_86 : bool)
 
 let fail = fun self (message : string) -> ignore (ignore (HxType.hx_throw_typed_rtti (Obj.repr ((HxString.toStdString message ^ " at position ") ^ string_of_int ((self : t).index))) ["Dynamic"]))
 
@@ -231,30 +238,48 @@ let parseNumber = fun self () -> try let __fallback_result_56 = let start = (sel
 let expectKeyword = fun self (keyword : string) -> ignore (ignore (let _g = ref 0 in let _g1 = HxString.length keyword in while !_g < _g1 do ignore (let i = let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
   ignore (_g := __new_65);
   __old_64
-) in let tempLeft = ref (0 : int) in let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
-  ignore (let __assign_66 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
-    tempNumber := __assign_66;
+) in let tempShortCircuit = ref (false : bool) in (
+  ignore (if (self : t).index >= (self : t).length then let __assign_66 = true in (
+    tempShortCircuit := __assign_66;
     __assign_66
+  ) else let tempLeft = ref (0 : int) in let tempNumber = ref (0 : int) in let s = ((self : t).input : string) in let index2 = (self : t).index in (
+    ignore (let __assign_67 = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in (
+      tempNumber := __assign_67;
+      __assign_67
+    ));
+    let code = !tempNumber in (
+      ignore (let __place_receiver_68 = self in let __place_old_69 = (__place_receiver_68 : t).index in let __place_new_70 = HxInt.add __place_old_69 1 in (
+        (__place_receiver_68 : t).index <- __place_new_70;
+        __place_old_69
+      ));
+      ignore (let __assign_71 = code in (
+        tempLeft := __assign_71;
+        __assign_71
+      ));
+      let __assign_72 = !tempLeft <> Obj.obj (HxAnon.get (Obj.repr keyword) "cca") i in (
+        tempShortCircuit := __assign_72;
+        __assign_72
+      )
+    )
   ));
-  let code = !tempNumber in (
-    ignore (let __place_receiver_67 = self in let __place_old_68 = (__place_receiver_67 : t).index in let __place_new_69 = HxInt.add __place_old_68 1 in (
-      (__place_receiver_67 : t).index <- __place_new_69;
-      __place_old_68
-    ));
-    ignore (let __assign_70 = code in (
-      tempLeft := __assign_70;
-      __assign_70
-    ));
-    if (self : t).index >= (self : t).length || !tempLeft <> Obj.obj (HxAnon.get (Obj.repr keyword) "cca") i then ignore (fail (Obj.magic self) ("invalid keyword" : string)) else ()
-  )
+  if !tempShortCircuit then ignore (fail (Obj.magic self) ("invalid keyword" : string)) else ()
 )) done))
 
-let expectCode = fun self (expected : int) -> ignore (ignore (let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
-  ignore (let __place_receiver_84 = self in let __place_old_85 = (__place_receiver_84 : t).index in let __place_new_86 = HxInt.add __place_old_85 1 in (
-    (__place_receiver_84 : t).index <- __place_new_86;
-    __place_old_85
+let expectCode = fun self (expected : int) -> ignore (ignore (let tempShortCircuit = ref (false : bool) in (
+  ignore (if (self : t).index >= (self : t).length then let __assign_88 = true in (
+    tempShortCircuit := __assign_88;
+    __assign_88
+  ) else let s = ((self : t).input : string) in let index2 = (self : t).index in let tempNumber = Obj.obj (HxAnon.get (Obj.repr s) "cca") index2 in let code = tempNumber in (
+    ignore (let __place_receiver_89 = self in let __place_old_90 = (__place_receiver_89 : t).index in let __place_new_91 = HxInt.add __place_old_90 1 in (
+      (__place_receiver_89 : t).index <- __place_new_91;
+      __place_old_90
+    ));
+    let tempLeft = code in let __assign_92 = tempLeft <> expected in (
+      tempShortCircuit := __assign_92;
+      __assign_92
+    )
   ));
-  let tempLeft = code in if (self : t).index >= (self : t).length || tempLeft <> expected then ignore (fail (Obj.magic self) ("unexpected token" : string)) else ()
+  if !tempShortCircuit then ignore (fail (Obj.magic self) ("unexpected token" : string)) else ()
 )))
 
 let parseString = fun self () -> (try let __fallback_result_30 = (
@@ -401,4 +426,4 @@ let parseDocument = fun self () -> ((
   )
 ) : Obj.t)
 
-let parse = fun (content : string) -> (let __call_receiver_87 = create (content : string) in parseDocument __call_receiver_87 () : Obj.t)
+let parse = fun (content : string) -> (let __call_receiver_93 = create (content : string) in parseDocument __call_receiver_93 () : Obj.t)
