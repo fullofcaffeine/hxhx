@@ -217,8 +217,9 @@ class OcamlFunctionPlanSealer {
 		a stable structural path. For a literal with at least one parameter, removing
 		the final `nested-function-argument:0` segment yields the literal's stable
 		occurrence path. That path is parent-scoped, so equal-looking closures in two
-		methods cannot share return targets. Literals outside the first exact-Int,
-		return-only slice receive an explicit deferral row for syntax to consume.
+		methods cannot share return targets. Literals outside the existing
+		represented-result, return-only slice receive an explicit deferral row for
+		syntax to consume.
 	**/
 	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan):Void {
 		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
@@ -243,20 +244,23 @@ class OcamlFunctionPlanSealer {
 							bodyRevision: observedBodyRevision,
 							pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
 						};
-						final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedExactInt(tfunc);
+						final boundary = new OcamlCallPlanner(representations, nestedBinding).boundaryForNestedRepresentedResult(tfunc);
 						if (boundary == null) {
 							registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
-								"The typed function literal is outside the first exact-Int callable boundary.");
+								"The typed function literal is outside the existing represented-result callable boundary.");
 						} else {
 							final emptyLocalRepresentations = new OcamlLocalRepresentationPlan([]);
 							final controls = new OcamlControlPlanner(representations, emptyLocalRepresentations, nestedBinding,
 								localIdentities).plan(tfunc.expr, boundary);
 							final onlyReturnTransfers = Lambda.foreach(controls.decisions(),
 								decision -> decision.kind == reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return);
-							if (!controls.returnFamilyAdmitted || !controls.hasReturnTransfers() || !onlyReturnTransfers
-								|| controls.catchOccurrenceCount() != 0) {
+							// An unrepresented throw or loop transfer is removed from `decisions()` by
+							// the control planner. Check the family flags as well, or the remaining
+							// returns could make an unsupported closure look safely return-only.
+							final allControlFamiliesAdmitted = controls.returnFamilyAdmitted && controls.loopFamilyAdmitted && controls.throwFamilyAdmitted;
+							if (!allControlFamiliesAdmitted || !controls.hasReturnTransfers() || !onlyReturnTransfers || controls.catchOccurrenceCount() != 0) {
 								registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
-									"The typed function literal is outside the first exact-Int, return-only, catch-free control slice.");
+									"The typed function literal is outside the existing represented-result, return-only, catch-free, fully represented control slice.");
 							} else {
 								validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
 								validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);

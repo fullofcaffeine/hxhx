@@ -437,27 +437,32 @@ class ControlPlanFixture {
 		}
 	}
 
-	/** Returns one exact `Int` carrier used on both sides of a fixture callable boundary. */
-	static function nestedCallValue(index:Int):OcamlCallValuePlan {
+	/** Returns one admitted exact carrier used on both sides of a fixture callable boundary. */
+	static function nestedCallValue(index:Int, semanticTypeId:String = "Int"):OcamlCallValuePlan {
+		final carrierTypeId = switch (semanticTypeId) {
+			case "Int": "int";
+			case "Bool": "bool";
+			case _: throw 'The nested callable fixture does not support $semanticTypeId';
+		}
 		return {
 			index: index,
 			parameterOptional: false,
-			inputSemanticTypeId: "Int",
-			inputCarrierTypeId: "int",
-			inputRepresentationId: "representation:Int:internal-value",
-			outputSemanticTypeId: "Int",
-			outputCarrierTypeId: "int",
-			outputRepresentationId: "representation:Int:internal-value",
+			inputSemanticTypeId: semanticTypeId,
+			inputCarrierTypeId: carrierTypeId,
+			inputRepresentationId: 'representation:$semanticTypeId:internal-value',
+			outputSemanticTypeId: semanticTypeId,
+			outputCarrierTypeId: carrierTypeId,
+			outputRepresentationId: 'representation:$semanticTypeId:internal-value',
 			conversion: OcamlCallCarrierConversion.Identity,
 			proofId: "identity-call-carrier-v1",
-			proofClaim: "fixture exact Int carrier"
+			proofClaim: 'fixture exact $semanticTypeId carrier'
 		};
 	}
 
-	/** Builds the smallest valid exact-Int function-value boundary for registry corruption tests. */
-	static function nestedBoundary(planBinding:OcamlFunctionPlanBinding):OcamlCallableBoundaryPlan {
+	/** Builds a valid represented function-value boundary for registry corruption tests. */
+	static function nestedBoundary(planBinding:OcamlFunctionPlanBinding, resultSemanticTypeId:String = "Int"):OcamlCallableBoundaryPlan {
 		final arguments = [nestedCallValue(0)];
-		final result = nestedCallValue(-1);
+		final result = nestedCallValue(-1, resultSemanticTypeId);
 		final proofId = OcamlCallPlan.functionValueProofId(arguments, OcamlCallResultKind.Value, result);
 		return {
 			id: "callable:" + planBinding.functionId,
@@ -471,9 +476,9 @@ class ControlPlanFixture {
 			resultKind: OcamlCallResultKind.Value,
 			result: result,
 			profileEligibility: ["metal", "portable"],
-			reason: "fixture exact Int nested function boundary",
+			reason: 'fixture exact $resultSemanticTypeId nested function boundary',
 			proofId: proofId,
-			proofClaim: "fixture exact Int nested function boundary",
+			proofClaim: 'fixture exact $resultSemanticTypeId nested function boundary',
 			functionId: planBinding.functionId,
 			programRevision: planBinding.programRevision,
 			bodyRevision: planBinding.bodyRevision,
@@ -1093,7 +1098,7 @@ class ControlPlanFixture {
 		final admittedReturnSource = OcamlLoweredOrigin.sourceSpan(admittedReturn.pos);
 		final admittedDecision = returnDecision("control:return:nested-admitted", admittedReturnSource.min, admittedBinding.functionId, null, null, "Int",
 			null, null, admittedBinding, admittedReturnSource);
-		final admittedControls = new OcamlControlPlan(true, false, false, admittedBinding, [], [admittedDecision], [],
+		final admittedControls = new OcamlControlPlan(true, true, true, admittedBinding, [], [admittedDecision], [],
 			[{expression: admittedReturn, decisionId: admittedDecision.id}], [], []);
 		final admittedPlan:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: "nested-function-occurrence:admitted",
@@ -1118,6 +1123,65 @@ class ControlPlanFixture {
 			() -> nestedRegistry.sealNestedFunction(duplicateIdentityExpression, nestedExternalLocals(duplicateIdentityExpression),
 				admittedBinding.bodyRevision, admittedPlan));
 
+		final mismatchedExpression = Context.typeExpr(macro function(value:Int):Int {
+			if (value > 0)
+				return 7;
+			return 0;
+		});
+		final mismatchedFunction = switch (mismatchedExpression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The nested result-mismatch fixture did not type as a function literal";
+		};
+		final mismatchedExternalLocals = nestedExternalLocals(mismatchedExpression);
+		final mismatchedBinding:OcamlFunctionPlanBinding = {
+			functionId: nestedParent.functionId + "|nested-function|result-mismatch",
+			programRevision: nestedParent.programRevision,
+			bodyRevision: FunctionBodyRevision.initial(mismatchedFunction.expr, mismatchedExternalLocals).id,
+			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
+		};
+		final mismatchedReturn = firstReturn(mismatchedFunction.expr);
+		final mismatchedReturnSource = OcamlLoweredOrigin.sourceSpan(mismatchedReturn.pos);
+		final mismatchedDecision = returnDecision("control:return:nested-result-mismatch", mismatchedReturnSource.min, mismatchedBinding.functionId, null,
+			null, "Int", null, null, mismatchedBinding, mismatchedReturnSource);
+		final mismatchedControls = new OcamlControlPlan(true, true, true, mismatchedBinding, [], [mismatchedDecision], [],
+			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
+		final mismatchedPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: "nested-function-occurrence:result-mismatch",
+			parentBinding: nestedParent,
+			binding: mismatchedBinding,
+			callableBoundary: nestedBoundary(mismatchedBinding, "Bool"),
+			controls: mismatchedControls
+		};
+		expectThrows("return-boundary-mismatch",
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan));
+
+		// An unsupported throw is removed from the planner's decision list. This
+		// deliberately corrupt plan proves the catalog checks the family flag and
+		// cannot mistake the surviving return for a return-only closure.
+		final unadmittedThrowControls = new OcamlControlPlan(true, true, false, mismatchedBinding, [], [mismatchedDecision], [],
+			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
+		final unadmittedThrowPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: "nested-function-occurrence:unadmitted-throw",
+			parentBinding: nestedParent,
+			binding: mismatchedBinding,
+			callableBoundary: nestedBoundary(mismatchedBinding),
+			controls: unadmittedThrowControls
+		};
+		expectThrows("unsupported-control",
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan));
+
+		final unadmittedLoopControls = new OcamlControlPlan(true, false, true, mismatchedBinding, [], [mismatchedDecision], [],
+			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
+		final unadmittedLoopPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: "nested-function-occurrence:unadmitted-loop",
+			parentBinding: nestedParent,
+			binding: mismatchedBinding,
+			callableBoundary: nestedBoundary(mismatchedBinding),
+			controls: unadmittedLoopControls
+		};
+		expectThrows("unsupported-control",
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan));
+
 		final caughtExpression = Context.typeExpr(macro function(value:Int):Int {
 			try {
 				if (value > 0)
@@ -1141,7 +1205,7 @@ class ControlPlanFixture {
 		final caughtDecision = returnDecision("control:return:nested-caught", caughtReturnSource.min, caughtBinding.functionId, null, null, "Int", null, null,
 			caughtBinding, caughtReturnSource);
 		final caughtTry = firstTry(caughtFunction.expr);
-		final caughtControls = new OcamlControlPlan(true, false, false, caughtBinding, [], [caughtDecision], [],
+		final caughtControls = new OcamlControlPlan(true, true, true, caughtBinding, [], [caughtDecision], [],
 			[{expression: caughtReturn, decisionId: caughtDecision.id}], [], [
 			{
 				expression: caughtTry,

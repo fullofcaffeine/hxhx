@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 21) {
-	fail(`expected 21 exact-value return decisions, including three nested function literals, got ${returnControls.length}`)
+if (returnControls.length !== 25) {
+	fail(`expected 25 represented return decisions, including seven nested function literals, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -67,6 +67,27 @@ const nestedFunctionControls = returnControls.filter(control =>
 if (nestedFunctionControls.length !== 1) {
 	fail(`expected one independently sealed nested-function return decision, got ${nestedFunctionControls.length}`)
 }
+const representedNestedFunctions = new Map([
+	['nestedBoolClosure', 'Bool'],
+	['nestedStringClosure', 'String'],
+	['nestedNullableIntClosure', 'Null<Int>'],
+	['nestedNullableBoolClosure', 'Null<Bool>']
+])
+for (const [functionName, semanticType] of representedNestedFunctions) {
+	const decisions = returnControls.filter(control =>
+		control.functionId.includes(`|function|${functionName}|`)
+		&& control.functionId.includes('|nested-function|'))
+	if (decisions.length !== 1 || decisions[0].payload.outputSemanticTypeId !== semanticType) {
+		fail(`${functionName} did not seal one nested ${semanticType} return decision`)
+	}
+}
+for (const functionName of ['nestedDynamicClosure', 'nestedZeroArgumentClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+	if (returnControls.some(control =>
+		control.functionId.includes(`|function|${functionName}|`)
+		&& control.functionId.includes('|nested-function|'))) {
+		fail(`${functionName} crossed its explicit nested-function deferral boundary`)
+	}
+}
 const deepNestedFunctionControls = returnControls.filter(control =>
 	control.functionId.includes('|function|deepNestedClosure|')
 	&& control.functionId.includes('|nested-function|'))
@@ -93,7 +114,6 @@ for (const control of returnControls) {
 		|| control.runtimeTags.length !== 0
 		|| control.runtimeTagPolicy !== 'no-runtime-tags'
 		|| control.profileEligibility.join(',') !== 'metal,portable'
-		|| control.proofId !== 'exact-value-early-return-control-v2'
 		|| !control.reason
 		|| !control.proofClaim
 		|| !control.source.file
@@ -102,27 +122,47 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v1'
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v2'
 			: control.pipelineRevision !== 'ocaml-function-plans-v62')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
-	const expectedCarrier = new Map([
+	const exactCarrier = new Map([
 		['Int', 'int'],
 		['Bool', 'bool'],
 		['String', 'string']
 	]).get(payload.inputSemanticTypeId)
-	if (!expectedCarrier
-		|| payload.inputCarrierTypeId !== expectedCarrier
-		|| payload.inputRepresentationId !== `representation:${payload.inputSemanticTypeId}:internal-value`
-		|| payload.signalCarrierTypeId !== 'Obj.t'
-		|| payload.outputSemanticTypeId !== payload.inputSemanticTypeId
-		|| payload.outputCarrierTypeId !== expectedCarrier
-		|| payload.outputRepresentationId !== payload.inputRepresentationId
-		|| payload.conversion !== 'box-and-recover-exact-value'
-		|| payload.proofId !== 'exact-value-early-return-control-v2'
+	const exactValue = exactCarrier != null
+		&& control.proofId === 'exact-value-early-return-control-v2'
+		&& payload.inputCarrierTypeId === exactCarrier
+		&& payload.inputRepresentationId === `representation:${payload.inputSemanticTypeId}:internal-value`
+		&& payload.outputSemanticTypeId === payload.inputSemanticTypeId
+		&& payload.outputCarrierTypeId === exactCarrier
+		&& payload.outputRepresentationId === payload.inputRepresentationId
+		&& payload.conversion === 'box-and-recover-exact-value'
+		&& payload.proofId === 'exact-value-early-return-control-v2'
+	const nullableInt = control.proofId === 'exact-int-to-nullable-early-return-control-v1'
+		&& payload.inputSemanticTypeId === 'Int'
+		&& payload.inputCarrierTypeId === 'int'
+		&& payload.inputRepresentationId === 'representation:Int:internal-value'
+		&& payload.outputSemanticTypeId === 'Null<Int>'
+		&& payload.outputCarrierTypeId === 'Obj.t'
+		&& payload.outputRepresentationId === 'representation:Null<Int>:internal-value'
+		&& payload.conversion === 'box-exact-int-to-nullable-carrier'
+		&& payload.proofId === 'exact-int-to-nullable-early-return-control-v1'
+	const nullableBool = control.proofId === 'exact-bool-to-nullable-early-return-control-v1'
+		&& payload.inputSemanticTypeId === 'Bool'
+		&& payload.inputCarrierTypeId === 'bool'
+		&& payload.inputRepresentationId === 'representation:Bool:internal-value'
+		&& payload.outputSemanticTypeId === 'Null<Bool>'
+		&& payload.outputCarrierTypeId === 'Obj.t'
+		&& payload.outputRepresentationId === 'representation:Null<Bool>:internal-value'
+		&& payload.conversion === 'box-exact-bool-to-nullable-carrier'
+		&& payload.proofId === 'exact-bool-to-nullable-early-return-control-v1'
+	if (payload.signalCarrierTypeId !== 'Obj.t'
+		|| (!exactValue && !nullableInt && !nullableBool)
 		|| !payload.proofClaim) {
-		fail(`control decision ${control.id} has an incomplete exact-value payload crossing`)
+		fail(`control decision ${control.id} has an incomplete represented return payload crossing`)
 	}
 	ids.add(control.id)
 }
@@ -169,7 +209,7 @@ if (!nullableStringBody.includes('Obj.repr (HxString.hx_null_string)')
 	fail('the exact-String boundary did not preserve the existing runtime null-sentinel carrier')
 }
 const closureStart = source.indexOf('let nestedClosure =')
-const closureEnd = source.indexOf('\nlet deepNestedClosure =', closureStart)
+const closureEnd = source.indexOf('\nlet nestedBoolClosure =', closureStart)
 const closureBody = source.slice(closureStart, closureEnd)
 if (!closureBody.includes('let local = fun')
 	|| !closureBody.includes('HxRuntime.Hx_return')
@@ -179,6 +219,36 @@ if (!closureBody.includes('let local = fun')
 	|| closureBody.includes('Obj.magic')
 	|| !closureBody.includes(': int)')) {
 	fail('the nested function literal did not consume its independent exact-Int return plan')
+}
+for (const [functionName, expectedType] of [
+	['nestedBoolClosure', 'bool'],
+	['nestedStringClosure', 'string'],
+	['nestedNullableIntClosure', 'Obj.t'],
+	['nestedNullableBoolClosure', 'Obj.t']
+]) {
+	const start = source.indexOf(`let ${functionName} =`)
+	const next = source.indexOf('\nlet ', start + 1)
+	const body = source.slice(start, next)
+	if (start < 0
+		|| next < 0
+		|| !body.includes('HxRuntime.Hx_return')
+		|| body.includes('__fallback_result')
+		|| body.includes('Obj.magic')
+		|| !body.includes(`: ${expectedType}`)) {
+		fail(`${functionName} did not consume its represented nested return plan`)
+	}
+}
+for (const functionName of ['nestedDynamicClosure', 'nestedZeroArgumentClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+	const start = source.indexOf(`let ${functionName} =`)
+	const next = source.indexOf('\nlet ', start + 1)
+	const body = source.slice(start, next)
+	if (start < 0
+		|| next < 0
+		|| !body.includes('HxRuntime.Hx_return')
+		|| !body.includes('__fallback_result')
+		|| !body.includes('Obj.magic')) {
+		fail(`${functionName} did not remain on its explicit legacy nested-return path`)
+	}
 }
 const deepClosureStart = source.indexOf('let deepNestedClosure =')
 const deepClosureEnd = source.indexOf('\nlet nestedCatchClosure =', deepClosureStart)
@@ -212,10 +282,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 21
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 25
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 21 validated exact-value control decisions')
+	throw new Error('public inspection did not expose the 25 validated represented control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=21"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=25"

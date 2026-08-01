@@ -1238,15 +1238,16 @@ class OcamlCallPlanner {
 	}
 
 	/**
-		Selects the independently typed boundary for an exact-Int function literal.
+		Selects the independently typed boundary for one represented function literal.
 
 		The caller supplies a binding whose function ID already names the literal's
-		stable lexical occurrence. This first slice deliberately requires at least
-		one parameter and an exact `Int` result; zero-argument literals and other
-		result carriers stay on their existing path until they have the same stable
-		identity and validation evidence.
+		stable lexical occurrence. The result must use a carrier already owned by the
+		existing first-class function-value matrix: exact Bool/Int/String or nullable
+		Int/Bool. Dynamic, nominal classes, and zero-argument literals remain explicit
+		deferrals because this boundary does not yet give them a closed callback proof
+		or stable occurrence identity.
 	**/
-	public function boundaryForNestedExactInt(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
+	public function boundaryForNestedRepresentedResult(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
 		if (tfunc.args.length == 0)
 			return null;
 		final functionType:Type = switch (TypeTools.follow(tfunc.t)) {
@@ -1258,7 +1259,7 @@ class OcamlCallPlanner {
 				], tfunc.t);
 		};
 		final signature = selectAdmittedSignature(functionType, null, representations);
-		if (signature == null || signature.resultKind != OcamlCallResultKind.Value || signature.resultSemanticTypeId != "Int")
+		if (signature == null || signature.resultKind != OcamlCallResultKind.Value || signature.resultSemanticTypeId == "Dynamic")
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
 		for (argument in signature.arguments) {
@@ -1268,8 +1269,13 @@ class OcamlCallPlanner {
 			argumentRepresentations.push(representation);
 		}
 		final resultRepresentation = signature.resultType == null ? null : representationFor(signature.resultType, representations);
-		if (resultRepresentation == null || resultRepresentation.semanticTypeId != "Int")
+		if (resultRepresentation == null)
 			return null;
+		switch (resultRepresentation.semanticTypeId) {
+			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>":
+			case _:
+				return null;
+		}
 		final proof = functionValueProof(signature);
 		return {
 			id: "nested-callable-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
@@ -1286,7 +1292,7 @@ class OcamlCallPlanner {
 			resultKind: OcamlCallResultKind.Value,
 			result: identityValue(-1, resultRepresentation),
 			profileEligibility: ["metal", "portable"],
-			reason: "The final typed function literal has a parent-scoped lexical identity, represented parameters, and one exact Int result. Its nested return plan and generated closure consume this same boundary.",
+			reason: 'The final typed function literal has a parent-scoped lexical identity, represented parameters, and one existing ${resultRepresentation.semanticTypeId} result carrier. Its nested return plan and generated closure consume this same boundary.',
 			proofId: proof.id,
 			proofClaim: proof.claim,
 			functionId: binding.functionId,

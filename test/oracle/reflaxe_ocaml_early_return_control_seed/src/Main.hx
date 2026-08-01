@@ -1,3 +1,11 @@
+private class NestedReturnBox {
+	public final value:Int;
+
+	public function new(value:Int) {
+		this.value = value;
+	}
+}
+
 class Main {
 	static function printLine(value:String):Void {
 		#if js
@@ -74,6 +82,87 @@ class Main {
 		return 9;
 	}
 
+	/** Exercises an exact Bool result through a planned nested return boundary. */
+	static function nestedBoolClosure():Bool {
+		final local = function(enabled:Bool):Bool {
+			if (enabled)
+				return true;
+			return false;
+		};
+		return local(true);
+	}
+
+	/** Exercises the runtime-owned Haxe String carrier without a syntax-time cast. */
+	static function nestedStringClosure():String {
+		final local = function(enabled:Bool):String {
+			if (enabled)
+				return "nested-string";
+			return "fallback";
+		};
+		return local(true);
+	}
+
+	/** Converts one early Int to the existing Null<Int> carrier before signaling. */
+	static function nestedNullableIntClosure():Null<Int> {
+		final local = function(enabled:Bool):Null<Int> {
+			if (enabled)
+				return 23;
+			return null;
+		};
+		return local(true);
+	}
+
+	/** Converts one early Bool to the existing Null<Bool> carrier before signaling. */
+	static function nestedNullableBoolClosure():Null<Bool> {
+		final local = function(enabled:Bool):Null<Bool> {
+			if (enabled)
+				return true;
+			return null;
+		};
+		return local(true);
+	}
+
+	/** Keeps a Dynamic result outside the represented nested callback matrix. */
+	static function nestedDynamicClosure():Dynamic {
+		final local = function(enabled:Bool):Dynamic {
+			if (enabled)
+				return 41;
+			return "dynamic";
+		};
+		return local(true);
+	}
+
+	/** Keeps a zero-argument literal deferred until it has a stable occurrence identity. */
+	static function nestedZeroArgumentClosure():Int {
+		final enabled = true;
+		final local = function():Int {
+			if (enabled)
+				return 43;
+			return 0;
+		};
+		return local();
+	}
+
+	/** Keeps a closure with an unrepresented throw payload on the legacy path. */
+	static function nestedUnsupportedThrowClosure():Int {
+		final local = function(enabled:Bool):Int {
+			if (enabled)
+				return 47;
+			throw [1];
+		};
+		return local(true);
+	}
+
+	/** Keeps nominal callback results deferred until the function-value ABI admits them. */
+	static function nestedNominalClosure():NestedReturnBox {
+		final local = function(enabled:Bool):NestedReturnBox {
+			if (enabled)
+				return new NestedReturnBox(53);
+			return new NestedReturnBox(0);
+		};
+		return local(true);
+	}
+
 	/**
 		Exercises two independently planned function literals and an outer capture.
 
@@ -125,6 +214,14 @@ class Main {
 		printLine("stringNull1=" + (nullableStringCarrier(true) == null));
 		printLine("stringNull0=" + nullableStringCarrier(false));
 		printLine("closure=" + nestedClosure());
+		printLine("boolClosure=" + nestedBoolClosure());
+		printLine("stringClosure=" + nestedStringClosure());
+		printLine("nullableIntClosure=" + nestedNullableIntClosure());
+		printLine("nullableBoolClosure=" + nestedNullableBoolClosure());
+		printLine("dynamicClosure=" + (nestedDynamicClosure() == 41));
+		printLine("zeroArgumentClosure=" + nestedZeroArgumentClosure());
+		printLine("unsupportedThrowClosure=" + nestedUnsupportedThrowClosure());
+		printLine("nominalClosure=" + nestedNominalClosure().value);
 		printLine("deepClosure=" + deepNestedClosure());
 		printLine("catchClosure=" + nestedCatchClosure());
 		printLine("OK early_return_control");

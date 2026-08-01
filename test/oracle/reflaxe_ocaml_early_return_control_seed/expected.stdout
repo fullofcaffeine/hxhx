@@ -12,6 +12,14 @@ string0=late
 stringNull1=true
 stringNull0=value
 closure=8
+boolClosure=true
+stringClosure=nested-string
+nullableIntClosure=23
+nullableBoolClosure=true
+dynamicClosure=true
+zeroArgumentClosure=43
+unsupportedThrowClosure=47
+nominalClosure=53
 deepClosure=14
 catchClosure=15
 OK early_return_control

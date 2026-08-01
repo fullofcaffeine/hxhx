@@ -10,6 +10,7 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
+import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
@@ -137,7 +138,7 @@ private typedef OcamlSealedFunctionRecord = {
 
 	`plan == null` is an explicit deferral, not a missing plan. Keeping that
 	distinction lets syntax use the legacy path only for a literal the planner
-	actually saw and deliberately left outside the first exact-Int slice.
+	actually saw and deliberately left outside the represented nested-result slice.
 **/
 private typedef OcamlNestedFunctionRecord = {
 	final parentBinding:OcamlFunctionPlanBinding;
@@ -159,7 +160,7 @@ private typedef OcamlNestedFunctionRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v1";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v2";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	var currentProgramRevision:Null<String> = null;
@@ -200,7 +201,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/**
-		Records one nested literal that is outside the current exact-Int slice.
+		Records one nested literal that is outside the represented-result slice.
 
 		Syntax may retain its older behavior only after this explicit observation.
 		If no row exists, planning and syntax did not see the same final body and the
@@ -226,7 +227,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/**
-		Seals one exact-Int nested function before target syntax starts.
+		Seals one represented nested function before target syntax starts.
 
 		The parent binding proves which final method owns the literal. The nested
 		binding proves which lexical occurrence and body revision own its return
@@ -255,17 +256,36 @@ class OcamlFunctionPlanRegistry {
 		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
 			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
 			|| plan.callableBoundary.result == null
-			|| plan.callableBoundary.result.outputSemanticTypeId != "Int") {
-			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the first exact-Int callable slice';
+			|| plan.callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity
+			|| plan.callableBoundary.result.inputSemanticTypeId != plan.callableBoundary.result.outputSemanticTypeId
+			|| plan.callableBoundary.result.inputCarrierTypeId != plan.callableBoundary.result.outputCarrierTypeId
+			|| plan.callableBoundary.result.inputRepresentationId != plan.callableBoundary.result.outputRepresentationId) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
 		plan.controls.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
+		// The planner removes decisions from any control family it could not
+		// represent. Validate those family flags directly so a surviving Return
+		// cannot hide an unsupported Throw, Break, or Continue from this catalog.
+		if (!plan.controls.loopFamilyAdmitted || !plan.controls.throwFamilyAdmitted)
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted loop or throw control family';
 		if (plan.controls.catchOccurrenceCount() != 0)
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains a catch outside the first return-only slice';
 		for (decision in plan.controls.decisions()) {
 			if (decision.kind != reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return)
 				throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains control outside the first return-only slice';
+		}
+		final returnBoundary = plan.controls.returnBoundaryDecision();
+		final returnPayload = returnBoundary == null ? null : returnBoundary.payload;
+		final callableResult = plan.callableBoundary.result;
+		if (returnBoundary == null
+			|| returnPayload == null
+			|| callableResult == null
+			|| returnPayload.outputSemanticTypeId != callableResult.outputSemanticTypeId
+			|| returnPayload.outputCarrierTypeId != callableResult.outputCarrierTypeId
+			|| returnPayload.outputRepresentationId != callableResult.outputRepresentationId) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:return-boundary-mismatch]: nested function "${plan.binding.functionId}" has callable and control plans for different result carriers';
 		}
 		final stored:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: plan.occurrenceId,
