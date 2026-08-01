@@ -9,6 +9,12 @@ This folder now contains examples that are mainly about `hxhx` behavior itself
 
 The test runner checks both roots.
 
+Every maintained example also has a checked tier, product surface, protected
+claim, and executable command in
+`docs/00-project/TESTING_PRODUCT_SURFACES.json`. The current examples in this
+folder are capability showcases: they prove the named path they execute, not a
+standalone target, bootstrap, or release claim by association.
+
 Run all examples from the repo root:
 
 ```bash

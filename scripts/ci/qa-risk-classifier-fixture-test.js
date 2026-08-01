@@ -39,13 +39,19 @@ expectTier('docs and beads only', {
   authenticCompilerPromotion: false
 })
 
-expectTier('standalone example', {
+const standaloneExample = expectTier('standalone example', {
   event: 'pull_request',
   changedPaths: ['packages/reflaxe.ocaml/examples/mini-compiler/Main.hx']
 }, 'Q1', {
   standalonePackage: true,
   hxhxCanary: false
 })
+assert.deepStrictEqual(standaloneExample.semanticOwners, ['standalone-target-examples-and-consumers'])
+assert.deepStrictEqual(standaloneExample.productSurfaces, [
+  'ocaml-native-runtime',
+  'package-downstream-examples',
+  'reflaxe-ocaml-backend'
+])
 
 expectTier('documentation nested under target source', {
   event: 'push',
@@ -87,7 +93,7 @@ expectTier('ordinary target module', {
   largeHxhxConsumer: false
 })
 
-expectTier('central target representation', {
+const centralRepresentation = expectTier('central target representation', {
   event: 'pull_request',
   changedPaths: ['packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx']
 }, 'Q3', {
@@ -96,6 +102,16 @@ expectTier('central target representation', {
   authenticCompilerPromotion: true,
   hxhxReleaseEvidence: false
 })
+assert.deepStrictEqual(centralRepresentation.semanticOwners, [
+  'ocaml-representation-lowering-and-runtime',
+  'target-lowering-and-compiler-contracts'
+])
+assert.deepStrictEqual(centralRepresentation.productSurfaces, [
+  'hxhx-compiler-bootstrap',
+  'ocaml-native-runtime',
+  'package-downstream-examples',
+  'reflaxe-ocaml-backend'
+])
 
 expectTier('plugin ABI', {
   event: 'push',
@@ -123,6 +139,14 @@ const unknown = expectTier('unknown code path', {
   hxhxCanary: true
 })
 assert.deepStrictEqual(unknown.unknownPaths, ['new-compiler-layer/Thing.hx'])
+assert.deepStrictEqual(unknown.semanticOwners, ['unclassified-change'])
+assert.deepStrictEqual(unknown.productSurfaces, [
+  'bootstrap-reproducibility',
+  'hxhx-compiler-bootstrap',
+  'ocaml-native-runtime',
+  'package-downstream-examples',
+  'reflaxe-ocaml-backend'
+])
 
 expectTier('mixed documentation and compiler source', {
   event: 'pull_request',

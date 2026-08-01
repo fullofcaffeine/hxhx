@@ -1,0 +1,345 @@
+{
+  "schema": "hxhx.testing-product-surfaces.v1",
+  "strategyVersion": "2026-07-31-v3",
+  "officialHaxeQualificationSurface": "reflaxe-ocaml-backend",
+  "surfaces": [
+    {
+      "surfaceId": "reflaxe-ocaml-backend",
+      "name": "Haxe-to-OCaml target backend conformance",
+      "ownerBeads": [
+        "haxe_ocaml-s7jry",
+        "haxe_ocaml-w32h3",
+        "haxe_ocaml-0uwin"
+      ],
+      "status": "partial",
+      "claims": [
+        "Ordinary Haxe source compiled through standalone reflaxe.ocaml produces OCaml that the declared OCaml toolchain accepts and whose executable behavior matches the independently authored expectation."
+      ],
+      "focusedOwners": [
+        "npm run test:snapshot",
+        "focused scripts/reflaxe-ocaml/run-*-oracle.sh commands"
+      ],
+      "verticalOwners": [
+        "npm run test:portable",
+        "npm run test:examples",
+        "npm run test:reflaxe-ocaml:package-install"
+      ],
+      "fullBackstopCommand": "npm run test:portable",
+      "releaseCommand": "npm run test:reflaxe-ocaml:package-install",
+      "lastCleanProof": "README.md Goals status and docs/00-project/FULL1_RELEASE_GO_NO_GO.md identify the latest retained evidence and current no-go boundaries.",
+      "residualRisks": [
+        "Control-effect and fail-closed runtime owners remain open.",
+        "The complete applicable official Haxe 4.3.7 target suite is not yet a release-qualified standalone backend pass."
+      ]
+    },
+    {
+      "surfaceId": "ocaml-native-runtime",
+      "name": "OCaml-native, metal, and runtime behavior",
+      "ownerBeads": [
+        "haxe_ocaml-v8a9b",
+        "haxe_ocaml-0uwin"
+      ],
+      "status": "partial",
+      "claims": [
+        "Haxe-authored programs may use the explicitly supported ocaml.* APIs and repository-owned runtime modules with the declared representation, exception, filesystem, process, and interop behavior."
+      ],
+      "focusedOwners": [
+        "npm run test:m4:ocaml-native",
+        "npm run test:m6:runtime",
+        "npm run test:m6:exceptions",
+        "npm run test:m6:metal-strict"
+      ],
+      "verticalOwners": [
+        "packages/reflaxe.ocaml/examples/ocaml-native-collections",
+        "packages/reflaxe.ocaml/examples/file-io",
+        "packages/reflaxe.ocaml/examples/extlib-pmap"
+      ],
+      "fullBackstopCommand": "npm run test:portable",
+      "releaseCommand": "npm run test:reflaxe-ocaml:package-install",
+      "lastCleanProof": "The executable example inventory is enforced by npm run guard:example-coverage; package readiness remains separately evaluated.",
+      "residualRisks": [
+        "Typed OCaml import and adapter coverage is incomplete.",
+        "A backend conformance pass does not prove native ABI, FFI, plugin, or runtime ownership behavior."
+      ]
+    },
+    {
+      "surfaceId": "hxhx-compiler-bootstrap",
+      "name": "hxhx compiler behavior and bootstrap stages",
+      "ownerBeads": [
+        "haxe.ocaml-f1cl",
+        "haxe_ocaml-38gsp.1"
+      ],
+      "status": "partial",
+      "claims": [
+        "The hxhx compiler performs the explicitly declared parser, typer, macro, server, target, plugin, and bootstrap work without hidden stage0 delegation where the lane forbids it."
+      ],
+      "focusedOwners": [
+        "focused npm run test:m14:* compiler regressions",
+        "npm run test:self-hosting-smoke"
+      ],
+      "verticalOwners": [
+        "npm run test:hxhx-targets",
+        "npm run test:upstream:replacement-ready:strict"
+      ],
+      "fullBackstopCommand": "npm run test:hxhx-targets",
+      "releaseCommand": "npm run test:upstream:replacement-ready:strict",
+      "lastCleanProof": "docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md separates bounded stage0-free successes from unfinished strong self-hosting.",
+      "residualRisks": [
+        "Strong stage0-free bootstrap refresh is unfinished.",
+        "The native OCaml target route still needs the authentic standalone reflaxe.ocaml hard cut.",
+        "A successful hxhx bootstrap or upstream compiler suite does not contribute a standalone Haxe-to-OCaml backend pass."
+      ]
+    },
+    {
+      "surfaceId": "bootstrap-reproducibility",
+      "name": "Bootstrap semantic equivalence and reproducibility",
+      "ownerBeads": [
+        "haxe_ocaml-38gsp.2"
+      ],
+      "status": "experimental",
+      "claims": [
+        "Successive hxhx stages are compared through declared observable compiler behavior and normalized generated artifacts; byte identity is required only for artifacts whose contract explicitly names it."
+      ],
+      "focusedOwners": [
+        "npm run test:hxhx:bootstrap-snapshot-copy",
+        "npm run test:hxhx:stage0-free-build-report"
+      ],
+      "verticalOwners": [
+        "npm run test:upstream:stage2"
+      ],
+      "fullBackstopCommand": "npm run test:upstream:stage2",
+      "releaseCommand": "npm run test:upstream:stage2",
+      "lastCleanProof": "scripts/hxhx/stage2-repro.sh currently compares command behavior and stable generated .ml hashes while documenting its shim-era limits.",
+      "residualRisks": [
+        "The stage2 command can skip when required OCaml tools are unavailable.",
+        "Current generated-source byte comparison is a narrow shim-era contract, not proof that native executable bytes are reproducible.",
+        "Two-generation native self-promotion remains open."
+      ]
+    },
+    {
+      "surfaceId": "package-downstream-examples",
+      "name": "Packages, downstream consumers, and executable examples",
+      "ownerBeads": [
+        "haxe_ocaml-a2w0e",
+        "haxe_ocaml-h5pxy"
+      ],
+      "status": "partial",
+      "claims": [
+        "Every maintained example is inventoried and executes the compile, build, runtime, or compiler-process behavior declared by its tier and command."
+      ],
+      "focusedOwners": [
+        "npm run guard:example-coverage",
+        "npm run guard:testing-product-surfaces"
+      ],
+      "verticalOwners": [
+        "npm run test:examples",
+        "npm run test:acceptance"
+      ],
+      "fullBackstopCommand": "npm run test:examples",
+      "releaseCommand": "npm run test:acceptance:full",
+      "lastCleanProof": "scripts/ci/example-coverage-contract-check.js requires every buildable example to have an expected runtime transcript and a documented executable command.",
+      "residualRisks": [
+        "The current inventory contains capability showcases but no example qualified as a flagship application.",
+        "The 2026-07-31 full example run stopped in hxhx-target-ocaml-stage3 on a typed-local declaration replay mismatch tracked by haxe_ocaml-7qbih; earlier evaluated OCaml examples built and ran successfully.",
+        "Passing an example proves only its declared route and must not advance backend, native-runtime, or bootstrap claims by itself."
+      ]
+    }
+  ],
+  "bootstrapStages": [
+    {
+      "stageId": "stage0",
+      "name": "Installed upstream starter compiler",
+      "status": "qualified",
+      "claim": "The exact upstream Haxe compiler is the pinned behavior oracle and build input used to produce stage1; its success is not evidence about hxhx implementation behavior.",
+      "oracle": "Pinned upstream Haxe 4.3.7 identity e0b355c6be312c1b17382603f018cf52522ec651 and the installed compiler version/provenance checks.",
+      "command": "npm run test:upstream:unit-macro-stage0",
+      "allowedNondeterminism": [
+        "machine-local installation path",
+        "wall-clock timing",
+        "toolchain-owned temporary paths"
+      ]
+    },
+    {
+      "stageId": "stage1",
+      "name": "First native hxhx built by stage0",
+      "status": "partial",
+      "claim": "The stage1 executable can perform the bounded stage0-forbidden compiler workflows named by its tests; this does not prove strong self-hosting or stage2 equivalence.",
+      "oracle": "Upstream Haxe behavior for accepted compiler inputs plus manually authored stage0-forbidden command, diagnostic, and runtime expectations.",
+      "command": "npm run test:self-hosting-smoke",
+      "allowedNondeterminism": [
+        "native executable bytes produced by the OCaml linker",
+        "Dune build paths and metadata",
+        "wall-clock timing and process identifiers"
+      ]
+    },
+    {
+      "stageId": "stage2",
+      "name": "Successor hxhx built by stage1",
+      "status": "experimental",
+      "claim": "Stage2 must reproduce the declared stage1 command behavior and stable generated-source contract; it is not yet a complete two-generation native self-promotion proof.",
+      "oracle": "Semantic equality of no-argument, help, and version behavior plus the current explicitly byte-identical stable generated .ml source set.",
+      "command": "npm run test:upstream:stage2",
+      "allowedNondeterminism": [
+        "native executable and object-file bytes",
+        "Dune _build contents",
+        "absolute paths, timestamps, timings, and process identifiers",
+        "artifacts excluded by the normalized generated-source inventory"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "path": "examples/hxhx-embedding-subprocess",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "hxhx-compiler-bootstrap",
+        "package-downstream-examples"
+      ],
+      "stageIds": [
+        "stage1"
+      ],
+      "claim": "A caller can run hxhx as a subprocess and receive deterministic success reports and failure diagnostics.",
+      "command": "npm run hxhx:example:embedding-subprocess",
+      "runtimeClaim": false
+    },
+    {
+      "path": "examples/hxhx-js-todoapp",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "hxhx-compiler-bootstrap",
+        "package-downstream-examples"
+      ],
+      "stageIds": [
+        "stage1"
+      ],
+      "claim": "The hxhx JavaScript compatibility lane compiles a library-shaped application and its Node observer produces the reviewed output.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "examples/hxhx-library-reflaxe-ocaml-plugin",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "hxhx-compiler-bootstrap",
+        "package-downstream-examples"
+      ],
+      "stageIds": [
+        "stage1"
+      ],
+      "claim": "The Stage3 bring-up lane loads a library extension, injects its classpath and macro hook, builds OCaml output, and runs it.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/build-macro",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "The evaluated reflaxe.ocaml route executes a build macro, generates OCaml, builds with Dune, and runs the expected program.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/extlib-pmap",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "ocaml-native-runtime",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "A Haxe-authored program can use the declared ExtLib PMap extern and Dune dependency when the host package is installed.",
+      "command": "npm run test:acceptance",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/file-io",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "ocaml-native-runtime",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "Generated OCaml uses the declared Sys, File, and FileSystem runtime behavior and produces the reviewed transcript.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/hxhx-native-reflaxe-bench",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "The evaluated reflaxe.ocaml path runs a deterministic compiler-shaped arithmetic workload used by the separate benchmark.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/hxhx-target-ocaml",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "The hxhx command wrapper selects the delegated ocaml-eval route, builds the generated OCaml project, and runs it.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/hxhx-target-ocaml-stage3",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "hxhx-compiler-bootstrap",
+        "package-downstream-examples"
+      ],
+      "stageIds": [
+        "stage1"
+      ],
+      "claim": "The Stage3 bring-up route selects its current OCaml emitter, creates an executable, and runs the expected program without claiming standalone backend conformance.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/loop-control",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "The evaluated backend preserves break and continue behavior in nested loops and terminates with the reviewed output.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/mini-compiler",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "A compiler-shaped Haxe program using scanning, enums, recursion, bytes, and exceptions builds as OCaml and evaluates expressions correctly.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    },
+    {
+      "path": "packages/reflaxe.ocaml/examples/ocaml-native-collections",
+      "tier": "capability-showcase",
+      "productSurfaces": [
+        "ocaml-native-runtime",
+        "package-downstream-examples"
+      ],
+      "stageIds": [],
+      "claim": "The supported ocaml.Array, Hashtbl, Bytes, Char, Seq, map, and set wrappers compile and execute against OCaml Stdlib.",
+      "command": "npm run test:examples",
+      "runtimeClaim": true
+    }
+  ]
+}

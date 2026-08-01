@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 const fs = require('fs')
 const path = require('path')
+const {
+  listMaintainedExamples,
+  validateManifest
+} = require('./testing-product-surfaces-check')
 
 const repoRoot = process.cwd()
 const exampleRoots = ['examples', 'packages/reflaxe.ocaml/examples']
@@ -141,8 +145,18 @@ function validateWiring() {
   requireIncludes(agents, 'EXAMPLE_COVERAGE_CONTRACT:PASS', 'AGENTS.md')
 }
 
+function validateExampleClaims() {
+  const manifest = JSON.parse(read('docs/00-project/TESTING_PRODUCT_SURFACES.json'))
+  const policy = JSON.parse(read('scripts/ci/qa-risk-policy.json'))
+  validateManifest(manifest, {
+    examplePaths: listMaintainedExamples(repoRoot),
+    qaPolicy: policy
+  })
+}
+
 function main() {
   validateExampleInventory()
+  validateExampleClaims()
   validateWiring()
   console.log('[ci:guards] OK: example coverage contract is valid')
   console.log('EXAMPLE_COVERAGE_CONTRACT:PASS')

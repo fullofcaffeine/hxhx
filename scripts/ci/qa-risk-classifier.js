@@ -13,7 +13,7 @@ const fs = require('fs')
 const path = require('path')
 
 const POLICY_PATH = path.join(__dirname, 'qa-risk-policy.json')
-const RESULT_SCHEMA = 'hxhx.qa-risk-classification.v2'
+const RESULT_SCHEMA = 'hxhx.qa-risk-classification.v3'
 const TIERS = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
 
 function invariant(condition, message) {
@@ -39,8 +39,18 @@ function normalizeChangedPath(value) {
 function loadPolicy(policyPath = POLICY_PATH) {
   const raw = fs.readFileSync(policyPath, 'utf8')
   const policy = JSON.parse(raw)
-  invariant(policy.schema === 'hxhx.qa-risk-policy.v1', `unexpected policy schema: ${policy.schema}`)
+  invariant(policy.schema === 'hxhx.qa-risk-policy.v2', `unexpected policy schema: ${policy.schema}`)
   tierIndex(policy.defaultUnknownTier)
+  invariant(
+    Array.isArray(policy.defaultUnknownSemanticOwners) && policy.defaultUnknownSemanticOwners.length > 0
+      && policy.defaultUnknownSemanticOwners.every(owner => typeof owner === 'string' && owner !== ''),
+    'defaultUnknownSemanticOwners must be a non-empty string array'
+  )
+  invariant(
+    Array.isArray(policy.defaultUnknownProductSurfaces) && policy.defaultUnknownProductSurfaces.length > 0
+      && policy.defaultUnknownProductSurfaces.every(surface => typeof surface === 'string' && surface !== ''),
+    'defaultUnknownProductSurfaces must be a non-empty string array'
+  )
   invariant(policy.eventMinimums && typeof policy.eventMinimums === 'object', 'eventMinimums must be an object')
   invariant(
     Array.isArray(policy.q0WorkflowIgnorePatterns) && policy.q0WorkflowIgnorePatterns.length > 0,
@@ -63,6 +73,16 @@ function loadPolicy(policyPath = POLICY_PATH) {
       `rule ${rule.id} terminal must be boolean when present`
     )
     invariant(typeof rule.description === 'string' && rule.description !== '', `rule ${rule.id} needs a description`)
+    invariant(
+      Array.isArray(rule.semanticOwners) && rule.semanticOwners.length > 0
+        && rule.semanticOwners.every(owner => typeof owner === 'string' && owner !== ''),
+      `rule ${rule.id} semanticOwners must be a non-empty string array`
+    )
+    invariant(
+      Array.isArray(rule.productSurfaces)
+        && rule.productSurfaces.every(surface => typeof surface === 'string' && surface !== ''),
+      `rule ${rule.id} productSurfaces must be a string array`
+    )
     const matchers = ['exact', 'prefixes', 'suffixes']
       .flatMap(field => Array.isArray(rule[field]) ? rule[field] : [])
     invariant(matchers.length > 0, `rule ${rule.id} needs at least one path matcher`)
@@ -111,9 +131,20 @@ function classify(options, loaded = loadPolicy()) {
     matches.push({
       path: changedPath,
       tier: matchedTier,
-      rules: effectiveRules.map(rule => rule.id).sort()
+      rules: effectiveRules.map(rule => rule.id).sort(),
+      semanticOwners: [...new Set(effectiveRules.flatMap(rule => rule.semanticOwners))].sort(),
+      productSurfaces: [...new Set(effectiveRules.flatMap(rule => rule.productSurfaces))].sort()
     })
   }
+
+  const semanticOwners = [...new Set([
+    ...matches.flatMap(match => match.semanticOwners),
+    ...(unknownPaths.length > 0 ? loaded.policy.defaultUnknownSemanticOwners : [])
+  ])].sort()
+  const productSurfaces = [...new Set([
+    ...matches.flatMap(match => match.productSurfaces),
+    ...(unknownPaths.length > 0 ? loaded.policy.defaultUnknownProductSurfaces : [])
+  ])].sort()
 
   const eventMinimum = loaded.policy.eventMinimums[event] || 'Q0'
   const emptyChangeMinimum = changedPaths.length === 0 && ['push', 'pull_request'].includes(event) ? 'Q3' : 'Q0'
@@ -138,6 +169,8 @@ function classify(options, loaded = loadPolicy()) {
     changedPathCount: changedPaths.length,
     changedPaths,
     matches,
+    semanticOwners,
+    productSurfaces,
     unknownPaths,
     runs: {
       routingAggregate: true,

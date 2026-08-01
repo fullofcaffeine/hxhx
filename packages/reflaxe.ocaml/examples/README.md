@@ -9,6 +9,13 @@ Important detail:
   1. target behavior, and
   2. how `hxhx` wires target execution.
 
+The exact route matters. The checked example scorecard in
+`docs/00-project/TESTING_PRODUCT_SURFACES.json` records whether an example uses
+the evaluated `--ocaml-eval` route or the native Stage3 bring-up route. A green
+Stage3 example is not counted as standalone `reflaxe.ocaml` qualification.
+The current set is classified as capability showcases rather than flagship
+applications.
+
 Run all example suites from repo root:
 
 ```bash
@@ -35,7 +42,7 @@ npm run test:acceptance
 
 ## Included examples
 
-- `hxhx-target-ocaml`: minimal native-lane smoke example (`hxhx --ocaml`).
+- `hxhx-target-ocaml`: minimal delegated target smoke example (`hxhx --ocaml-eval`).
 - `hxhx-target-ocaml-stage3`: minimal native-lane smoke example (`hxhx --hxhx-stage3` + `--library reflaxe.ocaml`).
 - `build-macro`: small `@:build` macro behavior check.
 - `extlib-pmap`: external OCaml library interop (`extlib`) check (acceptance-only).

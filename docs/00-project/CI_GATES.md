@@ -153,8 +153,17 @@ tag resets this range only when its commit has both the matching automated
 release message and the matching package version. The result is
 uploaded as `qa-risk-route-<commit>` and records the producer commit, release
 base, inventory digest, policy digest, changed paths, selected tier, reasons,
-and requested workloads. If the required Git history or release boundary is
-unavailable, routing fails safe to Q3.
+requested workloads, semantic owners, and product surfaces. A **semantic
+owner** names the part of the compiler or target whose behavior may have
+changed; a **product surface** names the independently reported user claim that
+the evidence may support. These fields explain affected-test selection without
+changing the fail-safe Q0–Q4 tier. If the required Git history or release
+boundary is unavailable, routing fails safe to Q3.
+
+The checked product-surface scorecards live in
+`docs/00-project/TESTING_PRODUCT_SURFACES.json`. Official Haxe target
+qualification belongs only to the standalone Haxe-to-OCaml backend scorecard;
+bootstrap, native-runtime, and example results remain separate.
 
 - **Q0:** documentation, repository guidance, and Beads-only changes run the
   Core route, cheap documentation guards, full-history secret scan, and stable
@@ -177,9 +186,12 @@ unavailable, routing fails safe to Q3.
 - **Q4:** release evidence remains explicit and is never inferred from an
   ordinary documentation or source change.
 
-Unknown code paths fail safe to Q2. A push or pull request whose immutable
-change inventory cannot be established escalates to Q3. Schedules and ordinary
-manual requests also require at least Q3; a manual Q4 request is explicit.
+Unknown code paths fail safe to Q2 and name `unclassified-change` plus every
+product surface in the receipt. This makes the uncertainty visible; it does not
+pretend the selector knows which claim changed. A push or pull request whose
+immutable change inventory cannot be established escalates to Q3. Schedules
+and ordinary manual requests also require at least Q3; a manual Q4 request is
+explicit.
 
 To validate an exact commit at the high-risk boundary, run `CI / Core PR Checks`
 manually and select `Q3` (the default). Select `Q4` only when release evidence is

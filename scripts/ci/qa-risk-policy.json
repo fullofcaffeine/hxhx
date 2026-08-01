@@ -1,6 +1,16 @@
 {
-  "schema": "hxhx.qa-risk-policy.v1",
+  "schema": "hxhx.qa-risk-policy.v2",
   "defaultUnknownTier": "Q2",
+  "defaultUnknownSemanticOwners": [
+    "unclassified-change"
+  ],
+  "defaultUnknownProductSurfaces": [
+    "reflaxe-ocaml-backend",
+    "ocaml-native-runtime",
+    "hxhx-compiler-bootstrap",
+    "bootstrap-reproducibility",
+    "package-downstream-examples"
+  ],
   "eventMinimums": {
     "release": "Q4",
     "schedule": "Q3",
@@ -34,6 +44,10 @@
       "tier": "Q0",
       "terminal": true,
       "description": "Documentation, repository guidance, and Beads records do not need a compiler build.",
+      "semanticOwners": [
+        "repository-governance"
+      ],
+      "productSurfaces": [],
       "exact": [
         "AGENTS.md",
         "CHANGELOG.md",
@@ -57,6 +71,14 @@
       "id": "standalone-reflaxe-ocaml-surface",
       "tier": "Q1",
       "description": "Standalone examples, package consumers, and authoring tools exercise reflaxe.ocaml without a large hxhx consumer.",
+      "semanticOwners": [
+        "standalone-target-examples-and-consumers"
+      ],
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "ocaml-native-runtime",
+        "package-downstream-examples"
+      ],
       "prefixes": [
         "bench/",
         "examples/",
@@ -73,6 +95,15 @@
       "id": "target-or-compiler-contract",
       "tier": "Q2",
       "description": "Target lowering, hxhx source, focused compiler fixtures, and their ordinary tooling require the bounded hxhx contract canary.",
+      "semanticOwners": [
+        "target-lowering-and-compiler-contracts"
+      ],
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "ocaml-native-runtime",
+        "hxhx-compiler-bootstrap",
+        "package-downstream-examples"
+      ],
       "exact": [
         ".haxerc",
         "extraParams.hxml",
@@ -100,6 +131,14 @@
       "id": "central-target-representation",
       "tier": "Q3",
       "description": "Central OCaml representation, lowering, and runtime changes require the large hxhx consumer in addition to focused target proof.",
+      "semanticOwners": [
+        "ocaml-representation-lowering-and-runtime"
+      ],
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "ocaml-native-runtime",
+        "hxhx-compiler-bootstrap"
+      ],
       "exact": [
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx",
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
@@ -113,6 +152,16 @@
       "id": "bootstrap-plugin-or-toolchain-contract",
       "tier": "Q3",
       "description": "Bootstrap snapshots, plugin ABI/loaders, macro host, workflow routing, and toolchain locks require large-consumer and authentic-promotion evidence.",
+      "semanticOwners": [
+        "bootstrap-plugin-abi-and-qa-tooling"
+      ],
+      "productSurfaces": [
+        "reflaxe-ocaml-backend",
+        "ocaml-native-runtime",
+        "hxhx-compiler-bootstrap",
+        "bootstrap-reproducibility",
+        "package-downstream-examples"
+      ],
       "exact": [
         "package-lock.json",
         "package.json",
@@ -132,6 +181,7 @@
         "scripts/ci/core-test-shard.js",
         "scripts/ci/core-test-shards.js",
         "scripts/ci/core-test-shards.json",
+        "scripts/ci/example-coverage-contract-check.js",
         "scripts/ci/github-api-json-fixture-test.js",
         "scripts/ci/github-api-json.js",
         "scripts/ci/qa-risk-change-inventory-fixture-test.js",
@@ -140,6 +190,8 @@
         "scripts/ci/qa-risk-classifier.js",
         "scripts/ci/qa-risk-policy.json",
         "scripts/ci/qa-risk-workflow-contract-check.js",
+        "scripts/ci/testing-product-surfaces-check.js",
+        "scripts/ci/testing-product-surfaces-fixture-test.js",
         "scripts/hxhx/build-hxhx.sh",
         "scripts/hxhx/build-hxhx-macro-host.sh"
       ],

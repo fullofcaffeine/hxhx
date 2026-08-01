@@ -9,6 +9,43 @@ The goal is to:
 - still have realistic “this actually builds and runs under dune” coverage
 - provide at least one **compiler-shaped acceptance workload** (not just unit tests / golden output)
 
+## Behavior-first change workflow
+
+Before multiplying tests for meaningful new or changed behavior, write one
+concrete scenario. Record the input and preconditions, the compilation or
+runtime action, the observable result, the important error or edge behavior,
+the product surface that owns the behavior, and the public claim the scenario
+protects. Bead acceptance criteria, a small fixture manifest, or plain
+Given/When/Then prose are sufficient; this repository does not require a
+Gherkin framework.
+
+For a bug fix or behavior change:
+
+1. Identify the **lowest faithful** observer: the smallest test that still
+   crosses the boundary where the bug exists.
+2. Run it before the fix and record the command plus a concise failure showing
+   that it is red for the intended reason. A separate red commit is optional.
+3. Name an **independent oracle** for the expected result. This may be a
+   specification, a manually authored minimal expectation, the pinned upstream
+   Haxe 4.3.7 behavior oracle, an invariant, a reviewed golden with provenance,
+   or a real consumer. Do not generate the answer with the code under test.
+4. Make the focused owner green, refactor, then run the next broader contract.
+5. Establish one **tracer bullet** for a new capability: a narrow real path from
+   authored Haxe through the compiler/target and package boundary to the actual
+   runtime or system observer. Expand permutations only after that path works.
+6. Keep the **double lock** when a high-level test finds a stable lower-level
+   compiler bug: retain one representative real-boundary test and add a focused
+   deterministic regression for quick diagnosis.
+
+Compiler representation, runtime, ABI, package, security, migration, and
+public-claim changes also require a review pass distinct from implementation.
+That review checks test sensitivity, oracle provenance, missing negative cases,
+mocked boundaries, affected-test routing, and accidental claim expansion.
+
+The independent scorecards and bootstrap oracles are documented in
+[`TESTING_PRODUCT_SURFACE_SCORECARDS.md`](../00-project/TESTING_PRODUCT_SURFACE_SCORECARDS.md).
+A green scorecard must not advance another product surface's status.
+
 ## Quick start
 
 From the repo root:

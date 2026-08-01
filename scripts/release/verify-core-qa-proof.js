@@ -15,7 +15,7 @@ const { classify, loadPolicy, normalizeChangedPath } = require('../ci/qa-risk-cl
 
 const CORE_WORKFLOW = 'CI / Core PR Checks'
 const PUBLISH_BRANCHES = ['main', 'master']
-const RECEIPT_SCHEMA = 'hxhx.qa-risk-classification.v2'
+const RECEIPT_SCHEMA = 'hxhx.qa-risk-classification.v3'
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message)
@@ -136,6 +136,8 @@ function validateProof(options) {
     'changedPathCount',
     'changedPaths',
     'matches',
+    'semanticOwners',
+    'productSurfaces',
     'unknownPaths',
     'runs',
     'reasons'

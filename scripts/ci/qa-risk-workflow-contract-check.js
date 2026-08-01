@@ -74,6 +74,9 @@ function main() {
     'scripts/ci/qa-risk-policy.json',
     'scripts/ci/qa-risk-classifier.js',
     'scripts/ci/qa-risk-workflow-contract-check.js',
+    'semantic owners',
+    'product surfaces',
+    'TESTING_PRODUCT_SURFACES.json',
     'haxe_ocaml-bxwut'
   ]) {
     if (!ciGates.includes(snippet)) fail(`docs/00-project/CI_GATES.md must include ${snippet}`)
