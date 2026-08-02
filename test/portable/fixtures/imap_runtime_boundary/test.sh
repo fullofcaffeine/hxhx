@@ -5,21 +5,24 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 53
+if (report.schemaVersion !== 54
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v19') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
-const calls = report.calls?.filter(call => call.kind === 'standard-imap-method') ?? []
-if (calls.length !== 53
-	|| calls.some(call =>
-		call.pipelineRevision !== 'ocaml-function-plans-v66'
-		|| call.receiver !== null
-		|| call.arguments?.length !== 0
-		|| call.result !== null
-		|| !call.standardIMapTarget)) {
-	throw new Error('the IMap fixture did not seal all standard calls without ordinary callable crossings')
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
+	|| report.iMapInterfaceConversionCount !== 3
+	|| report.iMapInterfaceCallCount !== 53
+	|| report.calls?.some(call => call.kind === 'standard-imap-method')) {
+	throw new Error('the IMap fixture did not hard-cut standard maps to the shared interface adapter')
 }
-const operations = new Set(calls.map(call => call.standardIMapTarget.operation))
+const calls = report.iMapInterfaceCalls
+if (calls.some(call =>
+	call.pipelineRevision !== 'ocaml-function-plans-v67'
+	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
+	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
+	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
+}
+const operations = new Set(calls.map(call => call.operation))
 for (const operation of [
 	'set',
 	'get',
@@ -35,29 +38,29 @@ for (const operation of [
 	if (!operations.has(operation))
 		throw new Error(`the IMap fixture did not cover ${operation}`)
 }
-const keyKinds = new Set(calls.map(call => call.standardIMapTarget.keyKind))
-if (![...['string', 'int', 'object-identity']].every(kind => keyKinds.has(kind)))
-	throw new Error('the IMap fixture did not cover all admitted standard key carriers')
-for (const call of calls) {
-	const target = call.standardIMapTarget
-	const expectedRequirementIds = target.runtimeCapabilities.map(capability => `${call.id}:runtime:${capability}`)
-	const actualRequirements = report.runtimeRequirements.filter(requirement => requirement.decisionId === call.id)
+const conversions = report.iMapInterfaceConversions
+const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKind))
+if (![...['string', 'int', 'object-identity']].every(kind => keyKinds.has(kind))
+	|| conversions.some(conversion =>
+		conversion.sourceKind === 'user-implementation'
+		|| conversion.methods.length !== 0
+		|| conversion.targetCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)')) {
+	throw new Error('the IMap fixture did not preserve all three proven standard storage carriers')
+}
+for (const conversion of conversions) {
+	const expectedRequirementIds = conversion.runtimeCapabilities.map(capability => `${conversion.id}:runtime:${capability}`)
+	const actualRequirements = report.runtimeRequirements.filter(requirement => requirement.decisionId === conversion.id)
 	if (actualRequirements.length !== expectedRequirementIds.length
 		|| actualRequirements.some(requirement => !expectedRequirementIds.includes(requirement.id))) {
-		throw new Error(`standard IMap call ${call.id} does not own its exact runtime requirements`)
-	}
-	if (call.evaluationSchedule?.[0]?.kind !== 'materialize-receiver'
-		|| call.evaluationSchedule.at(-1)?.kind !== 'invoke-callee'
-		|| call.evaluationSchedule.length !== target.argumentSemanticTypeIds.length + 2) {
-		throw new Error(`standard IMap call ${call.id} lost receiver-first source-order evaluation`)
+		throw new Error(`standard IMap conversion ${conversion.id} does not own its exact runtime requirements`)
 	}
 }
-const formatted = calls.filter(call => call.standardIMapTarget.operation === 'to-string')
+const formatted = conversions.filter(conversion => conversion.valueStringifier !== null)
 if (formatted.length !== 3
-	|| formatted.some(call =>
-		call.standardIMapTarget.runtimeFunction.startsWith('toString_')
-		|| call.standardIMapTarget.resultForm !== 'formatted-entries'
-		|| !call.standardIMapTarget.runtimeCapabilities.includes('haxe-array'))) {
+	|| formatted.some(conversion =>
+		!conversion.runtimeCapabilities.includes('haxe-array')
+		|| (!conversion.runtimeCapabilities.includes('haxe-string-text')
+			&& !conversion.runtimeCapabilities.includes('haxe-dynamic-text')))) {
 	throw new Error('Map.toString was not sealed as typed pair traversal and entry formatting')
 }
 
@@ -93,21 +96,28 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-const standardCalls = report.lowering?.calls?.filter(call => call.kind === 'standard-imap-method') ?? []
-if (report.schemaVersion !== 32 || !report.summary?.valid || standardCalls.length !== 53)
-	throw new Error('reflaxe.ocaml inspection did not preserve the sealed standard IMap targets')
+if (report.schemaVersion !== 32
+	|| !report.summary?.valid
+	|| report.summary.iMapInterfaceConversionCount !== 3
+	|| report.summary.iMapInterfaceCallCount !== 53) {
+	throw new Error('reflaxe.ocaml inspection did not preserve the sealed standard IMap adapters')
+}
 NODE
 
 node <<'NODE'
 const fs = require('fs')
+const crypto = require('crypto')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
-const call = report.calls.find(item => item.kind === 'standard-imap-method')
-call.standardIMapTarget.runtimeFunction = 'corrupted_runtime_function'
+report.iMapInterfaceConversions[0].sourceCarrierTypeId = 'HxMap.wrong_map'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+	conversions: report.iMapInterfaceConversions,
+	calls: report.iMapInterfaceCalls
+})).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 if inspect >"$inspection_report" 2>/dev/null; then
-	echo "reflaxe.ocaml inspection accepted a corrupted standard IMap runtime target" >&2
+	echo "reflaxe.ocaml inspection accepted a corrupted standard IMap storage carrier" >&2
 	exit 1
 fi
 cp "$lowering_backup" out/ocaml_lowering_report.json

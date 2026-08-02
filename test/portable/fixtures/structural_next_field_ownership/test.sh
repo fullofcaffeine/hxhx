@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (lowering.schemaVersion !== 53
+if (lowering.schemaVersion !== 54
 	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v2') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
@@ -32,7 +32,7 @@ for (const field of storedFields) {
 		|| field.receiverCarrierTypeId !== 'Obj.t'
 		|| field.runtimeModule !== 'HxAnon'
 		|| field.runtimeOperation !== (field.operation === 'write-stored-field' ? 'set' : 'get')
-		|| field.pipelineRevision !== 'ocaml-function-plans-v66') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v67') {
 		throw new Error(`stored structural field ${field.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === field.id)
@@ -66,7 +66,7 @@ for (const field of tupleFields) {
 		|| !target.iteratorLocalId.startsWith('lexical-local-v1:')
 		|| !target.pairLocalId.startsWith('lexical-local-v1:')
 		|| target.proofId !== 'standard-map-key-value-tuple-projection-v2'
-		|| field.pipelineRevision !== 'ocaml-function-plans-v66') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v67') {
 		throw new Error(`Map-pair projection ${field.id} has no complete typed producer proof`)
 	}
 	if (lowering.runtimeRequirements.some(requirement => requirement.decisionId === field.id))
