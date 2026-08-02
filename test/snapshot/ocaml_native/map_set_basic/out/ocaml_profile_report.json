@@ -2,7 +2,7 @@
   "metalFallbackAllowed": false,
   "requestedProfile": null,
   "strictUserBoundaries": false,
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "atomicSemantics": "emulated",
   "portableNativeSurfacePolicy": "warn",
   "verifier": {
@@ -10,7 +10,6 @@
       "portable_native_surface"
     ],
     "mode": "reflaxe_stage0_macro",
-    "laneModules": [],
     "strictScope": "disabled",
     "violationCount": 1,
     "enabled": true,

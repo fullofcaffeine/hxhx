@@ -29,7 +29,6 @@ private typedef ProfileReportVerifier = {
 	final strictScope:String;
 	final violationCount:Int;
 	final violations:Array<String>;
-	final laneModules:Array<String>;
 }
 
 private typedef ProfileReport = {
@@ -308,12 +307,11 @@ class RuntimeCopier {
 			result: "not_enabled",
 			strictScope: "disabled",
 			violationCount: 0,
-			violations: [],
-			laneModules: []
+			violations: []
 		};
 		#end
 		final report:ProfileReport = {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			requestedProfile: requested,
 			normalizedProfile: OcamlProfileContract.toDefineValue(context.profile),
 			atomicSemantics: OcamlAtomicSemantics.toDefineValue(context.atomicSemantics),
@@ -327,8 +325,7 @@ class RuntimeCopier {
 				result: strictSnapshot.result,
 				strictScope: strictSnapshot.strictScope,
 				violationCount: strictSnapshot.violationCount,
-				violations: strictSnapshot.violations.copy(),
-				laneModules: strictSnapshot.laneModules.copy()
+				violations: strictSnapshot.violations.copy()
 			}
 		};
 		output.saveFile(PROFILE_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");

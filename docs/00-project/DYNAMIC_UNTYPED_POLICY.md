@@ -34,8 +34,8 @@ Raw target injection has an additional OCaml-specific design record:
 - `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`
 
 That policy defines the proposed `@:ocamlAllowRaw` authority marker for rare low-level modules. It does not weaken
-the default rule here: raw `__ocaml__` remains forbidden by default in app/compiler code and must not bypass metal or
-`@:haxeMetal` checks.
+the default rule here: raw `__ocaml__` remains forbidden by default in app/compiler code and must not bypass the
+global metal checks. The removed `@:haxeMetal` annotation is not an authority or optimization mechanism.
 
 ## Allowlist categories
 

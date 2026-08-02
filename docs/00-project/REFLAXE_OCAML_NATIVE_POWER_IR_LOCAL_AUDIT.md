@@ -274,8 +274,10 @@ authoring ladder:
 
 Typed target-native APIs can be valid in either profile when selected
 explicitly, but they affect source portability and must be reported or rejected
-according to policy. A raw-authority marker must never weaken `metal` or
-`@:haxeMetal` checks.
+according to policy. A raw-authority marker must never weaken global `metal`
+checks. The unpublished `@:haxeMetal` annotation was removed because it did not
+own representation, lowering, or native API authority; see
+`OCAML_METAL_SOURCE_BOUNDARY_DECISION_2026_08_02.md`.
 
 The architecture review must not use “metal” as shorthand for “write arbitrary
 OCaml.” Metal is a statically proven representation/runtime policy, not an

@@ -239,7 +239,8 @@ This is intentionally constrained (constant string only) and should be reserved 
 bridges. Application code should prefer typed Haxe APIs, externs, runtime modules, or compiler intrinsics. The scoped
 authority policy for rare framework-owned raw islands is documented in
 `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`; raw `__ocaml__` remains rejected in `metal` and
-`@:haxeMetal` lanes.
+the global `metal` profile. Portable direct lowering is selected from typed
+program facts and does not require a source annotation.
 
 ### Reflection note (portable)
 

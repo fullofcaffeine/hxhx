@@ -281,8 +281,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 2) {
-						throw 'Unsupported profile report schema $version; expected 2.';
+					if (version != 3) {
+						throw 'Unsupported profile report schema $version; expected 3.';
 					}
 					final verifier = requiredObject(value, "verifier");
 					{

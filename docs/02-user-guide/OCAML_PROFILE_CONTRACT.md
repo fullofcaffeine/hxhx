@@ -4,13 +4,16 @@ This document defines the canonical OCaml profile switch used by OCaml backends 
 
 ## Goal
 
-Make profile selection explicit and deterministic while we evolve portable/metal behavior.
+Keep build-wide strictness and runtime policy explicit without making users
+choose a profile merely to receive efficient OCaml output.
 
 ## Product policy (performance)
 
 - `portable` stays the default because `hxhx` must remain cross-target viable.
-- `metal` stays the strict performance lane (no implicit fallback).
-- Performance work prioritizes profile-agnostic optimizations so portable converges toward metal on compiler workloads.
+- `metal` stays the current build-wide strict/selective-runtime preset (no implicit fallback).
+- Portable code receives direct typed OCaml lowering whenever the compiler can prove that Haxe behavior is preserved.
+- Typed `ocaml.*` APIs and externs express explicit OCaml-native source intent under either profile; the portable native-surface policy reports or rejects that dependency when requested.
+- Performance work prioritizes profile-agnostic optimizations. `metal` is not required merely to request faster output.
 - Convergence budgets and ratio lanes are tracked by the KPI harness (`scripts/hxhx/bench-kpi.sh`) and documented in:
   - `docs/benchmarks/HXHX_KPI_BASELINE.md`
   - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
@@ -34,11 +37,13 @@ Any other value is invalid and fails fast.
 - `portable`:
   - current default behavior for OCaml emission.
   - intended to preserve existing Haxe-oriented portability expectations.
-  - Stage3 runs a portable auto-metalization planner that classifies function regions,
-    applies selected metal-style lowerings in metal-safe regions, and emits a deterministic
-    planner report (current lowered hotspots include typed `Array.map` and typed `Array<String>.join`).
+  - Stage3 runs a direct-lowering planner, historically named the portable
+    auto-metalization planner. It classifies function regions, applies selected
+    typed lowerings when they preserve Haxe behavior, and emits a deterministic
+    report. Current lowered hotspots include typed `Array.map` and typed
+    `Array<String>.join`; no source annotation enables this work.
 - `metal`:
-  - native-oriented runtime layering mode.
+  - current build-wide strictness, fallback, and runtime-layering preset.
   - always links any helper module recorded while translating a specific Haxe
     operation, then uses structured target-syntax observations for compiler
     families that have not migrated yet; the locked runtime-source manifest
@@ -95,8 +100,9 @@ Any other value is invalid and fails fast.
 - Stage3 currently runs the metal verifier before emit.
 - Stage0 runs strict boundary enforcement in macro-time for:
   - global metal profile (`ocaml_profile=metal`)
-  - portable metal-islands (`@:haxeMetal` modules)
+  - optional global portable strictness (`ocaml_strict`)
   - optional portable native-surface policy (`ocaml_portable_native_surface`)
+- The unpublished source-local metal annotation was removed without a compatibility layer.
 - Native JS paths do not enforce this define.
 
 ## Failure behavior
@@ -125,10 +131,11 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - raw `__ocaml__` injection
   - reflection calls (`Reflect.*`, `Type.*`)
   - explicit `Dynamic` annotations in key typed positions
-- Stage0 portable builds can still enforce strict checks in `@:haxeMetal` modules.
+- Stage0 portable builds can enforce the same application-boundary checks for
+  the whole build with `-D ocaml_strict`.
 - Scoped raw-injection authority is tracked separately in
   `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`; the proposed `@:ocamlAllowRaw` marker is portable-only
-  and must not bypass `metal` or `@:haxeMetal` rejection of raw `__ocaml__`.
+  and must not bypass global `metal` rejection of raw `__ocaml__`.
 - If compilation must continue without metal constraints, users must explicitly choose:
   - `-D ocaml_profile=portable`
 - Explicit fallback lane (Stage0): `-D ocaml_metal_allow_fallback`
@@ -142,7 +149,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 `reflaxe.ocaml` emits machine-readable profile/runtime plan reports into `ocaml_output`:
 
 - `ocaml_profile_report.json`
-  - `schemaVersion` (current: `2`)
+  - `schemaVersion` (current: `3`)
   - `requestedProfile`
   - `normalizedProfile`
   - `atomicSemantics`
@@ -150,7 +157,9 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `portableNativeSurfacePolicy`
   - `strictUserBoundaries`
   - `metalFallbackAllowed`
-  - verifier summary fields
+  - verifier summary fields; `strictScope` is `disabled`, `global_strict`, or
+    `global_metal`. Schema 3 removes the former module-lane inventory because
+    source-local metal annotations are no longer part of the contract.
 - `ocaml_runtime_plan_report.json`
   - `schemaVersion` (current: `2`)
   - `profile`

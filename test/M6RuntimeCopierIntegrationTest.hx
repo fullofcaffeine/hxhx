@@ -7,7 +7,6 @@ private typedef ProfileReportVerifier = {
 	final strictScope:String;
 	final violationCount:Int;
 	final violations:Array<String>;
-	final laneModules:Array<String>;
 }
 
 private typedef ProfileReport = {
@@ -468,7 +467,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertNotContains(metalJoined, "\nHxReflect.ml\n", "metal runtime omits unused reflect runtime");
 		assertNotContains(metalJoined, "\nHxSys.ml\n", "metal runtime omits unused sys runtime");
 
-		assertTrue(portableProfileReport.schemaVersion == 2, "portable profile report schema version");
+		assertTrue(portableProfileReport.schemaVersion == 3, "portable profile report schema version");
 		assertTrue(portableProfileReport.requestedProfile == null, "portable report keeps null requested profile");
 		assertTrue(portableProfileReport.normalizedProfile == "portable", "portable report normalized profile");
 		assertTrue(portableProfileReport.atomicSemantics == "emulated", "portable report atomic semantics");
@@ -479,7 +478,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableProfileReport.verifier.violationCount == 0, "portable report verifier violation count");
 		assertTrue(portableProfileReport.verifier.strictScope == "disabled", "portable report strict scope");
 
-		assertTrue(metalProfileReport.schemaVersion == 2, "metal profile report schema version");
+		assertTrue(metalProfileReport.schemaVersion == 3, "metal profile report schema version");
 		assertTrue(metalProfileReport.requestedProfile == "MeTaL", "metal report should keep requested mixed-case profile");
 		assertTrue(metalProfileReport.normalizedProfile == "metal", "metal report normalized profile");
 		assertTrue(metalProfileReport.atomicSemantics == "emulated", "metal report atomic semantics");
@@ -491,7 +490,7 @@ class M6RuntimeCopierIntegrationTest {
 
 		assertTrue(metalFullProfileReport.normalizedProfile == "metal", "metal full override keeps metal profile");
 
-		assertTrue(emptyProfileReport.schemaVersion == 2, "empty profile report schema version");
+		assertTrue(emptyProfileReport.schemaVersion == 3, "empty profile report schema version");
 		assertTrue(emptyProfileReport.requestedProfile == "", "empty profile report keeps empty requested profile");
 		assertTrue(emptyProfileReport.normalizedProfile == "portable", "empty profile normalizes to portable");
 		assertTrue(emptyProfileReport.atomicSemantics == "emulated", "empty profile report atomic semantics");

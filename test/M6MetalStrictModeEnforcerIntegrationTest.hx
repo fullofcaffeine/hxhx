@@ -83,14 +83,6 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 		final portableInjection = compileFixture("injection", ["ocaml_profile=portable"]);
 		assertTrue(portableInjection.exitCode == 0, "portable profile should allow __ocaml__ injection");
 
-		final portableLaneInjection = compileFixture("lane_haxe_metal", ["ocaml_profile=portable"]);
-		assertTrue(portableLaneInjection.exitCode != 0, "portable profile should enforce strict rules for @:haxeMetal modules");
-		assertContains(combinedOutput(portableLaneInjection), "__ocaml__", "portable lane violation should mention __ocaml__");
-
-		final portableLaneAlias = compileFixture("lane_alias", ["ocaml_profile=portable"]);
-		assertTrue(portableLaneAlias.exitCode != 0, "legacy lane alias metadata should be rejected");
-		assertContains(combinedOutput(portableLaneAlias), "@:haxeMetal", "legacy lane alias failure should mention canonical metadata");
-
 		final portableNativeSurfaceWarn = compileFixture("portable_native_surface", ["ocaml_profile=portable"]);
 		assertTrue(portableNativeSurfaceWarn.exitCode == 0, "portable native-surface warn policy should compile");
 		assertContains(combinedOutput(portableNativeSurfaceWarn), "ocaml_portable_native_surface", "portable warn policy should mention policy define");

@@ -486,6 +486,15 @@ try {
 	assert(JSON.parse(inconsistent.stdout).consistencyErrors.some(message => message.includes('Profile report says')))
 	profile.normalizedProfile = report.profile.profile
 	fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
+	profile.schemaVersion = 999
+	fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
+	const staleProfile = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
+	assert.strictEqual(staleProfile.status, 1)
+	const staleProfileReport = JSON.parse(staleProfile.stdout)
+	assert.strictEqual(staleProfileReport.profile.status, 'invalid')
+	assert(staleProfileReport.profile.message.includes('expected 3'))
+	profile.schemaVersion = 3
+	fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
 
 	generated.filesGenerated.push('../escape.ml')
 	fs.writeFileSync(generatedPath, JSON.stringify(generated, null, 2) + '\n')

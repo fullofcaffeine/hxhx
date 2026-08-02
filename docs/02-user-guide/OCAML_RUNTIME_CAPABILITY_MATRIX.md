@@ -142,7 +142,10 @@ used for ordinary external OCaml libraries.
   `-D ocaml_metal_allow_fallback` during migration/debugging.
 - Portable profile can enforce `ocaml.*` usage policy with:
   - `-D ocaml_portable_native_surface=warn|allow|error` (default: `warn`)
-- Portable builds can opt in strict metal checks for selected modules via `@:haxeMetal`.
+- Portable builds can opt in to the strict application-boundary checks for the
+  whole build with `-D ocaml_strict`. Source-local metal annotations were
+  removed because they did not select representation, lowering, or native API
+  authority.
 - Metal mode has no implicit fallback to portable; switching lanes requires explicit
   `-D ocaml_profile=portable`.
 - Optional runtime token-scan fallback (`-D ocaml_runtime_token_scan_fallback`) requires

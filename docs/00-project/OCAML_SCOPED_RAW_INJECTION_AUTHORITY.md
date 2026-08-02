@@ -19,8 +19,8 @@ Default policy remains:
 - application code should not use raw `__ocaml__` directly;
 - reusable target behavior should be expressed through typed externs, core APIs,
   target runtime modules, or compiler intrinsics;
-- `metal` and `@:haxeMetal` lanes must continue rejecting raw `__ocaml__` even
-  if a module is tagged with `@:ocamlAllowRaw`.
+- the global `metal` profile must continue rejecting raw `__ocaml__` even if a
+  module is tagged with `@:ocamlAllowRaw`.
 
 ## Why This Exists
 
@@ -64,7 +64,7 @@ modules. It is only a last-resort bridge for controlled low-level abstractions.
 - `@:rustAllowRaw` marks a module/type as an authority island;
 - the authority marker resolves to the owning module;
 - metal cleanliness is enforced separately, so `@:rustAllowRaw` does not bypass
-  `metal` or `@:haxeMetal` raw-fallback restrictions.
+  Rust's global or source-local metal restrictions.
 
 This maps closely to the desired OCaml behavior. The important part is not the
 exact implementation shape; it is the separation between a strict app-boundary
@@ -75,8 +75,8 @@ exception and the stricter native-performance contract.
 Current OCaml surfaces differ from Go/Rust in a few important ways:
 
 - Stage0 `reflaxe.ocaml` already has `StrictModeEnforcer`, which rejects raw
-  `__ocaml__`, reflection, and explicit `Dynamic` in metal or `@:haxeMetal`
-  scopes.
+  `__ocaml__`, reflection, and explicit `Dynamic` in global metal or
+  `ocaml_strict` builds.
 - Stage3 native `hxhx` has `MetalProfileVerifier`, which rejects all `untyped`
   expressions in `metal` before emit.
 - `hxhx-macro-host` already has `hxhxmacrohost.OcamlInjection`, a typed macro
@@ -114,7 +114,6 @@ smaller module first.
 | --- | --- | --- |
 | Normal portable app code | Discouraged; may be accepted by current backend if no strict policy is enabled | Should authorize strict-boundary exceptions only for the tagged module once an analyzer exists |
 | Portable strict user boundaries | Rejected by strict boundary policy | Allowed only in the tagged low-level module, with documentation and tests |
-| `@:haxeMetal` portable island | Rejected | Still rejected |
 | `-D ocaml_profile=metal` | Rejected | Still rejected |
 | Stage3 `MetalProfileVerifier` | Rejects `untyped` broadly | Still rejected |
 | Repo-owned macro-host internals | Prefer typed shim `hxhxmacrohost.OcamlInjection` | Metadata is optional policy documentation, not a bypass |
@@ -145,12 +144,13 @@ slice:
 1. Add an `OcamlRawInjectionAuthorityAnalyzer` that collects `@:ocamlAllowRaw`
    declarations from typed module types and resolves them to owning modules.
 2. Teach Stage0 `StrictModeEnforcer` to allow raw `__ocaml__` only when the
-   current strict scope is not metal/`@:haxeMetal` and the module is authorized.
+   current strict scope is portable `ocaml_strict`, not global metal, and the
+   module is authorized.
 3. Keep `MetalProfileVerifier` unchanged unless a separate metal design review
    proves a safe typed replacement. The current policy is to continue rejecting
    all raw/untyped fallback there.
 4. Add a positive regression for a tagged portable low-level module.
-5. Add negative regressions proving normal strict app code, `@:haxeMetal`, and
+5. Add negative regressions proving normal strict app code and
    `ocaml_profile=metal` still reject raw injection.
 6. Update `scripts/ci/no-dynamic-check.js` only if the analyzer creates a stable
    first-class allowlist model; until then, keep CI guard exceptions explicit and
@@ -160,6 +160,6 @@ slice:
 
 - This does not authorize raw OCaml in app business logic.
 - This does not make raw injection part of the beginner-facing API.
-- This does not bypass metal, `@:haxeMetal`, or Stage3 native profile checks.
+- This does not bypass global metal or Stage3 native profile checks.
 - This does not replace typed externs, runtime modules, or compiler intrinsics.
 - This does not permit copying upstream compiler implementation code.

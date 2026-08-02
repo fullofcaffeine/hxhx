@@ -9,7 +9,6 @@ import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
-import reflaxe.ocaml.analyze.MetalLaneAnalyzer;
 
 private typedef StrictModeSnapshot = {
 	final mode:String;
@@ -18,25 +17,22 @@ private typedef StrictModeSnapshot = {
 	final strictScope:String;
 	final violationCount:Int;
 	final violations:Array<String>;
-	final laneModules:Array<String>;
 	final portableNativeSurfacePolicy:String;
 }
 
 /**
-	Stage0 metal strict-boundary enforcement for `reflaxe.ocaml`.
+	Applies request-wide OCaml source-boundary checks during a stage0 build.
 
-	Why:
-	- Metal mode must be explicit about raw target injection and reflection-heavy boundaries.
-	- Stage0 should enforce the same direction as Stage3 metal policy.
+	This class does not choose faster representations or enable native lowering. Portable code
+	receives direct typed OCaml output whenever the target can prove that Haxe behavior is preserved.
+	These checks instead control whether one complete build may use compatibility-heavy constructs:
+	raw `__ocaml__` injection, `Reflect.*` or `Type.*` calls, and explicit `Dynamic` annotations.
 
-	What:
-	- Rejects raw `__ocaml__` injection in application sources.
-	- Rejects `Reflect.*` / `Type.*` reflection calls in application sources.
-	- Rejects explicit `Dynamic` annotations (var/catch/function args) in application sources.
-
-	Policy:
-	- In strict metal mode (default): violations are hard errors.
-	- With `-D ocaml_metal_allow_fallback`: violations become warnings (report-only lane).
+	The metal profile enables the checks globally and fails on violations by default. Portable builds
+	may request the same global checks with `-D ocaml_strict`. The separate
+	`ocaml_portable_native_surface` policy reports or rejects explicit use of typed `ocaml.*` APIs.
+	`-D ocaml_metal_allow_fallback` changes strict violations into warnings for an explicitly requested
+	diagnostic build; it does not create source-local strictness or authorize a second lowering path.
 **/
 class StrictModeEnforcer {
 	static var initialized = false;
@@ -50,7 +46,6 @@ class StrictModeEnforcer {
 		strictScope: "disabled",
 		violationCount: 0,
 		violations: [],
-		laneModules: [],
 		portableNativeSurfacePolicy: OcamlPortableNativeSurfacePolicy.toDefineValue(OcamlPortableNativeSurfacePolicy.Warn)
 	};
 
@@ -91,21 +86,19 @@ class StrictModeEnforcer {
 			strictScope: lastSnapshot.strictScope,
 			violationCount: lastSnapshot.violationCount,
 			violations: lastSnapshot.violations.copy(),
-			laneModules: lastSnapshot.laneModules.copy(),
 			portableNativeSurfacePolicy: lastSnapshot.portableNativeSurfacePolicy
 		};
 	}
 
 	static function enforce(types:Array<ModuleType>, projectRoot:String, buildContext:OcamlBuildContext):Void {
-		final laneModuleSet = MetalLaneAnalyzer.collectModuleSet(types);
-		final laneModules = mapKeysSorted(laneModuleSet);
 		final strictGlobal = buildContext.profile == OcamlProfileContract.Metal || buildContext.strictUserBoundaries;
-		final strictEnabled = strictGlobal || laneModules.length > 0;
+		final strictEnabled = strictGlobal;
 		final portablePolicyEnabled = buildContext.profile == OcamlProfileContract.Portable
 			&& buildContext.portableNativeSurfacePolicy != OcamlPortableNativeSurfacePolicy.Allow;
 		final atomicEmulationDiagnosticsEnabled = buildContext.profile == OcamlProfileContract.Portable
 			&& buildContext.atomicSemantics == OcamlAtomicSemantics.Emulated;
-		final strictScope = if (strictGlobal) "global_metal" else if (laneModules.length > 0) "portable_haxeMetal_lanes" else "disabled";
+		final strictScope = if (buildContext.profile == OcamlProfileContract.Metal) "global_metal" else if (buildContext.strictUserBoundaries)
+			"global_strict" else "disabled";
 
 		final reported:Map<String, Bool> = [];
 		final violationIds:Map<String, Bool> = [];
@@ -115,8 +108,7 @@ class StrictModeEnforcer {
 					final classType = classRef.get();
 					if (!isStrictProjectSource(classType.pos, projectRoot))
 						continue;
-					final moduleName = normalizeModuleLabel(classType.module);
-					final strictForModule = strictGlobal || laneModuleSet.exists(moduleName);
+					final strictForModule = strictGlobal;
 					if (!strictForModule && !portablePolicyEnabled && !atomicEmulationDiagnosticsEnabled)
 						continue;
 					final strictHardError = strictForModule && !fallbackAllowed;
@@ -139,7 +131,6 @@ class StrictModeEnforcer {
 			strictScope: strictScope,
 			violationCount: violationList.length,
 			violations: violationList,
-			laneModules: laneModules,
 			portableNativeSurfacePolicy: OcamlPortableNativeSurfacePolicy.toDefineValue(buildContext.portableNativeSurfacePolicy)
 		};
 	}
@@ -479,12 +470,6 @@ class StrictModeEnforcer {
 	static function ensureTrailingSlash(path:String):String {
 		final normalized = normalizePath(path);
 		return StringTools.endsWith(normalized, "/") ? normalized : normalized + "/";
-	}
-
-	static function normalizeModuleLabel(moduleName:Null<String>):String {
-		if (moduleName != null && moduleName.length > 0)
-			return moduleName;
-		return "<unknown>";
 	}
 
 	static function mapKeysSorted(values:Map<String, Bool>):Array<String> {
