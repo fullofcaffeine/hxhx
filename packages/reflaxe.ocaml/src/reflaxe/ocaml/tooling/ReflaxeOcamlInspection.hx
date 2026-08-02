@@ -517,6 +517,7 @@ class ReflaxeOcamlInspection {
 			targetById.set(target.id, target);
 		final controls = [for (entry in rawControls) controlDecision(entry)];
 		final ids:Map<String, Bool> = [];
+		final bindingByFunction:Map<String, {programRevision:String, bodyRevision:String, pipelineRevision:String}> = [];
 		for (control in controls) {
 			if (ids.exists(control.id))
 				throw 'Control report contains duplicate identity "${control.id}".';
@@ -525,6 +526,18 @@ class ReflaxeOcamlInspection {
 			final expectedPipelineRevision = control.functionId.indexOf("|nested-function|") >= 0 ? NESTED_FUNCTION_PIPELINE_REVISION : FUNCTION_PLAN_PIPELINE_REVISION;
 			if (control.pipelineRevision != expectedPipelineRevision) {
 				throw 'Control decision "${control.id}" uses unsupported function-plan pipeline "${control.pipelineRevision}"; expected "$expectedPipelineRevision" for function "${control.functionId}".';
+			}
+			final priorBinding = bindingByFunction.get(control.functionId);
+			if (priorBinding == null) {
+				bindingByFunction.set(control.functionId, {
+					programRevision: control.programRevision,
+					bodyRevision: control.bodyRevision,
+					pipelineRevision: control.pipelineRevision
+				});
+			} else if (priorBinding.programRevision != control.programRevision
+				|| priorBinding.bodyRevision != control.bodyRevision
+				|| priorBinding.pipelineRevision != control.pipelineRevision) {
+				throw 'Control decision "${control.id}" disagrees with another decision owned by function "${control.functionId}" about its program, body, or pipeline revision.';
 			}
 			final payload = control.payload;
 			switch (control.kind) {
@@ -547,9 +560,9 @@ class ReflaxeOcamlInspection {
 							if (control.runtimeCapabilityId != "hxhx-runtime:function-return-signal-v1" || payload == null)
 								throw 'Control decision "${control.id}" has an invalid exact-value return capability or payload.';
 							validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-								'Control decision "${control.id}" input');
+								'Control decision "${control.id}" input', control.programRevision);
 							validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
-								representationById, 'Control decision "${control.id}" output');
+								representationById, 'Control decision "${control.id}" output', control.programRevision);
 							final admittedExactInput = (payload.inputSemanticTypeId == "Int"
 								&& payload.inputCarrierTypeId == "int"
 								&& payload.inputRepresentationId == "representation:Int:internal-value")
@@ -702,9 +715,9 @@ class ReflaxeOcamlInspection {
 						}
 					} else if (!directEnumPayload) {
 						validateCallValueSide(payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId, representationById,
-							'Control decision "${control.id}" input');
+							'Control decision "${control.id}" input', control.programRevision);
 						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
-							'Control decision "${control.id}" output');
+							'Control decision "${control.id}" output', control.programRevision);
 					}
 					final expectedConversion = switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
@@ -896,7 +909,7 @@ class ReflaxeOcamlInspection {
 			throw 'Exact ${clause.semanticTypeId} control catch clause "${clause.id}" has an invalid tag, carrier, representation, or conversion.';
 		}
 		validateCallValueSide(clause.outputRepresentationId, clause.semanticTypeId, clause.outputCarrierTypeId, representationById,
-			'Control catch clause "${clause.id}" output');
+			'Control catch clause "${clause.id}" output', clause.programRevision);
 	}
 
 	static function controlCatchChain(value:Dynamic):InspectionControlCatchChain {
@@ -1686,11 +1699,21 @@ class ReflaxeOcamlInspection {
 			&& representationId == 'representation:$expectedSemanticTypeId:internal-value';
 	}
 
+	/**
+		Validates one report consumer against the program-owned representation it names.
+
+		When the consumer records a program revision, both sides must come from that
+		same complete typed program. Recomputing a report digest therefore cannot make
+		a stale control or catch decision look compatible with a newer representation.
+	**/
 	static function validateCallValueSide(representationId:String, semanticTypeId:String, carrierTypeId:String,
-			representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
+			representations:Map<String, InspectionRepresentationDecision>, owner:String, ?expectedProgramRevision:String):Void {
 		final representation = representations.get(representationId);
 		if (representation == null)
 			throw '$owner refers to missing representation "$representationId".';
+		if (expectedProgramRevision != null && representation.programRevision != expectedProgramRevision) {
+			throw '$owner belongs to program revision "$expectedProgramRevision", but representation ${representation.id} belongs to "${representation.programRevision}".';
+		}
 		if (representation.semanticTypeId != semanticTypeId
 			|| representation.carrierTypeId != carrierTypeId
 			|| representation.domain != "internal-value") {

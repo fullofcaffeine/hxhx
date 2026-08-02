@@ -569,7 +569,7 @@ NODE
 	fi
 done
 
-for mutation in semantic carrier representation conversion tags proof binding; do
+for mutation in semantic carrier representation conversion tags proof program body binding; do
 	invalid_output="$INVALID_ARRAY_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
@@ -606,6 +606,12 @@ switch (mutation) {
 	case 'proof':
 		control.proofId = 'wrong-array-throw-proof'
 		control.payload.proofId = 'wrong-array-throw-proof'
+		break
+	case 'program':
+		control.programRevision = 'stale-program-revision'
+		break
+	case 'body':
+		control.bodyRevision = '0:stale-body-revision'
 		break
 	case 'binding':
 		control.pipelineRevision = 'ocaml-nested-function-plans-v7'
