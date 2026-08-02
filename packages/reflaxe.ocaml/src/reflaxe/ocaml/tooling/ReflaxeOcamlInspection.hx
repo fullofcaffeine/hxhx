@@ -1547,7 +1547,7 @@ class ReflaxeOcamlInspection {
 				throw '$owner cannot describe a computed function value.';
 			if (proofId.indexOf(FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX) != 0)
 				throw '$owner has unsupported function-value proof "$proofId".';
-			validateFunctionValueSignatureMatrix(arguments, resultKind, result, proofId, owner);
+			validateFunctionValueSignatureMatrix(arguments, resultKind, result, proofId, representations, owner);
 		}
 		switch (resultKind) {
 			case "value":
@@ -1601,7 +1601,7 @@ class ReflaxeOcamlInspection {
 
 	/** Validates computed callbacks through the same represented-call matrix. */
 	static function validateFunctionValueSignatureMatrix(arguments:Array<InspectionCallValue>, resultKind:String, result:Null<InspectionCallValue>,
-			proofId:String, owner:String):Void {
+			proofId:String, representations:Map<String, InspectionRepresentationDecision>, owner:String):Void {
 		for (argument in arguments) {
 			if (!isAdmittedCallValueSide(argument.inputSemanticTypeId, argument.inputCarrierTypeId, argument.inputRepresentationId)
 				|| !isAdmittedCallValueSide(argument.outputSemanticTypeId, argument.outputCarrierTypeId, argument.outputRepresentationId)) {
@@ -1612,8 +1612,12 @@ class ReflaxeOcamlInspection {
 			if (result == null)
 				throw '$owner has no represented result in the function-value signature matrix.';
 			final functionResult:InspectionCallValue = result;
-			if (!isAdmittedCallValueSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId)
-				|| !isAdmittedCallValueSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId, functionResult.outputRepresentationId)
+			if ((!isAdmittedCallValueSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId)
+				&& !isAdmittedNominalSide(functionResult.inputSemanticTypeId, functionResult.inputCarrierTypeId, functionResult.inputRepresentationId,
+					representations))
+				|| (!isAdmittedCallValueSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId, functionResult.outputRepresentationId)
+					&& !isAdmittedNominalSide(functionResult.outputSemanticTypeId, functionResult.outputCarrierTypeId, functionResult.outputRepresentationId,
+						representations))
 				|| functionResult.inputSemanticTypeId != functionResult.outputSemanticTypeId
 				|| functionResult.inputCarrierTypeId != functionResult.outputCarrierTypeId
 				|| functionResult.inputRepresentationId != functionResult.outputRepresentationId
@@ -1647,7 +1651,10 @@ class ReflaxeOcamlInspection {
 			representations:Map<String, InspectionRepresentationDecision>):Bool {
 		if (isAdmittedCallValueSide(semanticTypeId, carrierTypeId, representationId))
 			return true;
-		return (kind == "direct-static-haxe-method" || kind == "direct-instance-haxe-method" || kind == "direct-haxe-constructor")
+		return (kind == "direct-static-haxe-method"
+			|| kind == "direct-instance-haxe-method"
+			|| kind == "direct-haxe-constructor"
+			|| kind == "typed-function-value")
 			&& isAdmittedNominalSide(semanticTypeId, carrierTypeId, representationId, representations);
 	}
 

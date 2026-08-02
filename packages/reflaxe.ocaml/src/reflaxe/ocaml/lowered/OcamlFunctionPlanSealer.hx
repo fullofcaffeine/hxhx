@@ -145,7 +145,7 @@ class OcamlFunctionPlanSealer {
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
 		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities).plan(data.expr, callableBoundary);
-		sealNestedFunctions(data.expr, binding, localIdentities);
+		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -242,7 +242,8 @@ class OcamlFunctionPlanSealer {
 		planner represented every return, loop transfer, throw, and catch occurrence;
 		otherwise syntax keeps using the explicit legacy disposition for that literal.
 	**/
-	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan):Void {
+	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan,
+			localRepresentations:OcamlLocalRepresentationPlan):Void {
 		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
 			switch (expression.expr) {
 				case TFunction(tfunc):
@@ -271,8 +272,13 @@ class OcamlFunctionPlanSealer {
 						registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
 							"The typed function literal is outside the existing represented-result callable boundary.");
 					} else {
-						final emptyLocalRepresentations = new OcamlLocalRepresentationPlan([]);
-						final controls = new OcamlControlPlanner(representations, emptyLocalRepresentations, nestedBinding,
+						// A nested function can read a local declared by its enclosing function.
+						// Reuse the enclosing function's sealed representation choices so an exact
+						// captured value, such as a monomorphic class record, crosses an early
+						// return with the same carrier. The nested planner still sees only locals
+						// present in its typed body and validates every selected representation
+						// against the current complete-program revision.
+						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding,
 							localIdentities).plan(tfunc.expr, boundary);
 						// An unsupported transfer or catch is omitted from the admitted lists.
 						// Compare both the family flags and the observed catch count so one valid

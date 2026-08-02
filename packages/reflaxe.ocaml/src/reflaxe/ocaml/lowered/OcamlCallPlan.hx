@@ -272,8 +272,8 @@ class OcamlCallPlan {
 					programRevision: decision.programRevision,
 					bodyRevision: decision.bodyRevision,
 					pipelineRevision: decision.pipelineRevision
-				}; final signatureId = OcamlCallPlanner.functionValueSignatureId(callee, arguments,
-					expression.t); signatureId != null && OcamlCallPlanner.functionValueCalleeId(callee, binding, signatureId) == decision.calleeId;
+				}; final signatureId = OcamlCallPlanner.functionValueSignatureIdForDecision(callee, arguments, expression.t,
+					decision.result); signatureId != null && OcamlCallPlanner.functionValueCalleeId(callee, binding, signatureId) == decision.calleeId;
 			case _:
 				false;
 		}
@@ -1028,8 +1028,10 @@ class OcamlCallPlan {
 		}
 		if (resultKind == OcamlCallResultKind.Value
 			&& (result == null
-				|| !isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
-				|| !isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+				|| (!isAdmittedInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId)
+					&& !isNominalInternalSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId))
+				|| (!isAdmittedInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId)
+					&& !isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId))
 				|| !sameRepresentationSides(result)
 				|| result.conversion != OcamlCallCarrierConversion.Identity)) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: $owner contains a result outside the function-value signature matrix';
@@ -1113,7 +1115,8 @@ class OcamlCallPlan {
 		return isNullableSemanticType(semanticTypeId) || semanticTypeId == "String";
 	}
 
-	static function isNominalInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+	/** Recognizes the identity shape used by a sealed program-owned class record. */
+	public static function isNominalInternalSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
 		return semanticTypeId.length > 0
 			&& semanticTypeId.indexOf("<") < 0
 			&& carrierTypeId.length > 0
@@ -1315,14 +1318,14 @@ class OcamlCallPlanner {
 	/**
 		Selects the independently typed boundary for one represented function literal.
 
-		The caller supplies a binding whose function ID already names the literal's
 		stable lexical occurrence. The result must use a carrier already owned by the
-		existing first-class function-value matrix: exact Bool/Int/String or nullable
-		Int/Bool, or Dynamic. Dynamic already has one closed `Obj.t` function-value
-		carrier, so a callback can preserve it without discovering a concrete runtime
-		type. Nominal classes remain explicit deferrals because this boundary does not
-		yet give them a closed callback proof. Zero-argument literals use the same
-		represented result proof with an empty argument list.
+		existing first-class function-value matrix: exact Bool/Int/String, nullable
+		Int/Bool, Dynamic, or one program-owned monomorphic class record. Dynamic
+		already has one closed `Obj.t` carrier. A nominal result is admitted only when
+		the representation registry supplies its exact record and layout proof; generic,
+		inherited, interface, extern, and otherwise unrepresented classes remain
+		deferred. Zero-argument literals use the same represented result proof with an
+		empty argument list.
 	**/
 	public function boundaryForNestedRepresentedResult(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
 		final functionType:Type = switch (TypeTools.follow(tfunc.t)) {
@@ -1349,7 +1352,8 @@ class OcamlCallPlanner {
 		switch (resultRepresentation.semanticTypeId) {
 			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic":
 			case _:
-				return null;
+				if (representations.monomorphicClassValue(resultRepresentation.semanticTypeId) == null)
+					return null;
 		}
 		final proof = functionValueProof(signature);
 		return {
@@ -1747,7 +1751,7 @@ class OcamlCallPlanner {
 				final target = OcamlStructuralIteratorCallContract.select(receiverExpression, field, arguments, expression.t);
 				target == null ? null : structuralIteratorCallDecision(expression, field, target);
 			case TCall(callee, arguments):
-				final signature = functionValueSignature(callee, arguments, expression.t);
+				final signature = functionValueSignature(callee, arguments, expression.t, representations);
 				final plannedArguments = signature == null ? null : functionValueArguments(signature, arguments, representations);
 				final plannedResult = signature == null ? null : functionValueResult(signature, representations);
 				if (signature == null
@@ -1879,8 +1883,9 @@ class OcamlCallPlanner {
 		fail-closed guard agree without sharing mutable compiler state. Instance
 		methods and arbitrary field expressions stay with their existing owners.
 	**/
-	public static function isAdmittedFunctionValueCall(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Bool {
-		return functionValueSignatureId(callee, arguments, resultType) != null;
+	public static function isAdmittedFunctionValueCall(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
+			?representations:OcamlRepresentationRegistry):Bool {
+		return functionValueSignature(callee, arguments, resultType, representations) != null;
 	}
 
 	/**
@@ -1896,15 +1901,27 @@ class OcamlCallPlanner {
 		return signature == null ? null : signature.id;
 	}
 
-	static function functionValueSignature(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type):Null<OcamlAdmittedCallSignature> {
+	/** Rebuilds the typed signature needed to authenticate one stored call decision. */
+	public static function functionValueSignatureIdForDecision(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type,
+			result:Null<OcamlCallValuePlan>):Null<String> {
+		final expectedNominalResult = result != null
+			&& OcamlCallPlan.isNominalInternalSide(result.outputSemanticTypeId, result.outputCarrierTypeId,
+				result.outputRepresentationId) ? result.outputSemanticTypeId : null;
+		final signature = functionValueSignature(callee, arguments, resultType, null, expectedNominalResult);
+		return signature == null ? null : signature.id;
+	}
+
+	static function functionValueSignature(callee:TypedExpr, arguments:Array<TypedExpr>, resultType:Type, ?representations:OcamlRepresentationRegistry,
+			?expectedNominalResult:String):Null<OcamlAdmittedCallSignature> {
 		final calleeForm = functionValueCalleeForm(callee);
 		if (calleeForm == null)
 			return null;
-		final signature = selectAdmittedSignature(callee.t, calleeForm);
+		final signature = selectAdmittedSignature(callee.t, calleeForm, representations, expectedNominalResult);
 		if (signature == null || !functionValueArgumentsMatch(signature, arguments))
 			return null;
 		return switch (signature.resultKind) {
-			case Value: signature.resultSemanticTypeId != null && semanticTypeId(resultType) == signature.resultSemanticTypeId ? signature : null;
+			case Value: final actualResult = semanticTypeIdWithExpectedNominal(resultType, representations,
+					expectedNominalResult); signature.resultSemanticTypeId != null && actualResult == signature.resultSemanticTypeId ? signature : null;
 			case EffectOnlyVoid:
 				isExactVoid(resultType) ? signature : null;
 			case _:
@@ -2261,12 +2278,11 @@ class OcamlCallPlanner {
 		normalizes both forms to one semantic signature while refusing exact
 		optional locals that do not have that observed typed-API shape.
 	**/
-	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>, ?representations:OcamlRepresentationRegistry):Null<OcamlAdmittedCallSignature> {
+	static function selectAdmittedSignature(type:Type, calleeForm:Null<String>, ?representations:OcamlRepresentationRegistry,
+			?expectedNominalResult:String):Null<OcamlAdmittedCallSignature> {
 		return switch (TypeTools.follow(type)) {
-			case TFun(arguments, result)
-				if (semanticTypeId(result) != null
-					|| (representations != null && representations.monomorphicClassForType(result) != null)
-					|| isExactVoid(result)):
+			case TFun(arguments, result) if (semanticTypeIdWithExpectedNominal(result, representations, expectedNominalResult) != null
+				|| isExactVoid(result)):
 				var optionalCount = 0;
 				var valid = true;
 				final selectedArguments:Array<OcamlAdmittedCallSignatureArgument> = [];
@@ -2308,7 +2324,8 @@ class OcamlCallPlanner {
 					null;
 				} else {
 					final resultKind = isExactVoid(result) ? OcamlCallResultKind.EffectOnlyVoid : OcamlCallResultKind.Value;
-					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeIdWithRegistry(result, representations) : null;
+					final resultSemanticTypeId = resultKind == OcamlCallResultKind.Value ? semanticTypeIdWithExpectedNominal(result, representations,
+						expectedNominalResult) : null;
 					final parameterIds = selectedArguments.map(argument -> (argument.optional ? "?" : "") + argument.semanticTypeId);
 					final resultId = resultKind == OcamlCallResultKind.EffectOnlyVoid ? "Void" : resultSemanticTypeId;
 					{
@@ -2354,6 +2371,26 @@ class OcamlCallPlanner {
 			return primitive;
 		final layout = representations.monomorphicClassForType(type);
 		return layout == null ? null : layout.semanticTypeId;
+	}
+
+	/**
+		Authenticates a nominal result while replaying a stored decision.
+
+		Planning still requires the live representation registry. Replay receives the
+		already-sealed semantic class name and accepts it only when the current typed
+		result names that same non-generic class. This lets call lookup verify the
+		original occurrence without turning every class-shaped function into an
+		admitted callback.
+	**/
+	static function semanticTypeIdWithExpectedNominal(type:Type, representations:Null<OcamlRepresentationRegistry>,
+			expectedNominalResult:Null<String>):Null<String> {
+		final selected = semanticTypeIdWithRegistry(type, representations);
+		if (selected != null)
+			return selected;
+		if (expectedNominalResult == null)
+			return null;
+		final observed = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(type);
+		return observed == expectedNominalResult ? observed : null;
 	}
 
 	static function classSemanticTypeId(classType:ClassType):String {

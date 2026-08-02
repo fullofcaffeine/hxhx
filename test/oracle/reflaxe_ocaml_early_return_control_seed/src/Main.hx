@@ -164,14 +164,15 @@ class Main {
 		return local(true);
 	}
 
-	/** Keeps nominal callback results deferred until the function-value ABI admits them. */
-	static function nestedNominalClosure():NestedReturnBox {
+	/** Proves that a class-valued closure return preserves the original object. */
+	static function nestedNominalClosure():Bool {
+		final expected = new NestedReturnBox(53);
 		final local = function(enabled:Bool):NestedReturnBox {
 			if (enabled)
-				return new NestedReturnBox(53);
+				return expected;
 			return new NestedReturnBox(0);
 		};
-		return local(true);
+		return local(true) == expected;
 	}
 
 	/**
@@ -267,7 +268,7 @@ class Main {
 		printLine("dynamicClosure=" + (nestedDynamicClosure() == 41));
 		printLine("zeroArgumentClosure=" + nestedZeroArgumentClosure());
 		printLine("unsupportedThrowClosure=" + nestedUnsupportedThrowClosure());
-		printLine("nominalClosure=" + nestedNominalClosure().value);
+		printLine("nominalClosure=" + nestedNominalClosure());
 		printLine("deepClosure=" + deepNestedClosure());
 		printLine("catchClosure=" + nestedCatchClosure());
 		printLine("throwCatchClosure=" + nestedThrowCatchClosure());

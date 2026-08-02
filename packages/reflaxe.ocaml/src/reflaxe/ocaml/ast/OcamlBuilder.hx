@@ -2275,7 +2275,7 @@ class OcamlBuilder {
 					|| functionPlanRegistry.hasEffectOnlyCallableDeclaration(OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()))):
 				callPlanInvariant('admitted call "${OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get())}" reached syntax without its sealed occurrence plan',
 					e.pos);
-			case TCall(callee, arguments) if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, e.t)):
+			case TCall(callee, arguments) if (OcamlCallPlanner.isAdmittedFunctionValueCall(callee, arguments, e.t, representationRegistry)):
 				callPlanInvariant("admitted typed function-value call reached syntax without its sealed occurrence plan", e.pos);
 			case TTypeExpr(_):
 				switch (e.expr) {

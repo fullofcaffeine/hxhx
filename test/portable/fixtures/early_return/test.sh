@@ -36,8 +36,8 @@ if (report.schemaVersion !== 54
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 32) {
-	fail(`expected 32 represented return decisions, including ordinary and nested Dynamic, catch, and loop paths, got ${returnControls.length}`)
+if (returnControls.length !== 33) {
+	fail(`expected 33 represented return decisions, including ordinary and nested Dynamic, nominal, catch, and loop paths, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -74,7 +74,8 @@ const representedNestedFunctions = new Map([
 	['nestedNullableIntClosure', 'Null<Int>'],
 	['nestedNullableBoolClosure', 'Null<Bool>'],
 	['nestedDynamicClosure', 'Dynamic'],
-	['nestedZeroArgumentClosure', 'Int']
+	['nestedZeroArgumentClosure', 'Int'],
+	['nestedNominalClosure', '_Main.NestedReturnBox']
 ])
 for (const [functionName, semanticType] of representedNestedFunctions) {
 	const decisions = returnControls.filter(control =>
@@ -84,7 +85,7 @@ for (const [functionName, semanticType] of representedNestedFunctions) {
 		fail(`${functionName} did not seal one nested ${semanticType} return decision`)
 	}
 }
-for (const functionName of ['nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+for (const functionName of ['nestedUnsupportedThrowClosure']) {
 	if (returnControls.some(control =>
 		control.functionId.includes(`|function|${functionName}|`)
 		&& control.functionId.includes('|nested-function|'))) {
@@ -234,8 +235,22 @@ for (const control of returnControls) {
 		&& payload.outputRepresentationId === payload.inputRepresentationId
 		&& payload.conversion === 'preserve-dynamic-return-carrier'
 		&& payload.proofId === 'dynamic-carrier-return-control-v1'
+	const nominal = payload.nominalRepresentation
+	const nominalValue = control.proofId === 'exact-monomorphic-class-early-return-control-v1'
+		&& payload.inputSemanticTypeId === '_Main.NestedReturnBox'
+		&& payload.inputCarrierTypeId === 'nestedreturnbox_t'
+		&& payload.inputRepresentationId === 'representation:_Main.NestedReturnBox:internal-value'
+		&& payload.outputSemanticTypeId === payload.inputSemanticTypeId
+		&& payload.outputCarrierTypeId === payload.inputCarrierTypeId
+		&& payload.outputRepresentationId === payload.inputRepresentationId
+		&& payload.conversion === 'box-and-recover-nominal-value'
+		&& payload.proofId === 'exact-monomorphic-class-early-return-control-v1'
+		&& nominal?.targetModuleName === 'Main'
+		&& nominal?.targetTypeName === 'nestedreturnbox_t'
+		&& /^sha256:[0-9a-f]{64}$/.test(nominal?.layoutRevision ?? '')
+		&& nominal?.representationProofId === `whole-program-monomorphic-nominal-record-v1:${nominal.layoutRevision}`
 	if (payload.signalCarrierTypeId !== 'Obj.t'
-		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier)
+		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier && !nominalValue)
 		|| !payload.proofClaim) {
 		fail(`control decision ${control.id} has an incomplete represented return payload crossing`)
 	}
@@ -347,7 +362,7 @@ if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v67'
 	|| dynamicBranchBody.includes('__fallback_result')) {
 	fail('dynamicBranch did not preserve its existing Dynamic Obj.t carrier through the root v63 return plan')
 }
-for (const functionName of ['nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+for (const functionName of ['nestedUnsupportedThrowClosure']) {
 	const start = source.indexOf(`let ${functionName} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	const body = source.slice(start, next)
@@ -358,6 +373,17 @@ for (const functionName of ['nestedUnsupportedThrowClosure', 'nestedNominalClosu
 		|| !body.includes('Obj.magic')) {
 		fail(`${functionName} did not remain on its explicit legacy nested-return path`)
 	}
+}
+const nominalClosureStart = source.indexOf('let nestedNominalClosure =')
+const nominalClosureEnd = source.indexOf('\nlet deepNestedClosure =', nominalClosureStart)
+const nominalClosureBody = source.slice(nominalClosureStart, nominalClosureEnd)
+if (nominalClosureStart < 0
+	|| nominalClosureEnd < 0
+	|| !nominalClosureBody.includes('HxRuntime.Hx_return (Obj.repr expected)')
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : nestedreturnbox_t\)/.test(nominalClosureBody)
+	|| nominalClosureBody.includes('__fallback_result')
+	|| nominalClosureBody.includes('Obj.magic')) {
+	fail('nestedNominalClosure did not preserve its sealed class record through the private return signal')
 }
 const deepClosureStart = source.indexOf('let deepNestedClosure =')
 const deepClosureEnd = source.indexOf('\nlet nestedCatchClosure =', deepClosureStart)
