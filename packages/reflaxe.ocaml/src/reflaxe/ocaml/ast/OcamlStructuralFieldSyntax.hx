@@ -11,9 +11,10 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldStoreC
 /**
 	Renders one already selected structural field operation.
 
-	This module never decides whether `next` is a stored linked-node field or an
-	Iterator method. It only materializes the receiver/value in the recorded order
-	and invokes the runtime operation named by the immutable decision.
+	This module never decides whether an overlapping name describes a normal
+	object field, an Iterator method, or a Map pair component. It only
+	materializes the receiver and optional assigned value in the recorded order,
+	then renders the operation selected from the final typed Haxe body.
 **/
 class OcamlStructuralFieldSyntax {
 	/** Builds a field read, write, or Iterator method capture from sealed facts. */
@@ -53,6 +54,11 @@ class OcamlStructuralFieldSyntax {
 					throw 'reflaxe.ocaml [ocaml-structural-field:syntax]: Iterator method "${decision.id}" has conflicting inputs';
 				final call = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(decision.runtimeModule), decision.runtimeOperation), [receiverValue]);
 				OcamlExpr.ELet(receiverName, buildExpr(receiver), OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], call), false);
+			case ProjectTupleKey, ProjectTupleValue:
+				if (value != null || decision.keyValueTupleTarget == null)
+					throw 'reflaxe.ocaml [ocaml-structural-field:syntax]: Map pair projection "${decision.id}" has conflicting inputs';
+				final projected = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(decision.runtimeModule), decision.runtimeOperation), [receiverValue]);
+				OcamlExpr.ELet(receiverName, buildExpr(receiver), projected, false);
 		}
 	}
 }

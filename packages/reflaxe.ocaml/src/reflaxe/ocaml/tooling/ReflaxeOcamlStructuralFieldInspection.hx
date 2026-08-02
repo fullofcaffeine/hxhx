@@ -4,6 +4,7 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldContract;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlKeyValueTupleProjectionTarget;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralField;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
@@ -17,11 +18,12 @@ typedef InspectionStructuralFieldInventory = {
 /**
 	Validates ambiguous structural fields without reading generated OCaml.
 
-	The saved lowering report must say whether each `next` or `hasNext` occurrence
-	was an ordinary stored field or a captured Iterator method. This reader rebuilds
-	the plain decision, applies the same contract used before syntax generation, and
-	recomputes the inventory digest. Missing or edited evidence therefore makes the
-	public inspection fail instead of presenting a plausible but unowned runtime use.
+	The saved lowering report must say whether each overlapping field occurrence
+	was an ordinary stored field, a captured Iterator method, or a proven Map-pair
+	projection. This reader rebuilds the plain decision, applies the same contract
+	used before syntax generation, and recomputes the inventory digest. Missing or
+	edited evidence therefore makes public inspection fail instead of presenting a
+	plausible but unowned runtime use.
 **/
 class ReflaxeOcamlStructuralFieldInspection {
 	/** Reads and validates the complete structural-field inventory. */
@@ -37,8 +39,8 @@ class ReflaxeOcamlStructuralFieldInspection {
 		for (index in 0...decisions.length) {
 			final current = decisions[index];
 			OcamlStructuralFieldContract.require(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v65"
-				&& current.pipelineRevision != "ocaml-standalone-expression-plans-v2")
+			if (current.pipelineRevision != "ocaml-function-plans-v66"
+				&& current.pipelineRevision != "ocaml-standalone-expression-plans-v3")
 				throw 'Structural field decision "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
 			if (index > 0 && Reflect.compare(decisions[index - 1].id, current.id) >= 0)
 				throw 'The structural-field inventory is not in strict identity order at "${current.id}".';
@@ -60,6 +62,9 @@ class ReflaxeOcamlStructuralFieldInspection {
 		if (sourceMin < 0 || sourceMax < sourceMin)
 			throw "Structural field decision has an invalid source span.";
 		final rawIteratorTarget = Reflect.hasField(value, "iteratorTarget") ? Reflect.field(value, "iteratorTarget") : null;
+		if (!Reflect.hasField(value, "keyValueTupleTarget"))
+			throw 'Expected structural-field field "keyValueTupleTarget".';
+		final rawTupleTarget = Reflect.field(value, "keyValueTupleTarget");
 		return {
 			id: requiredString(value, "id"),
 			occurrenceOrdinal: requiredInt(value, "occurrenceOrdinal"),
@@ -81,12 +86,29 @@ class ReflaxeOcamlStructuralFieldInspection {
 			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds"),
 			evaluationSchedule: requiredStringArray(value, "evaluationSchedule"),
 			iteratorTarget: rawIteratorTarget == null ? null : iteratorTarget(requiredObject(value, "iteratorTarget")),
+			keyValueTupleTarget: rawTupleTarget == null ? null : keyValueTupleTarget(requiredObject(value, "keyValueTupleTarget")),
 			proofId: requiredString(value, "proofId"),
 			proofClaim: requiredString(value, "proofClaim"),
 			functionId: requiredString(value, "functionId"),
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function keyValueTupleTarget(value:Dynamic):OcamlKeyValueTupleProjectionTarget {
+		return {
+			projection: requiredString(value, "projection"),
+			iteratorProducerCallId: requiredString(value, "iteratorProducerCallId"),
+			pairProducerCallId: requiredString(value, "pairProducerCallId"),
+			iteratorLocalId: requiredString(value, "iteratorLocalId"),
+			pairLocalId: requiredString(value, "pairLocalId"),
+			iteratorSemanticTypeId: requiredString(value, "iteratorSemanticTypeId"),
+			pairSemanticTypeId: requiredString(value, "pairSemanticTypeId"),
+			keySemanticTypeId: requiredString(value, "keySemanticTypeId"),
+			valueSemanticTypeId: requiredString(value, "valueSemanticTypeId"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim")
 		};
 	}
 

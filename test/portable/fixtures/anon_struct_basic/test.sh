@@ -62,7 +62,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 52
+if (report.schemaVersion !== 53
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -106,7 +106,7 @@ for (const operation of operations) {
 	const compoundWrite = operation.kind === 'compound-write-field'
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v65'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v66'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'

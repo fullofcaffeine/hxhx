@@ -13,14 +13,23 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 	Explains the runtime module selected for one ambiguous structural field.
 
 	For example, a linked-node `next` field needs `HxAnon.get`, while a captured
-	`Iterator.next` method needs `HxIterator.next`. The sealed field decision has
-	already made that distinction from the final Haxe type; this recorder only
-	transfers the answer into the request-owned runtime inventory.
+	`Iterator.next` method needs `HxIterator.next`. A proven Map pair uses
+	`Stdlib.fst` or `Stdlib.snd`, which ships with OCaml and therefore adds no
+	repository-owned runtime module. The sealed field decision has already made
+	that distinction; this recorder only transfers its runtime dependencies.
 **/
 class OcamlStructuralFieldRuntimeRequirementRecorder {
-	/** Builds the one runtime requirement owned by a sealed field decision. */
+	/** Builds the repository runtime requirements owned by a sealed decision. */
+	public static function requirements(decision:OcamlStructuralFieldDecision):Array<OcamlRuntimeRequirement> {
+		OcamlStructuralFieldContract.require(decision);
+		return OcamlStructuralFieldContract.isTupleProjection(decision.operation) ? [] : [requirement(decision)];
+	}
+
+	/** Builds the one runtime requirement for a non-Stdlib field operation. */
 	public static function requirement(decision:OcamlStructuralFieldDecision):OcamlRuntimeRequirement {
 		OcamlStructuralFieldContract.require(decision);
+		if (OcamlStructuralFieldContract.isTupleProjection(decision.operation))
+			throw 'reflaxe.ocaml [ocaml-structural-field:unexpected-runtime]: tuple projection "${decision.id}" uses OCaml Stdlib and has no repository runtime requirement';
 		final expectedId = OcamlStructuralFieldContract.runtimeRequirementId(decision.id, decision.operation);
 		if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != expectedId)
 			throw 'reflaxe.ocaml [ocaml-structural-field:wrong-runtime]: decision "${decision.id}" does not name its exact runtime requirement';
@@ -44,9 +53,10 @@ class OcamlStructuralFieldRuntimeRequirementRecorder {
 		};
 	}
 
-	/** Adds the decision's exact runtime requirement to the active request. */
+	/** Adds every repository runtime requirement to the active request. */
 	public static function record(ledger:OcamlRuntimeRequirementLedger, decision:OcamlStructuralFieldDecision):Void {
-		ledger.record(requirement(decision));
+		for (required in requirements(decision))
+			ledger.record(required);
 	}
 }
 #end

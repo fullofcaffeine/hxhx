@@ -51,7 +51,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 52;
+	public static inline final SCHEMA_VERSION = 53;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -406,13 +406,14 @@ class OcamlLoweringReportWriter {
 			}
 		}
 		for (decision in sortedStructuralFields) {
-			final expected = OcamlStructuralFieldRuntimeRequirementRecorder.requirement(decision);
-			final recorded = requirementById.get(expected.id);
-			if (recorded == null)
-				throw 'Structural field decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
-			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
-				throw 'Structural field decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
-			includedRequirementIds.set(expected.id, true);
+			for (expected in OcamlStructuralFieldRuntimeRequirementRecorder.requirements(decision)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'Structural field decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'Structural field decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
 		}
 		for (conversion in sortedLocalConversions) {
 			if (conversion.conversion != OcamlLocalCarrierConversion.BoxExactEnumToDynamic)

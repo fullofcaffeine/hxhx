@@ -9,13 +9,17 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorOperation;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
 
-/** The caller-visible meaning selected for one structural `next` or `hasNext`. */
+/** The caller-visible meaning selected for one field that overlaps a target protocol. */
 enum abstract OcamlStructuralFieldOperation(String) from String to String {
 	/** Read an ordinary stored field from the portable anonymous-object carrier. */
 	final ReadStoredField = "read-stored-field";
@@ -25,6 +29,12 @@ enum abstract OcamlStructuralFieldOperation(String) from String to String {
 
 	/** Capture a genuine structural Iterator method as a `Void -> T` value. */
 	final CaptureIteratorMethod = "capture-iterator-method";
+
+	/** Read `key` from a pair produced by the target's standard map iterator. */
+	final ProjectTupleKey = "project-tuple-key";
+
+	/** Read `value` from a pair produced by the target's standard map iterator. */
+	final ProjectTupleValue = "project-tuple-value";
 }
 
 /** How a stored `HxAnon` value becomes the field's typed Haxe result. */
@@ -40,12 +50,37 @@ enum abstract OcamlStructuralFieldStoreConversion(String) from String to String 
 }
 
 /**
-	One immutable decision for a structural field whose name overlaps Iterator.
+	Proof that one anonymous `{key, value}` receiver uses the OCaml tuple carrier.
+
+	Haxe erases the pair's `KeyValueIterator<K,V>` typedef after `next()` returns,
+	so the field receiver alone looks like any other anonymous object. These facts
+	retain the two typed calls and stable locals that connect the pair back to a
+	standard `IMap.keyValueIterator()` producer. Syntax may use `fst` or `snd` only
+	when this complete chain was sealed from the final typed body.
+**/
+typedef OcamlKeyValueTupleProjectionTarget = {
+	final projection:String;
+	final iteratorProducerCallId:String;
+	final pairProducerCallId:String;
+	final iteratorLocalId:String;
+	final pairLocalId:String;
+	final iteratorSemanticTypeId:String;
+	final pairSemanticTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final proofId:String;
+	final proofClaim:String;
+}
+
+/**
+	One immutable decision for a field whose spelling overlaps a target protocol.
 
 	The decision makes the important distinction before OCaml syntax: `q.next`
 	can be an ordinary linked-node value, while `iterator.next` can be a captured
-	Iterator method. The renderer receives the selected runtime operation and is
-	not allowed to infer either meaning from the spelling of the field.
+	Iterator method. It also distinguishes ordinary stored `key` and `value`
+	fields from pair projections produced by the standard map iterator. The
+	renderer receives the selected operation and is not allowed to infer any of
+	these meanings from the spelling of the field.
 **/
 typedef OcamlStructuralFieldDecision = {
 	final id:String;
@@ -64,6 +99,7 @@ typedef OcamlStructuralFieldDecision = {
 	final runtimeRequirementIds:Array<String>;
 	final evaluationSchedule:Array<String>;
 	final iteratorTarget:Null<OcamlStructuralIteratorCallTarget>;
+	final keyValueTupleTarget:Null<OcamlKeyValueTupleProjectionTarget>;
 	final proofId:String;
 	final proofClaim:String;
 	final functionId:String;
@@ -74,23 +110,30 @@ typedef OcamlStructuralFieldDecision = {
 
 /** Pure identity and validation rules shared by planning, syntax, and reports. */
 class OcamlStructuralFieldContract {
-	public static inline final MODEL = "typed-structural-field-overlap-v1";
+	public static inline final MODEL = "typed-structural-field-overlap-v2";
 	public static inline final HAXE_ANON_CAPABILITY = "haxe-structural-field";
 	public static inline final HAXE_ITERATOR_CAPABILITY = "haxe-iterator";
 	public static inline final STORED_PROOF_ID = "structural-stored-field-v1";
 	public static inline final ITERATOR_PROOF_ID = "structural-iterator-method-value-v1";
+	public static inline final KEY_VALUE_TUPLE_PROOF_ID = "standard-imap-key-value-tuple-projection-v1";
 
-	public static inline final STORED_PROOF_CLAIM = "The final typed FAnon occurrence names an ordinary stored next or hasNext field, not a complete structural Iterator method. The portable carrier is one HxAnon object. Reads evaluate the receiver once and recover the stored field value. Writes evaluate the receiver before the assigned value, replace that exact field, and return the assigned Haxe value.";
+	public static inline final STORED_PROOF_CLAIM = "The final typed FAnon occurrence names an ordinary stored next, hasNext, key, or value field, not a complete structural Iterator method or a pair produced by the standard IMap keyValueIterator path. The portable carrier is one HxAnon object. Reads evaluate the receiver once and recover the stored field value. Writes evaluate the receiver before the assigned value, replace that exact field, and return the assigned Haxe value.";
 	public static inline final ITERATOR_PROOF_CLAIM = "The final typed field occurrence captures hasNext or next from a complete structural Iterator value. The target evaluates the receiver once and returns a zero-argument closure over the exact HxIterator operation. Immediate invocation remains owned by the separate structural Iterator call plan.";
+	public static inline final KEY_VALUE_TUPLE_PROOF_CLAIM = "The final typed key or value read receives a pair from structural Iterator.next, whose unchanged iterator local receives the exact standard IMap.keyValueIterator tuple-producing call. Stable lexical locals and both sealed call identities connect the anonymous pair back to that producer before syntax. No field name or anonymous shape authorizes the tuple projection.";
 
 	/** Returns whether this bounded model owns a potentially ambiguous field. */
 	public static function ownsFieldName(name:String):Bool {
-		return name == "next" || name == "hasNext";
+		return name == "next" || name == "hasNext" || name == "key" || name == "value";
 	}
 
 	/** Returns the one runtime requirement selected by a structural field decision. */
 	public static function runtimeRequirementId(decisionId:String, operation:OcamlStructuralFieldOperation):String {
 		return decisionId + ":runtime:" + (operation == CaptureIteratorMethod ? HAXE_ITERATOR_CAPABILITY : HAXE_ANON_CAPABILITY);
+	}
+
+	/** Returns whether the decision uses only an OCaml Stdlib tuple projection. */
+	public static function isTupleProjection(operation:OcamlStructuralFieldOperation):Bool {
+		return operation == ProjectTupleKey || operation == ProjectTupleValue;
 	}
 
 	/** Builds the content identity after every behavior-bearing field is known. */
@@ -138,15 +181,23 @@ class OcamlStructuralFieldContract {
 					|| target.proofClaim != OcamlStructuralIteratorCallContract.METHOD_VALUE_PROOF_CLAIM
 					|| decision.loadConversion != null
 					|| decision.storeConversion != null
+					|| decision.keyValueTupleTarget != null
 					|| decision.evaluationSchedule.join(",") != "materialize-receiver,capture-method"
 					|| decision.proofId != ITERATOR_PROOF_ID
 					|| decision.proofClaim != ITERATOR_PROOF_CLAIM) {
 					throw 'reflaxe.ocaml [ocaml-structural-field:invalid-iterator]: Iterator method decision "${decision.id}" disagrees with its target';
 				}
+			case ProjectTupleKey, ProjectTupleValue:
+				requireTupleProjection(decision);
 		}
-		final expectedRequirement = runtimeRequirementId(decision.id, decision.operation);
-		if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != expectedRequirement)
-			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: structural field decision "${decision.id}" does not own its exact runtime requirement';
+		if (isTupleProjection(decision.operation)) {
+			if (decision.runtimeRequirementIds.length != 0)
+				throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: tuple projection "${decision.id}" must not claim a repository runtime module';
+		} else {
+			final expectedRequirement = runtimeRequirementId(decision.id, decision.operation);
+			if (decision.runtimeRequirementIds.length != 1 || decision.runtimeRequirementIds[0] != expectedRequirement)
+				throw 'reflaxe.ocaml [ocaml-structural-field:invalid-runtime]: structural field decision "${decision.id}" does not own its exact runtime requirement';
+		}
 		if (decision.id != decisionId(decision))
 			throw 'reflaxe.ocaml [ocaml-structural-field:stale]: structural field decision "${decision.id}" does not match its canonical facts';
 	}
@@ -159,6 +210,7 @@ class OcamlStructuralFieldContract {
 			|| decision.runtimeOperation != operation
 			|| decision.evaluationSchedule.join(",") != schedule.join(",")
 			|| decision.iteratorTarget != null
+			|| decision.keyValueTupleTarget != null
 			|| decision.proofId != STORED_PROOF_ID
 			|| decision.proofClaim != STORED_PROOF_CLAIM
 			|| (read && decision.storeConversion != null)
@@ -167,6 +219,46 @@ class OcamlStructuralFieldContract {
 			|| (!read && decision.storeConversion != (boolField ? BoxBool : ObjRepr))) {
 			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-stored]: stored field decision "${decision.id}" disagrees with its HxAnon operation';
 		}
+	}
+
+	static function requireTupleProjection(decision:OcamlStructuralFieldDecision):Void {
+		final target = decision.keyValueTupleTarget;
+		if (target == null)
+			throw 'reflaxe.ocaml [ocaml-structural-field:missing-key-value-proof]: tuple projection "${decision.id}" has no typed producer chain';
+		final expectedProjection = decision.operation == ProjectTupleKey ? "fst" : "snd";
+		final expectedField = decision.operation == ProjectTupleKey ? "key" : "value";
+		final expectedFieldType = decision.operation == ProjectTupleKey ? target.keySemanticTypeId : target.valueSemanticTypeId;
+		if ((target.projection != "fst" && target.projection != "snd")
+			|| target.projection != expectedProjection
+			|| decision.fieldName != expectedField
+			|| decision.receiverSemanticTypeId != target.pairSemanticTypeId
+			|| decision.receiverCarrierTypeId != 'tuple<${target.keySemanticTypeId},${target.valueSemanticTypeId}>'
+			|| decision.fieldSemanticTypeId != expectedFieldType
+			|| decision.resultSemanticTypeId != expectedFieldType
+			|| decision.loadConversion != null
+			|| decision.storeConversion != null
+			|| decision.iteratorTarget != null
+			|| decision.runtimeModule != "Stdlib"
+			|| decision.runtimeOperation != expectedProjection
+			|| decision.evaluationSchedule.join(",") != "materialize-receiver,project-field"
+			|| decision.proofId != KEY_VALUE_TUPLE_PROOF_ID
+			|| decision.proofClaim != KEY_VALUE_TUPLE_PROOF_CLAIM
+			|| target.proofId != KEY_VALUE_TUPLE_PROOF_ID
+			|| target.proofClaim != KEY_VALUE_TUPLE_PROOF_CLAIM
+			|| target.iteratorProducerCallId.length == 0
+			|| target.pairProducerCallId.length == 0
+			|| target.iteratorSemanticTypeId.length == 0
+			|| target.pairSemanticTypeId.length == 0
+			|| target.keySemanticTypeId.length == 0
+			|| target.valueSemanticTypeId.length == 0
+			|| !isReusableLocalId(target.iteratorLocalId)
+			|| !isReusableLocalId(target.pairLocalId)) {
+			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-key-value-proof]: tuple projection "${decision.id}" disagrees with its typed producer chain';
+		}
+	}
+
+	static function isReusableLocalId(localId:String):Bool {
+		return ~/^lexical-local-v1:[0-9a-f]{64}$/.match(localId);
 	}
 
 	/** Returns a detached copy suitable for reports and sealed-plan storage. */
@@ -188,6 +280,7 @@ class OcamlStructuralFieldContract {
 			runtimeRequirementIds: decision.runtimeRequirementIds.copy(),
 			evaluationSchedule: decision.evaluationSchedule.copy(),
 			iteratorTarget: decision.iteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.iteratorTarget),
+			keyValueTupleTarget: decision.keyValueTupleTarget == null ? null : copyKeyValueTupleTarget(decision.keyValueTupleTarget),
 			proofId: decision.proofId,
 			proofClaim: decision.proofClaim,
 			functionId: decision.functionId,
@@ -195,6 +288,40 @@ class OcamlStructuralFieldContract {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
+	}
+
+	/** Returns a detached copy of a tuple-projection producer proof. */
+	public static function copyKeyValueTupleTarget(target:OcamlKeyValueTupleProjectionTarget):OcamlKeyValueTupleProjectionTarget {
+		return {
+			projection: target.projection,
+			iteratorProducerCallId: target.iteratorProducerCallId,
+			pairProducerCallId: target.pairProducerCallId,
+			iteratorLocalId: target.iteratorLocalId,
+			pairLocalId: target.pairLocalId,
+			iteratorSemanticTypeId: target.iteratorSemanticTypeId,
+			pairSemanticTypeId: target.pairSemanticTypeId,
+			keySemanticTypeId: target.keySemanticTypeId,
+			valueSemanticTypeId: target.valueSemanticTypeId,
+			proofId: target.proofId,
+			proofClaim: target.proofClaim
+		};
+	}
+
+	/** Canonical text for the typed producer chain behind one tuple projection. */
+	public static function keyValueTupleFingerprint(target:OcamlKeyValueTupleProjectionTarget):String {
+		return [
+			target.projection,
+			target.iteratorProducerCallId,
+			target.pairProducerCallId,
+			target.iteratorLocalId,
+			target.pairLocalId,
+			target.iteratorSemanticTypeId,
+			target.pairSemanticTypeId,
+			target.keySemanticTypeId,
+			target.valueSemanticTypeId,
+			target.proofId,
+			target.proofClaim
+		].join("|");
 	}
 
 	/** Canonical text used by decision IDs and complete-plan revisions. */
@@ -215,6 +342,7 @@ class OcamlStructuralFieldContract {
 			decision.runtimeModule + "." + decision.runtimeOperation,
 			decision.evaluationSchedule.join(","),
 			decision.iteratorTarget == null ? "" : OcamlStructuralIteratorCallContract.fingerprint(decision.iteratorTarget),
+			decision.keyValueTupleTarget == null ? "" : keyValueTupleFingerprint(decision.keyValueTupleTarget),
 			decision.proofId,
 			decision.proofClaim,
 			decision.functionId,
@@ -229,6 +357,25 @@ class OcamlStructuralFieldContract {
 private typedef OcamlStructuralFieldOccurrence = {
 	final expression:TypedExpr;
 	final decisionId:String;
+}
+
+private typedef OcamlTupleIteratorLocalProof = {
+	final target:OcamlStandardIMapCallTarget;
+	final iteratorProducerCallId:String;
+	final iteratorLocalId:String;
+}
+
+private typedef OcamlTuplePairLocalProof = {
+	final iterator:OcamlTupleIteratorLocalProof;
+	final pairProducerCallId:String;
+	final pairLocalId:String;
+	final pairSemanticTypeId:String;
+}
+
+private typedef OcamlLocalInitializer = {
+	final hostLocalId:Int;
+	final semanticTypeId:String;
+	final expression:TypedExpr;
 }
 
 /** Request-local lookup from final typed occurrences to immutable field decisions. */
@@ -301,18 +448,30 @@ class OcamlStructuralFieldPlanner {
 	final calls:OcamlCallPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final representations:OcamlRepresentationRegistry;
+	final localIdentities:LexicalLocalIdentityPlan;
+	var tuplePairsByHostLocalId:Map<Int, OcamlTuplePairLocalProof> = [];
 	var ordinal = 0;
 
 	public function new(binding:OcamlFunctionPlanBinding, calls:OcamlCallPlan, anonymousStructures:OcamlAnonymousStructurePlan,
-			representations:OcamlRepresentationRegistry) {
+			representations:OcamlRepresentationRegistry, localIdentities:LexicalLocalIdentityPlan) {
 		this.binding = binding;
 		this.calls = calls;
 		this.anonymousStructures = anonymousStructures;
 		this.representations = representations;
+		this.localIdentities = localIdentities;
 	}
 
-	/** Plans stored fields and Iterator method values without duplicating direct calls. */
+	/**
+		Plans stored fields, Iterator method values, and proven Map-pair fields.
+
+		A Map pair is admitted only when two existing typed call decisions form a
+		complete chain: a local receives `IMap.keyValueIterator()`, then another
+		local receives `next()` from that unchanged iterator local. This early
+		ownership step is what lets syntax use an OCaml tuple for that pair while
+		keeping unrelated anonymous `{key, value}` objects on `HxAnon`.
+	**/
 	public function plan(root:TypedExpr):OcamlStructuralFieldPlan {
+		tuplePairsByHostLocalId = discoverTuplePairLocals(root);
 		final decisions:Array<OcamlStructuralFieldDecision> = [];
 		final occurrences:Array<OcamlStructuralFieldOccurrence> = [];
 
@@ -408,9 +567,18 @@ class OcamlStructuralFieldPlanner {
 		if (iteratorTarget == null && !storedFieldAllowed)
 			return null;
 		final fieldSemanticTypeId = TypeTools.toString(field.type);
-		final operation = iteratorTarget == null ? ReadStoredField : CaptureIteratorMethod;
+		final tupleTarget = iteratorTarget == null ? tupleProjectionTarget(receiver, field.name) : null;
+		final operation = iteratorTarget != null ? CaptureIteratorMethod : tupleTarget == null ? ReadStoredField : field.name == "key" ? ProjectTupleKey : ProjectTupleValue;
 		final decision = baseDecision(expression, receiver, field, occurrenceOrdinal, operation, fieldSemanticTypeId);
-		if (iteratorTarget == null) {
+		if (tupleTarget != null) {
+			decision.receiverCarrierTypeId = 'tuple<${tupleTarget.keySemanticTypeId},${tupleTarget.valueSemanticTypeId}>';
+			decision.runtimeModule = "Stdlib";
+			decision.runtimeOperation = tupleTarget.projection;
+			decision.evaluationSchedule = ["materialize-receiver", "project-field"];
+			decision.keyValueTupleTarget = tupleTarget;
+			decision.proofId = OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_ID;
+			decision.proofClaim = OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_CLAIM;
+		} else if (iteratorTarget == null) {
 			decision.receiverCarrierTypeId = "Obj.t";
 			decision.loadConversion = fieldSemanticTypeId == "Bool" ? UnboxBool : ObjObj;
 			decision.runtimeModule = "HxAnon";
@@ -433,6 +601,8 @@ class OcamlStructuralFieldPlanner {
 	function selectWrite(expression:TypedExpr, receiver:TypedExpr, field:ClassField, occurrenceOrdinal:Int):Null<OcamlStructuralFieldDecision> {
 		if (!OcamlStructuralFieldContract.ownsFieldName(field.name))
 			return null;
+		if (tupleProjectionTarget(receiver, field.name) != null)
+			throw 'reflaxe.ocaml [ocaml-structural-field:unsupported-tuple-write]: the ${field.name} field belongs to an immutable pair produced by Map.keyValueIterator(); assign to an ordinary object field or construct a new pair instead';
 		final fieldSemanticTypeId = TypeTools.toString(field.type);
 		final decision = baseDecision(expression, receiver, field, occurrenceOrdinal, WriteStoredField, fieldSemanticTypeId);
 		decision.receiverCarrierTypeId = "Obj.t";
@@ -464,6 +634,7 @@ class OcamlStructuralFieldPlanner {
 			runtimeRequirementIds: [],
 			evaluationSchedule: [],
 			iteratorTarget: null,
+			keyValueTupleTarget: null,
 			proofId: "",
 			proofClaim: "",
 			functionId: binding.functionId,
@@ -477,10 +648,139 @@ class OcamlStructuralFieldPlanner {
 		final provisional:OcamlStructuralFieldDecision = cast raw;
 		final id = OcamlStructuralFieldContract.decisionId(provisional);
 		Reflect.setField(raw, "id", id);
-		Reflect.setField(raw, "runtimeRequirementIds", [OcamlStructuralFieldContract.runtimeRequirementId(id, provisional.operation)]);
+		Reflect.setField(raw, "runtimeRequirementIds",
+			OcamlStructuralFieldContract.isTupleProjection(provisional.operation) ? [] : [OcamlStructuralFieldContract.runtimeRequirementId(id,
+				provisional.operation)]);
 		final decision:OcamlStructuralFieldDecision = cast raw;
 		OcamlStructuralFieldContract.require(decision);
 		return decision;
+	}
+
+	/**
+		Finds pair locals whose tuple representation is proven by existing calls.
+
+		The target intentionally accepts only direct compiler-typed local
+		initializers. It does not follow aliases, assignments, field names, or
+		anonymous-object shape. A future broader data-flow model must extend this
+		proof explicitly rather than making the syntax renderer guess.
+	**/
+	function discoverTuplePairLocals(root:TypedExpr):Map<Int, OcamlTuplePairLocalProof> {
+		final initializers:Array<OcamlLocalInitializer> = [];
+		final reassigned:Map<Int, Bool> = [];
+
+		function visit(expression:TypedExpr):Void {
+			switch (expression.expr) {
+				case TVar(local, initializer) if (initializer != null):
+					initializers.push({
+						hostLocalId: local.id,
+						semanticTypeId: TypeTools.toString(local.t),
+						expression: initializer
+					});
+					TypedExprTools.iter(initializer, visit);
+				case TBinop(OpAssign, {expr: TLocal(local)}, value):
+					reassigned.set(local.id, true);
+					visit(value);
+				case TBinop(OpAssignOp(_), {expr: TLocal(local)}, value):
+					reassigned.set(local.id, true);
+					visit(value);
+				case TUnop(OpIncrement | OpDecrement, _, {expr: TLocal(local)}):
+					reassigned.set(local.id, true);
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+
+		visit(root);
+		final iterators:Map<Int, OcamlTupleIteratorLocalProof> = [];
+		for (initializer in initializers) {
+			if (reassigned.exists(initializer.hostLocalId))
+				continue;
+			final expression = transparentExpression(initializer.expression);
+			final call = calls.decisionFor(expression);
+			final target = call == null ? null : call.standardIMapTarget;
+			if (call == null
+				|| call.kind != OcamlCallKind.StandardIMapMethod
+				|| target == null
+				|| target.operation != OcamlStandardIMapOperation.Pairs
+				|| target.resultSemanticTypeId != initializer.semanticTypeId)
+				continue;
+			iterators.set(initializer.hostLocalId, {
+				target: target,
+				iteratorProducerCallId: call.id,
+				iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id
+			});
+		}
+
+		final pairs:Map<Int, OcamlTuplePairLocalProof> = [];
+		for (initializer in initializers) {
+			if (reassigned.exists(initializer.hostLocalId))
+				continue;
+			final expression = transparentExpression(initializer.expression);
+			final call = calls.decisionFor(expression);
+			final target = call == null ? null : call.structuralIteratorTarget;
+			if (call == null
+				|| call.kind != OcamlCallKind.StructuralIteratorMethod
+				|| target == null
+				|| target.operation != OcamlStructuralIteratorOperation.Next
+				|| target.resultSemanticTypeId != initializer.semanticTypeId)
+				continue;
+			final receiverHostId = structuralCallReceiverLocalId(expression);
+			final iterator = receiverHostId == null ? null : iterators.get(receiverHostId);
+			if (iterator == null || target.receiverSemanticTypeId != iterator.target.resultSemanticTypeId)
+				continue;
+			pairs.set(initializer.hostLocalId, {
+				iterator: iterator,
+				pairProducerCallId: call.id,
+				pairLocalId: localIdentities.requireHostId(initializer.hostLocalId).id,
+				pairSemanticTypeId: initializer.semanticTypeId
+			});
+		}
+		return pairs;
+	}
+
+	/** Returns the tuple proof only for a `key` or `value` read on its exact pair local. */
+	function tupleProjectionTarget(receiver:TypedExpr, fieldName:String):Null<OcamlKeyValueTupleProjectionTarget> {
+		if (fieldName != "key" && fieldName != "value")
+			return null;
+		final hostLocalId = localExpressionId(receiver);
+		final pair = hostLocalId == null ? null : tuplePairsByHostLocalId.get(hostLocalId);
+		if (pair == null || TypeTools.toString(receiver.t) != pair.pairSemanticTypeId)
+			return null;
+		return {
+			projection: fieldName == "key" ? "fst" : "snd",
+			iteratorProducerCallId: pair.iterator.iteratorProducerCallId,
+			pairProducerCallId: pair.pairProducerCallId,
+			iteratorLocalId: pair.iterator.iteratorLocalId,
+			pairLocalId: pair.pairLocalId,
+			iteratorSemanticTypeId: pair.iterator.target.resultSemanticTypeId,
+			pairSemanticTypeId: pair.pairSemanticTypeId,
+			keySemanticTypeId: pair.iterator.target.keySemanticTypeId,
+			valueSemanticTypeId: pair.iterator.target.valueSemanticTypeId,
+			proofId: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_ID,
+			proofClaim: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_CLAIM
+		};
+	}
+
+	static function transparentExpression(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TMeta(_, inner): transparentExpression(inner);
+			case TCast(inner, null): transparentExpression(inner);
+			case _: expression;
+		}
+	}
+
+	static function localExpressionId(expression:TypedExpr):Null<Int> {
+		return switch (transparentExpression(expression).expr) {
+			case TLocal(local): local.id;
+			case _: null;
+		}
+	}
+
+	static function structuralCallReceiverLocalId(expression:TypedExpr):Null<Int> {
+		return switch (transparentExpression(expression).expr) {
+			case TCall({expr: TField(receiver, FAnon(_))}, []): localExpressionId(receiver);
+			case _: null;
+		}
 	}
 
 	static function readMismatch(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type,

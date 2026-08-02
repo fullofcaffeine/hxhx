@@ -127,7 +127,7 @@ class OcamlFunctionPlanSealer {
 		OcamlContainerElementPlanner.requireCompleteness(data.expr, binding, containerElements);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, anonymousStructures, representations).plan(data.expr);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, anonymousStructures, representations, localIdentities).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);

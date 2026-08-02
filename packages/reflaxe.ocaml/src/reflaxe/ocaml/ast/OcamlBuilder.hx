@@ -275,12 +275,13 @@ class OcamlBuilder {
 	}
 
 	/**
-		Stops syntax from deciding what an ambiguous `next` or `hasNext` means.
+		Stops syntax from deciding what an overlapping structural field means.
 
 		The final typed planner must first classify the occurrence as an ordinary
-		stored field or a captured Iterator method. Reaching this boundary without
-		that decision is an internal compiler error because choosing from the field
-		name alone can silently change valid linked-list behavior.
+		stored field, a captured Iterator method, or a proven Map-pair projection.
+		Reaching this boundary without that decision is an internal compiler error:
+		choosing from `next`, `hasNext`, `key`, or `value` alone can silently change
+		valid object or iteration behavior.
 	**/
 	function structuralFieldInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-structural-field:plan-invariant]: " + message;
@@ -5558,10 +5559,9 @@ class OcamlBuilder {
 					case TField(obj, FAnon(cfRef)):
 						final cf = cfRef.get();
 						switch (cf.name) {
-							case "key", "value":
-								OcamlExpr.EConst(OcamlConst.CUnit);
-							case "hasNext", "next":
-								structuralFieldInvariant('stored field assignment to "${cf.name}" reached the legacy name-only branch', e1.pos);
+							case "key", "value", "hasNext", "next":
+								structuralFieldInvariant('assignment to overlapping structural field "${cf.name}" reached syntax without its typed owner',
+									e1.pos);
 							case _:
 								if (isSysFileStatAnon(obj.t)) {
 									OcamlExpr.EConst(OcamlConst.CUnit);
@@ -8577,19 +8577,13 @@ class OcamlBuilder {
 					])
 				]);
 			case FAnon(cfRef):
-				// This is the remaining legacy KeyValueIterator bridge: it assumes `.key` and
-				// `.value` belong to an OCaml `(key, value)` pair based only on their names.
-				// Ordinary anonymous objects can use the same names, so haxe_ocaml-0uwin.21
-				// must replace this guess with a typed representation decision before syntax.
-				// `next` and `hasNext` already have that typed owner and must never reach here.
+				// `key`, `value`, `next`, and `hasNext` can mean either ordinary object
+				// fields or target protocol operations. Their typed structural-field plan
+				// must choose that behavior before this general field renderer runs.
 				final cf = cfRef.get();
 				switch (cf.name) {
-					case "key":
-						OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [buildExpr(obj)]);
-					case "value":
-						OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [buildExpr(obj)]);
-					case "hasNext", "next":
-						structuralFieldInvariant('field read from "${cf.name}" reached the legacy name-only branch', pos);
+					case "key", "value", "hasNext", "next":
+						structuralFieldInvariant('read from overlapping structural field "${cf.name}" reached syntax without its typed owner', pos);
 					case _:
 						// Some typedef-backed anonymous structures are represented as real OCaml records
 						// for better performance/ergonomics (e.g. `sys.FileStat`).

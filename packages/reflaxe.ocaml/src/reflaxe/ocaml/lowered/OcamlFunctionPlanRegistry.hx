@@ -176,9 +176,9 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v65";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v66";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
-	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
+	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/**
 		Builds the only nested-function ID accepted for one parent and occurrence.
@@ -492,7 +492,9 @@ class OcamlFunctionPlanRegistry {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]), anonymousStructures, representations).plan(expression);
+		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, expression);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]), anonymousStructures, representations,
+			localIdentities).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);

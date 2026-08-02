@@ -430,6 +430,7 @@ typedef InspectionStructuralIteratorCallTarget = {
 	or captures a real Iterator method as a function value. Inspection exposes this
 	distinction so a successful build cannot hide a return to field-name guessing.
 **/
+/** One validated stored field, Iterator method capture, or Map-pair projection. **/
 typedef InspectionStructuralField = {
 	final id:String;
 	final occurrenceOrdinal:Int;

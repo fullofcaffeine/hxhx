@@ -529,12 +529,13 @@ class CompilationContext {
 	}
 
 	/**
-		Records the runtime operation chosen for one `next` or `hasNext` field.
+		Records runtime support chosen for one overlapping structural field.
 
-		The sealed decision distinguishes an ordinary stored field from a captured
-		Iterator method before generated OCaml exists. This method preserves that
-		typed explanation in the runtime inventory instead of guessing from a field
-		name or scanning generated text.
+		The sealed decision distinguishes an ordinary stored field, a captured
+		Iterator method, and a proven Map-pair projection before generated OCaml
+		exists. Map-pair projections use OCaml Stdlib and add no repository runtime
+		module. This method preserves the typed explanation instead of guessing from
+		a field name or scanning generated text.
 	**/
 	public function recordStructuralFieldRuntimeRequirement(decision:OcamlStructuralFieldDecision):Void {
 		OcamlStructuralFieldRuntimeRequirementRecorder.record(runtimeRequirements, decision);

@@ -61,9 +61,9 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v65";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v66";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
-	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
+	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
@@ -165,7 +165,7 @@ class ReflaxeOcamlInspection {
 				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
 				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
 			}
-			lines.push('[PASS] Ambiguous structural fields: ${report.lowering.structuralFields.length} stored read, stored write, or captured Iterator method occurrence${report.lowering.structuralFields.length == 1 ? "" : "s"} were classified from final Haxe types before target syntax.');
+			lines.push('[PASS] Ambiguous structural fields: ${report.lowering.structuralFields.length} stored read, stored write, captured Iterator method, or proven Map-pair projection occurrence${report.lowering.structuralFields.length == 1 ? "" : "s"} were classified from final Haxe types before target syntax.');
 			for (field in report.lowering.structuralFields) {
 				lines.push('  - ${field.sourceFile} bytes ${field.sourceMin}-${field.sourceMax} ${field.fieldName}: ${field.operation} via ${field.runtimeModule}.${field.runtimeOperation}');
 			}
@@ -381,8 +381,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 52) {
-						throw 'Unsupported lowering report schema $version; expected 52.';
+					if (version != 53) {
+						throw 'Unsupported lowering report schema $version; expected 53.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -2518,6 +2518,14 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		for (field in structuralFields) {
+			final tupleProjection = field.operation == "project-tuple-key" || field.operation == "project-tuple-value";
+			if (tupleProjection) {
+				if (field.runtimeRequirementIds.length != 0
+					|| field.runtimeModule != "Stdlib"
+					|| (field.operation == "project-tuple-key" ? field.runtimeOperation != "fst" : field.runtimeOperation != "snd"))
+					throw 'Structural field decision "${field.id}" has an invalid Stdlib tuple projection.';
+				continue;
+			}
 			final iteratorMethod = field.operation == "capture-iterator-method";
 			final capability = iteratorMethod ? "haxe-iterator" : "haxe-structural-field";
 			final requirementId = field.id + ":runtime:" + capability;

@@ -1,4 +1,6 @@
 field.read=1
 field.nested=1
 field.hasNext=true
+field.entry=after:2
+iterator.entries=a:1,b:2
 listsort.values=1,2,3
