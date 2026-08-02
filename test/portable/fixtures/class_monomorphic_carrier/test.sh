@@ -77,7 +77,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v62'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v63'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'
@@ -376,7 +376,7 @@ if (
 	echo "The external inspector accepted an early return bound to a stale class layout" >&2
 	exit 1
 fi
-if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, or primitive-to-nullable payload crossing" "$invalid_control_nominal_log"; then
+if ! grep -Fq "invalid exact-value, nominal, nullable-carrier, Dynamic-carrier, or primitive-to-nullable payload crossing" "$invalid_control_nominal_log"; then
 	echo "The external inspector rejected the stale early-return class layout for an unexpected reason" >&2
 	cat "$invalid_control_nominal_log" >&2
 	exit 1

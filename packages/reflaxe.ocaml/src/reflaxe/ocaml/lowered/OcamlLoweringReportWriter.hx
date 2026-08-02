@@ -20,6 +20,7 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
@@ -257,8 +258,19 @@ class OcamlLoweringReportWriter {
 			final payload = control.payload;
 			if (payload != null) {
 				if (payload.inputSemanticTypeId == "Dynamic") {
-					if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload)) {
-						throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+					switch (control.kind) {
+						case Return:
+							if (!OcamlControlPlan.isAdmittedDynamicReturnPayload(payload))
+								throw 'Control decision "${control.id}" has an invalid Dynamic return carrier.';
+							requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
+								OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
+							requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId,
+								payload.outputCarrierTypeId, OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" output');
+						case Throw:
+							if (!OcamlControlPlan.isAdmittedDynamicThrowPayload(payload))
+								throw 'Control decision "${control.id}" has an invalid Dynamic exception carrier.';
+						case _:
+							throw 'Control decision "${control.id}" has a Dynamic payload on unsupported transfer ${control.kind}.';
 					}
 				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)
 					&& !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)) {

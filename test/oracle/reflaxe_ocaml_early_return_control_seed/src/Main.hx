@@ -71,6 +71,15 @@ class Main {
 		return "value";
 	}
 
+	/** Preserves an existing Dynamic carrier through an ordinary function return. */
+	static function dynamicBranch(enabled:Bool):Dynamic {
+		final early:Dynamic = 37;
+		if (enabled)
+			return early;
+		final fallback:Dynamic = "root-dynamic";
+		return fallback;
+	}
+
 	static function nestedClosure():Int {
 		final local = function(flag:Bool):Int {
 			if (flag)
@@ -122,12 +131,14 @@ class Main {
 		return local(true);
 	}
 
-	/** Keeps a Dynamic result outside the represented nested callback matrix. */
+	/** Preserves an existing Dynamic carrier across one closure-local early return. */
 	static function nestedDynamicClosure():Dynamic {
 		final local = function(enabled:Bool):Dynamic {
+			final early:Dynamic = 41;
 			if (enabled)
-				return 41;
-			return "dynamic";
+				return early;
+			final fallback:Dynamic = "dynamic";
+			return fallback;
 		};
 		return local(true);
 	}
@@ -247,6 +258,7 @@ class Main {
 		printLine("string0=" + stringThroughTry(false));
 		printLine("stringNull1=" + (nullableStringCarrier(true) == null));
 		printLine("stringNull0=" + nullableStringCarrier(false));
+		printLine("dynamicBranch=" + (dynamicBranch(true) == 37));
 		printLine("closure=" + nestedClosure());
 		printLine("boolClosure=" + nestedBoolClosure());
 		printLine("stringClosure=" + nestedStringClosure());

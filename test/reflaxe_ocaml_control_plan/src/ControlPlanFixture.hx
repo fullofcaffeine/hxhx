@@ -98,9 +98,11 @@ class ControlPlanFixture {
 		final semanticType = semanticTypeId ?? "Int";
 		final outputSemanticType = outputSemanticTypeId ?? semanticType;
 		final nullableCarrier = semanticType == "Null<Int>" || semanticType == "Null<Bool>";
-		final selectedConversion = conversion ?? (nullableCarrier ? OcamlControlPayloadConversion.PreserveNullableCarrier : OcamlControlPayloadConversion.BoxAndRecoverExactValue);
+		final dynamicCarrier = semanticType == "Dynamic";
+		final selectedConversion = conversion ?? (nullableCarrier ? OcamlControlPayloadConversion.PreserveNullableCarrier : (dynamicCarrier ? OcamlControlPayloadConversion.PreserveDynamicReturnCarrier : OcamlControlPayloadConversion.BoxAndRecoverExactValue));
 		final selectedProofId = proofId ?? switch (selectedConversion) {
 			case PreserveNullableCarrier: OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID;
+			case PreserveDynamicReturnCarrier: OcamlControlPlan.DYNAMIC_RETURN_PROOF_ID;
 			case BoxExactIntToNullableCarrier: OcamlControlPlan.NULLABLE_INT_CONVERSION_RETURN_PROOF_ID;
 			case BoxExactBoolToNullableCarrier: OcamlControlPlan.NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID;
 			case _: OcamlControlPlan.EXACT_VALUE_RETURN_PROOF_ID;
@@ -108,14 +110,14 @@ class ControlPlanFixture {
 		final carrierType = switch (semanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
-			case "Null<Int>", "Null<Bool>": "Obj.t";
+			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
 		final outputCarrierType = switch (outputSemanticType) {
 			case "Int": "int";
 			case "Bool": "bool";
-			case "Null<Int>", "Null<Bool>": "Obj.t";
+			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case _: "unsupported";
 		}
@@ -687,8 +689,12 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(returnDecision("control:return:string", 45, null, null, null, "String"));
 		final nullableIntReturn = returnDecision("control:return:nullable-int", 46, null, null, null, "Null<Int>");
 		final nullableBoolReturn = returnDecision("control:return:nullable-bool", 47, null, null, null, "Null<Bool>");
+		final dynamicReturn = returnDecision("control:return:dynamic", 47, null, null, null, "Dynamic");
 		OcamlControlPlan.requireDecision(nullableIntReturn);
 		OcamlControlPlan.requireDecision(nullableBoolReturn);
+		OcamlControlPlan.requireDecision(dynamicReturn);
+		if (dynamicReturn.payload == null || !OcamlControlPlan.isAdmittedDynamicReturnPayload(dynamicReturn.payload))
+			throw "Exact Dynamic return lost its carrier-preserving function boundary";
 		final nullableReturnOnly = new OcamlControlPlan(true, false, false, binding(), [], [nullableIntReturn]);
 		if (nullableReturnOnly.returnBoundaryDecision()?.payload?.conversion != OcamlControlPayloadConversion.PreserveNullableCarrier)
 			throw "Exact nullable return lost its carrier-preserving function boundary";
@@ -768,6 +774,19 @@ class ControlPlanFixture {
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongNullableProof]));
 		final mismatchedNullablePayload = returnDecision("control:return:mismatched-nullable", 90, null, null, null, "Null<Int>", "Int");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [mismatchedNullablePayload]));
+		final boxedDynamicReturn = returnDecision("control:return:boxed-dynamic", 90, null, OcamlControlPayloadConversion.BoxAndRecoverExactValue, null,
+			"Dynamic");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [boxedDynamicReturn]));
+		final dynamicReturnWithWrongCarrier = returnDecision("control:return:dynamic-wrong-carrier", 90, null, null, null, "Dynamic");
+		Reflect.setField(dynamicReturnWithWrongCarrier.payload, "inputCarrierTypeId", "int");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [dynamicReturnWithWrongCarrier]));
+		final dynamicReturnWithWrongRepresentation = returnDecision("control:return:dynamic-wrong-representation", 90, null, null, null, "Dynamic");
+		Reflect.setField(dynamicReturnWithWrongRepresentation.payload, "outputRepresentationId", "representation:Dynamic:other");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [dynamicReturnWithWrongRepresentation]));
+		final foreignDynamicBinding = binding("body:foreign-dynamic-return");
+		final dynamicReturnWithWrongBinding = returnDecision("control:return:dynamic-wrong-binding", 90, null, null, null, "Dynamic", null, null,
+			foreignDynamicBinding);
+		expectThrows("stale-binding", () -> new OcamlControlPlan(true, false, false, binding(), [], [dynamicReturnWithWrongBinding]));
 		final wrongDirectionalConversion = returnDecision("control:return:wrong-directional-conversion", 91, null,
 			OcamlControlPayloadConversion.BoxExactBoolToNullableCarrier, null, "Int", "Null<Int>");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(true, false, false, binding(), [], [wrongDirectionalConversion]));

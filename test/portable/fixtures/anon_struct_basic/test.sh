@@ -106,7 +106,7 @@ for (const operation of operations) {
 	const compoundWrite = operation.kind === 'compound-write-field'
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v62'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v63'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'

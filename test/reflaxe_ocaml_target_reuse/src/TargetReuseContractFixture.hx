@@ -14,7 +14,7 @@ class TargetReuseContractFixture {
 			?mliEnabled:Bool = false):OcamlTargetReuseObservation {
 		return {
 			packageVersion: "0.33.4",
-			pipelineRevision: "ocaml-function-plans-v62",
+			pipelineRevision: "ocaml-function-plans-v63",
 			sourceConfigurationRevision: configurationRevision ?? ("sha256:" + Sha256.encode("configuration")),
 			outputSchemaRevision: "sha256:" + Sha256.encode("output-schema"),
 			runtimeInputRevision: "sha256:" + Sha256.encode("runtime-input"),

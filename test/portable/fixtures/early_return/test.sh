@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 30) {
-	fail(`expected 30 represented return decisions, including nested catch and loop paths, got ${returnControls.length}`)
+if (returnControls.length !== 32) {
+	fail(`expected 32 represented return decisions, including ordinary and nested Dynamic, catch, and loop paths, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -47,6 +47,7 @@ const expectedByFunction = new Map([
 	['boolBranch', 1],
 	['stringThroughTry', 2],
 	['nullableStringCarrier', 1],
+	['dynamicBranch', 1],
 	['nestedClosure', 1]
 ])
 for (const [name, expectedCount] of expectedByFunction) {
@@ -72,6 +73,7 @@ const representedNestedFunctions = new Map([
 	['nestedStringClosure', 'String'],
 	['nestedNullableIntClosure', 'Null<Int>'],
 	['nestedNullableBoolClosure', 'Null<Bool>'],
+	['nestedDynamicClosure', 'Dynamic'],
 	['nestedZeroArgumentClosure', 'Int']
 ])
 for (const [functionName, semanticType] of representedNestedFunctions) {
@@ -82,7 +84,7 @@ for (const [functionName, semanticType] of representedNestedFunctions) {
 		fail(`${functionName} did not seal one nested ${semanticType} return decision`)
 	}
 }
-for (const functionName of ['nestedDynamicClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+for (const functionName of ['nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
 	if (returnControls.some(control =>
 		control.functionId.includes(`|function|${functionName}|`)
 		&& control.functionId.includes('|nested-function|'))) {
@@ -115,7 +117,7 @@ if (nestedThrows.length !== 1
 	|| nestedThrows[0].payload?.inputCarrierTypeId !== 'int'
 	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
 	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
-	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v5') {
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v6') {
 	fail('nestedThrowCatchClosure did not seal its exact Int throw under the nested binding')
 }
 const nestedCatches = report.controlCatches.filter(catchChain =>
@@ -124,7 +126,7 @@ const nestedCatches = report.controlCatches.filter(catchChain =>
 		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
 if (nestedCatches.length !== 2
 	|| nestedCatches.some(catchChain =>
-		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v5'
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v6'
 		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
 		|| catchChain.clauses.length !== 1)) {
 	fail('the two nested catch chains are missing or do not preserve private control signals')
@@ -152,7 +154,7 @@ if (nestedLoopTargets.length !== 1
 	|| nestedLoopReturns.length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
-	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v5'
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v6'
 	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
 	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
 	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
@@ -186,8 +188,8 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v5'
-			: control.pipelineRevision !== 'ocaml-function-plans-v62')) {
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v6'
+			: control.pipelineRevision !== 'ocaml-function-plans-v63')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -223,8 +225,17 @@ for (const control of returnControls) {
 		&& payload.outputRepresentationId === 'representation:Null<Bool>:internal-value'
 		&& payload.conversion === 'box-exact-bool-to-nullable-carrier'
 		&& payload.proofId === 'exact-bool-to-nullable-early-return-control-v1'
+	const dynamicCarrier = control.proofId === 'dynamic-carrier-return-control-v1'
+		&& payload.inputSemanticTypeId === 'Dynamic'
+		&& payload.inputCarrierTypeId === 'Obj.t'
+		&& payload.inputRepresentationId === 'representation:Dynamic:internal-value'
+		&& payload.outputSemanticTypeId === 'Dynamic'
+		&& payload.outputCarrierTypeId === 'Obj.t'
+		&& payload.outputRepresentationId === payload.inputRepresentationId
+		&& payload.conversion === 'preserve-dynamic-return-carrier'
+		&& payload.proofId === 'dynamic-carrier-return-control-v1'
 	if (payload.signalCarrierTypeId !== 'Obj.t'
-		|| (!exactValue && !nullableInt && !nullableBool)
+		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier)
 		|| !payload.proofClaim) {
 		fail(`control decision ${control.id} has an incomplete represented return payload crossing`)
 	}
@@ -289,6 +300,7 @@ for (const [functionName, expectedType] of [
 	['nestedStringClosure', 'string'],
 	['nestedNullableIntClosure', 'Obj.t'],
 	['nestedNullableBoolClosure', 'Obj.t'],
+	['nestedDynamicClosure', 'Obj.t'],
 	['nestedZeroArgumentClosure', 'int']
 ]) {
 	const start = source.indexOf(`let ${functionName} =`)
@@ -304,7 +316,38 @@ for (const [functionName, expectedType] of [
 		fail(`${functionName} did not consume its represented nested return plan`)
 	}
 }
-for (const functionName of ['nestedDynamicClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+const dynamicClosureStart = source.indexOf('let nestedDynamicClosure =')
+const dynamicClosureEnd = source.indexOf('\nlet nestedZeroArgumentClosure =', dynamicClosureStart)
+const dynamicClosureBody = source.slice(dynamicClosureStart, dynamicClosureEnd)
+if (dynamicClosureStart < 0
+	|| dynamicClosureEnd < 0
+	|| !dynamicClosureBody.includes('HxRuntime.Hx_return early')
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(__ret_\d+ : Obj\.t\)/.test(dynamicClosureBody)
+	|| dynamicClosureBody.includes('HxRuntime.Hx_return (Obj.repr')
+	|| dynamicClosureBody.includes('Obj.obj')
+	|| dynamicClosureBody.includes('Obj.magic')
+	|| dynamicClosureBody.includes('__fallback_result')) {
+	fail('nestedDynamicClosure did not preserve its existing Dynamic Obj.t carrier through the private return signal')
+}
+const dynamicBranchControl = returnControls.find(control =>
+	control.functionId.includes('|function|dynamicBranch|')
+	&& !control.functionId.includes('|nested-function|'))
+const dynamicBranchStart = source.indexOf('let dynamicBranch =')
+const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
+const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v63'
+	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
+	|| dynamicBranchStart < 0
+	|| dynamicBranchEnd < 0
+	|| !dynamicBranchBody.includes('HxRuntime.Hx_return early')
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(__ret_\d+ : Obj\.t\)/.test(dynamicBranchBody)
+	|| dynamicBranchBody.includes('HxRuntime.Hx_return (Obj.repr')
+	|| dynamicBranchBody.includes('Obj.obj')
+	|| dynamicBranchBody.includes('Obj.magic')
+	|| dynamicBranchBody.includes('__fallback_result')) {
+	fail('dynamicBranch did not preserve its existing Dynamic Obj.t carrier through the root v63 return plan')
+}
+for (const functionName of ['nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
 	const start = source.indexOf(`let ${functionName} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	const body = source.slice(start, next)
@@ -382,10 +425,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 30
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 32
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 30 validated represented control decisions')
+	throw new Error('public inspection did not expose the 32 validated represented control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=30"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=32"

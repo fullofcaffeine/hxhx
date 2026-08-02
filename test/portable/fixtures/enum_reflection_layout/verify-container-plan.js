@@ -182,7 +182,7 @@ try {
 	expectLoweringRejection('a standalone conversion using the function pipeline revision',
 		/invalid exact enum-to-Dynamic array contract/, report => {
 			const standalone = report.containerElementConversions.find(entry => entry.functionId.startsWith('standalone:'))
-			standalone.pipelineRevision = 'ocaml-function-plans-v62'
+			standalone.pipelineRevision = 'ocaml-function-plans-v63'
 		})
 	expectLoweringRejection('a corrupt container carrier', /invalid exact enum-to-Dynamic array contract/, report => {
 		report.containerElementConversions[0].inputCarrierTypeId = 'haxe-enum-native-variant-carrier-v1:OtherEnum'

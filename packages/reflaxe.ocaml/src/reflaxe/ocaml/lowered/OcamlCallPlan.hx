@@ -1243,9 +1243,11 @@ class OcamlCallPlanner {
 		The caller supplies a binding whose function ID already names the literal's
 		stable lexical occurrence. The result must use a carrier already owned by the
 		existing first-class function-value matrix: exact Bool/Int/String or nullable
-		Int/Bool. Dynamic and nominal classes remain explicit deferrals because this
-		boundary does not yet give them a closed callback proof. Zero-argument
-		literals use the same represented result proof with an empty argument list.
+		Int/Bool, or Dynamic. Dynamic already has one closed `Obj.t` function-value
+		carrier, so a callback can preserve it without discovering a concrete runtime
+		type. Nominal classes remain explicit deferrals because this boundary does not
+		yet give them a closed callback proof. Zero-argument literals use the same
+		represented result proof with an empty argument list.
 	**/
 	public function boundaryForNestedRepresentedResult(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
 		final functionType:Type = switch (TypeTools.follow(tfunc.t)) {
@@ -1257,7 +1259,7 @@ class OcamlCallPlanner {
 				], tfunc.t);
 		};
 		final signature = selectAdmittedSignature(functionType, null, representations);
-		if (signature == null || signature.resultKind != OcamlCallResultKind.Value || signature.resultSemanticTypeId == "Dynamic")
+		if (signature == null || signature.resultKind != OcamlCallResultKind.Value)
 			return null;
 		final argumentRepresentations:Array<OcamlRepresentationDecision> = [];
 		for (argument in signature.arguments) {
@@ -1270,7 +1272,7 @@ class OcamlCallPlanner {
 		if (resultRepresentation == null)
 			return null;
 		switch (resultRepresentation.semanticTypeId) {
-			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>":
+			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic":
 			case _:
 				return null;
 		}

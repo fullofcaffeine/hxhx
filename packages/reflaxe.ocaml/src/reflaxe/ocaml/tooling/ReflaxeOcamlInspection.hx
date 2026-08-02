@@ -59,8 +59,8 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v62";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v5";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v63";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -557,6 +557,14 @@ class ReflaxeOcamlInspection {
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
+							final dynamicPayloadValid = payload.inputSemanticTypeId == "Dynamic"
+								&& payload.inputCarrierTypeId == "Obj.t"
+								&& payload.inputRepresentationId == "representation:Dynamic:internal-value"
+								&& sameSides
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "preserve-dynamic-return-carrier"
+								&& payload.proofId == "dynamic-carrier-return-control-v1"
+								&& control.proofId == "dynamic-carrier-return-control-v1";
 							final nullableIntConversionValid = payload.inputSemanticTypeId == "Int"
 								&& payload.inputCarrierTypeId == "int"
 								&& payload.inputRepresentationId == "representation:Int:internal-value"
@@ -595,9 +603,9 @@ class ReflaxeOcamlInspection {
 								&& control.proofId == "exact-monomorphic-class-early-return-control-v1";
 							if (!commonPayloadValid
 								|| payload.proofClaim.length == 0
-								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !nullableIntConversionValid
-									&& !nullableBoolConversionValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, or primitive-to-nullable payload crossing.';
+								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !dynamicPayloadValid
+									&& !nullableIntConversionValid && !nullableBoolConversionValid)) {
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, Dynamic-carrier, or primitive-to-nullable payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';

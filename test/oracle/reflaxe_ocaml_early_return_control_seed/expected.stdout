@@ -11,6 +11,7 @@ string1=early
 string0=late
 stringNull1=true
 stringNull0=value
+dynamicBranch=true
 closure=8
 boolClosure=true
 stringClosure=nested-string

@@ -69,6 +69,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final BoxAndRecoverNominalValue = "box-and-recover-nominal-value";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
+	final PreserveDynamicReturnCarrier = "preserve-dynamic-return-carrier";
 	final BoxExactIntToNullableCarrier = "box-exact-int-to-nullable-carrier";
 	final BoxExactBoolToNullableCarrier = "box-exact-bool-to-nullable-carrier";
 	final ReprAndRecoverExactValue = "repr-and-recover-exact-value";
@@ -318,6 +319,7 @@ typedef OcamlCatchChainOccurrence = {
 **/
 class OcamlControlPlan {
 	public static inline final EXACT_VALUE_RETURN_PROOF_ID = "exact-value-early-return-control-v2";
+	public static inline final DYNAMIC_RETURN_PROOF_ID = "dynamic-carrier-return-control-v1";
 	public static inline final EXACT_NOMINAL_RETURN_PROOF_ID = "exact-monomorphic-class-early-return-control-v1";
 	public static inline final NULLABLE_CARRIER_RETURN_PROOF_ID = "exact-nullable-carrier-early-return-control-v1";
 	public static inline final NULLABLE_INT_CONVERSION_RETURN_PROOF_ID = "exact-int-to-nullable-early-return-control-v1";
@@ -801,6 +803,12 @@ class OcamlControlPlan {
 							|| payload.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID
 							|| decision.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid nullable-carrier payload crossing';
+						}
+					case PreserveDynamicReturnCarrier:
+						if (!isAdmittedDynamicReturnPayload(payload)
+							|| payload.proofId != DYNAMIC_RETURN_PROOF_ID
+							|| decision.proofId != DYNAMIC_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid Dynamic carrier crossing';
 						}
 					case BoxExactIntToNullableCarrier:
 						if (!isExactNullableConversion(payload, "Int", "int", "representation:Int:internal-value", "Null<Int>",
@@ -1384,6 +1392,25 @@ class OcamlControlPlan {
 	}
 
 	/**
+		Reports whether an existing Dynamic value crosses a function return unchanged.
+
+		Dynamic uses `Obj.t` as its normal internal target representation. The private
+		return signal also carries `Obj.t`, so an admitted return neither boxes the value
+		again nor guesses its concrete runtime type while printing OCaml syntax.
+	**/
+	public static function isAdmittedDynamicReturnPayload(payload:OcamlControlPayloadPlan):Bool {
+		return payload.inputSemanticTypeId == "Dynamic"
+			&& payload.inputCarrierTypeId == "Obj.t"
+			&& payload.inputRepresentationId == "representation:Dynamic:internal-value"
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& payload.outputSemanticTypeId == "Dynamic"
+			&& payload.outputCarrierTypeId == "Obj.t"
+			&& payload.outputRepresentationId == "representation:Dynamic:internal-value"
+			&& payload.conversion == OcamlControlPayloadConversion.PreserveDynamicReturnCarrier
+			&& payload.nominalRepresentation == null;
+	}
+
+	/**
 		Reports whether an exact generated Haxe exception wrapper crosses the
 		private exception channel without changing object identity.
 
@@ -1430,7 +1457,7 @@ class OcamlControlPlan {
 			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
 			case "Dynamic":
 				switch (haxe.macro.TypeTools.follow(expression.t)) {
-					case TDynamic(_): payload.inputCarrierTypeId == "Obj.t" && payload.inputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID && payload.conversion == OcamlControlPayloadConversion.PreserveDynamicThrowCarrier;
+					case TDynamic(_): isAdmittedDynamicReturnPayload(payload) || isAdmittedDynamicThrowPayload(payload);
 					case _:
 						false;
 				}
@@ -1737,7 +1764,7 @@ class OcamlControlPlanner {
 						});
 						return;
 					}
-					final representation = value == null ? null : exactValueRepresentation(value);
+					final representation = value == null ? null : returnRepresentation(value);
 					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
 					if (value == null || payload == null) {
 						returnFamilyAdmitted = false;
@@ -2155,6 +2182,14 @@ class OcamlControlPlanner {
 		return null;
 	}
 
+	/** Selects a value representation that may cross one private return signal. */
+	function returnRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+		final exact = exactValueRepresentation(expression);
+		if (exact != null)
+			return exact;
+		return OcamlRepresentationRegistry.isExactDynamic(expression.t) ? representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue) : null;
+	}
+
 	/**
 		Selects a represented value that can cross the exception channel opaquely.
 
@@ -2251,6 +2286,14 @@ class OcamlControlPlanner {
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.PreserveNullableCarrier, OcamlControlPlan.NULLABLE_CARRIER_RETURN_PROOF_ID,
 				proofClaim);
 		}
+		if (sameSide
+			&& input.semanticTypeId == "Dynamic"
+			&& input.carrierTypeId == "Obj.t"
+			&& input.id == "representation:Dynamic:internal-value") {
+			final proofClaim = "The final typed Haxe body already stores this Dynamic return as the selected Obj.t carrier. The private return signal and the callable boundary preserve that same carrier without another box, unchecked cast, or runtime type guess.";
+			return makeReturnPayload(input, output, OcamlControlPayloadConversion.PreserveDynamicReturnCarrier, OcamlControlPlan.DYNAMIC_RETURN_PROOF_ID,
+				proofClaim);
+		}
 		if (input.semanticTypeId == "Int" && output.outputSemanticTypeId == "Null<Int>") {
 			final proofClaim = "The final typed Haxe body converts this exact Int return to the function's exact Null<Int> Obj.t carrier once before the private return signal. The owning function boundary preserves that resulting carrier unchanged.";
 			return makeReturnPayload(input, output, OcamlControlPayloadConversion.BoxExactIntToNullableCarrier,
@@ -2303,6 +2346,8 @@ class OcamlControlPlanner {
 		return switch (payload.conversion) {
 			case PreserveNullableCarrier:
 				'This return is nested below the function\'s direct result path, so it preserves the current exact-${payload.outputSemanticTypeId} carrier through one revision-bound private runtime signal.';
+			case PreserveDynamicReturnCarrier:
+				"This return is nested below the function's direct result path, so it preserves the existing Dynamic Obj.t carrier through one revision-bound private runtime signal.";
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
 				'This return is nested below the function\'s direct result path, so it performs the sealed ${payload.inputSemanticTypeId}-to-${payload.outputSemanticTypeId} conversion before one revision-bound private runtime signal.';
 			case BoxAndRecoverNominalValue:
@@ -2353,6 +2398,15 @@ class OcamlControlPlanner {
 			&& result.conversion == OcamlCallCarrierConversion.Identity
 			&& OcamlControlPlan.isAdmittedExactSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId);
 		if (exactIdentity)
+			return OcamlCallPlan.copyValue(result);
+		final dynamicIdentity = result.inputSemanticTypeId == "Dynamic"
+			&& result.inputCarrierTypeId == "Obj.t"
+			&& result.inputRepresentationId == "representation:Dynamic:internal-value"
+			&& result.outputSemanticTypeId == "Dynamic"
+			&& result.outputCarrierTypeId == "Obj.t"
+			&& result.outputRepresentationId == "representation:Dynamic:internal-value"
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (dynamicIdentity)
 			return OcamlCallPlan.copyValue(result);
 		final nominalRepresentation = representations.monomorphicClassValue(result.outputSemanticTypeId);
 		final nominalIdentity = nominalRepresentation != null
