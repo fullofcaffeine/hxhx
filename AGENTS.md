@@ -102,19 +102,19 @@ Agent policy:
 - When a bead has a `thinking:*` label, match reasoning depth to that label automatically.
 - If a claimed bead has no `thinking:*` label, infer one immediately and add it before substantial work.
 - `thinking:xhigh`, `thinking:max`, and `thinking:ultra` should get a second-pass review before closure.
-  - Preferred: an Oracle checkpoint/review.
-  - Acceptable fallback: an explicit written second-pass design review recorded in the bead comments.
-- Use GPT-5.6 Sol for repository work and GPT-5.6 Pro for rare manual Oracle reviews while this policy remains current. If the active environment cannot honor the repository-work model choice, say so instead of silently claiming it did.
+  - Use Oracle only when the work is also genuinely critical and remains unusually hard, materially undefined, non-convergent, or in need of a higher-quality independent challenge.
+  - Otherwise use an explicit written second-pass design review recorded in the bead comments.
+- Use GPT-5.6 Sol for repository work and the `$oracle-review` facade for rare GPT-5.6 Pro planning or reviews while this policy remains current. If the active environment cannot honor the repository-work model choice, say so instead of silently claiming it did.
 - Oracle is a review/escalation tool for `thinking:xhigh` and above; it is not a substitute for implementation, tests, or CI evidence.
 - Do not escalate to extended reasoning or Oracle review by default.
   - Use the current bead thinking level first.
   - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh` or above, or when a lower-level task turns into scope, release, or provenance policy work.
   - When escalation becomes necessary, state that explicitly in the session hand-off or work log so the threshold is visible instead of assumed.
 - Use `max` for deeper single-agent reasoning only when representative work justifies its extra latency. Use `ultra` only when there are concrete, bounded workstreams that can run independently; name those workstreams before delegating and synthesize their evidence before deciding.
-- If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
+- If genuinely critical implementation/debugging stops converging and no credible local next step remains, escalate to Oracle explicitly instead of grinding indefinitely.
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
-  - Use the globally installed `$oracle-review` skill for the detailed prompt, sanitized selective or whole-repository Repomix bundles, checked ZIP, pending-request check, and archive lifecycle under `/tmp/oracle`. The human performs the GPT-5.6 Pro handoff and pastes the response back. Public source and install instructions: https://github.com/fullofcaffeine/caf-skills/tree/main/skills/oracle-review
+  - Invoke the globally installed `$oracle-review` skill for planning or review and let its caf-oracle facade own the ledger, agent provenance, checked evidence, dedicated browser dispatch, recovery, response capture, disposition, and archive. Do not maintain a parallel `/tmp/oracle` queue or manually upload and paste when the tool is available. If `$show-me-your-work` is active, link its concise trail to the request rather than duplicating Oracle artifacts.
 - Document modules and classes by default.
   - Add or update module/class documentation when creating or substantially changing one, unless the file's existing convention clearly does not support doc comments.
   - Add function/method documentation once behavior, invariants, side effects, target semantics, or call contracts exceed what a reader can reasonably infer from the name and type.
