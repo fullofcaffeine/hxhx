@@ -1520,7 +1520,7 @@ class ControlPlanFixture {
 		});
 		final caughtFunction = switch (caughtExpression.expr) {
 			case TFunction(tfunc): tfunc;
-			case _: throw "The catch-exclusion fixture did not type as a function literal";
+			case _: throw "The nested catch-completeness fixture did not type as a function literal";
 		};
 		final caughtExternalLocals = nestedExternalLocals(caughtExpression);
 		final caughtParent:OcamlFunctionPlanBinding = {
@@ -1537,6 +1537,26 @@ class ControlPlanFixture {
 		final caughtDecision = returnDecision("control:return:nested-caught", caughtReturnSource.min, caughtBinding.functionId, null, null, "Int", null, null,
 			caughtBinding, caughtReturnSource);
 		final caughtTry = firstTry(caughtFunction.expr);
+		// A catch chain from an ordinary function cannot be attached to a nested
+		// function merely because its source shape looks compatible. Construction
+		// must reject the foreign function and revision before the catalog or target
+		// syntax can observe it.
+		final foreignCaughtChain = catchChain("control-catch-chain:nested-foreign", [
+			catchClause("control-catch-clause:nested-foreign", caughtReturnSource.min, 0, "_", "Dynamic")
+		]);
+		expectThrows("stale-catch-chain",
+			() -> new OcamlControlPlan(true, true, true, caughtBinding, [], [caughtDecision], [], [{expression: caughtReturn, decisionId: caughtDecision.id}],
+				[foreignCaughtChain], [
+				{
+					expression: caughtTry,
+					occurrenceId: "catch-occurrence:nested-foreign",
+					source: OcamlLoweredOrigin.sourceSpan(caughtTry.pos),
+					chainId: foreignCaughtChain.id
+				}
+			]));
+		// An observed nested try with no admitted chain is a deliberate legacy
+		// disposition. The registry must reject it now that nested catches are
+		// allowed, rather than confusing "observed" with "fully represented".
 		final caughtControls = new OcamlControlPlan(true, true, true, caughtBinding, [], [caughtDecision], [],
 			[{expression: caughtReturn, decisionId: caughtDecision.id}], [], [
 			{

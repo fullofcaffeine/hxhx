@@ -22,4 +22,5 @@ unsupportedThrowClosure=47
 nominalClosure=53
 deepClosure=14
 catchClosure=15
+throwCatchClosure=22
 OK early_return_control

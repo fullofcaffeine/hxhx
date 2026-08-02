@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 26) {
-	fail(`expected 26 represented return decisions, including eight nested function literals, got ${returnControls.length}`)
+if (returnControls.length !== 29) {
+	fail(`expected 29 represented return decisions, including nested catch paths, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -97,10 +97,44 @@ if (deepNestedFunctionControls.length !== 2
 		control.functionId.split('|nested-function|').length - 1 === 2)) {
 	fail('the two-level closure did not preserve an independently sealed child under its admitted nested parent')
 }
-if (returnControls.some(control =>
-	control.functionId.includes('|function|nestedCatchClosure|')
-	&& control.functionId.includes('|nested-function|'))) {
-	fail('the first return-only nested slice incorrectly admitted a function containing try/catch')
+for (const [functionName, expectedCount] of [['nestedCatchClosure', 2], ['nestedThrowCatchClosure', 1]]) {
+	const decisions = returnControls.filter(control =>
+		control.functionId.includes(`|function|${functionName}|`)
+		&& control.functionId.includes('|nested-function|'))
+	if (decisions.length !== expectedCount) {
+		fail(`${functionName} did not seal its ${expectedCount} nested return decisions`)
+	}
+}
+
+const nestedThrows = report.controls.filter(control =>
+	control.kind === 'throw'
+	&& control.functionId.includes('|function|nestedThrowCatchClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (nestedThrows.length !== 1
+	|| nestedThrows[0].payload?.inputSemanticTypeId !== 'Int'
+	|| nestedThrows[0].payload?.inputCarrierTypeId !== 'int'
+	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
+	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v5') {
+	fail('nestedThrowCatchClosure did not seal its exact Int throw under the nested binding')
+}
+const nestedCatches = report.controlCatches.filter(catchChain =>
+	catchChain.functionId.includes('|nested-function|')
+	&& (catchChain.functionId.includes('|function|nestedCatchClosure|')
+		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
+if (nestedCatches.length !== 2
+	|| nestedCatches.some(catchChain =>
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v5'
+		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
+		|| catchChain.clauses.length !== 1)) {
+	fail('the two nested catch chains are missing or do not preserve private control signals')
+}
+const intCatch = nestedCatches.find(catchChain => catchChain.functionId.includes('|function|nestedThrowCatchClosure|'))
+if (intCatch?.clauses[0].semanticTypeId !== 'Int'
+	|| intCatch.clauses[0].outputCarrierTypeId !== 'int'
+	|| intCatch.clauses[0].matchPolicy !== 'exact-runtime-tag'
+	|| intCatch.clauses[0].runtimeTag !== 'Int') {
+	fail('nestedThrowCatchClosure did not seal the exact Int catch policy')
 }
 
 const ids = new Set()
@@ -123,7 +157,7 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v4'
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v5'
 			: control.pipelineRevision !== 'ocaml-function-plans-v62')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
@@ -263,6 +297,28 @@ if ((deepClosureBody.match(/HxRuntime\.Hx_return/g) ?? []).length < 4
 	|| deepClosureBody.includes('Obj.magic')) {
 	fail('the two-level nested functions did not consume their separate exact-Int return plans')
 }
+for (const functionName of ['nestedCatchClosure', 'nestedThrowCatchClosure']) {
+	const start = source.indexOf(`let ${functionName} =`)
+	const next = source.indexOf('\nlet ', start + 1)
+	const body = source.slice(start, next)
+	if (start < 0
+		|| next < 0
+		|| !body.includes('HxRuntime.Hx_return')
+		|| !body.includes('HxRuntime.Hx_exception')
+		|| !body.includes('raise (HxRuntime.Hx_return')
+		|| body.includes('__fallback_result')
+		|| body.includes('Obj.magic')) {
+		fail(`${functionName} did not consume its nested return and catch plan without legacy result recovery`)
+	}
+}
+const throwCatchStart = source.indexOf('let nestedThrowCatchClosure =')
+const throwCatchEnd = source.indexOf('\nlet main =', throwCatchStart)
+const throwCatchBody = source.slice(throwCatchStart, throwCatchEnd)
+if (!throwCatchBody.includes('HxType.hx_throw_typed_rtti (Obj.repr 21) ["Dynamic"]')
+	|| !throwCatchBody.includes('HxRuntime.tags_has __exn_tags_')
+	|| !throwCatchBody.includes('"Int"')) {
+	fail('nestedThrowCatchClosure did not consume the planned exact Int throw and catch tags')
+}
 NODE
 
 cp "$REPORT_FILE" "$REPORT_COPY"
@@ -285,10 +341,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 26
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 29
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 26 validated represented control decisions')
+	throw new Error('public inspection did not expose the 29 validated represented control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=26"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=29"

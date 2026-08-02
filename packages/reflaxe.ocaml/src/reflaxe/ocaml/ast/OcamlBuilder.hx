@@ -7698,7 +7698,8 @@ class OcamlBuilder {
 			example, an admitted `Bool` closure with an early `return true` raises and
 			recovers the already-selected Bool carrier without an unchecked fallback cast.
 			A `null` plan is allowed only when the parent catalog explicitly records that
-			this literal is outside the represented, return-only nested-function slice.
+			this literal has an unsupported result or an incompletely represented return,
+			loop, throw, or catch family.
 			Syntax must not decide eligibility from the expression on its own.
 		**/
 	public function buildFunction(expression:TypedExpr, tfunc:haxe.macro.Type.TFunc):OcamlExpr {

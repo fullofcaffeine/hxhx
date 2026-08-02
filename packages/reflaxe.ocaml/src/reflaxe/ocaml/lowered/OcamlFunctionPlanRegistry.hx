@@ -89,7 +89,7 @@ typedef OcamlFunctionSyntaxInput = {
 }
 
 /**
-	The return-control facts sealed for one nested function literal.
+	The represented result and control facts sealed for one nested function literal.
 
 	This is request-local because `controls` keeps exact typed-expression keys for
 	the active compiler request. The copied decisions can appear in reports, but
@@ -172,7 +172,7 @@ private typedef OcamlRootIdentityRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v4";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v5";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
 	/**
@@ -290,8 +290,9 @@ class OcamlFunctionPlanRegistry {
 		Seals one represented nested function before target syntax starts.
 
 		The parent binding proves which final method owns the literal. The nested
-		binding proves which lexical occurrence and body revision own its return
-		decisions. Neither identity may be substituted by another parent or request.
+		binding proves which lexical occurrence and body revision own its return,
+		loop, throw, and catch decisions. Neither identity may be substituted by
+		another parent or request.
 	**/
 	public function sealNestedFunction(expression:TypedExpr, bodyExternalLocals:Array<TVar>, observedBodyRevision:String, plan:OcamlSealedNestedFunctionPlan,
 			localIdentities:LexicalLocalIdentityPlan):Void {
@@ -354,17 +355,13 @@ class OcamlFunctionPlanRegistry {
 		plan.controls.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
-		// The planner removes decisions from any control family it could not
-		// represent. Validate those family flags directly so a surviving Return
-		// cannot hide an unsupported Throw, Break, or Continue from this catalog.
+		// The planner omits unsupported transfers and catch chains. Validate both
+		// the family flags and observed catch count so a surviving return cannot
+		// hide an unsupported throw, loop transfer, or catch from this catalog.
 		if (!plan.controls.loopFamilyAdmitted || !plan.controls.throwFamilyAdmitted)
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted loop or throw control family';
-		if (plan.controls.catchOccurrenceCount() != 0)
-			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains a catch outside the first return-only slice';
-		for (decision in plan.controls.decisions()) {
-			if (decision.kind != reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return)
-				throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains control outside the first return-only slice';
-		}
+		if (plan.controls.catchChains().length != plan.controls.catchOccurrenceCount())
+			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-control]: nested function "${plan.binding.functionId}" contains an unadmitted catch occurrence';
 		final returnBoundary = plan.controls.returnBoundaryDecision();
 		final returnPayload = returnBoundary == null ? null : returnBoundary.payload;
 		final callableResult = plan.callableBoundary.result;

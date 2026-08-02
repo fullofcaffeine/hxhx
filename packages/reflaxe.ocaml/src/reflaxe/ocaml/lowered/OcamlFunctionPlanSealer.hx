@@ -212,14 +212,16 @@ class OcamlFunctionPlanSealer {
 	}
 
 	/**
-		Seals represented nested returns using the generic function occurrence.
+		Seals completely represented nested control using the generic function occurrence.
 
 		A function occurrence is the literal's deterministic structural position in
 		the enclosing typed body. Generic Reflaxe records it during the same traversal
 		that names lexical locals, so zero-argument and argument-taking functions share
 		one identity model. The typed expression remains only a request-local lookup
 		key; target plans retain the stable identity and never retain another host
-		object for cross-request reuse.
+		object for cross-request reuse. A nested function is admitted only when the
+		planner represented every return, loop transfer, throw, and catch occurrence;
+		otherwise syntax keeps using the explicit legacy disposition for that literal.
 	**/
 	function sealNestedFunctions(body:TypedExpr, parentBinding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan):Void {
 		function visit(expression:TypedExpr, lexicalParentBinding:OcamlFunctionPlanBinding):Void {
@@ -253,15 +255,14 @@ class OcamlFunctionPlanSealer {
 						final emptyLocalRepresentations = new OcamlLocalRepresentationPlan([]);
 						final controls = new OcamlControlPlanner(representations, emptyLocalRepresentations, nestedBinding,
 							localIdentities).plan(tfunc.expr, boundary);
-						final onlyReturnTransfers = Lambda.foreach(controls.decisions(),
-							decision -> decision.kind == reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind.Return);
-						// An unrepresented throw or loop transfer is removed from `decisions()` by
-						// the control planner. Check the family flags as well, or the remaining
-						// returns could make an unsupported closure look safely return-only.
+						// An unsupported transfer or catch is omitted from the admitted lists.
+						// Compare both the family flags and the observed catch count so one valid
+						// return cannot make a partly represented closure look complete.
 						final allControlFamiliesAdmitted = controls.returnFamilyAdmitted && controls.loopFamilyAdmitted && controls.throwFamilyAdmitted;
-						if (!allControlFamiliesAdmitted || !controls.hasReturnTransfers() || !onlyReturnTransfers || controls.catchOccurrenceCount() != 0) {
+						final allCatchOccurrencesAdmitted = controls.catchChains().length == controls.catchOccurrenceCount();
+						if (!allControlFamiliesAdmitted || !allCatchOccurrencesAdmitted || !controls.hasReturnTransfers()) {
 							registry.deferNestedFunction(expression, lexicalParentBinding, bodyExternalLocals, observedBodyRevision,
-								"The typed function literal is outside the existing represented-result, return-only, catch-free, fully represented control slice.");
+								"The typed function literal has a represented result, but at least one return, loop, throw, or catch occurrence is not represented by its nested control plan.");
 						} else {
 							validateBoundaryRepresentationReferences(boundary, lexicalParentBinding.programRevision, expression.pos);
 							validateControlRepresentationReferences(controls, lexicalParentBinding.programRevision, expression.pos);

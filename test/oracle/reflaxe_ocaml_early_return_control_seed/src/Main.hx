@@ -185,7 +185,7 @@ class Main {
 		return outer(true);
 	}
 
-	/** Keeps nested `try`/`catch` behavior on the explicit legacy path in this first slice. */
+	/** Exercises planned returns across a nested catch that does not handle the return signal. */
 	static function nestedCatchClosure():Int {
 		final local = function(enabled:Bool):Int {
 			try {
@@ -193,6 +193,20 @@ class Main {
 					return 15;
 			} catch (_:Dynamic) {
 				return -1;
+			}
+			return 0;
+		};
+		return local(true);
+	}
+
+	/** Exercises one exact Int throw and catch under the nested function's own control plan. */
+	static function nestedThrowCatchClosure():Int {
+		final local = function(enabled:Bool):Int {
+			try {
+				if (enabled)
+					throw 21;
+			} catch (value:Int) {
+				return value + 1;
 			}
 			return 0;
 		};
@@ -224,6 +238,7 @@ class Main {
 		printLine("nominalClosure=" + nestedNominalClosure().value);
 		printLine("deepClosure=" + deepNestedClosure());
 		printLine("catchClosure=" + nestedCatchClosure());
+		printLine("throwCatchClosure=" + nestedThrowCatchClosure());
 		printLine("OK early_return_control");
 	}
 }
