@@ -11,6 +11,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplici
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -163,6 +165,50 @@ class OcamlRuntimeRequirementLedger {
 	public function recordStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
 			target:OcamlStandardIMapCallTarget):Void {
 		for (requirement in requirementsForStandardIMapCall(callId, source, profileEligibility, target))
+			record(requirement);
+	}
+
+	/**
+		Returns the runtime reason owned by one direct structural Iterator call.
+
+		This record connects a particular Haxe `hasNext()` or `next()` occurrence
+		to `HxIterator`. Packaging can therefore include the module because a
+		sealed compiler decision requested it, rather than merely because generated
+		text happened to mention the module name.
+	**/
+	public static function requirementsForStructuralIteratorCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStructuralIteratorCallTarget):Array<OcamlRuntimeRequirement> {
+		OcamlStructuralIteratorCallContract.require(target);
+		final stableCallId = required(callId, "structural Iterator call identity");
+		if (source.file.length == 0 || source.min < 0 || source.max < source.min)
+			throw 'Structural Iterator call "$stableCallId" has an invalid source occurrence.';
+		if (profileEligibility.length != 2 || profileEligibility[0] != "metal" || profileEligibility[1] != "portable")
+			throw 'Structural Iterator call "$stableCallId" has an unsupported profile inventory.';
+		return [
+			normalize({
+				id: OcamlStructuralIteratorCallContract.runtimeRequirementIds(stableCallId, target)[0],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: stableCallId,
+				source: source,
+				semanticCapability: HAXE_ITERATOR,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: stableCallId,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: target.receiverSemanticTypeId
+				},
+				implementationFeature: "haxe-iterator-v1",
+				rootModules: [target.runtimeModule],
+				profileEligibility: profileEligibility,
+				explanation: "The sealed direct structural Iterator call uses HxIterator to invoke the selected hasNext or next operation after evaluating the receiver exactly once."
+			})
+		];
+	}
+
+	/** Records the runtime dependency selected by one direct structural Iterator call. */
+	public function recordStructuralIteratorCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
+			target:OcamlStructuralIteratorCallTarget):Void {
+		for (requirement in requirementsForStructuralIteratorCall(callId, source, profileEligibility, target))
 			record(requirement);
 	}
 

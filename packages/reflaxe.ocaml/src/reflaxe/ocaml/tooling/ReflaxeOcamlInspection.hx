@@ -13,6 +13,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
@@ -59,7 +60,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v63";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v64";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
@@ -372,8 +373,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 50) {
-						throw 'Unsupported lowering report schema $version; expected 50.';
+					if (version != 51) {
+						throw 'Unsupported lowering report schema $version; expected 51.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -1013,8 +1014,10 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v18")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v19")
 			throw "Unsupported call-boundary report model.";
+		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
+			throw "Unsupported structural Iterator consumer report model.";
 		final rawCalls = requiredArray(value, "calls");
 		final rawBoundaries = requiredArray(value, "callableBoundaries");
 		if (rawCalls.length != requiredInt(value, "callCount"))
@@ -1058,8 +1061,15 @@ class ReflaxeOcamlInspection {
 				callIds.set(call.id, true);
 				continue;
 			}
+			if (call.kind == "structural-iterator-method") {
+				ReflaxeOcamlStructuralIteratorInspection.validate(call);
+				callIds.set(call.id, true);
+				continue;
+			}
 			if (call.standardIMapTarget != null)
 				throw 'Call "${call.id}" carries a standard IMap target for ordinary call kind "${call.kind}".';
+			if (call.structuralIteratorTarget != null)
+				throw 'Call "${call.id}" carries a structural Iterator target for ordinary call kind "${call.kind}".';
 			if (call.receiver != null)
 				validateCallValue(call.receiver, representationById, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
@@ -1135,9 +1145,9 @@ class ReflaxeOcamlInspection {
 		if (!Reflect.hasField(value, "result"))
 			throw 'Expected typed-call field "result".';
 		final rawResult = Reflect.field(value, "result");
-		if (kind == "standard-imap-method") {
+		if (kind == "standard-imap-method" || kind == "structural-iterator-method") {
 			if (rawResult != null)
-				throw "Standard IMap calls describe their result in the sealed target instead of an ordinary call crossing.";
+				throw 'Specialized call kind "$kind" describes its result in the sealed target instead of an ordinary call crossing.';
 			return null;
 		}
 		if (resultKind == "effect-only-void") {
@@ -1174,7 +1184,8 @@ class ReflaxeOcamlInspection {
 			&& kind != "direct-instance-haxe-method"
 			&& kind != "direct-haxe-constructor"
 			&& kind != "typed-function-value"
-			&& kind != "standard-imap-method")
+			&& kind != "standard-imap-method"
+			&& kind != "structural-iterator-method")
 			throw 'Unsupported typed-call kind "$kind".';
 		return kind;
 	}
@@ -1186,7 +1197,8 @@ class ReflaxeOcamlInspection {
 		final receiver = callReceiver(value, kind);
 		final arguments = callValues(value, "arguments");
 		final standardIMapTarget = standardIMapCallTarget(value, kind);
-		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardIMapTarget);
+		final structuralIteratorTarget = structuralIteratorCallTarget(value, kind);
+		final schedule = callEvaluationSchedule(value, id, kind, arguments, standardIMapTarget, structuralIteratorTarget);
 		final resultKind = callResultKind(value);
 		return {
 			id: id,
@@ -1211,7 +1223,8 @@ class ReflaxeOcamlInspection {
 			programRevision: requiredString(value, "programRevision"),
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision"),
-			standardIMapTarget: standardIMapTarget
+			standardIMapTarget: standardIMapTarget,
+			structuralIteratorTarget: structuralIteratorTarget
 		};
 	}
 
@@ -1247,8 +1260,32 @@ class ReflaxeOcamlInspection {
 		};
 	}
 
+	static function structuralIteratorCallTarget(value:Dynamic, kind:String):Null<InspectionStructuralIteratorCallTarget> {
+		if (!Reflect.hasField(value, "structuralIteratorTarget"))
+			throw 'Expected typed-call field "structuralIteratorTarget".';
+		final rawTarget = Reflect.field(value, "structuralIteratorTarget");
+		if (kind != "structural-iterator-method") {
+			if (rawTarget != null)
+				throw 'Typed-call kind "$kind" cannot carry a structural Iterator target.';
+			return null;
+		}
+		final target = requiredObject(value, "structuralIteratorTarget");
+		return {
+			operation: requiredString(target, "operation"),
+			receiverSemanticTypeId: requiredString(target, "receiverSemanticTypeId"),
+			receiverCarrierTypeId: requiredString(target, "receiverCarrierTypeId"),
+			resultSemanticTypeId: requiredString(target, "resultSemanticTypeId"),
+			runtimeModule: requiredString(target, "runtimeModule"),
+			runtimeFunction: requiredString(target, "runtimeFunction"),
+			runtimeCapabilities: requiredStringArray(target, "runtimeCapabilities"),
+			proofId: requiredString(target, "proofId"),
+			proofClaim: requiredString(target, "proofClaim")
+		};
+	}
+
 	static function callEvaluationSchedule(value:Dynamic, callId:String, kind:String, arguments:Array<InspectionCallValue>,
-			standardIMapTarget:Null<InspectionStandardIMapCallTarget>):Array<InspectionCallEvaluationStep> {
+			standardIMapTarget:Null<InspectionStandardIMapCallTarget>,
+			structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>):Array<InspectionCallEvaluationStep> {
 		final schedule = [
 			for (entry in requiredArray(value, "evaluationSchedule"))
 				{
@@ -1259,8 +1296,12 @@ class ReflaxeOcamlInspection {
 				}
 		];
 		final materializesCallee = kind == "typed-function-value";
-		final materializesReceiver = kind == "direct-instance-haxe-method" || kind == "standard-imap-method";
+		final materializesReceiver = kind == "direct-instance-haxe-method"
+			|| kind == "standard-imap-method"
+			|| kind == "structural-iterator-method";
 		final argumentCount = standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length;
+		if (structuralIteratorTarget != null && argumentCount != 0)
+			throw 'Structural Iterator call "$callId" unexpectedly owns source arguments.';
 		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
 		if (schedule.length != argumentCount + scheduleOffset + 1)
 			throw 'Call "$callId" has an unsupported evaluation-schedule length.';
@@ -2466,18 +2507,47 @@ class ReflaxeOcamlInspection {
 		}
 		for (call in calls) {
 			final target = call.standardIMapTarget;
-			if (target == null)
-				continue;
-			for (capability in target.runtimeCapabilities) {
+			if (target != null)
+				for (capability in target.runtimeCapabilities) {
+					final requirementId = call.id + ":runtime:" + capability;
+					final requirement = requirements.get(requirementId);
+					if (requirement == null)
+						throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
+					final implementation = ReflaxeOcamlStandardIMapInspection.runtimeImplementation(capability);
+					final source = requiredObject(requirement, "source");
+					final subject = requiredObject(requirement, "subject");
+					final roots = requiredStringArray(requirement, "rootModules");
+					if (requiredString(requirement, "sourceKind") != "haxe-expression"
+						|| requiredString(requirement, "sourceId") != call.id
+						|| requiredString(source, "file") != call.sourceFile
+						|| requiredInt(source, "min") != call.sourceMin
+						|| requiredInt(source, "max") != call.sourceMax
+						|| requiredString(requirement, "semanticCapability") != capability
+						|| requiredString(requirement, "cause") != "lowering-decision"
+						|| requiredString(requirement, "decisionId") != call.id
+						|| requiredString(subject, "kind") != "haxe-type"
+						|| requiredString(subject, "id") != target.receiverSemanticTypeId
+						|| requiredString(requirement, "implementationFeature") != implementation.feature
+						|| roots.length != 1
+						|| roots[0] != implementation.root
+						|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
+						throw 'Standard IMap call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+					}
+					referenced.set(requirementId, true);
+				}
+			final iteratorTarget = call.structuralIteratorTarget;
+			if (iteratorTarget != null) {
+				final capability = "haxe-iterator";
 				final requirementId = call.id + ":runtime:" + capability;
 				final requirement = requirements.get(requirementId);
 				if (requirement == null)
-					throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
-				final implementation = ReflaxeOcamlStandardIMapInspection.runtimeImplementation(capability);
+					throw 'Structural Iterator call "${call.id}" refers to missing runtime requirement "$requirementId".';
 				final source = requiredObject(requirement, "source");
 				final subject = requiredObject(requirement, "subject");
 				final roots = requiredStringArray(requirement, "rootModules");
-				if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				if (iteratorTarget.runtimeCapabilities.length != 1
+					|| iteratorTarget.runtimeCapabilities[0] != capability
+					|| requiredString(requirement, "sourceKind") != "haxe-expression"
 					|| requiredString(requirement, "sourceId") != call.id
 					|| requiredString(source, "file") != call.sourceFile
 					|| requiredInt(source, "min") != call.sourceMin
@@ -2486,12 +2556,12 @@ class ReflaxeOcamlInspection {
 					|| requiredString(requirement, "cause") != "lowering-decision"
 					|| requiredString(requirement, "decisionId") != call.id
 					|| requiredString(subject, "kind") != "haxe-type"
-					|| requiredString(subject, "id") != target.receiverSemanticTypeId
-					|| requiredString(requirement, "implementationFeature") != implementation.feature
+					|| requiredString(subject, "id") != iteratorTarget.receiverSemanticTypeId
+					|| requiredString(requirement, "implementationFeature") != "haxe-iterator-v1"
 					|| roots.length != 1
-					|| roots[0] != implementation.root
+					|| roots[0] != "HxIterator"
 					|| requiredStringArray(requirement, "profileEligibility").join(",") != call.profileEligibility.join(",")) {
-					throw 'Standard IMap call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
+					throw 'Structural Iterator call "${call.id}" runtime requirement "$requirementId" disagrees with its sealed target.';
 				}
 				referenced.set(requirementId, true);
 			}

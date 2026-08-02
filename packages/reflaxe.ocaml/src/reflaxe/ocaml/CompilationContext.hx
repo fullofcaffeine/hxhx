@@ -486,6 +486,13 @@ class CompilationContext {
 			throw 'Standard IMap call "${call.id}" has no sealed runtime target.';
 		runtimeRequirements.recordStandardIMapCall(call.id, call.source, call.profileEligibility, call.standardIMapTarget);
 	}
+
+	/** Records runtime support selected by one direct structural Iterator call. */
+	public function recordStructuralIteratorRuntimeRequirements(call:OcamlCallDecision):Void {
+		if (call.structuralIteratorTarget == null)
+			throw 'Structural Iterator call "${call.id}" has no sealed runtime target.';
+		runtimeRequirements.recordStructuralIteratorCall(call.id, call.source, call.profileEligibility, call.structuralIteratorTarget);
+	}
 	#end
 
 	/** Records runtime support selected by one sealed non-null Bytes producer. **/

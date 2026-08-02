@@ -410,6 +410,19 @@ typedef InspectionStandardIMapCallTarget = {
 	final proofClaim:String;
 }
 
+/** The exact runtime operation selected for one direct structural Iterator call. */
+typedef InspectionStructuralIteratorCallTarget = {
+	final operation:String;
+	final receiverSemanticTypeId:String;
+	final receiverCarrierTypeId:String;
+	final resultSemanticTypeId:String;
+	final runtimeModule:String;
+	final runtimeFunction:String;
+	final runtimeCapabilities:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -435,6 +448,7 @@ typedef InspectionCall = {
 	final bodyRevision:String;
 	final pipelineRevision:String;
 	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
+	final structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
 }
 
 /** One callable definition independently sealed against its final body. **/

@@ -88,6 +88,7 @@ import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallCon
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
@@ -746,6 +747,8 @@ class OcamlBuilder {
 			OcamlCallPlan.requireCall(call);
 			if (call.kind == OcamlCallKind.StandardIMapMethod)
 				return buildPlannedStandardIMapCall(call, callee, arguments, position);
+			if (call.kind == OcamlCallKind.StructuralIteratorMethod)
+				return buildPlannedStructuralIteratorCall(call, callee, arguments, position);
 			if (call.kind != OcamlCallKind.TypedFunctionValue)
 				functionPlanRegistry.requireCallableDeclaration(call);
 		} catch (error:Dynamic) {
@@ -771,6 +774,8 @@ class OcamlBuilder {
 				null;
 			case OcamlCallKind.StandardIMapMethod:
 				return callPlanInvariant('standard IMap call "${call.id}" bypassed its specialized sealed target', position);
+			case OcamlCallKind.StructuralIteratorMethod:
+				return callPlanInvariant('structural Iterator call "${call.id}" bypassed its specialized sealed target', position);
 		};
 		final materialized:Array<{name:String, value:OcamlExpr}> = [];
 		final applicationArguments:Array<OcamlExpr> = [];
@@ -849,6 +854,52 @@ class OcamlBuilder {
 			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
 		}
 		return out;
+	}
+
+	/**
+		Renders one direct structural Iterator call from its sealed target.
+
+		For input such as `iterator.next()`, this method evaluates `iterator` once
+		and invokes the preselected `HxIterator.next` helper. It does not build an
+		intermediate method closure or infer the operation again from a field name.
+	**/
+	function buildPlannedStructuralIteratorCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		final target = call.structuralIteratorTarget;
+		if (target == null)
+			return callPlanInvariant('structural Iterator call "${call.id}" has no sealed target', position);
+		try {
+			OcamlStructuralIteratorCallContract.require(target);
+		} catch (error:Dynamic) {
+			return callPlanInvariant(Std.string(error), position);
+		}
+		if (callee == null || arguments.length != 0)
+			return callPlanInvariant('structural Iterator call "${call.id}" must have one typed receiver and no source arguments', position);
+		final receiver = switch (callee.expr) {
+			case TField(receiverExpression, FAnon(fieldRef)) if (fieldRef.get().name == OcamlStructuralIteratorCallContract.sourceFieldName(target.operation)):
+				receiverExpression;
+			case _:
+				return callPlanInvariant('structural Iterator call "${call.id}" no longer matches its typed field occurrence', position);
+		}
+		if (!OcamlStructuralIteratorCallContract.matches(target, receiver, switch (callee.expr) {
+			case TField(_, FAnon(fieldRef)): fieldRef.get();
+			case _: return callPlanInvariant('structural Iterator call "${call.id}" lost its typed field', position);
+		}, arguments, switch (callee.t) {
+			case TFun(_, result): result;
+			case _: return callPlanInvariant('structural Iterator call "${call.id}" no longer has a callable field type', position);
+		})) {
+			return callPlanInvariant('structural Iterator call "${call.id}" disagrees with its final typed occurrence', position);
+		}
+
+		final receiverStep = call.evaluationSchedule[0];
+		final invocationStep = call.evaluationSchedule[1];
+		if (receiverStep.kind != OcamlCallEvaluationStepKind.MaterializeReceiver
+			|| receiverStep.slotId == null
+			|| invocationStep.kind != OcamlCallEvaluationStepKind.InvokeCallee) {
+			return callPlanInvariant('structural Iterator call "${call.id}" has an invalid receiver-first evaluation schedule', position);
+		}
+		final receiverName = freshTmp("iterator_receiver");
+		final runtimeCall = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.runtimeModule), target.runtimeFunction), [OcamlExpr.EIdent(receiverName)]);
+		return OcamlExpr.ELet(receiverName, buildExpr(receiver), runtimeCall, false);
 	}
 
 	/**

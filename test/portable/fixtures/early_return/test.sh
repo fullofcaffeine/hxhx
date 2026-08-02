@@ -25,7 +25,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 50
+if (report.schemaVersion !== 51
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
@@ -189,7 +189,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v6'
-			: control.pipelineRevision !== 'ocaml-function-plans-v63')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v64')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -335,7 +335,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v63'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v64'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0

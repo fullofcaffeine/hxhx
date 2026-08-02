@@ -15,6 +15,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecisio
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallTarget;
 
 /** The source-language dispatch selected before OCaml syntax is constructed. */
 enum abstract OcamlCallKind(String) from String to String {
@@ -23,6 +25,7 @@ enum abstract OcamlCallKind(String) from String to String {
 	final DirectHaxeConstructor = "direct-haxe-constructor";
 	final TypedFunctionValue = "typed-function-value";
 	final StandardIMapMethod = "standard-imap-method";
+	final StructuralIteratorMethod = "structural-iterator-method";
 }
 
 /**
@@ -183,6 +186,7 @@ typedef OcamlCallDecision = {
 	final bodyRevision:String;
 	final pipelineRevision:String;
 	final ?standardIMapTarget:OcamlStandardIMapCallTarget;
+	final ?structuralIteratorTarget:OcamlStructuralIteratorCallTarget;
 }
 
 /**
@@ -259,6 +263,10 @@ class OcamlCallPlan {
 				if (decision.kind == OcamlCallKind.StandardIMapMethod && decision.standardIMapTarget != null): OcamlStandardIMapCallContract.matches(decision.standardIMapTarget,
 					classRef.get(), parameters, fieldRef.get(), receiver, arguments,
 					expression.t) && OcamlCallPlanner.calleeId(classRef.get(), fieldRef.get()) == decision.calleeId;
+			case TCall({expr: TField(receiver, FAnon(fieldRef))}, arguments)
+				if (decision.kind == OcamlCallKind.StructuralIteratorMethod
+					&& decision.structuralIteratorTarget != null): OcamlStructuralIteratorCallContract.matches(decision.structuralIteratorTarget, receiver,
+					fieldRef.get(), arguments, expression.t);
 			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue): final binding:OcamlFunctionPlanBinding = {
 					functionId: decision.functionId,
 					programRevision: decision.programRevision,
@@ -282,7 +290,9 @@ class OcamlCallPlan {
 	}
 
 	static function suppliedArgumentCountForDecision(decision:OcamlCallDecision):Int {
-		return decision.standardIMapTarget == null ? suppliedArgumentCount(decision.arguments) : decision.standardIMapTarget.argumentSemanticTypeIds.length;
+		if (decision.standardIMapTarget != null)
+			return decision.standardIMapTarget.argumentSemanticTypeIds.length;
+		return decision.structuralIteratorTarget != null ? 0 : suppliedArgumentCount(decision.arguments);
 	}
 
 	/** Returns whether a crossing materializes an omitted source argument. */
@@ -356,6 +366,7 @@ class OcamlCallPlan {
 			resultFingerprint(decision.resultKind, decision.result),
 			decision.evaluationSchedule.map(evaluationStepFingerprint).join(","),
 			decision.standardIMapTarget == null ? "" : OcamlStandardIMapCallContract.fingerprint(decision.standardIMapTarget),
+			decision.structuralIteratorTarget == null ? "" : OcamlStructuralIteratorCallContract.fingerprint(decision.structuralIteratorTarget),
 			decision.functionId,
 			decision.programRevision,
 			decision.bodyRevision,
@@ -414,7 +425,8 @@ class OcamlCallPlan {
 			programRevision: decision.programRevision,
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision,
-			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget)
+			standardIMapTarget: decision.standardIMapTarget == null ? null : OcamlStandardIMapCallContract.copy(decision.standardIMapTarget),
+			structuralIteratorTarget: decision.structuralIteratorTarget == null ? null : OcamlStructuralIteratorCallContract.copy(decision.structuralIteratorTarget)
 		};
 	}
 
@@ -686,8 +698,14 @@ class OcamlCallPlan {
 			requireStandardIMapCall(call);
 			return;
 		}
+		if (call.kind == OcamlCallKind.StructuralIteratorMethod) {
+			requireStructuralIteratorCall(call);
+			return;
+		}
 		if (call.standardIMapTarget != null)
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: non-IMap call "${call.id}" owns a standard IMap target';
+		if (call.structuralIteratorTarget != null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: ordinary call "${call.id}" owns a structural Iterator target';
 		requireCallCommon(call.calleeId, call.sourceModuleId, call.sourceTypeName, call.sourceFieldName, call.kind, call.arguments, call.resultKind,
 			call.result, call.profileEligibility, call.reason, call.proofId, call.proofClaim, call.programRevision, call.pipelineRevision,
 			'call "${call.id}"', call.receiver);
@@ -819,6 +837,63 @@ class OcamlCallPlan {
 			|| invocation.sourceArgumentIndex != null
 			|| invocation.slotId != null) {
 			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: standard IMap call "${call.id}" has an invalid invocation step';
+		}
+	}
+
+	/**
+		Rejects a corrupted direct structural Iterator call before syntax runs.
+
+		A structural Iterator is a Haxe value with zero-argument `hasNext` and
+		`next` functions, regardless of the concrete class that produced it. The
+		sealed target records which `HxIterator` operation implements the direct
+		call, while the evaluation schedule guarantees that the receiver is
+		evaluated exactly once.
+	**/
+	static function requireStructuralIteratorCall(call:OcamlCallDecision):Void {
+		final target = call.structuralIteratorTarget;
+		if (target == null)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: structural Iterator call "${call.id}" has no typed target operation';
+		OcamlStructuralIteratorCallContract.require(target);
+		final expectedField = OcamlStructuralIteratorCallContract.sourceFieldName(target.operation);
+		if (call.calleeId != 'haxe.Iterator|Iterator::$expectedField'
+			|| call.sourceModuleId != "haxe.Iterator"
+			|| call.sourceTypeName != "Iterator"
+			|| call.sourceFieldName != expectedField
+			|| call.receiver != null
+			|| call.arguments.length != 0
+			|| call.resultKind != OcamlCallResultKind.Value
+			|| call.result != null
+			|| call.standardIMapTarget != null
+			|| call.proofId != OcamlStructuralIteratorCallContract.PROOF_ID
+			|| call.proofClaim != target.proofClaim
+			|| call.reason.length == 0
+			|| call.functionId.length == 0
+			|| call.programRevision.length == 0
+			|| call.bodyRevision.length == 0
+			|| call.pipelineRevision.length == 0
+			|| call.source.file.length == 0
+			|| call.source.min < 0
+			|| call.source.max < call.source.min
+			|| call.profileEligibility.length != 2
+			|| call.profileEligibility[0] != "metal"
+			|| call.profileEligibility[1] != "portable") {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: structural Iterator call "${call.id}" has incomplete or conflicting source, proof, profile, or revision facts';
+		}
+		if (call.evaluationSchedule.length != 2)
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: structural Iterator call "${call.id}" has an invalid evaluation schedule';
+		final receiver = call.evaluationSchedule[0];
+		if (receiver.kind != OcamlCallEvaluationStepKind.MaterializeReceiver
+			|| receiver.argumentIndex != null
+			|| receiver.sourceArgumentIndex != null
+			|| receiver.slotId != receiverSlotId(call.id)) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: structural Iterator call "${call.id}" has an invalid receiver materialization';
+		}
+		final invocation = call.evaluationSchedule[1];
+		if (invocation.kind != OcamlCallEvaluationStepKind.InvokeCallee
+			|| invocation.argumentIndex != null
+			|| invocation.sourceArgumentIndex != null
+			|| invocation.slotId != null) {
+			throw 'reflaxe.ocaml [ocaml-call:invalid-plan]: structural Iterator call "${call.id}" has an invalid invocation step';
 		}
 	}
 
@@ -1665,6 +1740,10 @@ class OcamlCallPlanner {
 						pipelineRevision: binding.pipelineRevision
 					};
 				}
+			case TCall({expr: TField(receiverExpression, FAnon(fieldRef))}, arguments):
+				final field = fieldRef.get();
+				final target = OcamlStructuralIteratorCallContract.select(receiverExpression, field, arguments, expression.t);
+				target == null ? null : structuralIteratorCallDecision(expression, field, target);
 			case TCall(callee, arguments):
 				final signature = functionValueSignature(callee, arguments, expression.t);
 				final plannedArguments = signature == null ? null : functionValueArguments(signature, arguments, representations);
@@ -1712,6 +1791,44 @@ class OcamlCallPlanner {
 			case _:
 				null;
 		}
+	}
+
+	function structuralIteratorCallDecision(expression:TypedExpr, field:ClassField, target:OcamlStructuralIteratorCallTarget):OcamlCallDecision {
+		OcamlStructuralIteratorCallContract.require(target);
+		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
+		final selectedCalleeId = 'haxe.Iterator|Iterator::${field.name}';
+		final id = "call:" + Sha256.encode([
+			binding.functionId,
+			binding.programRevision,
+			binding.bodyRevision,
+			binding.pipelineRevision,
+			OcamlCallPlan.sourceKey(source),
+			selectedCalleeId,
+			OcamlStructuralIteratorCallContract.fingerprint(target)
+		].join("|")).substr(0, 24);
+		return {
+			id: id,
+			source: source,
+			calleeId: selectedCalleeId,
+			sourceModuleId: "haxe.Iterator",
+			sourceTypeName: "Iterator",
+			sourceFieldName: field.name,
+			kind: OcamlCallKind.StructuralIteratorMethod,
+			receiver: null,
+			arguments: [],
+			resultKind: OcamlCallResultKind.Value,
+			result: null,
+			evaluationSchedule: OcamlCallPlan.evaluationSchedule(id, 0, [], false, true),
+			profileEligibility: ["metal", "portable"],
+			reason: 'The final typed Haxe expression calls structural Iterator.${field.name}. Its sealed target selects ${target.receiverCarrierTypeId} and ${target.runtimeModule}.${target.runtimeFunction} before syntax while preserving receiver-first evaluation.',
+			proofId: target.proofId,
+			proofClaim: target.proofClaim,
+			functionId: binding.functionId,
+			programRevision: binding.programRevision,
+			bodyRevision: binding.bodyRevision,
+			pipelineRevision: binding.pipelineRevision,
+			structuralIteratorTarget: OcamlStructuralIteratorCallContract.copy(target)
+		};
 	}
 
 	function standardIMapCallDecision(expression:TypedExpr, classType:ClassType, field:ClassField, target:OcamlStandardIMapCallTarget):OcamlCallDecision {

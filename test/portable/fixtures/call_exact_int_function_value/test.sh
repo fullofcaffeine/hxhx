@@ -20,7 +20,7 @@ fi
 node - "$report_file" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 50 || report.callModel !== 'typed-ocaml-directional-call-boundary-v18') {
+if (report.schemaVersion !== 51 || report.callModel !== 'typed-ocaml-directional-call-boundary-v19') {
 	throw new Error('expected the function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call => call.kind === 'typed-function-value')

@@ -182,6 +182,8 @@ class OcamlFunctionPlanSealer {
 		for (call in calls.decisions()) {
 			if (call.standardIMapTarget != null)
 				context.recordStandardIMapRuntimeRequirements(call);
+			if (call.structuralIteratorTarget != null)
+				context.recordStructuralIteratorRuntimeRequirements(call);
 		}
 		validateControlRepresentationReferences(controls, binding.programRevision, data.expr.pos);
 		for (control in controls.decisions()) {

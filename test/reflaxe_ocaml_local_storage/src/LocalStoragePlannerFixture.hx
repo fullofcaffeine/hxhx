@@ -725,7 +725,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		};
 		final dynamicCarrierIdentities = localIdentities(dynamicCarrierInput, dynamicCarrierBinding.functionId);
 		final dynamicCarrierStorage = OcamlLocalStoragePlanner.planExpression(dynamicCarrierInput, dynamicCarrierIdentities);
@@ -767,7 +767,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-enum-carrier",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-enum-carrier-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		};
 		final dynamicEnumIdentities = localIdentities(dynamicEnumInput, dynamicEnumBinding.functionId);
 		final dynamicEnumStorage = OcamlLocalStoragePlanner.planExpression(dynamicEnumInput, dynamicEnumIdentities);
@@ -802,7 +802,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|dynamic-enum-array-elements",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:dynamic-enum-array-elements-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		};
 		final dynamicArrayPlan = OcamlContainerElementPlanner.planExpression(dynamicArrayInput, dynamicArrayBinding);
 		final dynamicArrayConversions = dynamicArrayPlan.decisions();
@@ -891,7 +891,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|duplicate-position-dynamic-enum-arrays",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:duplicate-position-dynamic-enum-arrays-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		};
 		final duplicatePositionPlan = OcamlContainerElementPlanner.planExpression(duplicatePositionArrays, duplicatePositionBinding);
 		final duplicatePositionDecisions = duplicatePositionPlan.decisions();
@@ -934,7 +934,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|excluded-dynamic-enum-array-elements",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:excluded-dynamic-enum-array-elements-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		};
 		final excludedDynamicArrayPlan = OcamlContainerElementPlanner.planExpression(excludedDynamicArrayInput, excludedDynamicArrayBinding);
 		assertTrue(excludedDynamicArrayPlan.decisions().length == 0 && excludedDynamicArrayPlan.requiredConversionIds().length == 0,
@@ -951,7 +951,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|indirect-dynamic-enum",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:indirect-dynamic-enum-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		});
 		assertTrue(indirectDynamicEnumPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& indirectDynamicEnumPlan.conversions().length == 0,
@@ -1004,7 +1004,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|uninitialized-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:uninitialized-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		});
 		assertTrue(uninitializedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& uninitializedDynamicPlan.conversions().length == 0,
@@ -1018,7 +1018,7 @@ class LocalStoragePlannerFixture {
 			functionId: "fixture|reassigned-dynamic",
 			programRevision: "program:local-storage-fixture",
 			bodyRevision: "body:reassigned-dynamic-v1",
-			pipelineRevision: "ocaml-function-plans-v63"
+			pipelineRevision: "ocaml-function-plans-v64"
 		});
 		assertTrue(reassignedDynamicPlan.references().filter(reference -> reference.semanticTypeId == "Dynamic").length == 0
 			&& reassignedDynamicPlan.conversions().length == 0,

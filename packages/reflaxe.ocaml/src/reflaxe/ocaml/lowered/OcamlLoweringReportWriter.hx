@@ -33,6 +33,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorage
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
+import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
@@ -47,7 +48,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 50;
+	public static inline final SCHEMA_VERSION = 51;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -219,7 +220,9 @@ class OcamlLoweringReportWriter {
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
-			if (call.kind == OcamlCallKind.TypedFunctionValue || call.kind == OcamlCallKind.StandardIMapMethod)
+			if (call.kind == OcamlCallKind.TypedFunctionValue
+				|| call.kind == OcamlCallKind.StandardIMapMethod
+				|| call.kind == OcamlCallKind.StructuralIteratorMethod)
 				continue;
 			final boundary = callableByCallee.get(call.calleeId);
 			if (boundary == null)
@@ -422,21 +425,37 @@ class OcamlLoweringReportWriter {
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (call in sortedCalls) {
-			if (call.standardIMapTarget == null)
-				continue;
-			final expectedIds = OcamlStandardIMapCallContract.runtimeRequirementIds(call.id, call.standardIMapTarget);
-			final expectedRequirements = OcamlRuntimeRequirementLedger.requirementsForStandardIMapCall(call.id, call.source, call.profileEligibility,
-				call.standardIMapTarget);
-			if (expectedIds.length != expectedRequirements.length)
-				throw 'Standard IMap call "${call.id}" has inconsistent runtime requirement identities.';
-			for (index in 0...expectedIds.length) {
-				final requirementId = expectedIds[index];
-				final recorded = requirementById.get(requirementId);
-				if (recorded == null)
-					throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
-				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expectedRequirements[index]))
-					throw 'Standard IMap call "${call.id}" disagrees with runtime requirement "$requirementId".';
-				includedRequirementIds.set(requirementId, true);
+			if (call.standardIMapTarget != null) {
+				final expectedIds = OcamlStandardIMapCallContract.runtimeRequirementIds(call.id, call.standardIMapTarget);
+				final expectedRequirements = OcamlRuntimeRequirementLedger.requirementsForStandardIMapCall(call.id, call.source, call.profileEligibility,
+					call.standardIMapTarget);
+				if (expectedIds.length != expectedRequirements.length)
+					throw 'Standard IMap call "${call.id}" has inconsistent runtime requirement identities.';
+				for (index in 0...expectedIds.length) {
+					final requirementId = expectedIds[index];
+					final recorded = requirementById.get(requirementId);
+					if (recorded == null)
+						throw 'Standard IMap call "${call.id}" refers to missing runtime requirement "$requirementId".';
+					if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expectedRequirements[index]))
+						throw 'Standard IMap call "${call.id}" disagrees with runtime requirement "$requirementId".';
+					includedRequirementIds.set(requirementId, true);
+				}
+			}
+			if (call.structuralIteratorTarget != null) {
+				final expectedIds = OcamlStructuralIteratorCallContract.runtimeRequirementIds(call.id, call.structuralIteratorTarget);
+				final expectedRequirements = OcamlRuntimeRequirementLedger.requirementsForStructuralIteratorCall(call.id, call.source,
+					call.profileEligibility, call.structuralIteratorTarget);
+				if (expectedIds.length != expectedRequirements.length)
+					throw 'Structural Iterator call "${call.id}" has inconsistent runtime requirement identities.';
+				for (index in 0...expectedIds.length) {
+					final requirementId = expectedIds[index];
+					final recorded = requirementById.get(requirementId);
+					if (recorded == null)
+						throw 'Structural Iterator call "${call.id}" refers to missing runtime requirement "$requirementId".';
+					if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expectedRequirements[index]))
+						throw 'Structural Iterator call "${call.id}" disagrees with runtime requirement "$requirementId".';
+					includedRequirementIds.set(requirementId, true);
+				}
 			}
 		}
 		final includedRequirements = [
@@ -521,7 +540,8 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v18",
+			callModel: "typed-ocaml-directional-call-boundary-v19",
+			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
 			callCount: sortedCalls.length,
 			calls: sortedCalls,
