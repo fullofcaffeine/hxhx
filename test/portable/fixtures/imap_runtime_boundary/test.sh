@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 54
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v19') {
+if (report.schemaVersion !== 55
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
 if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
@@ -17,7 +17,7 @@ if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
 }
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
-	call.pipelineRevision !== 'ocaml-function-plans-v67'
+	call.pipelineRevision !== 'ocaml-function-plans-v68'
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
@@ -96,7 +96,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 32
+if (report.schemaVersion !== 33
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 3
 	|| report.summary.iMapInterfaceCallCount !== 53) {

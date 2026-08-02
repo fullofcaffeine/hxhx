@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 54
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15'
+if (report.schemaVersion !== 55
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v16'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| !sha256.test(report.controlCatchRevision)) {
@@ -72,7 +72,7 @@ for (const chain of catches) {
 		|| chain.runtimeCapabilityId !== 'hxhx-runtime:typed-haxe-catch-chain-v1'
 		|| !resultPolicies.has(chain.tryBodyResultPolicy)
 		|| chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v67'
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v68'
 		|| chain.profileEligibility.join(',') !== 'metal,portable'
 		|| !rawSha256.test(chain.programRevision)
 		|| !bodyRevision.test(chain.bodyRevision)
@@ -167,7 +167,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 32
+if (report.schemaVersion !== 33
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== report.lowering.controlCatches.length
 	|| report.lowering.controlCatches.length !== 10

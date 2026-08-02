@@ -2,6 +2,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
+import haxe.ds.ObjectMap;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
@@ -26,6 +27,7 @@ import reflaxe.ocaml.lowered.OcamlControlFlowFacts;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
@@ -1266,7 +1268,8 @@ class CallPlanFixture {
 		final localIdentities = LexicalLocalIdentityPlan.build(owner.functionId, null);
 		registry.sealFunction(owner, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities), new OcamlLocalRepresentationPlan([]),
 			new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
-			new OcamlBytesReadPlan([]), calls, OcamlControlPlan.notAdmitted(owner), callable, construction);
+			new OcamlBytesReadPlan([]), new OcamlIMapInterfacePlan(owner, new ObjectMap(), new ObjectMap()), calls, OcamlControlPlan.notAdmitted(owner),
+			callable, construction);
 	}
 
 	/** Returns one real typed method body for the syntax-handoff lifecycle test. */
@@ -1303,7 +1306,8 @@ class CallPlanFixture {
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, data.expr, externalLocals);
 		registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities),
 			new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
-			new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
+			new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlIMapInterfacePlan(binding, new ObjectMap(), new ObjectMap()),
+			new OcamlCallPlan([]), OcamlControlPlan.notAdmitted(binding), null, null);
 
 		FunctionBodyRevision.resetDigestCallCount();
 		final syntaxInput = registry.functionSyntaxInputFor(data);
@@ -1613,6 +1617,19 @@ class CallPlanFixture {
 		final effectMatrixFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-effect-matrix-fixture", 42, [stringValue(0)],
 			OcamlCallResultKind.EffectOnlyVoid, null);
 		OcamlCallPlan.requireCall(effectMatrixFunctionValueCall);
+		final nominalResultFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-nominal-result-fixture", 44, [boolValue(0)],
+			OcamlCallResultKind.Value, nominalCounterValue(-1));
+		OcamlCallPlan.requireCall(nominalResultFunctionValueCall);
+
+		// This slice admits a represented class only as the result of a function
+		// value. A class argument would need its own source-to-parameter conversion
+		// contract, so changing the result into an argument must fail closed.
+		final nominalArgumentFunctionValueCall = matrixFunctionValueCall(caller, "call:function-value-nominal-argument-fixture", 46, [nominalCounterValue(0)],
+			OcamlCallResultKind.Value, value(-1));
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireCall(nominalArgumentFunctionValueCall));
+		final wrongNominalResultCarrier = copyCall(nominalResultFunctionValueCall);
+		Reflect.setField(wrongNominalResultCarrier.result, "outputCarrierTypeId", "wrong_counter_t");
+		expectThrows("invalid identity crossing", () -> OcamlCallPlan.requireCall(wrongNominalResultCarrier));
 
 		final wrongOptionalStringProof = copyCall(omittedOptionalStringFunctionValueCall);
 		Reflect.setField(wrongOptionalStringProof, "proofId", OcamlCallPlan.DIRECT_STATIC_SIGNATURE_PROOF_ID);
