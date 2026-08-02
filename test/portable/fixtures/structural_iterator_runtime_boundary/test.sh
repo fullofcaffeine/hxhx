@@ -25,7 +25,7 @@ for (const consumer of consumers) {
 		|| target.runtimeFunction !== (target.operation === 'has-next' ? 'hasNext' : 'next')
 		|| target.receiverCarrierTypeId !== 'HxIterator.t'
 		|| consumer.evaluationSchedule?.map(step => step.kind).join(',') !== 'materialize-receiver,invoke-callee'
-		|| consumer.pipelineRevision !== 'ocaml-function-plans-v68') {
+		|| consumer.pipelineRevision !== 'ocaml-function-plans-v69') {
 		throw new Error(`structural Iterator consumer ${consumer.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === consumer.id)
@@ -53,7 +53,7 @@ for (const method of methodValues) {
 		|| method.runtimeModule !== 'HxIterator'
 		|| method.runtimeOperation !== method.fieldName
 		|| method.evaluationSchedule?.join(',') !== 'materialize-receiver,capture-method'
-		|| method.pipelineRevision !== 'ocaml-function-plans-v68') {
+		|| method.pipelineRevision !== 'ocaml-function-plans-v69') {
 		throw new Error(`Iterator method value ${method.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === method.id)
@@ -104,7 +104,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const consumers = report.lowering?.calls?.filter(call => call.kind === 'structural-iterator-method') ?? []
 const methodValues = report.lowering?.structuralFields?.filter(field => field.operation === 'capture-iterator-method') ?? []
-if (report.schemaVersion !== 33
+if (report.schemaVersion !== 34
 	|| !report.summary?.valid
 	|| consumers.length === 0
 	|| methodValues.length !== 2

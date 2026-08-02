@@ -39,7 +39,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 		for (index in 0...decisions.length) {
 			final current = decisions[index];
 			OcamlStructuralFieldContract.require(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v68"
+			if (current.pipelineRevision != "ocaml-function-plans-v69"
 				&& current.pipelineRevision != "ocaml-standalone-expression-plans-v3")
 				throw 'Structural field decision "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
 			if (index > 0 && Reflect.compare(decisions[index - 1].id, current.id) >= 0)

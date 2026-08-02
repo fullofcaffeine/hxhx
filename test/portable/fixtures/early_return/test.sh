@@ -7,7 +7,8 @@ REPORT_FILE="out/ocaml_lowering_report.json"
 REPORT_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_NOMINAL_ROOT="$(mktemp -d)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT"' EXIT
+INVALID_ARRAY_ROOT="$(mktemp -d)"
+trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
 	echo "Missing generated early-return source or lowering report" >&2
@@ -26,8 +27,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 55
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v16'
+if (report.schemaVersion !== 56
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v17'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -37,8 +38,8 @@ if (report.schemaVersion !== 55
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 33) {
-	fail(`expected 33 represented return decisions, including ordinary and nested Dynamic, nominal, catch, and loop paths, got ${returnControls.length}`)
+if (returnControls.length !== 34) {
+	fail(`expected 34 represented return decisions, including the nested exact Array<Int> throw path, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -76,6 +77,7 @@ const representedNestedFunctions = new Map([
 	['nestedNullableBoolClosure', 'Null<Bool>'],
 	['nestedDynamicClosure', 'Dynamic'],
 	['nestedZeroArgumentClosure', 'Int'],
+	['nestedArrayThrowClosure', 'Int'],
 	['nestedNominalClosure', '_Main.NestedReturnBox']
 ])
 for (const [functionName, semanticType] of representedNestedFunctions) {
@@ -86,7 +88,7 @@ for (const [functionName, semanticType] of representedNestedFunctions) {
 		fail(`${functionName} did not seal one nested ${semanticType} return decision`)
 	}
 }
-for (const functionName of ['nestedUnsupportedThrowClosure']) {
+for (const functionName of ['nestedUnsupportedGenericThrowClosure']) {
 	if (returnControls.some(control =>
 		control.functionId.includes(`|function|${functionName}|`)
 		&& control.functionId.includes('|nested-function|'))) {
@@ -119,8 +121,21 @@ if (nestedThrows.length !== 1
 	|| nestedThrows[0].payload?.inputCarrierTypeId !== 'int'
 	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
 	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
-	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v7') {
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v8') {
 	fail('nestedThrowCatchClosure did not seal its exact Int throw under the nested binding')
+}
+const nestedArrayThrows = report.controls.filter(control =>
+	control.kind === 'throw'
+	&& control.functionId.includes('|function|nestedArrayThrowClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (nestedArrayThrows.length !== 1
+	|| nestedArrayThrows[0].payload?.inputSemanticTypeId !== 'Array<Int>'
+	|| nestedArrayThrows[0].payload?.inputCarrierTypeId !== 'int HxArray.t'
+	|| nestedArrayThrows[0].payload?.inputRepresentationId !== 'representation:Array<Int>:internal-value'
+	|| nestedArrayThrows[0].payload?.conversion !== 'box-array-int-throw-carrier'
+	|| nestedArrayThrows[0].proofId !== 'exact-array-int-throw-control-v1'
+	|| nestedArrayThrows[0].runtimeTags.join(',') !== 'Dynamic,Array') {
+	fail('nestedArrayThrowClosure did not seal its exact Array<Int> throw and runtime tags')
 }
 const nestedCatches = report.controlCatches.filter(catchChain =>
 	catchChain.functionId.includes('|nested-function|')
@@ -128,7 +143,7 @@ const nestedCatches = report.controlCatches.filter(catchChain =>
 		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
 if (nestedCatches.length !== 2
 	|| nestedCatches.some(catchChain =>
-		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v7'
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v8'
 		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
 		|| catchChain.clauses.length !== 1)) {
 	fail('the two nested catch chains are missing or do not preserve private control signals')
@@ -156,7 +171,7 @@ if (nestedLoopTargets.length !== 1
 	|| nestedLoopReturns.length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
-	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v7'
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v8'
 	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
 	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
 	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
@@ -190,8 +205,8 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v7'
-			: control.pipelineRevision !== 'ocaml-function-plans-v68')) {
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v8'
+			: control.pipelineRevision !== 'ocaml-function-plans-v69')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -351,7 +366,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v68'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v69'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -363,7 +378,7 @@ if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v68'
 	|| dynamicBranchBody.includes('__fallback_result')) {
 	fail('dynamicBranch did not preserve its existing Dynamic Obj.t carrier through the current root return plan')
 }
-for (const functionName of ['nestedUnsupportedThrowClosure']) {
+for (const functionName of ['nestedUnsupportedGenericThrowClosure']) {
 	const start = source.indexOf(`let ${functionName} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	const body = source.slice(start, next)
@@ -374,6 +389,23 @@ for (const functionName of ['nestedUnsupportedThrowClosure']) {
 		|| !body.includes('Obj.magic')) {
 		fail(`${functionName} did not remain on its explicit legacy nested-return path`)
 	}
+}
+const arrayThrowStart = source.indexOf('let nestedArrayThrowClosure =')
+const arrayThrowEnd = source.indexOf('\nlet nestedUnsupportedGenericThrowClosure =', arrayThrowStart)
+const arrayThrowBody = source.slice(arrayThrowStart, arrayThrowEnd)
+const arrayLocalStart = arrayThrowBody.indexOf('let local = fun')
+const arrayLocalEnd = arrayThrowBody.indexOf(' in let result =', arrayLocalStart)
+const arrayLocalBody = arrayThrowBody.slice(arrayLocalStart, arrayLocalEnd)
+if (arrayThrowStart < 0
+	|| arrayThrowEnd < 0
+	|| arrayLocalStart < 0
+	|| arrayLocalEnd < 0
+	|| !arrayLocalBody.includes('HxRuntime.Hx_return')
+	|| !arrayLocalBody.includes('HxType.hx_throw_typed_rtti (Obj.repr expected) ["Dynamic"; "Array"]')
+	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : int\)/.test(arrayLocalBody)
+	|| arrayLocalBody.includes('__fallback_result')
+	|| arrayLocalBody.includes('Obj.magic')) {
+	fail('nestedArrayThrowClosure did not consume its exact Array<Int> throw and return plans')
 }
 const nominalClosureStart = source.indexOf('let nestedNominalClosure =')
 const nominalClosureEnd = source.indexOf('\nlet deepNestedClosure =', nominalClosureStart)
@@ -448,13 +480,25 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 33
+if (report.schemaVersion !== 34
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 33
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 34
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 33 validated represented return decisions')
+	throw new Error('public inspection did not expose the 34 validated represented return decisions')
+}
+const arrayThrow = report.lowering.controls.find(control =>
+	control.kind === 'throw'
+	&& control.functionId.includes('|function|nestedArrayThrowClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (arrayThrow?.payload?.inputSemanticTypeId !== 'Array<Int>'
+	|| arrayThrow.payload.inputCarrierTypeId !== 'int HxArray.t'
+	|| arrayThrow.payload.inputRepresentationId !== 'representation:Array<Int>:internal-value'
+	|| arrayThrow.payload.conversion !== 'box-array-int-throw-carrier'
+	|| arrayThrow.proofId !== 'exact-array-int-throw-control-v1'
+	|| arrayThrow.runtimeTags.join(',') !== 'Dynamic,Array') {
+	throw new Error('public inspection did not validate the exact nested Array<Int> throw crossing')
 }
 const nominalCall = report.lowering.calls.find(call =>
 	call.kind === 'typed-function-value'
@@ -525,4 +569,67 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=33"
+for mutation in semantic carrier representation conversion tags proof binding; do
+	invalid_output="$INVALID_ARRAY_ROOT/$mutation"
+	cp -R out "$invalid_output"
+	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const mutation = process.argv[3]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const control = report.controls?.find(item =>
+	item.kind === 'throw'
+	&& item.functionId.includes('|function|nestedArrayThrowClosure|')
+	&& item.functionId.includes('|nested-function|'))
+if (control?.payload == null) {
+	throw new Error('missing nested Array<Int> throw proof to corrupt')
+}
+switch (mutation) {
+	case 'semantic':
+		control.payload.inputSemanticTypeId = 'Array<String>'
+		control.payload.outputSemanticTypeId = 'Array<String>'
+		break
+	case 'carrier':
+		control.payload.inputCarrierTypeId = 'Obj.t'
+		control.payload.outputCarrierTypeId = 'Obj.t'
+		break
+	case 'representation':
+		control.payload.inputRepresentationId = 'representation:Array<Int>:captured-local-storage'
+		control.payload.outputRepresentationId = 'representation:Array<Int>:captured-local-storage'
+		break
+	case 'conversion':
+		control.payload.conversion = 'box-nominal-throw-carrier'
+		break
+	case 'tags':
+		control.runtimeTags = ['Dynamic']
+		break
+	case 'proof':
+		control.proofId = 'wrong-array-throw-proof'
+		control.payload.proofId = 'wrong-array-throw-proof'
+		break
+	case 'binding':
+		control.pipelineRevision = 'ocaml-nested-function-plans-v7'
+		break
+	default:
+		throw new Error(`unsupported corruption ${mutation}`)
+}
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+	haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+		"$invalid_output/ocaml_lowering_report.json"
+	invalid_log="$INVALID_ARRAY_ROOT/$mutation.log"
+	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
+		echo "The public inspector accepted an exact Array<Int> throw with corrupted $mutation metadata" >&2
+		exit 1
+	fi
+	if ! grep -Fq 'Control decision' "$invalid_log"; then
+		echo "The public inspector rejected corrupted Array<Int> $mutation metadata for an unrelated reason" >&2
+		cat "$invalid_log" >&2
+		exit 1
+	fi
+done
+
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=34"

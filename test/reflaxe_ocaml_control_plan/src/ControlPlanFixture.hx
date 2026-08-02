@@ -249,6 +249,7 @@ class ControlPlanFixture {
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
+			case "Array<Int>": "int HxArray.t";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + semanticTypeId : "unsupported";
@@ -259,6 +260,7 @@ class ControlPlanFixture {
 			case "Bool": "bool";
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
+			case "Array<Int>": "int HxArray.t";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
@@ -721,6 +723,13 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:string", 190, "String"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-int", 192, "Null<Int>"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:nullable-bool", 194, "Null<Bool>"));
+		final arrayIntThrow = throwDecision("control:throw:array-int", 195, "Array<Int>");
+		OcamlControlPlan.requireDecision(arrayIntThrow);
+		if (arrayIntThrow.payload == null
+			|| !OcamlControlPlan.isAdmittedArrayIntThrowPayload(arrayIntThrow.payload)
+			|| arrayIntThrow.runtimeTags.join(",") != "Dynamic,Array") {
+			throw "The exact Array<Int> throw lost its sealed carrier, identity, or runtime tags";
+		}
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-exception", 197, "haxe.Exception"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-value-exception", 198, "haxe.ValueException"));
@@ -834,6 +843,22 @@ class ControlPlanFixture {
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [preservedNullableBoolThrow]));
 		final boxedDynamicThrow = throwDecision("control:throw:boxed-dynamic", 255, "Dynamic", OcamlControlPayloadConversion.ReprAndRecoverExactValue);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [boxedDynamicThrow]));
+		final arrayThrowWithWrongCarrier = throwDecision("control:throw:array-wrong-carrier", 255, "Array<Int>");
+		Reflect.setField(arrayThrowWithWrongCarrier.payload, "inputCarrierTypeId", "Obj.t");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongCarrier]));
+		final arrayThrowWithWrongRepresentation = throwDecision("control:throw:array-wrong-representation", 255, "Array<Int>");
+		Reflect.setField(arrayThrowWithWrongRepresentation.payload, "outputRepresentationId", "representation:Array<Int>:captured-local-storage");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongRepresentation]));
+		final arrayThrowWithWrongConversion = throwDecision("control:throw:array-wrong-conversion", 255, "Array<Int>",
+			OcamlControlPayloadConversion.BoxNominalThrowCarrier);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongConversion]));
+		final arrayThrowWithWrongTags = throwDecision("control:throw:array-wrong-tags", 255, "Array<Int>", null, ["Dynamic"]);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongTags]));
+		final arrayThrowWithWrongProof = throwDecision("control:throw:array-wrong-proof", 255, "Array<Int>");
+		Reflect.setField(arrayThrowWithWrongProof.payload, "proofId", OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID);
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongProof]));
+		final unsupportedGenericArrayThrow = throwDecision("control:throw:generic-array", 255, "Array<String>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [unsupportedGenericArrayThrow]));
 		final dynamicThrowWithProgramRepresentation = throwDecision("control:throw:dynamic-program-representation", 256, "Dynamic");
 		if (dynamicThrowWithProgramRepresentation.payload == null)
 			throw "The Dynamic representation-corruption fixture lost its payload";

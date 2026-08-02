@@ -533,6 +533,8 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [carrier])
 				]);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
+			case BoxArrayIntThrowCarrier:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case BoxNominalThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case PreserveDynamicThrowCarrier:

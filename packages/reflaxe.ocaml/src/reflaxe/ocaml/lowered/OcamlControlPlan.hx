@@ -76,6 +76,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxBoolAndRecoverExactValue = "box-bool-and-recover-exact-value";
 	final PreserveNullableIntThrowCarrier = "preserve-nullable-int-throw-carrier";
 	final NormalizeNullableBoolThrowCarrier = "normalize-nullable-bool-throw-carrier";
+	final BoxArrayIntThrowCarrier = "box-array-int-throw-carrier";
 	final BoxNominalThrowCarrier = "box-nominal-throw-carrier";
 	final PreserveDynamicThrowCarrier = "preserve-dynamic-throw-carrier";
 	final BoxHaxeExceptionWrapperThrowCarrier = "box-haxe-exception-wrapper-throw-carrier";
@@ -329,6 +330,7 @@ class OcamlControlPlan {
 	public static inline final EXACT_VALUE_THROW_PROOF_ID = "exact-value-throw-control-v1";
 	public static inline final NULLABLE_INT_THROW_PROOF_ID = "nullable-int-throw-control-v1";
 	public static inline final NULLABLE_BOOL_THROW_PROOF_ID = "nullable-bool-throw-control-v1";
+	public static inline final EXACT_ARRAY_INT_THROW_PROOF_ID = "exact-array-int-throw-control-v1";
 	public static inline final EXACT_NOMINAL_THROW_PROOF_ID = "exact-monomorphic-class-throw-control-v1";
 	public static inline final DYNAMIC_THROW_PROOF_ID = "dynamic-carrier-throw-control-v1";
 	public static inline final HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID = "exact-haxe-exception-wrapper-throw-control-v1";
@@ -896,6 +898,10 @@ class OcamlControlPlan {
 					|| !isAdmittedNullableSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid nullable-Bool signal normalization';
 				}
+			case BoxArrayIntThrowCarrier:
+				if (!isAdmittedArrayIntThrowPayload(payload)) {
+					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an invalid exact Array<Int> exception crossing';
+				}
 			case BoxNominalThrowCarrier:
 				if (!isAdmittedNominalPayload(payload)) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: throw decision "${decision.id}" has an incomplete monomorphic-class payload crossing';
@@ -1308,6 +1314,7 @@ class OcamlControlPlan {
 	public static function expectedThrowTags(semanticTypeId:String, hasNominalRepresentation:Bool = false, hasEnumRepresentation:Bool = false):Array<String> {
 		return switch (semanticTypeId) {
 			case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
+			case "Array<Int>": ["Dynamic", "Array"];
 			case _: hasEnumRepresentation ? ["Dynamic", semanticTypeId] : (hasNominalRepresentation ? ["Dynamic"] : []);
 		}
 	}
@@ -1319,6 +1326,7 @@ class OcamlControlPlan {
 			case "Bool": OcamlControlPayloadConversion.BoxBoolAndRecoverExactValue;
 			case "Null<Int>": OcamlControlPayloadConversion.PreserveNullableIntThrowCarrier;
 			case "Null<Bool>": OcamlControlPayloadConversion.NormalizeNullableBoolThrowCarrier;
+			case "Array<Int>": OcamlControlPayloadConversion.BoxArrayIntThrowCarrier;
 			case "Dynamic": OcamlControlPayloadConversion.PreserveDynamicThrowCarrier;
 			case "haxe.Exception", "haxe.ValueException": OcamlControlPayloadConversion.BoxHaxeExceptionWrapperThrowCarrier;
 			case _: hasEnumRepresentation ? OcamlControlPayloadConversion.BoxEnumThrowCarrier : (hasNominalRepresentation ? OcamlControlPayloadConversion.BoxNominalThrowCarrier : null);
@@ -1331,6 +1339,7 @@ class OcamlControlPlan {
 			case "Int", "Bool", "String": EXACT_VALUE_THROW_PROOF_ID;
 			case "Null<Int>": NULLABLE_INT_THROW_PROOF_ID;
 			case "Null<Bool>": NULLABLE_BOOL_THROW_PROOF_ID;
+			case "Array<Int>": EXACT_ARRAY_INT_THROW_PROOF_ID;
 			case "Dynamic": DYNAMIC_THROW_PROOF_ID;
 			case "haxe.Exception", "haxe.ValueException": HAXE_EXCEPTION_WRAPPER_THROW_PROOF_ID;
 			case _: hasEnumRepresentation ? EXACT_ENUM_THROW_PROOF_ID : (hasNominalRepresentation ? EXACT_NOMINAL_THROW_PROOF_ID : null);
@@ -1388,6 +1397,26 @@ class OcamlControlPlan {
 			&& payload.outputCarrierTypeId == "Obj.t"
 			&& payload.outputRepresentationId == DYNAMIC_CONTROL_REPRESENTATION_ID
 			&& payload.conversion == OcamlControlPayloadConversion.PreserveDynamicThrowCarrier
+			&& payload.nominalRepresentation == null;
+	}
+
+	/**
+		Reports whether one exact `Array<Int>` local keeps its native array object
+		while crossing the private Haxe exception channel.
+
+		The array is already stored as `int HxArray.t`. `Obj.t` is only the opaque
+		in-flight exception carrier, so a Dynamic catch receives the same mutable
+		array object. This deliberately admits only the existing immutable-local
+		representation; generic arrays, fields, call boundaries, and array-valued
+		returns still require separate representation decisions.
+	**/
+	public static function isAdmittedArrayIntThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		return payload.inputSemanticTypeId == "Array<Int>"
+			&& payload.inputCarrierTypeId == "int HxArray.t"
+			&& payload.inputRepresentationId == "representation:Array<Int>:internal-value"
+			&& payload.signalCarrierTypeId == "Obj.t"
+			&& samePayloadSides(payload)
+			&& payload.conversion == OcamlControlPayloadConversion.BoxArrayIntThrowCarrier
 			&& payload.nominalRepresentation == null;
 	}
 
@@ -1455,6 +1484,7 @@ class OcamlControlPlan {
 			case "Null<Int>": OcamlRepresentationRegistry.isExactNullInt(expression.t);
 			case "Null<Bool>": OcamlRepresentationRegistry.isExactNullBool(expression.t);
 			case "String": OcamlRepresentationRegistry.isExactString(expression.t);
+			case "Array<Int>": OcamlRepresentationRegistry.isExactArrayInt(expression.t) && isAdmittedArrayIntThrowPayload(payload);
 			case "Dynamic":
 				switch (haxe.macro.TypeTools.follow(expression.t)) {
 					case TDynamic(_): isAdmittedDynamicReturnPayload(payload) || isAdmittedDynamicThrowPayload(payload);
@@ -1643,10 +1673,12 @@ class OcamlControlPlan {
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
 	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
-	whole-program-monomorphic class payload, or a directly visible ordinary enum
-	constructor. A direct enum throw means the thrown expression itself is the
-	constructor value or call; values reached through locals, casts, fields, or
-	other expressions remain outside this slice. Nested function literals own
+	immutable-local `Array<Int>`, one whole-program-monomorphic class payload, or
+	a directly visible ordinary enum constructor. The array case reuses the
+	already-sealed `int HxArray.t` local and does not admit array literals, fields,
+	calls, or generic arrays. A direct enum throw means the thrown expression
+	itself is the constructor value or call; values reached through locals, casts,
+	fields, or other expressions remain outside this slice. Nested function literals own
 	independent boundaries and are deliberately skipped. Each source `try` is
 	admitted independently, so one unsupported catch chain does not discard
 	another represented chain in the same function.
@@ -1821,6 +1853,8 @@ class OcamlControlPlanner {
 							"The final typed Haxe body sends one exact Null<Int>/Obj.t value through the compiler-owned Haxe exception channel without another box. The runtime tag comes from the carried value, so non-null matches Int while null remains Dynamic-only.";
 						case "Null<Bool>":
 							"The final typed Haxe body sends one exact Null<Bool>/Obj.t value through the compiler-owned Haxe exception channel. Null remains the existing sentinel; a non-null carrier is normalized once into the unambiguous boxed-Bool exception representation so it matches Bool rather than Int.";
+						case "Array<Int>":
+							"The final typed Haxe body throws one already-sealed Array<Int>/int HxArray.t local through the compiler-owned Haxe exception channel. Obj.t is only the in-flight carrier: the caught value remains the same mutable HxArray object, and the runtime tags identify it as both Dynamic and Array without admitting generic arrays or an array-valued callable boundary.";
 						case "Dynamic":
 							"The final typed Haxe body sends one Dynamic/Obj.t value through the compiler-owned Haxe exception channel without reboxing or changing the payload. Dynamic is the only static tag; the runtime derives any more specific primitive or class tag from the carried value, while null remains Dynamic-only.";
 						case "haxe.Exception", "haxe.ValueException":
@@ -2191,6 +2225,37 @@ class OcamlControlPlanner {
 	}
 
 	/**
+		Selects the existing immutable-local representation for one exact
+		`Array<Int>` throw.
+
+		Only a typed local already sealed by the local-representation planner is
+		eligible. This prevents throw planning from treating an array literal,
+		field, call result, generic array, or a mutable/captured storage carrier as
+		if it had the same proven boundary.
+	**/
+	function exactArrayIntThrowRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+		if (!OcamlRepresentationRegistry.isExactArrayInt(expression.t))
+			return null;
+		final unwrapped = unwrapTransparent(expression);
+		return switch (unwrapped.expr) {
+			case TLocal(local):
+				final reference = localRepresentations.referenceFor(localIdentities.requireHostId(local.id).id);
+				if (reference == null
+					|| reference.semanticTypeId != "Array<Int>"
+					|| reference.domain != OcamlRepresentationDomain.InternalValue
+					|| reference.representationId != "representation:Array<Int>:internal-value") {
+					null;
+				} else {
+					final representation = representations.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
+					representation.id == reference.representationId
+					&& representation.carrierTypeId == "int HxArray.t" ? representation : null;
+				}
+			case _:
+				null;
+		}
+	}
+
+	/**
 		Selects a represented value that can cross the exception channel opaquely.
 
 		Throwing does not read fields or expose a callable/storage carrier, so an
@@ -2201,6 +2266,9 @@ class OcamlControlPlanner {
 		for a real record. A value statically typed as `Dynamic` already uses the
 		private `Obj.t` carrier; selecting it here preserves that carrier only for
 		exception transport and does not register a general Dynamic representation.
+		An exact immutable `Array<Int>` local may also cross opaquely once its
+		program representation is already sealed; this preserves the existing
+		mutable array object without introducing an array-valued call boundary.
 		Other control families remain on their narrower proofs.
 	**/
 	function throwRepresentation(expression:TypedExpr):Null<OcamlControlThrowRepresentation> {
@@ -2227,6 +2295,16 @@ class OcamlControlPlanner {
 				carrierTypeId: exact.carrierTypeId,
 				representationId: exact.id,
 				nominalRepresentation: nominalProofFor(exact),
+				enumIdentity: null
+			};
+		}
+		final exactArrayInt = exactArrayIntThrowRepresentation(expression);
+		if (exactArrayInt != null) {
+			return {
+				semanticTypeId: exactArrayInt.semanticTypeId,
+				carrierTypeId: exactArrayInt.carrierTypeId,
+				representationId: exactArrayInt.id,
+				nominalRepresentation: null,
 				enumIdentity: null
 			};
 		}

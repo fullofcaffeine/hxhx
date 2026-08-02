@@ -62,8 +62,8 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v68";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v7";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v69";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v8";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -94,7 +94,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 33,
+			schemaVersion: 34,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -388,8 +388,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 55) {
-						throw 'Unsupported lowering report schema $version; expected 55.';
+					if (version != 56) {
+						throw 'Unsupported lowering report schema $version; expected 56.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -495,7 +495,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v16")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v17")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -711,18 +711,21 @@ class ReflaxeOcamlInspection {
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
+						case "Array<Int>": "box-array-int-throw-carrier";
 						case "Dynamic": "preserve-dynamic-throw-carrier";
 						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
 						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
 					};
 					final expectedTags = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
+						case "Array<Int>": ["Dynamic", "Array"];
 						case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
 					};
 					final expectedProofId = switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
+						case "Array<Int>": "exact-array-int-throw-control-v1";
 						case "Dynamic": "dynamic-carrier-throw-control-v1";
 						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
 						case _: directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");

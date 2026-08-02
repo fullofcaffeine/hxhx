@@ -154,12 +154,36 @@ class Main {
 		return local();
 	}
 
-	/** Keeps a closure with an unrepresented throw payload on the legacy path. */
-	static function nestedUnsupportedThrowClosure():Int {
+	/** Exercises one exact Array<Int> throw without losing the array object. */
+	static function nestedArrayThrowClosure(enabled:Bool):String {
+		final expected = [1];
 		final local = function(enabled:Bool):Int {
 			if (enabled)
 				return 47;
-			throw [1];
+			throw expected;
+		};
+		var result = "unreachable";
+		if (enabled) {
+			result = Std.string(local(true));
+		} else {
+			try {
+				local(false);
+			} catch (caught:Dynamic) {
+				final actual:Array<Int> = cast caught;
+				final sameObject = actual == expected;
+				actual.push(2);
+				result = sameObject + ":" + expected.length + ":" + expected[1];
+			}
+		}
+		return result;
+	}
+
+	/** Keeps a generic array throw outside the exact Array<Int> proof. */
+	static function nestedUnsupportedGenericThrowClosure():Int {
+		final local = function(enabled:Bool):Int {
+			if (enabled)
+				return 49;
+			throw ["generic"];
 		};
 		return local(true);
 	}
@@ -267,7 +291,9 @@ class Main {
 		printLine("nullableBoolClosure=" + nestedNullableBoolClosure());
 		printLine("dynamicClosure=" + (nestedDynamicClosure() == 41));
 		printLine("zeroArgumentClosure=" + nestedZeroArgumentClosure());
-		printLine("unsupportedThrowClosure=" + nestedUnsupportedThrowClosure());
+		printLine("arrayThrowReturn=" + nestedArrayThrowClosure(true));
+		printLine("arrayThrowCatch=" + nestedArrayThrowClosure(false));
+		printLine("unsupportedGenericThrowClosure=" + nestedUnsupportedGenericThrowClosure());
 		printLine("nominalClosure=" + nestedNominalClosure());
 		printLine("deepClosure=" + deepNestedClosure());
 		printLine("catchClosure=" + nestedCatchClosure());
