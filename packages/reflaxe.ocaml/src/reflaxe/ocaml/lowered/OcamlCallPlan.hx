@@ -1318,7 +1318,8 @@ class OcamlCallPlanner {
 	/**
 		Selects the independently typed boundary for one represented function literal.
 
-		stable lexical occurrence. The result must use a carrier already owned by the
+		The function literal already has a stable lexical occurrence owned by its
+		enclosing root function. Its result must use a carrier already owned by the
 		existing first-class function-value matrix: exact Bool/Int/String, nullable
 		Int/Bool, Dynamic, or one program-owned monomorphic class record. Dynamic
 		already has one closed `Obj.t` carrier. A nominal result is admitted only when
