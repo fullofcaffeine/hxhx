@@ -34,7 +34,10 @@ import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64Representat
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldContract;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -48,7 +51,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 51;
+	public static inline final SCHEMA_VERSION = 52;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -120,10 +123,11 @@ class OcamlLoweringReportWriter {
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
-			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, localConversions:Array<OcamlLocalConversionDecision>,
-			containerElementRequiredConversionIds:Array<String>, containerElementConversions:Array<OcamlContainerElementDecision>,
-			unsafeOperations:Array<OcamlUnsafeOperationRecord>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, structuralFields:Array<OcamlStructuralFieldDecision>,
+			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
+			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
+			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
+			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -162,6 +166,15 @@ class OcamlLoweringReportWriter {
 			if (anonymousOperationIds.exists(operation.id))
 				throw 'Anonymous operation identity "${operation.id}" occurs more than once.';
 			anonymousOperationIds.set(operation.id, true);
+		}
+		final sortedStructuralFields = structuralFields.copy();
+		sortedStructuralFields.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final structuralFieldIds:Map<String, Bool> = [];
+		for (decision in sortedStructuralFields) {
+			OcamlStructuralFieldContract.require(decision);
+			if (structuralFieldIds.exists(decision.id))
+				throw 'Structural field decision identity "${decision.id}" occurs more than once.';
+			structuralFieldIds.set(decision.id, true);
 		}
 		for (entry in sorted) {
 			final domain = switch (entry.place.kind) {
@@ -392,6 +405,15 @@ class OcamlLoweringReportWriter {
 				includedRequirementIds.set(expected.id, true);
 			}
 		}
+		for (decision in sortedStructuralFields) {
+			final expected = OcamlStructuralFieldRuntimeRequirementRecorder.requirement(decision);
+			final recorded = requirementById.get(expected.id);
+			if (recorded == null)
+				throw 'Structural field decision "${decision.id}" refers to missing runtime requirement "${expected.id}".';
+			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+				throw 'Structural field decision "${decision.id}" disagrees with runtime requirement "${expected.id}".';
+			includedRequirementIds.set(expected.id, true);
+		}
 		for (conversion in sortedLocalConversions) {
 			if (conversion.conversion != OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
 				continue;
@@ -470,6 +492,7 @@ class OcamlLoweringReportWriter {
 			structures: sortedAnonymousStructures,
 			operations: sortedAnonymousOperations
 		});
+		final canonicalStructuralFields = haxe.Json.stringify(sortedStructuralFields);
 		final sortedUnsafeOperations = unsafeOperations.copy();
 		sortedUnsafeOperations.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final unsafeByConversionId:Map<String, OcamlUnsafeOperationRecord> = [];
@@ -523,6 +546,10 @@ class OcamlLoweringReportWriter {
 			anonymousStructures: sortedAnonymousStructures,
 			anonymousStructureOperationCount: sortedAnonymousOperations.length,
 			anonymousStructureOperations: sortedAnonymousOperations,
+			structuralFieldModel: OcamlStructuralFieldContract.MODEL,
+			structuralFieldRevision: "sha256:" + Sha256.encode(canonicalStructuralFields),
+			structuralFieldCount: sortedStructuralFields.length,
+			structuralFields: sortedStructuralFields,
 			localConversionModel: "typed-ocaml-local-carrier-conversions-v3",
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,

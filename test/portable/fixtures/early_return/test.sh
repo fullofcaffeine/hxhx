@@ -25,7 +25,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 51
+if (report.schemaVersion !== 52
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
@@ -189,7 +189,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v6'
-			: control.pipelineRevision !== 'ocaml-function-plans-v64')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v65')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -335,7 +335,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v64'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v65'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -421,7 +421,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 30
+if (report.schemaVersion !== 31
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

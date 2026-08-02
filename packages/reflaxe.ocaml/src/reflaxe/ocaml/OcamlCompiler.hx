@@ -1493,6 +1493,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordEnumDynamicContainerRuntimeRequirement(conversion);
 		for (decision in plan.anonymousStructures.operations())
 			ctx.recordAnonymousStructureRuntimeRequirement(decision);
+		for (decision in plan.structuralFields.decisions())
+			ctx.recordStructuralFieldRuntimeRequirement(decision);
 		for (decision in plan.bytesAccesses.decisions())
 			ctx.recordBytesAccessRuntimeRequirements(decision);
 		for (decision in plan.bytesMutations.decisions())
@@ -2753,10 +2755,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationDecisions,
 				functionPlanRegistry.anonymousStructureDecisions(), functionPlanRegistry.anonymousStructureOperations(),
-				functionPlanRegistry.localConversions(), functionPlanRegistry.containerElementRequiredConversionIds(),
-				functionPlanRegistry.containerElementConversions(), functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(),
-				functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
-				functionPlanRegistry.controlCatchChains(), staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.structuralFieldDecisions(), functionPlanRegistry.localConversions(),
+				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
+				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(),
+				functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(),
+				staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

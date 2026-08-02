@@ -14,6 +14,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralField;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControl;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchChain;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionControlCatchClause;
@@ -60,7 +61,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v64";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v65";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
@@ -92,7 +93,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 30,
+			schemaVersion: 31,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -115,6 +116,7 @@ class ReflaxeOcamlInspection {
 				representationDecisionCount: representation.decisions.length,
 				anonymousStructureCount: lowering.anonymousStructures.length,
 				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
+				structuralFieldCount: lowering.structuralFields.length,
 				localConversionCount: lowering.localConversions.length,
 				containerElementConversionCount: lowering.containerElementConversions.length,
 				unsafeOperationCount: lowering.unsafeOperations.length,
@@ -162,6 +164,10 @@ class ReflaxeOcamlInspection {
 			for (structure in report.lowering.anonymousStructures) {
 				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
 				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
+			}
+			lines.push('[PASS] Ambiguous structural fields: ${report.lowering.structuralFields.length} stored read, stored write, or captured Iterator method occurrence${report.lowering.structuralFields.length == 1 ? "" : "s"} were classified from final Haxe types before target syntax.');
+			for (field in report.lowering.structuralFields) {
+				lines.push('  - ${field.sourceFile} bytes ${field.sourceMin}-${field.sourceMax} ${field.fieldName}: ${field.operation} via ${field.runtimeModule}.${field.runtimeOperation}');
 			}
 			lines.push('[PASS] Local carrier conversions: ${report.lowering.localConversions.length} occurrence${report.lowering.localConversions.length == 1 ? "" : "s"} sealed before syntax.');
 			lines.push('[PASS] Container-element conversions: ${report.lowering.containerElementConversions.length} typed array element${report.lowering.containerElementConversions.length == 1 ? "" : "s"} sealed before syntax.');
@@ -345,6 +351,8 @@ class ReflaxeOcamlInspection {
 					anonymousStructureRevision: null,
 					anonymousStructures: [],
 					anonymousStructureOperations: [],
+					structuralFieldRevision: null,
+					structuralFields: [],
 					localConversionRevision: null,
 					localConversions: [],
 					containerElementRequiredConversionRevision: null,
@@ -373,8 +381,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 51) {
-						throw 'Unsupported lowering report schema $version; expected 51.';
+					if (version != 52) {
+						throw 'Unsupported lowering report schema $version; expected 52.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -389,6 +397,7 @@ class ReflaxeOcamlInspection {
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
 					final anonymousStructures = ReflaxeOcamlAnonymousStructureInspection.inspect(value, representation);
+					final structuralFields = ReflaxeOcamlStructuralFieldInspection.inspect(value);
 					final localConversions = inspectLocalConversions(value);
 					final containerElementRequiredConversionIds = inspectContainerElementRequiredConversions(value);
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
@@ -399,7 +408,7 @@ class ReflaxeOcamlInspection {
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
-						containerElementConversions, anonymousStructures.operations, callInventory.calls, controls);
+						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, callInventory.calls, controls);
 					{
 						status: "present",
 						required: required,
@@ -412,6 +421,8 @@ class ReflaxeOcamlInspection {
 						anonymousStructureRevision: anonymousStructures.revision,
 						anonymousStructures: anonymousStructures.structures,
 						anonymousStructureOperations: anonymousStructures.operations,
+						structuralFieldRevision: structuralFields.revision,
+						structuralFields: structuralFields.decisions,
 						localConversionRevision: requiredSha256Revision(value, "localConversionRevision"),
 						localConversions: localConversions,
 						containerElementRequiredConversionRevision: requiredSha256Revision(value, "containerElementRequiredConversionRevision"),
@@ -433,7 +444,7 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -2282,7 +2293,8 @@ class ReflaxeOcamlInspection {
 
 	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>, representation:InspectionRepresentation,
 			localConversions:Array<InspectionLocalConversion>, containerElementConversions:Array<InspectionContainerElementConversion>,
-			anonymousOperations:Array<InspectionAnonymousStructureOperation>, calls:Array<InspectionCall>, controls:Array<InspectionControl>):Int {
+			anonymousOperations:Array<InspectionAnonymousStructureOperation>, structuralFields:Array<InspectionStructuralField>, calls:Array<InspectionCall>,
+			controls:Array<InspectionControl>):Int {
 		requiredSha256Revision(value, "runtimeRequirementRevision");
 		final requirementValues = requiredArray(value, "runtimeRequirements");
 		final expectedCount = requiredInt(value, "runtimeRequirementCount");
@@ -2504,6 +2516,37 @@ class ReflaxeOcamlInspection {
 				}
 				referenced.set(arithmeticId, true);
 			}
+		}
+		for (field in structuralFields) {
+			final iteratorMethod = field.operation == "capture-iterator-method";
+			final capability = iteratorMethod ? "haxe-iterator" : "haxe-structural-field";
+			final requirementId = field.id + ":runtime:" + capability;
+			if (field.runtimeRequirementIds.length != 1 || field.runtimeRequirementIds[0] != requirementId)
+				throw 'Structural field decision "${field.id}" has the wrong runtime requirement identity.';
+			final requirement = requirements.get(requirementId);
+			if (requirement == null)
+				throw 'Structural field decision "${field.id}" refers to missing runtime requirement "$requirementId".';
+			final source = requiredObject(requirement, "source");
+			final subject = requiredObject(requirement, "subject");
+			final roots = requiredStringArray(requirement, "rootModules");
+			final expectedFeature = iteratorMethod ? "haxe-iterator-v1" : "haxe-anonymous-structure-v1";
+			if (requiredString(requirement, "sourceKind") != "haxe-expression"
+				|| requiredString(requirement, "sourceId") != field.id
+				|| requiredString(source, "file") != field.sourceFile
+				|| requiredInt(source, "min") != field.sourceMin
+				|| requiredInt(source, "max") != field.sourceMax
+				|| requiredString(requirement, "semanticCapability") != capability
+				|| requiredString(requirement, "cause") != "lowering-decision"
+				|| requiredString(requirement, "decisionId") != field.id
+				|| requiredString(subject, "kind") != "haxe-type"
+				|| requiredString(subject, "id") != field.receiverSemanticTypeId
+				|| requiredString(requirement, "implementationFeature") != expectedFeature
+				|| roots.length != 1
+				|| roots[0] != field.runtimeModule
+				|| requiredStringArray(requirement, "profileEligibility").join(",") != "metal,portable") {
+				throw 'Structural field decision "${field.id}" runtime requirement "$requirementId" disagrees with its sealed typed operation.';
+			}
+			referenced.set(requirementId, true);
 		}
 		for (call in calls) {
 			final target = call.standardIMapTarget;
@@ -2868,6 +2911,8 @@ class ReflaxeOcamlInspection {
 			anonymousStructureRevision: null,
 			anonymousStructures: [],
 			anonymousStructureOperations: [],
+			structuralFieldRevision: null,
+			structuralFields: [],
 			localConversionRevision: null,
 			localConversions: [],
 			containerElementRequiredConversionRevision: null,

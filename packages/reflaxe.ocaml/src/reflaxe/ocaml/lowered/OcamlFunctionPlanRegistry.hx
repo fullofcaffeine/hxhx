@@ -32,6 +32,9 @@ import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan.OcamlAnonymousStructurePlanner;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
@@ -64,6 +67,7 @@ typedef OcamlSealedFunctionPlan = {
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
+	final structuralFields:OcamlStructuralFieldPlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
@@ -115,6 +119,7 @@ typedef OcamlSealedStandaloneExpressionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final containerElements:OcamlContainerElementPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
+	final structuralFields:OcamlStructuralFieldPlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
@@ -171,7 +176,7 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v64";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v65";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
 
@@ -208,6 +213,7 @@ class OcamlFunctionPlanRegistry {
 	final standaloneRequiredContainerElementIds:StringMap<Bool> = new StringMap();
 	final standaloneAnonymousStructuresById:StringMap<OcamlAnonymousStructureDecision> = new StringMap();
 	final standaloneAnonymousOperationsById:StringMap<OcamlAnonymousStructureOperationDecision> = new StringMap();
+	final standaloneStructuralFieldsById:StringMap<OcamlStructuralFieldDecision> = new StringMap();
 
 	public function new() {}
 
@@ -231,6 +237,7 @@ class OcamlFunctionPlanRegistry {
 		standaloneRequiredContainerElementIds.clear();
 		standaloneAnonymousStructuresById.clear();
 		standaloneAnonymousOperationsById.clear();
+		standaloneStructuralFieldsById.clear();
 	}
 
 	/**
@@ -485,6 +492,7 @@ class OcamlFunctionPlanRegistry {
 		final binding = standaloneBinding("standalone:" + requiredStandaloneOwner(ownerId), expression);
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]), anonymousStructures, representations).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(expression);
@@ -493,6 +501,7 @@ class OcamlFunctionPlanRegistry {
 		OcamlContainerElementPlanner.requireCompleteness(expression, binding, containerElements);
 		anonymousStructures.requirePlanBinding(binding);
 		anonymousStructures.requireRepresentations(representations);
+		structuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
 		bytesAccesses.requireRepresentations(representations);
 		bytesMutations.requirePlanBinding(binding);
@@ -503,15 +512,27 @@ class OcamlFunctionPlanRegistry {
 		bytesReads.requireRepresentations(representations);
 		recordStandaloneContainerElements(containerElements);
 		recordStandaloneAnonymousStructures(anonymousStructures);
+		recordStandaloneStructuralFields(structuralFields);
 		return {
 			binding: binding,
 			containerElements: containerElements,
 			anonymousStructures: anonymousStructures,
+			structuralFields: structuralFields,
 			bytesAccesses: bytesAccesses,
 			bytesMutations: bytesMutations,
 			bytesProducers: bytesProducers,
 			bytesReads: bytesReads
 		};
+	}
+
+	/** Keeps report-safe structural-field decisions from non-function roots. */
+	function recordStandaloneStructuralFields(plan:OcamlStructuralFieldPlan):Void {
+		for (decision in plan.decisions()) {
+			final existing = standaloneStructuralFieldsById.get(decision.id);
+			if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(decision))
+				throw 'reflaxe.ocaml [ocaml-structural-field:conflicting-standalone]: standalone decision "${decision.id}" changed within one request';
+			standaloneStructuralFieldsById.set(decision.id, decision);
+		}
 	}
 
 	/**
@@ -576,6 +597,7 @@ class OcamlFunctionPlanRegistry {
 		OcamlContainerElementPlanner.requireCompleteness(expression, expected, plan.containerElements);
 		plan.anonymousStructures.requirePlanBinding(expected);
 		plan.anonymousStructures.requireRepresentations(representations);
+		plan.structuralFields.requirePlanBinding(expected);
 		plan.bytesAccesses.requirePlanBinding(expected);
 		plan.bytesAccesses.requireRepresentations(representations);
 		plan.bytesMutations.requirePlanBinding(expected);
@@ -733,7 +755,7 @@ class OcamlFunctionPlanRegistry {
 			localRepresentations:OcamlLocalRepresentationPlan, containerElements:OcamlContainerElementPlan, bytesAccesses:OcamlBytesAccessPlan,
 			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan,
 			controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
-			?anonymousStructures:OcamlAnonymousStructurePlan):Void {
+			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -746,7 +768,9 @@ class OcamlFunctionPlanRegistry {
 				throw 'reflaxe.ocaml [ocaml-nested-function:conflicting-root-identities]: sealed function "${binding.functionId}" does not use its registered whole-body identity lookup';
 		}
 		final sealedAnonymousStructures = anonymousStructures ?? new OcamlAnonymousStructurePlan([], []);
+		final sealedStructuralFields = structuralFields ?? new OcamlStructuralFieldPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
+		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
 		bytesMutations.requirePlanBinding(binding);
 		bytesProducers.requirePlanBinding(binding);
@@ -775,6 +799,7 @@ class OcamlFunctionPlanRegistry {
 				localRepresentations: localRepresentations,
 				containerElements: containerElements,
 				anonymousStructures: sealedAnonymousStructures,
+				structuralFields: sealedStructuralFields,
 				bytesAccesses: bytesAccesses,
 				bytesMutations: bytesMutations,
 				bytesProducers: bytesProducers,
@@ -1013,6 +1038,24 @@ class OcamlFunctionPlanRegistry {
 			}
 		}
 		final out = [for (operation in byId) operation];
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
+	}
+
+	/** Returns every overlapping structural-field decision in stable order. */
+	public function structuralFieldDecisions():Array<OcamlStructuralFieldDecision> {
+		final byId:Map<String, OcamlStructuralFieldDecision> = [];
+		for (decision in standaloneStructuralFieldsById)
+			byId.set(decision.id, decision);
+		for (record in sealedFunctions) {
+			for (decision in record.plan.structuralFields.decisions()) {
+				final existing = byId.get(decision.id);
+				if (existing != null && haxe.Json.stringify(existing) != haxe.Json.stringify(decision))
+					throw 'reflaxe.ocaml [ocaml-structural-field:conflicting]: decision "${decision.id}" differs between sealed roots';
+				byId.set(decision.id, decision);
+			}
+		}
+		final out = [for (decision in byId) decision];
 		out.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return out;
 	}

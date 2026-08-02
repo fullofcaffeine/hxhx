@@ -30,6 +30,7 @@ import reflaxe.ocaml.ast.OcamlBytesReadSyntax;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
+import reflaxe.ocaml.ast.OcamlStructuralFieldSyntax;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
@@ -84,6 +85,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
@@ -121,6 +124,7 @@ class OcamlBuilder {
 	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 	var currentAnonymousStructurePlan:Null<OcamlAnonymousStructurePlan> = null;
+	var currentStructuralFieldPlan:Null<OcamlStructuralFieldPlan> = null;
 	var currentBytesAccessPlan:Null<OcamlBytesAccessPlan> = null;
 	var currentBytesMutationPlan:Null<OcamlBytesMutationPlan> = null;
 	var currentBytesProducerPlan:Null<OcamlBytesProducerPlan> = null;
@@ -264,6 +268,22 @@ class OcamlBuilder {
 	**/
 	function anonymousStructureInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-anonymous:plan-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/**
+		Stops syntax from deciding what an ambiguous `next` or `hasNext` means.
+
+		The final typed planner must first classify the occurrence as an ordinary
+		stored field or a captured Iterator method. Reaching this boundary without
+		that decision is an internal compiler error because choosing from the field
+		name alone can silently change valid linked-list behavior.
+	**/
+	function structuralFieldInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-structural-field:plan-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -2274,6 +2294,9 @@ class OcamlBuilder {
 		final plannedAnonymousLiteral = currentAnonymousStructurePlan == null
 			|| !anonymousLiteralCandidate ? null : currentAnonymousStructurePlan.requireLiteral(e, representationRegistry);
 		final plannedAnonymousOperation = currentAnonymousStructurePlan == null ? null : currentAnonymousStructurePlan.operationFor(e, representationRegistry);
+		final structuralFieldCandidate = plannedAnonymousOperation == null && OcamlStructuralFieldPlanner.isCandidate(e);
+		final plannedStructuralField = currentStructuralFieldPlan == null
+			|| !structuralFieldCandidate ? null : currentStructuralFieldPlan.decisionFor(e);
 		final bytesAccessOccurrence = OcamlBytesAccessPlan.admittedOccurrence(e);
 		final plannedBytesAccess = currentBytesAccessPlan == null
 			|| bytesAccessOccurrence == null ? null : currentBytesAccessPlan.requireFor(e, representationRegistry);
@@ -2305,6 +2328,14 @@ class OcamlBuilder {
 				OcamlAnonymousStructureSyntax.buildCompoundWrite(plannedAnonymousOperation, receiver, value, buildExpr, freshTmp);
 			case _ if (plannedAnonymousOperation != null):
 				anonymousStructureInvariant('anonymous operation "${plannedAnonymousOperation.id}" no longer matches its typed expression', e.pos);
+			case TField(receiver, FAnon(_)) if (plannedStructuralField != null):
+				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, null, buildExpr, freshTmp);
+			case TField(receiver, FClosure(null, _)) if (plannedStructuralField != null):
+				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, null, buildExpr, freshTmp);
+			case TBinop(OpAssign, {expr: TField(receiver, FAnon(_))}, value) if (plannedStructuralField != null):
+				OcamlStructuralFieldSyntax.build(plannedStructuralField, receiver, value, buildExpr, freshTmp);
+			case _ if (structuralFieldCandidate):
+				structuralFieldInvariant("an ambiguous structural field reached syntax without its sealed typed decision", e.pos);
 			case _ if (plannedBytesAccess != null && bytesAccessOccurrence != null):
 				OcamlBytesAccessSyntax.build(plannedBytesAccess, bytesAccessOccurrence.receiver, bytesAccessOccurrence.arguments, buildExpr, freshTmp);
 			case _ if (bytesAccessOccurrence != null):
@@ -5527,8 +5558,10 @@ class OcamlBuilder {
 					case TField(obj, FAnon(cfRef)):
 						final cf = cfRef.get();
 						switch (cf.name) {
-							case "key", "value", "hasNext", "next":
+							case "key", "value":
 								OcamlExpr.EConst(OcamlConst.CUnit);
+							case "hasNext", "next":
+								structuralFieldInvariant('stored field assignment to "${cf.name}" reached the legacy name-only branch', e1.pos);
 							case _:
 								if (isSysFileStatAnon(obj.t)) {
 									OcamlExpr.EConst(OcamlConst.CUnit);
@@ -7310,6 +7343,7 @@ class OcamlBuilder {
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
+		final previousStructuralFieldPlan = currentStructuralFieldPlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7319,6 +7353,7 @@ class OcamlBuilder {
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
+		currentStructuralFieldPlan = validatedPlan.structuralFields;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
@@ -7328,6 +7363,7 @@ class OcamlBuilder {
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
+		currentStructuralFieldPlan = previousStructuralFieldPlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7347,6 +7383,7 @@ class OcamlBuilder {
 		final previousLocalIdentities = currentLocalIdentities;
 		final previousContainerElementPlan = currentContainerElementPlan;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
+		final previousStructuralFieldPlan = currentStructuralFieldPlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7356,6 +7393,7 @@ class OcamlBuilder {
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
 		currentContainerElementPlan = validatedPlan.containerElements;
 		currentAnonymousStructurePlan = validatedPlan.anonymousStructures;
+		currentStructuralFieldPlan = validatedPlan.structuralFields;
 		currentBytesAccessPlan = validatedPlan.bytesAccesses;
 		currentBytesMutationPlan = validatedPlan.bytesMutations;
 		currentBytesProducerPlan = validatedPlan.bytesProducers;
@@ -7365,6 +7403,7 @@ class OcamlBuilder {
 		currentLocalIdentities = previousLocalIdentities;
 		currentContainerElementPlan = previousContainerElementPlan;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
+		currentStructuralFieldPlan = previousStructuralFieldPlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -7553,6 +7592,7 @@ class OcamlBuilder {
 		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousAnonymousStructurePlan = currentAnonymousStructurePlan;
+		final previousStructuralFieldPlan = currentStructuralFieldPlan;
 		final previousBytesAccessPlan = currentBytesAccessPlan;
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
@@ -7568,6 +7608,7 @@ class OcamlBuilder {
 		functionPlan.bytesReads.requireRepresentations(representationRegistry);
 		functionPlan.anonymousStructures.requireRepresentations(representationRegistry);
 		currentAnonymousStructurePlan = functionPlan.anonymousStructures;
+		currentStructuralFieldPlan = functionPlan.structuralFields;
 		currentBytesAccessPlan = functionPlan.bytesAccesses;
 		currentBytesMutationPlan = functionPlan.bytesMutations;
 		currentBytesProducerPlan = functionPlan.bytesProducers;
@@ -7728,6 +7769,7 @@ class OcamlBuilder {
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentAnonymousStructurePlan = previousAnonymousStructurePlan;
+		currentStructuralFieldPlan = previousStructuralFieldPlan;
 		currentBytesAccessPlan = previousBytesAccessPlan;
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
@@ -8535,41 +8577,19 @@ class OcamlBuilder {
 					])
 				]);
 			case FAnon(cfRef):
-				// Minimal anonymous-structure support: KeyValueIterator elements are represented as OCaml tuples.
-				// `{ key:K, value:V }` lowers to `(key, value)`, so `.key` maps to `fst`, `.value` maps to `snd`.
-				//
-				// For iterator values (`Iterator<T>`), we represent them as OCaml records with fields
-				// `hasNext` and `next`, so field access becomes `it.hasNext` / `it.next`.
+				// This is the remaining legacy KeyValueIterator bridge: it assumes `.key` and
+				// `.value` belong to an OCaml `(key, value)` pair based only on their names.
+				// Ordinary anonymous objects can use the same names, so haxe_ocaml-0uwin.21
+				// must replace this guess with a typed representation decision before syntax.
+				// `next` and `hasNext` already have that typed owner and must never reach here.
 				final cf = cfRef.get();
 				switch (cf.name) {
 					case "key":
 						OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [buildExpr(obj)]);
 					case "value":
 						OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [buildExpr(obj)]);
-					case "hasNext":
-						// Iterator bring-up: avoid emitting raw record-label access (`it.hasNext`)
-						// in modules that don't reference `HxIterator`, which can fail under dune
-						// with "Unbound record field hasNext".
-						//
-						// We instead surface iterator primitives via helper functions:
-						//   it.hasNext()  -> HxIterator.hasNext it
-						//   it.hasNext    -> fun () -> HxIterator.hasNext it
-						//
-						// This preserves Haxe's `Void -> Bool` shape while keeping record-label use
-						// confined to `HxIterator` itself.
-						final recvTmp = freshTmp("iter");
-						OcamlExpr.ELet(recvTmp, buildExpr(obj),
-							OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)],
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "hasNext"),
-									[OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(recvTmp)])])),
-							false);
-					case "next":
-						final recvTmp = freshTmp("iter");
-						OcamlExpr.ELet(recvTmp, buildExpr(obj),
-							OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)],
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "next"),
-									[OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(recvTmp)])])),
-							false);
+					case "hasNext", "next":
+						structuralFieldInvariant('field read from "${cf.name}" reached the legacy name-only branch', pos);
 					case _:
 						// Some typedef-backed anonymous structures are represented as real OCaml records
 						// for better performance/ergonomics (e.g. `sys.FileStat`).

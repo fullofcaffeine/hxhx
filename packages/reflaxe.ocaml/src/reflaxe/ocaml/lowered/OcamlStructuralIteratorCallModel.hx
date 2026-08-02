@@ -37,22 +37,29 @@ typedef OcamlStructuralIteratorCallTarget = {
 /**
 	Selects direct `hasNext()` and `next()` calls on structural Iterator values.
 
-	This is deliberately a consumer-only boundary. Iterator construction,
-	array-to-iterator conversion, class adaptation, and standalone method values
-	remain separate work even though they may eventually use the same runtime
-	carrier.
+	Direct invocation and method-value capture use separate proof identities even
+	though both select the same runtime carrier. Iterator construction,
+	array-to-iterator conversion, and class adaptation remain separate work.
 **/
 class OcamlStructuralIteratorCallContract {
 	public static inline final MODEL = "typed-structural-iterator-consumer-v1";
 	public static inline final PROOF_ID = "structural-iterator-runtime-call-v1";
+	public static inline final METHOD_VALUE_PROOF_ID = "structural-iterator-runtime-method-value-v1";
 	public static inline final RUNTIME_CAPABILITY = "haxe-iterator";
 	public static inline final RECEIVER_CARRIER = "HxIterator.t";
+	public static inline final DIRECT_PROOF_CLAIM = "The final typed Haxe call invokes hasNext or next on a structural Iterator value with no source arguments. The target materializes that receiver once, calls the matching HxIterator operation, and preserves the typed result selected by the existing call boundary. This proof does not cover iterator construction, adaptation, or a method value used without immediate invocation.";
+	public static inline final METHOD_VALUE_PROOF_CLAIM = "The final typed Haxe field occurrence captures hasNext or next from a complete structural Iterator value. The target records the exact HxIterator operation and result used by the separate structural-field plan; it does not authorize direct invocation, Iterator construction, or nominal adaptation.";
 
 	#if macro
 	/** Selects one supported direct structural Iterator call. */
 	public static function select(receiver:TypedExpr, field:ClassField, arguments:Array<TypedExpr>, resultType:Type):Null<OcamlStructuralIteratorCallTarget> {
 		if (arguments.length != 0 || !isIteratorType(receiver.t))
 			return null;
+		return selectTarget(receiver, field, resultType, PROOF_ID, DIRECT_PROOF_CLAIM);
+	}
+
+	static function selectTarget(receiver:TypedExpr, field:ClassField, resultType:Type, proofId:String,
+			proofClaim:String):Null<OcamlStructuralIteratorCallTarget> {
 		final operation = operationFor(field.name);
 		if (operation == null || !fieldMatchesOperation(field, operation, resultType))
 			return null;
@@ -64,11 +71,21 @@ class OcamlStructuralIteratorCallContract {
 			runtimeModule: "HxIterator",
 			runtimeFunction: runtimeFunction(operation),
 			runtimeCapabilities: [RUNTIME_CAPABILITY],
-			proofId: PROOF_ID,
-			proofClaim: "The final typed Haxe call invokes hasNext or next on a structural Iterator value with no source arguments. The target materializes that receiver once, calls the matching HxIterator operation, and preserves the typed result selected by the existing call boundary. This proof does not cover iterator construction, adaptation, or a method value used without immediate invocation."
+			proofId: proofId,
+			proofClaim: proofClaim
 		};
 		require(target);
 		return target;
+	}
+
+	/** Selects the same Iterator operation when the method is used as a value. */
+	public static function selectMethodValue(receiver:TypedExpr, field:ClassField):Null<OcamlStructuralIteratorCallTarget> {
+		return switch (TypeTools.follow(field.type)) {
+			case TFun(arguments, result) if (arguments.length == 0):
+				isIteratorType(receiver.t) ? selectTarget(receiver, field, result, METHOD_VALUE_PROOF_ID, METHOD_VALUE_PROOF_CLAIM) : null;
+			case _:
+				null;
+		}
 	}
 
 	/** Rechecks a sealed target against its final typed call occurrence. */
@@ -126,11 +143,15 @@ class OcamlStructuralIteratorCallContract {
 			|| target.runtimeFunction != runtimeFunction(target.operation)
 			|| target.runtimeCapabilities.length != 1
 			|| target.runtimeCapabilities[0] != RUNTIME_CAPABILITY
-			|| target.proofId != PROOF_ID
-			|| target.proofClaim.length == 0
+			|| !validProof(target.proofId, target.proofClaim)
 			|| (target.operation == OcamlStructuralIteratorOperation.HasNext && target.resultSemanticTypeId != "Bool")) {
 			throw "reflaxe.ocaml [ocaml-iterator:invalid-plan]: structural Iterator target disagrees with its receiver, operation, result, runtime, or proof";
 		}
+	}
+
+	static function validProof(proofId:String, proofClaim:String):Bool {
+		return (proofId == PROOF_ID && proofClaim == DIRECT_PROOF_CLAIM)
+			|| (proofId == METHOD_VALUE_PROOF_ID && proofClaim == METHOD_VALUE_PROOF_CLAIM);
 	}
 
 	/** Copies the immutable target out of request-owned planning state. */

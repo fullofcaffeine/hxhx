@@ -16,12 +16,14 @@ import reflaxe.ocaml.lowered.OcamlBytesAccessModel.OcamlBytesAccessDecision;
 import reflaxe.ocaml.lowered.OcamlBytesProducerModel.OcamlBytesProducerDecision;
 import reflaxe.ocaml.lowered.OcamlBytesReadModel.OcamlBytesReadDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
+import reflaxe.ocaml.runtimegen.OcamlStructuralFieldRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlBytesRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
@@ -524,6 +526,18 @@ class CompilationContext {
 	**/
 	public function recordAnonymousStructureRuntimeRequirement(decision:OcamlAnonymousStructureOperationDecision):Void {
 		OcamlAnonymousStructureRuntimeRequirementRecorder.record(runtimeRequirements, decision);
+	}
+
+	/**
+		Records the runtime operation chosen for one `next` or `hasNext` field.
+
+		The sealed decision distinguishes an ordinary stored field from a captured
+		Iterator method before generated OCaml exists. This method preserves that
+		typed explanation in the runtime inventory instead of guessing from a field
+		name or scanning generated text.
+	**/
+	public function recordStructuralFieldRuntimeRequirement(decision:OcamlStructuralFieldDecision):Void {
+		OcamlStructuralFieldRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/**

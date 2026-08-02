@@ -423,6 +423,40 @@ typedef InspectionStructuralIteratorCallTarget = {
 	final proofClaim:String;
 }
 
+/**
+	One typed decision for a field whose name also appears on `Iterator<T>`.
+
+	The operation says whether the source reads or writes an ordinary stored field,
+	or captures a real Iterator method as a function value. Inspection exposes this
+	distinction so a successful build cannot hide a return to field-name guessing.
+**/
+typedef InspectionStructuralField = {
+	final id:String;
+	final occurrenceOrdinal:Int;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final operation:String;
+	final fieldName:String;
+	final receiverSemanticTypeId:String;
+	final receiverCarrierTypeId:String;
+	final fieldSemanticTypeId:String;
+	final resultSemanticTypeId:String;
+	final loadConversion:Null<String>;
+	final storeConversion:Null<String>;
+	final runtimeModule:String;
+	final runtimeOperation:String;
+	final runtimeRequirementIds:Array<String>;
+	final evaluationSchedule:Array<String>;
+	final iteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -624,6 +658,8 @@ typedef InspectionLowering = {
 	final anonymousStructureRevision:Null<String>;
 	final anonymousStructures:Array<InspectionAnonymousStructure>;
 	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
+	final structuralFieldRevision:Null<String>;
+	final structuralFields:Array<InspectionStructuralField>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
 	final containerElementRequiredConversionRevision:Null<String>;
@@ -668,6 +704,7 @@ typedef InspectionSummary = {
 	final representationDecisionCount:Int;
 	final anonymousStructureCount:Int;
 	final anonymousStructureOperationCount:Int;
+	final structuralFieldCount:Int;
 	final localConversionCount:Int;
 	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;

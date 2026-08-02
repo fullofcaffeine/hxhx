@@ -17,7 +17,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 51 || report.callModel !== 'typed-ocaml-directional-call-boundary-v19') {
+if (report.schemaVersion !== 52 || report.callModel !== 'typed-ocaml-directional-call-boundary-v19') {
 	fail('unexpected lowering report or call-model version')
 }
 

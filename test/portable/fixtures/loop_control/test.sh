@@ -26,7 +26,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 51
+if (report.schemaVersion !== 52
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v15'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
@@ -70,7 +70,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v64') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v65') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }
@@ -130,7 +130,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 30
+if (report.schemaVersion !== 31
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length

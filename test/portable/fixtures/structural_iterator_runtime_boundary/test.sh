@@ -25,7 +25,7 @@ for (const consumer of consumers) {
 		|| target.runtimeFunction !== (target.operation === 'has-next' ? 'hasNext' : 'next')
 		|| target.receiverCarrierTypeId !== 'HxIterator.t'
 		|| consumer.evaluationSchedule?.map(step => step.kind).join(',') !== 'materialize-receiver,invoke-callee'
-		|| consumer.pipelineRevision !== 'ocaml-function-plans-v64') {
+		|| consumer.pipelineRevision !== 'ocaml-function-plans-v65') {
 		throw new Error(`structural Iterator consumer ${consumer.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === consumer.id)
@@ -33,6 +33,35 @@ for (const consumer of consumers) {
 		|| requirements[0].id !== `${consumer.id}:runtime:haxe-iterator`
 		|| requirements[0].rootModules?.join(',') !== 'HxIterator') {
 		throw new Error(`structural Iterator consumer ${consumer.id} does not own its exact runtime requirement`)
+	}
+}
+
+const methodValues = lowering.structuralFields?.filter(field => field.operation === 'capture-iterator-method') ?? []
+if (methodValues.length !== 2 || lowering.structuralFieldCount !== methodValues.length)
+	throw new Error('the fixture did not seal both Iterator methods used as function values')
+const methodNames = new Set(methodValues.map(field => field.fieldName))
+for (const methodName of ['hasNext', 'next']) {
+	if (!methodNames.has(methodName))
+		throw new Error(`the fixture did not seal the Iterator.${methodName} method value`)
+}
+for (const method of methodValues) {
+	const target = method.iteratorTarget
+	if (!target
+		|| target.proofId !== 'structural-iterator-runtime-method-value-v1'
+		|| target.runtimeModule !== 'HxIterator'
+		|| target.runtimeFunction !== method.fieldName
+		|| method.runtimeModule !== 'HxIterator'
+		|| method.runtimeOperation !== method.fieldName
+		|| method.evaluationSchedule?.join(',') !== 'materialize-receiver,capture-method'
+		|| method.pipelineRevision !== 'ocaml-function-plans-v65') {
+		throw new Error(`Iterator method value ${method.id} is not fully sealed`)
+	}
+	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === method.id)
+	if (requirements.length !== 1
+		|| requirements[0].id !== `${method.id}:runtime:haxe-iterator`
+		|| requirements[0].semanticCapability !== 'haxe-iterator'
+		|| requirements[0].rootModules?.join(',') !== 'HxIterator') {
+		throw new Error(`Iterator method value ${method.id} does not own its exact runtime requirement`)
 	}
 }
 
@@ -74,8 +103,14 @@ node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const consumers = report.lowering?.calls?.filter(call => call.kind === 'structural-iterator-method') ?? []
-if (report.schemaVersion !== 30 || !report.summary?.valid || consumers.length === 0)
-	throw new Error('reflaxe.ocaml inspection did not preserve the sealed structural Iterator consumers')
+const methodValues = report.lowering?.structuralFields?.filter(field => field.operation === 'capture-iterator-method') ?? []
+if (report.schemaVersion !== 31
+	|| !report.summary?.valid
+	|| consumers.length === 0
+	|| methodValues.length !== 2
+	|| report.summary.structuralFieldCount !== methodValues.length) {
+	throw new Error('reflaxe.ocaml inspection did not preserve the sealed structural Iterator calls and method values')
+}
 NODE
 
 node <<'NODE'
@@ -88,6 +123,20 @@ fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a corrupted structural Iterator runtime target" >&2
+	exit 1
+fi
+cp "$lowering_backup" out/ocaml_lowering_report.json
+
+node <<'NODE'
+const fs = require('fs')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const method = report.structuralFields.find(item => item.operation === 'capture-iterator-method')
+method.iteratorTarget.proofId = 'structural-iterator-runtime-call-v1'
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$inspection_report" 2>/dev/null; then
+	echo "reflaxe.ocaml inspection accepted an Iterator method value with a direct-call proof" >&2
 	exit 1
 fi
 cp "$lowering_backup" out/ocaml_lowering_report.json

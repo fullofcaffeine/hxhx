@@ -195,6 +195,7 @@ class BytesReadPlanFixture {
 			},
 			containerElements: firstStandalone.containerElements,
 			anonymousStructures: firstStandalone.anonymousStructures,
+			structuralFields: firstStandalone.structuralFields,
 			bytesAccesses: firstStandalone.bytesAccesses,
 			bytesMutations: firstStandalone.bytesMutations,
 			bytesProducers: firstStandalone.bytesProducers,
