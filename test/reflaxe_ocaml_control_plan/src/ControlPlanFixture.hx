@@ -1511,6 +1511,15 @@ class ControlPlanFixture {
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan,
 				mismatchedIdentities));
 
+		// A loop target or transfer sealed for an ordinary function must not become
+		// valid merely because a nested plan has the same control kind. These records
+		// deliberately retain the fixture's ordinary binding and must fail before the
+		// nested catalog or OCaml syntax can observe them.
+		final foreignNestedLoopTarget = loopTarget("control-target:loop:nested-foreign", 520);
+		expectThrows("stale-target", () -> new OcamlControlPlan(true, true, true, mismatchedBinding, [foreignNestedLoopTarget], [mismatchedDecision]));
+		final foreignNestedBreak = loopDecision("control:break:nested-foreign", 530, foreignNestedLoopTarget.id, OcamlControlTransferKind.Break);
+		expectThrows("stale-binding", () -> new OcamlControlPlan(true, true, true, mismatchedBinding, [], [foreignNestedBreak]));
+
 		final caughtExpression = Context.typeExpr(macro function(value:Int):Int {
 			try {
 				if (value > 0)

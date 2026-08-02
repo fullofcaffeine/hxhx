@@ -213,6 +213,26 @@ class Main {
 		return local(true);
 	}
 
+	/** Exercises continue, break, and return against one closure-local loop target. */
+	static function nestedLoopClosure():Int {
+		final local = function(limit:Int):Int {
+			var index = 0;
+			var total = 0;
+			while (index < limit) {
+				index++;
+				if (index == 2)
+					continue;
+				total += index;
+				if (index == 4)
+					break;
+			}
+			if (index > 0)
+				return total;
+			return 0;
+		};
+		return local(6);
+	}
+
 	static function main() {
 		printLine("branch0=" + branch(0));
 		printLine("branch1=" + branch(1));
@@ -239,6 +259,7 @@ class Main {
 		printLine("deepClosure=" + deepNestedClosure());
 		printLine("catchClosure=" + nestedCatchClosure());
 		printLine("throwCatchClosure=" + nestedThrowCatchClosure());
+		printLine("loopClosure=" + nestedLoopClosure());
 		printLine("OK early_return_control");
 	}
 }

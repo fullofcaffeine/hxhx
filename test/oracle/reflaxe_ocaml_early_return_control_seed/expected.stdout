@@ -23,4 +23,5 @@ nominalClosure=53
 deepClosure=14
 catchClosure=15
 throwCatchClosure=22
+loopClosure=8
 OK early_return_control

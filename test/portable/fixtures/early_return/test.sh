@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 29) {
-	fail(`expected 29 represented return decisions, including nested catch paths, got ${returnControls.length}`)
+if (returnControls.length !== 30) {
+	fail(`expected 30 represented return decisions, including nested catch and loop paths, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -135,6 +135,35 @@ if (intCatch?.clauses[0].semanticTypeId !== 'Int'
 	|| intCatch.clauses[0].matchPolicy !== 'exact-runtime-tag'
 	|| intCatch.clauses[0].runtimeTag !== 'Int') {
 	fail('nestedThrowCatchClosure did not seal the exact Int catch policy')
+}
+
+const nestedLoopTargets = report.controlTargets.filter(target =>
+	target.functionId.includes('|function|nestedLoopClosure|')
+	&& target.functionId.includes('|nested-function|'))
+const nestedLoopTransfers = report.controls.filter(control =>
+	(control.kind === 'break' || control.kind === 'continue')
+	&& control.functionId.includes('|function|nestedLoopClosure|')
+	&& control.functionId.includes('|nested-function|'))
+const nestedLoopReturns = returnControls.filter(control =>
+	control.functionId.includes('|function|nestedLoopClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (nestedLoopTargets.length !== 1
+	|| nestedLoopTransfers.length !== 2
+	|| nestedLoopReturns.length !== 1
+	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
+	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v5'
+	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
+	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
+	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
+	|| nestedLoopReturns[0].programRevision !== nestedLoopTargets[0].programRevision
+	|| nestedLoopTransfers.some(control =>
+		control.functionId !== nestedLoopTargets[0].functionId
+		|| control.targetId !== nestedLoopTargets[0].id
+		|| control.pipelineRevision !== nestedLoopTargets[0].pipelineRevision
+		|| control.bodyRevision !== nestedLoopTargets[0].bodyRevision
+		|| control.programRevision !== nestedLoopTargets[0].programRevision)) {
+	fail('nestedLoopClosure did not seal one exact lexical loop with its break, continue, and return decisions')
 }
 
 const ids = new Set()
@@ -312,12 +341,24 @@ for (const functionName of ['nestedCatchClosure', 'nestedThrowCatchClosure']) {
 	}
 }
 const throwCatchStart = source.indexOf('let nestedThrowCatchClosure =')
-const throwCatchEnd = source.indexOf('\nlet main =', throwCatchStart)
+const throwCatchEnd = source.indexOf('\nlet nestedLoopClosure =', throwCatchStart)
 const throwCatchBody = source.slice(throwCatchStart, throwCatchEnd)
 if (!throwCatchBody.includes('HxType.hx_throw_typed_rtti (Obj.repr 21) ["Dynamic"]')
 	|| !throwCatchBody.includes('HxRuntime.tags_has __exn_tags_')
 	|| !throwCatchBody.includes('"Int"')) {
 	fail('nestedThrowCatchClosure did not consume the planned exact Int throw and catch tags')
+}
+const loopClosureStart = source.indexOf('let nestedLoopClosure =')
+const loopClosureEnd = source.indexOf('\nlet main =', loopClosureStart)
+const loopClosureBody = source.slice(loopClosureStart, loopClosureEnd)
+if (!loopClosureBody.includes('raise (HxRuntime.Hx_break)')
+	|| !loopClosureBody.includes('| HxRuntime.Hx_break -> ()')
+	|| !loopClosureBody.includes('raise (HxRuntime.Hx_continue)')
+	|| !loopClosureBody.includes('| HxRuntime.Hx_continue -> ()')
+	|| !loopClosureBody.includes('HxRuntime.Hx_return')
+	|| loopClosureBody.includes('__fallback_result')
+	|| loopClosureBody.includes('Obj.magic')) {
+	fail('nestedLoopClosure did not consume its exact nested loop and return plan')
 }
 NODE
 
@@ -341,10 +382,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 29
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 30
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 29 validated represented control decisions')
+	throw new Error('public inspection did not expose the 30 validated represented control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=29"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=30"
