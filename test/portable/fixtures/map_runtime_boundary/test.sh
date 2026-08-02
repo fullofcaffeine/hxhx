@@ -2,12 +2,15 @@
 set -euo pipefail
 
 ROOT="$(cd ../../../.. && pwd)"
+FIXTURE_ROOT="$PWD"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_runtime_requirement_report.json"
 LOWERING_REPORT_FILE="out/ocaml_lowering_report.json"
 BUILDER_FILE="$ROOT/packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
 REPORT_COPY="$(mktemp)"
-trap 'rm -f "$REPORT_COPY"' EXIT
+LOWERING_REPORT_COPY="$(mktemp)"
+INSPECTION_REPORT="$(mktemp)"
+trap 'rm -f "$REPORT_COPY" "$LOWERING_REPORT_COPY" "$INSPECTION_REPORT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$LOWERING_REPORT_FILE" ] || [ ! -f "$BUILDER_FILE" ]; then
 	echo "Missing generated Map source, lowering evidence, runtime requirement report, or target builder" >&2
@@ -147,6 +150,42 @@ for (const moduleName of ['HxMap', 'HxIterator']) {
 	}
 }
 NODE
+
+cp "$LOWERING_REPORT_FILE" "$LOWERING_REPORT_COPY"
+inspect() {
+	(
+		cd "$ROOT"
+		haxe -cp packages/reflaxe.ocaml/src \
+			--macro 'nullSafety("reflaxe.ocaml")' \
+			--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+			inspect --project "$FIXTURE_ROOT" --output out --require-lowering --json
+	)
+}
+
+inspect >"$INSPECTION_REPORT"
+node <<'NODE'
+const fs = require('fs')
+const path = 'out/ocaml_lowering_report.json'
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const field = report.structuralFields.find(decision =>
+	decision.keyValueTupleTarget?.iteratorProducerSourceId ===
+	'haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_string)')
+if (!field)
+	throw new Error('Map fixture has no string-key target-native pair proof to corrupt')
+field.keyValueTupleTarget.iteratorProducerSourceId =
+	'haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_int)'
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+if inspect >"$INSPECTION_REPORT" 2>&1; then
+	echo "reflaxe.ocaml inspection accepted a target-native Map proof with conflicting key ownership" >&2
+	exit 1
+fi
+if ! grep -Fq '[ocaml-structural-field:invalid-key-value-proof]' "$INSPECTION_REPORT"; then
+	echo "Conflicting target-native Map proof failed outside the typed ownership contract" >&2
+	cat "$INSPECTION_REPORT" >&2
+	exit 1
+fi
+cp "$LOWERING_REPORT_COPY" "$LOWERING_REPORT_FILE"
 
 cp "$REPORT_FILE" "$REPORT_COPY"
 haxe build.hxml -D ocaml_build=native
