@@ -102,29 +102,30 @@ Agent policy:
 - When a bead has a `thinking:*` label, match reasoning depth to that label automatically.
 - If a claimed bead has no `thinking:*` label, infer one immediately and add it before substantial work.
 - `thinking:xhigh`, `thinking:max`, and `thinking:ultra` should get a second-pass review before closure.
-  - Preferred: an Oracle checkpoint/review.
-  - Acceptable fallback: an explicit written second-pass design review recorded in the bead comments.
-- Use GPT-5.6 Sol for repository work and Oracle reviews while this policy remains current. If the active environment cannot honor that model choice, say so instead of silently claiming it did.
+  - Use Oracle only when the work is also genuinely critical and remains unusually hard, materially undefined, non-convergent, or in need of a higher-quality independent challenge.
+  - Otherwise use an explicit written second-pass design review recorded in the bead comments.
+- Use GPT-5.6 Sol for repository work and the `$oracle-review` facade for rare GPT-5.6 Pro planning or reviews while this policy remains current. If the active environment cannot honor the repository-work model choice, say so instead of silently claiming it did.
 - Oracle is a review/escalation tool for `thinking:xhigh` and above; it is not a substitute for implementation, tests, or CI evidence.
 - Do not escalate to extended reasoning or Oracle review by default.
   - Use the current bead thinking level first.
   - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh` or above, or when a lower-level task turns into scope, release, or provenance policy work.
   - When escalation becomes necessary, state that explicitly in the session hand-off or work log so the threshold is visible instead of assumed.
 - Use `max` for deeper single-agent reasoning only when representative work justifies its extra latency. Use `ultra` only when there are concrete, bounded workstreams that can run independently; name those workstreams before delegating and synthesize their evidence before deciding.
-- If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
+- If genuinely critical implementation/debugging stops converging and no credible local next step remains, escalate to Oracle explicitly instead of grinding indefinitely.
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
+  - Invoke the globally installed `$oracle-review` skill for planning or review and let its caf-oracle facade own the ledger, agent provenance, checked evidence, dedicated browser dispatch, recovery, response capture, disposition, and archive. Do not maintain a parallel `/tmp/oracle` queue or manually upload and paste when the tool is available. If `$show-me-your-work` is active, link its concise trail to the request rather than duplicating Oracle artifacts.
 - Document modules and classes by default.
   - Add or update module/class documentation when creating or substantially changing one, unless the file's existing convention clearly does not support doc comments.
   - Add function/method documentation once behavior, invariants, side effects, target semantics, or call contracts exceed what a reader can reasonably infer from the name and type.
   - Keep documentation behavior-level and maintenance-oriented; describe what callers can rely on, not a line-by-line narration of the implementation.
 - If a compiler/runtime issue starts feeling circular, fragile, architecture-heavy, or likely to invite another local patch without fixing the model, stop grinding before implementation.
-  - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT-5.6 Sol design review instead of stacking more local guesses.
-  - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT-5.6 Sol is only for finding a safe way forward when the seam/model is unclear.
+  - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT-5.6 Pro design review instead of stacking more local guesses.
+  - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT-5.6 Pro is only for finding a safe way forward when the seam/model is unclear.
   - Do not escalate merely because a gate is red, a fix is tedious, or the next failing target is unfamiliar.
     If upstream behavior is clear and there is a bounded repo-local seam, implement the seam, add focused coverage, and validate normally.
   - Use this escalation when repeated local attempts fail to produce a credible next step, when upstream-oracle evidence confirms behavior but not a safe implementation boundary, or when the fix touches broad semantics across multiple compiler/runtime layers.
-  - Do not use GPT-5.6 Sol to replace upstream oracle evidence, write implementation code for direct transcription, rubber-stamp a local workaround, or avoid running the required tests and gates.
+  - Do not use GPT-5.6 Pro to replace upstream oracle evidence, write implementation code for direct transcription, rubber-stamp a local workaround, or avoid running the required tests and gates.
   - Good escalation candidates include:
     - closure capture, receiver/state threading, AST lowering, or expression-to-statement lowering that affects multiple target backends,
     - Haxe stdlib semantics that do not map cleanly to OCaml output or source-native targets,
@@ -134,10 +135,10 @@ Agent policy:
     - or cases where a local patch would likely hide the bug instead of fixing the model.
   - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, OCaml output/runtime behavior, source-native target behavior, and upstream Haxe 4.3.7 runtime conformance.
     Use `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md` to identify trigger surfaces, oracle cases, and local validation before changing behavior.
-  - The escalation proposal should include a concrete prompt, the whole-repo review request, the relevant beads, observed failing gates, local evidence, upstream oracle expectations, constraints about MIT/provenance, and a request for architecture guidance rather than code transcription.
-  - Ask GPT-5.6 Sol for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
+  - Apply the repository-specific requirements to the shared skill's prompt: include the relevant beads, observed failing gates, local evidence, upstream oracle expectations, constraints about MIT/provenance, and a request for architecture guidance rather than code transcription.
+  - Ask GPT-5.6 Pro for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
   - If adapting this rule from another project, translate examples to this repo before committing them. Avoid irrelevant project-specific terms; use `hxhx`, `reflaxe.ocaml`, upstream Haxe 4.3.7 parity, source-native targets, native plugin boundaries, and bootstrap snapshot risk as the frame.
-  - In the bead/checkpoint note, record whether the GPT-5.6 Sol path was used, deliberately skipped because a bounded seam existed, or deferred to a follow-up architecture bead.
+  - In the bead/checkpoint note, record whether the GPT-5.6 Pro path was used, deliberately skipped because a bounded seam existed, or deferred to a follow-up architecture bead.
 - If the user says to stop at a particular thinking threshold, stop immediately when that level or any higher level is reached and ask the user before continuing.
   - Do not silently continue implementation work at or above the requested stop threshold.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.
@@ -285,7 +286,7 @@ iteration speed while preserving correctness, customizability, and embeddability
     implement new grammar. Prefer the latest structured extension seam that can
     express a feature correctly, and investigate a versioned pre-parse
     macro/eval or parser-extension seam before hard-coding multiple features.
-  - Before implementing this parser-level extension program, ask GPT-5.6 Sol
+  - Before implementing this parser-level extension program, ask GPT-5.6 Pro
     Oracle to brainstorm and review the extension ladder. Keep exact upstream
     baseline evidence separate from `hxhx`-only syntax.
   - This is durable future direction, not current-priority authorization and not
@@ -303,7 +304,7 @@ iteration speed while preserving correctness, customizability, and embeddability
     only after production-quality Full1 `hxhx`, standalone `reflaxe.ocaml`, the
     authentic shared target, and the extension lifecycle.
   - Pin and inventory the external skeleton at review time, then request a fresh
-    GPT-5.6 Sol Oracle brainstorm in the `hxhx` context. This is post-1.0 R&D,
+    GPT-5.6 Pro Oracle brainstorm in the `hxhx` context. This is post-1.0 R&D,
     not current P0/P1 work or readiness evidence.
 
 ## Beginner-Friendly Terms (Read This First)
