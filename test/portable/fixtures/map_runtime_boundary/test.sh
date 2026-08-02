@@ -91,7 +91,7 @@ for (const decision of tupleDecisions) {
 	const target = decision.keyValueTupleTarget
 	if (target.iteratorProducerKind !== 'target-native-standard-map-call'
 		|| target.iteratorProducerId !== 'target-native-standard-map-pair-producer-v1'
-		|| target.proofId !== 'standard-map-key-value-tuple-projection-v2'
+		|| target.proofId !== 'standard-map-key-value-tuple-projection-v3'
 		|| !expectedPairSources.includes(target.iteratorProducerSourceId)
 		|| decision.runtimeModule !== 'Stdlib'
 		|| !['fst', 'snd'].includes(decision.runtimeOperation)

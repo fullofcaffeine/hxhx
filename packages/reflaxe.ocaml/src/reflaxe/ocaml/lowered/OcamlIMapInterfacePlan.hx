@@ -43,6 +43,7 @@ typedef OcamlIMapInterfaceConversionMaterialization = {
 	final keyType:Type;
 	final valueType:Type;
 	final sourceClass:ClassType;
+	final operations:Array<OcamlStandardIMapOperation>;
 	final methods:Array<OcamlIMapInterfaceMethodMaterialization>;
 }
 
@@ -433,20 +434,20 @@ class OcamlIMapInterfacePlanner {
 				if (standard != null) {
 					if (!sameType(standard.key, target.key) || !sameType(standard.value, target.value))
 						return null;
-					standardConversion(value, sourceType, role, roleIndex, sourceClass, target.key, target.value, standard.kind);
+					standardConversion(value, sourceType, role, roleIndex, sourceClass, target.owner, target.key, target.value, standard.kind);
 				} else {
 					final implemented = implementedIMap(sourceClass);
 					if (implemented == null || !sameType(implemented.key, target.key) || !sameType(implemented.value, target.value))
 						return null;
-					userConversion(value, sourceType, role, roleIndex, sourceClass, target.key, target.value);
+					userConversion(value, sourceType, role, roleIndex, sourceClass, target.owner, target.key, target.value);
 				}
 			case _:
 				null;
 		};
 	}
 
-	function standardConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:ClassType, keyType:Type,
-			valueType:Type, kind:OcamlStandardMapCarrierKind):OcamlIMapInterfaceConversionMaterialization {
+	function standardConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:ClassType,
+			interfaceClass:ClassType, keyType:Type, valueType:Type, kind:OcamlStandardMapCarrierKind):OcamlIMapInterfaceConversionMaterialization {
 		final sourceKind:OcamlIMapInterfaceSourceKind = switch (kind) {
 			case StringKeys: OcamlIMapInterfaceSourceKind.StandardStringMap;
 			case IntKeys: OcamlIMapInterfaceSourceKind.StandardIntMap;
@@ -459,23 +460,35 @@ class OcamlIMapInterfacePlanner {
 		};
 		final keySemanticTypeId = semanticTypeId(keyType);
 		final valueSemanticTypeId = semanticTypeId(valueType);
+		final operations = retainedInterfaceOperations(interfaceClass);
+		final targetSemanticTypeId = 'haxe.IMap<$keySemanticTypeId, $valueSemanticTypeId>';
+		final methods:Array<OcamlIMapInterfaceMethodDecision> = operations.map(operation -> {
+			name: OcamlStandardIMapCallContract.sourceFieldName(operation),
+			sourceOwnerModuleId: interfaceClass.module,
+			sourceOwnerTypeName: interfaceClass.name,
+			argumentSemanticTypeIds: OcamlStandardIMapCallContract.argumentSemanticTypeIds(operation, keySemanticTypeId, valueSemanticTypeId),
+			resultSemanticTypeId: OcamlStandardIMapCallContract.expectedResultSemanticTypeId(operation, targetSemanticTypeId, keySemanticTypeId,
+				valueSemanticTypeId)
+		});
 		final decision = conversionDecision(value, sourceType, role, roleIndex, sourceKind, sourceClass, OcamlStandardIMapCallContract.carrierId(keyKind),
-			keyType, valueType, keyKind, [], OcamlStandardIMapCallContract.adapterRuntimeCapabilities(keySemanticTypeId, valueSemanticTypeId));
+			keyType, valueType, keyKind, methods, OcamlStandardIMapCallContract.adapterRuntimeCapabilities(keySemanticTypeId, valueSemanticTypeId));
 		return {
 			decision: decision,
 			keyType: keyType,
 			valueType: valueType,
 			sourceClass: sourceClass,
+			operations: operations,
 			methods: []
 		};
 	}
 
-	function userConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:ClassType, keyType:Type,
-			valueType:Type):OcamlIMapInterfaceConversionMaterialization {
+	function userConversion(value:TypedExpr, sourceType:Type, role:OcamlIMapInterfaceConversionRole, roleIndex:Int, sourceClass:ClassType,
+			interfaceClass:ClassType, keyType:Type, valueType:Type):OcamlIMapInterfaceConversionMaterialization {
 		if (sourceClass.params.length > 0)
 			throw 'reflaxe.ocaml [ocaml-imap-interface:unsupported-user-implementation]: generic user IMap implementation ${fullClassName(sourceClass)} needs an explicit specialization contract';
 		final methods:Array<OcamlIMapInterfaceMethodMaterialization> = [];
-		for (name in OcamlIMapInterfacePlan.REQUIRED_METHODS) {
+		for (operation in retainedInterfaceOperations(interfaceClass)) {
+			final name = OcamlStandardIMapCallContract.sourceFieldName(operation);
 			final found = findMethod(sourceClass, name);
 			if (found == null)
 				throw 'reflaxe.ocaml [ocaml-imap-interface:missing-user-method]: ${fullClassName(sourceClass)} has no concrete "$name" implementation';
@@ -517,6 +530,7 @@ class OcamlIMapInterfacePlanner {
 			keyType: keyType,
 			valueType: valueType,
 			sourceClass: sourceClass,
+			operations: methods.map(method -> method.operation),
 			methods: methods
 		};
 	}
@@ -567,13 +581,33 @@ class OcamlIMapInterfacePlanner {
 		};
 	}
 
-	static function exactIMap(type:Type):Null<{key:Type, value:Type}> {
+	static function exactIMap(type:Type):Null<{owner:ClassType, key:Type, value:Type}> {
 		return switch (TypeTools.follow(type)) {
 			case TInst(classRef, parameters) if (OcamlStandardIMapCallContract.isIMapClass(classRef.get()) && parameters.length == 2):
-				{key: parameters[0], value: parameters[1]};
+				{owner: classRef.get(), key: parameters[0], value: parameters[1]};
 			case _:
 				null;
 		};
+	}
+
+	/**
+		Returns the interface methods that survived Haxe dead-code elimination.
+
+		For example, a program that only calls `map.get()` and `map.keys()` receives
+		an OCaml `imap_t` record with only those two fields. Adapters must mirror
+		that retained surface exactly: adding an unused field is a native OCaml type
+		error, while omitting a retained field would make the actual call impossible.
+	**/
+	static function retainedInterfaceOperations(interfaceClass:ClassType):Array<OcamlStandardIMapOperation> {
+		final retained:Map<String, Bool> = [];
+		for (field in interfaceClass.fields.get())
+			retained.set(field.name, true);
+		final out:Array<OcamlStandardIMapOperation> = [];
+		for (operation in OcamlIMapInterfaceContract.requiredOperations()) {
+			if (retained.exists(OcamlStandardIMapCallContract.sourceFieldName(operation)))
+				out.push(operation);
+		}
+		return out;
 	}
 
 	static function standardMapTypes(classType:ClassType, parameters:Array<Type>):Null<{kind:OcamlStandardMapCarrierKind, key:Type, value:Type}> {

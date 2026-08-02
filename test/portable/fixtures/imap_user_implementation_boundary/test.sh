@@ -62,7 +62,7 @@ for (const [sourceKind, expected] of Object.entries(expectedStandard)) {
 		|| conversion.valueStringifier !== expected.valueText
 		|| conversion.sourceCarrierTypeId !== expected.carrier
 		|| conversion.sourceSemanticTypeId !== expected.source
-		|| conversion.methods.length !== 0) {
+		|| conversion.methods.map(method => method.name).join(',') !== Object.keys(expectedMethods).join(',')) {
 		throw new Error(`standard conversion ${sourceKind} lost its exact source and storage carrier`)
 	}
 	const requirementIds = conversion.runtimeCapabilities.map(capability => `${conversion.id}:runtime:${capability}`).sort()

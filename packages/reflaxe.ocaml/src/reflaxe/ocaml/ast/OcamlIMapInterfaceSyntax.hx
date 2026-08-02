@@ -37,7 +37,8 @@ typedef OcamlIMapInterfaceSyntaxServices = {
 
 	A concrete standard Map and a user-defined `IMap` class have different runtime
 	shapes. Planning converts either source into one checked dispatch record whose
-	fields implement the ten Haxe 4.3.7 `IMap` methods. This module only builds
+	fields implement the `IMap` methods retained by Haxe dead-code elimination.
+	This module only builds
 	OCaml expressions from that record: it never infers the receiver implementation
 	from a key type, class name, or generated text.
 **/
@@ -158,7 +159,7 @@ class OcamlIMapInterfaceSyntax {
 		final receiverName = services.freshName("standard_imap_receiver");
 		final receiver = OcamlExpr.EIdent(receiverName);
 		final fields:Array<{name:String, value:OcamlExpr}> = [typeMarkerField()];
-		for (operation in OcamlIMapInterfaceContract.requiredOperations()) {
+		for (operation in materialization.operations) {
 			final argumentTypes = argumentTypes(operation, materialization.keyType, materialization.valueType);
 			final parameterNames = [for (index in 0...argumentTypes.length) "a" + index];
 			final parameters:Array<OcamlPat> = [OcamlPat.PAny];
@@ -200,7 +201,8 @@ class OcamlIMapInterfaceSyntax {
 		}
 		final record = OcamlExpr.EAnnot(OcamlExpr.ERecord(fields), OcamlTypeExpr.TIdent("Haxe_Constraints.imap_t"));
 		final adapter = OcamlExpr.EFun([OcamlPat.PVar(receiverName)], OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [record]));
-		return OcamlExpr.ELet(adapterName, adapter, OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [services.buildExpression(value)]), true);
+		final recursive = materialization.operations.indexOf(OcamlStandardIMapOperation.Copy) >= 0;
+		return OcamlExpr.ELet(adapterName, adapter, OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [services.buildExpression(value)]), recursive);
 	}
 
 	/** Returns the typed source arguments for one already-admitted operation. */

@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (lowering.schemaVersion !== 54
-	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v2') {
+	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v3') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
 
@@ -59,13 +59,13 @@ for (const field of tupleFields) {
 		|| target.projection !== expectedProjection
 		|| target.keySemanticTypeId !== 'String'
 		|| target.valueSemanticTypeId !== 'Int'
-		|| target.iteratorProducerKind !== 'standard-imap-call'
-		|| !target.iteratorProducerId.startsWith('call:')
+		|| target.iteratorProducerKind !== 'imap-interface-call'
+		|| !target.iteratorProducerId.startsWith('imap-interface-call:')
 		|| target.iteratorProducerSourceId !== 'haxe.Constraints.IMap.keyValueIterator'
 		|| !target.pairProducerCallId.startsWith('call:')
 		|| !target.iteratorLocalId.startsWith('lexical-local-v1:')
 		|| !target.pairLocalId.startsWith('lexical-local-v1:')
-		|| target.proofId !== 'standard-map-key-value-tuple-projection-v2'
+		|| target.proofId !== 'standard-map-key-value-tuple-projection-v3'
 		|| field.pipelineRevision !== 'ocaml-function-plans-v67') {
 		throw new Error(`Map-pair projection ${field.id} has no complete typed producer proof`)
 	}

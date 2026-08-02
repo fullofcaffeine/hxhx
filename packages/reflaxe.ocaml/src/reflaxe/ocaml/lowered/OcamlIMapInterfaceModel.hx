@@ -29,7 +29,7 @@ enum abstract OcamlIMapInterfaceConversionRole(String) from String to String {
 	final Assignment = "assignment";
 }
 
-/** One required method on the Haxe 4.3.7 `IMap` interface. */
+/** One `IMap` method retained by Haxe dead-code elimination. */
 typedef OcamlIMapInterfaceMethodDecision = {
 	final name:String;
 	final sourceOwnerModuleId:String;
@@ -152,9 +152,7 @@ class OcamlIMapInterfaceContract {
 		if (decision.standardKeyKind != expectedKeyKind
 			|| decision.keyStringifier != expectedKeyStringifier
 			|| decision.valueStringifier != expectedValueStringifier
-			|| decision.runtimeCapabilities.join(",") != expectedCapabilities.join(",")
-			|| (standard && decision.methods.length != 0)
-			|| (!standard && decision.methods.length != REQUIRED_METHODS.length)) {
+			|| decision.runtimeCapabilities.join(",") != expectedCapabilities.join(",")) {
 			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has a conflicting source kind, method surface, or runtime inventory';
 		}
 		if (expectedKeyKind != null) {
@@ -165,23 +163,24 @@ class OcamlIMapInterfaceContract {
 					decision.valueSemanticTypeId)) {
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" disagrees with its standard Map source and key carrier';
 			}
-		} else {
-			for (index in 0...REQUIRED_METHODS.length) {
-				final method = decision.methods[index];
-				final operation = operationForMethod(method.name);
-				if (method.name != REQUIRED_METHODS[index]
-					|| decision.methods[index].sourceOwnerModuleId.length == 0
-					|| decision.methods[index].sourceOwnerTypeName.length == 0
-					|| operation == null) {
-					throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has an incomplete or reordered user method surface';
-				}
-				final exactOperation:OcamlStandardIMapOperation = operation;
-				if (method.argumentSemanticTypeIds.join(",") != OcamlStandardIMapCallContract.argumentSemanticTypeIds(exactOperation,
-					decision.keySemanticTypeId, decision.valueSemanticTypeId)
-					.join(",") || method.resultSemanticTypeId != OcamlStandardIMapCallContract.expectedResultSemanticTypeId(exactOperation,
-						decision.targetSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId)) {
-					throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has a user method whose key, value, or result type disagrees with its IMap boundary';
-				}
+		}
+		var previousMethodIndex = -1;
+		for (method in decision.methods) {
+			final operation = operationForMethod(method.name);
+			final methodIndex = REQUIRED_METHODS.indexOf(method.name);
+			if (methodIndex <= previousMethodIndex
+				|| method.sourceOwnerModuleId.length == 0
+				|| method.sourceOwnerTypeName.length == 0
+				|| operation == null) {
+				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has an incomplete or reordered retained method surface';
+			}
+			previousMethodIndex = methodIndex;
+			final exactOperation:OcamlStandardIMapOperation = operation;
+			if (method.argumentSemanticTypeIds.join(",") != OcamlStandardIMapCallContract.argumentSemanticTypeIds(exactOperation, decision.keySemanticTypeId,
+				decision.valueSemanticTypeId)
+				.join(",") || method.resultSemanticTypeId != OcamlStandardIMapCallContract.expectedResultSemanticTypeId(exactOperation,
+					decision.targetSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId)) {
+				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has a retained method whose key, value, or result type disagrees with its IMap boundary';
 			}
 		}
 	}

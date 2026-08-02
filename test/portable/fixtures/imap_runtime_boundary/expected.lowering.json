@@ -1740,7 +1740,7 @@
     }
   ],
   "containerElementRequiredConversionCount": 0,
-  "iMapInterfaceRevision": "sha256:ced98a6a64ceca8a936db3a5cb14ebcfe515c2e5d0762e29f354b3fea9f4e705",
+  "iMapInterfaceRevision": "sha256:b23baaa718c101c8912432fe686c73827e01ef290f2d05b0d8779fef7b233497",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
   "iMapInterfaceModel": "typed-imap-interface-adapter-v1",
@@ -3172,7 +3172,87 @@
       "role": "call-argument",
       "roleIndex": 0,
       "id": "imap-interface-conversion:9634e1e26806ac9185d6cbd2",
-      "methods": [],
+      "methods": [
+        {
+          "resultSemanticTypeId": "Null<String>",
+          "name": "get",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "set",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "Int",
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "exists",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "remove",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<Int>",
+          "name": "keys",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<String>",
+          "name": "iterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "KeyValueIterator<Int, String>",
+          "name": "keyValueIterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "haxe.IMap<Int, String>",
+          "name": "copy",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "String",
+          "name": "toString",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "clear",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        }
+      ],
       "source": {
         "min": 3932,
         "max": 3960,
@@ -3205,7 +3285,87 @@
       "role": "call-argument",
       "roleIndex": 0,
       "id": "imap-interface-conversion:cf536cb9fe4c990fcad94340",
-      "methods": [],
+      "methods": [
+        {
+          "resultSemanticTypeId": "Null<Int>",
+          "name": "get",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "set",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String",
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "exists",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "remove",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "String"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<String>",
+          "name": "keys",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<Int>",
+          "name": "iterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "KeyValueIterator<String, Int>",
+          "name": "keyValueIterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "haxe.IMap<String, Int>",
+          "name": "copy",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "String",
+          "name": "toString",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "clear",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        }
+      ],
       "source": {
         "min": 3891,
         "max": 3919,
@@ -3238,7 +3398,87 @@
       "role": "call-argument",
       "roleIndex": 0,
       "id": "imap-interface-conversion:d006d25a02ef66f8a8ffd0c3",
-      "methods": [],
+      "methods": [
+        {
+          "resultSemanticTypeId": "Null<Int>",
+          "name": "get",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "_Main.ObjectKey"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "set",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "_Main.ObjectKey",
+            "Int"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "exists",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "_Main.ObjectKey"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Bool",
+          "name": "remove",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [
+            "_Main.ObjectKey"
+          ],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<_Main.ObjectKey>",
+          "name": "keys",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Iterator<Int>",
+          "name": "iterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "KeyValueIterator<_Main.ObjectKey, Int>",
+          "name": "keyValueIterator",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "haxe.IMap<_Main.ObjectKey, Int>",
+          "name": "copy",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "String",
+          "name": "toString",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        },
+        {
+          "resultSemanticTypeId": "Void",
+          "name": "clear",
+          "sourceOwnerTypeName": "IMap",
+          "argumentSemanticTypeIds": [],
+          "sourceOwnerModuleId": "haxe.Constraints"
+        }
+      ],
       "source": {
         "min": 4010,
         "max": 4049,
@@ -9928,7 +10168,7 @@
   ],
   "containerElementConversionCount": 0,
   "callCount": 60,
-  "runtimeRequirementRevision": "sha256:97a21c9f4fc2f92b98bec71ce415eaac62a7e0d2b4b1caf165814f649e6b8bc3",
+  "runtimeRequirementRevision": "sha256:e4607e036b0339c21d06b6f5a7037169fa3471e06a417327041d75a51f4166b7",
   "callRevision": "sha256:e691d75a0091440746bb19c77fcdc51cf5228f6e235f64b480c834dd9c479fc7",
   "controls": [
     {
@@ -12490,7 +12730,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
       "rootModules": [
         "HxArray"
       ],
@@ -12516,7 +12756,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-iterator",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
       "rootModules": [
         "HxIterator"
       ],
@@ -12542,7 +12782,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-map",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
       "rootModules": [
         "HxMap"
       ],
@@ -12568,7 +12808,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-string-text",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
       "rootModules": [
         "HxString"
       ],
@@ -12594,7 +12834,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
       "rootModules": [
         "HxArray"
       ],
@@ -12620,7 +12860,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-iterator",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
       "rootModules": [
         "HxIterator"
       ],
@@ -12646,7 +12886,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-map",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
       "rootModules": [
         "HxMap"
       ],
@@ -12672,7 +12912,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-string-text",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxString to preserve the Haxe String null sentinel while converting an exact String key or value to displayed text.",
       "rootModules": [
         "HxString"
       ],
@@ -12698,7 +12938,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxArray to retain formatted entries in traversal order before joining them with the Haxe Map separator.",
       "rootModules": [
         "HxArray"
       ],
@@ -12724,7 +12964,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-dynamic-text",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap text adapter uses HxDynamic for the typed fallback that formats a non-primitive key or value through registered Haxe runtime string behavior.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap text adapter uses HxDynamic for the typed fallback that formats a non-primitive key or value through registered Haxe runtime string behavior.",
       "rootModules": [
         "HxDynamic"
       ],
@@ -12750,7 +12990,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-iterator",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxIterator to expose keys, values, pairs, or formatting traversal through Haxe's structural iterator contract.",
       "rootModules": [
         "HxIterator"
       ],
@@ -12776,7 +13016,7 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-map",
-      "explanation": "The sealed concrete-to-IMap adapter exposes every IMap method. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
+      "explanation": "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. The sealed standard IMap call uses HxMap for the exact String, Int, or object-identity storage operation selected from the final typed receiver.",
       "rootModules": [
         "HxMap"
       ],

@@ -193,7 +193,7 @@ class OcamlRuntimeRequirementLedger {
 				implementationFeature: implementation.feature,
 				rootModules: [implementation.module],
 				profileEligibility: ["metal", "portable"],
-				explanation: "The sealed concrete-to-IMap adapter exposes every IMap method. " + implementation.explanation
+				explanation: "The sealed concrete-to-IMap adapter exposes the IMap methods retained for this program. " + implementation.explanation
 			}));
 		}
 		return out;

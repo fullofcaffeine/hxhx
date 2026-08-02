@@ -43,7 +43,7 @@ const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKin
 if (![...['string', 'int', 'object-identity']].every(kind => keyKinds.has(kind))
 	|| conversions.some(conversion =>
 		conversion.sourceKind === 'user-implementation'
-		|| conversion.methods.length !== 0
+		|| conversion.methods.length !== 10
 		|| conversion.targetCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)')) {
 	throw new Error('the IMap fixture did not preserve all three proven standard storage carriers')
 }
