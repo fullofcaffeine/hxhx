@@ -39,9 +39,28 @@ class Main {
 		return values.join(",");
 	}
 
+	/**
+		Exercises the generic Iterator returned by `ObjectMap.keys()`.
+
+		Haxe can keep the generated `next()` call's result as an unresolved generic
+		placeholder even though the declared Iterator member returns `Dynamic`.
+		That valid difference must still be owned by the direct Iterator call plan;
+		it must not be mistaken for a separately captured method value.
+	**/
+	static function countObjectMapKeys():Int {
+		final key:Dynamic = {id: 1};
+		final map = new haxe.ds.ObjectMap<Dynamic, Dynamic>();
+		map.set(key, "present");
+		var count = 0;
+		for (_ in map.keys())
+			count++;
+		return count;
+	}
+
 	static function main():Void {
 		emit("literal.sum=" + sum(fromArray([1, 2, 3])));
 		emit("method.values=" + consumeMethodValues(fromArray([4, 5])));
+		emit("objectmap.keys=" + countObjectMapKeys());
 
 		emit("array.count=" + Lambda.count([7, 8, 9]));
 	}

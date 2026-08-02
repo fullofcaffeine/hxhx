@@ -113,8 +113,19 @@ class OcamlStructuralIteratorCallContract {
 			case TFun(_, result): TypeTools.toString(result);
 			case _: return false;
 		}
-		return declaredResult == TypeTools.toString(resultType)
-			&& (operation != OcamlStructuralIteratorOperation.HasNext || declaredResult == "Bool");
+		if (operation == OcamlStructuralIteratorOperation.HasNext)
+			return declaredResult == "Bool" && TypeTools.toString(resultType) == "Bool";
+
+		/*
+			The generated `next()` call is already tied to a complete `Iterator<T>`
+			receiver. Haxe can represent that call's result as `Unknown<n>` while the
+			member declaration still says `Dynamic`, particularly for generic
+			iterators such as `ObjectMap.keys()`. Those strings describe different
+			views of the same typed call, so equality would incorrectly reject the
+			direct call and let it fall into method-value handling. The target records
+			the call occurrence's actual result type in the selected target instead.
+		 */
+		return true;
 	}
 
 	static function fieldReturnsExactBool(field:ClassField):Bool {

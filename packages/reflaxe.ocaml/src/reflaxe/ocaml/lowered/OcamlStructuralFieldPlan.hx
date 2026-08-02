@@ -270,8 +270,11 @@ class OcamlStructuralFieldPlan {
 		if (id == null)
 			return null;
 		final decision = decisionsById.get(id);
-		if (decision == null || !OcamlStructuralFieldPlanner.matches(decision, expression))
-			throw 'reflaxe.ocaml [ocaml-structural-field:stale]: decision "$id" no longer matches its final typed occurrence';
+		if (decision == null)
+			throw 'reflaxe.ocaml [ocaml-structural-field:stale]: decision "$id" is missing from its sealed plan';
+		final mismatch = OcamlStructuralFieldPlanner.mismatchReason(decision, expression);
+		if (mismatch != null)
+			throw 'reflaxe.ocaml [ocaml-structural-field:stale]: decision "$id" no longer matches its final typed occurrence at ${decision.source.file}:${decision.source.min}-${decision.source.max}: $mismatch';
 		return OcamlStructuralFieldContract.copy(decision);
 	}
 
@@ -369,18 +372,31 @@ class OcamlStructuralFieldPlanner {
 
 	/** Rechecks plain decision facts against their request-local typed occurrence. */
 	public static function matches(decision:OcamlStructuralFieldDecision, expression:TypedExpr):Bool {
+		return mismatchReason(decision, expression) == null;
+	}
+
+	/**
+		Explains why a previously typed field decision can no longer be consumed.
+
+		A non-null result means some behavior-bearing typed fact changed between
+		planning and code generation. Naming the exact fact keeps this fail-closed
+		check useful: a maintainer sees whether the source occurrence, receiver,
+		field type, result type, or Iterator classification drifted instead of
+		being tempted to remove the check merely to let generation continue.
+	**/
+	public static function mismatchReason(decision:OcamlStructuralFieldDecision, expression:TypedExpr):Null<String> {
 		final source = OcamlLoweredOrigin.sourceSpan(expression.pos);
 		if (source.file != decision.source.file || source.min != decision.source.min || source.max != decision.source.max)
-			return false;
+			return 'source expected=${decision.source.file}:${decision.source.min}-${decision.source.max} actual=${source.file}:${source.min}-${source.max}';
 		return switch (expression.expr) {
 			case TField(receiver, FAnon(fieldRef)):
-				matchesRead(decision, receiver, fieldRef.get(), expression.t, true);
+				readMismatch(decision, receiver, fieldRef.get(), expression.t, true);
 			case TField(receiver, FClosure(null, fieldRef)):
-				matchesRead(decision, receiver, fieldRef.get(), expression.t, false);
+				readMismatch(decision, receiver, fieldRef.get(), expression.t, false);
 			case TBinop(OpAssign, {expr: TField(receiver, FAnon(fieldRef))}, _):
-				matchesWrite(decision, receiver, fieldRef.get(), expression.t);
+				writeMismatch(decision, receiver, fieldRef.get(), expression.t);
 			case _:
-				false;
+				"expression shape is no longer an owned structural field read, method capture, or write";
 		}
 	}
 
@@ -467,26 +483,47 @@ class OcamlStructuralFieldPlanner {
 		return decision;
 	}
 
-	static function matchesRead(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type, storedFieldAllowed:Bool):Bool {
-		if (decision.operation == WriteStoredField
-			|| decision.fieldName != field.name
-			|| decision.receiverSemanticTypeId != TypeTools.toString(receiver.t)
-			|| decision.fieldSemanticTypeId != TypeTools.toString(field.type)
-			|| decision.resultSemanticTypeId != TypeTools.toString(resultType))
-			return false;
+	static function readMismatch(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type,
+			storedFieldAllowed:Bool):Null<String> {
+		if (decision.operation == WriteStoredField)
+			return "operation changed from a write to a read";
+		if (decision.fieldName != field.name)
+			return 'field name expected=${decision.fieldName} actual=${field.name}';
+		final receiverType = TypeTools.toString(receiver.t);
+		if (decision.receiverSemanticTypeId != receiverType)
+			return 'receiver type expected=${decision.receiverSemanticTypeId} actual=$receiverType';
+		final fieldType = TypeTools.toString(field.type);
+		if (decision.fieldSemanticTypeId != fieldType)
+			return 'field type expected=${decision.fieldSemanticTypeId} actual=$fieldType';
+		final actualResultType = TypeTools.toString(resultType);
+		if (decision.resultSemanticTypeId != actualResultType)
+			return 'result type expected=${decision.resultSemanticTypeId} actual=$actualResultType';
 		final iteratorTarget = OcamlStructuralIteratorCallContract.selectMethodValue(receiver, field);
-		return decision.operation == CaptureIteratorMethod ? iteratorTarget != null
-			&& decision.iteratorTarget != null
-			&& OcamlStructuralIteratorCallContract.fingerprint(iteratorTarget) == OcamlStructuralIteratorCallContract.fingerprint(decision.iteratorTarget) : storedFieldAllowed
-			&& iteratorTarget == null;
+		if (decision.operation == CaptureIteratorMethod) {
+			if (iteratorTarget == null || decision.iteratorTarget == null)
+				return "Iterator method ownership is no longer present";
+			if (OcamlStructuralIteratorCallContract.fingerprint(iteratorTarget) != OcamlStructuralIteratorCallContract.fingerprint(decision.iteratorTarget))
+				return "Iterator method target facts changed";
+			return null;
+		}
+		if (!storedFieldAllowed)
+			return "the final field shape no longer permits a stored anonymous field";
+		return iteratorTarget == null ? null : "the stored field is now classified as an Iterator method";
 	}
 
-	static function matchesWrite(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type):Bool {
-		return decision.operation == WriteStoredField
-			&& decision.fieldName == field.name
-			&& decision.receiverSemanticTypeId == TypeTools.toString(receiver.t)
-			&& decision.fieldSemanticTypeId == TypeTools.toString(field.type)
-			&& decision.resultSemanticTypeId == TypeTools.toString(resultType);
+	static function writeMismatch(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type):Null<String> {
+		if (decision.operation != WriteStoredField)
+			return "operation changed from a read or method capture to a write";
+		if (decision.fieldName != field.name)
+			return 'field name expected=${decision.fieldName} actual=${field.name}';
+		final receiverType = TypeTools.toString(receiver.t);
+		if (decision.receiverSemanticTypeId != receiverType)
+			return 'receiver type expected=${decision.receiverSemanticTypeId} actual=$receiverType';
+		final fieldType = TypeTools.toString(field.type);
+		if (decision.fieldSemanticTypeId != fieldType)
+			return 'field type expected=${decision.fieldSemanticTypeId} actual=$fieldType';
+		final actualResultType = TypeTools.toString(resultType);
+		return decision.resultSemanticTypeId == actualResultType ? null : 'result type expected=${decision.resultSemanticTypeId} actual=$actualResultType';
 	}
 }
 #end
