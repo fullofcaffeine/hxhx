@@ -4,22 +4,24 @@ set -euo pipefail
 ROOT="$(cd ../../../.. && pwd)"
 SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_runtime_requirement_report.json"
+LOWERING_REPORT_FILE="out/ocaml_lowering_report.json"
 BUILDER_FILE="$ROOT/packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
 REPORT_COPY="$(mktemp)"
 trap 'rm -f "$REPORT_COPY"' EXIT
 
-if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$BUILDER_FILE" ]; then
-	echo "Missing generated Map source, runtime requirement report, or target builder" >&2
+if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ] || [ ! -f "$LOWERING_REPORT_FILE" ] || [ ! -f "$BUILDER_FILE" ]; then
+	echo "Missing generated Map source, lowering evidence, runtime requirement report, or target builder" >&2
 	exit 1
 fi
 
 rm -f out/oracle.interp out/oracle.js out/oracle.js.stdout out/oracle.n out/oracle.neko.stdout out/invalid-source-identity.log
 
-node - "$SOURCE_FILE" "$REPORT_FILE" "$BUILDER_FILE" <<'NODE'
+node - "$SOURCE_FILE" "$REPORT_FILE" "$LOWERING_REPORT_FILE" "$BUILDER_FILE" <<'NODE'
 const fs = require('fs')
 const source = fs.readFileSync(process.argv[2], 'utf8')
 const report = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
-const builder = fs.readFileSync(process.argv[4], 'utf8')
+const lowering = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))
+const builder = fs.readFileSync(process.argv[5], 'utf8')
 
 function fail(message) {
 	throw new Error(message)
@@ -71,6 +73,36 @@ for (const carrier of [
 }
 if (!source.includes('HxIterator.of_array'))
 	fail('generated Map iteration does not consume the typed HxIterator adapter')
+if (!source.includes('Stdlib.fst') || !source.includes('Stdlib.snd') || source.includes('HxAnon.get'))
+	fail('standard Map pairs must use proven tuple projections rather than anonymous-object field lookup')
+
+const tupleDecisions = (lowering.structuralFields || []).filter(decision => decision.keyValueTupleTarget)
+const expectedPairSources = [
+	'haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_string)',
+	'haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_int)',
+	'haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_object)'
+]
+if (tupleDecisions.length === 0)
+	fail('lowering report contains no typed standard Map pair projections')
+for (const decision of tupleDecisions) {
+	const target = decision.keyValueTupleTarget
+	if (target.iteratorProducerKind !== 'target-native-standard-map-call'
+		|| target.iteratorProducerId !== 'target-native-standard-map-pair-producer-v1'
+		|| target.proofId !== 'standard-map-key-value-tuple-projection-v2'
+		|| !expectedPairSources.includes(target.iteratorProducerSourceId)
+		|| decision.runtimeModule !== 'Stdlib'
+		|| !['fst', 'snd'].includes(decision.runtimeOperation)
+		|| decision.runtimeRequirementIds.length !== 0) {
+		fail(`Map pair field lacks the exact target-native tuple proof: ${JSON.stringify(decision)}`)
+	}
+}
+for (const pairSource of expectedPairSources) {
+	const projections = new Set(tupleDecisions
+		.filter(decision => decision.keyValueTupleTarget.iteratorProducerSourceId === pairSource)
+		.map(decision => decision.keyValueTupleTarget.projection))
+	if (!projections.has('fst') || !projections.has('snd'))
+		fail(`Map pair producer ${pairSource} did not prove both key and value projections`)
+}
 for (const operation of ['toString_string', 'toString_int', 'toString_object']) {
 	if (source.includes(`HxMap.${operation}`))
 		fail(`Map text still delegates Haxe behavior to runtime placeholder ${operation}`)

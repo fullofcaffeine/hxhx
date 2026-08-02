@@ -59,11 +59,13 @@ for (const field of tupleFields) {
 		|| target.projection !== expectedProjection
 		|| target.keySemanticTypeId !== 'String'
 		|| target.valueSemanticTypeId !== 'Int'
-		|| !target.iteratorProducerCallId.startsWith('call:')
+		|| target.iteratorProducerKind !== 'standard-imap-call'
+		|| !target.iteratorProducerId.startsWith('call:')
+		|| target.iteratorProducerSourceId !== 'haxe.Constraints.IMap.keyValueIterator'
 		|| !target.pairProducerCallId.startsWith('call:')
 		|| !target.iteratorLocalId.startsWith('lexical-local-v1:')
 		|| !target.pairLocalId.startsWith('lexical-local-v1:')
-		|| target.proofId !== 'standard-imap-key-value-tuple-projection-v1'
+		|| target.proofId !== 'standard-map-key-value-tuple-projection-v2'
 		|| field.pipelineRevision !== 'ocaml-function-plans-v66') {
 		throw new Error(`Map-pair projection ${field.id} has no complete typed producer proof`)
 	}

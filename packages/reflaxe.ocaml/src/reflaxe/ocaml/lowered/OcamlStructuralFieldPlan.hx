@@ -11,8 +11,8 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
-import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorOperation;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -54,13 +54,16 @@ enum abstract OcamlStructuralFieldStoreConversion(String) from String to String 
 
 	Haxe erases the pair's `KeyValueIterator<K,V>` typedef after `next()` returns,
 	so the field receiver alone looks like any other anonymous object. These facts
-	retain the two typed calls and stable locals that connect the pair back to a
-	standard `IMap.keyValueIterator()` producer. Syntax may use `fst` or `snd` only
+	retain the producer identity, the typed `next()` call, and stable locals that
+	connect the pair back to either a standard `IMap.keyValueIterator()` call or
+	the target's exact standard-Map pair helper. Syntax may use `fst` or `snd` only
 	when this complete chain was sealed from the final typed body.
 **/
 typedef OcamlKeyValueTupleProjectionTarget = {
 	final projection:String;
-	final iteratorProducerCallId:String;
+	final iteratorProducerKind:String;
+	final iteratorProducerId:String;
+	final iteratorProducerSourceId:String;
 	final pairProducerCallId:String;
 	final iteratorLocalId:String;
 	final pairLocalId:String;
@@ -115,11 +118,12 @@ class OcamlStructuralFieldContract {
 	public static inline final HAXE_ITERATOR_CAPABILITY = "haxe-iterator";
 	public static inline final STORED_PROOF_ID = "structural-stored-field-v1";
 	public static inline final ITERATOR_PROOF_ID = "structural-iterator-method-value-v1";
-	public static inline final KEY_VALUE_TUPLE_PROOF_ID = "standard-imap-key-value-tuple-projection-v1";
+	public static inline final KEY_VALUE_TUPLE_PROOF_ID = "standard-map-key-value-tuple-projection-v2";
+	public static inline final TARGET_NATIVE_MAP_PAIR_PRODUCER_PROOF_ID = "target-native-standard-map-pair-producer-v1";
 
 	public static inline final STORED_PROOF_CLAIM = "The final typed FAnon occurrence names an ordinary stored next, hasNext, key, or value field, not a complete structural Iterator method or a pair produced by the standard IMap keyValueIterator path. The portable carrier is one HxAnon object. Reads evaluate the receiver once and recover the stored field value. Writes evaluate the receiver before the assigned value, replace that exact field, and return the assigned Haxe value.";
 	public static inline final ITERATOR_PROOF_CLAIM = "The final typed field occurrence captures hasNext or next from a complete structural Iterator value. The target evaluates the receiver once and returns a zero-argument closure over the exact HxIterator operation. Immediate invocation remains owned by the separate structural Iterator call plan.";
-	public static inline final KEY_VALUE_TUPLE_PROOF_CLAIM = "The final typed key or value read receives a pair from structural Iterator.next, whose unchanged iterator local receives the exact standard IMap.keyValueIterator tuple-producing call. Stable lexical locals and both sealed call identities connect the anonymous pair back to that producer before syntax. No field name or anonymous shape authorizes the tuple projection.";
+	public static inline final KEY_VALUE_TUPLE_PROOF_CLAIM = "The final typed key or value read receives a pair from structural Iterator.next, whose unchanged iterator local receives either a sealed standard IMap.keyValueIterator call or the exact target-authored NativeHxMapIterator.of_array call around a typed NativeHxMap pair helper. Stable lexical locals, the typed producer identity, and the sealed next-call identity connect the anonymous pair back to that producer before syntax. No field name or anonymous shape authorizes the tuple projection.";
 
 	/** Returns whether this bounded model owns a potentially ambiguous field. */
 	public static function ownsFieldName(name:String):Bool {
@@ -245,7 +249,7 @@ class OcamlStructuralFieldContract {
 			|| decision.proofClaim != KEY_VALUE_TUPLE_PROOF_CLAIM
 			|| target.proofId != KEY_VALUE_TUPLE_PROOF_ID
 			|| target.proofClaim != KEY_VALUE_TUPLE_PROOF_CLAIM
-			|| target.iteratorProducerCallId.length == 0
+			|| !validIteratorProducer(target)
 			|| target.pairProducerCallId.length == 0
 			|| target.iteratorSemanticTypeId.length == 0
 			|| target.pairSemanticTypeId.length == 0
@@ -254,6 +258,21 @@ class OcamlStructuralFieldContract {
 			|| !isReusableLocalId(target.iteratorLocalId)
 			|| !isReusableLocalId(target.pairLocalId)) {
 			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-key-value-proof]: tuple projection "${decision.id}" disagrees with its typed producer chain';
+		}
+	}
+
+	static function validIteratorProducer(target:OcamlKeyValueTupleProjectionTarget):Bool {
+		return switch (target.iteratorProducerKind) {
+			case "standard-imap-call": StringTools.startsWith(target.iteratorProducerId,
+					"call:") && target.iteratorProducerSourceId == "haxe.Constraints.IMap.keyValueIterator";
+			case "target-native-standard-map-call": final sourceMatchesKey = switch (target.iteratorProducerSourceId) {
+					case "haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_string)": target.keySemanticTypeId == "String";
+					case "haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_int)": target.keySemanticTypeId == "Int";
+					case "haxe.ds.NativeHxMapIterator.of_array(haxe.ds.NativeHxMap.pairs_object)": target.keySemanticTypeId != "String" && target.keySemanticTypeId != "Int";
+					case _: false;
+				} target.iteratorProducerId == TARGET_NATIVE_MAP_PAIR_PRODUCER_PROOF_ID && sourceMatchesKey;
+			case _:
+				false;
 		}
 	}
 
@@ -294,7 +313,9 @@ class OcamlStructuralFieldContract {
 	public static function copyKeyValueTupleTarget(target:OcamlKeyValueTupleProjectionTarget):OcamlKeyValueTupleProjectionTarget {
 		return {
 			projection: target.projection,
-			iteratorProducerCallId: target.iteratorProducerCallId,
+			iteratorProducerKind: target.iteratorProducerKind,
+			iteratorProducerId: target.iteratorProducerId,
+			iteratorProducerSourceId: target.iteratorProducerSourceId,
 			pairProducerCallId: target.pairProducerCallId,
 			iteratorLocalId: target.iteratorLocalId,
 			pairLocalId: target.pairLocalId,
@@ -311,7 +332,9 @@ class OcamlStructuralFieldContract {
 	public static function keyValueTupleFingerprint(target:OcamlKeyValueTupleProjectionTarget):String {
 		return [
 			target.projection,
-			target.iteratorProducerCallId,
+			target.iteratorProducerKind,
+			target.iteratorProducerId,
+			target.iteratorProducerSourceId,
 			target.pairProducerCallId,
 			target.iteratorLocalId,
 			target.pairLocalId,
@@ -360,9 +383,13 @@ private typedef OcamlStructuralFieldOccurrence = {
 }
 
 private typedef OcamlTupleIteratorLocalProof = {
-	final target:OcamlStandardIMapCallTarget;
-	final iteratorProducerCallId:String;
+	final producerKind:String;
+	final producerId:String;
+	final producerSourceId:String;
 	final iteratorLocalId:String;
+	final iteratorSemanticTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
 }
 
 private typedef OcamlTuplePairLocalProof = {
@@ -698,17 +725,37 @@ class OcamlStructuralFieldPlanner {
 			final expression = transparentExpression(initializer.expression);
 			final call = calls.decisionFor(expression);
 			final target = call == null ? null : call.standardIMapTarget;
-			if (call == null
-				|| call.kind != OcamlCallKind.StandardIMapMethod
-				|| target == null
-				|| target.operation != OcamlStandardIMapOperation.Pairs
-				|| target.resultSemanticTypeId != initializer.semanticTypeId)
+			var proof:Null<OcamlTupleIteratorLocalProof> = null;
+			if (call != null
+				&& call.kind == OcamlCallKind.StandardIMapMethod
+				&& target != null
+				&& target.operation == OcamlStandardIMapOperation.Pairs
+				&& target.resultSemanticTypeId == initializer.semanticTypeId) {
+				proof = {
+					producerKind: "standard-imap-call",
+					producerId: call.id,
+					producerSourceId: "haxe.Constraints.IMap.keyValueIterator",
+					iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id,
+					iteratorSemanticTypeId: target.resultSemanticTypeId,
+					keySemanticTypeId: target.keySemanticTypeId,
+					valueSemanticTypeId: target.valueSemanticTypeId
+				};
+			} else {
+				final targetNative = OcamlStandardMapCarrierContract.pairProducerForExpression(expression);
+				if (targetNative != null && targetNative.iteratorSemanticTypeId == initializer.semanticTypeId)
+					proof = {
+						producerKind: "target-native-standard-map-call",
+						producerId: targetNative.proofId,
+						producerSourceId: targetNative.sourceDeclarationId,
+						iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id,
+						iteratorSemanticTypeId: targetNative.iteratorSemanticTypeId,
+						keySemanticTypeId: targetNative.keySemanticTypeId,
+						valueSemanticTypeId: targetNative.valueSemanticTypeId
+					};
+			}
+			if (proof == null)
 				continue;
-			iterators.set(initializer.hostLocalId, {
-				target: target,
-				iteratorProducerCallId: call.id,
-				iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id
-			});
+			iterators.set(initializer.hostLocalId, proof);
 		}
 
 		final pairs:Map<Int, OcamlTuplePairLocalProof> = [];
@@ -726,7 +773,7 @@ class OcamlStructuralFieldPlanner {
 				continue;
 			final receiverHostId = structuralCallReceiverLocalId(expression);
 			final iterator = receiverHostId == null ? null : iterators.get(receiverHostId);
-			if (iterator == null || target.receiverSemanticTypeId != iterator.target.resultSemanticTypeId)
+			if (iterator == null || target.receiverSemanticTypeId != iterator.iteratorSemanticTypeId)
 				continue;
 			pairs.set(initializer.hostLocalId, {
 				iterator: iterator,
@@ -748,14 +795,16 @@ class OcamlStructuralFieldPlanner {
 			return null;
 		return {
 			projection: fieldName == "key" ? "fst" : "snd",
-			iteratorProducerCallId: pair.iterator.iteratorProducerCallId,
+			iteratorProducerKind: pair.iterator.producerKind,
+			iteratorProducerId: pair.iterator.producerId,
+			iteratorProducerSourceId: pair.iterator.producerSourceId,
 			pairProducerCallId: pair.pairProducerCallId,
 			iteratorLocalId: pair.iterator.iteratorLocalId,
 			pairLocalId: pair.pairLocalId,
-			iteratorSemanticTypeId: pair.iterator.target.resultSemanticTypeId,
+			iteratorSemanticTypeId: pair.iterator.iteratorSemanticTypeId,
 			pairSemanticTypeId: pair.pairSemanticTypeId,
-			keySemanticTypeId: pair.iterator.target.keySemanticTypeId,
-			valueSemanticTypeId: pair.iterator.target.valueSemanticTypeId,
+			keySemanticTypeId: pair.iterator.keySemanticTypeId,
+			valueSemanticTypeId: pair.iterator.valueSemanticTypeId,
 			proofId: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_ID,
 			proofClaim: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_CLAIM
 		};

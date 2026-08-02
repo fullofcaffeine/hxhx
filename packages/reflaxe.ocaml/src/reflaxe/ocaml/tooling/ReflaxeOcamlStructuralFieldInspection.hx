@@ -99,7 +99,9 @@ class ReflaxeOcamlStructuralFieldInspection {
 	static function keyValueTupleTarget(value:Dynamic):OcamlKeyValueTupleProjectionTarget {
 		return {
 			projection: requiredString(value, "projection"),
-			iteratorProducerCallId: requiredString(value, "iteratorProducerCallId"),
+			iteratorProducerKind: requiredString(value, "iteratorProducerKind"),
+			iteratorProducerId: requiredString(value, "iteratorProducerId"),
+			iteratorProducerSourceId: requiredString(value, "iteratorProducerSourceId"),
 			pairProducerCallId: requiredString(value, "pairProducerCallId"),
 			iteratorLocalId: requiredString(value, "iteratorLocalId"),
 			pairLocalId: requiredString(value, "pairLocalId"),
