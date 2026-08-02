@@ -7725,7 +7725,7 @@ class OcamlBuilder {
 		final params = if (callableBoundary == null) {
 			tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
 		} else {
-			[
+			tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : [
 				for (index in 0...tfunc.args.length)
 					OcamlPat.PAnnot(OcamlPat.PVar(renameVar(tfunc.args[index].v.name)), callableOutputType(callableBoundary.arguments[index], tfunc.expr.pos))
 			];

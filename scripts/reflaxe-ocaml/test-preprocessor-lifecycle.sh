@@ -34,8 +34,10 @@ if [ ! -f "$REFLAXE_SOURCE_ROOT/src/reflaxe/preprocessors/implementations/Remove
 fi
 
 pipeline_source="$ROOT/packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlFunctionPlanRegistry.hx"
-pipeline_revision="$(sed -n 's/.*PIPELINE_REVISION = "\([^"]*\)";.*/\1/p' "$pipeline_source")"
-if [ -z "$pipeline_revision" ]; then
+# This fixture traces an ordinary class function, so read only the ordinary
+# function constant rather than also collecting nested and standalone schemas.
+pipeline_revision="$(sed -n 's/^[[:space:]]*public static inline final PIPELINE_REVISION = "\([^"]*\)";.*/\1/p' "$pipeline_source")"
+if [ -z "$pipeline_revision" ] || [[ "$pipeline_revision" == *$'\n'* ]]; then
   echo "Unable to read the current OCaml function-plan pipeline revision from $pipeline_source." >&2
   exit 2
 fi

@@ -1,9 +1,11 @@
+import haxe.crypto.Sha256;
 import haxe.macro.Expr;
 import haxe.macro.Context;
 import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.FunctionBodyRevision;
+import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
@@ -39,6 +41,13 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlEnumRuntimeRequirementRecorder;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
+private typedef NestedReturnOnlyFixture = {
+	final expression:TypedExpr;
+	final externalLocals:Array<TVar>;
+	final binding:OcamlFunctionPlanBinding;
+	final plan:OcamlSealedNestedFunctionPlan;
+}
+
 /**
 	Checks control-family independence, immutability, and fail-closed validation.
 
@@ -49,6 +58,27 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 **/
 class ControlPlanFixture {
 	static inline final FUNCTION_ID = "Main|Main|static|function|value|generics:0|required:Int->Int";
+
+	/** Builds one structurally valid occurrence ID for registry corruption tests. **/
+	static function nestedOccurrenceId(label:String):String {
+		return LexicalLocalIdentityPlan.FUNCTION_OCCURRENCE_ID_PREFIX + Sha256.encode(label);
+	}
+
+	/** Builds the exact nested binding that the registry will accept for a typed literal. **/
+	static function nestedFunctionBinding(parent:OcamlFunctionPlanBinding, expression:TypedExpr, externalLocals:Array<TVar>,
+			identities:LexicalLocalIdentityPlan):OcamlFunctionPlanBinding {
+		final nestedFunction = switch (expression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The nested-function binding fixture requires a typed function literal";
+		}
+		final occurrence = identities.requireFunctionOccurrence(expression);
+		return {
+			functionId: OcamlFunctionPlanRegistry.nestedFunctionId(parent.functionId, occurrence.id),
+			programRevision: parent.programRevision,
+			bodyRevision: FunctionBodyRevision.initial(nestedFunction.expr, externalLocals).id,
+			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
+		};
+	}
 
 	static function binding(?bodyRevision:String = "body:control-fixture"):OcamlFunctionPlanBinding {
 		return {
@@ -504,6 +534,67 @@ class ControlPlanFixture {
 		if (result == null)
 			throw "The admitted nested-function fixture requires an early return";
 		return result;
+	}
+
+	/** Finds the first nested function literal inside a typed owner body. */
+	static function firstFunctionLiteral(expression:TypedExpr):TypedExpr {
+		var result:Null<TypedExpr> = null;
+		function visit(current:TypedExpr):Void {
+			if (result != null)
+				return;
+			switch (current.expr) {
+				case TFunction(_):
+					result = current;
+				case _:
+					TypedExprTools.iter(current, visit);
+			}
+		}
+		visit(expression);
+		if (result == null)
+			throw "The fixture owner body contains no nested function literal";
+		return result;
+	}
+
+	/** Returns nested function literals in the typed tree's structural order. */
+	static function functionLiterals(expression:TypedExpr):Array<TypedExpr> {
+		final result:Array<TypedExpr> = [];
+		function visit(current:TypedExpr):Void {
+			switch (current.expr) {
+				case TFunction(_):
+					result.push(current);
+				case _:
+			}
+			TypedExprTools.iter(current, visit);
+		}
+		visit(expression);
+		return result;
+	}
+
+	/** Builds one internally consistent return-only nested plan for ownership corruption tests. */
+	static function nestedReturnOnlyFixture(parent:OcamlFunctionPlanBinding, expression:TypedExpr, identities:LexicalLocalIdentityPlan,
+			decisionId:String):NestedReturnOnlyFixture {
+		final nestedFunction = switch (expression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The return-only nested fixture requires a typed function literal";
+		};
+		final externalLocals = nestedExternalLocals(expression);
+		final planBinding = nestedFunctionBinding(parent, expression, externalLocals, identities);
+		final returned = firstReturn(nestedFunction.expr);
+		final source = OcamlLoweredOrigin.sourceSpan(returned.pos);
+		final decision = returnDecision(decisionId, source.min, planBinding.functionId, null, null, "Int", null, null, planBinding, source);
+		final controls = new OcamlControlPlan(true, true, true, planBinding, [], [decision], [], [{expression: returned, decisionId: decision.id}], [], []);
+		return {
+			expression: expression,
+			externalLocals: externalLocals,
+			binding: planBinding,
+			plan: {
+				occurrenceId: identities.requireFunctionOccurrence(expression).id,
+				parentBinding: parent,
+				binding: planBinding,
+				callableBoundary: nestedBoundary(planBinding),
+				controls: controls
+			}
+		};
 	}
 
 	/** Finds the first `try` node so a legacy catch disposition can be indexed exactly. */
@@ -1078,22 +1169,24 @@ class ControlPlanFixture {
 		};
 		expectThrows("stale-parent", () -> nestedRegistry.nestedFunctionPlanFor(nestedExpression, staleParent));
 
-		final admittedExpression = Context.typeExpr(macro function(value:Int):Int {
-			if (value > 0)
-				return 6;
-			return 0;
+		final admittedOwnerBody = Context.typeExpr(macro {
+			final local = function(value:Int):Int {
+				if (value > 0)
+					return 6;
+				return 0;
+			};
+			local(1);
 		});
+		final admittedExpression = firstFunctionLiteral(admittedOwnerBody);
 		final admittedFunction = switch (admittedExpression.expr) {
 			case TFunction(tfunc): tfunc;
 			case _: throw "The admitted nested-function fixture did not type as a function literal";
 		};
 		final admittedExternalLocals = nestedExternalLocals(admittedExpression);
-		final admittedBinding:OcamlFunctionPlanBinding = {
-			functionId: nestedParent.functionId + "|nested-function|admitted",
-			programRevision: nestedParent.programRevision,
-			bodyRevision: FunctionBodyRevision.initial(admittedFunction.expr, admittedExternalLocals).id,
-			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
-		};
+		final admittedIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedOwnerBody);
+		nestedRegistry.registerRootIdentityPlan(nestedParent, admittedIdentities);
+		final admittedOccurrence = admittedIdentities.requireFunctionOccurrence(admittedExpression);
+		final admittedBinding = nestedFunctionBinding(nestedParent, admittedExpression, admittedExternalLocals, admittedIdentities);
 		final admittedReturn = firstReturn(admittedFunction.expr);
 		final admittedReturnSource = OcamlLoweredOrigin.sourceSpan(admittedReturn.pos);
 		final admittedDecision = returnDecision("control:return:nested-admitted", admittedReturnSource.min, admittedBinding.functionId, null, null, "Int",
@@ -1101,15 +1194,252 @@ class ControlPlanFixture {
 		final admittedControls = new OcamlControlPlan(true, true, true, admittedBinding, [], [admittedDecision], [],
 			[{expression: admittedReturn, decisionId: admittedDecision.id}], [], []);
 		final admittedPlan:OcamlSealedNestedFunctionPlan = {
-			occurrenceId: "nested-function-occurrence:admitted",
+			occurrenceId: admittedOccurrence.id,
 			parentBinding: nestedParent,
 			binding: admittedBinding,
 			callableBoundary: nestedBoundary(admittedBinding),
 			controls: admittedControls
 		};
-		nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan);
+		final noncanonicalIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedExpression);
+		final noncanonicalOccurrence = noncanonicalIdentities.requireFunctionOccurrence(admittedExpression);
+		if (noncanonicalOccurrence.id == admittedOccurrence.id)
+			throw "The noncanonical identity fixture did not move the literal to a different structural path";
+		final noncanonicalBinding = nestedFunctionBinding(nestedParent, admittedExpression, admittedExternalLocals, noncanonicalIdentities);
+		final noncanonicalDecision = returnDecision("control:return:nested-noncanonical", admittedReturnSource.min, noncanonicalBinding.functionId, null,
+			null, "Int", null, null, noncanonicalBinding, admittedReturnSource);
+		final noncanonicalControls = new OcamlControlPlan(true, true, true, noncanonicalBinding, [], [noncanonicalDecision], [],
+			[{expression: admittedReturn, decisionId: noncanonicalDecision.id}], [], []);
+		final noncanonicalPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: noncanonicalOccurrence.id,
+			parentBinding: nestedParent,
+			binding: noncanonicalBinding,
+			callableBoundary: nestedBoundary(noncanonicalBinding),
+			controls: noncanonicalControls
+		};
+		expectThrows("foreign-root-identities",
+			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, noncanonicalBinding.bodyRevision, noncanonicalPlan,
+				noncanonicalIdentities));
+		final wrongNestedBinding:OcamlFunctionPlanBinding = {
+			functionId: nestedParent.functionId + "|nested-function|plausible-but-wrong",
+			programRevision: admittedBinding.programRevision,
+			bodyRevision: admittedBinding.bodyRevision,
+			pipelineRevision: admittedBinding.pipelineRevision
+		};
+		final wrongNestedBindingPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: admittedOccurrence.id,
+			parentBinding: nestedParent,
+			binding: wrongNestedBinding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls
+		};
+		expectThrows("binding-mismatch",
+			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, wrongNestedBindingPlan,
+				admittedIdentities));
+		final staleRootParent:OcamlFunctionPlanBinding = {
+			functionId: nestedParent.functionId,
+			programRevision: nestedParent.programRevision,
+			bodyRevision: "0:stale-root-body",
+			pipelineRevision: nestedParent.pipelineRevision
+		};
+		final staleRootPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: admittedPlan.occurrenceId,
+			parentBinding: staleRootParent,
+			binding: admittedPlan.binding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls
+		};
+		expectThrows("stale-root-binding",
+			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, staleRootPlan,
+				admittedIdentities));
+		expectThrows("conflicting-root-binding", () -> nestedRegistry.registerRootIdentityPlan(staleRootParent, admittedIdentities));
+		nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan, admittedIdentities);
 		if (nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent) == null)
 			throw "An admitted nested function did not return its sealed plan";
+		final malformedOccurrenceExpression = Context.typeExpr(macro function(value:Int):Int {
+			if (value > 0)
+				return 6;
+			return 0;
+		});
+		final malformedOccurrenceIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, malformedOccurrenceExpression);
+		final malformedOccurrencePlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: "nested-function-occurrence:not-a-generic-identity",
+			parentBinding: admittedPlan.parentBinding,
+			binding: admittedPlan.binding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls
+		};
+		expectThrows("missing-identity",
+			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
+				admittedBinding.bodyRevision, malformedOccurrencePlan, malformedOccurrenceIdentities));
+		final foreignOccurrencePlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: nestedOccurrenceId("valid-but-foreign"),
+			parentBinding: admittedPlan.parentBinding,
+			binding: admittedPlan.binding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls
+		};
+		expectThrows("foreign-occurrence",
+			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
+				admittedBinding.bodyRevision, foreignOccurrencePlan, admittedIdentities));
+		final crossRootOwnerId = "Main|Main|static|function|crossRootOwner|generics:0|->Int";
+		final ordinaryImpostorParent:OcamlFunctionPlanBinding = {
+			functionId: crossRootOwnerId + "|nested-function|ordinary-impostor",
+			programRevision: nestedParent.programRevision,
+			bodyRevision: nestedParent.bodyRevision,
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+		final ordinaryImpostorBinding:OcamlFunctionPlanBinding = {
+			functionId: OcamlFunctionPlanRegistry.nestedFunctionId(ordinaryImpostorParent.functionId,
+				malformedOccurrenceIdentities.requireFunctionOccurrence(malformedOccurrenceExpression).id),
+			programRevision: admittedBinding.programRevision,
+			bodyRevision: admittedBinding.bodyRevision,
+			pipelineRevision: admittedBinding.pipelineRevision
+		};
+		final ordinaryImpostorPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: malformedOccurrenceIdentities.requireFunctionOccurrence(malformedOccurrenceExpression).id,
+			parentBinding: ordinaryImpostorParent,
+			binding: ordinaryImpostorBinding,
+			callableBoundary: admittedPlan.callableBoundary,
+			controls: admittedPlan.controls
+		};
+		expectThrows("foreign-root-identities",
+			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
+				admittedBinding.bodyRevision, ordinaryImpostorPlan, malformedOccurrenceIdentities));
+
+		// A function ID is text, so an ordinary function can legitimately contain
+		// the nested-function separator in its own name. Register a child below that
+		// root, then prove a second root cannot claim a deeper child merely because
+		// its shorter ID is a textual prefix of the registered parent's ID.
+		final impostorRootExpression = Context.typeExpr(macro function(value:Int):Int {
+			if (value > 0)
+				return 9;
+			return 0;
+		});
+		final impostorRootFunction = switch (impostorRootExpression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The impostor-root fixture did not type as a function literal";
+		};
+		final impostorRootExternalLocals = nestedExternalLocals(impostorRootExpression);
+		final impostorRootIdentities = LexicalLocalIdentityPlan.build(ordinaryImpostorParent.functionId, impostorRootExpression);
+		nestedRegistry.registerRootIdentityPlan(ordinaryImpostorParent, impostorRootIdentities);
+		final impostorRootBinding = nestedFunctionBinding(ordinaryImpostorParent, impostorRootExpression, impostorRootExternalLocals, impostorRootIdentities);
+		final impostorRootReturn = firstReturn(impostorRootFunction.expr);
+		final impostorRootReturnSource = OcamlLoweredOrigin.sourceSpan(impostorRootReturn.pos);
+		final impostorRootDecision = returnDecision("control:return:nested-impostor-root", impostorRootReturnSource.min, impostorRootBinding.functionId, null,
+			null, "Int", null, null, impostorRootBinding, impostorRootReturnSource);
+		final impostorRootControls = new OcamlControlPlan(true, true, true, impostorRootBinding, [], [impostorRootDecision], [],
+			[{expression: impostorRootReturn, decisionId: impostorRootDecision.id}], [], []);
+		final impostorRootPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: impostorRootIdentities.requireFunctionOccurrence(impostorRootExpression).id,
+			parentBinding: ordinaryImpostorParent,
+			binding: impostorRootBinding,
+			callableBoundary: nestedBoundary(impostorRootBinding),
+			controls: impostorRootControls
+		};
+		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
+			impostorRootIdentities);
+
+		final crossRootChildExpression = Context.typeExpr(macro function(value:Int):Int {
+			if (value > 0)
+				return 10;
+			return 0;
+		});
+		final crossRootChildFunction = switch (crossRootChildExpression.expr) {
+			case TFunction(tfunc): tfunc;
+			case _: throw "The cross-root child fixture did not type as a function literal";
+		};
+		final crossRootChildExternalLocals = nestedExternalLocals(crossRootChildExpression);
+		final crossRootChildIdentities = LexicalLocalIdentityPlan.build(crossRootOwnerId, crossRootChildExpression);
+		final crossRootOwnerBinding:OcamlFunctionPlanBinding = {
+			functionId: crossRootOwnerId,
+			programRevision: nestedParent.programRevision,
+			bodyRevision: nestedParent.bodyRevision,
+			pipelineRevision: nestedParent.pipelineRevision
+		};
+		nestedRegistry.registerRootIdentityPlan(crossRootOwnerBinding, crossRootChildIdentities);
+		final crossRootChildBinding = nestedFunctionBinding(impostorRootBinding, crossRootChildExpression, crossRootChildExternalLocals,
+			crossRootChildIdentities);
+		final crossRootChildReturn = firstReturn(crossRootChildFunction.expr);
+		final crossRootChildReturnSource = OcamlLoweredOrigin.sourceSpan(crossRootChildReturn.pos);
+		final crossRootChildDecision = returnDecision("control:return:nested-cross-root", crossRootChildReturnSource.min, crossRootChildBinding.functionId,
+			null, null, "Int", null, null, crossRootChildBinding, crossRootChildReturnSource);
+		final crossRootChildControls = new OcamlControlPlan(true, true, true, crossRootChildBinding, [], [crossRootChildDecision], [],
+			[{expression: crossRootChildReturn, decisionId: crossRootChildDecision.id}], [], []);
+		final crossRootChildPlan:OcamlSealedNestedFunctionPlan = {
+			occurrenceId: crossRootChildIdentities.requireFunctionOccurrence(crossRootChildExpression).id,
+			parentBinding: impostorRootBinding,
+			binding: crossRootChildBinding,
+			callableBoundary: nestedBoundary(crossRootChildBinding),
+			controls: crossRootChildControls
+		};
+		expectThrows("foreign-parent-occurrence",
+			() -> nestedRegistry.sealNestedFunction(crossRootChildExpression, crossRootChildExternalLocals, crossRootChildBinding.bodyRevision,
+				crossRootChildPlan, crossRootChildIdentities));
+
+		final siblingRegistry = new OcamlFunctionPlanRegistry();
+		siblingRegistry.beginProgram("program:same-root-parent-fixture");
+		final siblingRoot:OcamlFunctionPlanBinding = {
+			functionId: "Main|Main|static|function|siblingRoot|generics:0|->Int",
+			programRevision: "program:same-root-parent-fixture",
+			bodyRevision: "0:sibling-root-body",
+			pipelineRevision: OcamlFunctionPlanRegistry.PIPELINE_REVISION
+		};
+		final siblingOwnerBody = Context.typeExpr(macro {
+			final siblingA = function(value:Int):Int {
+				if (value > 0)
+					return 1;
+				return 0;
+			};
+			final siblingB = function(value:Int):Int {
+				final child = function(childValue:Int):Int {
+					if (childValue > 0)
+						return 2;
+					return 0;
+				};
+				if (value > 0)
+					return child(value);
+				return 0;
+			};
+			siblingA(1) + siblingB(1);
+		});
+		final siblingExpressions = functionLiterals(siblingOwnerBody);
+		if (siblingExpressions.length != 3)
+			throw 'The same-root parent fixture expected three function literals, got ${siblingExpressions.length}';
+		final siblingIdentities = LexicalLocalIdentityPlan.build(siblingRoot.functionId, siblingOwnerBody);
+		siblingRegistry.registerRootIdentityPlan(siblingRoot, siblingIdentities);
+		final siblingA = nestedReturnOnlyFixture(siblingRoot, siblingExpressions[0], siblingIdentities, "control:return:sibling-a");
+		final siblingB = nestedReturnOnlyFixture(siblingRoot, siblingExpressions[1], siblingIdentities, "control:return:sibling-b");
+		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan, siblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan, siblingIdentities);
+		final wrongSiblingChild = nestedReturnOnlyFixture(siblingA.binding, siblingExpressions[2], siblingIdentities, "control:return:wrong-sibling-child");
+		expectThrows("foreign-parent-occurrence",
+			() -> siblingRegistry.sealNestedFunction(wrongSiblingChild.expression, wrongSiblingChild.externalLocals, wrongSiblingChild.binding.bodyRevision,
+				wrongSiblingChild.plan, siblingIdentities));
+		final siblingChild = nestedReturnOnlyFixture(siblingB.binding, siblingExpressions[2], siblingIdentities, "control:return:sibling-child");
+		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.externalLocals, siblingChild.binding.bodyRevision, siblingChild.plan,
+			siblingIdentities);
+		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
+			throw "The exact same-root nested parent did not retain its child plan";
+
+		// Starting another request with the same program name must still discard all
+		// request-local identity and parent records. Re-registering a freshly built
+		// lookup and sealing the same literals proves the old expression, occurrence,
+		// nested-parent, and root records cannot authorize the new request.
+		siblingRegistry.beginProgram(siblingRoot.programRevision);
+		expectThrows("stale-parent", () -> siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding));
+		expectThrows("foreign-root-identities",
+			() -> siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan,
+				siblingIdentities));
+		final refreshedSiblingIdentities = LexicalLocalIdentityPlan.build(siblingRoot.functionId, siblingOwnerBody);
+		siblingRegistry.registerRootIdentityPlan(siblingRoot, refreshedSiblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingA.expression, siblingA.externalLocals, siblingA.binding.bodyRevision, siblingA.plan,
+			refreshedSiblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingB.expression, siblingB.externalLocals, siblingB.binding.bodyRevision, siblingB.plan,
+			refreshedSiblingIdentities);
+		siblingRegistry.sealNestedFunction(siblingChild.expression, siblingChild.externalLocals, siblingChild.binding.bodyRevision, siblingChild.plan,
+			refreshedSiblingIdentities);
+		if (siblingRegistry.nestedFunctionPlanFor(siblingChild.expression, siblingB.binding) == null)
+			throw "The same-program reset did not rebuild the exact nested-parent plan";
 
 		final childExpression = Context.typeExpr(macro function(value:Int):Int return value);
 		final childExternalLocals = nestedExternalLocals(childExpression);
@@ -1118,10 +1448,9 @@ class ControlPlanFixture {
 		if (nestedRegistry.nestedFunctionPlanFor(childExpression, admittedBinding) != null)
 			throw "A deliberately deferred child of an admitted nested function unexpectedly returned a plan";
 
-		final duplicateIdentityExpression = Context.typeExpr(macro function(value:Int):Int return value);
-		expectThrows("duplicate-identity",
-			() -> nestedRegistry.sealNestedFunction(duplicateIdentityExpression, nestedExternalLocals(duplicateIdentityExpression),
-				admittedBinding.bodyRevision, admittedPlan));
+		expectThrows("duplicate-occurrence",
+			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan,
+				admittedIdentities));
 
 		final mismatchedExpression = Context.typeExpr(macro function(value:Int):Int {
 			if (value > 0)
@@ -1133,12 +1462,9 @@ class ControlPlanFixture {
 			case _: throw "The nested result-mismatch fixture did not type as a function literal";
 		};
 		final mismatchedExternalLocals = nestedExternalLocals(mismatchedExpression);
-		final mismatchedBinding:OcamlFunctionPlanBinding = {
-			functionId: nestedParent.functionId + "|nested-function|result-mismatch",
-			programRevision: nestedParent.programRevision,
-			bodyRevision: FunctionBodyRevision.initial(mismatchedFunction.expr, mismatchedExternalLocals).id,
-			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
-		};
+		final mismatchedIdentities = LexicalLocalIdentityPlan.build(otherParent.functionId, mismatchedExpression);
+		nestedRegistry.registerRootIdentityPlan(otherParent, mismatchedIdentities);
+		final mismatchedBinding = nestedFunctionBinding(otherParent, mismatchedExpression, mismatchedExternalLocals, mismatchedIdentities);
 		final mismatchedReturn = firstReturn(mismatchedFunction.expr);
 		final mismatchedReturnSource = OcamlLoweredOrigin.sourceSpan(mismatchedReturn.pos);
 		final mismatchedDecision = returnDecision("control:return:nested-result-mismatch", mismatchedReturnSource.min, mismatchedBinding.functionId, null,
@@ -1146,14 +1472,15 @@ class ControlPlanFixture {
 		final mismatchedControls = new OcamlControlPlan(true, true, true, mismatchedBinding, [], [mismatchedDecision], [],
 			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
 		final mismatchedPlan:OcamlSealedNestedFunctionPlan = {
-			occurrenceId: "nested-function-occurrence:result-mismatch",
-			parentBinding: nestedParent,
+			occurrenceId: mismatchedIdentities.requireFunctionOccurrence(mismatchedExpression).id,
+			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding, "Bool"),
 			controls: mismatchedControls
 		};
 		expectThrows("return-boundary-mismatch",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan));
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan,
+				mismatchedIdentities));
 
 		// An unsupported throw is removed from the planner's decision list. This
 		// deliberately corrupt plan proves the catalog checks the family flag and
@@ -1161,26 +1488,28 @@ class ControlPlanFixture {
 		final unadmittedThrowControls = new OcamlControlPlan(true, true, false, mismatchedBinding, [], [mismatchedDecision], [],
 			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
 		final unadmittedThrowPlan:OcamlSealedNestedFunctionPlan = {
-			occurrenceId: "nested-function-occurrence:unadmitted-throw",
-			parentBinding: nestedParent,
+			occurrenceId: mismatchedPlan.occurrenceId,
+			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedThrowControls
 		};
 		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan));
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan,
+				mismatchedIdentities));
 
 		final unadmittedLoopControls = new OcamlControlPlan(true, false, true, mismatchedBinding, [], [mismatchedDecision], [],
 			[{expression: mismatchedReturn, decisionId: mismatchedDecision.id}], [], []);
 		final unadmittedLoopPlan:OcamlSealedNestedFunctionPlan = {
-			occurrenceId: "nested-function-occurrence:unadmitted-loop",
-			parentBinding: nestedParent,
+			occurrenceId: mismatchedPlan.occurrenceId,
+			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
 			controls: unadmittedLoopControls
 		};
 		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan));
+			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan,
+				mismatchedIdentities));
 
 		final caughtExpression = Context.typeExpr(macro function(value:Int):Int {
 			try {
@@ -1194,12 +1523,15 @@ class ControlPlanFixture {
 			case _: throw "The catch-exclusion fixture did not type as a function literal";
 		};
 		final caughtExternalLocals = nestedExternalLocals(caughtExpression);
-		final caughtBinding:OcamlFunctionPlanBinding = {
-			functionId: nestedParent.functionId + "|nested-function|caught",
+		final caughtParent:OcamlFunctionPlanBinding = {
+			functionId: "Main|Main|static|function|caughtOwner|generics:0|->Int",
 			programRevision: nestedParent.programRevision,
-			bodyRevision: FunctionBodyRevision.initial(caughtFunction.expr, caughtExternalLocals).id,
-			pipelineRevision: OcamlFunctionPlanRegistry.NESTED_FUNCTION_PIPELINE_REVISION
+			bodyRevision: nestedParent.bodyRevision,
+			pipelineRevision: nestedParent.pipelineRevision
 		};
+		final caughtIdentities = LexicalLocalIdentityPlan.build(caughtParent.functionId, caughtExpression);
+		nestedRegistry.registerRootIdentityPlan(caughtParent, caughtIdentities);
+		final caughtBinding = nestedFunctionBinding(caughtParent, caughtExpression, caughtExternalLocals, caughtIdentities);
 		final caughtReturn = firstReturn(caughtFunction.expr);
 		final caughtReturnSource = OcamlLoweredOrigin.sourceSpan(caughtReturn.pos);
 		final caughtDecision = returnDecision("control:return:nested-caught", caughtReturnSource.min, caughtBinding.functionId, null, null, "Int", null, null,
@@ -1215,14 +1547,14 @@ class ControlPlanFixture {
 			}
 		]);
 		final caughtPlan:OcamlSealedNestedFunctionPlan = {
-			occurrenceId: "nested-function-occurrence:caught",
-			parentBinding: nestedParent,
+			occurrenceId: caughtIdentities.requireFunctionOccurrence(caughtExpression).id,
+			parentBinding: caughtParent,
 			binding: caughtBinding,
 			callableBoundary: nestedBoundary(caughtBinding),
 			controls: caughtControls
 		};
 		expectThrows("unsupported-control",
-			() -> nestedRegistry.sealNestedFunction(caughtExpression, caughtExternalLocals, caughtBinding.bodyRevision, caughtPlan));
+			() -> nestedRegistry.sealNestedFunction(caughtExpression, caughtExternalLocals, caughtBinding.bodyRevision, caughtPlan, caughtIdentities));
 
 		Reflect.setField(admittedFunction, "expr", Context.typeExpr(macro 99));
 		expectThrows("stale-body", () -> nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent));

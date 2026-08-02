@@ -150,6 +150,18 @@ private typedef OcamlNestedFunctionRecord = {
 }
 
 /**
+	The exact ordinary-function binding and structural lookup that own its literals.
+
+	The binding includes the root body's revision. Keeping it beside the lookup
+	prevents a later caller from reusing real occurrence identities after the root
+	body changed, even when the program and function names stayed the same.
+**/
+private typedef OcamlRootIdentityRecord = {
+	final binding:OcamlFunctionPlanBinding;
+	final identities:LexicalLocalIdentityPlan;
+}
+
+/**
 	Owns revision-bound lowered plans between final typed preprocessing and syntax.
 
 	A new compilation request clears the registry. Each function is planned and
@@ -160,8 +172,22 @@ private typedef OcamlNestedFunctionRecord = {
 **/
 class OcamlFunctionPlanRegistry {
 	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v62";
-	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v2";
+	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v4";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v2";
+
+	/**
+		Builds the only nested-function ID accepted for one parent and occurrence.
+
+		An occurrence ID names the literal's structural position. Combining it with
+		the immediate parent keeps deeply nested functions in the correct lexical
+		chain. The registry recomputes this value during sealing so a valid identity
+		from another literal cannot be paired with a plausible-looking function ID.
+	**/
+	public static function nestedFunctionId(parentFunctionId:String, occurrenceId:String):String {
+		if (parentFunctionId.length == 0 || !LexicalLocalIdentityPlan.isReusableFunctionOccurrenceId(occurrenceId))
+			throw "reflaxe.ocaml [ocaml-nested-function:missing-identity]: a nested function ID requires one parent and one stable occurrence";
+		return parentFunctionId + "|nested-function|" + haxe.crypto.Sha256.encode(parentFunctionId + "|" + occurrenceId).substr(0, 24);
+	}
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -170,6 +196,11 @@ class OcamlFunctionPlanRegistry {
 	final nestedFunctionsByExpression:ObjectMap<TypedExpr, OcamlNestedFunctionRecord> = new ObjectMap();
 	final nestedFunctionsByOccurrence:StringMap<OcamlSealedNestedFunctionPlan> = new StringMap();
 	final nestedFunctionsByFunctionId:StringMap<OcamlSealedNestedFunctionPlan> = new StringMap();
+	final rootIdentityRecordsByFunctionId:StringMap<OcamlRootIdentityRecord> = new StringMap();
+	// A nested function ID contains its parent text, but that text alone cannot
+	// prove which ordinary function ultimately owns it. Keep the exact root owner
+	// chosen during sealing so a deeper literal cannot cross into another root.
+	final nestedFunctionRootOwnerById:StringMap<String> = new StringMap();
 	final declaredCallableByCallee:StringMap<OcamlCallableDeclarationPlan> = new StringMap();
 	final callableByCallee:StringMap<OcamlCallableBoundaryPlan> = new StringMap();
 	final originByProtection:StringMap<String> = new StringMap();
@@ -191,6 +222,8 @@ class OcamlFunctionPlanRegistry {
 		nestedFunctionsByExpression.clear();
 		nestedFunctionsByOccurrence.clear();
 		nestedFunctionsByFunctionId.clear();
+		rootIdentityRecordsByFunctionId.clear();
+		nestedFunctionRootOwnerById.clear();
 		declaredCallableByCallee.clear();
 		callableByCallee.clear();
 		originByProtection.clear();
@@ -198,6 +231,33 @@ class OcamlFunctionPlanRegistry {
 		standaloneRequiredContainerElementIds.clear();
 		standaloneAnonymousStructuresById.clear();
 		standaloneAnonymousOperationsById.clear();
+	}
+
+	/**
+		Registers the one whole-body lexical lookup allowed for an ordinary function.
+
+		The lookup maps request-local typed nodes to stable structural identities. Its
+		owner text is not enough to prove that it was built from the complete function
+		body, so nested planning must retain and reuse this exact lookup object for the
+		current request.
+	**/
+	public function registerRootIdentityPlan(binding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan):Void {
+		if (binding.programRevision != currentProgramRevision || binding.pipelineRevision != PIPELINE_REVISION)
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-root-identities]: root function "${binding.functionId}" does not belong to the current ordinary-function pipeline';
+		if (localIdentities.ownerId != binding.functionId)
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-root-identities]: root function "${binding.functionId}" received identities owned by "${localIdentities.ownerId}"';
+		final current = rootIdentityRecordsByFunctionId.get(binding.functionId);
+		if (current != null) {
+			if (!sameBinding(current.binding, binding))
+				throw 'reflaxe.ocaml [ocaml-nested-function:conflicting-root-binding]: root function "${binding.functionId}" changed binding after its whole-body identity lookup was registered';
+			if (current.identities != localIdentities)
+				throw 'reflaxe.ocaml [ocaml-nested-function:conflicting-root-identities]: root function "${binding.functionId}" received more than one whole-body identity lookup';
+			return;
+		}
+		rootIdentityRecordsByFunctionId.set(binding.functionId, {
+			binding: copyBinding(binding),
+			identities: localIdentities
+		});
 	}
 
 	/**
@@ -233,16 +293,45 @@ class OcamlFunctionPlanRegistry {
 		binding proves which lexical occurrence and body revision own its return
 		decisions. Neither identity may be substituted by another parent or request.
 	**/
-	public function sealNestedFunction(expression:TypedExpr, bodyExternalLocals:Array<TVar>, observedBodyRevision:String,
-			plan:OcamlSealedNestedFunctionPlan):Void {
+	public function sealNestedFunction(expression:TypedExpr, bodyExternalLocals:Array<TVar>, observedBodyRevision:String, plan:OcamlSealedNestedFunctionPlan,
+			localIdentities:LexicalLocalIdentityPlan):Void {
 		requireCurrentParentBinding(plan.parentBinding);
+		if (!LexicalLocalIdentityPlan.isReusableFunctionOccurrenceId(plan.occurrenceId) || plan.binding.functionId.length == 0)
+			throw "reflaxe.ocaml [ocaml-nested-function:missing-identity]: a sealed nested function requires stable occurrence and function identities";
+		final canonicalRoot = rootIdentityRecordsByFunctionId.get(localIdentities.ownerId);
+		if (canonicalRoot == null || canonicalRoot.identities != localIdentities)
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-root-identities]: nested function "${plan.binding.functionId}" does not use the one whole-body identity lookup registered for root "${localIdentities.ownerId}"';
+		if (plan.parentBinding.pipelineRevision == PIPELINE_REVISION && !sameBinding(canonicalRoot.binding, plan.parentBinding))
+			throw 'reflaxe.ocaml [ocaml-nested-function:stale-root-binding]: nested function "${plan.binding.functionId}" does not use the exact root binding that registered its whole-body identity lookup';
 		if (nestedFunctionsByExpression.exists(expression))
 			throw 'reflaxe.ocaml [ocaml-nested-function:duplicate-occurrence]: one typed function literal was sealed more than once in parent "${plan.parentBinding.functionId}"';
-		if (plan.occurrenceId.length == 0 || plan.binding.functionId.length == 0)
-			throw "reflaxe.ocaml [ocaml-nested-function:missing-identity]: a sealed nested function requires stable occurrence and function identities";
+		final expectedOccurrence = try {
+			localIdentities.requireFunctionOccurrence(expression);
+		} catch (error:Dynamic) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-occurrence]: ${Std.string(error)}';
+		}
+		final expectedParentOccurrenceId = if (plan.parentBinding.pipelineRevision == PIPELINE_REVISION) {
+			null;
+		} else {
+			final nestedParent = nestedFunctionsByFunctionId.get(plan.parentBinding.functionId);
+			nestedParent == null ? null : nestedParent.occurrenceId;
+		};
+		if (expectedOccurrence.parentOccurrenceId != expectedParentOccurrenceId)
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-parent-occurrence]: nested function "${plan.binding.functionId}" belongs to parent occurrence "${expectedOccurrence.parentOccurrenceId}", not "${expectedParentOccurrenceId}"';
+		final parentUsesLexicalOwner = if (plan.parentBinding.pipelineRevision == PIPELINE_REVISION) {
+			plan.parentBinding.functionId == localIdentities.ownerId;
+		} else {
+			plan.parentBinding.pipelineRevision == NESTED_FUNCTION_PIPELINE_REVISION && nestedFunctionRootOwnerById.get(plan.parentBinding.functionId) == localIdentities.ownerId;
+		};
+		if (expectedOccurrence.ownerId != localIdentities.ownerId
+			|| !parentUsesLexicalOwner
+			|| expectedOccurrence.id != plan.occurrenceId) {
+			throw 'reflaxe.ocaml [ocaml-nested-function:foreign-occurrence]: nested function "${plan.binding.functionId}" does not use the occurrence assigned to this expression and lexical owner';
+		}
+		final expectedFunctionId = nestedFunctionId(plan.parentBinding.functionId, plan.occurrenceId);
 		if (plan.binding.programRevision != plan.parentBinding.programRevision
 			|| plan.binding.pipelineRevision != NESTED_FUNCTION_PIPELINE_REVISION
-			|| !StringTools.startsWith(plan.binding.functionId, plan.parentBinding.functionId + "|nested-function|")) {
+			|| plan.binding.functionId != expectedFunctionId) {
 			throw 'reflaxe.ocaml [ocaml-nested-function:binding-mismatch]: nested function "${plan.binding.functionId}" does not belong to parent "${plan.parentBinding.functionId}"';
 		}
 		if (nestedFunctionsByOccurrence.exists(plan.occurrenceId))
@@ -304,6 +393,7 @@ class OcamlFunctionPlanRegistry {
 		});
 		nestedFunctionsByOccurrence.set(plan.occurrenceId, stored);
 		nestedFunctionsByFunctionId.set(plan.binding.functionId, stored);
+		nestedFunctionRootOwnerById.set(plan.binding.functionId, localIdentities.ownerId);
 	}
 
 	/**
@@ -649,6 +739,15 @@ class OcamlFunctionPlanRegistry {
 			?anonymousStructures:OcamlAnonymousStructurePlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
+		if (canonicalRoot == null) {
+			registerRootIdentityPlan(binding, localIdentities);
+		} else {
+			if (!sameBinding(canonicalRoot.binding, binding))
+				throw 'reflaxe.ocaml [ocaml-nested-function:conflicting-root-binding]: sealed function "${binding.functionId}" changed binding after nested planning began';
+			if (canonicalRoot.identities != localIdentities)
+				throw 'reflaxe.ocaml [ocaml-nested-function:conflicting-root-identities]: sealed function "${binding.functionId}" does not use its registered whole-body identity lookup';
+		}
 		final sealedAnonymousStructures = anonymousStructures ?? new OcamlAnonymousStructurePlan([], []);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);

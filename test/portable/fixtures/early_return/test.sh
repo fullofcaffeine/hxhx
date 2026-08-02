@@ -36,8 +36,8 @@ if (report.schemaVersion !== 50
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 25) {
-	fail(`expected 25 represented return decisions, including seven nested function literals, got ${returnControls.length}`)
+if (returnControls.length !== 26) {
+	fail(`expected 26 represented return decisions, including eight nested function literals, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -71,7 +71,8 @@ const representedNestedFunctions = new Map([
 	['nestedBoolClosure', 'Bool'],
 	['nestedStringClosure', 'String'],
 	['nestedNullableIntClosure', 'Null<Int>'],
-	['nestedNullableBoolClosure', 'Null<Bool>']
+	['nestedNullableBoolClosure', 'Null<Bool>'],
+	['nestedZeroArgumentClosure', 'Int']
 ])
 for (const [functionName, semanticType] of representedNestedFunctions) {
 	const decisions = returnControls.filter(control =>
@@ -81,7 +82,7 @@ for (const [functionName, semanticType] of representedNestedFunctions) {
 		fail(`${functionName} did not seal one nested ${semanticType} return decision`)
 	}
 }
-for (const functionName of ['nestedDynamicClosure', 'nestedZeroArgumentClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+for (const functionName of ['nestedDynamicClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
 	if (returnControls.some(control =>
 		control.functionId.includes(`|function|${functionName}|`)
 		&& control.functionId.includes('|nested-function|'))) {
@@ -122,7 +123,7 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v2'
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v4'
 			: control.pipelineRevision !== 'ocaml-function-plans-v62')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
@@ -224,7 +225,8 @@ for (const [functionName, expectedType] of [
 	['nestedBoolClosure', 'bool'],
 	['nestedStringClosure', 'string'],
 	['nestedNullableIntClosure', 'Obj.t'],
-	['nestedNullableBoolClosure', 'Obj.t']
+	['nestedNullableBoolClosure', 'Obj.t'],
+	['nestedZeroArgumentClosure', 'int']
 ]) {
 	const start = source.indexOf(`let ${functionName} =`)
 	const next = source.indexOf('\nlet ', start + 1)
@@ -234,11 +236,12 @@ for (const [functionName, expectedType] of [
 		|| !body.includes('HxRuntime.Hx_return')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')
+		|| (functionName === 'nestedZeroArgumentClosure' && !body.includes('let local = fun () ->'))
 		|| !body.includes(`: ${expectedType}`)) {
 		fail(`${functionName} did not consume its represented nested return plan`)
 	}
 }
-for (const functionName of ['nestedDynamicClosure', 'nestedZeroArgumentClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
+for (const functionName of ['nestedDynamicClosure', 'nestedUnsupportedThrowClosure', 'nestedNominalClosure']) {
 	const start = source.indexOf(`let ${functionName} =`)
 	const next = source.indexOf('\nlet ', start + 1)
 	const body = source.slice(start, next)
@@ -282,10 +285,10 @@ if (report.schemaVersion !== 30
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 25
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 26
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 25 validated represented control decisions')
+	throw new Error('public inspection did not expose the 26 validated represented control decisions')
 }
 NODE
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=25"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=26"

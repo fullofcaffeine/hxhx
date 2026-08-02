@@ -243,14 +243,24 @@ The fork then added target-neutral lifecycle and scalability repairs:
 As of 2026-08-01, upstream `SomeRanDev/reflaxe` remains at
 `73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` remains at
 `6922422448a5a0c1f8249f0682ecd4b239ebf325`. The `hxhx` consumer pins stacked
-candidate fork commit `6ca210f526007ff6f4a44694b169538eba4f969c`, published on branch
-`hxhx-agent/target-reuse-fingerprint`, with
+candidate fork commit `ad25a8ba52adf48a7bf69c5311b274f1c9417ba6`, published on branch
+`hxhx-agent/function-occurrence-identity`, with
 path-independent content digest
-`593d8603829d1fb99d814191c7b9c136cc6b9e92cb653b4d7942e0de2415b9e0`.
+`65f5cb6406cfb90d5aea72b4c4d7471059446a48672f0122a424e0bd549bcad7`.
 The last repository-validated rollback pin is
-`e833fec65203964d40287483e6f951d6bbaf949d` with digest
-`58cc28d20249b7f9d64b4090e41d4dd1fc2da8103f25b21311b9532564e36712`;
+`6ca210f526007ff6f4a44694b169538eba4f969c` with digest
+`593d8603829d1fb99d814191c7b9c136cc6b9e92cb653b4d7942e0de2415b9e0`;
 restoring both values together is the bounded rollback.
+
+The current candidate also gives each nested function literal a stable
+structural identity during the existing lexical traversal. A target can now
+identify `function():Int return 1` directly even though the literal has no
+parameter identity to reuse. The typed expression remains a request-local
+lookup key; only the enclosing owner and structural path enter the published
+identity. Each occurrence also names its immediate enclosing function literal,
+so a target can reject a real child that is paired with the wrong sibling
+parent. Fork PR #21 reviews this additive framework API separately from the
+older target-reuse lifecycle PR.
 
 Fork PR #19 makes Haxe 4.3.7's all-null abstract resolve-hook placeholder an
 explicit fingerprint fact. A missing hook, the exact host placeholder, and a

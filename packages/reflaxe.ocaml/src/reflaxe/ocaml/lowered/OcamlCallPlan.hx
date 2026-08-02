@@ -1243,13 +1243,11 @@ class OcamlCallPlanner {
 		The caller supplies a binding whose function ID already names the literal's
 		stable lexical occurrence. The result must use a carrier already owned by the
 		existing first-class function-value matrix: exact Bool/Int/String or nullable
-		Int/Bool. Dynamic, nominal classes, and zero-argument literals remain explicit
-		deferrals because this boundary does not yet give them a closed callback proof
-		or stable occurrence identity.
+		Int/Bool. Dynamic and nominal classes remain explicit deferrals because this
+		boundary does not yet give them a closed callback proof. Zero-argument
+		literals use the same represented result proof with an empty argument list.
 	**/
 	public function boundaryForNestedRepresentedResult(tfunc:haxe.macro.Type.TFunc):Null<OcamlCallableBoundaryPlan> {
-		if (tfunc.args.length == 0)
-			return null;
 		final functionType:Type = switch (TypeTools.follow(tfunc.t)) {
 			case TFun(_, _): tfunc.t;
 			case _:

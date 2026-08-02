@@ -132,7 +132,7 @@ class Main {
 		return local(true);
 	}
 
-	/** Keeps a zero-argument literal deferred until it has a stable occurrence identity. */
+	/** Exercises a zero-argument literal through its direct stable occurrence identity. */
 	static function nestedZeroArgumentClosure():Int {
 		final enabled = true;
 		final local = function():Int {
