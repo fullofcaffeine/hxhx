@@ -141,7 +141,7 @@ const controls = report.lowering.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-if (report.schemaVersion !== 31
+if (report.schemaVersion !== 32
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 5

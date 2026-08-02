@@ -94,7 +94,7 @@ node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const standardCalls = report.lowering?.calls?.filter(call => call.kind === 'standard-imap-method') ?? []
-if (report.schemaVersion !== 31 || !report.summary?.valid || standardCalls.length !== 53)
+if (report.schemaVersion !== 32 || !report.summary?.valid || standardCalls.length !== 53)
 	throw new Error('reflaxe.ocaml inspection did not preserve the sealed standard IMap targets')
 NODE
 

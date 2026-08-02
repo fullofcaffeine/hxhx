@@ -629,7 +629,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 31
+	if (scaffoldInspectionReport.schemaVersion !== 32
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'

@@ -114,7 +114,7 @@ function inspect(outputDirectory) {
 const inspection = inspect(path.join(fixtureRoot, 'out'))
 assert.equal(inspection.status, 0, `public inspection rejected the valid container plan: ${inspection.stdout}${inspection.stderr}`)
 const inspectionReport = JSON.parse(inspection.stdout)
-assert.equal(inspectionReport.schemaVersion, 31)
+assert.equal(inspectionReport.schemaVersion, 32)
 assert.equal(inspectionReport.lowering.containerElementConversions.length, conversions.length)
 assert.deepEqual(inspectionReport.lowering.containerElementRequiredConversionIds, conversions.map(entry => entry.id))
 

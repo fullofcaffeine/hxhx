@@ -133,7 +133,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 31
+if (report.schemaVersion !== 32
 	|| !report.summary?.valid
 	|| report.lowering?.structuralFields?.length < 14
 	|| report.summary.structuralFieldCount !== report.lowering.structuralFields.length) {

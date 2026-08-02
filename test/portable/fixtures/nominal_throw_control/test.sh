@@ -139,7 +139,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.clauses)
 	.filter(clause => clause.semanticTypeId === 'Box')
-if (report.schemaVersion !== 31
+if (report.schemaVersion !== 32
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== 4
 	|| nominalClauses.length !== 4
