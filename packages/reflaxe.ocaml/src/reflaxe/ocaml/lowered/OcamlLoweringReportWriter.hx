@@ -31,6 +31,9 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingP
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
@@ -51,7 +54,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 53;
+	public static inline final SCHEMA_VERSION = 54;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -126,6 +129,7 @@ class OcamlLoweringReportWriter {
 			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, structuralFields:Array<OcamlStructuralFieldDecision>,
 			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
 			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
+			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
 			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
@@ -175,6 +179,24 @@ class OcamlLoweringReportWriter {
 			if (structuralFieldIds.exists(decision.id))
 				throw 'Structural field decision identity "${decision.id}" occurs more than once.';
 			structuralFieldIds.set(decision.id, true);
+		}
+		final sortedIMapInterfaceConversions = iMapInterfaceConversions.copy();
+		sortedIMapInterfaceConversions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final iMapInterfaceConversionIds:Map<String, Bool> = [];
+		for (conversion in sortedIMapInterfaceConversions) {
+			OcamlIMapInterfacePlan.requireConversionDecision(conversion);
+			if (iMapInterfaceConversionIds.exists(conversion.id))
+				throw 'IMap interface conversion identity "${conversion.id}" occurs more than once.';
+			iMapInterfaceConversionIds.set(conversion.id, true);
+		}
+		final sortedIMapInterfaceCalls = iMapInterfaceCalls.copy();
+		sortedIMapInterfaceCalls.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final iMapInterfaceCallIds:Map<String, Bool> = [];
+		for (call in sortedIMapInterfaceCalls) {
+			OcamlIMapInterfacePlan.requireCallDecision(call);
+			if (iMapInterfaceCallIds.exists(call.id))
+				throw 'IMap interface call identity "${call.id}" occurs more than once.';
+			iMapInterfaceCallIds.set(call.id, true);
 		}
 		for (entry in sorted) {
 			final domain = switch (entry.place.kind) {
@@ -447,6 +469,17 @@ class OcamlLoweringReportWriter {
 				throw 'Direct enum throw "${control.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
+		for (conversion in sortedIMapInterfaceConversions) {
+			final expectedRequirements = OcamlRuntimeRequirementLedger.requirementsForIMapInterfaceConversion(conversion);
+			for (expected in expectedRequirements) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null)
+					throw 'IMap interface conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
+				if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
+					throw 'IMap interface conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (call in sortedCalls) {
 			if (call.standardIMapTarget != null) {
 				final expectedIds = OcamlStandardIMapCallContract.runtimeRequirementIds(call.id, call.standardIMapTarget);
@@ -522,6 +555,10 @@ class OcamlLoweringReportWriter {
 		final canonicalContainerElementRequiredConversionIds = haxe.Json.stringify(sortedContainerElementRequiredConversionIds);
 		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
+		final canonicalIMapInterfaces = haxe.Json.stringify({
+			conversions: sortedIMapInterfaceConversions,
+			calls: sortedIMapInterfaceCalls
+		});
 		final canonicalCalls = haxe.Json.stringify({
 			calls: sortedCalls,
 			callableBoundaries: sortedCallableBoundaries
@@ -551,6 +588,12 @@ class OcamlLoweringReportWriter {
 			structuralFieldRevision: "sha256:" + Sha256.encode(canonicalStructuralFields),
 			structuralFieldCount: sortedStructuralFields.length,
 			structuralFields: sortedStructuralFields,
+			iMapInterfaceModel: OcamlIMapInterfacePlan.MODEL,
+			iMapInterfaceRevision: "sha256:" + Sha256.encode(canonicalIMapInterfaces),
+			iMapInterfaceConversionCount: sortedIMapInterfaceConversions.length,
+			iMapInterfaceConversions: sortedIMapInterfaceConversions,
+			iMapInterfaceCallCount: sortedIMapInterfaceCalls.length,
+			iMapInterfaceCalls: sortedIMapInterfaceCalls,
 			localConversionModel: "typed-ocaml-local-carrier-conversions-v3",
 			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,

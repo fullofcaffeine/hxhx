@@ -39,6 +39,9 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
@@ -72,6 +75,7 @@ typedef OcamlSealedFunctionPlan = {
 	final bytesMutations:OcamlBytesMutationPlan;
 	final bytesProducers:OcamlBytesProducerPlan;
 	final bytesReads:OcamlBytesReadPlan;
+	final imapInterfaces:OcamlIMapInterfacePlan;
 	final calls:OcamlCallPlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
@@ -176,7 +180,7 @@ private typedef OcamlRootIdentityRecord = {
 	reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v66";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v67";
 	public static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v6";
 	public static inline final STANDALONE_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -493,7 +497,8 @@ class OcamlFunctionPlanRegistry {
 		final containerElements = OcamlContainerElementPlanner.planExpression(expression, binding);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(expression);
 		final localIdentities = LexicalLocalIdentityPlan.build(binding.functionId, expression);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]), anonymousStructures, representations,
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, new OcamlCallPlan([]),
+			new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap()), anonymousStructures, representations,
 			localIdentities).plan(expression);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(expression);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(expression);
@@ -755,9 +760,10 @@ class OcamlFunctionPlanRegistry {
 	/** Prevents later planning from silently changing one function's inventory. */
 	public function sealFunction(binding:OcamlFunctionPlanBinding, localIdentities:LexicalLocalIdentityPlan, localStorage:OcamlLocalStoragePlan,
 			localRepresentations:OcamlLocalRepresentationPlan, containerElements:OcamlContainerElementPlan, bytesAccesses:OcamlBytesAccessPlan,
-			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan, calls:OcamlCallPlan,
-			controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
-			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan):Void {
+			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan,
+			imapInterfaces:OcamlIMapInterfacePlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
+			?constructionBoundary:Null<OcamlCallableBoundaryPlan>, ?anonymousStructures:OcamlAnonymousStructurePlan,
+			?structuralFields:OcamlStructuralFieldPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -777,6 +783,7 @@ class OcamlFunctionPlanRegistry {
 		bytesMutations.requirePlanBinding(binding);
 		bytesProducers.requirePlanBinding(binding);
 		bytesReads.requirePlanBinding(binding);
+		imapInterfaces.requirePlanBinding(binding);
 		localRepresentations.requirePlanBinding(binding);
 		containerElements.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
@@ -806,6 +813,7 @@ class OcamlFunctionPlanRegistry {
 				bytesMutations: bytesMutations,
 				bytesProducers: bytesProducers,
 				bytesReads: bytesReads,
+				imapInterfaces: imapInterfaces,
 				calls: calls,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
@@ -946,6 +954,26 @@ class OcamlFunctionPlanRegistry {
 		}
 		calls.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return calls;
+	}
+
+	/** Returns every concrete-to-`IMap` conversion in deterministic identity order. */
+	public function iMapInterfaceConversions():Array<OcamlIMapInterfaceConversionDecision> {
+		final out:Array<OcamlIMapInterfaceConversionDecision> = [];
+		for (sealed in sealedFunctions)
+			for (conversion in sealed.plan.imapInterfaces.conversions())
+				out.push(conversion);
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
+	}
+
+	/** Returns every call through a sealed `IMap` interface carrier in stable order. */
+	public function iMapInterfaceCalls():Array<OcamlIMapInterfaceCallDecision> {
+		final out:Array<OcamlIMapInterfaceCallDecision> = [];
+		for (sealed in sealedFunctions)
+			for (call in sealed.plan.imapInterfaces.calls())
+				out.push(call);
+		out.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return out;
 	}
 
 	/** Returns every admitted control transfer in deterministic identity order. */

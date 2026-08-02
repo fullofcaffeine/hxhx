@@ -458,6 +458,64 @@ typedef InspectionStructuralField = {
 	final pipelineRevision:String;
 }
 
+/** One method proven on a user class before it is adapted to `IMap<K, V>`. */
+typedef InspectionIMapInterfaceMethod = {
+	final name:String;
+	final sourceOwnerModuleId:String;
+	final sourceOwnerTypeName:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+}
+
+/** One concrete standard or user map value converted to the shared interface carrier. */
+typedef InspectionIMapInterfaceConversion = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final role:String;
+	final roleIndex:Int;
+	final sourceKind:String;
+	final sourceSemanticTypeId:String;
+	final sourceCarrierTypeId:String;
+	final targetSemanticTypeId:String;
+	final targetCarrierTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final standardKeyKind:Null<String>;
+	final keyStringifier:Null<String>;
+	final valueStringifier:Null<String>;
+	final methods:Array<InspectionIMapInterfaceMethod>;
+	final runtimeCapabilities:Array<String>;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
+/** One method call dispatched through an already converted `IMap<K, V>` value. */
+typedef InspectionIMapInterfaceCall = {
+	final id:String;
+	final sourceFile:String;
+	final sourceMin:Int;
+	final sourceMax:Int;
+	final operation:String;
+	final receiverSemanticTypeId:String;
+	final receiverCarrierTypeId:String;
+	final keySemanticTypeId:String;
+	final valueSemanticTypeId:String;
+	final argumentSemanticTypeIds:Array<String>;
+	final resultSemanticTypeId:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
 	final id:String;
@@ -661,6 +719,9 @@ typedef InspectionLowering = {
 	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
 	final structuralFieldRevision:Null<String>;
 	final structuralFields:Array<InspectionStructuralField>;
+	final iMapInterfaceRevision:Null<String>;
+	final iMapInterfaceConversions:Array<InspectionIMapInterfaceConversion>;
+	final iMapInterfaceCalls:Array<InspectionIMapInterfaceCall>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
 	final containerElementRequiredConversionRevision:Null<String>;
@@ -706,6 +767,8 @@ typedef InspectionSummary = {
 	final anonymousStructureCount:Int;
 	final anonymousStructureOperationCount:Int;
 	final structuralFieldCount:Int;
+	final iMapInterfaceConversionCount:Int;
+	final iMapInterfaceCallCount:Int;
 	final localConversionCount:Int;
 	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;

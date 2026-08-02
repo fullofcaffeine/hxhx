@@ -1,0 +1,15 @@
+custom.order=receiver|key|value:5
+custom.get=1:true
+custom.exists=true
+custom.remove=true:false
+custom.keys=a,b
+custom.values=3
+custom.pairs=3
+custom.copy=1:9
+custom.text=tagged:source
+custom.clear=true
+custom.calls=set:b|set:a|get:a|get:missing|exists:b|remove:b|remove:b|set:b|keys|iterator|pairs|copy|get:a|text|clear|keys
+standard.string=7
+standard.int=four
+standard.object=11
+OK imap_user_implementation_boundary

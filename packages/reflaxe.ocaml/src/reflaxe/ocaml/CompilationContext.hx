@@ -20,6 +20,7 @@ import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldDecisi
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.OcamlAnonymousStructureRuntimeRequirementRecorder;
@@ -487,6 +488,11 @@ class CompilationContext {
 		if (call.standardIMapTarget == null)
 			throw 'Standard IMap call "${call.id}" has no sealed runtime target.';
 		runtimeRequirements.recordStandardIMapCall(call.id, call.source, call.profileEligibility, call.standardIMapTarget);
+	}
+
+	/** Records runtime support selected by one concrete-to-`IMap` adapter. */
+	public function recordIMapInterfaceRuntimeRequirements(decision:OcamlIMapInterfaceConversionDecision):Void {
+		runtimeRequirements.recordIMapInterfaceConversion(decision);
 	}
 
 	/** Records runtime support selected by one direct structural Iterator call. */

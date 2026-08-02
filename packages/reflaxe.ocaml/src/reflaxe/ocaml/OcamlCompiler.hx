@@ -2757,9 +2757,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.anonymousStructureDecisions(), functionPlanRegistry.anonymousStructureOperations(),
 				functionPlanRegistry.structuralFieldDecisions(), functionPlanRegistry.localConversions(),
 				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
-				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(),
-				functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(),
-				staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
+				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.iMapInterfaceConversions(), functionPlanRegistry.iMapInterfaceCalls(),
+				functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(),
+				functionPlanRegistry.controlLoopTargets(), functionPlanRegistry.controlCatchChains(), staticStoragePlan.reportEntries(),
+				staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
@@ -4260,19 +4261,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else if (mapCarrier != null) {
 					mapCarrier;
 				} else if (OcamlStandardIMapCallContract.isIMapClass(c) && params.length == 2) {
-					final keyKind = OcamlStandardIMapCallContract.keyKindForType(params[0]);
-					final key = ocamlTypeExprFromHaxeType(params[0]);
-					final value = ocamlTypeExprFromHaxeType(params[1]);
-					switch (keyKind) {
-						case OcamlStandardIMapKeyKind.StringKey:
-							OcamlTypeExpr.TApp("HxMap.string_map", [value]);
-						case OcamlStandardIMapKeyKind.IntKey:
-							OcamlTypeExpr.TApp("HxMap.int_map", [value]);
-						case OcamlStandardIMapKeyKind.ObjectIdentityKey:
-							OcamlTypeExpr.TApp("HxMap.obj_map", [key, value]);
-						case _:
-							OcamlTypeExpr.TIdent("Obj.t");
-					}
+					// An `IMap` value carries a checked dispatch record, not key-selected
+					// standard Map storage. The record itself is boxed so standard maps and
+					// user implementations share one interface type without claiming the
+					// same runtime object layout.
+					OcamlTypeExpr.TIdent("Obj.t");
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 					OcamlTypeExpr.TIdent("HxBytes.t");
 				} else if (c.pack != null && c.pack.length == 1 && c.pack[0] == "ocaml" && c.name == "Ref") {

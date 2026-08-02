@@ -5,6 +5,8 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
@@ -165,6 +167,41 @@ class OcamlRuntimeRequirementLedger {
 	public function recordStandardIMapCall(callId:String, source:OcamlLoweredSourceSpan, profileEligibility:Array<String>,
 			target:OcamlStandardIMapCallTarget):Void {
 		for (requirement in requirementsForStandardIMapCall(callId, source, profileEligibility, target))
+			record(requirement);
+	}
+
+	/** Returns runtime explanations selected by one complete standard-Map interface adapter. */
+	public static function requirementsForIMapInterfaceConversion(decision:OcamlIMapInterfaceConversionDecision):Array<OcamlRuntimeRequirement> {
+		OcamlIMapInterfacePlan.requireConversionDecision(decision);
+		final requirementIds = OcamlIMapInterfacePlan.runtimeRequirementIds(decision);
+		final out:Array<OcamlRuntimeRequirement> = [];
+		for (index in 0...decision.runtimeCapabilities.length) {
+			final capability = decision.runtimeCapabilities[index];
+			final implementation = standardIMapImplementation(capability);
+			out.push(normalize({
+				id: requirementIds[index],
+				sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+				sourceId: decision.id,
+				source: decision.source,
+				semanticCapability: capability,
+				cause: OcamlRuntimeRequirementCause.LoweringDecision,
+				decisionId: decision.id,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: decision.targetSemanticTypeId
+				},
+				implementationFeature: implementation.feature,
+				rootModules: [implementation.module],
+				profileEligibility: ["metal", "portable"],
+				explanation: "The sealed concrete-to-IMap adapter exposes every IMap method. " + implementation.explanation
+			}));
+		}
+		return out;
+	}
+
+	/** Records the runtime dependencies owned by one concrete-to-interface conversion. */
+	public function recordIMapInterfaceConversion(decision:OcamlIMapInterfaceConversionDecision):Void {
+		for (requirement in requirementsForIMapInterfaceConversion(decision))
 			record(requirement);
 	}
 

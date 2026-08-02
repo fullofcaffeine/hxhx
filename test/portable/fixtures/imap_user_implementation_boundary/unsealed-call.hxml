@@ -1,0 +1,9 @@
+-cp unsealed-call-src
+-main UnsealedIMapCallRejected
+--no-output
+
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=out_unsealed_call
+-D ocaml_no_build

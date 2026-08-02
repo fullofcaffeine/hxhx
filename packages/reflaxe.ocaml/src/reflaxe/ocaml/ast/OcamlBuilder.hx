@@ -27,6 +27,8 @@ import reflaxe.ocaml.ast.OcamlBytesAccessSyntax;
 import reflaxe.ocaml.ast.OcamlBytesMutationSyntax;
 import reflaxe.ocaml.ast.OcamlBytesProducerSyntax;
 import reflaxe.ocaml.ast.OcamlBytesReadSyntax;
+import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax;
+import reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax.OcamlIMapInterfaceSyntaxServices;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
@@ -66,6 +68,11 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
+import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfaceConversionMaterialization;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfaceMethodMaterialization;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementLookup;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
@@ -88,9 +95,6 @@ import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan;
 import reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralFieldPlanner;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
-import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallTarget;
-import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapResultForm;
-import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorCallContract;
 import reflaxe.ocaml.lowered.OcamlStringRepresentationMaterializer;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
@@ -129,6 +133,7 @@ class OcamlBuilder {
 	var currentBytesMutationPlan:Null<OcamlBytesMutationPlan> = null;
 	var currentBytesProducerPlan:Null<OcamlBytesProducerPlan> = null;
 	var currentBytesReadPlan:Null<OcamlBytesReadPlan> = null;
+	var currentIMapInterfacePlan:Null<OcamlIMapInterfacePlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
 
@@ -767,7 +772,7 @@ class OcamlBuilder {
 		try {
 			OcamlCallPlan.requireCall(call);
 			if (call.kind == OcamlCallKind.StandardIMapMethod)
-				return buildPlannedStandardIMapCall(call, callee, arguments, position);
+				return callPlanInvariant('obsolete standard IMap call "${call.id}" reached syntax after the interface-adapter hard cut', position);
 			if (call.kind == OcamlCallKind.StructuralIteratorMethod)
 				return buildPlannedStructuralIteratorCall(call, callee, arguments, position);
 			if (call.kind != OcamlCallKind.TypedFunctionValue)
@@ -921,145 +926,6 @@ class OcamlBuilder {
 		final receiverName = freshTmp("iterator_receiver");
 		final runtimeCall = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.runtimeModule), target.runtimeFunction), [OcamlExpr.EIdent(receiverName)]);
 		return OcamlExpr.ELet(receiverName, buildExpr(receiver), runtimeCall, false);
-	}
-
-	/**
-		Renders one sealed standard `IMap` target without rediscovering semantics.
-
-		The call plan has already selected the Map carrier, runtime operation,
-		receiver-first evaluation schedule, result adapter, and any value-to-text
-		conversions. This method only materializes those recorded decisions.
-	**/
-	function buildPlannedStandardIMapCall(call:OcamlCallDecision, callee:Null<TypedExpr>, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
-		final target = call.standardIMapTarget;
-		if (target == null)
-			return callPlanInvariant('standard IMap call "${call.id}" has no sealed target', position);
-		try {
-			OcamlStandardIMapCallContract.require(target);
-		} catch (error:Dynamic) {
-			return callPlanInvariant(Std.string(error), position);
-		}
-		if (callee == null)
-			return callPlanInvariant('standard IMap call "${call.id}" has no typed receiver occurrence', position);
-		final receiver = switch (callee.expr) {
-			case TField(receiverExpression, FInstance(_, _, _)):
-				receiverExpression;
-			case _:
-				return callPlanInvariant('standard IMap call "${call.id}" has no typed instance receiver occurrence', position);
-		}
-		if (arguments.length != target.argumentSemanticTypeIds.length)
-			return
-				callPlanInvariant('standard IMap call "${call.id}" has ${arguments.length} source arguments but its sealed target expects ${target.argumentSemanticTypeIds.length}',
-				position);
-
-		final materialized:Array<{name:String, value:OcamlExpr}> = [];
-		final runtimeArguments:Array<OcamlExpr> = [];
-		var invocationSeen = false;
-		for (step in call.evaluationSchedule) {
-			switch (step.kind) {
-				case OcamlCallEvaluationStepKind.MaterializeReceiver:
-					if (step.slotId == null || runtimeArguments.length != 0)
-						return callPlanInvariant('standard IMap call "${call.id}" has an invalid receiver materialization step', position);
-					final name = freshTmp("imap_receiver");
-					materialized.push({name: name, value: buildExpr(receiver)});
-					runtimeArguments.push(OcamlExpr.EIdent(name));
-				case OcamlCallEvaluationStepKind.MaterializeArgument:
-					final argumentIndex = step.argumentIndex;
-					final sourceArgumentIndex = step.sourceArgumentIndex;
-					if (argumentIndex == null
-						|| argumentIndex != runtimeArguments.length - 1
-						|| sourceArgumentIndex == null
-						|| sourceArgumentIndex != argumentIndex
-						|| sourceArgumentIndex < 0
-						|| sourceArgumentIndex >= arguments.length
-						|| step.slotId == null) {
-						return callPlanInvariant('standard IMap call "${call.id}" has an invalid argument materialization step', position);
-					}
-					final name = freshTmp("imap_arg_" + argumentIndex);
-					materialized.push({name: name, value: buildExpr(arguments[sourceArgumentIndex])});
-					runtimeArguments.push(OcamlExpr.EIdent(name));
-				case OcamlCallEvaluationStepKind.InvokeCallee:
-					if (invocationSeen)
-						return callPlanInvariant('standard IMap call "${call.id}" invokes its target more than once', position);
-					invocationSeen = true;
-				case OcamlCallEvaluationStepKind.MaterializeCallee, OcamlCallEvaluationStepKind.MaterializeOmittedArgument:
-					return callPlanInvariant('standard IMap call "${call.id}" contains an unsupported ${step.kind} step', position);
-			}
-		}
-		if (!invocationSeen || runtimeArguments.length != target.argumentSemanticTypeIds.length + 1)
-			return callPlanInvariant('standard IMap call "${call.id}" did not materialize every target input before invocation', position);
-
-		final runtimeCall = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.runtimeModule), target.runtimeFunction), runtimeArguments);
-		var out = switch (target.resultForm) {
-			case OcamlStandardIMapResultForm.Direct:
-				runtimeCall;
-			case OcamlStandardIMapResultForm.IteratorFromArray:
-				if (target.iteratorModule == null || target.iteratorFunction == null)
-					return callPlanInvariant('standard IMap call "${call.id}" has no sealed iterator adapter', position);
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.iteratorModule), target.iteratorFunction), [runtimeCall]);
-			case OcamlStandardIMapResultForm.FormattedEntries:
-				buildStandardIMapFormattedEntries(call, target, runtimeCall, position);
-			case _:
-				return callPlanInvariant('standard IMap call "${call.id}" has unsupported result form "${target.resultForm}"', position);
-		}
-		for (offset in 0...materialized.length) {
-			final binding = materialized[materialized.length - 1 - offset];
-			out = OcamlExpr.ELet(binding.name, binding.value, out, false);
-		}
-		return out;
-	}
-
-	/** Materializes the `IMap.toString` adapter selected in the sealed call target. */
-	function buildStandardIMapFormattedEntries(call:OcamlCallDecision, target:OcamlStandardIMapCallTarget, pairs:OcamlExpr, position:Position):OcamlExpr {
-		if (target.iteratorModule == null || target.iteratorFunction == null || target.keyStringifier == null || target.valueStringifier == null) {
-			return callPlanInvariant('standard IMap call "${call.id}" has an incomplete text-formatting adapter', position);
-		}
-		final iteratorName = freshTmp("imap_pairs");
-		final entriesName = freshTmp("imap_entries");
-		final entryName = freshTmp("imap_entry");
-		final itemName = freshTmp("imap_text");
-		final iterator = OcamlExpr.EIdent(iteratorName);
-		final entries = OcamlExpr.EIdent(entriesName);
-		final entry = OcamlExpr.EIdent(entryName);
-		final nextEntry = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.iteratorModule), "next"), [iterator]);
-		final key = OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [entry]);
-		final value = OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [entry]);
-		final text = OcamlExpr.EBinop(OcamlBinop.Concat, standardIMapStringify(target.keyStringifier, key),
-			OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EConst(OcamlConst.CString(" => ")), standardIMapStringify(target.valueStringifier, value)));
-		final push = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [entries, text])
-		]);
-		final loop = OcamlExpr.EWhile(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.iteratorModule), "hasNext"), [iterator]),
-			OcamlExpr.ELet(entryName, nextEntry, push, false));
-		final joined = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"), [
-			entries,
-			OcamlExpr.EConst(OcamlConst.CString(", ")),
-			OcamlExpr.EFun([OcamlPat.PVar(itemName)], OcamlExpr.EIdent(itemName))
-		]);
-		final formatted = OcamlExpr.EBinop(OcamlBinop.Concat, OcamlExpr.EConst(OcamlConst.CString("[")),
-			OcamlExpr.EBinop(OcamlBinop.Concat, joined, OcamlExpr.EConst(OcamlConst.CString("]"))));
-		final createEntries = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-		final createIterator = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(target.iteratorModule), target.iteratorFunction), [pairs]);
-		return OcamlExpr.ELet(iteratorName, createIterator, OcamlExpr.ELet(entriesName, createEntries, OcamlExpr.ESeq([loop, formatted]), false), false);
-	}
-
-	/** Applies the exact Haxe value-to-text family recorded by the call plan. */
-	static function standardIMapStringify(stringifier:OcamlStandardIMapStringifier, value:OcamlExpr):OcamlExpr {
-		return switch (stringifier) {
-			case OcamlStandardIMapStringifier.ExactString:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"), [value]);
-			case OcamlStandardIMapStringifier.ExactInt:
-				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [value]);
-			case OcamlStandardIMapStringifier.ExactFloat:
-				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [value]);
-			case OcamlStandardIMapStringifier.ExactBool:
-				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [value]);
-			case OcamlStandardIMapStringifier.DynamicObject:
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxDynamic"), "toStdString"),
-					[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value])]);
-			case _:
-				throw 'reflaxe.ocaml [ocaml-imap:invalid-stringifier]: unsupported standard IMap stringifier "$stringifier"';
-		}
 	}
 
 	/** Resolves one pre-emission static cell and rejects an unsafe late cross-type reference. */
@@ -1341,6 +1207,43 @@ class OcamlBuilder {
 			case _:
 				null;
 		}
+	}
+
+	/** Renders one checked interface call and reports any stale syntax input at its source position. */
+	function buildPlannedIMapInterfaceCall(decision:OcamlIMapInterfaceCallDecision, callee:TypedExpr, arguments:Array<TypedExpr>, position:Position):OcamlExpr {
+		return try {
+			OcamlIMapInterfaceSyntax.buildCall(decision, callee, arguments, iMapInterfaceSyntaxServices());
+		} catch (error:Dynamic) {
+			callPlanInvariant(Std.string(error), position);
+		}
+	}
+
+	/** Materializes one concrete-to-interface conversion selected from the final typed body. */
+	function buildPlannedIMapInterfaceConversion(materialization:OcamlIMapInterfaceConversionMaterialization, value:TypedExpr):OcamlExpr {
+		return try {
+			OcamlIMapInterfaceSyntax.buildConversion(materialization, value, iMapInterfaceSyntaxServices());
+		} catch (error:Dynamic) {
+			callPlanInvariant(Std.string(error), value.pos);
+		}
+	}
+
+	/** Supplies mechanical expression and target-name operations to the focused syntax module. */
+	function iMapInterfaceSyntaxServices():OcamlIMapInterfaceSyntaxServices {
+		return {
+			buildExpression: expression -> buildExpr(expression),
+			freshName: prefix -> freshTmp(prefix),
+			typeExpression: type -> typeExprFromHaxeType(type),
+			coerceToObjectCarrier: (type, value) -> coerceToObjCarrier(type, value),
+			userMethodTarget: method -> iMapInterfaceUserMethodTarget(method)
+		};
+	}
+
+	/** Resolves the generated implementation name recorded by one user-method materialization. */
+	function iMapInterfaceUserMethodTarget(method:OcamlIMapInterfaceMethodMaterialization):OcamlExpr {
+		final moduleName = moduleIdToOcamlModuleName(method.owner.module);
+		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+		final implementationName = ctx.scopedValueName(method.owner.module, method.owner.name, method.field.name + "__impl");
+		return selfModule == moduleName ? OcamlExpr.EIdent(implementationName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), implementationName);
 	}
 
 	/** Materializes one occurrence-bound initializer into Dynamic's Obj.t carrier. */
@@ -2309,6 +2212,8 @@ class OcamlBuilder {
 		final bytesReadOccurrence = OcamlBytesReadPlan.admittedOccurrence(e);
 		final plannedBytesRead = currentBytesReadPlan == null
 			|| bytesReadOccurrence == null ? null : currentBytesReadPlan.requireFor(e, representationRegistry);
+		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
+		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
 		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
 		final built:OcamlExpr = switch (e.expr) {
 			case TObjectDecl(fields) if (plannedAnonymousLiteral != null):
@@ -2357,6 +2262,10 @@ class OcamlBuilder {
 				bytesProducerInvariant("an admitted non-null Bytes constructor reached syntax without its sealed occurrence plan", e.pos);
 			case TCall(_, _) if (OcamlBytesProducerPlan.admittedKind(e) != null):
 				bytesProducerInvariant("an admitted non-null Bytes producer reached syntax without its sealed occurrence plan", e.pos);
+			case TCall(callee, arguments) if (plannedIMapInterfaceCall != null):
+				buildPlannedIMapInterfaceCall(plannedIMapInterfaceCall, callee, arguments, e.pos);
+			case TCall(_, _) if (iMapInterfaceCallCandidate):
+				callPlanInvariant("an exact IMap interface call reached syntax without its sealed dispatch decision", e.pos);
 			case TNew(_, _, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
@@ -6146,6 +6055,26 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		if (isExactIMapType(lhsType)) {
+			// Haxe may give a constructor expression its expected interface type. The
+			// typed `TNew` node still names the concrete class that will exist at
+			// runtime, so use that source when deciding whether an adapter is needed.
+			if (isExactIMapType(OcamlIMapInterfacePlanner.conversionSourceType(rhs)))
+				return buildExpr(rhs);
+			return switch (unwrap(rhs).expr) {
+				case TConst(TNull):
+					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				case _:
+					if (currentIMapInterfacePlan == null)
+						return callPlanInvariant("a concrete value reached an IMap boundary without an active interface-conversion plan", rhs.pos);
+					final materialization = try {
+						currentIMapInterfacePlan.requireConversion(rhs, lhsType);
+					} catch (error:Dynamic) {
+						return callPlanInvariant(Std.string(error), rhs.pos);
+					}
+					buildPlannedIMapInterfaceConversion(materialization, rhs);
+			};
+		}
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
@@ -7310,15 +7239,21 @@ class OcamlBuilder {
 
 	/**
 			Builds a direct source return against the function's declared Haxe result.
-			A fully admitted callable applies its sealed result conversion around the
-			complete body later. Functions whose argument families are still outside
-			that call matrix nevertheless retain an exact declared result. This
-			fallback changes only nullable-primitive values crossing into their exact
-			declared primitive; all other result families keep their prior lowering.
+			An `IMap` result is more than an OCaml type annotation: a concrete map must
+			be wrapped in the dispatch record that implements the Haxe interface. The
+			function's sealed interface plan records that conversion, so it is applied
+			here before the surrounding callable boundary validates the result carrier.
+			Other fully admitted callables still apply their general result conversion
+			around the complete body later. The fallback below retains the older exact
+			nullable-primitive handling for functions outside that call matrix.
 		**/
 	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
 		final returnType = currentFunctionReturnType;
-		if (returnType == null || isVoidType(returnType) || currentCallableBoundary != null)
+		if (returnType == null || isVoidType(returnType))
+			return buildExpr(value);
+		if (isExactIMapType(returnType) && !isExactIMapType(OcamlIMapInterfacePlanner.conversionSourceType(value)))
+			return coerceForAssignment(returnType, value);
+		if (currentCallableBoundary != null)
 			return buildExpr(value);
 		final valueNullableKind = nullablePrimitiveKind(value.t);
 		if (valueNullableKind == "int" && isIntType(returnType)) {
@@ -7597,6 +7532,7 @@ class OcamlBuilder {
 		final previousBytesMutationPlan = currentBytesMutationPlan;
 		final previousBytesProducerPlan = currentBytesProducerPlan;
 		final previousBytesReadPlan = currentBytesReadPlan;
+		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousCallPlan = currentCallPlan;
 		final previousControlPlan = currentControlPlan;
 		final previousLoopDepth = loopDepth;
@@ -7607,12 +7543,14 @@ class OcamlBuilder {
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
 		functionPlan.bytesReads.requireRepresentations(representationRegistry);
 		functionPlan.anonymousStructures.requireRepresentations(representationRegistry);
+		functionPlan.imapInterfaces.requirePlanBinding(functionPlan.binding);
 		currentAnonymousStructurePlan = functionPlan.anonymousStructures;
 		currentStructuralFieldPlan = functionPlan.structuralFields;
 		currentBytesAccessPlan = functionPlan.bytesAccesses;
 		currentBytesMutationPlan = functionPlan.bytesMutations;
 		currentBytesProducerPlan = functionPlan.bytesProducers;
 		currentBytesReadPlan = functionPlan.bytesReads;
+		currentIMapInterfacePlan = functionPlan.imapInterfaces;
 		currentCallPlan = functionPlan.calls;
 		currentControlPlan = functionPlan.controls;
 		loopDepth = 0;
@@ -7774,6 +7712,7 @@ class OcamlBuilder {
 		currentBytesMutationPlan = previousBytesMutationPlan;
 		currentBytesProducerPlan = previousBytesProducerPlan;
 		currentBytesReadPlan = previousBytesReadPlan;
+		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentCallPlan = previousCallPlan;
 		currentControlPlan = previousControlPlan;
 		loopDepth = previousLoopDepth;
@@ -8782,6 +8721,25 @@ class OcamlBuilder {
 			case _:
 				null;
 		}
+	}
+
+	/** Returns whether a type is the exact upstream `haxe.Constraints.IMap<K,V>` interface. */
+	static function isExactIMapType(type:Type):Bool {
+		return switch (TypeTools.follow(type)) {
+			case TInst(classRef, parameters): parameters.length == 2 && OcamlStandardIMapCallContract.isIMapClass(classRef.get());
+			case _:
+				false;
+		};
+	}
+
+	/** Returns whether an expression is a method call on that exact interface declaration. */
+	static function isExactIMapInterfaceCall(expression:TypedExpr):Bool {
+		return switch (expression.expr) {
+			case TCall({expr: TField(_, FInstance(classRef, parameters, fieldRef))}, arguments): OcamlStandardIMapCallContract.isIMapClass(classRef.get()) && parameters.length == 2 && OcamlStandardIMapCallContract.operationFor(fieldRef.get()
+					.name, arguments.length) != null;
+			case _:
+				false;
+		};
 	}
 
 	static function classTypeFromType(t:Type):Null<ClassType> {

@@ -1694,6 +1694,8 @@ class OcamlCallPlanner {
 			case TCall({expr: TField(receiverExpression, FInstance(classRef, parameters, fieldRef))}, arguments):
 				final classType = classRef.get();
 				final field = fieldRef.get();
+				if (OcamlStandardIMapCallContract.isIMapClass(classType))
+					return null;
 				final standardIMapTarget = OcamlStandardIMapCallContract.select(classType, parameters, field, receiverExpression, arguments, expression.t);
 				if (standardIMapTarget != null)
 					return standardIMapCallDecision(expression, classType, field, standardIMapTarget);

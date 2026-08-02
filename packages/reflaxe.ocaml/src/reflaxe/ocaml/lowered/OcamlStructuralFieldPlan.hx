@@ -11,6 +11,7 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 import reflaxe.ocaml.lowered.OcamlStructuralIteratorCallModel.OcamlStructuralIteratorOperation;
@@ -113,17 +114,17 @@ typedef OcamlStructuralFieldDecision = {
 
 /** Pure identity and validation rules shared by planning, syntax, and reports. */
 class OcamlStructuralFieldContract {
-	public static inline final MODEL = "typed-structural-field-overlap-v2";
+	public static inline final MODEL = "typed-structural-field-overlap-v3";
 	public static inline final HAXE_ANON_CAPABILITY = "haxe-structural-field";
 	public static inline final HAXE_ITERATOR_CAPABILITY = "haxe-iterator";
 	public static inline final STORED_PROOF_ID = "structural-stored-field-v1";
 	public static inline final ITERATOR_PROOF_ID = "structural-iterator-method-value-v1";
-	public static inline final KEY_VALUE_TUPLE_PROOF_ID = "standard-map-key-value-tuple-projection-v2";
+	public static inline final KEY_VALUE_TUPLE_PROOF_ID = "standard-map-key-value-tuple-projection-v3";
 	public static inline final TARGET_NATIVE_MAP_PAIR_PRODUCER_PROOF_ID = "target-native-standard-map-pair-producer-v1";
 
 	public static inline final STORED_PROOF_CLAIM = "The final typed FAnon occurrence names an ordinary stored next, hasNext, key, or value field, not a complete structural Iterator method or a pair produced by the standard IMap keyValueIterator path. The portable carrier is one HxAnon object. Reads evaluate the receiver once and recover the stored field value. Writes evaluate the receiver before the assigned value, replace that exact field, and return the assigned Haxe value.";
 	public static inline final ITERATOR_PROOF_CLAIM = "The final typed field occurrence captures hasNext or next from a complete structural Iterator value. The target evaluates the receiver once and returns a zero-argument closure over the exact HxIterator operation. Immediate invocation remains owned by the separate structural Iterator call plan.";
-	public static inline final KEY_VALUE_TUPLE_PROOF_CLAIM = "The final typed key or value read receives a pair from structural Iterator.next, whose unchanged iterator local receives either a sealed standard IMap.keyValueIterator call or the exact target-authored NativeHxMapIterator.of_array call around a typed NativeHxMap pair helper. Stable lexical locals, the typed producer identity, and the sealed next-call identity connect the anonymous pair back to that producer before syntax. No field name or anonymous shape authorizes the tuple projection.";
+	public static inline final KEY_VALUE_TUPLE_PROOF_CLAIM = "The final typed key or value read receives a pair from structural Iterator.next, whose unchanged iterator local receives either a sealed IMap interface keyValueIterator call, the earlier standard-IMap call form, or the exact target-authored NativeHxMapIterator.of_array call around a typed NativeHxMap pair helper. Stable lexical locals, the typed producer identity, and the sealed next-call identity connect the anonymous pair back to that producer before syntax. No field name or anonymous shape authorizes the tuple projection.";
 
 	/** Returns whether this bounded model owns a potentially ambiguous field. */
 	public static function ownsFieldName(name:String):Bool {
@@ -263,6 +264,8 @@ class OcamlStructuralFieldContract {
 
 	static function validIteratorProducer(target:OcamlKeyValueTupleProjectionTarget):Bool {
 		return switch (target.iteratorProducerKind) {
+			case "imap-interface-call": StringTools.startsWith(target.iteratorProducerId,
+					"imap-interface-call:") && target.iteratorProducerSourceId == "haxe.Constraints.IMap.keyValueIterator";
 			case "standard-imap-call": StringTools.startsWith(target.iteratorProducerId,
 					"call:") && target.iteratorProducerSourceId == "haxe.Constraints.IMap.keyValueIterator";
 			case "target-native-standard-map-call": final sourceMatchesKey = switch (target.iteratorProducerSourceId) {
@@ -473,16 +476,18 @@ class OcamlStructuralFieldPlan {
 class OcamlStructuralFieldPlanner {
 	final binding:OcamlFunctionPlanBinding;
 	final calls:OcamlCallPlan;
+	final iMapInterfaces:OcamlIMapInterfacePlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final representations:OcamlRepresentationRegistry;
 	final localIdentities:LexicalLocalIdentityPlan;
 	var tuplePairsByHostLocalId:Map<Int, OcamlTuplePairLocalProof> = [];
 	var ordinal = 0;
 
-	public function new(binding:OcamlFunctionPlanBinding, calls:OcamlCallPlan, anonymousStructures:OcamlAnonymousStructurePlan,
-			representations:OcamlRepresentationRegistry, localIdentities:LexicalLocalIdentityPlan) {
+	public function new(binding:OcamlFunctionPlanBinding, calls:OcamlCallPlan, iMapInterfaces:OcamlIMapInterfacePlan,
+			anonymousStructures:OcamlAnonymousStructurePlan, representations:OcamlRepresentationRegistry, localIdentities:LexicalLocalIdentityPlan) {
 		this.binding = binding;
 		this.calls = calls;
+		this.iMapInterfaces = iMapInterfaces;
 		this.anonymousStructures = anonymousStructures;
 		this.representations = representations;
 		this.localIdentities = localIdentities;
@@ -723,10 +728,23 @@ class OcamlStructuralFieldPlanner {
 			if (reassigned.exists(initializer.hostLocalId))
 				continue;
 			final expression = transparentExpression(initializer.expression);
+			final interfaceCall = iMapInterfaces.callFor(expression);
 			final call = calls.decisionFor(expression);
 			final target = call == null ? null : call.standardIMapTarget;
 			var proof:Null<OcamlTupleIteratorLocalProof> = null;
-			if (call != null
+			if (interfaceCall != null
+				&& interfaceCall.operation == OcamlStandardIMapOperation.Pairs
+				&& interfaceCall.resultSemanticTypeId == initializer.semanticTypeId) {
+				proof = {
+					producerKind: "imap-interface-call",
+					producerId: interfaceCall.id,
+					producerSourceId: "haxe.Constraints.IMap.keyValueIterator",
+					iteratorLocalId: localIdentities.requireHostId(initializer.hostLocalId).id,
+					iteratorSemanticTypeId: interfaceCall.resultSemanticTypeId,
+					keySemanticTypeId: interfaceCall.keySemanticTypeId,
+					valueSemanticTypeId: interfaceCall.valueSemanticTypeId
+				};
+			} else if (call != null
 				&& call.kind == OcamlCallKind.StandardIMapMethod
 				&& target != null
 				&& target.operation == OcamlStandardIMapOperation.Pairs

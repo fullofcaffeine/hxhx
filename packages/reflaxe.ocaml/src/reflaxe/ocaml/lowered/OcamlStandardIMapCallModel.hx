@@ -295,6 +295,17 @@ class OcamlStandardIMapCallContract {
 		return target.runtimeCapabilities.map(capability -> callId + ":runtime:" + capability);
 	}
 
+	/**
+		Returns every runtime capability needed by a complete standard `IMap` adapter.
+
+		Unlike one method call, an adapter exposes all ten interface methods. Its
+		inventory therefore always includes storage, iteration, entry collection,
+		and whichever string conversion helpers its key and value types require.
+	**/
+	public static function adapterRuntimeCapabilities(keySemanticTypeId:String, valueSemanticTypeId:String):Array<String> {
+		return runtimeCapabilities(true, true, stringifierForSemanticTypeId(keySemanticTypeId), stringifierForSemanticTypeId(valueSemanticTypeId));
+	}
+
 	/** Returns the exact source-interface field represented by one operation. */
 	public static function sourceFieldName(operation:OcamlStandardIMapOperation):String {
 		return switch (operation) {
@@ -311,7 +322,8 @@ class OcamlStandardIMapCallContract {
 		return TypeTools.toString(type);
 	}
 
-	static function operationFor(fieldName:String, suppliedArguments:Int):Null<OcamlStandardIMapOperation> {
+	/** Resolves one public `IMap` method name and arity to its sealed operation. */
+	public static function operationFor(fieldName:String, suppliedArguments:Int):Null<OcamlStandardIMapOperation> {
 		return switch (fieldName) {
 			case "set" if (suppliedArguments == 2): OcamlStandardIMapOperation.Set;
 			case "get" if (suppliedArguments == 1): OcamlStandardIMapOperation.Get;
@@ -329,7 +341,8 @@ class OcamlStandardIMapCallContract {
 	}
 	#end
 
-	static function argumentSemanticTypeIds(operation:OcamlStandardIMapOperation, keySemanticTypeId:String, valueSemanticTypeId:String):Array<String> {
+	/** Returns the exact source argument types for one admitted `IMap` method. */
+	public static function argumentSemanticTypeIds(operation:OcamlStandardIMapOperation, keySemanticTypeId:String, valueSemanticTypeId:String):Array<String> {
 		return switch (operation) {
 			case Set: [keySemanticTypeId, valueSemanticTypeId];
 			case Get, Exists, Remove: [keySemanticTypeId];
@@ -338,7 +351,8 @@ class OcamlStandardIMapCallContract {
 		}
 	}
 
-	static function keyKindMatchesSemanticType(keyKind:OcamlStandardIMapKeyKind, semanticTypeId:String):Bool {
+	/** Returns whether a standard storage family agrees with its recorded key type. */
+	public static function keyKindMatchesSemanticType(keyKind:OcamlStandardIMapKeyKind, semanticTypeId:String):Bool {
 		return switch (keyKind) {
 			case StringKey: semanticTypeId == "String";
 			case IntKey: semanticTypeId == "Int";
@@ -353,7 +367,8 @@ class OcamlStandardIMapCallContract {
 		}
 	}
 
-	static function expectedResultSemanticTypeId(operation:OcamlStandardIMapOperation, receiverSemanticTypeId:String, keySemanticTypeId:String,
+	/** Returns the exact Haxe result type for one admitted `IMap` method. */
+	public static function expectedResultSemanticTypeId(operation:OcamlStandardIMapOperation, receiverSemanticTypeId:String, keySemanticTypeId:String,
 			valueSemanticTypeId:String):String {
 		return switch (operation) {
 			case Set, Clear: "Void";
@@ -377,7 +392,8 @@ class OcamlStandardIMapCallContract {
 		}
 	}
 
-	static function runtimeFunction(operation:OcamlStandardIMapOperation, keyKind:OcamlStandardIMapKeyKind):String {
+	/** Returns the exact `HxMap` function selected by a sealed standard-map adapter. */
+	public static function runtimeFunction(operation:OcamlStandardIMapOperation, keyKind:OcamlStandardIMapKeyKind):String {
 		final stem = switch (operation) {
 			case Set: "set";
 			case Get: "get";
@@ -400,7 +416,8 @@ class OcamlStandardIMapCallContract {
 	}
 
 	#if macro
-	static function stringifierFor(type:Type):OcamlStandardIMapStringifier {
+	/** Selects the value-to-text behavior used by standard `IMap.toString()`. */
+	public static function stringifierFor(type:Type):OcamlStandardIMapStringifier {
 		if (OcamlRepresentationRegistry.isExactString(type))
 			return OcamlStandardIMapStringifier.ExactString;
 		if (OcamlRepresentationRegistry.isExactInt(type))
@@ -413,7 +430,8 @@ class OcamlStandardIMapCallContract {
 	}
 	#end
 
-	static function stringifierForSemanticTypeId(semanticTypeId:String):OcamlStandardIMapStringifier {
+	/** Selects value-to-text behavior from one stable semantic type identity. */
+	public static function stringifierForSemanticTypeId(semanticTypeId:String):OcamlStandardIMapStringifier {
 		return switch (semanticTypeId) {
 			case "String": OcamlStandardIMapStringifier.ExactString;
 			case "Int": OcamlStandardIMapStringifier.ExactInt;

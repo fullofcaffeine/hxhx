@@ -4,6 +4,7 @@ package reflaxe.ocaml.lowered;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type.TVar;
 import haxe.macro.Type.TypedExpr;
+import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
@@ -33,6 +34,8 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
+import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -109,12 +112,17 @@ class OcamlFunctionPlanSealer {
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
+		final functionResultType = switch (TypeTools.follow(data.field.type)) {
+			case TFun(_, result): result;
+			case _: null;
+		};
 		if (data.expr == null) {
 			final controls = OcamlControlPlan.notAdmitted(binding);
+			final imapInterfaces = new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap());
 			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
 				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
-				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), new OcamlCallPlan([]), controls, callableBoundary, constructionBoundary,
-				new OcamlAnonymousStructurePlan([], []), new OcamlStructuralFieldPlan([]));
+				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), imapInterfaces, new OcamlCallPlan([]), controls, callableBoundary,
+				constructionBoundary, new OcamlAnonymousStructurePlan([], []), new OcamlStructuralFieldPlan([]));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
@@ -125,9 +133,13 @@ class OcamlFunctionPlanSealer {
 		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(data.expr, binding, containerElements);
+		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding).plan(data.expr, functionResultType);
+		for (conversion in imapInterfaces.conversions())
+			context.recordIMapInterfaceRuntimeRequirements(conversion);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
-		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, anonymousStructures, representations, localIdentities).plan(data.expr);
+		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
+			localIdentities).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
@@ -212,7 +224,7 @@ class OcamlFunctionPlanSealer {
 		for (decision in bytesReads.decisions())
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
-			bytesReads, calls, controls, callableBoundary, constructionBoundary, anonymousStructures, structuralFields);
+			bytesReads, imapInterfaces, calls, controls, callableBoundary, constructionBoundary, anonymousStructures, structuralFields);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
