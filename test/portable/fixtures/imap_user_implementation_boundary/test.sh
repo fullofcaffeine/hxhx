@@ -167,6 +167,14 @@ switch (mutation) {
 		conversion.methods.find(method => method.name === 'set').argumentSemanticTypeIds[1] = 'String'
 		break
 	}
+	case 'wrong-key-type': {
+		const conversion = report.iMapInterfaceConversions.find(item => item.sourceKind === 'user-implementation')
+		conversion.methods.find(method => method.name === 'set').argumentSemanticTypeIds[0] = 'Int'
+		break
+	}
+	case 'missing-retained-method':
+		report.iMapInterfaceConversions[0].methods.pop()
+		break
 	case 'stale-call':
 		report.iMapInterfaceCalls[0].pipelineRevision = 'ocaml-function-plans-v66'
 		break
@@ -197,6 +205,8 @@ expect_inspection_rejection() {
 expect_inspection_rejection missing-conversion
 expect_inspection_rejection wrong-receiver-carrier
 expect_inspection_rejection wrong-value-type
+expect_inspection_rejection wrong-key-type
+expect_inspection_rejection missing-retained-method
 expect_inspection_rejection stale-call
 expect_inspection_rejection wrong-runtime-owner
 

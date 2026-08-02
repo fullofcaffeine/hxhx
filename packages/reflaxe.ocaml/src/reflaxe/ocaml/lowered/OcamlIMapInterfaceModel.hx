@@ -182,6 +182,8 @@ class OcamlIMapInterfaceContract {
 					decision.targetSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId)) {
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has a retained method whose key, value, or result type disagrees with its IMap boundary';
 			}
+			if (standard && (method.sourceOwnerModuleId != "haxe.Constraints" || method.sourceOwnerTypeName != "IMap"))
+				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: standard conversion "${decision.id}" does not attribute its retained method to haxe.Constraints.IMap';
 		}
 	}
 

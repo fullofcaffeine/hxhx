@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversio
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceMethodDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceKind;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceSourceSpan;
+import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapKeyKind;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapOperation;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapStringifier;
@@ -53,6 +54,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 			throw 'IMap interface call count is $callCount but the inventory contains ${rawCalls.length} entries.';
 		final calls = [for (entry in rawCalls) call(entry)];
 		validateOrderedCalls(calls);
+		validateRetainedSurface(conversions, calls);
 
 		final revision = requiredSha256Revision(value, "iMapInterfaceRevision");
 		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify({conversions: conversions, calls: calls}));
@@ -85,6 +87,29 @@ class ReflaxeOcamlIMapInterfaceInspection {
 				throw 'IMap interface call "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
 			if (index > 0 && Reflect.compare(calls[index - 1].id, current.id) >= 0)
 				throw 'The IMap interface call inventory is not in strict identity order at "${current.id}".';
+		}
+	}
+
+	/**
+		Proves that every concrete adapter implements the same DCE-retained fields.
+
+		Haxe emits one `IMap` record type for the final program, so a standard Map
+		and a user class cannot legitimately report different field subsets. Every
+		recorded interface call must also name a field present on that shared record.
+	**/
+	static function validateRetainedSurface(conversions:Array<OcamlIMapInterfaceConversionDecision>, calls:Array<OcamlIMapInterfaceCallDecision>):Void {
+		if (conversions.length == 0)
+			return;
+		final retainedNames = conversions[0].methods.map(method -> method.name);
+		final retainedKey = retainedNames.join(",");
+		for (conversion in conversions) {
+			if (conversion.methods.map(method -> method.name).join(",") != retainedKey)
+				throw 'IMap interface conversion "${conversion.id}" disagrees with the shared retained method surface "$retainedKey".';
+		}
+		for (call in calls) {
+			final fieldName = OcamlStandardIMapCallContract.sourceFieldName(call.operation);
+			if (retainedNames.indexOf(fieldName) < 0)
+				throw 'IMap interface call "${call.id}" uses field "$fieldName", which is absent from the retained method surface "$retainedKey".';
 		}
 	}
 

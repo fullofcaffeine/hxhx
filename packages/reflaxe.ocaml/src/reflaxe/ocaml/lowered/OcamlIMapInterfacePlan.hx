@@ -101,6 +101,14 @@ class OcamlIMapInterfacePlan {
 			throw 'reflaxe.ocaml [ocaml-imap-interface:stale-conversion]: conversion "${decision.id}" disagrees with the final typed occurrence or function revision';
 		}
 		requireConversionDecision(decision);
+		final retainedMethodNames = decision.methods.map(method -> method.name).join(",");
+		final materializedOperationNames = materialization.operations.map(operation -> OcamlStandardIMapCallContract.sourceFieldName(operation)).join(",");
+		final materializedMethodNames = materialization.methods.map(method -> method.decision.name).join(",");
+		if (materializedOperationNames != retainedMethodNames
+			|| (decision.sourceKind == OcamlIMapInterfaceSourceKind.UserImplementation && materializedMethodNames != retainedMethodNames)
+			|| (decision.sourceKind != OcamlIMapInterfaceSourceKind.UserImplementation && materialization.methods.length != 0)) {
+			throw 'reflaxe.ocaml [ocaml-imap-interface:stale-conversion]: conversion "${decision.id}" has a request-local adapter surface that disagrees with its sealed report decision';
+		}
 		return materialization;
 	}
 
@@ -600,8 +608,11 @@ class OcamlIMapInterfacePlanner {
 	**/
 	static function retainedInterfaceOperations(interfaceClass:ClassType):Array<OcamlStandardIMapOperation> {
 		final retained:Map<String, Bool> = [];
-		for (field in interfaceClass.fields.get())
+		for (field in interfaceClass.fields.get()) {
+			if (OcamlIMapInterfacePlan.REQUIRED_METHODS.indexOf(field.name) < 0)
+				throw 'reflaxe.ocaml [ocaml-imap-interface:unsupported-retained-method]: ${fullClassName(interfaceClass)}.${field.name} is outside the pinned IMap adapter contract';
 			retained.set(field.name, true);
+		}
 		final out:Array<OcamlStandardIMapOperation> = [];
 		for (operation in OcamlIMapInterfaceContract.requiredOperations()) {
 			if (retained.exists(OcamlStandardIMapCallContract.sourceFieldName(operation)))
