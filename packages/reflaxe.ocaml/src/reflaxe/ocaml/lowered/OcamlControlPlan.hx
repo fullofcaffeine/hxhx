@@ -7,6 +7,7 @@ import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
@@ -74,6 +75,7 @@ enum abstract OcamlControlPayloadConversion(String) from String to String {
 	final BoxAndRecoverExactValue = "box-and-recover-exact-value";
 	final BoxAndRecoverNominalValue = "box-and-recover-nominal-value";
 	final PreserveNullableCarrier = "preserve-nullable-carrier";
+	final PreserveAnonymousCarrier = "preserve-anonymous-carrier";
 	final PreserveDynamicReturnCarrier = "preserve-dynamic-return-carrier";
 	final BoxExactIntToNullableCarrier = "box-exact-int-to-nullable-carrier";
 	final BoxExactBoolToNullableCarrier = "box-exact-bool-to-nullable-carrier";
@@ -356,6 +358,7 @@ class OcamlControlPlan {
 	public static inline final DYNAMIC_RETURN_PROOF_ID = "dynamic-carrier-return-control-v1";
 	public static inline final EXACT_NOMINAL_RETURN_PROOF_ID = "exact-monomorphic-class-early-return-control-v1";
 	public static inline final NULLABLE_CARRIER_RETURN_PROOF_ID = "exact-nullable-carrier-early-return-control-v1";
+	public static inline final ANONYMOUS_CARRIER_RETURN_PROOF_ID = "exact-anonymous-carrier-early-return-control-v1";
 	public static inline final NULLABLE_INT_CONVERSION_RETURN_PROOF_ID = "exact-int-to-nullable-early-return-control-v1";
 	public static inline final NULLABLE_BOOL_CONVERSION_RETURN_PROOF_ID = "exact-bool-to-nullable-early-return-control-v1";
 	public static inline final EFFECT_ONLY_VOID_RETURN_PROOF_ID = "effect-only-void-early-return-control-v1";
@@ -880,6 +883,15 @@ class OcamlControlPlan {
 							|| decision.proofId != NULLABLE_CARRIER_RETURN_PROOF_ID) {
 							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid nullable-carrier payload crossing';
 						}
+					case PreserveAnonymousCarrier:
+						if (!OcamlControlPlan.isAdmittedAnonymousSide(payload.inputSemanticTypeId, payload.inputCarrierTypeId, payload.inputRepresentationId)
+							|| !samePayloadSides(payload)
+							|| payload.nominalRepresentation != null
+							|| !isSha256Revision(payload.representationRevision ?? "")
+							|| payload.proofId != ANONYMOUS_CARRIER_RETURN_PROOF_ID
+							|| decision.proofId != ANONYMOUS_CARRIER_RETURN_PROOF_ID) {
+							throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an invalid anonymous-object carrier crossing';
+						}
 					case PreserveDynamicReturnCarrier:
 						if (!isAdmittedDynamicReturnPayload(payload)
 							|| payload.proofId != DYNAMIC_RETURN_PROOF_ID
@@ -1319,6 +1331,14 @@ class OcamlControlPlan {
 				&& representationId == "representation:Null<Bool>:internal-value");
 	}
 
+	/** Whether one side is the exact carrier selected for a sealed anonymous shape. */
+	public static function isAdmittedAnonymousSide(semanticTypeId:String, carrierTypeId:String, representationId:String):Bool {
+		return StringTools.startsWith(semanticTypeId, "anonymous{")
+			&& StringTools.endsWith(semanticTypeId, "}")
+			&& carrierTypeId == "Obj.t"
+			&& representationId == 'representation:$semanticTypeId:internal-value';
+	}
+
 	static function samePayloadSides(payload:OcamlControlPayloadPlan):Bool {
 		return payload.outputSemanticTypeId == payload.inputSemanticTypeId
 			&& payload.outputCarrierTypeId == payload.inputCarrierTypeId
@@ -1576,6 +1596,14 @@ class OcamlControlPlan {
 	}
 
 	static function expressionMatchesPayload(expression:TypedExpr, payload:OcamlControlPayloadPlan):Bool {
+		if (payload.conversion == OcamlControlPayloadConversion.PreserveAnonymousCarrier) {
+			final unwrapped = unwrapControlTransparent(expression);
+			return switch (unwrapped.expr) {
+				case TConst(TNull): OcamlAnonymousStructurePlan.semanticTypeIdForType(unwrapped.t) == payload.inputSemanticTypeId && isAdmittedAnonymousSide(payload.inputSemanticTypeId,
+						payload.inputCarrierTypeId, payload.inputRepresentationId);
+				case _: false;
+			};
+		}
 		if (isAdmittedEnumThrowPayload(payload)) {
 			final identity = OcamlEnumDynamicCarrier.fromDirectValue(expression);
 			return identity != null
@@ -1613,6 +1641,13 @@ class OcamlControlPlan {
 			case _: final semanticTypeId = OcamlRepresentationRegistry.monomorphicClassSemanticTypeId(expression.t); (payload.conversion == OcamlControlPayloadConversion.BoxAndRecoverNominalValue
 					|| payload.conversion == OcamlControlPayloadConversion.BoxNominalThrowCarrier) && semanticTypeId == payload.inputSemanticTypeId && isAdmittedNominalPayload(payload);
 		}
+	}
+
+	static function unwrapControlTransparent(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TMeta(_, child), TParenthesis(child): unwrapControlTransparent(child);
+			case _: expression;
+		};
 	}
 
 	/** Returns the exact generated Haxe exception runtime class, if any. */
@@ -1951,7 +1986,7 @@ class OcamlControlPlanner {
 						returnBlockers.push(OcamlControlAdmissionContract.blocker("return-payload-missing", returnOccurrenceId, returnSource));
 						return;
 					}
-					final representation = value == null ? null : returnRepresentation(value);
+					final representation = value == null ? null : returnRepresentation(value, boundary);
 					final payload = representation == null ? null : returnPayload(representation, boundaryPayload);
 					if (representation == null) {
 						returnFamilyAdmitted = false;
@@ -2420,11 +2455,26 @@ class OcamlControlPlanner {
 	}
 
 	/** Selects a value representation that may cross one private return signal. */
-	function returnRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+	function returnRepresentation(expression:TypedExpr, boundary:Null<OcamlFunctionResultBoundaryPlan>):Null<OcamlRepresentationDecision> {
 		final exact = exactValueRepresentation(expression);
 		if (exact != null)
 			return exact;
-		return OcamlRepresentationRegistry.isExactDynamic(expression.t) ? representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue) : null;
+		if (OcamlRepresentationRegistry.isExactDynamic(expression.t))
+			return representations.selectExactDynamic(OcamlRepresentationDomain.InternalValue);
+		final unwrapped = unwrapTransparent(expression);
+		final isNull = switch (unwrapped.expr) {
+			case TConst(TNull): true;
+			case _: false;
+		};
+		final proof = boundary == null ? null : boundary.anonymousStructure;
+		if (!isNull || proof == null || OcamlAnonymousStructurePlan.semanticTypeIdForType(unwrapped.t) != proof.semanticTypeId)
+			return null;
+		final representation = representations.require(proof.representationId, binding.programRevision);
+		return representation.revision == proof.representationRevision
+			&& representation.semanticTypeId == proof.semanticTypeId
+			&& representation.carrierTypeId == "Obj.t"
+			&& representation.domain == OcamlRepresentationDomain.InternalValue
+			&& representation.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectRuntimeContainer ? representation : null;
 	}
 
 	/**
@@ -2650,6 +2700,25 @@ class OcamlControlPlanner {
 				proofClaim);
 		}
 		if (sameSide
+			&& OcamlControlPlan.isAdmittedAnonymousSide(input.semanticTypeId, input.carrierTypeId, input.id)
+			&& input.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectRuntimeContainer) {
+			final proofClaim = 'The final typed null return belongs to the same ${input.semanticTypeId} shape as the function\'s direct object-literal result. The anonymous-structure planner already selected this exact Obj.t runtime-container representation, so the private return signal preserves the runtime null sentinel and the function boundary recovers the same carrier without boxing, casting, or shape inference.';
+			return {
+				inputSemanticTypeId: input.semanticTypeId,
+				inputCarrierTypeId: input.carrierTypeId,
+				inputRepresentationId: input.id,
+				signalCarrierTypeId: "Obj.t",
+				outputSemanticTypeId: output.outputSemanticTypeId,
+				outputCarrierTypeId: output.outputCarrierTypeId,
+				outputRepresentationId: output.outputRepresentationId,
+				representationRevision: input.revision,
+				conversion: OcamlControlPayloadConversion.PreserveAnonymousCarrier,
+				nominalRepresentation: null,
+				proofId: OcamlControlPlan.ANONYMOUS_CARRIER_RETURN_PROOF_ID,
+				proofClaim: proofClaim
+			};
+		}
+		if (sameSide
 			&& input.semanticTypeId == "Dynamic"
 			&& input.carrierTypeId == "Obj.t"
 			&& input.id == "representation:Dynamic:internal-value") {
@@ -2709,6 +2778,8 @@ class OcamlControlPlanner {
 		return switch (payload.conversion) {
 			case PreserveNullableCarrier:
 				'This return is nested below the function\'s direct result path, so it preserves the current exact-${payload.outputSemanticTypeId} carrier through one revision-bound private runtime signal.';
+			case PreserveAnonymousCarrier:
+				"This typed null return is nested below the function's direct object-literal result, so it preserves that exact anonymous runtime-container carrier through one revision-bound private signal.";
 			case PreserveDynamicReturnCarrier:
 				"This return is nested below the function's direct result path, so it preserves the existing Dynamic Obj.t carrier through one revision-bound private runtime signal.";
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
@@ -2758,7 +2829,19 @@ class OcamlControlPlanner {
 		if (boundary == null || boundary.resultKind != OcamlCallResultKind.Value || boundary.result == null) {
 			return null;
 		}
+		OcamlFunctionResultBoundary.require(boundary);
 		final result = boundary.result;
+		final anonymous = boundary.anonymousStructure;
+		final anonymousIdentity = anonymous != null
+			&& result.inputSemanticTypeId == anonymous.semanticTypeId
+			&& result.inputCarrierTypeId == "Obj.t"
+			&& result.inputRepresentationId == anonymous.representationId
+			&& result.outputSemanticTypeId == anonymous.semanticTypeId
+			&& result.outputCarrierTypeId == "Obj.t"
+			&& result.outputRepresentationId == anonymous.representationId
+			&& result.conversion == OcamlCallCarrierConversion.Identity;
+		if (anonymousIdentity)
+			return OcamlCallPlan.copyValue(result);
 		final exactIdentity = result.inputSemanticTypeId == result.outputSemanticTypeId
 			&& result.inputCarrierTypeId == result.outputCarrierTypeId
 			&& result.inputRepresentationId == result.outputRepresentationId

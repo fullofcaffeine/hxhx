@@ -3,8 +3,11 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.macro.Type;
+import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
+import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
@@ -20,6 +23,17 @@ enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final NonGenericInstanceExactIntDeclaration = "non-generic-instance-exact-int-declaration";
 	final NonGenericInstanceExactStringDeclaration = "non-generic-instance-exact-string-declaration";
 	final NonGenericInstanceEffectOnlyVoidDeclaration = "non-generic-instance-effect-only-void-declaration";
+	final StaticNullableAnonymousDeclaration = "static-nullable-anonymous-declaration";
+}
+
+/** Exact anonymous-object decision reused by one result-only function boundary. */
+typedef OcamlFunctionResultAnonymousStructureProof = {
+	final semanticTypeId:String;
+	final structureId:String;
+	final structureRevision:String;
+	final structureProofId:String;
+	final representationId:String;
+	final representationRevision:String;
 }
 
 /**
@@ -42,6 +56,7 @@ typedef OcamlFunctionResultBoundaryPlan = {
 	final sourceFieldName:String;
 	final resultKind:OcamlCallResultKind;
 	final result:Null<OcamlCallValuePlan>;
+	final anonymousStructure:Null<OcamlFunctionResultAnonymousStructureProof>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;
@@ -54,24 +69,26 @@ typedef OcamlFunctionResultBoundaryPlan = {
 
 /** Builds and validates result-only function boundaries before target syntax. */
 class OcamlFunctionResultBoundary {
-	public static inline final MODEL = "typed-ocaml-function-result-boundary-v1";
+	public static inline final MODEL = "typed-ocaml-function-result-boundary-v2";
 	public static inline final CALLABLE_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EXACT_STRING_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 	public static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
+	public static inline final STATIC_NULLABLE_ANONYMOUS_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 
 	/**
 		Selects one result boundary without expanding the callable ABI.
 
-		Existing admitted callables reuse their result. Declaration-only paths
-		currently admit the existing static inline exact-`Int`
-		tracer plus exact `Int`, `String`, and payloadless `Void` results for concrete
-		non-generic instance methods. An instance rule deliberately ignores receiver
-		and parameter ABI; it proves only how the already-emitted method finishes.
+		Existing admitted callables reuse their result. Declaration-only paths admit
+		the existing static inline exact-`Int` tracer, one exact core-`Null` anonymous
+		result backed by a direct object literal, plus exact `Int`, `String`, and
+		payloadless `Void` results for concrete non-generic instance methods. These
+		rules deliberately ignore receiver and parameter ABI; they prove only how the
+		already-emitted method finishes.
 	**/
 	public static function select(data:ClassFuncData, callable:Null<OcamlCallableBoundaryPlan>, representations:OcamlRepresentationRegistry,
-			binding:OcamlFunctionPlanBinding):Null<OcamlFunctionResultBoundaryPlan> {
+			binding:OcamlFunctionPlanBinding, anonymousStructures:OcamlAnonymousStructurePlan):Null<OcamlFunctionResultBoundaryPlan> {
 		if (callable != null
 			&& (callable.kind == OcamlCallKind.DirectStaticHaxeMethod
 				|| callable.kind == OcamlCallKind.DirectInstanceHaxeMethod
@@ -83,7 +100,7 @@ class OcamlFunctionResultBoundary {
 			return null;
 		}
 		switch (data.classType.kind) {
-			case KNormal:
+			case KNormal, KAbstractImpl(_):
 			case _:
 				return null;
 		}
@@ -96,6 +113,7 @@ class OcamlFunctionResultBoundary {
 		final exactIntResult = OcamlRepresentationRegistry.isExactInt(followedResult);
 		final exactStringResult = OcamlRepresentationRegistry.isExactString(followedResult);
 		final effectOnlyVoidResult = OcamlCallPlanner.isExactVoid(followedResult);
+		final anonymousSemanticTypeId = nullableAnonymousSemanticTypeId(followedResult);
 
 		var source:OcamlFunctionResultBoundarySource;
 		var reason:String;
@@ -103,24 +121,46 @@ class OcamlFunctionResultBoundary {
 		var proofClaim:String;
 		var semanticTypeId:String;
 		var resultKind = OcamlCallResultKind.Value;
+		var anonymousStructure:Null<OcamlFunctionResultAnonymousStructureProof> = null;
 		if (data.isStatic) {
-			if (!exactIntResult)
-				return null;
-			final matchesStaticTracer = switch (data.field.kind) {
-				case FMethod(MethInline):
-					switch (TypeTools.follow(data.field.type)) {
-						case TFun(arguments, _): arguments.length == 1 && !arguments[0].opt && OcamlRepresentationRegistry.isExactInt(arguments[0].t);
-						case _: false;
-					}
-				case _: false;
-			};
-			if (!matchesStaticTracer)
-				return null;
-			source = OcamlFunctionResultBoundarySource.StaticInlineExactIntDeclaration;
-			reason = "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.";
-			proofId = STATIC_INLINE_EXACT_INT_PROOF_ID;
-			proofClaim = "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.";
-			semanticTypeId = "Int";
+			if (exactIntResult) {
+				final matchesStaticTracer = switch (data.field.kind) {
+					case FMethod(MethInline):
+						switch (TypeTools.follow(data.field.type)) {
+							case TFun(arguments, _): arguments.length == 1 && !arguments[0].opt && OcamlRepresentationRegistry.isExactInt(arguments[0].t);
+							case _: false;
+						}
+					case _: false;
+				};
+				if (!matchesStaticTracer)
+					return null;
+				source = OcamlFunctionResultBoundarySource.StaticInlineExactIntDeclaration;
+				reason = "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.";
+				proofId = STATIC_INLINE_EXACT_INT_PROOF_ID;
+				proofClaim = "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.";
+				semanticTypeId = "Int";
+			} else {
+				switch (data.field.kind) {
+					case FMethod(MethNormal):
+					case _:
+						return null;
+				}
+				if (anonymousSemanticTypeId == null)
+					return null;
+				final literal = directCompletedObjectLiteral(data.expr);
+				if (literal == null || !anonymousStructures.hasLiteral(literal))
+					return null;
+				final literalPlan = anonymousStructures.requireLiteral(literal, representations);
+				final structure = literalPlan.structure;
+				if (structure.semanticTypeId != anonymousSemanticTypeId)
+					return null;
+				anonymousStructure = anonymousProof(structure);
+				source = OcamlFunctionResultBoundarySource.StaticNullableAnonymousDeclaration;
+				reason = "The final typed declaration is a concrete non-generic static function whose normal completed result is one directly constructed anonymous object. Nested typed null returns may preserve that exact runtime-container carrier without admitting parameters, calls, fields, casts, or other anonymous-value sources.";
+				proofId = STATIC_NULLABLE_ANONYMOUS_PROOF_ID;
+				proofClaim = "The anonymous-structure planner already fixed the direct result literal's shape, mutable HxAnon container, reference identity, shared aliases, runtime null sentinel, and representation revision. This result-only boundary reuses that exact decision; it does not infer a shape from the declared type or authorize another anonymous crossing.";
+				semanticTypeId = structure.semanticTypeId;
+			}
 		} else {
 			switch (data.field.kind) {
 				case FMethod(MethNormal):
@@ -153,7 +193,13 @@ class OcamlFunctionResultBoundary {
 		final result:Null<OcamlCallValuePlan> = if (resultKind == OcamlCallResultKind.EffectOnlyVoid) {
 			null;
 		} else {
-			final representation = semanticTypeId == "Int" ? representations.selectExactInt(OcamlRepresentationDomain.InternalValue) : representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+			final representation = if (anonymousStructure != null) {
+				representations.require(anonymousStructure.representationId, binding.programRevision);
+			} else if (semanticTypeId == "Int") {
+				representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+			} else {
+				representations.selectExactString(OcamlRepresentationDomain.InternalValue);
+			};
 			{
 				index: -1,
 				parameterOptional: false,
@@ -177,6 +223,7 @@ class OcamlFunctionResultBoundary {
 			sourceFieldName: data.field.name,
 			resultKind: resultKind,
 			result: result,
+			anonymousStructure: anonymousStructure,
 			profileEligibility: ["metal", "portable"],
 			reason: reason,
 			proofId: proofId,
@@ -216,6 +263,7 @@ class OcamlFunctionResultBoundary {
 			sourceFieldName: callable.sourceFieldName,
 			resultKind: callable.resultKind,
 			result: OcamlCallPlan.copyOptionalValue(callable.result),
+			anonymousStructure: null,
 			profileEligibility: callable.profileEligibility.copy(),
 			reason: "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
 			proofId: CALLABLE_RESULT_PROOF_ID,
@@ -240,6 +288,7 @@ class OcamlFunctionResultBoundary {
 			sourceFieldName: boundary.sourceFieldName,
 			resultKind: boundary.resultKind,
 			result: OcamlCallPlan.copyOptionalValue(boundary.result),
+			anonymousStructure: copyAnonymousProof(boundary.anonymousStructure),
 			profileEligibility: boundary.profileEligibility.copy(),
 			reason: boundary.reason,
 			proofId: boundary.proofId,
@@ -280,6 +329,7 @@ class OcamlFunctionResultBoundary {
 			case CallableBoundary:
 				if (boundary.callableBoundaryId == null
 					|| boundary.callableBoundaryId.length == 0
+					|| boundary.anonymousStructure != null
 					|| boundary.proofId != CALLABLE_RESULT_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: callable-derived result boundary "${boundary.id}" has no callable owner';
 			case StaticInlineExactIntDeclaration:
@@ -291,12 +341,15 @@ class OcamlFunctionResultBoundary {
 					"string");
 			case NonGenericInstanceEffectOnlyVoidDeclaration:
 				requireDeclarationEffectOnlyVoid(boundary);
+			case StaticNullableAnonymousDeclaration:
+				requireDeclarationAnonymous(boundary);
 		}
 	}
 
 	/** Checks that an instance `Void` declaration owns no value or callable facts. */
 	static function requireDeclarationEffectOnlyVoid(boundary:OcamlFunctionResultBoundaryPlan):Void {
 		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -320,6 +373,7 @@ class OcamlFunctionResultBoundary {
 		final result = boundary.result;
 		final representationId = 'representation:$semanticTypeId:internal-value';
 		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -336,6 +390,94 @@ class OcamlFunctionResultBoundary {
 			|| boundary.proofId != expectedProofId) {
 			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the $label exact-$semanticTypeId slice';
 		}
+	}
+
+	/** Checks the exact anonymous structure reused by a result-only static function. */
+	static function requireDeclarationAnonymous(boundary:OcamlFunctionResultBoundaryPlan):Void {
+		final result = boundary.result;
+		final structure = boundary.anonymousStructure;
+		if (boundary.callableBoundaryId != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf("|static|function|") < 0
+			|| boundary.resultKind != OcamlCallResultKind.Value
+			|| result == null
+			|| structure == null
+			|| !StringTools.startsWith(structure.semanticTypeId, "anonymous{")
+			|| !StringTools.endsWith(structure.semanticTypeId, "}")
+			|| structure.structureId != OcamlAnonymousStructureContract.structureId(structure.semanticTypeId)
+			|| !StringTools.startsWith(structure.structureRevision, "sha256:")
+			|| structure.structureProofId != OcamlAnonymousStructureContract.PROOF_ID
+			|| structure.representationId != 'representation:${structure.semanticTypeId}:internal-value'
+			|| !StringTools.startsWith(structure.representationRevision, "sha256:")
+			|| result.inputSemanticTypeId != structure.semanticTypeId
+			|| result.inputCarrierTypeId != "Obj.t"
+			|| result.inputRepresentationId != structure.representationId
+			|| result.outputSemanticTypeId != structure.semanticTypeId
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| result.outputRepresentationId != structure.representationId
+			|| result.conversion != OcamlCallCarrierConversion.Identity
+			|| boundary.proofId != STATIC_NULLABLE_ANONYMOUS_PROOF_ID) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the static nullable anonymous-object slice';
+		}
+	}
+
+	/** Finds only the direct object literal that completes the function body. */
+	static function directCompletedObjectLiteral(body:TypedExpr):Null<TypedExpr> {
+		final unwrappedBody = unwrapTransparent(body);
+		final completed = switch (unwrappedBody.expr) {
+			case TBlock(expressions) if (expressions.length > 0): unwrapTransparent(expressions[expressions.length - 1]);
+			case _: unwrappedBody;
+		};
+		return switch (completed.expr) {
+			case TReturn(value) if (value != null):
+				final unwrappedValue = unwrapTransparent(value);
+				switch (unwrappedValue.expr) {
+					case TObjectDecl(_): unwrappedValue;
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	static function unwrapTransparent(expression:TypedExpr):TypedExpr {
+		return switch (expression.expr) {
+			case TMeta(_, child), TParenthesis(child): unwrapTransparent(child);
+			case _: expression;
+		};
+	}
+
+	/** Returns the shape only for the direct core `Null<anonymous object>` form. */
+	static function nullableAnonymousSemanticTypeId(type:Type):Null<String> {
+		return switch (type) {
+			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? OcamlAnonymousStructurePlan.semanticTypeIdForType(inner) : null;
+			case _:
+				null;
+		};
+	}
+
+	static function anonymousProof(structure:OcamlAnonymousStructureDecision):OcamlFunctionResultAnonymousStructureProof {
+		OcamlAnonymousStructureContract.requireStructure(structure);
+		return {
+			semanticTypeId: structure.semanticTypeId,
+			structureId: structure.id,
+			structureRevision: structure.revision,
+			structureProofId: structure.proofId,
+			representationId: structure.representationId,
+			representationRevision: structure.representationRevision
+		};
+	}
+
+	static function copyAnonymousProof(proof:Null<OcamlFunctionResultAnonymousStructureProof>):Null<OcamlFunctionResultAnonymousStructureProof> {
+		return proof == null ? null : {
+			semanticTypeId: proof.semanticTypeId,
+			structureId: proof.structureId,
+			structureRevision: proof.structureRevision,
+			structureProofId: proof.structureProofId,
+			representationId: proof.representationId,
+			representationRevision: proof.representationRevision
+		};
 	}
 
 	/** Requires a callable-derived result record to remain identical to its owner. */

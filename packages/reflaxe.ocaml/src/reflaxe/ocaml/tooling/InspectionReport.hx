@@ -617,6 +617,7 @@ typedef InspectionFunctionResultBoundary = {
 	final sourceFieldName:String;
 	final resultKind:String;
 	final result:Null<InspectionCallValue>;
+	final anonymousStructure:Null<InspectionFunctionResultAnonymousStructureProof>;
 	final profileEligibility:Array<String>;
 	final reason:String;
 	final proofId:String;
@@ -625,6 +626,16 @@ typedef InspectionFunctionResultBoundary = {
 	final programRevision:String;
 	final bodyRevision:String;
 	final pipelineRevision:String;
+}
+
+/** Exact anonymous-object structure and representation reused by a function result. **/
+typedef InspectionFunctionResultAnonymousStructureProof = {
+	final semanticTypeId:String;
+	final structureId:String;
+	final structureRevision:String;
+	final structureProofId:String;
+	final representationId:String;
+	final representationRevision:String;
 }
 
 /** One report-safe reference to the program-owned nominal class layout. **/

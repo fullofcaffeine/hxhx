@@ -34,11 +34,11 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 64
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
+if (report.schemaVersion !== 65
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v21'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
-	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v1'
+	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v2'
 	|| report.controlCount !== report.controls.length
 	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -54,16 +54,23 @@ function familyFor(admission, family) {
 	return admission?.families?.find(entry => entry.family === family)
 }
 
-const blockedParse = report.controlAdmissions.find(admission =>
+const admittedParse = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
-const blockedParseReturn = familyFor(blockedParse, 'return')
-if (blockedParseReturn?.status !== 'blocked'
-	|| blockedParseReturn.occurrenceCount !== 4
-	|| blockedParseReturn.decisionCount !== 0
-	|| blockedParseReturn.blockers.length !== 1
-	|| blockedParseReturn.blockers[0].code !== 'return-boundary-unrepresented'
-	|| blockedParseReturn.blockers[0].semanticTypeId !== 'Null<{ line : Int, file : String }>') {
-	fail('the typed planner did not explain the existing anonymous-result return blocker')
+const admittedParseReturn = familyFor(admittedParse, 'return')
+const admittedParseResult = report.functionResultBoundaries.find(boundary =>
+	boundary.functionId === admittedParse?.functionId)
+if (admittedParseReturn?.status !== 'admitted'
+	|| admittedParseReturn.occurrenceCount !== 4
+	|| admittedParseReturn.decisionCount !== 4
+	|| admittedParseReturn.blockers.length !== 0
+	|| admittedParseResult?.source !== 'static-nullable-anonymous-declaration'
+	|| admittedParseResult.callableBoundaryId != null
+	|| admittedParseResult.anonymousStructure?.semanticTypeId !== 'anonymous{file:String,line:Int}'
+	|| admittedParseResult.result?.inputCarrierTypeId !== 'Obj.t'
+	|| admittedParseResult.result?.outputCarrierTypeId !== 'Obj.t'
+	|| admittedParseResult.proofId !== 'static-nullable-anonymous-function-result-v1'
+	|| report.callableBoundaries.some(boundary => boundary.functionId === admittedParse.functionId)) {
+	fail('NativeStackTrace.parseFileLine did not receive its result-only nullable anonymous-object boundary')
 }
 const admittedBranch = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('Main|Main|static|function|branch|'))
@@ -192,8 +199,8 @@ if (writeStringStart < 0
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 48) {
-	fail(`expected 48 represented return decisions, including StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
+if (returnControls.length !== 56) {
+	fail(`expected 56 represented return decisions, including eight nullable anonymous parse returns, StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -506,7 +513,7 @@ for (const control of returnControls) {
 			|| control.source.max < control.source.min
 			|| !rawSha256.test(control.programRevision)
 			|| !bodyRevision.test(control.bodyRevision)
-			|| control.pipelineRevision !== 'ocaml-function-plans-v74') {
+			|| control.pipelineRevision !== 'ocaml-function-plans-v75') {
 			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 		}
 		ids.add(control.id)
@@ -531,7 +538,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v10'
-			: control.pipelineRevision !== 'ocaml-function-plans-v74')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v75')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -576,6 +583,17 @@ for (const control of returnControls) {
 		&& payload.outputRepresentationId === payload.inputRepresentationId
 		&& payload.conversion === 'preserve-dynamic-return-carrier'
 		&& payload.proofId === 'dynamic-carrier-return-control-v1'
+	const anonymousCarrier = control.proofId === 'exact-anonymous-carrier-early-return-control-v1'
+		&& payload.inputSemanticTypeId === 'anonymous{file:String,line:Int}'
+		&& payload.inputCarrierTypeId === 'Obj.t'
+		&& payload.inputRepresentationId === 'representation:anonymous{file:String,line:Int}:internal-value'
+		&& payload.outputSemanticTypeId === payload.inputSemanticTypeId
+		&& payload.outputCarrierTypeId === 'Obj.t'
+		&& payload.outputRepresentationId === payload.inputRepresentationId
+		&& /^sha256:[0-9a-f]{64}$/.test(payload.representationRevision ?? '')
+		&& payload.conversion === 'preserve-anonymous-carrier'
+		&& payload.nominalRepresentation == null
+		&& payload.proofId === 'exact-anonymous-carrier-early-return-control-v1'
 	const nominal = payload.nominalRepresentation
 	const nominalValue = control.proofId === 'exact-monomorphic-class-early-return-control-v1'
 		&& payload.inputSemanticTypeId === '_Main.NestedReturnBox'
@@ -591,7 +609,7 @@ for (const control of returnControls) {
 		&& /^sha256:[0-9a-f]{64}$/.test(nominal?.layoutRevision ?? '')
 		&& nominal?.representationProofId === `whole-program-monomorphic-nominal-record-v1:${nominal.layoutRevision}`
 	if (payload.signalCarrierTypeId !== 'Obj.t'
-		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier && !nominalValue)
+		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier && !anonymousCarrier && !nominalValue)
 		|| !payload.proofClaim) {
 		fail(`control decision ${control.id} has an incomplete represented return payload crossing`)
 	}
@@ -691,7 +709,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v74'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v75'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -847,7 +865,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 41
+if (report.schemaVersion !== 42
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
@@ -857,9 +875,9 @@ if (report.schemaVersion !== 41
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 48
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 56
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 48 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 56 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -904,13 +922,18 @@ if (instanceVoidResults.length !== 1
 	|| report.lowering.callableBoundaries.some(callable => callable.functionId === instanceVoidResults[0].functionId)) {
 	throw new Error('public inspection did not preserve result-only ownership for the stdio Void instance method')
 }
-const blockedParseAdmission = report.lowering.controlAdmissions.find(admission =>
+const admittedParseAdmission = report.lowering.controlAdmissions.find(admission =>
 	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
-const blockedParseReturn = blockedParseAdmission?.families.find(family => family.family === 'return')
-if (blockedParseReturn?.status !== 'blocked'
-	|| blockedParseReturn.blockers[0]?.code !== 'return-boundary-unrepresented'
-	|| !/^sha256:[0-9a-f]{64}$/.test(blockedParseAdmission.revision ?? '')) {
-	throw new Error('public inspection did not validate the existing anonymous-result return blocker')
+const admittedParseReturn = admittedParseAdmission?.families.find(family => family.family === 'return')
+const admittedParseResult = report.lowering.functionResultBoundaries.find(boundary =>
+	boundary.functionId === admittedParseAdmission?.functionId)
+if (admittedParseReturn?.status !== 'admitted'
+	|| admittedParseReturn.occurrenceCount !== 4
+	|| admittedParseReturn.decisionCount !== 4
+	|| admittedParseResult?.source !== 'static-nullable-anonymous-declaration'
+	|| admittedParseResult.anonymousStructure?.semanticTypeId !== 'anonymous{file:String,line:Int}'
+	|| !/^sha256:[0-9a-f]{64}$/.test(admittedParseAdmission.revision ?? '')) {
+	throw new Error('public inspection did not validate the nullable anonymous parse result and its four return decisions')
 }
 const arrayThrow = report.lowering.controls.find(control =>
 	control.kind === 'throw'
@@ -1080,7 +1103,7 @@ NODE
 	fi
 done
 
-for mutation in duplicate missing-family edited-message stale-revision; do
+for mutation in duplicate missing-family edited-count stale-revision; do
 	invalid_output="$INVALID_ADMISSION_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
@@ -1092,8 +1115,8 @@ const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const admission = report.controlAdmissions.find(entry =>
 	entry.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
 const family = admission?.families?.find(entry => entry.family === 'return')
-if (family?.status !== 'blocked') {
-	throw new Error('missing blocked return admission to corrupt')
+if (family?.status !== 'admitted') {
+	throw new Error('missing admitted nullable anonymous return family to corrupt')
 }
 switch (mutation) {
 	case 'duplicate':
@@ -1103,8 +1126,8 @@ switch (mutation) {
 	case 'missing-family':
 		admission.families.pop()
 		break
-	case 'edited-message':
-		family.blockers[0].message = 'edited explanation'
+	case 'edited-count':
+		family.occurrenceCount += 1
 		break
 	case 'stale-revision':
 		admission.revision = `sha256:${'0'.repeat(64)}`
@@ -1378,4 +1401,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=48 function_results=53 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=56 function_results=55 producers=4"

@@ -115,20 +115,20 @@ class OcamlFunctionPlanSealer {
 		registry.registerRootIdentityPlan(binding, localIdentities);
 		final callPlanner = new OcamlCallPlanner(representations, binding);
 		final callableBoundary = callPlanner.boundaryFor(data);
-		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding);
 		final constructionBoundary = callPlanner.constructionBoundaryFor(data);
 		final functionResultType = switch (TypeTools.follow(data.field.type)) {
 			case TFun(_, result): result;
 			case _: null;
 		};
 		if (data.expr == null) {
+			final anonymousStructures = new OcamlAnonymousStructurePlan([], []);
+			final functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 			final controls = OcamlControlPlan.notAdmitted(binding);
 			final imapInterfaces = new OcamlIMapInterfacePlan(binding, new haxe.ds.ObjectMap(), new haxe.ds.ObjectMap());
 			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
 				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
 				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), imapInterfaces, new OcamlCallPlan([]), controls, callableBoundary,
-				functionResultBoundary, constructionBoundary, new OcamlAnonymousStructurePlan([], []), new OcamlStructuralFieldPlan([]),
-				new OcamlArrayLiteralProducerPlan([]));
+				functionResultBoundary, constructionBoundary, anonymousStructures, new OcamlStructuralFieldPlan([]), new OcamlArrayLiteralProducerPlan([]));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
@@ -147,6 +147,7 @@ class OcamlFunctionPlanSealer {
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
 		final calls = new OcamlCallPlanner(representations, binding, localRepresentations, localIdentities).plan(data.expr);
 		final anonymousStructures = new OcamlAnonymousStructurePlanner(binding, representations).plan(data.expr);
+		var functionResultBoundary = OcamlFunctionResultBoundary.select(data, callableBoundary, representations, binding, anonymousStructures);
 		final structuralFields = new OcamlStructuralFieldPlanner(binding, calls, imapInterfaces, anonymousStructures, representations,
 			localIdentities).plan(data.expr);
 		final bytesAccesses = new OcamlBytesAccessPlanner(binding, representations).plan(data.expr);
@@ -218,7 +219,9 @@ class OcamlFunctionPlanSealer {
 			if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
 				context.recordEnumThrowRuntimeRequirement(control);
 		}
+		anonymousStructures.requirePlanBinding(binding);
 		anonymousStructures.requireRepresentations(representations);
+		validateFunctionResultRepresentationReferences(functionResultBoundary, anonymousStructures, binding.programRevision, data.expr.pos);
 		for (decision in anonymousStructures.operations())
 			context.recordAnonymousStructureRuntimeRequirement(decision);
 		for (decision in structuralFields.decisions())
@@ -457,6 +460,33 @@ class OcamlFunctionPlanSealer {
 			validateCallValue(boundary.arguments[index], programRevision, 'callable boundary "${boundary.id}" argument $index', position);
 		if (boundary.result != null)
 			validateCallValue(boundary.result, programRevision, 'callable boundary "${boundary.id}" result', position);
+	}
+
+	/** Rechecks a result-only carrier and its exact anonymous-structure owner before sealing. */
+	function validateFunctionResultRepresentationReferences(boundary:Null<OcamlFunctionResultBoundaryPlan>, anonymousStructures:OcamlAnonymousStructurePlan,
+			programRevision:String, position:Position):Void {
+		if (boundary == null)
+			return;
+		try {
+			OcamlFunctionResultBoundary.require(boundary);
+		} catch (error:Dynamic) {
+			fail(Std.string(error), position);
+		}
+		if (boundary.result != null)
+			validateCallValue(boundary.result, programRevision, 'function result boundary "${boundary.id}"', position);
+		final proof = boundary.anonymousStructure;
+		if (proof == null)
+			return;
+		final structure = Lambda.find(anonymousStructures.structures(), candidate -> candidate.id == proof.structureId);
+		if (structure == null
+			|| structure.semanticTypeId != proof.semanticTypeId
+			|| structure.revision != proof.structureRevision
+			|| structure.proofId != proof.structureProofId
+			|| structure.representationId != proof.representationId
+			|| structure.representationRevision != proof.representationRevision
+			|| structure.programRevision != programRevision) {
+			fail('function result boundary "${boundary.id}" does not match its sealed anonymous-object structure and representation revisions', position);
+		}
 	}
 
 	function validateCallValue(value:OcamlCallValuePlan, programRevision:String, owner:String, position:Position):Void {

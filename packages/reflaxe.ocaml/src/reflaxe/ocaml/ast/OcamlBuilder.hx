@@ -474,6 +474,8 @@ class OcamlBuilder {
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case PreserveNullableCarrier, PreserveDynamicReturnCarrier:
 								buildExpr(value);
+							case PreserveAnonymousCarrier:
+								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 							case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 							case _:
@@ -503,7 +505,7 @@ class OcamlBuilder {
 			case BoxAndRecoverExactValue, BoxAndRecoverNominalValue:
 				OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]),
 					OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
-			case PreserveNullableCarrier, PreserveDynamicReturnCarrier:
+			case PreserveNullableCarrier, PreserveAnonymousCarrier, PreserveDynamicReturnCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));
 			case BoxExactIntToNullableCarrier, BoxExactBoolToNullableCarrier:
 				OcamlExpr.EAnnot(OcamlExpr.EIdent(returnVarName), OcamlTypeExpr.TIdent(payload.outputCarrierTypeId));

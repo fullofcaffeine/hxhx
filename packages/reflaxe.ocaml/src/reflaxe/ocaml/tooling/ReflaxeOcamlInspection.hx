@@ -7,6 +7,7 @@ import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructure;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionAnonymousStructureOperation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionIMapInterfaceConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
@@ -68,12 +69,13 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
-	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v1";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v2";
 	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_INT_RESULT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EXACT_STRING_RESULT_PROOF_ID = "non-generic-instance-exact-string-function-result-v1";
 	static inline final NON_GENERIC_INSTANCE_EFFECT_ONLY_VOID_RESULT_PROOF_ID = "non-generic-instance-effect-only-void-function-result-v1";
+	static inline final STATIC_NULLABLE_ANONYMOUS_RESULT_PROOF_ID = "static-nullable-anonymous-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
@@ -81,7 +83,7 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v74";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v75";
 	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v10";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
@@ -113,7 +115,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 41,
+			schemaVersion: 42,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -426,8 +428,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 64) {
-						throw 'Unsupported lowering report schema $version; expected 64.';
+					if (version != 65) {
+						throw 'Unsupported lowering report schema $version; expected 65.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -450,12 +452,13 @@ class ReflaxeOcamlInspection {
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
-					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries);
+					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries,
+						anonymousStructures.structures);
 					final controlTargets = inspectControlTargets(value);
 					final controls = inspectControls(value, representation, arrayLiteralProducers, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final controlAdmissions = inspectControlAdmissions(value, controls, controlTargets, controlCatches);
-					requireFunctionResultCoverage(functionResultBoundaries, controlAdmissions);
+					requireFunctionResultCoverage(functionResultBoundaries, controlAdmissions, controls);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
@@ -807,7 +810,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v20")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v21")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -931,6 +934,19 @@ class ReflaxeOcamlInspection {
 								&& payload.conversion == "preserve-nullable-carrier"
 								&& payload.proofId == "exact-nullable-carrier-early-return-control-v1"
 								&& control.proofId == "exact-nullable-carrier-early-return-control-v1";
+							final anonymousDecision = representationById.get(payload.inputRepresentationId);
+							final anonymousPayloadValid = StringTools.startsWith(payload.inputSemanticTypeId, "anonymous{")
+								&& StringTools.endsWith(payload.inputSemanticTypeId, "}")
+								&& payload.inputCarrierTypeId == "Obj.t"
+								&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
+								&& sameSides
+								&& anonymousDecision != null
+								&& anonymousDecision.revision == payload.representationRevision
+								&& anonymousDecision.boxingPolicy == "direct-runtime-container"
+								&& payload.nominalRepresentation == null
+								&& payload.conversion == "preserve-anonymous-carrier"
+								&& payload.proofId == "exact-anonymous-carrier-early-return-control-v1"
+								&& control.proofId == "exact-anonymous-carrier-early-return-control-v1";
 							final dynamicPayloadValid = payload.inputSemanticTypeId == "Dynamic"
 								&& payload.inputCarrierTypeId == "Obj.t"
 								&& payload.inputRepresentationId == "representation:Dynamic:internal-value"
@@ -977,9 +993,9 @@ class ReflaxeOcamlInspection {
 								&& control.proofId == "exact-monomorphic-class-early-return-control-v1";
 							if (!commonPayloadValid
 								|| payload.proofClaim.length == 0
-								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !dynamicPayloadValid
+								|| (!exactPayloadValid && !nominalPayloadValid && !nullablePayloadValid && !anonymousPayloadValid && !dynamicPayloadValid
 									&& !nullableIntConversionValid && !nullableBoolConversionValid)) {
-								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, Dynamic-carrier, or primitive-to-nullable payload crossing.';
+								throw 'Control decision "${control.id}" has an invalid exact-value, nominal, nullable-carrier, anonymous-object, Dynamic-carrier, or primitive-to-nullable payload crossing.';
 							}
 						case _:
 							throw 'Control decision "${control.id}" has unsupported return mechanism "${control.mechanism}".';
@@ -1540,7 +1556,8 @@ class ReflaxeOcamlInspection {
 		callable-derived entries to remain exact copies of their callable owner.
 	**/
 	static function inspectFunctionResultBoundaries(value:Dynamic, representation:InspectionRepresentation,
-			callableBoundaries:Array<InspectionCallableBoundary>):Array<InspectionFunctionResultBoundary> {
+			callableBoundaries:Array<InspectionCallableBoundary>,
+			anonymousStructures:Array<InspectionAnonymousStructure>):Array<InspectionFunctionResultBoundary> {
 		if (requiredString(value, "functionResultBoundaryModel") != FUNCTION_RESULT_BOUNDARY_MODEL)
 			throw "Unsupported function-result boundary report model.";
 		final rawBoundaries = requiredArray(value, "functionResultBoundaries");
@@ -1556,6 +1573,9 @@ class ReflaxeOcamlInspection {
 		final callableById:Map<String, InspectionCallableBoundary> = [];
 		for (callable in callableBoundaries)
 			callableById.set(callable.id, callable);
+		final anonymousStructureById:Map<String, InspectionAnonymousStructure> = [];
+		for (structure in anonymousStructures)
+			anonymousStructureById.set(structure.id, structure);
 
 		final boundaries = [for (entry in rawBoundaries) functionResultBoundary(entry)];
 		final ids:Map<String, Bool> = [];
@@ -1591,6 +1611,7 @@ class ReflaxeOcamlInspection {
 						throw 'Function-result boundary "${boundary.id}" has no callable owner.';
 					final callable = callableById.get(callableId);
 					if (callable == null
+						|| boundary.anonymousStructure != null
 						|| boundary.proofId != CALLABLE_FUNCTION_RESULT_PROOF_ID
 						|| boundary.sourceModuleId != callable.sourceModuleId
 						|| boundary.sourceTypeName != callable.sourceTypeName
@@ -1613,6 +1634,8 @@ class ReflaxeOcamlInspection {
 						"String", "string");
 				case "non-generic-instance-effect-only-void-declaration":
 					validateDeclarationEffectOnlyVoidResult(boundary);
+				case "static-nullable-anonymous-declaration":
+					validateDeclarationAnonymousResult(boundary, anonymousStructureById);
 				case _:
 					throw 'Function-result boundary "${boundary.id}" has unsupported source "${boundary.source}".';
 			}
@@ -1626,6 +1649,7 @@ class ReflaxeOcamlInspection {
 	/** Rejects any value carrier or callable owner on declaration-only instance `Void`. */
 	static function validateDeclarationEffectOnlyVoidResult(boundary:InspectionFunctionResultBoundary):Void {
 		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -1642,6 +1666,7 @@ class ReflaxeOcamlInspection {
 			semanticTypeId:String, carrierTypeId:String):Void {
 		final result = boundary.result;
 		if (boundary.callableBoundaryId != null
+			|| boundary.anonymousStructure != null
 			|| boundary.sourceModuleId.length == 0
 			|| boundary.sourceTypeName.length == 0
 			|| boundary.sourceFieldName.length == 0
@@ -1659,8 +1684,42 @@ class ReflaxeOcamlInspection {
 		}
 	}
 
+	/** Validates a result-only nullable anonymous object against its public structure inventory. */
+	static function validateDeclarationAnonymousResult(boundary:InspectionFunctionResultBoundary,
+			structuresById:Map<String, InspectionAnonymousStructure>):Void {
+		final result = boundary.result;
+		final proof = boundary.anonymousStructure;
+		final structure = proof == null ? null : structuresById.get(proof.structureId);
+		if (boundary.callableBoundaryId != null
+			|| boundary.functionId.indexOf("|static|function|") < 0
+			|| boundary.resultKind != "value"
+			|| result == null
+			|| proof == null
+			|| structure == null
+			|| structure.semanticTypeId != proof.semanticTypeId
+			|| structure.revision != proof.structureRevision
+			|| structure.proofId != proof.structureProofId
+			|| structure.representationId != proof.representationId
+			|| structure.representationRevision != proof.representationRevision
+			|| structure.programRevision != boundary.programRevision
+			|| result.inputSemanticTypeId != proof.semanticTypeId
+			|| result.inputCarrierTypeId != "Obj.t"
+			|| result.inputRepresentationId != proof.representationId
+			|| result.outputSemanticTypeId != proof.semanticTypeId
+			|| result.outputCarrierTypeId != "Obj.t"
+			|| result.outputRepresentationId != proof.representationId
+			|| result.index != -1
+			|| result.parameterOptional
+			|| result.conversion != "identity"
+			|| result.proofId != "identity-call-carrier-v1"
+			|| boundary.proofId != STATIC_NULLABLE_ANONYMOUS_RESULT_PROOF_ID) {
+			throw 'Function-result boundary "${boundary.id}" exceeds the declaration-only static nullable anonymous-object slice.';
+		}
+	}
+
 	static function functionResultBoundary(value:Dynamic):InspectionFunctionResultBoundary {
 		final resultKind = callResultKind(value);
+		final anonymousStructure = Reflect.field(value, "anonymousStructure");
 		return {
 			id: requiredString(value, "id"),
 			source: requiredString(value, "source"),
@@ -1670,6 +1729,14 @@ class ReflaxeOcamlInspection {
 			sourceFieldName: requiredString(value, "sourceFieldName"),
 			resultKind: resultKind,
 			result: callResult(value, resultKind, "function-result-boundary"),
+			anonymousStructure: anonymousStructure == null ? null : {
+				semanticTypeId: requiredString(anonymousStructure, "semanticTypeId"),
+				structureId: requiredString(anonymousStructure, "structureId"),
+				structureRevision: requiredSha256Revision(anonymousStructure, "structureRevision"),
+				structureProofId: requiredString(anonymousStructure, "structureProofId"),
+				representationId: requiredString(anonymousStructure, "representationId"),
+				representationRevision: requiredSha256Revision(anonymousStructure, "representationRevision")
+			},
 			profileEligibility: requiredStringArray(value, "profileEligibility"),
 			reason: requiredString(value, "reason"),
 			proofId: requiredString(value, "proofId"),
@@ -1697,8 +1764,18 @@ class ReflaxeOcamlInspection {
 			&& left.proofClaim == right.proofClaim;
 	}
 
-	/** Requires every admitted root early-return family to name its result owner. */
-	static function requireFunctionResultCoverage(boundaries:Array<InspectionFunctionResultBoundary>, admissions:Array<OcamlControlAdmissionSnapshot>):Void {
+	/**
+		Requires every admitted root early-return family to name its result owner.
+
+		A nullable anonymous-object return has one extra ownership rule: the private
+		return signal must preserve the exact anonymous structure and representation
+		selected for that function's normal object-literal result. Checking the two
+		report sections together prevents a plausible-looking control record from
+		borrowing another function's `Obj.t` carrier or inventing a shape after typed
+		planning has finished.
+	**/
+	static function requireFunctionResultCoverage(boundaries:Array<InspectionFunctionResultBoundary>, admissions:Array<OcamlControlAdmissionSnapshot>,
+			controls:Array<InspectionControl>):Void {
 		final byFunction:Map<String, InspectionFunctionResultBoundary> = [];
 		for (boundary in boundaries)
 			byFunction.set(boundary.functionId, boundary);
@@ -1710,6 +1787,35 @@ class ReflaxeOcamlInspection {
 				&& returns.occurrenceCount > 0
 				&& !byFunction.exists(admission.functionId)) {
 				throw 'Control admission "${admission.id}" admits return transfers without a function-result boundary.';
+			}
+		}
+		for (control in controls) {
+			final payload = control.payload;
+			if (control.kind != "return" || payload == null)
+				continue;
+			if (payload.conversion != "preserve-anonymous-carrier")
+				continue;
+			final boundary = byFunction.get(control.functionId);
+			if (boundary == null)
+				throw 'Control decision "${control.id}" does not match its function-owned nullable anonymous-object result boundary.';
+			final proof = boundary.anonymousStructure;
+			if (proof == null)
+				throw 'Control decision "${control.id}" does not match its function-owned nullable anonymous-object result boundary.';
+			if (boundary.source != "static-nullable-anonymous-declaration"
+				|| boundary.callableBoundaryId != null
+				|| boundary.programRevision != control.programRevision
+				|| boundary.bodyRevision != control.bodyRevision
+				|| boundary.pipelineRevision != control.pipelineRevision
+				|| payload.inputSemanticTypeId != proof.semanticTypeId
+				|| payload.outputSemanticTypeId != proof.semanticTypeId
+				|| payload.inputCarrierTypeId != "Obj.t"
+				|| payload.outputCarrierTypeId != "Obj.t"
+				|| payload.inputRepresentationId != proof.representationId
+				|| payload.outputRepresentationId != proof.representationId
+				|| payload.representationRevision != proof.representationRevision
+				|| payload.proofId != "exact-anonymous-carrier-early-return-control-v1"
+				|| control.proofId != "exact-anonymous-carrier-early-return-control-v1") {
+				throw 'Control decision "${control.id}" does not match its function-owned nullable anonymous-object result boundary.';
 			}
 		}
 	}

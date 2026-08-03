@@ -162,6 +162,18 @@ class OcamlAnonymousStructurePlan {
 	}
 
 	/**
+		Reports whether this request already sealed the exact typed object literal.
+
+		Callers use this only to keep a narrow optional feature fail-closed. A `false`
+		result does not authorize reconstructing the object's shape from its type;
+		the caller must decline that feature and leave the existing syntax path in
+		control.
+	**/
+	public function hasLiteral(expression:TypedExpr):Bool {
+		return literalByExpression.exists(expression);
+	}
+
+	/**
 		Returns a read, plain-write, or admitted `Int +=` plan only when this
 		function proved that the receiver came from a direct literal.
 
