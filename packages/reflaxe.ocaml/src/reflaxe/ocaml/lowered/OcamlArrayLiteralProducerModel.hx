@@ -40,11 +40,13 @@ typedef OcamlArrayLiteralEvaluationStep = {
 }
 
 /**
-	One immutable construction decision for a direct flat `Array<Int>` literal.
+	One immutable construction decision for an admitted direct flat array literal.
 
 	The decision is a plain-value receipt created before OCaml syntax exists. It
 	binds the literal to the current program's represented-array descriptor and
-	records exactly one evaluation and one store for each source element.
+	records exactly one evaluation and one store for each source element. The
+	descriptor supplies the exact element family; this record never guesses it from
+	the target carrier text.
 **/
 typedef OcamlArrayLiteralProducerDecision = {
 	final id:String;
@@ -74,10 +76,32 @@ typedef OcamlArrayLiteralProducerDecision = {
 
 /** Closed identities and validation shared by planning, reports, and syntax. */
 class OcamlArrayLiteralProducerContract {
-	public static inline final MODEL_REVISION = "ocaml-represented-array-literal-producer-v1";
+	public static inline final MODEL_REVISION = "ocaml-represented-array-literal-producer-v2";
 	public static inline final CONSTRUCTION_POLICY = "create-then-evaluate-and-push-in-order";
-	public static inline final PROOF_ID = "direct-array-int-literal-construction-v1";
-	public static inline final PROOF_CLAIM = "This occurrence allocates one direct represented Array<Int>, evaluates each exact Int element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.";
+	public static inline final INT_PROOF_ID = "direct-array-int-literal-construction-v1";
+	public static inline final INT_PROOF_CLAIM = "This occurrence allocates one direct represented Array<Int>, evaluates each exact Int element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.";
+	public static inline final STRING_PROOF_ID = "direct-array-string-literal-construction-v1";
+	public static inline final STRING_PROOF_CLAIM = "This occurrence allocates one direct represented Array<String>, evaluates each exact String element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.";
+
+	/** Returns the exact construction proof for one already-admitted element family. */
+	public static function proofIdFor(elementSemanticTypeId:String):String {
+		return switch (elementSemanticTypeId) {
+			case "Int": INT_PROOF_ID;
+			case "String": STRING_PROOF_ID;
+			case _:
+				throw 'reflaxe.ocaml [ocaml-array-literal:unsupported-element-family]: $elementSemanticTypeId has no literal-construction proof';
+		};
+	}
+
+	/** Returns the human-readable behavior protected by one family proof. */
+	public static function proofClaimFor(elementSemanticTypeId:String):String {
+		return switch (elementSemanticTypeId) {
+			case "Int": INT_PROOF_CLAIM;
+			case "String": STRING_PROOF_CLAIM;
+			case _:
+				throw 'reflaxe.ocaml [ocaml-array-literal:unsupported-element-family]: $elementSemanticTypeId has no literal-construction proof';
+		};
+	}
 
 	/** True only for the complete revision form emitted by the compiler. */
 	static function isSha256Revision(value:String):Bool {
@@ -222,6 +246,7 @@ class OcamlArrayLiteralProducerContract {
 	public static function requireDecision(decision:OcamlArrayLiteralProducerDecision):Void {
 		if (decision == null)
 			throw "reflaxe.ocaml [ocaml-array-literal:invalid-producer]: array literal producer decision is null";
+		final family = familyFor(decision.elementSemanticTypeId);
 		final binding:OcamlFunctionPlanBinding = {
 			functionId: decision.functionId,
 			programRevision: decision.programRevision,
@@ -235,25 +260,25 @@ class OcamlArrayLiteralProducerContract {
 			|| decision.source.min < 0
 			|| decision.source.max < decision.source.min
 			|| decision.literalOrdinal < 0
-			|| decision.arraySemanticTypeId != "Array<Int>"
-			|| decision.arrayCarrierTypeId != "int HxArray.t"
-			|| decision.resultRepresentationId != "representation:Array<Int>:internal-value"
+			|| family == null
+			|| decision.arraySemanticTypeId != family.arraySemanticTypeId
+			|| decision.arrayCarrierTypeId != family.arrayCarrierTypeId
+			|| decision.resultRepresentationId != family.resultRepresentationId
 			|| !isSha256Revision(decision.resultRepresentationRevision)
-			|| decision.arrayDescriptorId != "represented-array:Array<Int>"
+			|| decision.arrayDescriptorId != family.arrayDescriptorId
 			|| !isSha256Revision(decision.arrayDescriptorRevision)
-			|| decision.elementSemanticTypeId != "Int"
-			|| decision.elementCarrierTypeId != "int"
-			|| decision.elementRepresentationId != "representation:Int:array-element"
+			|| decision.elementCarrierTypeId != family.elementCarrierTypeId
+			|| decision.elementRepresentationId != family.elementRepresentationId
 			|| !isSha256Revision(decision.elementRepresentationRevision)
 			|| decision.constructionPolicy != CONSTRUCTION_POLICY
-			|| decision.proofId != PROOF_ID
-			|| decision.proofClaim != PROOF_CLAIM
+			|| decision.proofId != family.proofId
+			|| decision.proofClaim != family.proofClaim
 			|| decision.profileEligibility.join(",") != "metal,portable"
 			|| decision.functionId.length == 0
 			|| decision.programRevision.length == 0
 			|| decision.bodyRevision.length == 0
 			|| decision.pipelineRevision.length == 0) {
-			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-producer]: producer "${decision.id}" does not match the direct represented Array<Int> literal contract';
+			throw 'reflaxe.ocaml [ocaml-array-literal:invalid-producer]: producer "${decision.id}" does not match an admitted direct represented array literal contract';
 		}
 		final elementIds:Map<String, Bool> = [];
 		for (index in 0...decision.elements.length) {
@@ -287,6 +312,48 @@ class OcamlArrayLiteralProducerContract {
 				throw 'reflaxe.ocaml [ocaml-array-literal:invalid-evaluation-schedule]: producer "${decision.id}" changed construction step $index';
 			}
 		}
+	}
+
+	/**
+		Returns the closed semantic and carrier identity for one producer family.
+
+		This is deliberately a small exact table rather than a carrier-string parser.
+		A new element family must first prove its own array-element representation and
+		literal behavior before it can add another row.
+	**/
+	static function familyFor(elementSemanticTypeId:String):Null<{
+		final arraySemanticTypeId:String;
+		final arrayCarrierTypeId:String;
+		final resultRepresentationId:String;
+		final arrayDescriptorId:String;
+		final elementCarrierTypeId:String;
+		final elementRepresentationId:String;
+		final proofId:String;
+		final proofClaim:String;
+	}> {
+		return switch (elementSemanticTypeId) {
+			case "Int": {
+					arraySemanticTypeId: "Array<Int>",
+					arrayCarrierTypeId: "int HxArray.t",
+					resultRepresentationId: "representation:Array<Int>:internal-value",
+					arrayDescriptorId: "represented-array:Array<Int>",
+					elementCarrierTypeId: "int",
+					elementRepresentationId: "representation:Int:array-element",
+					proofId: INT_PROOF_ID,
+					proofClaim: INT_PROOF_CLAIM
+				};
+			case "String": {
+					arraySemanticTypeId: "Array<String>",
+					arrayCarrierTypeId: "string HxArray.t",
+					resultRepresentationId: "representation:Array<String>:internal-value",
+					arrayDescriptorId: "represented-array:Array<String>",
+					elementCarrierTypeId: "string",
+					elementRepresentationId: "representation:String:array-element",
+					proofId: STRING_PROOF_ID,
+					proofClaim: STRING_PROOF_CLAIM
+				};
+			case _: null;
+		};
 	}
 }
 #end

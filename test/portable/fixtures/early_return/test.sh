@@ -160,7 +160,7 @@ if (nestedArrayThrows[0].payload.arrayLiteralProducerId != null
 	fail('the local Array<Int> throw incorrectly claimed a direct-literal producer')
 }
 
-if (report.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v1'
+if (report.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v2'
 	|| report.arrayLiteralProducerCount !== report.arrayLiteralProducers.length
 	|| report.arrayLiteralProducerCount !== 3
 	|| !sha256.test(report.arrayLiteralProducerRevision)) {
@@ -649,7 +649,7 @@ const literalThrow = report.lowering.controls.find(control =>
 	control.kind === 'throw'
 	&& control.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
 	&& control.functionId.includes('|nested-function|'))
-if (report.lowering.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v1'
+if (report.lowering.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v2'
 	|| !/^sha256:[0-9a-f]{64}$/.test(report.lowering.arrayLiteralProducerRevision ?? '')
 	|| literalProducer?.elements.length !== 2
 	|| literalProducer.evaluationSchedule.map(step => step.kind).join(',')

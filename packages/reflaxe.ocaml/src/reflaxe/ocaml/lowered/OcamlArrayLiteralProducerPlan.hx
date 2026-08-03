@@ -9,6 +9,7 @@ import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEva
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlNormalizedRepresentedArray;
 
 /** What syntax planning knows about one typed array-literal occurrence. */
 enum OcamlArrayLiteralProducerLookup {
@@ -260,8 +261,40 @@ class OcamlArrayLiteralProducerPlanner {
 		return new OcamlArrayLiteralProducerPlan(decisions, byExpression);
 	}
 
+	/**
+		Builds one detached decision for an explicitly supplied direct array identity.
+
+		A detached decision is validated plain data that is not installed in the
+		request-local expression lookup, so target syntax and control cannot consume it.
+		This lets a later element family prove its construction record before an atomic
+		hard cut enables the real compiler path.
+	**/
+	public function planDetachedLiteral(expression:TypedExpr, normalized:OcamlNormalizedRepresentedArray,
+			literalOrdinal:Int):OcamlArrayLiteralProducerDecision {
+		if (literalOrdinal < 0)
+			throw "reflaxe.ocaml [ocaml-array-literal:invalid-literal-ordinal]: a detached literal ordinal cannot be negative";
+		final items = switch (expression.expr) {
+			case TArrayDecl(values): values;
+			case _:
+				throw "reflaxe.ocaml [ocaml-array-literal:not-array-literal]: the detached producer seam requires one typed array literal";
+		};
+		if (!matchesNormalizedArrayType(expression.t, normalized)
+			|| !Lambda.foreach(items, item -> matchesElementType(item.t, normalized.elementSemanticTypeId))) {
+			throw 'reflaxe.ocaml [ocaml-array-literal:typed-identity-mismatch]: the typed literal does not match ${normalized.arraySemanticTypeId}/${normalized.elementSemanticTypeId}';
+		}
+		return decisionForNormalized(expression, items, literalOrdinal, normalized);
+	}
+
 	function decisionFor(expression:TypedExpr, items:Array<TypedExpr>, literalOrdinal:Int):OcamlArrayLiteralProducerDecision {
-		final resultRepresentation = representations.selectRepresentedArray(expression.t, OcamlRepresentationDomain.InternalValue);
+		final normalized = OcamlRepresentationRegistry.normalizedDirectFlatArray(expression.t);
+		if (normalized == null)
+			throw "reflaxe.ocaml [ocaml-array-literal:unsupported-array-shape]: the active producer accepts only its current direct represented array family";
+		return decisionForNormalized(expression, items, literalOrdinal, normalized);
+	}
+
+	function decisionForNormalized(expression:TypedExpr, items:Array<TypedExpr>, literalOrdinal:Int,
+			normalized:OcamlNormalizedRepresentedArray):OcamlArrayLiteralProducerDecision {
+		final resultRepresentation = representations.selectNormalizedRepresentedArray(normalized, OcamlRepresentationDomain.InternalValue);
 		if (resultRepresentation.programRevision != binding.programRevision
 			|| resultRepresentation.arrayDescriptorId == null
 			|| resultRepresentation.arrayDescriptorRevision == null) {
@@ -303,13 +336,36 @@ class OcamlArrayLiteralProducerPlanner {
 			elements: elements,
 			evaluationSchedule: OcamlArrayLiteralProducerContract.schedule(elements),
 			constructionPolicy: OcamlArrayLiteralProducerContract.CONSTRUCTION_POLICY,
-			proofId: OcamlArrayLiteralProducerContract.PROOF_ID,
-			proofClaim: OcamlArrayLiteralProducerContract.PROOF_CLAIM,
+			proofId: OcamlArrayLiteralProducerContract.proofIdFor(descriptor.elementSemanticTypeId),
+			proofClaim: OcamlArrayLiteralProducerContract.proofClaimFor(descriptor.elementSemanticTypeId),
 			profileEligibility: descriptor.profileEligibility.copy(),
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,
 			pipelineRevision: binding.pipelineRevision
+		};
+	}
+
+	static function matchesNormalizedArrayType(type:haxe.macro.Type, normalized:OcamlNormalizedRepresentedArray):Bool {
+		if (normalized.arraySemanticTypeId != 'Array<${normalized.elementSemanticTypeId}>'
+			|| normalized.sourceForm != "direct-builtin-array"
+			|| normalized.closureKind != "closed-monomorphic"
+			|| normalized.outerWrapperKind != "none"
+			|| normalized.nestingKind != "flat") {
+			return false;
+		}
+		return switch (type) {
+			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" && matchesElementType(elementType,
+					normalized.elementSemanticTypeId);
+			case _: false;
+		};
+	}
+
+	static function matchesElementType(type:haxe.macro.Type, semanticTypeId:String):Bool {
+		return switch (semanticTypeId) {
+			case "Int": OcamlRepresentationRegistry.isExactInt(type);
+			case "String": OcamlRepresentationRegistry.isExactString(type);
+			case _: false;
 		};
 	}
 }
