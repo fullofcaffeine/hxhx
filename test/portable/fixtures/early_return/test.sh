@@ -34,7 +34,7 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 61
+if (report.schemaVersion !== 62
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
@@ -75,6 +75,8 @@ const hexValueResult = report.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
 const declarationOnlyResults = report.functionResultBoundaries.filter(boundary =>
 	boundary.source === 'static-inline-exact-int-declaration')
+const instanceExactIntResults = report.functionResultBoundaries.filter(boundary =>
+	boundary.source === 'non-generic-instance-exact-int-declaration')
 if (familyFor(admittedBranch, 'return')?.status !== 'admitted'
 	|| familyFor(unusedPrint, 'return')?.status !== 'not-needed') {
 	fail('the control admission inventory conflated admitted, blocked, and unused return families')
@@ -104,6 +106,40 @@ if (hexValueResult?.source !== 'static-inline-exact-int-declaration'
 	fail('StringTools._hexValue result ownership accidentally admitted a callable receiver, argument, or call boundary')
 }
 
+const stdioReadBytes = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('sys.io.Stdio|OcamlStdioInput|instance|function|readBytes|'))
+const stdioWriteBytes = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeBytes|'))
+if (instanceExactIntResults.length !== 2) {
+	fail(`expected the two concrete stdio instance Int results, got ${instanceExactIntResults.length}`)
+}
+for (const [name, admission] of [['readBytes', stdioReadBytes], ['writeBytes', stdioWriteBytes]]) {
+	const result = report.functionResultBoundaries.find(boundary => boundary.functionId === admission?.functionId)
+	if (familyFor(admission, 'return')?.status !== 'admitted'
+		|| familyFor(admission, 'return')?.occurrenceCount !== 1
+		|| familyFor(admission, 'return')?.decisionCount !== 1
+		|| result?.source !== 'non-generic-instance-exact-int-declaration'
+		|| result.callableBoundaryId != null
+		|| result.resultKind !== 'value'
+		|| result.result?.inputSemanticTypeId !== 'Int'
+		|| result.result?.inputCarrierTypeId !== 'int'
+		|| result.result?.inputRepresentationId !== 'representation:Int:internal-value'
+		|| result.result?.outputSemanticTypeId !== 'Int'
+		|| result.result?.outputCarrierTypeId !== 'int'
+		|| result.result?.outputRepresentationId !== 'representation:Int:internal-value'
+		|| result.result?.conversion !== 'identity'
+		|| result.proofId !== 'non-generic-instance-exact-int-function-result-v1'
+		|| report.callableBoundaries.some(boundary => boundary.functionId === admission.functionId)) {
+		fail(`OcamlStdio ${name} did not receive an exact-Int result without receiver, argument, or call admission`)
+	}
+}
+if (familyFor(stdioReadBytes, 'throw')?.status !== 'blocked'
+	|| familyFor(stdioReadBytes, 'throw')?.blockers[0]?.code !== 'throw-value-unrepresented'
+	|| familyFor(stdioReadBytes, 'throw')?.blockers[0]?.semanticTypeId !== 'haxe.io.Eof'
+	|| familyFor(stdioWriteBytes, 'throw')?.status !== 'not-needed') {
+	fail('the instance result slice accidentally changed the separate Eof throw boundary')
+}
+
 const stringToolsSource = fs.readFileSync('out/StringTools.ml', 'utf8')
 const hexValueStart = stringToolsSource.indexOf('let _hexValue =')
 const hexValueEnd = stringToolsSource.indexOf('\nlet ', hexValueStart + 1)
@@ -116,9 +152,23 @@ if (hexValueStart < 0
 	fail('StringTools._hexValue still uses legacy result recovery instead of its checked return plan')
 }
 
+const stdioSource = fs.readFileSync('out/sys_io_Stdio.ml', 'utf8')
+for (const functionName of ['ocamlstdioinput_readBytes__impl', 'ocamlstdiooutput_writeBytes__impl']) {
+	const start = stdioSource.indexOf(`let ${functionName} =`)
+	const end = stdioSource.indexOf('\nlet ', start + 1)
+	const body = stdioSource.slice(start, end)
+	if (start < 0
+		|| end < 0
+		|| !body.includes('HxRuntime.Hx_return')
+		|| body.includes('__fallback_result')
+		|| body.includes('Obj.magic __fallback_result')) {
+		fail(`${functionName} still recovers its exact Int result through the legacy fallback`)
+	}
+}
+
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 44) {
-	fail(`expected 44 represented return decisions, including StringTools._hexValue and the URL-decoder observer, got ${returnControls.length}`)
+if (returnControls.length !== 46) {
+	fail(`expected 46 represented return decisions, including StringTools._hexValue and the two stdio instance methods, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -430,7 +480,7 @@ for (const control of returnControls) {
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
 			? control.pipelineRevision !== 'ocaml-nested-function-plans-v10'
-			: control.pipelineRevision !== 'ocaml-function-plans-v71')) {
+			: control.pipelineRevision !== 'ocaml-function-plans-v72')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -590,7 +640,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v71'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v72'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -746,7 +796,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 38
+if (report.schemaVersion !== 39
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
@@ -756,9 +806,9 @@ if (report.schemaVersion !== 38
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 44
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 46
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 44 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 46 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -775,6 +825,22 @@ if (!/^sha256:[0-9a-f]{64}$/.test(report.lowering.functionResultBoundaryRevision
 	|| declarationOnlyResults[0]?.id !== hexValueResult.id
 	|| report.lowering.callableBoundaries.some(boundary => boundary.functionId === hexValueResult.functionId)) {
 	throw new Error('public inspection did not preserve result-only ownership for StringTools._hexValue')
+}
+const instanceExactIntResults = report.lowering.functionResultBoundaries.filter(boundary =>
+	boundary.source === 'non-generic-instance-exact-int-declaration')
+if (instanceExactIntResults.length !== 2
+	|| !instanceExactIntResults.some(boundary =>
+		boundary.functionId.includes('sys.io.Stdio|OcamlStdioInput|instance|function|readBytes|'))
+	|| !instanceExactIntResults.some(boundary =>
+		boundary.functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeBytes|'))
+	|| instanceExactIntResults.some(boundary =>
+		boundary.callableBoundaryId != null
+		|| boundary.result?.inputSemanticTypeId !== 'Int'
+		|| boundary.result?.inputCarrierTypeId !== 'int'
+		|| boundary.result?.outputRepresentationId !== 'representation:Int:internal-value'
+		|| boundary.proofId !== 'non-generic-instance-exact-int-function-result-v1'
+		|| report.lowering.callableBoundaries.some(callable => callable.functionId === boundary.functionId))) {
+	throw new Error('public inspection did not preserve result-only ownership for the two stdio instance methods')
 }
 const blockedParseAdmission = report.lowering.controlAdmissions.find(admission =>
 	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
@@ -880,7 +946,7 @@ if (nominalCall?.proofId !== 'typed-function-value-signature-matrix-v1:(Bool)->_
 }
 NODE
 
-for mutation in duplicate missing stale-program carrier representation conversion callable-owner; do
+for mutation in duplicate missing stale-program carrier representation conversion callable-owner instance-source instance-callable-owner; do
 	invalid_output="$INVALID_RESULT_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
@@ -889,10 +955,12 @@ const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
-const index = report.functionResultBoundaries.findIndex(entry =>
-	entry.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
+const targetsInstance = mutation === 'instance-source' || mutation === 'instance-callable-owner'
+const index = report.functionResultBoundaries.findIndex(entry => targetsInstance
+	? entry.functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeBytes|')
+	: entry.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
 if (index < 0) {
-	throw new Error('missing StringTools._hexValue function-result boundary to corrupt')
+	throw new Error('missing selected function-result boundary to corrupt')
 }
 const boundary = report.functionResultBoundaries[index]
 switch (mutation) {
@@ -915,6 +983,15 @@ switch (mutation) {
 		boundary.result.conversion = 'checked-unbox-nullable-int'
 		break
 	case 'callable-owner':
+		boundary.source = 'callable-boundary'
+		boundary.callableBoundaryId = 'callable-boundary:missing'
+		boundary.proofId = 'callable-function-result-boundary-v1'
+		break
+	case 'instance-source':
+		boundary.source = 'static-inline-exact-int-declaration'
+		boundary.proofId = 'static-inline-exact-int-function-result-v1'
+		break
+	case 'instance-callable-owner':
 		boundary.source = 'callable-boundary'
 		boundary.callableBoundaryId = 'callable-boundary:missing'
 		boundary.proofId = 'callable-function-result-boundary-v1'
@@ -1239,4 +1316,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=44 function_results=48 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=46 function_results=51 producers=4"

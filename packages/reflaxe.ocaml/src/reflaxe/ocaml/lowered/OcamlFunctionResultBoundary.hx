@@ -16,6 +16,7 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 enum abstract OcamlFunctionResultBoundarySource(String) from String to String {
 	final CallableBoundary = "callable-boundary";
 	final StaticInlineExactIntDeclaration = "static-inline-exact-int-declaration";
+	final NonGenericInstanceExactIntDeclaration = "non-generic-instance-exact-int-declaration";
 }
 
 /**
@@ -53,24 +54,27 @@ class OcamlFunctionResultBoundary {
 	public static inline final MODEL = "typed-ocaml-function-result-boundary-v1";
 	public static inline final CALLABLE_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
 	public static inline final STATIC_INLINE_EXACT_INT_PROOF_ID = "static-inline-exact-int-function-result-v1";
+	public static inline final NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID = "non-generic-instance-exact-int-function-result-v1";
 
 	/**
 		Selects one result boundary without expanding the callable ABI.
 
 		Existing admitted static methods reuse their callable result. The new
-		declaration-only path is intentionally limited to a non-generic static inline
-		function with one required exact-`Int` input, an exact-`Int` result, and a
-		function-owned return. That shape covers `StringTools._hexValue` without
-		admitting its parameter or calls through a new compiler contract.
+		Declaration-only paths currently admit two exact-`Int` result shapes: the
+		existing static inline `_hexValue` tracer and a concrete non-generic instance
+		method. The instance rule deliberately ignores receiver and parameter ABI;
+		it proves only the value produced when the already-emitted method finishes.
 	**/
 	public static function select(data:ClassFuncData, callable:Null<OcamlCallableBoundaryPlan>, representations:OcamlRepresentationRegistry,
 			binding:OcamlFunctionPlanBinding):Null<OcamlFunctionResultBoundaryPlan> {
 		if (callable != null
-			&& (callable.kind == OcamlCallKind.DirectStaticHaxeMethod || callable.kind == OcamlCallKind.TypedFunctionValue)) {
+			&& (callable.kind == OcamlCallKind.DirectStaticHaxeMethod
+				|| callable.kind == OcamlCallKind.DirectInstanceHaxeMethod
+				|| callable.kind == OcamlCallKind.TypedFunctionValue)) {
 			return fromCallable(callable);
 		}
-		if (data.expr == null || !data.isStatic || data.field.isExtern || data.classType.isExtern || data.classType.isInterface
-			|| data.classType.params.length > 0 || data.field.params.length > 0 || data.field.overloads.get().length > 0) {
+		if (data.expr == null || data.field.isExtern || data.classType.isExtern || data.classType.isInterface || data.classType.params.length > 0
+			|| data.field.params.length > 0 || data.field.overloads.get().length > 0) {
 			return null;
 		}
 		switch (data.classType.kind) {
@@ -78,22 +82,43 @@ class OcamlFunctionResultBoundary {
 			case _:
 				return null;
 		}
-		switch (data.field.kind) {
-			case FMethod(MethInline):
-			case _:
-				return null;
-		}
-		final resultType = switch (TypeTools.follow(data.field.type)) {
-			case TFun(arguments, result)
-				if (arguments.length == 1
-					&& !arguments[0].opt
-					&& OcamlRepresentationRegistry.isExactInt(arguments[0].t)
-					&& OcamlRepresentationRegistry.isExactInt(result)):
-				result;
-			case _: null;
+		final exactIntResult = switch (TypeTools.follow(data.field.type)) {
+			case TFun(_, result): OcamlRepresentationRegistry.isExactInt(result);
+			case _: false;
 		};
-		if (resultType == null)
+		if (!exactIntResult)
 			return null;
+
+		var source:OcamlFunctionResultBoundarySource;
+		var reason:String;
+		var proofId:String;
+		var proofClaim:String;
+		if (data.isStatic) {
+			final matchesStaticTracer = switch (data.field.kind) {
+				case FMethod(MethInline):
+					switch (TypeTools.follow(data.field.type)) {
+						case TFun(arguments, _): arguments.length == 1 && !arguments[0].opt && OcamlRepresentationRegistry.isExactInt(arguments[0].t);
+						case _: false;
+					}
+				case _: false;
+			};
+			if (!matchesStaticTracer)
+				return null;
+			source = OcamlFunctionResultBoundarySource.StaticInlineExactIntDeclaration;
+			reason = "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.";
+			proofId = STATIC_INLINE_EXACT_INT_PROOF_ID;
+			proofClaim = "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.";
+		} else {
+			switch (data.field.kind) {
+				case FMethod(MethNormal):
+				case _:
+					return null;
+			}
+			source = OcamlFunctionResultBoundarySource.NonGenericInstanceExactIntDeclaration;
+			reason = "The final typed declaration is a concrete non-generic instance method with an exact Int result. The compiler may recover its function-owned returns as Int without deciding how a receiver, parameter, override, or call site is represented.";
+			proofId = NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID;
+			proofClaim = "The followed instance-method result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
+		}
 		final representation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
 		final result:OcamlCallValuePlan = {
 			index: -1,
@@ -110,7 +135,7 @@ class OcamlFunctionResultBoundary {
 		};
 		final selected:OcamlFunctionResultBoundaryPlan = {
 			id: "function-result-boundary:" + Sha256.encode(binding.functionId).substr(0, 24),
-			source: OcamlFunctionResultBoundarySource.StaticInlineExactIntDeclaration,
+			source: source,
 			callableBoundaryId: null,
 			sourceModuleId: data.classType.module,
 			sourceTypeName: data.classType.name,
@@ -118,9 +143,9 @@ class OcamlFunctionResultBoundary {
 			resultKind: OcamlCallResultKind.Value,
 			result: result,
 			profileEligibility: ["metal", "portable"],
-			reason: "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.",
-			proofId: STATIC_INLINE_EXACT_INT_PROOF_ID,
-			proofClaim: "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.",
+			reason: reason,
+			proofId: proofId,
+			proofClaim: proofClaim,
 			functionId: binding.functionId,
 			programRevision: binding.programRevision,
 			bodyRevision: binding.bodyRevision,
@@ -140,7 +165,7 @@ class OcamlFunctionResultBoundary {
 	**/
 	public static function retainAfterControlPlanning(boundary:Null<OcamlFunctionResultBoundaryPlan>,
 			hasAdmittedReturn:Bool):Null<OcamlFunctionResultBoundaryPlan> {
-		if (boundary != null && boundary.source == OcamlFunctionResultBoundarySource.StaticInlineExactIntDeclaration && !hasAdmittedReturn)
+		if (boundary != null && boundary.source != OcamlFunctionResultBoundarySource.CallableBoundary && !hasAdmittedReturn)
 			return null;
 		return boundary;
 	}
@@ -223,23 +248,37 @@ class OcamlFunctionResultBoundary {
 					|| boundary.proofId != CALLABLE_RESULT_PROOF_ID)
 					throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: callable-derived result boundary "${boundary.id}" has no callable owner';
 			case StaticInlineExactIntDeclaration:
-				final result = boundary.result;
-				if (boundary.callableBoundaryId != null
-					|| boundary.sourceModuleId.length == 0
-					|| boundary.sourceTypeName.length == 0
-					|| boundary.sourceFieldName.length == 0
-					|| boundary.resultKind != OcamlCallResultKind.Value
-					|| result == null
-					|| result.inputSemanticTypeId != "Int"
-					|| result.inputCarrierTypeId != "int"
-					|| result.inputRepresentationId != "representation:Int:internal-value"
-					|| result.outputSemanticTypeId != "Int"
-					|| result.outputCarrierTypeId != "int"
-					|| result.outputRepresentationId != "representation:Int:internal-value"
-					|| result.conversion != OcamlCallCarrierConversion.Identity
-					|| boundary.proofId != STATIC_INLINE_EXACT_INT_PROOF_ID) {
-					throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the static inline exact-Int slice';
-				}
+				requireDeclarationExactInt(boundary, STATIC_INLINE_EXACT_INT_PROOF_ID, "|static|function|", "static inline");
+			case NonGenericInstanceExactIntDeclaration:
+				requireDeclarationExactInt(boundary, NON_GENERIC_INSTANCE_EXACT_INT_PROOF_ID, "|instance|function|", "non-generic instance");
+		}
+	}
+
+	/**
+		Checks the common exact-`Int` result without mistaking it for call authority.
+
+		The function identity must also name the declaration mode selected by the
+		source record. This catches a report that relabels an instance method as the
+		static tracer (or vice versa) while leaving the carrier bytes unchanged.
+	**/
+	static function requireDeclarationExactInt(boundary:OcamlFunctionResultBoundaryPlan, expectedProofId:String, functionMode:String, label:String):Void {
+		final result = boundary.result;
+		if (boundary.callableBoundaryId != null
+			|| boundary.sourceModuleId.length == 0
+			|| boundary.sourceTypeName.length == 0
+			|| boundary.sourceFieldName.length == 0
+			|| boundary.functionId.indexOf(functionMode) < 0
+			|| boundary.resultKind != OcamlCallResultKind.Value
+			|| result == null
+			|| result.inputSemanticTypeId != "Int"
+			|| result.inputCarrierTypeId != "int"
+			|| result.inputRepresentationId != "representation:Int:internal-value"
+			|| result.outputSemanticTypeId != "Int"
+			|| result.outputCarrierTypeId != "int"
+			|| result.outputRepresentationId != "representation:Int:internal-value"
+			|| result.conversion != OcamlCallCarrierConversion.Identity
+			|| boundary.proofId != expectedProofId) {
+			throw 'reflaxe.ocaml [ocaml-function-result:invalid-plan]: declaration-derived result boundary "${boundary.id}" exceeds the $label exact-Int slice';
 		}
 	}
 

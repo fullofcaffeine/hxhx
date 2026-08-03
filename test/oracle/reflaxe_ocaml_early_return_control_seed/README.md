@@ -31,6 +31,13 @@ separately. The OCaml target preserves the invalid escape as `%G0`; that is an
 explicit target-library contract, not a false claim that every Haxe target
 agrees on malformed URLs.
 
+The `stdioZeroWrite` case is the public-behavior check for an instance method
+implemented by the OCaml standard-output wrapper. Interpreter and Neko call
+`Sys.stdout().writeBytes` with a zero-length buffer and prove that it returns
+`0` without adding output. The JavaScript route has no equivalent native
+system stream in this fixture, so it reports the same value without pretending
+to exercise that boundary. The OCaml route compiles and runs the real override.
+
 Run the upstream Haxe 4.3.7 oracle with:
 
 ```bash

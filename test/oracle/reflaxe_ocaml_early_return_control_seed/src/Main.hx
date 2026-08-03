@@ -1,3 +1,5 @@
+import haxe.io.Bytes;
+
 private class NestedReturnBox {
 	public final value:Int;
 
@@ -32,6 +34,22 @@ class Main {
 		} catch (_:Dynamic) {
 			return "error";
 		}
+	}
+
+	/**
+		Exercises the process-output implementation without changing stdout.
+
+		The OCaml build reaches the target-specific `writeBytes` override, whose
+		zero-length branch returns before any byte is written. JavaScript does not
+		expose the same system stream, so that route contributes the same observable
+		value without claiming to test the native stream boundary.
+	**/
+	static function stdioZeroLengthWrite():Int {
+		#if js
+		return 0;
+		#else
+		return Sys.stdout().writeBytes(Bytes.alloc(0), 0, 0);
+		#end
 	}
 
 	static function branch(value:Int):Int {
@@ -362,6 +380,7 @@ class Main {
 		printLine("urlLower=" + urlDecodeOutcome(encodedUrl("%4a")));
 		printLine("urlInvalid=" + urlDecodeOutcome(encodedUrl("%G0")));
 		printLine("urlEvaluationCount=" + urlDecodeEvaluationCount);
+		printLine("stdioZeroWrite=" + stdioZeroLengthWrite());
 		printLine("branch0=" + branch(0));
 		printLine("branch1=" + branch(1));
 		printLine("loop3=" + loop(3));
