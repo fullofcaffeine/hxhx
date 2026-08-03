@@ -533,7 +533,7 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [carrier])
 				]);
 				OcamlExpr.ELet(carrierName, built, OcamlExpr.EIf(isNull, carrier, normalized), false);
-			case BoxArrayIntThrowCarrier:
+			case BoxRepresentedArrayThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			case BoxNominalThrowCarrier:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
@@ -1000,15 +1000,17 @@ class OcamlBuilder {
 		return switch (choice) {
 			case Unmigrated(_):
 				null;
-			case ProgramDecision(representationId, semanticTypeId, domain):
+			case ProgramDecision(representationId, representationRevision, semanticTypeId, domain):
 				final decision = try {
 					representationRegistry.require(representationId, binding.programRevision);
 				} catch (error:Dynamic) {
 					return localStorageInvariant(Std.string(error), position);
 				}
-				if (decision.semanticTypeId != semanticTypeId || decision.domain != domain) {
+				if (decision.revision != representationRevision
+					|| decision.semanticTypeId != semanticTypeId
+					|| decision.domain != domain) {
 					return
-						localStorageInvariant('local $stableId expects $semanticTypeId in representation domain $domain, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
+						localStorageInvariant('local $stableId expects $representationId@$representationRevision for $semanticTypeId in representation domain $domain, but ${decision.id}@${decision.revision} selects ${decision.semanticTypeId} in ${decision.domain}',
 						position);
 				}
 				decision;

@@ -43,9 +43,15 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
-	/** Recognizes only a direct nominal `Array<Int>` carrier. */
-	static function isExactIntArray(type:Type):Bool {
-		return OcamlRepresentationRegistry.isExactArrayInt(type);
+	/**
+		Reports whether the represented-array registry can describe this array.
+
+		The current registry recognizes only direct flat `Array<Int>`. Asking for
+		the normalized descriptor input keeps this guard aligned with that single
+		owner instead of maintaining a second exact-type selector.
+	**/
+	static function isRepresentedArray(type:Type):Bool {
+		return OcamlRepresentationRegistry.normalizedDirectFlatArray(type) != null;
 	}
 
 	/** Recognizes an exact `Int` element place on a direct nominal `Array<Int>`. */
@@ -53,7 +59,7 @@ class OcamlPlaceInputPolicy {
 		if (!isExactInt(left.t))
 			return false;
 		return switch (left.expr) {
-			case TArray(receiver, index): isExactIntArray(receiver.t) && isExactInt(index.t);
+			case TArray(receiver, index): isRepresentedArray(receiver.t) && isExactInt(index.t);
 			case _: false;
 		}
 	}

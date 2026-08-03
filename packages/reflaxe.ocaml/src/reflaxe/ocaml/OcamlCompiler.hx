@@ -2754,8 +2754,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationDecisions,
-				functionPlanRegistry.anonymousStructureDecisions(), functionPlanRegistry.anonymousStructureOperations(),
-				functionPlanRegistry.structuralFieldDecisions(), functionPlanRegistry.localConversions(),
+				representationRegistry.representedArrays(), functionPlanRegistry.anonymousStructureDecisions(),
+				functionPlanRegistry.anonymousStructureOperations(), functionPlanRegistry.structuralFieldDecisions(), functionPlanRegistry.localConversions(),
 				functionPlanRegistry.containerElementRequiredConversionIds(), functionPlanRegistry.containerElementConversions(),
 				functionPlanRegistry.unsafeOperations(), functionPlanRegistry.iMapInterfaceConversions(), functionPlanRegistry.iMapInterfaceCalls(),
 				functionPlanRegistry.callDecisions(), functionPlanRegistry.callableBoundaries(), functionPlanRegistry.controlDecisions(),

@@ -136,7 +136,10 @@ class OcamlPlaceAssignmentPlanner {
 						case TConst(TThis): currentModuleId == receiverLayout.sourceModuleId && currentTypeName == receiverLayout.sourceTypeName;
 						case TLocal(local):
 							switch (localRepresentations.choiceFor(localIdentities.requireHostId(local.id).id)) {
-								case ProgramDecision(representationId, semanticTypeId, OcamlRepresentationDomain.InternalValue): representationId == receiverRepresentation.id && semanticTypeId == receiverLayout.semanticTypeId;
+								case ProgramDecision(representationId, representationRevision, semanticTypeId, OcamlRepresentationDomain.InternalValue):
+									representationId == receiverRepresentation.id
+									&& representationRevision == receiverRepresentation.revision
+									&& semanticTypeId == receiverLayout.semanticTypeId;
 								case _:
 									false;
 							}
@@ -207,9 +210,13 @@ class OcamlPlaceAssignmentPlanner {
 	function planArrayElement(originId:String, left:TypedExpr):Null<{place:OcamlLoweredArrayElementPlace, receiver:TypedExpr, index:TypedExpr}> {
 		return switch (left.expr) {
 			case TArray(receiver, index):
-				final receiverRepresentation = representations.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
+				final receiverRepresentation = representations.selectRepresentedArray(receiver.t, OcamlRepresentationDomain.InternalValue);
+				final descriptor = representations.requireRepresentedArray(receiverRepresentation.arrayDescriptorId,
+					receiverRepresentation.arrayDescriptorRevision, receiverRepresentation.programRevision);
 				final indexRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
-				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.ArrayElement);
+				final valueRepresentation = representations.require(descriptor.elementRepresentationId, receiverRepresentation.programRevision);
+				if (valueRepresentation.revision != descriptor.elementRepresentationRevision)
+					throw 'reflaxe.ocaml [ocaml-place:stale-array-element-representation]: ${descriptor.id} no longer matches ${valueRepresentation.id}@${valueRepresentation.revision}';
 				{
 					place: {
 						id: originId + ":place",

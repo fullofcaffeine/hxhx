@@ -125,6 +125,7 @@ typedef OcamlLocalConversionDecision = {
 typedef OcamlLocalRepresentationReference = {
 	final localId:String;
 	final representationId:String;
+	final representationRevision:String;
 	final semanticTypeId:String;
 	final domain:OcamlRepresentationDomain;
 }
@@ -132,7 +133,7 @@ typedef OcamlLocalRepresentationReference = {
 /** Complete representation status for one admitted or mutated local. */
 enum OcamlLocalRepresentationChoice {
 	/** Syntax must resolve this exact program-owned decision. */
-	ProgramDecision(representationId:String, semanticTypeId:String, domain:OcamlRepresentationDomain);
+	ProgramDecision(representationId:String, representationRevision:String, semanticTypeId:String, domain:OcamlRepresentationDomain);
 
 	/** This semantic type remains deliberately on the legacy mapper for now. */
 	Unmigrated(semanticTypeId:String);
@@ -178,7 +179,9 @@ class OcamlLocalRepresentationPlan {
 				throw 'reflaxe.ocaml [ocaml-representation:duplicate-local-choice]: local ${decision.localId} has more than one representation choice';
 			decisionsByLocalId.set(decision.localId, decision);
 			switch (decision.choice) {
-				case ProgramDecision(_, _, _):
+				case ProgramDecision(representationId, representationRevision, _, _):
+					if (representationId.length == 0 || !StringTools.startsWith(representationRevision, "sha256:"))
+						throw 'reflaxe.ocaml [ocaml-representation:invalid-local-reference]: local ${decision.localId} must bind one representation identity and exact revision';
 					admitted += 1;
 				case Unmigrated(_):
 					if (decision.initializerConversion != OcamlLocalCarrierConversion.LegacyCoercion
@@ -203,11 +206,11 @@ class OcamlLocalRepresentationPlan {
 			if (localDecision == null)
 				throw 'reflaxe.ocaml [ocaml-representation:conversion-without-local]: occurrence "${conversion.id}" refers to unplanned local ${conversion.localId}';
 			switch (localDecision.choice) {
-				case ProgramDecision(_, semanticTypeId, _) if (semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>"):
+				case ProgramDecision(_, _, semanticTypeId, _) if (semanticTypeId == "Null<Int>" || semanticTypeId == "Null<Bool>"):
 					validateNullablePrimitiveConversion(conversion, semanticTypeId);
-				case ProgramDecision(_, "Dynamic", _):
+				case ProgramDecision(_, _, "Dynamic", _):
 					validateDynamicConversion(conversion);
-				case ProgramDecision(_, semanticTypeId, _):
+				case ProgramDecision(_, _, semanticTypeId, _):
 					throw 'reflaxe.ocaml [ocaml-representation:wrong-conversion-family]: occurrence "${conversion.id}" selects a migrated carrier conversion for $semanticTypeId';
 				case Unmigrated(_):
 					throw 'reflaxe.ocaml [ocaml-representation:unmigrated-occurrence-conversion]: occurrence "${conversion.id}" belongs to an unmigrated local';
@@ -310,9 +313,10 @@ class OcamlLocalRepresentationPlan {
 	public function referenceFor(localId:String):Null<OcamlLocalRepresentationReference> {
 		final choice = choiceFor(localId);
 		return switch (choice) {
-			case ProgramDecision(representationId, semanticTypeId, domain): {
+			case ProgramDecision(representationId, representationRevision, semanticTypeId, domain): {
 					localId: localId,
 					representationId: representationId,
+					representationRevision: representationRevision,
 					semanticTypeId: semanticTypeId,
 					domain: domain
 				};
@@ -325,10 +329,11 @@ class OcamlLocalRepresentationPlan {
 		final references:Array<OcamlLocalRepresentationReference> = [];
 		for (decision in orderedDecisions) {
 			switch (decision.choice) {
-				case ProgramDecision(representationId, semanticTypeId, domain):
+				case ProgramDecision(representationId, representationRevision, semanticTypeId, domain):
 					references.push({
 						localId: decision.localId,
 						representationId: representationId,
+						representationRevision: representationRevision,
 						semanticTypeId: semanticTypeId,
 						domain: domain
 					});
@@ -356,15 +361,16 @@ class OcamlLocalRepresentationPlan {
 
 	static function copyChoice(choice:OcamlLocalRepresentationChoice):OcamlLocalRepresentationChoice {
 		return switch (choice) {
-			case ProgramDecision(representationId, semanticTypeId, domain): ProgramDecision(representationId, semanticTypeId, domain);
+			case ProgramDecision(representationId, representationRevision, semanticTypeId, domain):
+				ProgramDecision(representationId, representationRevision, semanticTypeId, domain);
 			case Unmigrated(semanticTypeId): Unmigrated(semanticTypeId);
 		}
 	}
 
 	static function decisionFingerprint(decision:OcamlLocalRepresentationDecision):String {
 		final choiceFingerprint = switch (decision.choice) {
-			case ProgramDecision(representationId, semanticTypeId,
-				domain): '${decision.localId}|program|$representationId|$semanticTypeId|${(domain : String)}';
+			case ProgramDecision(representationId, representationRevision, semanticTypeId,
+				domain): '${decision.localId}|program|$representationId|$representationRevision|$semanticTypeId|${(domain : String)}';
 			case Unmigrated(semanticTypeId): '${decision.localId}|unmigrated|$semanticTypeId';
 		}
 		return choiceFingerprint + "|initializer:" + (decision.initializerConversion : String) + "|assignment:" + (decision.assignmentConversion : String)

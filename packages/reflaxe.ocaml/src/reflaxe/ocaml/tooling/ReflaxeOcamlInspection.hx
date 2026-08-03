@@ -28,6 +28,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLocalConversion;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentation;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentedArrayDescriptor;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntime;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
@@ -62,8 +63,8 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v69";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v8";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v70";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v9";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -94,7 +95,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 34,
+			schemaVersion: 35,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -115,6 +116,7 @@ class ReflaxeOcamlInspection {
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length,
 				representationDecisionCount: representation.decisions.length,
+				representedArrayCount: representation.representedArrays.length,
 				anonymousStructureCount: lowering.anonymousStructures.length,
 				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
 				structuralFieldCount: lowering.structuralFields.length,
@@ -214,6 +216,10 @@ class ReflaxeOcamlInspection {
 			for (decision in report.representation.decisions) {
 				lines.push('  - ${decision.semanticTypeId} in ${decision.domain}: ${decision.carrierTypeId}');
 				lines.push('    reason: ${decision.reason}');
+			}
+			for (descriptor in report.representation.representedArrays) {
+				lines.push('  - ${descriptor.arraySemanticTypeId}: ${descriptor.elementRepresentationId}@${descriptor.elementRepresentationRevision} -> ${descriptor.arrayCarrierTypeId}');
+				lines.push('    descriptor: ${descriptor.id}@${descriptor.revision}');
 			}
 		}
 		if (report.consistencyErrors.length == 0) {
@@ -388,8 +394,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 56) {
-						throw 'Unsupported lowering report schema $version; expected 56.';
+					if (version != 57) {
+						throw 'Unsupported lowering report schema $version; expected 57.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -495,7 +501,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v17")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v18")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -512,6 +518,9 @@ class ReflaxeOcamlInspection {
 		final representationById:Map<String, InspectionRepresentationDecision> = [];
 		for (decision in representation.decisions)
 			representationById.set(decision.id, decision);
+		final representedArrayById:Map<String, InspectionRepresentedArrayDescriptor> = [];
+		for (descriptor in representation.representedArrays)
+			representedArrayById.set(descriptor.id, descriptor);
 		final targetById:Map<String, InspectionControlLoopTarget> = [];
 		for (target in targets)
 			targetById.set(target.id, target);
@@ -694,6 +703,30 @@ class ReflaxeOcamlInspection {
 					if (claimsDirectEnumPayload && !directEnumPayload) {
 						throw 'Control decision "${control.id}" has an invalid direct enum-constructor exception carrier.';
 					}
+					final representedArrayPayload = payload.arrayDescriptorId != null;
+					if (payload.representationRevision != null) {
+						final programRepresentation = representationById.get(payload.inputRepresentationId);
+						if (programRepresentation == null
+							|| programRepresentation.revision != payload.representationRevision
+							|| programRepresentation.programRevision != control.programRevision) {
+							throw 'Control decision "${control.id}" has a missing or stale program-representation revision.';
+						}
+					}
+					if (representedArrayPayload) {
+						final descriptorId:String = cast payload.arrayDescriptorId;
+						final descriptor = representedArrayById.get(descriptorId);
+						final programRepresentation = representationById.get(payload.inputRepresentationId);
+						if (descriptor == null
+							|| programRepresentation == null
+							|| payload.representationRevision != programRepresentation.revision
+							|| payload.arrayDescriptorRevision != descriptor.revision
+							|| programRepresentation.arrayDescriptorId != descriptor.id
+							|| programRepresentation.arrayDescriptorRevision != descriptor.revision
+							|| descriptor.arraySemanticTypeId != payload.inputSemanticTypeId
+							|| descriptor.arrayCarrierTypeId != payload.inputCarrierTypeId) {
+							throw 'Control decision "${control.id}" does not match its represented-array descriptor and representation revisions.';
+						}
+					}
 					if (payload.inputSemanticTypeId == "Dynamic") {
 						if (payload.inputCarrierTypeId != "Obj.t"
 							|| payload.outputSemanticTypeId != "Dynamic"
@@ -719,26 +752,23 @@ class ReflaxeOcamlInspection {
 						validateCallValueSide(payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId, representationById,
 							'Control decision "${control.id}" output', control.programRevision);
 					}
-					final expectedConversion = switch (payload.inputSemanticTypeId) {
+					final expectedConversion = representedArrayPayload ? "box-represented-array-throw-carrier" : switch (payload.inputSemanticTypeId) {
 						case "Int", "String": "repr-and-recover-exact-value";
 						case "Bool": "box-bool-and-recover-exact-value";
 						case "Null<Int>": "preserve-nullable-int-throw-carrier";
 						case "Null<Bool>": "normalize-nullable-bool-throw-carrier";
-						case "Array<Int>": "box-array-int-throw-carrier";
 						case "Dynamic": "preserve-dynamic-throw-carrier";
 						case "haxe.Exception", "haxe.ValueException": "box-haxe-exception-wrapper-throw-carrier";
 						case _: directEnumPayload ? "box-enum-throw-carrier" : (payload.nominalRepresentation == null ? null : "box-nominal-throw-carrier");
 					};
-					final expectedTags = switch (payload.inputSemanticTypeId) {
+					final expectedTags = representedArrayPayload ? ["Dynamic", "Array"] : switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String", "Null<Int>", "Null<Bool>", "Dynamic", "haxe.Exception", "haxe.ValueException": ["Dynamic"];
-						case "Array<Int>": ["Dynamic", "Array"];
 						case _: directEnumPayload ? ["Dynamic", payload.inputSemanticTypeId] : (payload.nominalRepresentation == null ? [] : ["Dynamic"]);
 					};
-					final expectedProofId = switch (payload.inputSemanticTypeId) {
+					final expectedProofId = representedArrayPayload ? "represented-array-throw-control-v1" : switch (payload.inputSemanticTypeId) {
 						case "Int", "Bool", "String": "exact-value-throw-control-v1";
 						case "Null<Int>": "nullable-int-throw-control-v1";
 						case "Null<Bool>": "nullable-bool-throw-control-v1";
-						case "Array<Int>": "exact-array-int-throw-control-v1";
 						case "Dynamic": "dynamic-carrier-throw-control-v1";
 						case "haxe.Exception", "haxe.ValueException": "exact-haxe-exception-wrapper-throw-control-v1";
 						case _: directEnumPayload ? "exact-enum-constructor-throw-control-v1" : (payload.nominalRepresentation == null ? null : "exact-monomorphic-class-throw-control-v1");
@@ -1021,6 +1051,9 @@ class ReflaxeOcamlInspection {
 			outputSemanticTypeId: requiredString(value, "outputSemanticTypeId"),
 			outputCarrierTypeId: requiredString(value, "outputCarrierTypeId"),
 			outputRepresentationId: requiredString(value, "outputRepresentationId"),
+			representationRevision: optionalString(value, "representationRevision"),
+			arrayDescriptorId: optionalString(value, "arrayDescriptorId"),
+			arrayDescriptorRevision: optionalString(value, "arrayDescriptorRevision"),
 			conversion: requiredString(value, "conversion"),
 			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			proofId: requiredString(value, "proofId"),
@@ -1821,12 +1854,14 @@ class ReflaxeOcamlInspection {
 		if (model != "typed-ocaml-program-representation")
 			throw 'Unsupported representation report model "$model".';
 		final scope = requiredString(value, "representationScope");
-		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14")
+		if (scope != "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15")
 			throw 'Unsupported representation report scope "$scope".';
 		final rawDecisions = requiredArray(value, "representations");
 		final expectedCount = requiredInt(value, "representationCount");
 		if (rawDecisions.length != expectedCount)
 			throw 'Representation report representationCount is $expectedCount but representations contains ${rawDecisions.length} entries.';
+		if (requiredSha256Revision(value, "representationRevision") != "sha256:" + Sha256.encode(Json.stringify(rawDecisions)))
+			throw "Representation report revision does not match its sorted decisions.";
 		final decisions = [for (decision in rawDecisions) representationDecision(decision)];
 		decisions.sort((left, right) -> compareStrings(left.id, right.id));
 		final byId:Map<String, InspectionRepresentationDecision> = [];
@@ -1838,6 +1873,43 @@ class ReflaxeOcamlInspection {
 				throw 'Representation report contains duplicate key "${decision.key}".';
 			byId.set(decision.id, decision);
 			byKey.set(decision.key, true);
+		}
+		final representedArrayModel = requiredString(value, "representedArrayModel");
+		if (representedArrayModel != "ocaml-represented-array-v1")
+			throw 'Unsupported represented-array report model "$representedArrayModel".';
+		final rawRepresentedArrays = requiredArray(value, "representedArrays");
+		if (rawRepresentedArrays.length != requiredInt(value, "representedArrayCount"))
+			throw "Represented-array count does not match its inventory.";
+		final representedArrayRevision = requiredSha256Revision(value, "representedArrayRevision");
+		if (representedArrayRevision != "sha256:" + Sha256.encode(Json.stringify(rawRepresentedArrays)))
+			throw "Represented-array report revision does not match its sorted descriptors.";
+		final representedArrays = [for (descriptor in rawRepresentedArrays) representedArrayDescriptor(descriptor)];
+		representedArrays.sort((left, right) -> compareStrings(left.id, right.id));
+		final representedArrayById:Map<String, InspectionRepresentedArrayDescriptor> = [];
+		for (descriptor in representedArrays) {
+			if (representedArrayById.exists(descriptor.id))
+				throw 'Represented-array report contains duplicate identity "${descriptor.id}".';
+			final element = byId.get(descriptor.elementRepresentationId);
+			if (element == null)
+				throw 'Represented-array descriptor "${descriptor.id}" refers to missing element representation "${descriptor.elementRepresentationId}".';
+			validateRepresentedArrayDescriptor(descriptor, element);
+			representedArrayById.set(descriptor.id, descriptor);
+		}
+		for (decision in decisions) {
+			final arrayFieldCount = (decision.arrayDescriptorId == null ? 0 : 1) + (decision.arrayDescriptorRevision == null ? 0 : 1);
+			if (arrayFieldCount == 0)
+				continue;
+			if (arrayFieldCount != 2)
+				throw 'Representation decision "${decision.id}" has incomplete represented-array metadata.';
+			final descriptorId:String = cast decision.arrayDescriptorId;
+			final descriptor = representedArrayById.get(descriptorId);
+			if (descriptor == null
+				|| descriptor.revision != decision.arrayDescriptorRevision
+				|| descriptor.programRevision != decision.programRevision
+				|| descriptor.arraySemanticTypeId != decision.semanticTypeId
+				|| descriptor.arrayCarrierTypeId != decision.carrierTypeId) {
+				throw 'Representation decision "${decision.id}" does not match ${decision.arrayDescriptorId}@${decision.arrayDescriptorRevision}.';
+			}
 		}
 		for (plan in plans) {
 			final representationId = plan.representationId;
@@ -1896,8 +1968,11 @@ class ReflaxeOcamlInspection {
 			model: model,
 			revision: requiredSha256Revision(value, "representationRevision"),
 			decisions: decisions,
+			representedArrayModel: representedArrayModel,
+			representedArrayRevision: representedArrayRevision,
+			representedArrays: representedArrays,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} for exact primitives, the narrow exact Float internal value, the exact nominal Int64 value, nullable primitives, direct Array<Int>, or a proven whole-program monomorphic class. The Float decision is limited to sealed Bytes binary I/O. The Int64 decision fixes one value-semantic high/low record layout. A class decision means constructor-produced and already-proven same-class values share one named OCaml record; an admitted captured-and-reassigned local stores that record in one shared cell so the closure sees replacements. Inheritance, interfaces, generics, external boundaries, ordinary mutable locals, and unproved null crossings remain outside this slice.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} and ${representedArrays.length} represented-array descriptor${representedArrays.length == 1 ? "" : "s"}. The first array descriptor covers only direct flat Array<Int> and binds it to the exact Int array-element representation; it does not admit another array family or boundary. Exact primitives, the narrow Float internal value, the exact nominal Int64 value, nullable primitives, and proven whole-program monomorphic classes keep their existing bounded contracts.'
 		};
 	}
 
@@ -2233,7 +2308,9 @@ class ReflaxeOcamlInspection {
 			profileEligibility: profiles,
 			nominalTargetModuleName: optionalString(value, "nominalTargetModuleName"),
 			nominalTargetTypeName: optionalString(value, "nominalTargetTypeName"),
-			nominalLayoutRevision: optionalString(value, "nominalLayoutRevision")
+			nominalLayoutRevision: optionalString(value, "nominalLayoutRevision"),
+			arrayDescriptorId: optionalString(value, "arrayDescriptorId"),
+			arrayDescriptorRevision: optionalString(value, "arrayDescriptorRevision")
 		};
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
@@ -2300,7 +2377,112 @@ class ReflaxeOcamlInspection {
 				throw 'Representation decision "${decision.id}" selects ${decision.storageMutationPolicy} storage for nominal carrier domain ${decision.domain}, expected $expectedStoragePolicy.';
 			}
 		}
+		final expectedRevision = "sha256:" + Sha256.encode([
+			"ocaml-representation-v19",
+			decision.semanticTypeId,
+			decision.domain,
+			decision.carrierTypeId,
+			decision.nullPolicy,
+			decision.identityPolicy,
+			decision.aliasingPolicy,
+			decision.storageMutationPolicy,
+			decision.valueMutationPolicy,
+			decision.boxingPolicy,
+			decision.implicitDefaultPolicy,
+			decision.reason,
+			decision.proofId,
+			decision.proofClaim,
+			decision.profileEligibility.join(","),
+			decision.nominalTargetModuleName ?? "",
+			decision.nominalTargetTypeName ?? "",
+			decision.nominalLayoutRevision ?? "",
+			decision.arrayDescriptorId ?? "",
+			decision.arrayDescriptorRevision ?? ""
+		].join("\n"));
+		if (decision.revision != expectedRevision)
+			throw 'Representation decision "${decision.id}" revision does not match its reported leaf facts.';
 		return decision;
+	}
+
+	static function representedArrayDescriptor(value:Dynamic):InspectionRepresentedArrayDescriptor {
+		return {
+			id: requiredString(value, "id"),
+			key: requiredString(value, "key"),
+			programRevision: requiredString(value, "programRevision"),
+			modelRevision: requiredString(value, "modelRevision"),
+			revision: requiredSha256Revision(value, "revision"),
+			arraySemanticTypeId: requiredString(value, "arraySemanticTypeId"),
+			sourceForm: requiredString(value, "sourceForm"),
+			closureKind: requiredString(value, "closureKind"),
+			outerWrapperKind: requiredString(value, "outerWrapperKind"),
+			elementSemanticTypeId: requiredString(value, "elementSemanticTypeId"),
+			elementRepresentationId: requiredString(value, "elementRepresentationId"),
+			elementRepresentationRevision: requiredSha256Revision(value, "elementRepresentationRevision"),
+			elementCarrierTypeId: requiredString(value, "elementCarrierTypeId"),
+			elementDomain: requiredString(value, "elementDomain"),
+			carrierFamilyId: requiredString(value, "carrierFamilyId"),
+			arrayCarrierTypeId: requiredString(value, "arrayCarrierTypeId"),
+			runtimeCarrierCapabilityId: requiredString(value, "runtimeCarrierCapabilityId"),
+			runtimeKindTagId: requiredString(value, "runtimeKindTagId"),
+			nestingKind: requiredString(value, "nestingKind"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			profileEligibility: requiredStringArray(value, "profileEligibility")
+		};
+	}
+
+	static function validateRepresentedArrayDescriptor(descriptor:InspectionRepresentedArrayDescriptor, element:InspectionRepresentationDecision):Void {
+		final expectedCarrier = element.carrierTypeId + " HxArray.t";
+		final expectedReason = 'The direct closed flat ${descriptor.arraySemanticTypeId} shape uses ${element.id}@${element.revision} for element storage and composes its ${element.carrierTypeId} carrier with HxArray.t.';
+		final expectedProofId = "direct-flat-array-element-binding-v1";
+		final expectedProofClaim = "The element decision is registered in the ArrayElement domain for the same program, so one HxArray container can store that exact carrier. This descriptor proves only shape and element binding; domain-specific representation decisions still own outer nullability, identity, aliases, replacement, and boxing.";
+		final expectedRevision = "sha256:" + Sha256.encode([
+			"ocaml-represented-array-v1",
+			descriptor.arraySemanticTypeId,
+			descriptor.sourceForm,
+			descriptor.closureKind,
+			descriptor.outerWrapperKind,
+			descriptor.elementSemanticTypeId,
+			element.id,
+			element.revision,
+			element.carrierTypeId,
+			"array-element",
+			"HxArray",
+			expectedCarrier,
+			"haxe-array",
+			"Array",
+			descriptor.nestingKind,
+			expectedReason,
+			expectedProofId,
+			expectedProofClaim,
+			element.profileEligibility.join(",")
+		].join("\n"));
+		if (descriptor.id != "represented-array:" + descriptor.arraySemanticTypeId
+			|| descriptor.key != descriptor.arraySemanticTypeId
+			|| descriptor.programRevision != element.programRevision
+			|| descriptor.modelRevision != "ocaml-represented-array-v1"
+			|| descriptor.revision != expectedRevision
+			|| descriptor.sourceForm != "direct-builtin-array"
+			|| descriptor.closureKind != "closed-monomorphic"
+			|| descriptor.outerWrapperKind != "none"
+			|| descriptor.elementRepresentationId != element.id
+			|| descriptor.elementRepresentationRevision != element.revision
+			|| descriptor.elementSemanticTypeId != element.semanticTypeId
+			|| descriptor.elementCarrierTypeId != element.carrierTypeId
+			|| descriptor.elementDomain != "array-element"
+			|| element.domain != "array-element"
+			|| descriptor.carrierFamilyId != "HxArray"
+			|| descriptor.arrayCarrierTypeId != expectedCarrier
+			|| descriptor.runtimeCarrierCapabilityId != "haxe-array"
+			|| descriptor.runtimeKindTagId != "Array"
+			|| descriptor.nestingKind != "flat"
+			|| descriptor.reason != expectedReason
+			|| descriptor.proofId != expectedProofId
+			|| descriptor.proofClaim != expectedProofClaim
+			|| descriptor.profileEligibility.join(",") != element.profileEligibility.join(",")) {
+			throw 'Represented-array descriptor "${descriptor.id}" does not match its exact array-element representation and derived carrier facts.';
+		}
 	}
 
 	static function loweredPlan(value:Dynamic):InspectionLoweredPlan {
@@ -2838,7 +3020,7 @@ class ReflaxeOcamlInspection {
 	static function renderRepresentation(value:InspectionRepresentation):String {
 		return switch (value.status) {
 			case "present":
-				'[PASS] Program representation registry: ${value.decisions.length} decision${value.decisions.length == 1 ? "" : "s"} (${value.scope}).';
+				'[PASS] Program representation registry: ${value.decisions.length} decision${value.decisions.length == 1 ? "" : "s"} and ${value.representedArrays.length} represented-array descriptor${value.representedArrays.length == 1 ? "" : "s"} (${value.scope}).';
 			case "not-enabled":
 				'[SKIP] Program representation registry: ${value.message}';
 			case _:
@@ -3031,7 +3213,10 @@ class ReflaxeOcamlInspection {
 			model: null,
 			revision: null,
 			decisions: [],
-			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14",
+			representedArrayModel: null,
+			representedArrayRevision: null,
+			representedArrays: [],
+			scope: "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15",
 			message: message
 		};
 	}

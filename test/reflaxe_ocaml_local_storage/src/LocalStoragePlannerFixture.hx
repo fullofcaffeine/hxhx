@@ -427,7 +427,8 @@ class LocalStoragePlannerFixture {
 			&& reference.domain == OcamlRepresentationDomain.CapturedLocalStorage)
 			.length == 1,
 			"an Int shared with a nested function should use the captured-local-storage representation domain");
-		assertTrue(representations.decisions().length == 6, "the registry should retain exact Int and Array<Int> decisions for all three local domains");
+		assertTrue(representations.decisions().length == 7 && representations.representedArrays().length == 1,
+			"the registry should retain exact Int local decisions, the Int array-element decision, and one shared Array<Int> descriptor");
 		final arrayReferences = references.filter(reference -> reference.semanticTypeId == "Array<Int>");
 		assertTrue(arrayReferences.length == 3
 			&& arrayReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 1
@@ -435,6 +436,13 @@ class LocalStoragePlannerFixture {
 			&& arrayReferences.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
 			"immutable, mutable, and captured Array<Int> locals should select their exact storage domains");
 		for (reference in arrayReferences) {
+			final representation = representations.require(reference.representationId, "program:local-storage-fixture");
+			assertTrue(reference.representationRevision == representation.revision
+				&& representation.arrayDescriptorId != null
+				&& representations.requireRepresentedArray(representation.arrayDescriptorId, representation.arrayDescriptorRevision,
+					"program:local-storage-fixture")
+					.arrayCarrierTypeId == representation.carrierTypeId,
+				"each array local should bind the exact representation revision and its transitive represented-array descriptor");
 			assertTrue(localRepresentations.initializerConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
 				&& localRepresentations.assignmentConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity
 				&& localRepresentations.readConversionFor(reference.localId) == OcamlLocalCarrierConversion.Identity,
@@ -960,7 +968,8 @@ class LocalStoragePlannerFixture {
 		final enumReference = dynamicEnumReferences.filter(reference -> reference.localId == enumConversion.localId)[0];
 		final enumDecision:OcamlLocalRepresentationDecision = {
 			localId: enumReference.localId,
-			choice: OcamlLocalRepresentationChoice.ProgramDecision(enumReference.representationId, enumReference.semanticTypeId, enumReference.domain),
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(enumReference.representationId, enumReference.representationRevision,
+				enumReference.semanticTypeId, enumReference.domain),
 			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
@@ -1028,7 +1037,8 @@ class LocalStoragePlannerFixture {
 		reidentifyConversion(wrongDynamicRole, dynamicCarrierBinding);
 		final dynamicDecisions:Array<OcamlLocalRepresentationDecision> = dynamicReferences.map(reference -> ({
 			localId: reference.localId,
-			choice: OcamlLocalRepresentationChoice.ProgramDecision(reference.representationId, reference.semanticTypeId, reference.domain),
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(reference.representationId, reference.representationRevision, reference.semanticTypeId,
+				reference.domain),
 			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
@@ -1045,8 +1055,8 @@ class LocalStoragePlannerFixture {
 		assertTrue(duplicateReference != null, "the duplicate-conversion fixture should retain its local representation");
 		final duplicateDecision:OcamlLocalRepresentationDecision = {
 			localId: duplicateConversion.localId,
-			choice: OcamlLocalRepresentationChoice.ProgramDecision(duplicateReference.representationId, duplicateReference.semanticTypeId,
-				duplicateReference.domain),
+			choice: OcamlLocalRepresentationChoice.ProgramDecision(duplicateReference.representationId, duplicateReference.representationRevision,
+				duplicateReference.semanticTypeId, duplicateReference.domain),
 			initializerConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 			readConversion: OcamlLocalCarrierConversion.LegacyCoercion
@@ -1145,8 +1155,8 @@ class LocalStoragePlannerFixture {
 		final legacyAssignmentPlan = new OcamlLocalRepresentationPlan([
 			{
 				localId: syntheticStableLocalId,
-				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
-					OcamlRepresentationDomain.InternalValue),
+				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", arrayReferences[0].representationRevision,
+					"Array<Int>", OcamlRepresentationDomain.InternalValue),
 				initializerConversion: OcamlLocalCarrierConversion.Identity,
 				assignmentConversion: OcamlLocalCarrierConversion.LegacyCoercion,
 				readConversion: OcamlLocalCarrierConversion.Identity
@@ -1155,8 +1165,8 @@ class LocalStoragePlannerFixture {
 		final identityAssignmentPlan = new OcamlLocalRepresentationPlan([
 			{
 				localId: syntheticStableLocalId,
-				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", "Array<Int>",
-					OcamlRepresentationDomain.InternalValue),
+				choice: OcamlLocalRepresentationChoice.ProgramDecision("representation:Array<Int>:internal-value", arrayReferences[0].representationRevision,
+					"Array<Int>", OcamlRepresentationDomain.InternalValue),
 				initializerConversion: OcamlLocalCarrierConversion.Identity,
 				assignmentConversion: OcamlLocalCarrierConversion.Identity,
 				readConversion: OcamlLocalCarrierConversion.Identity

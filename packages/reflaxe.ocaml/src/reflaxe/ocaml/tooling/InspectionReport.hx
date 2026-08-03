@@ -271,6 +271,35 @@ typedef InspectionRepresentationDecision = {
 	final nominalTargetModuleName:Null<String>;
 	final nominalTargetTypeName:Null<String>;
 	final nominalLayoutRevision:Null<String>;
+	final arrayDescriptorId:Null<String>;
+	final arrayDescriptorRevision:Null<String>;
+}
+
+/** One validated direct array shape and its exact element-storage decision. **/
+typedef InspectionRepresentedArrayDescriptor = {
+	final id:String;
+	final key:String;
+	final programRevision:String;
+	final modelRevision:String;
+	final revision:String;
+	final arraySemanticTypeId:String;
+	final sourceForm:String;
+	final closureKind:String;
+	final outerWrapperKind:String;
+	final elementSemanticTypeId:String;
+	final elementRepresentationId:String;
+	final elementRepresentationRevision:String;
+	final elementCarrierTypeId:String;
+	final elementDomain:String;
+	final carrierFamilyId:String;
+	final arrayCarrierTypeId:String;
+	final runtimeCarrierCapabilityId:String;
+	final runtimeKindTagId:String;
+	final nestingKind:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
 }
 
 /** The admitted portion of the program-wide representation registry. **/
@@ -281,6 +310,9 @@ typedef InspectionRepresentation = {
 	final model:Null<String>;
 	final revision:Null<String>;
 	final decisions:Array<InspectionRepresentationDecision>;
+	final representedArrayModel:Null<String>;
+	final representedArrayRevision:Null<String>;
+	final representedArrays:Array<InspectionRepresentedArrayDescriptor>;
 	final scope:String;
 	final message:String;
 }
@@ -583,6 +615,9 @@ typedef InspectionControlPayload = {
 	final outputSemanticTypeId:String;
 	final outputCarrierTypeId:String;
 	final outputRepresentationId:String;
+	final representationRevision:Null<String>;
+	final arrayDescriptorId:Null<String>;
+	final arrayDescriptorRevision:Null<String>;
 	final conversion:String;
 	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;
@@ -764,6 +799,7 @@ typedef InspectionSummary = {
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
+	final representedArrayCount:Int;
 	final anonymousStructureCount:Int;
 	final anonymousStructureOperationCount:Int;
 	final structuralFieldCount:Int;

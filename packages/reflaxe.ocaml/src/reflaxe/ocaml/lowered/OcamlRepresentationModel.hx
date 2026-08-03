@@ -218,6 +218,12 @@ typedef OcamlRepresentationSelection = {
 
 	/** Revision of the exact field layout represented by the nominal carrier. */
 	final ?nominalLayoutRevision:String;
+
+	/** Program-owned array shape used by this representation, when it is an array. */
+	final ?arrayDescriptorId:String;
+
+	/** Exact content revision of `arrayDescriptorId`. */
+	final ?arrayDescriptorRevision:String;
 }
 
 /** One immutable program-owned representation decision. */
@@ -227,5 +233,57 @@ typedef OcamlRepresentationDecision = {
 	final key:String;
 	final programRevision:String;
 	final revision:String;
+}
+
+/**
+	Host-neutral identity for one direct, closed, flat Haxe array type.
+
+	The normalizing adapter creates this plain value from the current typed Haxe
+	program. It deliberately retains no macro `Type` object, so the representation
+	registry can validate and report the same array shape without depending on
+	request-local compiler identity.
+**/
+typedef OcamlNormalizedRepresentedArray = {
+	final arraySemanticTypeId:String;
+	final elementSemanticTypeId:String;
+	final sourceForm:String;
+	final closureKind:String;
+	final outerWrapperKind:String;
+	final nestingKind:String;
+}
+
+/**
+	One immutable program-owned description of a represented Haxe array.
+
+	A descriptor binds an array shape to an element representation that is
+	explicitly valid for array storage. Domain-specific representation decisions
+	still own outer nullability, identity, aliasing, replacement, and boxing. This
+	record only prevents local, call, and control consumers from independently
+	reconstructing the element carrier or `HxArray.t` composition.
+**/
+typedef OcamlRepresentedArrayDescriptor = {
+	final id:String;
+	final key:String;
+	final programRevision:String;
+	final modelRevision:String;
+	final revision:String;
+	final arraySemanticTypeId:String;
+	final sourceForm:String;
+	final closureKind:String;
+	final outerWrapperKind:String;
+	final elementSemanticTypeId:String;
+	final elementRepresentationId:String;
+	final elementRepresentationRevision:String;
+	final elementCarrierTypeId:String;
+	final elementDomain:OcamlRepresentationDomain;
+	final carrierFamilyId:String;
+	final arrayCarrierTypeId:String;
+	final runtimeCarrierCapabilityId:String;
+	final runtimeKindTagId:String;
+	final nestingKind:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
 }
 #end

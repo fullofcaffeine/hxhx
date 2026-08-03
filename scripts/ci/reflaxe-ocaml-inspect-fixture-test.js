@@ -2,6 +2,7 @@
 /** Proves inspect reports only compiler-owned artifacts and fails closed on stale data. */
 const assert = require('assert')
 const cp = require('child_process')
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
@@ -43,13 +44,14 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 34)
+	assert.strictEqual(report.schemaVersion, 35)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
 	assert(report.summary.runtimeModuleCount > 0)
 	assert.strictEqual(report.summary.loweredPlanCount, 21)
 	assert(report.summary.representationDecisionCount > 0)
+	assert.strictEqual(report.summary.representedArrayCount, report.representation.representedArrays.length)
 	assert(report.summary.staticStorageCount > 0)
 	assert.strictEqual(report.artifactManifest.status, 'present')
 	assert.strictEqual(report.artifactManifest.entryCount, report.summary.artifactEntryCount)
@@ -120,8 +122,11 @@ try {
 		&& entry.declarationSite === 'type-prelude'
 		&& entry.carrierTypeId === 'samemoduleworker_t'))
 	assert.strictEqual(report.representation.status, 'present')
-	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14')
+	assert.strictEqual(report.representation.scope, 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15')
 	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
+	assert(report.representation.representedArrays.some(descriptor => descriptor.id === 'represented-array:Array<Int>'
+		&& descriptor.elementRepresentationId === 'representation:Int:array-element'
+		&& descriptor.arrayCarrierTypeId === 'int HxArray.t'))
 	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
 		&& decision.carrierTypeId === 'int'
 		&& decision.nullPolicy === 'non-null'
@@ -393,6 +398,34 @@ try {
 	assert.strictEqual(missingRequirementReport.lowering.status, 'invalid')
 	assert(missingRequirementReport.lowering.message.includes(`refers to missing runtime requirement "${removedRequirement.id}"`))
 	fs.writeFileSync(loweringPath, loweringBytes)
+	const staleArrayDescriptorValue = JSON.parse(loweringBytes)
+	const staleArrayDescriptor = staleArrayDescriptorValue.representedArrays.find(
+		descriptor => descriptor.id === 'represented-array:Array<Int>')
+	assert(staleArrayDescriptor)
+	staleArrayDescriptor.elementRepresentationRevision = 'sha256:' + '0'.repeat(64)
+	staleArrayDescriptorValue.representedArrayRevision = 'sha256:' + crypto.createHash('sha256')
+		.update(JSON.stringify(staleArrayDescriptorValue.representedArrays)).digest('hex')
+	fs.writeFileSync(loweringPath, JSON.stringify(staleArrayDescriptorValue, null, 2) + '\n')
+	const staleArrayDescriptorResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(staleArrayDescriptorResult.status, 1)
+	const staleArrayDescriptorReport = JSON.parse(staleArrayDescriptorResult.stdout)
+	assert.strictEqual(staleArrayDescriptorReport.representation.status, 'invalid')
+	assert(staleArrayDescriptorReport.representation.message.includes('does not match its exact array-element representation'))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const staleRepresentationLeafValue = JSON.parse(loweringBytes)
+	const staleRepresentationLeaf = staleRepresentationLeafValue.representations.find(
+		representation => representation.id === 'representation:Array<Int>:internal-value')
+	assert(staleRepresentationLeaf)
+	staleRepresentationLeaf.reason += ' corrupted'
+	staleRepresentationLeafValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
+		.update(JSON.stringify(staleRepresentationLeafValue.representations)).digest('hex')
+	fs.writeFileSync(loweringPath, JSON.stringify(staleRepresentationLeafValue, null, 2) + '\n')
+	const staleRepresentationLeafResult = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(staleRepresentationLeafResult.status, 1)
+	const staleRepresentationLeafReport = JSON.parse(staleRepresentationLeafResult.stdout)
+	assert.strictEqual(staleRepresentationLeafReport.representation.status, 'invalid')
+	assert(staleRepresentationLeafReport.representation.message.includes('revision does not match its reported leaf facts'))
+	fs.writeFileSync(loweringPath, loweringBytes)
 	const corruptStringRequirementValue = JSON.parse(loweringBytes)
 	const corruptStringRequirement = corruptStringRequirementValue.runtimeRequirements.find(
 		requirement => requirement.semanticCapability === 'haxe-string-null-sentinel')
@@ -424,6 +457,8 @@ try {
 	assert(removedRepresentationIndex >= 0)
 	const [removedRepresentation] = missingRepresentationValue.representations.splice(removedRepresentationIndex, 1)
 	missingRepresentationValue.representationCount -= 1
+	missingRepresentationValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
+		.update(JSON.stringify(missingRepresentationValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(missingRepresentationValue, null, 2) + '\n')
 	const missingRepresentation = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(missingRepresentation.status, 1)
@@ -437,16 +472,19 @@ try {
 		representation => representation.id === 'representation:Int:static-field')
 	assert(staticRepresentation)
 	staticRepresentation.domain = 'array-element'
+	wrongDomainValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
+		.update(JSON.stringify(wrongDomainValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(wrongDomainValue, null, 2) + '\n')
 	const wrongDomain = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(wrongDomain.status, 1)
 	const wrongDomainReport = JSON.parse(wrongDomain.stdout)
 	assert.strictEqual(wrongDomainReport.representation.status, 'invalid')
-	assert(wrongDomainReport.representation.message.includes('static-field')
-		&& wrongDomainReport.representation.message.includes('array-element'))
+	assert(wrongDomainReport.representation.message.includes('revision does not match its reported leaf facts'))
 	fs.writeFileSync(loweringPath, loweringBytes)
 	const missingMutationPolicyValue = JSON.parse(loweringBytes)
 	delete missingMutationPolicyValue.representations[0].storageMutationPolicy
+	missingMutationPolicyValue.representationRevision = 'sha256:' + crypto.createHash('sha256')
+		.update(JSON.stringify(missingMutationPolicyValue.representations)).digest('hex')
 	fs.writeFileSync(loweringPath, JSON.stringify(missingMutationPolicyValue, null, 2) + '\n')
 	const missingMutationPolicy = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(missingMutationPolicy.status, 1)

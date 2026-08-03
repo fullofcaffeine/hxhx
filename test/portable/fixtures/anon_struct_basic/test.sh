@@ -62,7 +62,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 56
+if (report.schemaVersion !== 57
 	|| report.anonymousStructureModel !== 'ocaml-anonymous-structure-v3'
 	|| report.anonymousStructures?.length !== report.anonymousStructureCount
 	|| report.anonymousStructureOperations?.length !== report.anonymousStructureOperationCount
@@ -106,7 +106,7 @@ for (const operation of operations) {
 	const compoundWrite = operation.kind === 'compound-write-field'
 	if (operation.structureId !== structure.id
 		|| operation.structureRevision !== structure.revision
-		|| operation.pipelineRevision !== 'ocaml-function-plans-v69'
+		|| operation.pipelineRevision !== 'ocaml-function-plans-v70'
 		|| operation.proofId !== 'direct-anonymous-runtime-operations-v3'
 		|| operation.evaluationSchedule.join(',') !== expectedSchedules.get(operation.kind)
 		|| operation.runtimeModule !== 'HxAnon'
@@ -182,7 +182,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_REPORT" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 34
+if (report.schemaVersion !== 35
 	|| !report.summary?.valid
 	|| report.summary.anonymousStructureCount !== report.lowering?.anonymousStructures?.length
 	|| report.summary.anonymousStructureOperationCount !== report.lowering?.anonymousStructureOperations?.length
@@ -228,6 +228,7 @@ fi
 
 cp -R out "$INVALID_REVISION_OUTPUT"
 node - "$INVALID_REVISION_OUTPUT/ocaml_lowering_report.json" <<'NODE'
+const crypto = require('crypto')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -237,6 +238,8 @@ if (!representation) {
 	throw new Error('fixture has no anonymous-object representation to corrupt')
 }
 representation.revision = `sha256:${'0'.repeat(64)}`
+report.representationRevision = 'sha256:' + crypto.createHash('sha256')
+	.update(JSON.stringify(report.representations)).digest('hex')
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 
@@ -247,8 +250,8 @@ if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	echo "Public inspection accepted an anonymous structure whose representation revision was stale" >&2
 	exit 1
 fi
-if ! grep -Fq "expects anonymous{a:Int,b:String,flag:Bool} -> Obj.t in internal-value at" "$INVALID_LOG"; then
-	echo "Public inspection rejected the stale anonymous representation without an actionable reason" >&2
+if ! grep -Fq "revision does not match its reported leaf facts" "$INVALID_LOG"; then
+	echo "Public inspection rejected the stale anonymous representation for an unrelated reason" >&2
 	cat "$INVALID_LOG" >&2
 	exit 1
 fi

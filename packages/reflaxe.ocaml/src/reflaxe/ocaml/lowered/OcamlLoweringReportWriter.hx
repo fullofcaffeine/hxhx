@@ -27,6 +27,7 @@ import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConve
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalConversionDecision;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlUnsafeOperationRecord;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescriptor;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
@@ -54,8 +55,8 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 56;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14";
+	public static inline final SCHEMA_VERSION = 57;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
@@ -125,13 +126,13 @@ class OcamlLoweringReportWriter {
 	}
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
-			representations:Array<OcamlRepresentationDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
-			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, structuralFields:Array<OcamlStructuralFieldDecision>,
-			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
-			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
-			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
-			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
-			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			representations:Array<OcamlRepresentationDecision>, representedArrays:Array<OcamlRepresentedArrayDescriptor>,
+			anonymousStructures:Array<OcamlAnonymousStructureDecision>, anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>,
+			structuralFields:Array<OcamlStructuralFieldDecision>, localConversions:Array<OcamlLocalConversionDecision>,
+			containerElementRequiredConversionIds:Array<String>, containerElementConversions:Array<OcamlContainerElementDecision>,
+			unsafeOperations:Array<OcamlUnsafeOperationRecord>, iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>,
+			iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -143,6 +144,33 @@ class OcamlLoweringReportWriter {
 				throw 'Program representation identity "${representation.id}" occurs more than once.';
 			validateNominalRepresentation(representation);
 			representationById.set(representation.id, representation);
+		}
+		final sortedRepresentedArrays = representedArrays.copy();
+		sortedRepresentedArrays.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final representedArrayById:Map<String, OcamlRepresentedArrayDescriptor> = [];
+		for (descriptor in sortedRepresentedArrays) {
+			if (representedArrayById.exists(descriptor.id))
+				throw 'Represented-array descriptor identity "${descriptor.id}" occurs more than once.';
+			final element = representationById.get(descriptor.elementRepresentationId);
+			if (element == null)
+				throw 'Represented-array descriptor "${descriptor.id}" refers to missing element representation "${descriptor.elementRepresentationId}".';
+			OcamlRepresentationRegistry.validateRepresentedArrayDescriptor(descriptor, element, descriptor.programRevision);
+			representedArrayById.set(descriptor.id, descriptor);
+		}
+		for (representation in sortedRepresentations) {
+			final descriptorFieldCount = (representation.arrayDescriptorId == null ? 0 : 1) + (representation.arrayDescriptorRevision == null ? 0 : 1);
+			if (descriptorFieldCount == 0)
+				continue;
+			if (descriptorFieldCount != 2)
+				throw 'Program representation "${representation.id}" has incomplete represented-array metadata.';
+			final descriptor = representedArrayById.get(representation.arrayDescriptorId);
+			if (descriptor == null
+				|| descriptor.revision != representation.arrayDescriptorRevision
+				|| descriptor.programRevision != representation.programRevision
+				|| descriptor.arraySemanticTypeId != representation.semanticTypeId
+				|| descriptor.arrayCarrierTypeId != representation.carrierTypeId) {
+				throw 'Program representation "${representation.id}" does not match ${representation.arrayDescriptorId}@${representation.arrayDescriptorRevision}.';
+			}
 		}
 		final sortedAnonymousStructures = anonymousStructures.copy();
 		sortedAnonymousStructures.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -295,6 +323,22 @@ class OcamlLoweringReportWriter {
 			controlById.set(control.id, true);
 			final payload = control.payload;
 			if (payload != null) {
+				if (payload.representationRevision != null) {
+					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
+						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" revision-bound input', payload.representationRevision);
+				}
+				if (payload.arrayDescriptorId != null) {
+					final representation = representationById.get(payload.inputRepresentationId);
+					final descriptor = representedArrayById.get(payload.arrayDescriptorId);
+					if (representation == null
+						|| descriptor == null
+						|| payload.arrayDescriptorRevision != descriptor.revision
+						|| representation.arrayDescriptorId != descriptor.id
+						|| representation.arrayDescriptorRevision != descriptor.revision
+						|| !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(payload)) {
+						throw 'Control decision "${control.id}" does not match its represented-array descriptor and representation revisions.';
+					}
+				}
 				if (payload.inputSemanticTypeId == "Dynamic") {
 					switch (control.kind) {
 						case Return:
@@ -552,6 +596,7 @@ class OcamlLoweringReportWriter {
 		if (sortedUnsafeOperations.length != expectedUnsafeOperationCount)
 			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local or container-element conversion.";
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
+		final canonicalRepresentedArrays = haxe.Json.stringify(sortedRepresentedArrays);
 		final canonicalContainerElementRequiredConversionIds = haxe.Json.stringify(sortedContainerElementRequiredConversionIds);
 		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
@@ -578,6 +623,10 @@ class OcamlLoweringReportWriter {
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
+			representedArrayModel: OcamlRepresentationRegistry.ARRAY_DESCRIPTOR_MODEL_REVISION,
+			representedArrayRevision: "sha256:" + Sha256.encode(canonicalRepresentedArrays),
+			representedArrayCount: sortedRepresentedArrays.length,
+			representedArrays: sortedRepresentedArrays,
 			anonymousStructureModel: OcamlAnonymousStructureContract.MODEL_REVISION,
 			anonymousStructureRevision: "sha256:" + Sha256.encode(canonicalAnonymousStructures),
 			anonymousStructureCount: sortedAnonymousStructures.length,
@@ -618,7 +667,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v17",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v18",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

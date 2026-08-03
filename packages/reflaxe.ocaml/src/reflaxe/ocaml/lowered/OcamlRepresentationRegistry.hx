@@ -15,7 +15,9 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingP
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlNormalizedRepresentedArray;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationProof;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescriptor;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
@@ -44,11 +46,14 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v18";
+	public static inline final MODEL_REVISION = "ocaml-representation-v19";
+	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
 	final decisionsByKey:StringMap<OcamlRepresentationDecision> = new StringMap();
 	final decisionsById:StringMap<OcamlRepresentationDecision> = new StringMap();
+	final representedArraysByKey:StringMap<OcamlRepresentedArrayDescriptor> = new StringMap();
+	final representedArraysById:StringMap<OcamlRepresentedArrayDescriptor> = new StringMap();
 	final monomorphicClassesBySemanticType:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 	final monomorphicClassesById:StringMap<OcamlMonomorphicClassDecision> = new StringMap();
 
@@ -61,6 +66,8 @@ class OcamlRepresentationRegistry {
 		currentProgramRevision = programRevision;
 		decisionsByKey.clear();
 		decisionsById.clear();
+		representedArraysByKey.clear();
+		representedArraysById.clear();
 		monomorphicClassesBySemanticType.clear();
 		monomorphicClassesById.clear();
 	}
@@ -350,17 +357,36 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
-		Returns whether a Haxe type is the direct nominal built-in `Array<Int>`.
+		Normalizes one currently admitted direct array shape into plain values.
 
-		This deliberately does not follow typedefs, abstracts, `Vector`, nullable
-		wrappers, or a generic element type. Those families need their own
-		representation and conversion proofs.
+		This first hard cut recognizes only the existing direct `Array<Int>`
+		family. Returning null for every other element or wrapper is deliberate:
+		the caller cannot create a represented-array descriptor until the element
+		has an independently proved `ArrayElement` representation.
 	**/
-	public static function isExactArrayInt(type:Type):Bool {
+	public static function normalizedDirectFlatArray(type:Type):Null<OcamlNormalizedRepresentedArray> {
 		return switch (type) {
-			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" && isExactInt(elementType);
+			case TInst(classRef, [elementType]):
+				final classType = classRef.get();
+				final directIntElement = switch (elementType) {
+					case TAbstract(abstractRef, parameters): final abstractType = abstractRef.get(); parameters.length == 0 && abstractType.pack.length == 0 && abstractType.name == "Int";
+					case _:
+						false;
+				};
+				if (classType.pack.length == 0 && classType.name == "Array" && directIntElement) {
+					{
+						arraySemanticTypeId: "Array<Int>",
+						elementSemanticTypeId: "Int",
+						sourceForm: "direct-builtin-array",
+						closureKind: "closed-monomorphic",
+						outerWrapperKind: "none",
+						nestingKind: "flat"
+					};
+				} else {
+					null;
+				}
 			case _:
-				false;
+				null;
 		}
 	}
 
@@ -641,17 +667,38 @@ class OcamlRepresentationRegistry {
 		array carrier but different storage owners. Fields, generic arrays, and ABI
 		crossings remain on their existing paths.
 	**/
-	public function selectExactArrayInt(domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+	public function selectRepresentedArray(type:Type, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
+		final normalized = normalizedDirectFlatArray(type);
+		if (normalized == null) {
+			throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-shape]: only a direct closed flat array with a proved ArrayElement representation is admitted';
+		}
+		return selectNormalizedRepresentedArray(normalized, domain);
+	}
+
+	/**
+		Selects a representation from a host-neutral direct array identity.
+
+		The descriptor is registered before the domain-specific representation so
+		all later consumers can follow one revision-checked graph back to the exact
+		element-storage decision.
+	**/
+	public function selectNormalizedRepresentedArray(normalized:OcamlNormalizedRepresentedArray, domain:OcamlRepresentationDomain):OcamlRepresentationDecision {
 		final storageMutationPolicy = switch (domain) {
 			case InternalValue: OcamlRepresentationStorageMutationPolicy.ImmutableBinding;
 			case MutableLocalStorage, CapturedLocalStorage: OcamlRepresentationStorageMutationPolicy.SharedLocalCell;
 			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-int-domain]: exact Array<Int> is admitted only for internal, mutable-local, or captured-local storage, not $domain';
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: a represented array is admitted only for internal, mutable-local, or captured-local storage, not $domain';
 		};
+		final elementRepresentation = switch (normalized.elementSemanticTypeId) {
+			case "Int": selectExactInt(OcamlRepresentationDomain.ArrayElement);
+			case _:
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-element]: ${normalized.elementSemanticTypeId} has no admitted ArrayElement representation';
+		};
+		final descriptor = registerRepresentedArray(normalized, elementRepresentation);
 		return register({
-			semanticTypeId: "Array<Int>",
+			semanticTypeId: descriptor.arraySemanticTypeId,
 			domain: domain,
-			carrierTypeId: "int HxArray.t",
+			carrierTypeId: descriptor.arrayCarrierTypeId,
 			nullPolicy: OcamlRepresentationNullPolicy.RuntimeSentinel,
 			identityPolicy: OcamlRepresentationIdentityPolicy.ReferenceIdentity,
 			aliasingPolicy: OcamlRepresentationAliasingPolicy.SharedReferenceAliases,
@@ -659,12 +706,14 @@ class OcamlRepresentationRegistry {
 			valueMutationPolicy: OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
 			boxingPolicy: OcamlRepresentationBoxingPolicy.DirectRuntimeContainer,
 			implicitDefaultPolicy: OcamlRepresentationImplicitDefaultPolicy.NotAdmitted,
-			reason: exactArrayIntReason(domain),
+			reason: representedArrayReason(descriptor, domain),
 			proof: {
-				id: "direct-array-int-reference-carrier-v2",
-				claim: "HxArray.t is the target runtime's mutable reference-bearing array container. The surrounding binding or ref cell owns replacement of the whole carrier, while the carrier owns shared element mutation. Reusing that exact carrier preserves reference identity and aliases; Haxe null remains a separately converted runtime sentinel. This proof does not admit generic, nullable, typedef, abstract, Vector, field, or ABI representations."
+				id: "direct-represented-array-reference-carrier-v1",
+				claim: "The program-owned array descriptor binds one direct closed flat Haxe array to an exact ArrayElement representation and HxArray.t carrier. The surrounding binding or ref cell owns whole-array replacement while the carrier owns shared element mutation. This proof does not admit another element family, wrapper, nesting shape, field, call, return, typed catch, native boundary, or public ABI."
 			},
-			profileEligibility: ["metal", "portable"]
+			profileEligibility: descriptor.profileEligibility,
+			arrayDescriptorId: descriptor.id,
+			arrayDescriptorRevision: descriptor.revision
 		});
 	}
 
@@ -1024,6 +1073,94 @@ class OcamlRepresentationRegistry {
 		});
 	}
 
+	/** Registers or reuses one immutable flat array shape. */
+	function registerRepresentedArray(normalized:OcamlNormalizedRepresentedArray,
+			elementRepresentation:OcamlRepresentationDecision):OcamlRepresentedArrayDescriptor {
+		final programRevision = requireProgramRevision();
+		if (normalized.arraySemanticTypeId.length == 0
+			|| normalized.elementSemanticTypeId.length == 0
+			|| normalized.sourceForm != "direct-builtin-array"
+			|| normalized.closureKind != "closed-monomorphic"
+			|| normalized.outerWrapperKind != "none"
+			|| normalized.nestingKind != "flat") {
+			throw "reflaxe.ocaml [ocaml-representation:invalid-array-shape]: represented arrays must be direct, closed, unwrapped, and flat";
+		}
+		if (elementRepresentation.programRevision != programRevision
+			|| elementRepresentation.semanticTypeId != normalized.elementSemanticTypeId
+			|| elementRepresentation.domain != OcamlRepresentationDomain.ArrayElement
+			|| elementRepresentation.id.length == 0
+			|| !StringTools.startsWith(elementRepresentation.revision, "sha256:")) {
+			throw 'reflaxe.ocaml [ocaml-representation:invalid-array-element]: ${normalized.arraySemanticTypeId} must bind an exact current-program ArrayElement representation for ${normalized.elementSemanticTypeId}';
+		}
+		final profiles = elementRepresentation.profileEligibility.copy();
+		profiles.sort(Reflect.compare);
+		final key = normalized.arraySemanticTypeId;
+		final id = "represented-array:" + normalized.arraySemanticTypeId;
+		final arrayCarrierTypeId = elementRepresentation.carrierTypeId + " HxArray.t";
+		final reason = 'The direct closed flat ${normalized.arraySemanticTypeId} shape uses ${elementRepresentation.id}@${elementRepresentation.revision} for element storage and composes its ${elementRepresentation.carrierTypeId} carrier with HxArray.t.';
+		final proofId = "direct-flat-array-element-binding-v1";
+		final proofClaim = "The element decision is registered in the ArrayElement domain for the same program, so one HxArray container can store that exact carrier. This descriptor proves only shape and element binding; domain-specific representation decisions still own outer nullability, identity, aliases, replacement, and boxing.";
+		final fingerprint = [
+			ARRAY_DESCRIPTOR_MODEL_REVISION,
+			normalized.arraySemanticTypeId,
+			normalized.sourceForm,
+			normalized.closureKind,
+			normalized.outerWrapperKind,
+			normalized.elementSemanticTypeId,
+			elementRepresentation.id,
+			elementRepresentation.revision,
+			elementRepresentation.carrierTypeId,
+			(OcamlRepresentationDomain.ArrayElement : String),
+			"HxArray",
+			arrayCarrierTypeId,
+			"haxe-array",
+			"Array",
+			normalized.nestingKind,
+			reason,
+			proofId,
+			proofClaim,
+			profiles.join(",")
+		].join("\n");
+		final descriptor:OcamlRepresentedArrayDescriptor = {
+			id: id,
+			key: key,
+			programRevision: programRevision,
+			modelRevision: ARRAY_DESCRIPTOR_MODEL_REVISION,
+			revision: "sha256:" + Sha256.encode(fingerprint),
+			arraySemanticTypeId: normalized.arraySemanticTypeId,
+			sourceForm: normalized.sourceForm,
+			closureKind: normalized.closureKind,
+			outerWrapperKind: normalized.outerWrapperKind,
+			elementSemanticTypeId: normalized.elementSemanticTypeId,
+			elementRepresentationId: elementRepresentation.id,
+			elementRepresentationRevision: elementRepresentation.revision,
+			elementCarrierTypeId: elementRepresentation.carrierTypeId,
+			elementDomain: OcamlRepresentationDomain.ArrayElement,
+			carrierFamilyId: "HxArray",
+			arrayCarrierTypeId: arrayCarrierTypeId,
+			runtimeCarrierCapabilityId: "haxe-array",
+			runtimeKindTagId: "Array",
+			nestingKind: normalized.nestingKind,
+			reason: reason,
+			proofId: proofId,
+			proofClaim: proofClaim,
+			profileEligibility: profiles
+		};
+		validateRepresentedArrayDescriptor(descriptor, elementRepresentation, programRevision);
+		final existing = representedArraysByKey.get(key);
+		if (existing != null) {
+			if (existing.revision != descriptor.revision) {
+				throw 'reflaxe.ocaml [ocaml-representation:conflicting-array-descriptor]: "$key" was already assigned ${existing.revision}, so it cannot also use ${descriptor.revision}';
+			}
+			return copyRepresentedArray(existing);
+		}
+		if (representedArraysById.exists(id))
+			throw 'reflaxe.ocaml [ocaml-representation:duplicate-array-identity]: represented array identity "$id" belongs to more than one key';
+		representedArraysByKey.set(key, descriptor);
+		representedArraysById.set(id, descriptor);
+		return copyRepresentedArray(descriptor);
+	}
+
 	/**
 		Registers one complete choice or rejects a conflicting choice for its key.
 
@@ -1034,6 +1171,7 @@ class OcamlRepresentationRegistry {
 	public function register(selection:OcamlRepresentationSelection):OcamlRepresentationDecision {
 		final programRevision = requireProgramRevision();
 		validateSelection(selection);
+		validateArrayDescriptorReference(selection, programRevision);
 		final canonical = canonicalSelection(selection);
 		final key = decisionKey(canonical.semanticTypeId, canonical.domain);
 		final id = "representation:" + canonical.semanticTypeId + ":" + (canonical.domain : String);
@@ -1058,7 +1196,9 @@ class OcamlRepresentationRegistry {
 			profileEligibility: canonical.profileEligibility,
 			nominalTargetModuleName: canonical.nominalTargetModuleName,
 			nominalTargetTypeName: canonical.nominalTargetTypeName,
-			nominalLayoutRevision: canonical.nominalLayoutRevision
+			nominalLayoutRevision: canonical.nominalLayoutRevision,
+			arrayDescriptorId: canonical.arrayDescriptorId,
+			arrayDescriptorRevision: canonical.arrayDescriptorRevision
 		};
 		final existing = decisionsByKey.get(key);
 		if (existing != null) {
@@ -1086,6 +1226,93 @@ class OcamlRepresentationRegistry {
 		return copyDecision(decision);
 	}
 
+	/** Resolves one represented-array descriptor and checks its exact revision. */
+	public function requireRepresentedArray(descriptorId:String, descriptorRevision:String, expectedProgramRevision:String):OcamlRepresentedArrayDescriptor {
+		final actualProgramRevision = requireProgramRevision();
+		if (expectedProgramRevision != actualProgramRevision) {
+			throw 'reflaxe.ocaml [ocaml-representation:stale-array-program-revision]: array descriptor "$descriptorId" was requested for $expectedProgramRevision, but the registry belongs to $actualProgramRevision';
+		}
+		final descriptor = representedArraysById.get(descriptorId);
+		if (descriptor == null)
+			throw 'reflaxe.ocaml [ocaml-representation:missing-array-descriptor]: no represented-array descriptor exists for "$descriptorId"';
+		if (descriptor.revision != descriptorRevision)
+			throw 'reflaxe.ocaml [ocaml-representation:stale-array-descriptor]: "$descriptorId" has ${descriptor.revision}, not $descriptorRevision';
+		final element = require(descriptor.elementRepresentationId, expectedProgramRevision);
+		validateRepresentedArrayDescriptor(descriptor, element, expectedProgramRevision);
+		return copyRepresentedArray(descriptor);
+	}
+
+	/**
+		Recomputes every descriptor leaf from plain values.
+
+		Reports and cached plans can call this without trusting a stored digest. The
+		check follows the descriptor to the exact array-element representation and
+		rejects any changed carrier, proof, profile, or program revision.
+	**/
+	public static function validateRepresentedArrayDescriptor(descriptor:OcamlRepresentedArrayDescriptor, elementRepresentation:OcamlRepresentationDecision,
+			expectedProgramRevision:String):Void {
+		final profiles = elementRepresentation.profileEligibility.copy();
+		profiles.sort(Reflect.compare);
+		final expectedCarrier = elementRepresentation.carrierTypeId + " HxArray.t";
+		final expectedReason = 'The direct closed flat ${descriptor.arraySemanticTypeId} shape uses ${elementRepresentation.id}@${elementRepresentation.revision} for element storage and composes its ${elementRepresentation.carrierTypeId} carrier with HxArray.t.';
+		final expectedProofId = "direct-flat-array-element-binding-v1";
+		final expectedProofClaim = "The element decision is registered in the ArrayElement domain for the same program, so one HxArray container can store that exact carrier. This descriptor proves only shape and element binding; domain-specific representation decisions still own outer nullability, identity, aliases, replacement, and boxing.";
+		final fingerprint = [
+			ARRAY_DESCRIPTOR_MODEL_REVISION,
+			descriptor.arraySemanticTypeId,
+			descriptor.sourceForm,
+			descriptor.closureKind,
+			descriptor.outerWrapperKind,
+			descriptor.elementSemanticTypeId,
+			elementRepresentation.id,
+			elementRepresentation.revision,
+			elementRepresentation.carrierTypeId,
+			(OcamlRepresentationDomain.ArrayElement : String),
+			"HxArray",
+			expectedCarrier,
+			"haxe-array",
+			"Array",
+			descriptor.nestingKind,
+			expectedReason,
+			expectedProofId,
+			expectedProofClaim,
+			profiles.join(",")
+		].join("\n");
+		final expectedRevision = "sha256:" + Sha256.encode(fingerprint);
+		if (descriptor.id != "represented-array:" + descriptor.arraySemanticTypeId
+			|| descriptor.key != descriptor.arraySemanticTypeId
+			|| descriptor.programRevision != expectedProgramRevision
+			|| descriptor.modelRevision != ARRAY_DESCRIPTOR_MODEL_REVISION
+			|| descriptor.revision != expectedRevision
+			|| descriptor.sourceForm != "direct-builtin-array"
+			|| descriptor.closureKind != "closed-monomorphic"
+			|| descriptor.outerWrapperKind != "none"
+			|| descriptor.elementRepresentationId != elementRepresentation.id
+			|| descriptor.elementRepresentationRevision != elementRepresentation.revision
+			|| descriptor.elementSemanticTypeId != elementRepresentation.semanticTypeId
+			|| descriptor.elementCarrierTypeId != elementRepresentation.carrierTypeId
+			|| descriptor.elementDomain != OcamlRepresentationDomain.ArrayElement
+			|| elementRepresentation.domain != OcamlRepresentationDomain.ArrayElement
+			|| descriptor.carrierFamilyId != "HxArray"
+			|| descriptor.arrayCarrierTypeId != expectedCarrier
+			|| descriptor.runtimeCarrierCapabilityId != "haxe-array"
+			|| descriptor.runtimeKindTagId != "Array"
+			|| descriptor.nestingKind != "flat"
+			|| descriptor.reason != expectedReason
+			|| descriptor.proofId != expectedProofId
+			|| descriptor.proofClaim != expectedProofClaim
+			|| descriptor.profileEligibility.join(",") != profiles.join(",")) {
+			throw 'reflaxe.ocaml [ocaml-representation:stale-array-descriptor-leaf]: ${descriptor.id}@${descriptor.revision} does not match its exact ArrayElement representation and derived carrier facts';
+		}
+	}
+
+	/** Returns every represented-array descriptor in deterministic identity order. */
+	public function representedArrays():Array<OcamlRepresentedArrayDescriptor> {
+		final ids = [for (id in representedArraysById.keys()) id];
+		ids.sort(Reflect.compare);
+		return [for (id in ids) copyRepresentedArray(cast representedArraysById.get(id))];
+	}
+
 	/** Returns every decision in deterministic identity order. */
 	public function decisions():Array<OcamlRepresentationDecision> {
 		final ids = [for (id in decisionsById.keys()) id];
@@ -1095,7 +1322,10 @@ class OcamlRepresentationRegistry {
 
 	/** Returns a deterministic digest of the program's current decisions. */
 	public function revision():String {
-		return "sha256:" + Sha256.encode(decisions().map(decision -> decision.id + "|" + decision.revision).join("\n"));
+		final entries = representedArrays().map(descriptor -> "array|" + descriptor.id + "|" + descriptor.revision)
+			.concat(decisions().map(decision -> "representation|" + decision.id + "|" + decision.revision));
+		entries.sort(Reflect.compare);
+		return "sha256:" + Sha256.encode(entries.join("\n"));
 	}
 
 	static function decisionKey(semanticTypeId:String, domain:OcamlRepresentationDomain):String {
@@ -1125,16 +1355,16 @@ class OcamlRepresentationRegistry {
 		}
 	}
 
-	static function exactArrayIntReason(domain:OcamlRepresentationDomain):String {
+	static function representedArrayReason(descriptor:OcamlRepresentedArrayDescriptor, domain:OcamlRepresentationDomain):String {
 		return switch (domain) {
 			case InternalValue:
-				"An exact Array<Int> immutable binding stores the direct HxArray container; aliases share its element mutations while a later source assignment creates a newer binding.";
+				'An exact ${descriptor.arraySemanticTypeId} immutable binding stores the descriptor-owned ${descriptor.arrayCarrierTypeId} container; aliases share its element mutations while a later source assignment creates a newer binding.';
 			case MutableLocalStorage:
-				"An exact Array<Int> mutable local stores the direct HxArray container in one ref cell; the cell owns whole-array replacement and each HxArray owns shared element mutation.";
+				'An exact ${descriptor.arraySemanticTypeId} mutable local stores the descriptor-owned ${descriptor.arrayCarrierTypeId} container in one ref cell; the cell owns whole-array replacement and each HxArray owns shared element mutation.';
 			case CapturedLocalStorage:
-				"An exact Array<Int> captured local stores the direct HxArray container in the ref cell shared with nested functions; the cell owns replacement and each HxArray owns shared element mutation.";
+				'An exact ${descriptor.arraySemanticTypeId} captured local stores the descriptor-owned ${descriptor.arrayCarrierTypeId} container in the ref cell shared with nested functions; the cell owns replacement and each HxArray owns shared element mutation.';
 			case InstanceField, StaticField, ArrayElement:
-				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-int-domain]: no exact Array<Int> local reason exists for $domain';
+				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: no represented ${descriptor.arraySemanticTypeId} local reason exists for $domain';
 		}
 	}
 
@@ -1252,6 +1482,27 @@ class OcamlRepresentationRegistry {
 				|| selection.nominalTargetTypeName.length == 0
 				|| !StringTools.startsWith(selection.nominalLayoutRevision, "sha256:")))
 			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: nominal carrier metadata is incomplete or has an invalid layout revision";
+		final arrayFieldCount = (selection.arrayDescriptorId == null ? 0 : 1) + (selection.arrayDescriptorRevision == null ? 0 : 1);
+		if (arrayFieldCount != 0 && arrayFieldCount != 2)
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor identity and revision must be supplied together";
+		if (arrayFieldCount == 2
+			&& (selection.arrayDescriptorId.length == 0 || !StringTools.startsWith(selection.arrayDescriptorRevision, "sha256:")))
+			throw "reflaxe.ocaml [ocaml-representation:invalid-decision]: array descriptor metadata is incomplete or has an invalid revision";
+	}
+
+	/**
+		Rejects a representation that names a missing, stale, or unrelated array
+		descriptor before the decision can enter the program registry.
+	**/
+	function validateArrayDescriptorReference(selection:OcamlRepresentationSelection, programRevision:String):Void {
+		if (selection.arrayDescriptorId == null)
+			return;
+		final descriptor = requireRepresentedArray(selection.arrayDescriptorId, selection.arrayDescriptorRevision, programRevision);
+		if (selection.semanticTypeId != descriptor.arraySemanticTypeId
+			|| selection.carrierTypeId != descriptor.arrayCarrierTypeId
+			|| selection.profileEligibility.join(",") != descriptor.profileEligibility.join(",")) {
+			throw 'reflaxe.ocaml [ocaml-representation:array-descriptor-mismatch]: ${selection.semanticTypeId}/${selection.carrierTypeId} does not match ${descriptor.id}@${descriptor.revision}';
+		}
 	}
 
 	static function canonicalSelection(selection:OcamlRepresentationSelection):OcamlRepresentationSelection {
@@ -1281,7 +1532,9 @@ class OcamlRepresentationRegistry {
 			profileEligibility: uniqueProfiles,
 			nominalTargetModuleName: selection.nominalTargetModuleName,
 			nominalTargetTypeName: selection.nominalTargetTypeName,
-			nominalLayoutRevision: selection.nominalLayoutRevision
+			nominalLayoutRevision: selection.nominalLayoutRevision,
+			arrayDescriptorId: selection.arrayDescriptorId,
+			arrayDescriptorRevision: selection.arrayDescriptorRevision
 		};
 	}
 
@@ -1304,7 +1557,9 @@ class OcamlRepresentationRegistry {
 			selection.profileEligibility.join(","),
 			selection.nominalTargetModuleName ?? "",
 			selection.nominalTargetTypeName ?? "",
-			selection.nominalLayoutRevision ?? ""
+			selection.nominalLayoutRevision ?? "",
+			selection.arrayDescriptorId ?? "",
+			selection.arrayDescriptorRevision ?? ""
 		].join("\n");
 	}
 
@@ -1332,7 +1587,37 @@ class OcamlRepresentationRegistry {
 			profileEligibility: decision.profileEligibility.copy(),
 			nominalTargetModuleName: decision.nominalTargetModuleName,
 			nominalTargetTypeName: decision.nominalTargetTypeName,
-			nominalLayoutRevision: decision.nominalLayoutRevision
+			nominalLayoutRevision: decision.nominalLayoutRevision,
+			arrayDescriptorId: decision.arrayDescriptorId,
+			arrayDescriptorRevision: decision.arrayDescriptorRevision
+		};
+	}
+
+	static function copyRepresentedArray(descriptor:OcamlRepresentedArrayDescriptor):OcamlRepresentedArrayDescriptor {
+		return {
+			id: descriptor.id,
+			key: descriptor.key,
+			programRevision: descriptor.programRevision,
+			modelRevision: descriptor.modelRevision,
+			revision: descriptor.revision,
+			arraySemanticTypeId: descriptor.arraySemanticTypeId,
+			sourceForm: descriptor.sourceForm,
+			closureKind: descriptor.closureKind,
+			outerWrapperKind: descriptor.outerWrapperKind,
+			elementSemanticTypeId: descriptor.elementSemanticTypeId,
+			elementRepresentationId: descriptor.elementRepresentationId,
+			elementRepresentationRevision: descriptor.elementRepresentationRevision,
+			elementCarrierTypeId: descriptor.elementCarrierTypeId,
+			elementDomain: descriptor.elementDomain,
+			carrierFamilyId: descriptor.carrierFamilyId,
+			arrayCarrierTypeId: descriptor.arrayCarrierTypeId,
+			runtimeCarrierCapabilityId: descriptor.runtimeCarrierCapabilityId,
+			runtimeKindTagId: descriptor.runtimeKindTagId,
+			nestingKind: descriptor.nestingKind,
+			reason: descriptor.reason,
+			proofId: descriptor.proofId,
+			proofClaim: descriptor.proofClaim,
+			profileEligibility: descriptor.profileEligibility.copy()
 		};
 	}
 

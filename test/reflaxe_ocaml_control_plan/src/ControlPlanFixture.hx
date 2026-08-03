@@ -265,10 +265,11 @@ class ControlPlanFixture {
 			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
 		};
-		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum);
+		final representedArray = semanticTypeId == "Array<Int>";
+		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, representedArray);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
-		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum);
+		var selectedProofId = OcamlControlPlan.expectedThrowProofId(semanticTypeId, false, directEnum, representedArray);
 		if (selectedProofId == null)
 			selectedProofId = OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID;
 		final representationId = switch (semanticTypeId) {
@@ -303,12 +304,15 @@ class ControlPlanFixture {
 				outputSemanticTypeId: outputSemanticType,
 				outputCarrierTypeId: outputCarrierTypeId,
 				outputRepresentationId: outputRepresentationId,
+				representationRevision: representedArray ? "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" : null,
+				arrayDescriptorId: representedArray ? "represented-array:Array<Int>" : null,
+				arrayDescriptorRevision: representedArray ? "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" : null,
 				conversion: selectedConversion,
 				proofId: selectedProofId,
 				proofClaim: proof,
 				nominalRepresentation: null
 			},
-			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum),
+			runtimeTags: runtimeTags ?? OcamlControlPlan.expectedThrowTags(semanticTypeId, false, directEnum, representedArray),
 			runtimeTagPolicy: runtimeTagPolicy ?? OcamlControlRuntimeTagPolicy.MergeDynamicWithExactRuntimeValue,
 			mechanism: mechanism ?? OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal,
 			runtimeCapabilityId: OcamlControlPlan.THROW_SIGNAL_CAPABILITY_ID,
@@ -726,7 +730,7 @@ class ControlPlanFixture {
 		final arrayIntThrow = throwDecision("control:throw:array-int", 195, "Array<Int>");
 		OcamlControlPlan.requireDecision(arrayIntThrow);
 		if (arrayIntThrow.payload == null
-			|| !OcamlControlPlan.isAdmittedArrayIntThrowPayload(arrayIntThrow.payload)
+			|| !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(arrayIntThrow.payload)
 			|| arrayIntThrow.runtimeTags.join(",") != "Dynamic,Array") {
 			throw "The exact Array<Int> throw lost its sealed carrier, identity, or runtime tags";
 		}

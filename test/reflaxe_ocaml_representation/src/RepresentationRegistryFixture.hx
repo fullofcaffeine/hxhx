@@ -97,14 +97,17 @@ class RepresentationRegistryFixture {
 			"the direct Dynamic type should be admitted by its dedicated predicate");
 		assertTrue(!OcamlRepresentationRegistry.isExactDynamic(Context.typeof(macro("value" : String))),
 			"a concrete value must remain visible to occurrence-bound Dynamic conversion planning");
-		assertTrue(OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Int>))), "the direct nominal Array<Int> should be admitted");
-		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : Array<Float>))),
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Int>))) != null,
+			"the direct nominal Array<Int> should be admitted");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Float>))) == null,
 			"Array<Float> should remain outside the exact Array<Int> slice");
-		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro(null : Null<Array<Int>>))),
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro(null : Null<Array<Int>>))) == null,
 			"an explicit nullable Array<Int> wrapper should remain outside the slice");
-		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro([] : IntArrayAlias))),
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : IntArrayAlias))) == null,
 			"an Array<Int> typedef should need its own representation proof instead of being followed implicitly");
-		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(Context.typeof(macro(new haxe.ds.Vector<Int>(1)))),
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<IntAlias>))) == null,
+			"an Array whose element is an Int typedef should need its own representation proof instead of being followed implicitly");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro(new haxe.ds.Vector<Int>(1)))) == null,
 			"Vector<Int> should not inherit the direct nominal Array<Int> carrier");
 		final genericArrayType = switch (Context.getType("GenericArrayCarrier")) {
 			case TInst(classRef, _):
@@ -115,7 +118,23 @@ class RepresentationRegistryFixture {
 			case other:
 				throw 'GenericArrayCarrier should be a class, got $other';
 		}
-		assertTrue(!OcamlRepresentationRegistry.isExactArrayInt(genericArrayType), "Array<T> should remain outside the exact Array<Int> representation proof");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(genericArrayType) == null,
+			"Array<T> should remain outside the exact Array<Int> representation proof");
+		final directArrayIdentity = OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Int>)));
+		assertTrue(directArrayIdentity != null
+			&& directArrayIdentity.arraySemanticTypeId == "Array<Int>"
+			&& directArrayIdentity.elementSemanticTypeId == "Int"
+			&& directArrayIdentity.sourceForm == "direct-builtin-array"
+			&& directArrayIdentity.closureKind == "closed-monomorphic"
+			&& directArrayIdentity.outerWrapperKind == "none"
+			&& directArrayIdentity.nestingKind == "flat",
+			"the host adapter should normalize one direct closed flat Array<Int> without retaining the Haxe Type object");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Float>))) == null,
+			"an element family without an ArrayElement representation should not become a represented array identity");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro(null : Null<Array<Int>>))) == null,
+			"an explicit nullable array wrapper should remain outside the direct flat identity");
+		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(genericArrayType) == null,
+			"an open generic array should remain outside the closed represented-array identity");
 
 		final mutable = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final internal = registry.selectExactInt(OcamlRepresentationDomain.InternalValue);
@@ -127,9 +146,28 @@ class RepresentationRegistryFixture {
 		final boolCaptured = registry.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		final boolInstanceField = registry.selectExactBool(OcamlRepresentationDomain.InstanceField);
 		final boolStaticField = registry.selectExactBool(OcamlRepresentationDomain.StaticField);
-		final arrayInternal = registry.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
-		final arrayMutable = registry.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
-		final arrayCaptured = registry.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		final arrayInternal = registry.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.InternalValue);
+		final arrayMutable = registry.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.MutableLocalStorage);
+		final arrayCaptured = registry.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.CapturedLocalStorage);
+		assertTrue(arrayInternal != null && arrayMutable != null && arrayCaptured != null,
+			"the registry should admit the existing Array<Int> local domains through the represented-array selector");
+		final arrayDescriptor = registry.requireRepresentedArray(arrayInternal.arrayDescriptorId, arrayInternal.arrayDescriptorRevision,
+			"program:representation-fixture");
+		assertTrue(arrayDescriptor.arraySemanticTypeId == "Array<Int>"
+			&& arrayDescriptor.elementSemanticTypeId == "Int"
+			&& arrayDescriptor.elementDomain == OcamlRepresentationDomain.ArrayElement
+			&& arrayDescriptor.elementCarrierTypeId == "int"
+			&& arrayDescriptor.elementRepresentationId == "representation:Int:array-element"
+			&& arrayDescriptor.arrayCarrierTypeId == "int HxArray.t"
+			&& arrayDescriptor.carrierFamilyId == "HxArray"
+			&& arrayDescriptor.runtimeCarrierCapabilityId == "haxe-array"
+			&& arrayDescriptor.runtimeKindTagId == "Array",
+			"the represented array should bind its exact ArrayElement decision and composed HxArray carrier once");
+		assertTrue(arrayInternal.arrayDescriptorId == arrayDescriptor.id
+			&& arrayInternal.arrayDescriptorRevision == arrayDescriptor.revision
+			&& registry.require(arrayDescriptor.elementRepresentationId, "program:representation-fixture")
+				.revision == arrayDescriptor.elementRepresentationRevision,
+			"the array representation should retain exact descriptor and element-representation revisions");
 		final nullableInternal = registry.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 		final nullableMutable = registry.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final nullableCaptured = registry.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);
@@ -217,9 +255,9 @@ class RepresentationRegistryFixture {
 			&& arrayCaptured.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
 			&& arrayMutable.valueMutationPolicy == OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer,
 			"mutable and captured Array<Int> locals should separate ref-cell replacement from container mutation");
-		assertTrue(arrayInternal.proof.id == "direct-array-int-reference-carrier-v2"
-			&& arrayInternal.proof.claim.indexOf("does not admit generic") >= 0,
-			"the Array<Int> proof should name its narrow boundary instead of generalizing all arrays");
+		assertTrue(arrayInternal.proof.id == "direct-represented-array-reference-carrier-v1"
+			&& arrayInternal.proof.claim.indexOf("does not admit another element family") >= 0,
+			"the represented-array proof should name its narrow boundary instead of generalizing all arrays");
 		assertTrue(nullableInternal.semanticTypeId == "Null<Int>"
 			&& nullableInternal.carrierTypeId == "Obj.t"
 			&& nullableInternal.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
@@ -328,8 +366,8 @@ class RepresentationRegistryFixture {
 			"an exact-program lookup should return the selected decision");
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
-		assertTrue(repeated.revision == mutable.revision
-			&& registry.decisions().length == 31, "selecting the same answer twice should reuse one decision");
+		assertTrue(repeated.revision == mutable.revision && registry.decisions().length == 32 && registry.representedArrays().length == 1,
+			"selecting the same answer twice should reuse one decision and one represented-array descriptor");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -386,8 +424,20 @@ class RepresentationRegistryFixture {
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
 		expectFailure("stale program", "registry belongs to", () -> registry.require(internal.id, "program:older"));
+		expectFailure("stale represented-array program", "array descriptor",
+			() -> registry.requireRepresentedArray(arrayDescriptor.id, arrayDescriptor.revision, "program:older"));
+		expectFailure("stale represented-array revision", "stale-array-descriptor",
+			() -> registry.requireRepresentedArray(arrayDescriptor.id, "sha256:" + StringTools.lpad("", "0", 64), "program:representation-fixture"));
+		final corruptedArrayDescriptor:Dynamic = Reflect.copy(arrayDescriptor);
+		Reflect.setField(corruptedArrayDescriptor, "elementRepresentationRevision", "sha256:" + StringTools.lpad("", "1", 64));
+		expectFailure("corrupted represented-array element edge", "stale-array-descriptor-leaf",
+			() -> OcamlRepresentationRegistry.validateRepresentedArrayDescriptor(cast corruptedArrayDescriptor,
+				registry.require(arrayDescriptor.elementRepresentationId, "program:representation-fixture"), "program:representation-fixture"));
+		final staleArrayReference:Dynamic = Reflect.copy(arrayInternal);
+		Reflect.setField(staleArrayReference, "arrayDescriptorRevision", "sha256:" + StringTools.lpad("", "2", 64));
+		expectFailure("corrupted array representation descriptor edge", "stale-array-descriptor", () -> registry.register(cast staleArrayReference));
 		expectFailure("unsupported Array<Int> domain", "admitted only for internal, mutable-local, or captured-local storage",
-			() -> registry.selectExactArrayInt(OcamlRepresentationDomain.InstanceField));
+			() -> registry.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.InstanceField));
 		expectFailure("unsupported Bool array domain", "admitted only for internal, local, instance-field, or static-field storage",
 			() -> registry.selectExactBool(OcamlRepresentationDomain.ArrayElement));
 		expectFailure("unsupported Null<Int> array domain", "admitted only for internal, local, instance-field, or static-field storage",
@@ -428,9 +478,9 @@ class RepresentationRegistryFixture {
 		registryAgain.selectExactBool(OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.InstanceField);
 		registryAgain.selectExactBool(OcamlRepresentationDomain.StaticField);
-		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.InternalValue);
-		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.MutableLocalStorage);
-		registryAgain.selectExactArrayInt(OcamlRepresentationDomain.CapturedLocalStorage);
+		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.InternalValue);
+		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);

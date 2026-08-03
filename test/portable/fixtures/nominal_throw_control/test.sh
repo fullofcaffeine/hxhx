@@ -27,8 +27,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 56
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v17'
+if (report.schemaVersion !== 57
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
 	|| report.controlCatchCount !== report.controlCatches.length
 	|| report.controlCatchCount !== 4) {
@@ -63,7 +63,7 @@ for (const functionName of throwFunctions) {
 	const payload = control?.payload
 	const nominal = payload?.nominalRepresentation
 	if (control == null
-		|| control.pipelineRevision !== 'ocaml-function-plans-v69'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v70'
 		|| control.proofId !== 'exact-monomorphic-class-throw-control-v1'
 		|| control.runtimeTags.join(',') !== 'Dynamic'
 		|| control.runtimeTagPolicy !== 'merge-dynamic-with-exact-runtime-value'
@@ -85,7 +85,7 @@ for (const functionName of throwFunctions) {
 let nominalClauseCount = 0
 for (const chain of report.controlCatches) {
 	if (chain.proofId !== 'represented-value-catch-control-v3'
-		|| chain.pipelineRevision !== 'ocaml-function-plans-v69') {
+		|| chain.pipelineRevision !== 'ocaml-function-plans-v70') {
 		fail(`catch chain ${chain.id} does not use the represented-value proof`)
 	}
 	for (const clause of chain.clauses) {
@@ -139,7 +139,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.clauses)
 	.filter(clause => clause.semanticTypeId === 'Box')
-if (report.schemaVersion !== 34
+if (report.schemaVersion !== 35
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== 4
 	|| nominalClauses.length !== 4

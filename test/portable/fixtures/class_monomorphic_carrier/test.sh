@@ -18,9 +18,9 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 56
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v17'
-	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-array-int-locals-monomorphic-class-dynamic-internal-v14') {
+if (report.schemaVersion !== 57
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
 	fail('unexpected lowering-report schema, control model, or representation scope')
 }
 
@@ -77,7 +77,7 @@ for (const functionName of expectedReturnFunctions) {
 	const nominal = payload?.nominalRepresentation
 	if (control == null
 		|| control.targetId !== control.functionId
-		|| control.pipelineRevision !== 'ocaml-function-plans-v69'
+		|| control.pipelineRevision !== 'ocaml-function-plans-v70'
 		|| control.proofId !== 'exact-monomorphic-class-early-return-control-v1'
 		|| payload?.inputSemanticTypeId !== 'Counter'
 		|| payload.inputCarrierTypeId !== 'counter_t'
@@ -324,6 +324,7 @@ NODE
 
 cp -R out "$invalid_output"
 node - "$invalid_output/ocaml_lowering_report.json" <<'NODE'
+const crypto = require('crypto')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -333,6 +334,8 @@ if (decision == null) {
 	throw new Error('missing Counter representation to corrupt')
 }
 decision.nominalTargetTypeName = 'wrong_counter_t'
+report.representationRevision = 'sha256:' + crypto.createHash('sha256')
+	.update(JSON.stringify(report.representations)).digest('hex')
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (
@@ -384,6 +387,7 @@ fi
 
 cp -R out "$invalid_captured_storage_output"
 node - "$invalid_captured_storage_output/ocaml_lowering_report.json" <<'NODE'
+const crypto = require('crypto')
 const fs = require('fs')
 const path = process.argv[2]
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
@@ -393,6 +397,8 @@ if (decision == null) {
 	throw new Error('missing captured Counter representation to corrupt')
 }
 decision.storageMutationPolicy = 'immutable-binding'
+report.representationRevision = 'sha256:' + crypto.createHash('sha256')
+	.update(JSON.stringify(report.representations)).digest('hex')
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 if (

@@ -27,8 +27,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 56
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v17'
+if (report.schemaVersion !== 57
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -121,7 +121,7 @@ if (nestedThrows.length !== 1
 	|| nestedThrows[0].payload?.inputCarrierTypeId !== 'int'
 	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
 	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
-	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v8') {
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v9') {
 	fail('nestedThrowCatchClosure did not seal its exact Int throw under the nested binding')
 }
 const nestedArrayThrows = report.controls.filter(control =>
@@ -132,10 +132,26 @@ if (nestedArrayThrows.length !== 1
 	|| nestedArrayThrows[0].payload?.inputSemanticTypeId !== 'Array<Int>'
 	|| nestedArrayThrows[0].payload?.inputCarrierTypeId !== 'int HxArray.t'
 	|| nestedArrayThrows[0].payload?.inputRepresentationId !== 'representation:Array<Int>:internal-value'
-	|| nestedArrayThrows[0].payload?.conversion !== 'box-array-int-throw-carrier'
-	|| nestedArrayThrows[0].proofId !== 'exact-array-int-throw-control-v1'
+	|| !sha256.test(nestedArrayThrows[0].payload?.representationRevision ?? '')
+	|| nestedArrayThrows[0].payload?.arrayDescriptorId !== 'represented-array:Array<Int>'
+	|| !sha256.test(nestedArrayThrows[0].payload?.arrayDescriptorRevision ?? '')
+	|| nestedArrayThrows[0].payload?.conversion !== 'box-represented-array-throw-carrier'
+	|| nestedArrayThrows[0].proofId !== 'represented-array-throw-control-v1'
 	|| nestedArrayThrows[0].runtimeTags.join(',') !== 'Dynamic,Array') {
 	fail('nestedArrayThrowClosure did not seal its exact Array<Int> throw and runtime tags')
+}
+const nestedArrayRepresentation = report.representations.find(decision =>
+	decision.id === nestedArrayThrows[0].payload.inputRepresentationId)
+const nestedArrayDescriptor = report.representedArrays.find(descriptor =>
+	descriptor.id === nestedArrayThrows[0].payload.arrayDescriptorId)
+if (nestedArrayRepresentation?.revision !== nestedArrayThrows[0].payload.representationRevision
+	|| nestedArrayRepresentation?.arrayDescriptorId !== nestedArrayDescriptor?.id
+	|| nestedArrayRepresentation?.arrayDescriptorRevision !== nestedArrayDescriptor?.revision
+	|| nestedArrayDescriptor?.revision !== nestedArrayThrows[0].payload.arrayDescriptorRevision
+	|| nestedArrayDescriptor?.elementSemanticTypeId !== 'Int'
+	|| nestedArrayDescriptor?.elementRepresentationId !== 'representation:Int:array-element'
+	|| !sha256.test(nestedArrayDescriptor?.elementRepresentationRevision ?? '')) {
+	fail('nestedArrayThrowClosure did not bind the exact representation, array descriptor, and element revisions')
 }
 const nestedCatches = report.controlCatches.filter(catchChain =>
 	catchChain.functionId.includes('|nested-function|')
@@ -143,7 +159,7 @@ const nestedCatches = report.controlCatches.filter(catchChain =>
 		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
 if (nestedCatches.length !== 2
 	|| nestedCatches.some(catchChain =>
-		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v8'
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v9'
 		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
 		|| catchChain.clauses.length !== 1)) {
 	fail('the two nested catch chains are missing or do not preserve private control signals')
@@ -171,7 +187,7 @@ if (nestedLoopTargets.length !== 1
 	|| nestedLoopReturns.length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
-	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v8'
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v9'
 	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
 	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
 	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
@@ -205,8 +221,8 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v8'
-			: control.pipelineRevision !== 'ocaml-function-plans-v69')) {
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v9'
+			: control.pipelineRevision !== 'ocaml-function-plans-v70')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -366,7 +382,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v69'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v70'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -480,7 +496,7 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 34
+if (report.schemaVersion !== 35
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
@@ -495,10 +511,24 @@ const arrayThrow = report.lowering.controls.find(control =>
 if (arrayThrow?.payload?.inputSemanticTypeId !== 'Array<Int>'
 	|| arrayThrow.payload.inputCarrierTypeId !== 'int HxArray.t'
 	|| arrayThrow.payload.inputRepresentationId !== 'representation:Array<Int>:internal-value'
-	|| arrayThrow.payload.conversion !== 'box-array-int-throw-carrier'
-	|| arrayThrow.proofId !== 'exact-array-int-throw-control-v1'
+	|| !/^sha256:[0-9a-f]{64}$/.test(arrayThrow.payload.representationRevision ?? '')
+	|| arrayThrow.payload.arrayDescriptorId !== 'represented-array:Array<Int>'
+	|| !/^sha256:[0-9a-f]{64}$/.test(arrayThrow.payload.arrayDescriptorRevision ?? '')
+	|| arrayThrow.payload.conversion !== 'box-represented-array-throw-carrier'
+	|| arrayThrow.proofId !== 'represented-array-throw-control-v1'
 	|| arrayThrow.runtimeTags.join(',') !== 'Dynamic,Array') {
 	throw new Error('public inspection did not validate the exact nested Array<Int> throw crossing')
+}
+const arrayRepresentation = report.lowering.representation.decisions.find(decision =>
+	decision.id === arrayThrow.payload.inputRepresentationId)
+const arrayDescriptor = report.lowering.representation.representedArrays.find(descriptor =>
+	descriptor.id === arrayThrow.payload.arrayDescriptorId)
+if (arrayRepresentation?.revision !== arrayThrow.payload.representationRevision
+	|| arrayRepresentation?.arrayDescriptorId !== arrayDescriptor?.id
+	|| arrayRepresentation?.arrayDescriptorRevision !== arrayDescriptor?.revision
+	|| arrayDescriptor?.revision !== arrayThrow.payload.arrayDescriptorRevision
+	|| arrayDescriptor?.elementRepresentationId !== 'representation:Int:array-element') {
+	throw new Error('public inspection did not validate the represented-array revision graph')
 }
 const nominalCall = report.lowering.calls.find(call =>
 	call.kind === 'typed-function-value'
@@ -569,7 +599,7 @@ NODE
 	fi
 done
 
-for mutation in semantic carrier representation conversion tags proof program body binding; do
+for mutation in semantic carrier representation representation-revision descriptor descriptor-revision conversion tags proof program body binding; do
 	invalid_output="$INVALID_ARRAY_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
@@ -596,6 +626,15 @@ switch (mutation) {
 	case 'representation':
 		control.payload.inputRepresentationId = 'representation:Array<Int>:captured-local-storage'
 		control.payload.outputRepresentationId = 'representation:Array<Int>:captured-local-storage'
+		break
+	case 'representation-revision':
+		control.payload.representationRevision = `sha256:${'0'.repeat(64)}`
+		break
+	case 'descriptor':
+		control.payload.arrayDescriptorId = 'represented-array:Array<String>'
+		break
+	case 'descriptor-revision':
+		control.payload.arrayDescriptorRevision = `sha256:${'0'.repeat(64)}`
 		break
 	case 'conversion':
 		control.payload.conversion = 'box-nominal-throw-carrier'
