@@ -7,18 +7,50 @@ if [ ! -f "$report_file" ]; then
 	exit 1
 fi
 
-# This child proves only that exact String can be an array element. A later
-# task must deliberately construct an Array<String> descriptor and producer,
-# so this real program must still report neither of those product decisions.
+# This program now exercises the first active Array<String> consumer: one direct
+# literal producer. The producer may select its exact descriptor and carrier,
+# but no other compiler family may treat Array<String> as a local, place, call,
+# return, field, catch, or public/native boundary merely because the source type
+# was recognized.
 node - "$report_file" <<'NODE'
 const fs = require('node:fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+const sha256 = /^sha256:[0-9a-f]{64}$/
 
-if (report.representedArrays.some(entry => entry.arraySemanticTypeId === 'Array<String>')) {
-	throw new Error('String ArrayElement proof unexpectedly admitted an Array<String> descriptor')
+const descriptors = report.representedArrays.filter(entry => entry.arraySemanticTypeId === 'Array<String>')
+const producers = report.arrayLiteralProducers.filter(entry => entry.arraySemanticTypeId === 'Array<String>')
+if (descriptors.length !== 1 || producers.length !== 1) {
+	throw new Error(`expected one literal-owned Array<String> descriptor and producer, got ${descriptors.length} descriptors and ${producers.length} producers`)
 }
-if (report.arrayLiteralProducers.some(entry => entry.arraySemanticTypeId === 'Array<String>')) {
-	throw new Error('String ArrayElement proof unexpectedly admitted an Array<String> literal producer')
+const descriptor = descriptors[0]
+const producer = producers[0]
+if (descriptor.id !== 'represented-array:Array<String>'
+	|| descriptor.elementSemanticTypeId !== 'String'
+	|| descriptor.elementCarrierTypeId !== 'string'
+	|| descriptor.elementRepresentationId !== 'representation:String:array-element'
+	|| !sha256.test(descriptor.elementRepresentationRevision)
+	|| descriptor.arrayCarrierTypeId !== 'string HxArray.t'
+	|| !sha256.test(descriptor.revision)
+	|| producer.functionId.indexOf('|function|main|') < 0
+	|| producer.arrayCarrierTypeId !== descriptor.arrayCarrierTypeId
+	|| producer.arrayDescriptorId !== descriptor.id
+	|| producer.arrayDescriptorRevision !== descriptor.revision
+	|| producer.elementRepresentationId !== descriptor.elementRepresentationId
+	|| producer.elementRepresentationRevision !== descriptor.elementRepresentationRevision
+	|| producer.proofId !== 'direct-array-string-literal-construction-v1'
+	|| producer.elements.length !== 2
+	|| producer.evaluationSchedule.map(step => step.kind).join(',')
+		!== 'create-array,evaluate-element,store-element,evaluate-element,store-element,result-array') {
+	throw new Error('the direct Array<String> literal did not retain its exact descriptor, element carrier, and evaluation schedule')
+}
+for (const [name, value] of Object.entries(report)) {
+	if (Array.isArray(value)
+		&& name !== 'representations'
+		&& name !== 'representedArrays'
+		&& name !== 'arrayLiteralProducers'
+		&& value.some(entry => JSON.stringify(entry).includes('Array<String>'))) {
+		throw new Error(`Array<String> escaped the literal-only boundary through report inventory ${name}`)
+	}
 }
 NODE
 
