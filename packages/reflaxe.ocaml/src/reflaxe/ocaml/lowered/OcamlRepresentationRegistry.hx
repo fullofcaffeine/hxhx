@@ -40,15 +40,17 @@ import reflaxe.ocaml.lowered.OcamlMonomorphicClassRepresentation.OcamlMonomorphi
 	distinct typed forms while sharing one nullable reference carrier. Exact core
 	`String` uses the target's nullable string carrier across internal values,
 	local cells, direct fields, and the independently proved `ArrayElement`
-	domain. That element decision does not itself admit an `Array<String>`
-	descriptor or producer. Exact `Dynamic` uses one internal `Obj.t`
+	domain. An explicit host-neutral identity can compose that element decision
+	into a dormant `Array<String>` descriptor, but the production Haxe-type
+	normalizer and all array producers and consumers remain `Array<Int>`-only.
+	Exact `Dynamic` uses one internal `Obj.t`
 	carrier with occurrence-bound conversions that either preserve an existing
 	Dynamic value or box one typed concrete value. A proven monomorphic class may
 	additionally occupy one captured local cell when every whole-value replacement
 	already produces that exact nominal carrier.
 **/
 class OcamlRepresentationRegistry {
-	public static inline final MODEL_REVISION = "ocaml-representation-v20";
+	public static inline final MODEL_REVISION = "ocaml-representation-v21";
 	public static inline final ARRAY_DESCRIPTOR_MODEL_REVISION = "ocaml-represented-array-v1";
 
 	var currentProgramRevision:Null<String> = null;
@@ -693,6 +695,7 @@ class OcamlRepresentationRegistry {
 		};
 		final elementRepresentation = switch (normalized.elementSemanticTypeId) {
 			case "Int": selectExactInt(OcamlRepresentationDomain.ArrayElement);
+			case "String": selectExactString(OcamlRepresentationDomain.ArrayElement);
 			case _:
 				throw 'reflaxe.ocaml [ocaml-representation:unsupported-array-element]: ${normalized.elementSemanticTypeId} has no admitted ArrayElement representation';
 		};

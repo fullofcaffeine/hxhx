@@ -12,6 +12,8 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlNormalizedRepresentedArray;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescriptor;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
@@ -45,6 +47,16 @@ class RepresentationRegistryFixture {
 		Reflect.setField(corrupted, "profileEligibility", decision.profileEligibility.copy());
 		mutate(corrupted);
 		expectFailure(label, expectedMessage, () -> OcamlRepresentationRegistry.validateDecisionSnapshot(cast corrupted, "program:representation-fixture"));
+	}
+
+	/** Copies and damages one array descriptor before checking its complete element edge. */
+	static function expectArrayDescriptorCorruption(label:String, descriptor:OcamlRepresentedArrayDescriptor, element:OcamlRepresentationDecision,
+			mutate:Dynamic->Void):Void {
+		final corrupted:Dynamic = Reflect.copy(descriptor);
+		Reflect.setField(corrupted, "profileEligibility", descriptor.profileEligibility.copy());
+		mutate(corrupted);
+		expectFailure(label, "stale-array-descriptor-leaf",
+			() -> OcamlRepresentationRegistry.validateRepresentedArrayDescriptor(cast corrupted, element, "program:representation-fixture"));
 	}
 
 	/** Registers the closed fixture class with its already-sealed Int field. */
@@ -147,6 +159,20 @@ class RepresentationRegistryFixture {
 			"an explicit nullable array wrapper should remain outside the direct flat identity");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(genericArrayType) == null,
 			"an open generic array should remain outside the closed represented-array identity");
+		final dormantStringArrayIdentity:OcamlNormalizedRepresentedArray = {
+			arraySemanticTypeId: "Array<String>",
+			elementSemanticTypeId: "String",
+			sourceForm: "direct-builtin-array",
+			closureKind: "closed-monomorphic",
+			outerWrapperKind: "none",
+			nestingKind: "flat"
+		};
+		final dormantStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.InternalValue);
+		final dormantMutableStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.MutableLocalStorage);
+		final dormantCapturedStringArray = registry.selectNormalizedRepresentedArray(dormantStringArrayIdentity,
+			OcamlRepresentationDomain.CapturedLocalStorage);
+		assertTrue(dormantStringArray.semanticTypeId == "Array<String>" && dormantStringArray.carrierTypeId == "string HxArray.t",
+			"an explicit host-neutral Array<String> identity should compose its proven String element carrier without enabling host normalization");
 
 		final mutable = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final internal = registry.selectExactInt(OcamlRepresentationDomain.InternalValue);
@@ -180,6 +206,43 @@ class RepresentationRegistryFixture {
 			&& registry.require(arrayDescriptor.elementRepresentationId, "program:representation-fixture")
 				.revision == arrayDescriptor.elementRepresentationRevision,
 			"the array representation should retain exact descriptor and element-representation revisions");
+		final dormantStringArrayDescriptor = registry.requireRepresentedArray(dormantStringArray.arrayDescriptorId,
+			dormantStringArray.arrayDescriptorRevision, "program:representation-fixture");
+		final dormantStringElement = registry.require(dormantStringArrayDescriptor.elementRepresentationId, "program:representation-fixture");
+		assertTrue(dormantStringArrayDescriptor.arraySemanticTypeId == "Array<String>"
+			&& dormantStringArrayDescriptor.elementSemanticTypeId == "String"
+			&& dormantStringArrayDescriptor.elementDomain == OcamlRepresentationDomain.ArrayElement
+			&& dormantStringArrayDescriptor.elementCarrierTypeId == "string"
+			&& dormantStringArrayDescriptor.elementRepresentationId == "representation:String:array-element"
+			&& dormantStringArrayDescriptor.elementRepresentationRevision == dormantStringElement.revision
+			&& dormantStringArrayDescriptor.arrayCarrierTypeId == "string HxArray.t"
+			&& dormantStringArrayDescriptor.carrierFamilyId == "HxArray"
+			&& dormantStringArrayDescriptor.runtimeCarrierCapabilityId == "haxe-array"
+			&& dormantStringArrayDescriptor.runtimeKindTagId == "Array"
+			&& dormantStringArrayDescriptor.sourceForm == "direct-builtin-array"
+			&& dormantStringArrayDescriptor.closureKind == "closed-monomorphic"
+			&& dormantStringArrayDescriptor.outerWrapperKind == "none"
+			&& dormantStringArrayDescriptor.nestingKind == "flat"
+			&& dormantStringArrayDescriptor.proofId == "direct-flat-array-element-binding-v1"
+			&& dormantStringArrayDescriptor.profileEligibility.join(",") == "metal,portable",
+			"the dormant Array<String> descriptor should bind every shape and carrier fact to the exact String array-element decision");
+		assertTrue(dormantStringArray.arrayDescriptorId == dormantStringArrayDescriptor.id
+			&& dormantStringArray.arrayDescriptorRevision == dormantStringArrayDescriptor.revision
+			&& dormantStringArray.nullPolicy == OcamlRepresentationNullPolicy.RuntimeSentinel
+			&& dormantStringArray.identityPolicy == OcamlRepresentationIdentityPolicy.ReferenceIdentity
+			&& dormantStringArray.aliasingPolicy == OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+			&& dormantStringArray.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+			&& dormantMutableStringArray.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& dormantCapturedStringArray.storageMutationPolicy == OcamlRepresentationStorageMutationPolicy.SharedLocalCell
+			&& dormantStringArray.valueMutationPolicy == OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+			&& dormantStringArray.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectRuntimeContainer
+			&& dormantStringArray.implicitDefaultPolicy == OcamlRepresentationImplicitDefaultPolicy.NotAdmitted
+			&& dormantStringArray.proof.id == "direct-represented-array-reference-carrier-v1"
+			&& dormantStringArray.profileEligibility.join(",") == "metal,portable",
+			"the dormant Array<String> outer decisions should own reference identity, container mutation, and each local storage owner");
+		OcamlRepresentationRegistry.validateDecisionSnapshot(dormantStringArray, "program:representation-fixture");
+		OcamlRepresentationRegistry.validateDecisionSnapshot(dormantMutableStringArray, "program:representation-fixture");
+		OcamlRepresentationRegistry.validateDecisionSnapshot(dormantCapturedStringArray, "program:representation-fixture");
 		final nullableInternal = registry.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 		final nullableMutable = registry.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
 		final nullableCaptured = registry.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);
@@ -392,8 +455,8 @@ class RepresentationRegistryFixture {
 			"an exact-program lookup should return the selected decision");
 
 		final repeated = registry.selectExactInt(OcamlRepresentationDomain.MutableLocalStorage);
-		assertTrue(repeated.revision == mutable.revision && registry.decisions().length == 33 && registry.representedArrays().length == 1,
-			"selecting the same answer twice should reuse one decision and one represented-array descriptor");
+		assertTrue(repeated.revision == mutable.revision && registry.decisions().length == 36 && registry.representedArrays().length == 2,
+			"selecting the same answer twice should reuse one decision and both represented-array descriptors");
 		final ordered = registry.decisions();
 		assertTrue(ordered[0].id < ordered[1].id && ordered[1].id < ordered[2].id, "reported decisions should use deterministic identity order");
 
@@ -462,6 +525,19 @@ class RepresentationRegistryFixture {
 			decision -> Reflect.setField(decision, "programRevision", "program:other"));
 		expectDecisionCorruption("corrupted String array revision", stringArrayElement, "stale-decision-snapshot",
 			decision -> Reflect.setField(decision, "revision", "sha256:" + StringTools.lpad("", "3", 64)));
+		expectArrayDescriptorCorruption("corrupted Array<String> element revision", dormantStringArrayDescriptor, dormantStringElement,
+			descriptor -> Reflect.setField(descriptor, "elementRepresentationRevision", "sha256:" + StringTools.lpad("", "4", 64)));
+		expectArrayDescriptorCorruption("corrupted Array<String> carrier", dormantStringArrayDescriptor, dormantStringElement,
+			descriptor -> Reflect.setField(descriptor, "arrayCarrierTypeId", "Obj.t HxArray.t"));
+		expectArrayDescriptorCorruption("corrupted Array<String> proof", dormantStringArrayDescriptor, dormantStringElement,
+			descriptor -> Reflect.setField(descriptor, "proofId", "unreviewed-array-string-proof"));
+		expectArrayDescriptorCorruption("corrupted Array<String> program", dormantStringArrayDescriptor, dormantStringElement,
+			descriptor -> Reflect.setField(descriptor, "programRevision", "program:other"));
+		expectArrayDescriptorCorruption("corrupted Array<String> profile", dormantStringArrayDescriptor, dormantStringElement,
+			descriptor -> Reflect.setField(descriptor, "profileEligibility", ["portable"]));
+		final staleStringArrayReference:Dynamic = Reflect.copy(dormantStringArray);
+		Reflect.setField(staleStringArrayReference, "arrayDescriptorRevision", "sha256:" + StringTools.lpad("", "5", 64));
+		expectFailure("corrupted Array<String> descriptor edge", "stale-array-descriptor", () -> registry.register(cast staleStringArrayReference));
 
 		expectFailure("missing decision", "no representation decision exists",
 			() -> registry.require("representation:Int:missing", "program:representation-fixture"));
@@ -521,6 +597,9 @@ class RepresentationRegistryFixture {
 		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectRepresentedArray(Context.typeof(macro([] : Array<Int>)), OcamlRepresentationDomain.CapturedLocalStorage);
+		registryAgain.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.InternalValue);
+		registryAgain.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.MutableLocalStorage);
+		registryAgain.selectNormalizedRepresentedArray(dormantStringArrayIdentity, OcamlRepresentationDomain.CapturedLocalStorage);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.InternalValue);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.MutableLocalStorage);
 		registryAgain.selectExactNullInt(OcamlRepresentationDomain.CapturedLocalStorage);

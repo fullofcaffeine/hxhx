@@ -2557,7 +2557,7 @@ class ReflaxeOcamlInspection {
 			}
 		}
 		final expectedRevision = "sha256:" + Sha256.encode([
-			"ocaml-representation-v20",
+			"ocaml-representation-v21",
 			decision.semanticTypeId,
 			decision.domain,
 			decision.carrierTypeId,
