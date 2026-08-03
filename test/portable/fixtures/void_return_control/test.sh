@@ -27,7 +27,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected Void-return control report schema, model, or inventory')
@@ -141,7 +141,7 @@ const controls = report.lowering.controls.filter(control =>
 	control.kind === 'return'
 	&& control.functionId.startsWith('Main|Main|')
 	&& control.mechanism === 'runtime-void-return-signal')
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 5

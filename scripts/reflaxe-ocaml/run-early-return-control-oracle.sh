@@ -34,11 +34,23 @@ node "$OUT_DIR/out.js" >"$OUT_DIR/js.stdout"
 "$HAXE_BIN" -cp "$SRC_DIR" -main Main -neko "$OUT_DIR/out.n"
 neko "$OUT_DIR/out.n" >"$OUT_DIR/neko.stdout"
 
+grep -v '^urlInvalid=' "$EXPECTED" >"$OUT_DIR/expected.shared.stdout"
 for route in interp js neko; do
-	if ! diff -u "$EXPECTED" "$OUT_DIR/$route.stdout"; then
-		echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_ORACLE:FAIL route=$route" >&2
+	actual="$OUT_DIR/$route.stdout"
+	case "$route" in
+		interp) expected_invalid_url='urlInvalid=value:G0' ;;
+		js) expected_invalid_url='urlInvalid=error' ;;
+		neko) expected_invalid_url='urlInvalid=value:' ;;
+	esac
+	grep -v '^urlInvalid=' "$actual" >"$OUT_DIR/$route.shared.stdout"
+	if ! diff -u "$OUT_DIR/expected.shared.stdout" "$OUT_DIR/$route.shared.stdout"; then
+		echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_ORACLE:FAIL route=$route shared_behavior=changed" >&2
+		exit 1
+	fi
+	if [[ "$(grep '^urlInvalid=' "$actual")" != "$expected_invalid_url" ]]; then
+		echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_ORACLE:FAIL route=$route invalid_url_behavior=changed" >&2
 		exit 1
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_ORACLE:PASS routes=3 cases=19"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_ORACLE:PASS routes=3 shared_cases=35 target_specific_cases=1"

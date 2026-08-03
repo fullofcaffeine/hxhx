@@ -8,10 +8,8 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
-import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
-import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionBlocker;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
@@ -20,6 +18,7 @@ import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlCatchAdmission;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier.OcamlEnumDynamicCarrierIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary.OcamlFunctionResultBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
@@ -1792,7 +1791,10 @@ class OcamlControlPlan {
 	monomorphic-class throws, lexical loop transfers, and represented
 	primitive/monomorphic-class/Dynamic catch chains.
 
-	Return-family admission depends on the callable result carrier. Loop-family
+	Return-family admission depends on the function result carrier. A function
+	result carrier records what the completed body returns without also claiming
+	that the compiler admitted the receiver, parameters, or call occurrences.
+	Loop-family
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
 	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
@@ -1831,7 +1833,7 @@ class OcamlControlPlanner {
 		this.arrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 	}
 
-	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlCallableBoundaryPlan>):OcamlControlPlan {
+	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlFunctionResultBoundaryPlan>):OcamlControlPlan {
 		if (body == null)
 			return OcamlControlPlan.notAdmitted(binding);
 
@@ -2752,11 +2754,8 @@ class OcamlControlPlanner {
 		return source.file + ":" + source.min + ":" + source.max;
 	}
 
-	function admittedBoundaryPayload(boundary:Null<OcamlCallableBoundaryPlan>):Null<OcamlCallValuePlan> {
-		if (boundary == null
-			|| (boundary.kind != OcamlCallKind.DirectStaticHaxeMethod && boundary.kind != OcamlCallKind.TypedFunctionValue)
-			|| boundary.resultKind != OcamlCallResultKind.Value
-			|| boundary.result == null) {
+	function admittedBoundaryPayload(boundary:Null<OcamlFunctionResultBoundaryPlan>):Null<OcamlCallValuePlan> {
+		if (boundary == null || boundary.resultKind != OcamlCallResultKind.Value || boundary.result == null) {
 			return null;
 		}
 		final result = boundary.result;
@@ -2844,11 +2843,8 @@ class OcamlControlPlanner {
 		}
 	}
 
-	static function admittedEffectOnlyVoidBoundary(boundary:Null<OcamlCallableBoundaryPlan>):Bool {
-		return boundary != null
-			&& boundary.kind == OcamlCallKind.DirectStaticHaxeMethod
-			&& boundary.resultKind == OcamlCallResultKind.EffectOnlyVoid
-			&& boundary.result == null;
+	static function admittedEffectOnlyVoidBoundary(boundary:Null<OcamlFunctionResultBoundaryPlan>):Bool {
+		return boundary != null && boundary.resultKind == OcamlCallResultKind.EffectOnlyVoid && boundary.result == null;
 	}
 }
 #end

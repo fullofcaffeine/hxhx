@@ -28,7 +28,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
@@ -291,7 +291,7 @@ const throws = report.lowering.controls.filter(control =>
 const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
 	chain.clauses.filter(clause => clause.semanticTypeId === 'haxe.Exception'
 		|| clause.semanticTypeId === 'haxe.ValueException'))
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| throws.length !== 12

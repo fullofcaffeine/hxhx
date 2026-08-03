@@ -601,6 +601,32 @@ typedef InspectionCallableBoundary = {
 	final pipelineRevision:String;
 }
 
+/**
+	One emitted function's completed result, independent of receiver or arguments.
+
+	This boundary can reuse a broader callable boundary or come from the first
+	declaration-only exact-Int slice. Its presence does not mean new call sites are
+	admitted.
+**/
+typedef InspectionFunctionResultBoundary = {
+	final id:String;
+	final source:String;
+	final callableBoundaryId:Null<String>;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final sourceFieldName:String;
+	final resultKind:String;
+	final result:Null<InspectionCallValue>;
+	final profileEligibility:Array<String>;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** One report-safe reference to the program-owned nominal class layout. **/
 typedef InspectionControlNominalRepresentationProof = {
 	final targetModuleName:String;
@@ -777,6 +803,8 @@ typedef InspectionLowering = {
 	final callRevision:Null<String>;
 	final calls:Array<InspectionCall>;
 	final callableBoundaries:Array<InspectionCallableBoundary>;
+	final functionResultBoundaryRevision:Null<String>;
+	final functionResultBoundaries:Array<InspectionFunctionResultBoundary>;
 	final controlRevision:Null<String>;
 	final controls:Array<InspectionControl>;
 	final controlCatchRevision:Null<String>;
@@ -821,6 +849,7 @@ typedef InspectionSummary = {
 	final unsafeOperationCount:Int;
 	final callCount:Int;
 	final callableBoundaryCount:Int;
+	final functionResultBoundaryCount:Int;
 	final controlCount:Int;
 	final controlCatchCount:Int;
 	final controlTargetCount:Int;

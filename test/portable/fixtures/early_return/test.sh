@@ -10,7 +10,8 @@ INVALID_NOMINAL_ROOT="$(mktemp -d)"
 INVALID_ARRAY_ROOT="$(mktemp -d)"
 INVALID_LITERAL_ROOT="$(mktemp -d)"
 INVALID_ADMISSION_ROOT="$(mktemp -d)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT" "$INVALID_ADMISSION_ROOT"' EXIT
+INVALID_RESULT_ROOT="$(mktemp -d)"
+trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT" "$INVALID_ADMISSION_ROOT" "$INVALID_RESULT_ROOT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
 	echo "Missing generated early-return source or lowering report" >&2
@@ -33,17 +34,20 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
+	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length
+	|| report.functionResultBoundaryCount !== report.functionResultBoundaries.length
 	|| !sha256.test(report.controlRevision)
 	|| !sha256.test(report.controlAdmissionRevision)
-	|| !sha256.test(report.controlTargetRevision)) {
-	fail('unexpected function/loop control report schema, model, inventory, or revision')
+	|| !sha256.test(report.controlTargetRevision)
+	|| !sha256.test(report.functionResultBoundaryRevision)) {
+	fail('unexpected function-result or function/loop control report schema, model, inventory, or revision')
 }
 
 function familyFor(admission, family) {
@@ -65,14 +69,56 @@ const admittedBranch = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('Main|Main|static|function|branch|'))
 const unusedPrint = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('Main|Main|static|function|printLine|'))
+const hexValue = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
+const hexValueResult = report.functionResultBoundaries.find(boundary =>
+	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
+const declarationOnlyResults = report.functionResultBoundaries.filter(boundary =>
+	boundary.source === 'static-inline-exact-int-declaration')
 if (familyFor(admittedBranch, 'return')?.status !== 'admitted'
 	|| familyFor(unusedPrint, 'return')?.status !== 'not-needed') {
 	fail('the control admission inventory conflated admitted, blocked, and unused return families')
 }
+if (familyFor(hexValue, 'return')?.status !== 'admitted'
+	|| familyFor(hexValue, 'return')?.occurrenceCount !== 3
+	|| familyFor(hexValue, 'return')?.decisionCount !== 3) {
+	fail('StringTools._hexValue did not receive its function-owned exact-Int result boundary')
+}
+if (hexValueResult?.source !== 'static-inline-exact-int-declaration'
+	|| hexValueResult.callableBoundaryId != null
+	|| hexValueResult.sourceModuleId !== 'StringTools'
+	|| hexValueResult.sourceTypeName !== 'StringTools'
+	|| hexValueResult.sourceFieldName !== '_hexValue'
+	|| hexValueResult.resultKind !== 'value'
+	|| hexValueResult.result?.inputSemanticTypeId !== 'Int'
+	|| hexValueResult.result?.inputCarrierTypeId !== 'int'
+	|| hexValueResult.result?.inputRepresentationId !== 'representation:Int:internal-value'
+	|| hexValueResult.result?.outputSemanticTypeId !== 'Int'
+	|| hexValueResult.result?.outputCarrierTypeId !== 'int'
+	|| hexValueResult.result?.outputRepresentationId !== 'representation:Int:internal-value'
+	|| hexValueResult.result?.conversion !== 'identity'
+	|| hexValueResult.proofId !== 'static-inline-exact-int-function-result-v1'
+	|| declarationOnlyResults.length !== 1
+	|| declarationOnlyResults[0]?.id !== hexValueResult.id
+	|| report.callableBoundaries.some(boundary => boundary.functionId === hexValueResult.functionId)) {
+	fail('StringTools._hexValue result ownership accidentally admitted a callable receiver, argument, or call boundary')
+}
+
+const stringToolsSource = fs.readFileSync('out/StringTools.ml', 'utf8')
+const hexValueStart = stringToolsSource.indexOf('let _hexValue =')
+const hexValueEnd = stringToolsSource.indexOf('\nlet ', hexValueStart + 1)
+const hexValueBody = stringToolsSource.slice(hexValueStart, hexValueEnd)
+if (hexValueStart < 0
+	|| hexValueEnd < 0
+	|| !hexValueBody.includes('HxRuntime.Hx_return')
+	|| hexValueBody.includes('__fallback_result')
+	|| hexValueBody.includes('Obj.magic')) {
+	fail('StringTools._hexValue still uses legacy result recovery instead of its checked return plan')
+}
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 39) {
-	fail(`expected 39 represented return decisions, including the nested Array<Int> and Array<String> throw paths, got ${returnControls.length}`)
+if (returnControls.length !== 44) {
+	fail(`expected 44 represented return decisions, including StringTools._hexValue and the URL-decoder observer, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -700,17 +746,35 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
 	|| report.summary.controlAdmissionCount !== report.lowering.controlAdmissions.length
 	|| report.summary.controlAdmissionCount === 0
+	|| report.summary.functionResultBoundaryCount !== report.lowering.functionResultBoundaries.length
+	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 39
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 44
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 39 returns and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 44 returns, their function-result owners, and four direct represented-array literal producers')
+}
+const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
+	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
+const declarationOnlyResults = report.lowering.functionResultBoundaries.filter(boundary =>
+	boundary.source === 'static-inline-exact-int-declaration')
+if (!/^sha256:[0-9a-f]{64}$/.test(report.lowering.functionResultBoundaryRevision ?? '')
+	|| hexValueResult?.source !== 'static-inline-exact-int-declaration'
+	|| hexValueResult.callableBoundaryId != null
+	|| hexValueResult.result?.inputSemanticTypeId !== 'Int'
+	|| hexValueResult.result?.inputCarrierTypeId !== 'int'
+	|| hexValueResult.result?.outputRepresentationId !== 'representation:Int:internal-value'
+	|| hexValueResult.proofId !== 'static-inline-exact-int-function-result-v1'
+	|| declarationOnlyResults.length !== 1
+	|| declarationOnlyResults[0]?.id !== hexValueResult.id
+	|| report.lowering.callableBoundaries.some(boundary => boundary.functionId === hexValueResult.functionId)) {
+	throw new Error('public inspection did not preserve result-only ownership for StringTools._hexValue')
 }
 const blockedParseAdmission = report.lowering.controlAdmissions.find(admission =>
 	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
@@ -815,6 +879,67 @@ if (nominalCall?.proofId !== 'typed-function-value-signature-matrix-v1:(Bool)->_
 	throw new Error('public inspection did not expose the exact nominal function-value result boundary')
 }
 NODE
+
+for mutation in duplicate missing stale-program carrier representation conversion callable-owner; do
+	invalid_output="$INVALID_RESULT_ROOT/$mutation"
+	cp -R out "$invalid_output"
+	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
+const crypto = require('crypto')
+const fs = require('fs')
+const path = process.argv[2]
+const mutation = process.argv[3]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const index = report.functionResultBoundaries.findIndex(entry =>
+	entry.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
+if (index < 0) {
+	throw new Error('missing StringTools._hexValue function-result boundary to corrupt')
+}
+const boundary = report.functionResultBoundaries[index]
+switch (mutation) {
+	case 'duplicate':
+		report.functionResultBoundaries.splice(index + 1, 0, structuredClone(boundary))
+		break
+	case 'missing':
+		report.functionResultBoundaries.splice(index, 1)
+		break
+	case 'stale-program':
+		boundary.programRevision = 'stale-program-revision'
+		break
+	case 'carrier':
+		boundary.result.outputCarrierTypeId = 'Obj.t'
+		break
+	case 'representation':
+		boundary.result.outputRepresentationId = 'representation:Int:captured-local-storage'
+		break
+	case 'conversion':
+		boundary.result.conversion = 'checked-unbox-nullable-int'
+		break
+	case 'callable-owner':
+		boundary.source = 'callable-boundary'
+		boundary.callableBoundaryId = 'callable-boundary:missing'
+		boundary.proofId = 'callable-function-result-boundary-v1'
+		break
+	default:
+		throw new Error(`unsupported corruption ${mutation}`)
+}
+report.functionResultBoundaryCount = report.functionResultBoundaries.length
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
+NODE
+	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
+	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
+		echo "The public inspector accepted corrupted function-result $mutation evidence" >&2
+		exit 1
+	fi
+	if ! grep -Eiq 'function-result|function result' "$invalid_log"; then
+		echo "The public inspector rejected corrupted function-result $mutation evidence for an unrelated reason" >&2
+		cat "$invalid_log" >&2
+		exit 1
+	fi
+done
 
 for mutation in duplicate missing-family edited-message stale-revision; do
 	invalid_output="$INVALID_ADMISSION_ROOT/$mutation"
@@ -1114,4 +1239,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=39 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=44 function_results=48 producers=4"

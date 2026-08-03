@@ -18,7 +18,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15') {
 	fail('unexpected lowering-report schema, control model, or representation scope')

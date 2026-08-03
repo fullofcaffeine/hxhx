@@ -43,6 +43,8 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary.OcamlFunctionResultBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceCallDecision;
 import reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision;
@@ -84,6 +86,7 @@ typedef OcamlSealedFunctionPlan = {
 	final calls:OcamlCallPlan;
 	final controls:OcamlControlPlan;
 	final callableBoundary:Null<OcamlCallableBoundaryPlan>;
+	final functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>;
 	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
 }
 
@@ -116,6 +119,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final parentBinding:OcamlFunctionPlanBinding;
 	final binding:OcamlFunctionPlanBinding;
 	final callableBoundary:OcamlCallableBoundaryPlan;
+	final ?functionResultBoundary:OcamlFunctionResultBoundaryPlan;
 	final controls:OcamlControlPlan;
 	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 }
@@ -362,6 +366,8 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:stale-body]: nested function "${plan.binding.functionId}" was planned for ${plan.binding.bodyRevision}, but its exact typed body is $observedBodyRevision';
 		OcamlCallPlan.requireCallableBoundary(plan.callableBoundary);
 		requireBoundaryBinding(plan.callableBoundary, plan.binding);
+		final functionResultBoundary = plan.functionResultBoundary ?? OcamlFunctionResultBoundary.fromCallable(plan.callableBoundary);
+		OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, plan.callableBoundary);
 		if (plan.callableBoundary.kind != OcamlCallKind.TypedFunctionValue
 			|| plan.callableBoundary.resultKind != OcamlCallResultKind.Value
 			|| plan.callableBoundary.result == null
@@ -398,6 +404,7 @@ class OcamlFunctionPlanRegistry {
 			parentBinding: copyBinding(plan.parentBinding),
 			binding: copyBinding(plan.binding),
 			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
+			functionResultBoundary: OcamlFunctionResultBoundary.copy(functionResultBoundary),
 			controls: plan.controls,
 			arrayLiteralProducers: plan.arrayLiteralProducers
 		};
@@ -772,8 +779,9 @@ class OcamlFunctionPlanRegistry {
 			localRepresentations:OcamlLocalRepresentationPlan, containerElements:OcamlContainerElementPlan, bytesAccesses:OcamlBytesAccessPlan,
 			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan,
 			imapInterfaces:OcamlIMapInterfacePlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
-			?constructionBoundary:Null<OcamlCallableBoundaryPlan>, ?anonymousStructures:OcamlAnonymousStructurePlan,
-			?structuralFields:OcamlStructuralFieldPlan, ?arrayLiteralProducers:OcamlArrayLiteralProducerPlan):Void {
+			functionResultBoundary:Null<OcamlFunctionResultBoundaryPlan>, ?constructionBoundary:Null<OcamlCallableBoundaryPlan>,
+			?anonymousStructures:OcamlAnonymousStructurePlan, ?structuralFields:OcamlStructuralFieldPlan,
+			?arrayLiteralProducers:OcamlArrayLiteralProducerPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -808,6 +816,12 @@ class OcamlFunctionPlanRegistry {
 		if (callableBoundary != null) {
 			registerCallableBoundary(callableBoundary, binding);
 		}
+		if (functionResultBoundary != null) {
+			OcamlFunctionResultBoundary.require(functionResultBoundary);
+			requireFunctionResultBinding(functionResultBoundary, binding);
+			if (callableBoundary != null)
+				OcamlFunctionResultBoundary.requireCallableMatch(functionResultBoundary, callableBoundary);
+		}
 		if (constructionBoundary != null) {
 			registerCallableBoundary(constructionBoundary, binding);
 		}
@@ -830,6 +844,7 @@ class OcamlFunctionPlanRegistry {
 				calls: calls,
 				controls: controls,
 				callableBoundary: callableBoundary == null ? null : OcamlCallPlan.copyBoundary(callableBoundary),
+				functionResultBoundary: functionResultBoundary == null ? null : OcamlFunctionResultBoundary.copy(functionResultBoundary),
 				constructionBoundary: constructionBoundary == null ? null : OcamlCallPlan.copyBoundary(constructionBoundary)
 			},
 			localIdentities: localIdentities,
@@ -1147,6 +1162,17 @@ class OcamlFunctionPlanRegistry {
 		return boundaries;
 	}
 
+	/** Returns every emitted declaration's completion boundary without treating it as call admission. */
+	public function functionResultBoundaries():Array<OcamlFunctionResultBoundaryPlan> {
+		final boundaries:Array<OcamlFunctionResultBoundaryPlan> = [];
+		for (record in sealedFunctions) {
+			if (record.plan.functionResultBoundary != null)
+				boundaries.push(OcamlFunctionResultBoundary.copy(record.plan.functionResultBoundary));
+		}
+		boundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return boundaries;
+	}
+
 	/**
 		Requires an admitted call to agree with the independently sealed callee.
 
@@ -1299,6 +1325,15 @@ class OcamlFunctionPlanRegistry {
 			|| boundary.bodyRevision != binding.bodyRevision
 			|| boundary.pipelineRevision != binding.pipelineRevision) {
 			throw 'reflaxe.ocaml [ocaml-call:stale-callable-binding]: callable boundary "${boundary.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
+		}
+	}
+
+	static function requireFunctionResultBinding(boundary:OcamlFunctionResultBoundaryPlan, binding:OcamlFunctionPlanBinding):Void {
+		if (boundary.functionId != binding.functionId
+			|| boundary.programRevision != binding.programRevision
+			|| boundary.bodyRevision != binding.bodyRevision
+			|| boundary.pipelineRevision != binding.pipelineRevision) {
+			throw 'reflaxe.ocaml [ocaml-function-result:stale-binding]: result boundary "${boundary.id}" does not belong to ${binding.functionId}/${binding.bodyRevision}/${binding.pipelineRevision}';
 		}
 	}
 

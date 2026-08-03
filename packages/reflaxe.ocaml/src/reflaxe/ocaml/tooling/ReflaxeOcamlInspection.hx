@@ -13,6 +13,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallEvaluationStep;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallableBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCallValue;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionFunctionResultBoundary;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStandardIMapCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralIteratorCallTarget;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStructuralField;
@@ -67,6 +68,9 @@ private enum InspectionJsonResult {
 **/
 class ReflaxeOcamlInspection {
 	static inline final GENERATED_FILES = "_GeneratedFiles.json";
+	static inline final FUNCTION_RESULT_BOUNDARY_MODEL = "typed-ocaml-function-result-boundary-v1";
+	static inline final CALLABLE_FUNCTION_RESULT_PROOF_ID = "callable-function-result-boundary-v1";
+	static inline final STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID = "static-inline-exact-int-function-result-v1";
 	static inline final PROFILE_REPORT = "ocaml_profile_report.json";
 	static inline final RUNTIME_REPORT = "ocaml_runtime_plan_report.json";
 	static inline final LOWERING_REPORT = "ocaml_lowering_report.json";
@@ -106,7 +110,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 37,
+			schemaVersion: 38,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -139,6 +143,7 @@ class ReflaxeOcamlInspection {
 				unsafeOperationCount: lowering.unsafeOperations.length,
 				callCount: lowering.calls.length,
 				callableBoundaryCount: lowering.callableBoundaries.length,
+				functionResultBoundaryCount: lowering.functionResultBoundaries.length,
 				controlCount: lowering.controls.length,
 				controlCatchCount: lowering.controlCatches.length,
 				controlTargetCount: lowering.controlTargets.length,
@@ -209,6 +214,7 @@ class ReflaxeOcamlInspection {
 				final result = call.result == null ? call.resultKind : '${call.result.outputSemanticTypeId}/${call.result.outputCarrierTypeId}';
 				lines.push('    schedule: ${schedule.join(" -> ")}; ($arguments) -> $result');
 			}
+			lines.push('[PASS] Function results: ${report.lowering.functionResultBoundaries.length} emitted function completion boundar${report.lowering.functionResultBoundaries.length == 1 ? "y" : "ies"} validated independently from call receivers and arguments.');
 			lines.push('[PASS] Typed control: ${report.lowering.controls.length} transfer${report.lowering.controls.length == 1 ? "" : "s"} and ${report.lowering.controlTargets.length} lexical loop target${report.lowering.controlTargets.length == 1 ? "" : "s"} sealed before syntax.');
 			for (control in report.lowering.controls) {
 				lines.push('  - ${control.sourceFile} bytes ${control.sourceMin}-${control.sourceMax}: ${control.kind} -> ${control.targetKind} ${control.targetId}');
@@ -251,7 +257,7 @@ class ReflaxeOcamlInspection {
 			lines.push('  - ${capability.label} [${capability.status}]: ${capability.reason}');
 		}
 		lines.push("");
-		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount} control_admissions=${report.summary.controlAdmissionCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
+		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount} function_results=${report.summary.functionResultBoundaryCount} control_admissions=${report.summary.controlAdmissionCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
 		return lines.join("\n") + "\n";
 	}
 
@@ -397,6 +403,8 @@ class ReflaxeOcamlInspection {
 					callRevision: null,
 					calls: [],
 					callableBoundaries: [],
+					functionResultBoundaryRevision: null,
+					functionResultBoundaries: [],
 					controlRevision: null,
 					controls: [],
 					controlCatchRevision: null,
@@ -415,8 +423,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 60) {
-						throw 'Unsupported lowering report schema $version; expected 60.';
+					if (version != 61) {
+						throw 'Unsupported lowering report schema $version; expected 61.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -439,10 +447,12 @@ class ReflaxeOcamlInspection {
 					final containerElementConversions = inspectContainerElementConversions(value, containerElementRequiredConversionIds);
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
+					final functionResultBoundaries = inspectFunctionResultBoundaries(value, representation, callInventory.boundaries);
 					final controlTargets = inspectControlTargets(value);
 					final controls = inspectControls(value, representation, arrayLiteralProducers, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final controlAdmissions = inspectControlAdmissions(value, controls, controlTargets, controlCatches);
+					requireFunctionResultCoverage(functionResultBoundaries, controlAdmissions);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
 						containerElementConversions, anonymousStructures.operations, structuralFields.decisions, iMapInterfaces.conversions,
@@ -479,6 +489,8 @@ class ReflaxeOcamlInspection {
 						callRevision: requiredSha256Revision(value, "callRevision"),
 						calls: callInventory.calls,
 						callableBoundaries: callInventory.boundaries,
+						functionResultBoundaryRevision: requiredSha256Revision(value, "functionResultBoundaryRevision"),
+						functionResultBoundaries: functionResultBoundaries,
 						controlRevision: requiredSha256Revision(value, "controlRevision"),
 						controls: controls,
 						controlCatchRevision: requiredSha256Revision(value, "controlCatchRevision"),
@@ -1513,6 +1525,161 @@ class ReflaxeOcamlInspection {
 		calls.sort((left, right) -> compareStrings(left.id, right.id));
 		boundaries.sort((left, right) -> compareStrings(left.calleeId, right.calleeId));
 		return {calls: calls, boundaries: boundaries};
+	}
+
+	/**
+		Validates the value produced when each emitted function completes.
+
+		A function-result boundary is deliberately narrower than a callable
+		boundary: it may authorize recovery of an early `return` value without
+		claiming that callers, parameters, or an instance receiver use a new ABI.
+		This reader therefore validates result ownership separately and requires
+		callable-derived entries to remain exact copies of their callable owner.
+	**/
+	static function inspectFunctionResultBoundaries(value:Dynamic, representation:InspectionRepresentation,
+			callableBoundaries:Array<InspectionCallableBoundary>):Array<InspectionFunctionResultBoundary> {
+		if (requiredString(value, "functionResultBoundaryModel") != FUNCTION_RESULT_BOUNDARY_MODEL)
+			throw "Unsupported function-result boundary report model.";
+		final rawBoundaries = requiredArray(value, "functionResultBoundaries");
+		if (rawBoundaries.length != requiredInt(value, "functionResultBoundaryCount"))
+			throw "Function-result boundary count does not match its inventory.";
+		final expectedRevision = "sha256:" + Sha256.encode(Json.stringify(rawBoundaries));
+		if (requiredSha256Revision(value, "functionResultBoundaryRevision") != expectedRevision)
+			throw "Function-result boundary revision does not match its ordered inventory.";
+
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final callableById:Map<String, InspectionCallableBoundary> = [];
+		for (callable in callableBoundaries)
+			callableById.set(callable.id, callable);
+
+		final boundaries = [for (entry in rawBoundaries) functionResultBoundary(entry)];
+		final ids:Map<String, Bool> = [];
+		final functions:Map<String, Bool> = [];
+		var previousId = "";
+		for (boundary in boundaries) {
+			if (ids.exists(boundary.id)
+				|| functions.exists(boundary.functionId)
+				|| (previousId.length > 0 && compareStrings(previousId, boundary.id) >= 0)) {
+				throw 'Function-result boundary report contains duplicate or unsorted identity "${boundary.id}" or function "${boundary.functionId}".';
+			}
+			if (boundary.id != "function-result-boundary:" + Sha256.encode(boundary.functionId).substr(0, 24)
+				|| boundary.functionId.length == 0
+				|| boundary.programRevision.length == 0
+				|| boundary.bodyRevision.length == 0
+				|| boundary.pipelineRevision.length == 0
+				|| boundary.reason.length == 0
+				|| boundary.proofClaim.length == 0
+				|| boundary.profileEligibility.join(",") != "metal,portable") {
+				throw 'Function-result boundary "${boundary.id}" has incomplete identity, revision, proof, or profile facts.';
+			}
+			if (boundary.result != null) {
+				validateCallValue(boundary.result, representationById, 'Function-result boundary "${boundary.id}" result');
+				validateCallValueSide(boundary.result.inputRepresentationId, boundary.result.inputSemanticTypeId, boundary.result.inputCarrierTypeId,
+					representationById, 'Function-result boundary "${boundary.id}" input', boundary.programRevision);
+				validateCallValueSide(boundary.result.outputRepresentationId, boundary.result.outputSemanticTypeId, boundary.result.outputCarrierTypeId,
+					representationById, 'Function-result boundary "${boundary.id}" output', boundary.programRevision);
+			}
+			switch (boundary.source) {
+				case "callable-boundary":
+					final callableId = boundary.callableBoundaryId;
+					if (callableId == null)
+						throw 'Function-result boundary "${boundary.id}" has no callable owner.';
+					final callable = callableById.get(callableId);
+					if (callable == null
+						|| boundary.proofId != CALLABLE_FUNCTION_RESULT_PROOF_ID
+						|| boundary.sourceModuleId != callable.sourceModuleId
+						|| boundary.sourceTypeName != callable.sourceTypeName
+						|| boundary.sourceFieldName != callable.sourceFieldName
+						|| boundary.functionId != callable.functionId
+						|| boundary.programRevision != callable.programRevision
+						|| boundary.bodyRevision != callable.bodyRevision
+						|| boundary.pipelineRevision != callable.pipelineRevision
+						|| boundary.resultKind != callable.resultKind
+						|| !sameFunctionResultValue(boundary.result, callable.result)) {
+						throw 'Function-result boundary "${boundary.id}" disagrees with callable owner "$callableId".';
+					}
+				case "static-inline-exact-int-declaration":
+					final result = boundary.result;
+					if (boundary.callableBoundaryId != null
+						|| boundary.sourceModuleId.length == 0
+						|| boundary.sourceTypeName.length == 0
+						|| boundary.sourceFieldName.length == 0
+						|| boundary.resultKind != "value"
+						|| result == null
+						|| !isCallValueSide(result.inputSemanticTypeId, result.inputCarrierTypeId, result.inputRepresentationId, "Int", "int")
+						|| !isCallValueSide(result.outputSemanticTypeId, result.outputCarrierTypeId, result.outputRepresentationId, "Int", "int")
+						|| result.index != -1
+						|| result.parameterOptional
+						|| result.conversion != "identity"
+						|| result.proofId != "identity-call-carrier-v1"
+						|| boundary.proofId != STATIC_INLINE_EXACT_INT_RESULT_PROOF_ID) {
+						throw 'Function-result boundary "${boundary.id}" exceeds the declaration-only static inline exact-Int slice.';
+					}
+				case _:
+					throw 'Function-result boundary "${boundary.id}" has unsupported source "${boundary.source}".';
+			}
+			ids.set(boundary.id, true);
+			functions.set(boundary.functionId, true);
+			previousId = boundary.id;
+		}
+		return boundaries;
+	}
+
+	static function functionResultBoundary(value:Dynamic):InspectionFunctionResultBoundary {
+		final resultKind = callResultKind(value);
+		return {
+			id: requiredString(value, "id"),
+			source: requiredString(value, "source"),
+			callableBoundaryId: optionalString(value, "callableBoundaryId"),
+			sourceModuleId: requiredString(value, "sourceModuleId"),
+			sourceTypeName: requiredString(value, "sourceTypeName"),
+			sourceFieldName: requiredString(value, "sourceFieldName"),
+			resultKind: resultKind,
+			result: callResult(value, resultKind, "function-result-boundary"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+	}
+
+	static function sameFunctionResultValue(left:Null<InspectionCallValue>, right:Null<InspectionCallValue>):Bool {
+		if (left == null || right == null)
+			return left == null && right == null;
+		return left.index == right.index
+			&& left.parameterOptional == right.parameterOptional
+			&& left.inputSemanticTypeId == right.inputSemanticTypeId
+			&& left.inputCarrierTypeId == right.inputCarrierTypeId
+			&& left.inputRepresentationId == right.inputRepresentationId
+			&& left.outputSemanticTypeId == right.outputSemanticTypeId
+			&& left.outputCarrierTypeId == right.outputCarrierTypeId
+			&& left.outputRepresentationId == right.outputRepresentationId
+			&& left.conversion == right.conversion
+			&& left.proofId == right.proofId
+			&& left.proofClaim == right.proofClaim;
+	}
+
+	/** Requires every admitted root early-return family to name its result owner. */
+	static function requireFunctionResultCoverage(boundaries:Array<InspectionFunctionResultBoundary>, admissions:Array<OcamlControlAdmissionSnapshot>):Void {
+		final byFunction:Map<String, InspectionFunctionResultBoundary> = [];
+		for (boundary in boundaries)
+			byFunction.set(boundary.functionId, boundary);
+		for (admission in admissions) {
+			if (admission.functionId.indexOf("|nested-function|") >= 0)
+				continue;
+			final returns = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
+			if (returns.status == OcamlControlAdmissionStatus.Admitted
+				&& returns.occurrenceCount > 0
+				&& !byFunction.exists(admission.functionId)) {
+				throw 'Control admission "${admission.id}" admits return transfers without a function-result boundary.';
+			}
+		}
 	}
 
 	static function callValue(value:Dynamic):InspectionCallValue {
@@ -3531,6 +3698,8 @@ class ReflaxeOcamlInspection {
 			callRevision: null,
 			calls: [],
 			callableBoundaries: [],
+			functionResultBoundaryRevision: null,
+			functionResultBoundaries: [],
 			controlRevision: null,
 			controls: [],
 			controlCatchRevision: null,

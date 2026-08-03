@@ -16,6 +16,21 @@ helpers record left-to-right evaluation, and the catch mutates the received
 array through one alias. Matching output therefore proves behavior and object
 identity; it does not treat generated OCaml text as the expected result.
 
+The URL-decoder cases are the independent public-behavior oracle for the
+standard-library `_hexValue` helper. They cover numeric, upper-case, lower-case,
+and invalid hexadecimal input through `StringTools.urlDecode`, while a counter
+proves that each source argument is evaluated once. `_hexValue` itself remains
+private, so the fixture deliberately observes its public caller instead of
+copying the helper's algorithm into the test.
+
+Haxe 4.3.7 does not define one cross-target result for the invalid `%G0` input:
+the interpreter returns `G0`, JavaScript throws, and Neko returns an empty
+string. The oracle therefore compares the valid cases and all other behavior
+across all three routes, then checks each route's invalid-input result
+separately. The OCaml target preserves the invalid escape as `%G0`; that is an
+explicit target-library contract, not a false claim that every Haxe target
+agrees on malformed URLs.
+
 Run the upstream Haxe 4.3.7 oracle with:
 
 ```bash

@@ -27,7 +27,7 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlCatchModel !== 'typed-ocaml-represented-value-catch-chain-v3'
 	|| report.controlCatchCount !== report.controlCatches.length
@@ -139,7 +139,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const nominalClauses = report.lowering.controlCatches.flatMap(chain => chain.clauses)
 	.filter(clause => clause.semanticTypeId === 'Box')
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| report.summary.valid !== true
 	|| report.summary.controlCatchCount !== 4
 	|| nominalClauses.length !== 4

@@ -1269,7 +1269,7 @@ class CallPlanFixture {
 		registry.sealFunction(owner, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities), new OcamlLocalRepresentationPlan([]),
 			new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]), new OcamlBytesProducerPlan([]),
 			new OcamlBytesReadPlan([]), new OcamlIMapInterfacePlan(owner, new ObjectMap(), new ObjectMap()), calls, OcamlControlPlan.notAdmitted(owner),
-			callable, construction);
+			callable, null, construction);
 	}
 
 	/** Returns one real typed method body for the syntax-handoff lifecycle test. */

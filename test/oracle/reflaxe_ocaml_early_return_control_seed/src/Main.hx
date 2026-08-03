@@ -9,6 +9,7 @@ private class NestedReturnBox {
 class Main {
 	static var arrayLiteralThrowOrder = "";
 	static var arrayLiteralThrowCount = 0;
+	static var urlDecodeEvaluationCount = 0;
 
 	static function printLine(value:String):Void {
 		#if js
@@ -16,6 +17,21 @@ class Main {
 		#else
 		Sys.println(value);
 		#end
+	}
+
+	/** Records that each public URL-decoder argument is evaluated exactly once. */
+	static function encodedUrl(value:String):String {
+		urlDecodeEvaluationCount += 1;
+		return value;
+	}
+
+	/** Makes both an ordinary decoded value and an invalid-input exception observable. */
+	static function urlDecodeOutcome(value:String):String {
+		try {
+			return "value:" + StringTools.urlDecode(value);
+		} catch (_:Dynamic) {
+			return "error";
+		}
 	}
 
 	static function branch(value:Int):Int {
@@ -341,6 +357,11 @@ class Main {
 	}
 
 	static function main() {
+		printLine("urlDecimal=" + urlDecodeOutcome(encodedUrl("%32")));
+		printLine("urlUpper=" + urlDecodeOutcome(encodedUrl("%4A")));
+		printLine("urlLower=" + urlDecodeOutcome(encodedUrl("%4a")));
+		printLine("urlInvalid=" + urlDecodeOutcome(encodedUrl("%G0")));
+		printLine("urlEvaluationCount=" + urlDecodeEvaluationCount);
 		printLine("branch0=" + branch(0));
 		printLine("branch1=" + branch(1));
 		printLine("loop3=" + loop(3));

@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 60
+if (report.schemaVersion !== 61
 	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v1'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
@@ -140,7 +140,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 6
 	|| report.summary.iMapInterfaceCallCount !== 25) {

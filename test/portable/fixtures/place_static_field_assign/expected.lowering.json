@@ -722,8 +722,823 @@
   "structuralFields": [],
   "anonymousStructureModel": "ocaml-anonymous-structure-v3",
   "representationRevision": "sha256:0d98f8db9e1f8159641198cdfa0953e6b322f07ff1a8fbb91b2ad586701eae5d",
-  "controlRevision": "sha256:b2209ce5949c8f98f19ec0164403072ff2bb0e9f78cc687adf2da00061d44fe5",
+  "controlRevision": "sha256:175ae0710dbf02dcde44239b55f57aa83fac30441e84f4807765cb8ddcac2733",
   "anonymousStructureRevision": "sha256:404769257020db6804655a41dde0de4fd99ad398e93b835943199f5eb8ab651e",
+  "functionResultBoundaries": [
+    {
+      "callableBoundaryId": "callable-boundary:0a38d9228412fb7b6427492d",
+      "bodyRevision": "12:1f6ab09622fdcabc61c3737f03a419a797896b5723335391342a338b6505aa2e",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "_quoteWinArgOcaml",
+      "id": "function-result-boundary:126e38af12344f7221e464e9",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|_quoteWinArgOcaml|generics:0|required:String,required:Bool->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:d55f1bdcdb37308b7690d9aa",
+      "bodyRevision": "12:a0b37c56c51a08e1d17d2ea8ad7afc6b8aac295c8e183cc95b757a80bb8d2f8a",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rhsBool",
+      "id": "function-result-boundary:163f13259671687aafbfe1ae",
+      "source": "callable-boundary",
+      "functionId": "Main|Main|static|function|rhsBool|generics:0|->Bool",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "Main",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Bool:internal-value",
+        "outputSemanticTypeId": "Bool",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "bool",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Bool:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Bool",
+        "index": -1,
+        "outputCarrierTypeId": "bool"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:91cee5cebd738ac2f26dccb2",
+      "bodyRevision": "12:556eedbe025201b539195275c632ae6c6298cc8a214e0553dfb0cdd258ee562c",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "endsWith",
+      "id": "function-result-boundary:1c059489199388bfc7cfc6aa",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|endsWith|generics:0|required:String,required:String->Bool",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Bool:internal-value",
+        "outputSemanticTypeId": "Bool",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "bool",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Bool:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Bool",
+        "index": -1,
+        "outputCarrierTypeId": "bool"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:124f432adea8898d15f39b20",
+      "bodyRevision": "12:07cabafed4fd06b97946e4d182994a247d2b6d51985f93ea54b00ee5292d53ec",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "quoteUnixArg",
+      "id": "function-result-boundary:25fb86e933ee0b329e986031",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|quoteUnixArg|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:e571994bbf0a0c982f613776",
+      "bodyRevision": "12:1590ca8eb0ba2f82e8d34b9c33080d13a314bd0dd573dd980f92d9fc4f347a91",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "trim",
+      "id": "function-result-boundary:26bc37922a3bc7767108a811",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|trim|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:cb197c20ebb932394159151f",
+      "bodyRevision": "12:f3e0a6ad1286659af6eff2cc1b2ebc9723cc3d06bce3c71132c45c2f6e33b681",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "lpad",
+      "id": "function-result-boundary:2c8952a9677173979b25b345",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|lpad|generics:0|required:String,required:String,required:Int->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:f4bf6371bed9b96200b9ea3c",
+      "bodyRevision": "12:4f469380596a9c4205def47f75f8ca0a1d4b5250179cb60bec984506d179b0fa",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "startsWith",
+      "id": "function-result-boundary:2d558bf106158706f82ef0f4",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|startsWith|generics:0|required:String,required:String->Bool",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Bool:internal-value",
+        "outputSemanticTypeId": "Bool",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "bool",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Bool:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Bool",
+        "index": -1,
+        "outputCarrierTypeId": "bool"
+      }
+    },
+    {
+      "callableBoundaryId": null,
+      "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
+      "proofClaim": "The followed declaration result and the program representation registry independently select Int -> int. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, or call occurrence.",
+      "reason": "The final typed declaration is a static inline function with one required exact Int input, an exact Int result, and function-owned return control. The compiler may therefore recover those returns as Int without claiming that the parameter or call sites use a newly admitted ABI.",
+      "sourceFieldName": "_hexValue",
+      "id": "function-result-boundary:2f7195244797f8991c347111",
+      "source": "static-inline-exact-int-declaration",
+      "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "proofId": "static-inline-exact-int-function-result-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Int:internal-value",
+        "outputSemanticTypeId": "Int",
+        "proofClaim": "The final typed function result already uses the exact Int internal carrier, so function completion preserves that carrier without conversion.",
+        "inputCarrierTypeId": "int",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Int",
+        "index": -1,
+        "outputCarrierTypeId": "int"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:a927727cfffdd186ade4720c",
+      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "_urlDecodeOcaml",
+      "id": "function-result-boundary:3355358d20df75b2c6cb9739",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:97bd1a7b8b8fa1bbaf103c0c",
+      "bodyRevision": "12:636477ba8a8b46222b077543bdedb5b09baaaf10630f6d4553fa53cbe204ad9a",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rhsMutatingQualified",
+      "id": "function-result-boundary:3b386535d14811c79d4e0eb9",
+      "source": "callable-boundary",
+      "functionId": "Main|Main|static|function|rhsMutatingQualified|generics:0|->Int",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "Main",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Int:internal-value",
+        "outputSemanticTypeId": "Int",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "int",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Int",
+        "index": -1,
+        "outputCarrierTypeId": "int"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:2c703fe8e8278308d197a5b4",
+      "bodyRevision": "12:26df1e66dc071beb11bcd7c41b60b09e78b5c76d1de586fcfc78cf2411b7d047",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "htmlUnescape",
+      "id": "function-result-boundary:49c3bf9fa74f20e4252fd7df",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|htmlUnescape|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:d31c7d988349d0de161e6f87",
+      "bodyRevision": "12:c52809e7d856204d42f34e1d8292c8f2021f19d74006ddfc0ed938868edfafc9",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "replace",
+      "id": "function-result-boundary:56defe4c9e3747d345ffb331",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|replace|generics:0|required:String,required:String,required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:873d431a308f45bc0109ef30",
+      "bodyRevision": "12:935e4eae357c7ec31343c37be5b8859aa33e3d891cc95ca540cfb33c45a2c121",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rtrim",
+      "id": "function-result-boundary:6785d12010fd1575bddc4e29",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|rtrim|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:7fcf57b88318cde6172a49d2",
+      "bodyRevision": "12:106ef18c7db75bed01d85a26a5dbed78ef0a9363438396c2fcb50b364c48097e",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "isSpace",
+      "id": "function-result-boundary:6d7c76d1be11d81d5354248a",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Bool:internal-value",
+        "outputSemanticTypeId": "Bool",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "bool",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Bool:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Bool",
+        "index": -1,
+        "outputCarrierTypeId": "bool"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:4b27a2e2bc48f0ec46a19d5a",
+      "bodyRevision": "12:39efc1f106b47cb1c653666a5c693420734a233b0bd9a05d4367b22ce12e3b9a",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "hex",
+      "id": "function-result-boundary:768f8a230f332c3900417e6f",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|hex|generics:0|required:Int,optional:Null<Int>->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:7d766863c07915d04bd0c802",
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "_urlEncodeOcaml",
+      "id": "function-result-boundary:8353cd6704bc5d89ec1a1f5b",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:822230e902e42cd36e4baea8",
+      "bodyRevision": "12:08e75edd7cdfae6d994fdbdb3e08cc3c98059959fc16abaab25f48270e2216b5",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "main",
+      "id": "function-result-boundary:873989be86d65a12cace3b3f",
+      "source": "callable-boundary",
+      "functionId": "Main|Main|static|function|main|generics:0|->Void",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "effect-only-void",
+      "sourceModuleId": "Main",
+      "result": null
+    },
+    {
+      "callableBoundaryId": "callable-boundary:0629a25ee8bb8426772dfd9b",
+      "bodyRevision": "12:671d0b95cb466ed17929f5ceff8411e1123a94968bb2a5ae0828cf708598f958",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "run",
+      "id": "function-result-boundary:991c044d3127cb972bc92f77",
+      "source": "callable-boundary",
+      "functionId": "Main|SameModuleWorker|static|function|run|generics:0|->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "SameModuleWorker",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "Main",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:4bfb0499456b9b19df185027",
+      "bodyRevision": "12:870df52dd893659566917cfe39ad0205d77cb3a4dc4493c9cd5767a685e6e32f",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "htmlEscape",
+      "id": "function-result-boundary:9f60e71f182df5eb1098541e",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|htmlEscape|generics:0|required:String,optional:Null<Bool>->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:b6f5b0c4e502d66b2a814b09",
+      "bodyRevision": "12:7a1dbbe1506d8b39cdd65b5b4172128dca300b441cbee7063c25019ab9f852b4",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rhsMutatingLocal",
+      "id": "function-result-boundary:b268573d4e533162edb4f4d3",
+      "source": "callable-boundary",
+      "functionId": "Main|Main|static|function|rhsMutatingLocal|generics:0|->Int",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "Main",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Int:internal-value",
+        "outputSemanticTypeId": "Int",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "int",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Int",
+        "index": -1,
+        "outputCarrierTypeId": "int"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:13e02f89c8cee9042b07c22b",
+      "bodyRevision": "12:a0e31001ea41d553cad707b8149ae999ebaf892353e48ab6f388dffe7cc13d2a",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "ltrim",
+      "id": "function-result-boundary:b356710343d48ee186adbbf6",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|ltrim|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:fd7646a762c98fda0f31d910",
+      "bodyRevision": "12:b8ff6beb0d541a4d5112bb0ea3a1c7c4e9f24d9bc4964a0c4ed10ea84f50c07b",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "quoteWinArg",
+      "id": "function-result-boundary:c15200c2a7f6ca379935aaf9",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:5cf0dd5434d78edb1304ca9a",
+      "bodyRevision": "12:7b3a3fd27050311144bbb22820f9002b46afab87b42e8064e9d952cc664099fb",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rpad",
+      "id": "function-result-boundary:cac3aea5060645e4d04108fe",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|rpad|generics:0|required:String,required:String,required:Int->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:204a81943e686597f5c5b27c",
+      "bodyRevision": "12:f881475f05fc8e2752ad3e5b00672cdf4fac76f12956f401cd43c1659dc6e43d",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "rhs",
+      "id": "function-result-boundary:ef65fe6fb3b3c938f13be947",
+      "source": "callable-boundary",
+      "functionId": "Main|Main|static|function|rhs|generics:0|required:String,required:Int->Int",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "Main",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "Main",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:Int:internal-value",
+        "outputSemanticTypeId": "Int",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "int",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "Int",
+        "index": -1,
+        "outputCarrierTypeId": "int"
+      }
+    },
+    {
+      "callableBoundaryId": "callable-boundary:d3244cb3df9c2f3fe955b834",
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "proofClaim": "The result kind, carrier conversion, function identity, body revision, program revision, and pipeline revision are copied from one validated callable boundary and must remain equal to it.",
+      "reason": "The admitted callable already fixes this function's completed result. Control lowering reuses that result and does not create a second conversion decision.",
+      "sourceFieldName": "_quoteUnixArgOcaml",
+      "id": "function-result-boundary:f8e3b6cb283aeac417a5558c",
+      "source": "callable-boundary",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "proofId": "callable-function-result-boundary-v1",
+      "sourceTypeName": "StringTools",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "resultKind": "value",
+      "sourceModuleId": "StringTools",
+      "result": {
+        "parameterOptional": false,
+        "inputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "inputCarrierTypeId": "string",
+        "proofId": "identity-call-carrier-v1",
+        "outputRepresentationId": "representation:String:internal-value",
+        "conversion": "identity",
+        "inputSemanticTypeId": "String",
+        "index": -1,
+        "outputCarrierTypeId": "string"
+      }
+    }
+  ],
   "iMapInterfaceConversionCount": 0,
   "structuralFieldRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "controlTargets": [
@@ -1284,6 +2099,7 @@
     }
   ],
   "controlCatchModel": "typed-ocaml-represented-value-catch-chain-v3",
+  "functionResultBoundaryCount": 25,
   "controlTargetCount": 37,
   "unsafeOperations": [
     {
@@ -4559,7 +5375,7 @@
     }
   ],
   "runtimeRequirementCount": 46,
-  "schemaVersion": 60,
+  "schemaVersion": 61,
   "controlAdmissionCount": 151,
   "structuralFieldModel": "typed-structural-field-overlap-v3",
   "unsafeOperationCount": 21,
@@ -7709,6 +8525,7 @@
       }
     }
   ],
+  "functionResultBoundaryRevision": "sha256:0837b6b279a388c43b44b389625f5df3c551f1d6e8d82d3bf5d0787113fd9899",
   "containerElementConversionCount": 0,
   "representedArrayModel": "ocaml-represented-array-v1",
   "callCount": 14,
@@ -8340,6 +9157,141 @@
       },
       "kind": "return",
       "functionId": "StringTools|StringTools|static|function|lpad|generics:0|required:String,required:String,required:Int->String",
+      "proofId": "exact-value-early-return-control-v2",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "runtimeCapabilityId": "hxhx-runtime:function-return-signal-v1",
+      "effect": "exit-function"
+    },
+    {
+      "mechanism": "runtime-return-signal",
+      "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
+      "runtimeTags": [],
+      "runtimeTagPolicy": "no-runtime-tags",
+      "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "targetKind": "function",
+      "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+      "payload": {
+        "inputRepresentationId": "representation:Int:internal-value",
+        "nominalRepresentation": null,
+        "representationRevision": null,
+        "outputSemanticTypeId": "Int",
+        "arrayDescriptorId": null,
+        "arrayLiteralProducerPlanRevision": null,
+        "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+        "arrayDescriptorRevision": null,
+        "arrayLiteralProducerId": null,
+        "inputCarrierTypeId": "int",
+        "proofId": "exact-value-early-return-control-v2",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "box-and-recover-exact-value",
+        "signalCarrierTypeId": "Obj.t",
+        "inputSemanticTypeId": "Int",
+        "outputCarrierTypeId": "int"
+      },
+      "reason": "This return is nested below the function's direct result path, so it exits the current exact-Int Haxe function through one revision-bound private runtime signal.",
+      "id": "control:return:51dbf198c2431c8a28863937",
+      "source": {
+        "min": 19031,
+        "max": 19060,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "kind": "return",
+      "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "proofId": "exact-value-early-return-control-v2",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "runtimeCapabilityId": "hxhx-runtime:function-return-signal-v1",
+      "effect": "exit-function"
+    },
+    {
+      "mechanism": "runtime-return-signal",
+      "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
+      "runtimeTags": [],
+      "runtimeTagPolicy": "no-runtime-tags",
+      "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "targetKind": "function",
+      "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+      "payload": {
+        "inputRepresentationId": "representation:Int:internal-value",
+        "nominalRepresentation": null,
+        "representationRevision": null,
+        "outputSemanticTypeId": "Int",
+        "arrayDescriptorId": null,
+        "arrayLiteralProducerPlanRevision": null,
+        "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+        "arrayDescriptorRevision": null,
+        "arrayLiteralProducerId": null,
+        "inputCarrierTypeId": "int",
+        "proofId": "exact-value-early-return-control-v2",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "box-and-recover-exact-value",
+        "signalCarrierTypeId": "Obj.t",
+        "inputSemanticTypeId": "Int",
+        "outputCarrierTypeId": "int"
+      },
+      "reason": "This return is nested below the function's direct result path, so it exits the current exact-Int Haxe function through one revision-bound private runtime signal.",
+      "id": "control:return:71232a2a5a42950ad21de9e6",
+      "source": {
+        "min": 18882,
+        "max": 18904,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "kind": "return",
+      "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "proofId": "exact-value-early-return-control-v2",
+      "pipelineRevision": "ocaml-function-plans-v71",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
+      "runtimeCapabilityId": "hxhx-runtime:function-return-signal-v1",
+      "effect": "exit-function"
+    },
+    {
+      "mechanism": "runtime-return-signal",
+      "bodyRevision": "12:649650dae97d049f10fd298121f8247554122c9d07f389658a2b56889fc9a78a",
+      "runtimeTags": [],
+      "runtimeTagPolicy": "no-runtime-tags",
+      "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
+      "targetKind": "function",
+      "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+      "payload": {
+        "inputRepresentationId": "representation:Int:internal-value",
+        "nominalRepresentation": null,
+        "representationRevision": null,
+        "outputSemanticTypeId": "Int",
+        "arrayDescriptorId": null,
+        "arrayLiteralProducerPlanRevision": null,
+        "proofClaim": "The final typed Haxe body assigns this return to the current Int function. The selected private runtime signal boxes the exact int carrier only while control is in flight, and the matching function boundary recovers that same sealed carrier before it can cross the callable ABI.",
+        "arrayDescriptorRevision": null,
+        "arrayLiteralProducerId": null,
+        "inputCarrierTypeId": "int",
+        "proofId": "exact-value-early-return-control-v2",
+        "outputRepresentationId": "representation:Int:internal-value",
+        "conversion": "box-and-recover-exact-value",
+        "signalCarrierTypeId": "Obj.t",
+        "inputSemanticTypeId": "Int",
+        "outputCarrierTypeId": "int"
+      },
+      "reason": "This return is nested below the function's direct result path, so it exits the current exact-Int Haxe function through one revision-bound private runtime signal.",
+      "id": "control:return:7e888b6212c5f54a0fa2de70",
+      "source": {
+        "min": 18953,
+        "max": 18982,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "kind": "return",
+      "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
       "proofId": "exact-value-early-return-control-v2",
       "pipelineRevision": "ocaml-function-plans-v71",
       "profileEligibility": [
@@ -9065,8 +10017,8 @@
       "effect": "raise-haxe-value"
     }
   ],
-  "controlAdmissionRevision": "sha256:cc842008869600268106b6ed1ed156573a268cd9df6ebc4f02a035ad58bb9620",
-  "controlCount": 34,
+  "controlAdmissionRevision": "sha256:6ea9474573860879e04e71776f829b328c1f64f6ad7cae730a7c011d11183ba5",
+  "controlCount": 37,
   "unsafeOperationCompleteness": "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
   "controlAdmissionModel": "typed-ocaml-control-admission-v1",
   "anonymousStructureOperationCount": 16,
@@ -11945,6 +12897,7 @@
       "result": "assigned-value"
     }
   ],
+  "functionResultBoundaryModel": "typed-ocaml-function-result-boundary-v1",
   "controlAdmissions": [
     {
       "catches": [
@@ -12797,21 +13750,9 @@
         {
           "occurrenceCount": 3,
           "family": "return",
-          "status": "blocked",
-          "decisionCount": 0,
-          "blockers": [
-            {
-              "code": "return-boundary-unrepresented",
-              "message": "The function result boundary has no checked carrier for Int, so nested returns remain on the older result path.",
-              "source": {
-                "min": 18882,
-                "max": 18904,
-                "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-              },
-              "semanticTypeId": "Int",
-              "occurrenceId": "control-admission-occurrence:return:fd321b1483e06c6305efdf8a"
-            }
-          ]
+          "status": "admitted",
+          "decisionCount": 3,
+          "blockers": []
         },
         {
           "occurrenceCount": 0,
@@ -12824,7 +13765,7 @@
       "functionId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
       "pipelineRevision": "ocaml-function-plans-v71",
       "programRevision": "ad1389d764ea70c2646e9386c1edec713b276ef617b7e42247a8d206c3c1df1f",
-      "revision": "sha256:40462ca377b9e81e94d989dda45f9729523667fe2f13178c33c160ada6f17455"
+      "revision": "sha256:14b93735355909eb6df76997a13c519812805e63619a82b0a27ce34a724839fc"
     },
     {
       "catches": [],

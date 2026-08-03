@@ -27,6 +27,8 @@ import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlDecision;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlLoopTarget;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetKind;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTransferKind;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary;
+import reflaxe.ocaml.lowered.OcamlFunctionResultBoundary.OcamlFunctionResultBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalCarrierConversion;
@@ -61,7 +63,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 60;
+	public static inline final SCHEMA_VERSION = 61;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -138,7 +140,8 @@ class OcamlLoweringReportWriter {
 			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
 			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
 			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
-			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
+			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
+			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
 			artifacts:OcamlArtifactManifestBuilder):Void {
@@ -305,9 +308,10 @@ class OcamlLoweringReportWriter {
 		final sortedCallableBoundaries = callableBoundaries.copy();
 		sortedCallableBoundaries.sort((left, right) -> Reflect.compare(left.calleeId, right.calleeId));
 		final callableByCallee:Map<String, OcamlCallableBoundaryPlan> = [];
+		final callableById:Map<String, OcamlCallableBoundaryPlan> = [];
 		for (boundary in sortedCallableBoundaries) {
 			OcamlCallPlan.requireCallableBoundary(boundary);
-			if (callableByCallee.exists(boundary.calleeId))
+			if (callableByCallee.exists(boundary.calleeId) || callableById.exists(boundary.id))
 				throw 'Callable boundary identity "${boundary.calleeId}" occurs more than once.';
 			if (boundary.receiver != null)
 				requireCallValue(representationById, boundary.receiver, 'Callable boundary "${boundary.id}" receiver');
@@ -316,6 +320,26 @@ class OcamlLoweringReportWriter {
 			if (boundary.result != null)
 				requireCallValue(representationById, boundary.result, 'Callable boundary "${boundary.id}" result');
 			callableByCallee.set(boundary.calleeId, boundary);
+			callableById.set(boundary.id, boundary);
+		}
+		final sortedFunctionResultBoundaries = functionResultBoundaries.map(OcamlFunctionResultBoundary.copy);
+		sortedFunctionResultBoundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final functionResultByFunction:Map<String, OcamlFunctionResultBoundaryPlan> = [];
+		final functionResultIds:Map<String, Bool> = [];
+		for (boundary in sortedFunctionResultBoundaries) {
+			OcamlFunctionResultBoundary.require(boundary);
+			if (functionResultIds.exists(boundary.id) || functionResultByFunction.exists(boundary.functionId))
+				throw 'Function result boundary identity "${boundary.id}" or function "${boundary.functionId}" occurs more than once.';
+			if (boundary.result != null)
+				requireCallValue(representationById, boundary.result, 'Function result boundary "${boundary.id}" result');
+			if (boundary.callableBoundaryId != null) {
+				final callable = callableById.get(boundary.callableBoundaryId);
+				if (callable == null)
+					throw 'Function result boundary "${boundary.id}" refers to missing callable boundary "${boundary.callableBoundaryId}".';
+				OcamlFunctionResultBoundary.requireCallableMatch(boundary, callable);
+			}
+			functionResultIds.set(boundary.id, true);
+			functionResultByFunction.set(boundary.functionId, boundary);
 		}
 		for (call in sortedCalls) {
 			OcamlCallPlan.requireCall(call);
@@ -356,6 +380,13 @@ class OcamlLoweringReportWriter {
 				throw 'Control admission identity "${admission.id}" or function "${admission.functionId}" occurs more than once.';
 			controlAdmissionIds.set(admission.id, true);
 			controlAdmissionByFunction.set(admission.functionId, admission);
+			final returnFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
+			if (returnFamily.status == OcamlControlAdmissionStatus.Admitted
+				&& returnFamily.occurrenceCount > 0
+				&& admission.functionId.indexOf("|nested-function|") < 0
+				&& !functionResultByFunction.exists(admission.functionId)) {
+				throw 'Control admission "${admission.id}" admits return transfers without a function result boundary.';
+			}
 		}
 		final sortedControlTargets = controlLoopTargets.copy();
 		sortedControlTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -705,6 +736,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaries: sortedCallableBoundaries
 		});
+		final canonicalFunctionResultBoundaries = haxe.Json.stringify(sortedFunctionResultBoundaries);
 		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
 		final canonicalControls = haxe.Json.stringify({
 			targets: sortedControlTargets,
@@ -769,6 +801,10 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
+			functionResultBoundaryModel: OcamlFunctionResultBoundary.MODEL,
+			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
+			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
+			functionResultBoundaries: sortedFunctionResultBoundaries,
 			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v20",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,

@@ -104,7 +104,7 @@ const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const consumers = report.lowering?.calls?.filter(call => call.kind === 'structural-iterator-method') ?? []
 const methodValues = report.lowering?.structuralFields?.filter(field => field.operation === 'capture-iterator-method') ?? []
-if (report.schemaVersion !== 37
+if (report.schemaVersion !== 38
 	|| !report.summary?.valid
 	|| consumers.length === 0
 	|| methodValues.length !== 2

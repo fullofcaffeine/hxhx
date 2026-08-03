@@ -7614,6 +7614,14 @@ class OcamlBuilder {
 		#end
 
 		final callableBoundary = functionPlan.callableBoundary;
+		final functionResultBoundary = functionPlan.functionResultBoundary;
+		// Instance-method return control remains deferred, but its existing callable
+		// boundary may still own the ordinary completed result. Keep that old result
+		// contract until a later slice gives instance returns their own checked
+		// control admission; do not silently drop its conversion or type annotation.
+		final completionBoundaryId:Null<String> = functionResultBoundary != null ? functionResultBoundary.id : (callableBoundary == null ? null : callableBoundary.id);
+		final completionResultKind:Null<OcamlCallResultKind> = functionResultBoundary != null ? functionResultBoundary.resultKind : (callableBoundary == null ? null : callableBoundary.resultKind);
+		final completionResult:Null<OcamlCallValuePlan> = functionResultBoundary != null ? functionResultBoundary.result : (callableBoundary == null ? null : callableBoundary.result);
 		final previousCallableBoundary = currentCallableBoundary;
 		currentCallableBoundary = callableBoundary;
 		final params = if (callableBoundary == null) {
@@ -7705,11 +7713,11 @@ class OcamlBuilder {
 			final fallbackBody = if (isVoidType(resolvedReturnType)) {
 				exprAsStatement(body);
 			} else if (functionPlan.controls.returnFamilyAdmitted) {
-				if (callableBoundary != null
-					&& callableBoundary.result != null
-					&& callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity) {
+				if (functionResultBoundary != null
+					&& functionResultBoundary.result != null
+					&& functionResultBoundary.result.conversion != OcamlCallCarrierConversion.Identity) {
 					resultConvertedInsideControl = true;
-					buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
+					buildPlannedFunctionResult(functionResultBoundary.result, body, bodyExpr.pos);
 				} else {
 					body;
 				}
@@ -7721,25 +7729,24 @@ class OcamlBuilder {
 			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
 		if (isVoidType(resolvedReturnType)) {
-			if (callableBoundary != null
-				&& (callableBoundary.resultKind != OcamlCallResultKind.EffectOnlyVoid || callableBoundary.result != null)) {
-				return callPlanInvariant('callable boundary "${callableBoundary.id}" does not own the effect-only Void result selected by its typed function',
+			if (completionBoundaryId != null && (completionResultKind != OcamlCallResultKind.EffectOnlyVoid || completionResult != null)) {
+				return
+					callPlanInvariant('function completion boundary "$completionBoundaryId" does not own the effect-only Void result selected by its typed function',
 					bodyExpr.pos);
 			}
 			body = exprAsStatement(body);
-		} else if (callableBoundary != null) {
-			if (callableBoundary.resultKind != OcamlCallResultKind.Value || callableBoundary.result == null)
-				return callPlanInvariant('callable boundary "${callableBoundary.id}" has no represented result for its value-returning typed function',
-					bodyExpr.pos);
-			if (needsReturnCatch
-				&& callableBoundary.result.conversion != OcamlCallCarrierConversion.Identity
-				&& !resultConvertedInsideControl)
+		} else if (completionBoundaryId != null) {
+			if (completionResultKind != OcamlCallResultKind.Value || completionResult == null)
 				return
-					callPlanInvariant('callable boundary "${callableBoundary.id}" selected a straight-line result conversion for a body with nested return control',
+					callPlanInvariant('function completion boundary "$completionBoundaryId" has no represented result for its value-returning typed function',
+						bodyExpr.pos);
+			if (needsReturnCatch && completionResult.conversion != OcamlCallCarrierConversion.Identity && !resultConvertedInsideControl)
+				return
+					callPlanInvariant('function completion boundary "$completionBoundaryId" selected a straight-line result conversion for a body with nested return control',
 					bodyExpr.pos);
 			if (!resultConvertedInsideControl)
-				body = buildPlannedFunctionResult(callableBoundary.result, body, bodyExpr.pos);
-			body = OcamlExpr.EAnnot(body, callableOutputType(callableBoundary.result, bodyExpr.pos));
+				body = buildPlannedFunctionResult(completionResult, body, bodyExpr.pos);
+			body = OcamlExpr.EAnnot(body, callableOutputType(completionResult, bodyExpr.pos));
 		}
 
 		for (a in args) {
@@ -7795,6 +7802,7 @@ class OcamlBuilder {
 		final nestedPlan:Null<OcamlSealedNestedFunctionPlan> = parentBinding == null ? null : functionPlanRegistry.nestedFunctionPlanFor(expression,
 			parentBinding);
 		final callableBoundary = nestedPlan == null ? null : nestedPlan.callableBoundary;
+		final functionResultBoundary = nestedPlan == null ? null : nestedPlan.functionResultBoundary;
 
 		// Determine parameters and wrap mutated parameters as refs inside the body.
 		if (callableBoundary != null) {
@@ -7880,12 +7888,13 @@ class OcamlBuilder {
 		}
 		if (isVoidType(functionReturnType)) {
 			body = exprAsStatement(body);
-		} else if (callableBoundary != null) {
-			if (callableBoundary.resultKind != OcamlCallResultKind.Value || callableBoundary.result == null)
-				return callPlanInvariant('nested callable boundary "${callableBoundary.id}" has no represented result for its value-returning typed function',
+		} else if (functionResultBoundary != null) {
+			if (functionResultBoundary.resultKind != OcamlCallResultKind.Value || functionResultBoundary.result == null)
+				return
+					callPlanInvariant('nested function result boundary "${functionResultBoundary.id}" has no represented result for its value-returning typed function',
 					tfunc.expr.pos);
-			body = buildPlannedFunctionResult(callableBoundary.result, body, tfunc.expr.pos);
-			body = OcamlExpr.EAnnot(body, callableOutputType(callableBoundary.result, tfunc.expr.pos));
+			body = buildPlannedFunctionResult(functionResultBoundary.result, body, tfunc.expr.pos);
+			body = OcamlExpr.EAnnot(body, callableOutputType(functionResultBoundary.result, tfunc.expr.pos));
 		}
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).
