@@ -5,13 +5,13 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
-import haxe.ds.ObjectMap;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEvaluationKind;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
+import reflaxe.ocaml.lowered.OcamlDirectArraySourceIdentity;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
@@ -21,11 +21,11 @@ import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 /**
 	Checks compiler-owned construction records for direct represented array literals.
 
-	An actively supported `Array<Int>` literal must be described before OCaml
-	syntax is built. A later `Array<String>` family can create the same kind of
-	detached plain-data record, but it is deliberately absent from the syntax
-	lookup until a separate hard cut admits its consumers. Both records fix the
-	carrier and the exact order in which the container and elements are evaluated.
+	An actively supported `Array<Int>` or `Array<String>` literal must be described
+	before OCaml syntax is built. Both records fix the carrier and the exact order
+	in which the container and elements are evaluated. General represented-array
+	admission remains Int-only, so this literal proof cannot silently enable a
+	String-array local, place, call, return, field, or public boundary.
 **/
 class ArrayLiteralProducerPlanFixture {
 	static inline final PROGRAM_REVISION = "program:array-literal-producer-fixture";
@@ -35,9 +35,21 @@ class ArrayLiteralProducerPlanFixture {
 		final representations = new OcamlRepresentationRegistry();
 		representations.beginProgram(PROGRAM_REVISION);
 		final fields = caseFields();
-		final admitted = ["ordered" => 2, "empty" => 0];
+		final admitted = [
+			{name: "ordered", elementCount: 2, elementSemanticTypeId: "Int"},
+			{name: "empty", elementCount: 0, elementSemanticTypeId: "Int"},
+			{name: "strings", elementCount: 2, elementSemanticTypeId: "String"},
+			{name: "emptyStrings", elementCount: 0, elementSemanticTypeId: "String"},
+			{name: "effectfulStrings", elementCount: 2, elementSemanticTypeId: "String"}
+		];
 		final decisions:Array<OcamlArrayLiteralProducerDecision> = [];
-		for (name => elementCount in admitted) {
+		for (admittedCase in admitted) {
+			final name = admittedCase.name;
+			final elementCount = admittedCase.elementCount;
+			final elementSemanticTypeId = admittedCase.elementSemanticTypeId;
+			final arraySemanticTypeId = 'Array<$elementSemanticTypeId>';
+			final arrayCarrierTypeId = elementSemanticTypeId == "Int" ? "int HxArray.t" : "string HxArray.t";
+			final elementCarrierTypeId = elementSemanticTypeId == "Int" ? "int" : "string";
 			final field = requiredField(fields, name);
 			final body = fieldBody(field);
 			final binding = binding(name);
@@ -56,9 +68,13 @@ class ArrayLiteralProducerPlanFixture {
 				|| decision.evaluationSchedule.length != elementCount * 2 + 2
 				|| decision.evaluationSchedule[0].kind != OcamlArrayLiteralEvaluationKind.CreateArray
 				|| decision.evaluationSchedule[decision.evaluationSchedule.length - 1].kind != OcamlArrayLiteralEvaluationKind.ResultArray
-				|| decision.resultRepresentationId != "representation:Array<Int>:internal-value"
-				|| decision.arrayDescriptorId != "represented-array:Array<Int>"
-				|| decision.elementRepresentationId != "representation:Int:array-element"
+				|| decision.arraySemanticTypeId != arraySemanticTypeId
+				|| decision.arrayCarrierTypeId != arrayCarrierTypeId
+				|| decision.resultRepresentationId != 'representation:$arraySemanticTypeId:internal-value'
+				|| decision.arrayDescriptorId != 'represented-array:$arraySemanticTypeId'
+				|| decision.elementSemanticTypeId != elementSemanticTypeId
+				|| decision.elementCarrierTypeId != elementCarrierTypeId
+				|| decision.elementRepresentationId != 'representation:$elementSemanticTypeId:array-element'
 				|| decision.functionId != binding.functionId
 				|| decision.programRevision != binding.programRevision
 				|| decision.bodyRevision != binding.bodyRevision
@@ -81,24 +97,27 @@ class ArrayLiteralProducerPlanFixture {
 			decisions.push(decision);
 		}
 
-		for (name in ["bools", "strings", "emptyStrings", "effectfulStrings", "nested"])
+		for (name in ["bools", "nested"])
 			if (new OcamlArrayLiteralProducerPlanner(binding(name), representations).plan(fieldBody(requiredField(fields, name))).decisions().length != 0)
-				Context.error('Unsupported array literal case "$name" was admitted by the direct Array<Int> producer.', requiredField(fields, name).pos);
+				Context.error('Unsupported array literal case "$name" was admitted by the direct Int/String producer.', requiredField(fields, name).pos);
 
-		final stringLiteral = firstLiteral(fieldBody(requiredField(fields, "strings")));
+		final stringBody = fieldBody(requiredField(fields, "strings"));
+		final stringLiteral = firstLiteral(stringBody);
 		if (stringLiteral == null)
 			Context.error("The strings case has no typed array literal.", Context.currentPos());
-		final stringNormalized = normalizedArray("String");
-		if (OcamlRepresentationRegistry.normalizedDirectFlatArray(stringLiteral.t) != null
-			|| OcamlArrayLiteralProducerPlan.isAdmittedLiteral(stringLiteral)) {
-			Context.error("The dormant String producer unexpectedly entered the active Array<Int> admission path.", stringLiteral.pos);
+		final stringNormalized = OcamlDirectArraySourceIdentity.normalize(stringLiteral.t);
+		if (stringNormalized == null
+			|| stringNormalized.elementSemanticTypeId != "String"
+			|| OcamlRepresentationRegistry.normalizedDirectFlatArray(stringLiteral.t) != null
+			|| !OcamlArrayLiteralProducerPlan.isAdmittedLiteral(stringLiteral)) {
+			Context.error("The String literal was not admitted through its producer-only source identity.", stringLiteral.pos);
 		}
 		final stringPlanner = new OcamlArrayLiteralProducerPlanner(binding("strings"), representations);
-		final firstStringDecision = stringPlanner.planDetachedLiteral(stringLiteral, stringNormalized, 0);
-		final secondStringDecision = stringPlanner.planDetachedLiteral(stringLiteral, stringNormalized, 0);
+		final firstStringPlan = stringPlanner.plan(stringBody);
+		final secondStringPlan = stringPlanner.plan(stringBody);
+		final firstStringDecision = firstStringPlan.decisions()[0];
+		final secondStringDecision = secondStringPlan.decisions()[0];
 		final expectedStringDecision = directStringDecision(stringLiteral, binding("strings"), representations);
-		final firstStringPlan = new OcamlArrayLiteralProducerPlan([firstStringDecision]);
-		final secondStringPlan = new OcamlArrayLiteralProducerPlan([secondStringDecision]);
 		if (firstStringPlan.revision != secondStringPlan.revision
 			|| firstStringPlan.revision != OcamlArrayLiteralProducerContract.planRevision([expectedStringDecision])
 			|| firstStringDecision.id != expectedStringDecision.id
@@ -112,48 +131,18 @@ class ArrayLiteralProducerPlanFixture {
 			|| firstStringDecision.proofId != "direct-array-string-literal-construction-v1"
 			|| firstStringDecision.elements.length != 2
 			|| firstStringDecision.evaluationSchedule.length != 6) {
-			Context.error("The detached String producer disagrees with its independently authored descriptor and construction contract.", stringLiteral.pos);
+			Context.error("The active String producer disagrees with its independently authored descriptor and construction contract.", stringLiteral.pos);
 		}
 		switch (firstStringPlan.syntaxLookup(stringLiteral)) {
-			case OcamlArrayLiteralProducerLookup.Unknown:
+			case OcamlArrayLiteralProducerLookup.Required(decision) if (decision.id == firstStringDecision.id):
 			case _:
-				Context.error("A detached String producer became reachable from target syntax.", stringLiteral.pos);
+				Context.error("The active String producer is not reachable through its exact request-local typed occurrence.", stringLiteral.pos);
 		}
-		final forgedLookup:ObjectMap<TypedExpr, Null<String>> = new ObjectMap();
-		forgedLookup.set(stringLiteral, firstStringDecision.id);
-		final forgedStringPlan = new OcamlArrayLiteralProducerPlan([firstStringDecision], forgedLookup);
-		switch (forgedStringPlan.syntaxLookup(stringLiteral)) {
-			case OcamlArrayLiteralProducerLookup.Required(_):
-			case _:
-				Context.error("The forged lookup fixture did not reach the final admission guard.", stringLiteral.pos);
-		}
-		expectThrows("unadmitted-producer", () -> forgedStringPlan.requireFor(stringLiteral, representations));
+		if (firstStringPlan.requireFor(stringLiteral, representations).id != firstStringDecision.id)
+			Context.error("The active String producer failed its final representation-graph check.", stringLiteral.pos);
 
-		for (name => elementCount in ["emptyStrings" => 0, "effectfulStrings" => 2]) {
-			final literal = firstLiteral(fieldBody(requiredField(fields, name)));
-			if (literal == null)
-				Context.error('The $name case has no typed array literal.', requiredField(fields, name).pos);
-			final decision = new OcamlArrayLiteralProducerPlanner(binding(name), representations).planDetachedLiteral(literal, stringNormalized, 0);
-			if (decision.elements.length != elementCount
-				|| decision.evaluationSchedule.length != elementCount * 2 + 2
-				|| decision.evaluationSchedule[0].kind != OcamlArrayLiteralEvaluationKind.CreateArray
-				|| decision.evaluationSchedule[decision.evaluationSchedule.length - 1].kind != OcamlArrayLiteralEvaluationKind.ResultArray) {
-				Context.error('The detached String producer case "$name" changed its create/evaluate/store/result schedule.', literal.pos);
-			}
-		}
-
-		final intLiteral = firstLiteral(fieldBody(requiredField(fields, "ordered")));
-		final boolLiteral = firstLiteral(fieldBody(requiredField(fields, "bools")));
-		if (intLiteral == null || boolLiteral == null)
-			Context.error("The negative producer cases are missing typed literals.", Context.currentPos());
-		expectThrows("typed-identity-mismatch", () -> stringPlanner.planDetachedLiteral(intLiteral, stringNormalized, 0));
-		expectThrows("typed-identity-mismatch", () -> stringPlanner.planDetachedLiteral(stringLiteral, normalizedArray("Int"), 0));
-		expectThrows("typed-identity-mismatch", () -> stringPlanner.planDetachedLiteral(boolLiteral, normalizedArray("Bool"), 0));
-		expectThrows("not-array-literal", () -> stringPlanner.planDetachedLiteral(fieldBody(requiredField(fields, "strings")), stringNormalized, 0));
-		expectThrows("invalid-literal-ordinal", () -> stringPlanner.planDetachedLiteral(stringLiteral, stringNormalized, -1));
 		expectThrows("stale-representation",
-			() -> new OcamlArrayLiteralProducerPlanner(changedProgramBinding("strings"),
-				representations).planDetachedLiteral(stringLiteral, stringNormalized, 0));
+			() -> new OcamlArrayLiteralProducerPlanner(changedProgramBinding("strings"), representations).plan(fieldBody(requiredField(fields, "strings"))));
 		expectThrows("unsupported-element-family", () -> OcamlArrayLiteralProducerContract.proofIdFor("Bool"));
 		expectThrows("unsupported-element-family", () -> OcamlArrayLiteralProducerContract.proofClaimFor("Bool"));
 		expectThrows("invalid-producer", () -> new OcamlArrayLiteralProducerPlan([copy(firstStringDecision, {arraySemanticTypeId: "Array<Int>"})]));
@@ -268,12 +257,10 @@ class ArrayLiteralProducerPlanFixture {
 	}
 
 	/**
-		Builds the independent expected record for one dormant String literal.
+		Builds the independent expected record for one active String literal.
 
-		The production planner does not admit this occurrence yet. Keeping the
-		expectation here makes the red test ask one precise question: can the shared
-		plain-data contract validate a String decision whose descriptor and schedule
-		already agree with the current registry?
+		This manually assembled value keeps the expected carrier, descriptor, element,
+		and schedule independent from the planner that is being tested.
 	**/
 	static function directStringDecision(literal:TypedExpr, owner:OcamlFunctionPlanBinding,
 			representations:OcamlRepresentationRegistry):OcamlArrayLiteralProducerDecision {

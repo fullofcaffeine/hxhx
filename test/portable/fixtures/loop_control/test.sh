@@ -26,8 +26,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 58
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v19'
+if (report.schemaVersion !== 59
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v20'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -70,7 +70,7 @@ for (const target of mainTargets) {
 	if (!target.id
 		|| (target.kind !== 'while' && target.kind !== 'do-while')
 		|| target.proofId !== 'lexical-loop-control-v1'
-		|| target.pipelineRevision !== 'ocaml-function-plans-v70') {
+		|| target.pipelineRevision !== 'ocaml-function-plans-v71') {
 		fail(`loop target ${target.id} has incomplete kind, proof, or revision metadata`)
 	}
 }

@@ -1114,7 +1114,7 @@ class OcamlBuilder {
 	/**
 		Builds one typed array literal from its planning disposition.
 
-		A direct `Array<Int>` literal must consume its producer's explicit
+		An admitted direct array literal must consume its producer's explicit
 		create/evaluate/store/result schedule. Other array shapes remain on the older
 		container-element path until their own representation and construction
 		contracts exist. `Unknown` is never a fallback: it means planning and syntax

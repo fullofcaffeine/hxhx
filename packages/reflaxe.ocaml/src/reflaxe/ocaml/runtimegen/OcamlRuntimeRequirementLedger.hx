@@ -253,16 +253,17 @@ class OcamlRuntimeRequirementLedger {
 		Returns the closed runtime requirements implied by one sealed program
 		representation.
 
-		The first admitted family is exact Haxe `String`. Its OCaml `string`
-		carrier can preserve Haxe null only through the canonical value owned by
-		`HxString`, so every selected domain records that dependency before
-		packaging. Other representation families remain outside this slice.
+		Exact Haxe `String` uses the canonical null value owned by `HxString` in
+		every selected domain. Ordinary values and array elements have different
+		proof IDs because `HxArray` owns slot mutation, but both require the same
+		null-sentinel runtime module before packaging.
 	**/
 	public static function requirementsForRepresentationDecision(decision:OcamlRepresentationDecision):Array<OcamlRuntimeRequirement> {
 		if (decision == null)
 			throw "OCaml runtime requirement representation decision must not be null.";
 		final selectsExactStringSentinel = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableStringCarrier
-			|| decision.proof.id == "nullable-string-runtime-sentinel-carrier-v1";
+			|| decision.proof.id == "nullable-string-runtime-sentinel-carrier-v1"
+			|| decision.proof.id == "nullable-string-array-element-carrier-v1";
 		if (!selectsExactStringSentinel)
 			return [];
 		if (decision.semanticTypeId != "String"
@@ -270,7 +271,8 @@ class OcamlRuntimeRequirementLedger {
 			|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
 			|| decision.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableStringCarrier
 			|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.RuntimeNullSentinel
-			|| decision.proof.id != "nullable-string-runtime-sentinel-carrier-v1") {
+			|| (decision.proof.id != "nullable-string-runtime-sentinel-carrier-v1"
+				&& decision.proof.id != "nullable-string-array-element-carrier-v1")) {
 			throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
 		}
 		return [

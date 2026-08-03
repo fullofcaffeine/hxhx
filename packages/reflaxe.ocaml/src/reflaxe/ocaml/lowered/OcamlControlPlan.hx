@@ -1447,20 +1447,25 @@ class OcamlControlPlan {
 	}
 
 	/**
-		Reports whether one descriptor-backed array local keeps its native array
-		object while crossing the private Haxe exception channel.
+		Reports whether one descriptor-backed array keeps its native object while
+		crossing the private Haxe exception channel.
 
 		A represented-array descriptor is the immutable record that binds an exact
 		Haxe array shape to its element representation and `HxArray.t` carrier.
 		`Obj.t` is only the opaque in-flight exception carrier, so a Dynamic catch
-		receives the same mutable array object. The current registry can construct
-		this proof only for direct flat `Array<Int>` locals; generic arrays, fields,
-		call boundaries, and array-valued returns remain outside this boundary.
+		receives the same mutable array object. `Array<Int>` may arrive through the
+		already-proved local or literal route. `Array<String>` is narrower: it must
+		name a complete direct-literal producer, so recognizing its source shape
+		cannot admit String-array locals, fields, calls, returns, or ABI crossings.
 	**/
 	public static function isAdmittedRepresentedArrayThrowPayload(payload:OcamlControlPayloadPlan):Bool {
 		final producerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
-		return payload.inputSemanticTypeId.length > 0
-			&& payload.inputCarrierTypeId.length > 0
+		final familyAdmitted = switch (payload.inputSemanticTypeId) {
+			case "Array<Int>": payload.inputCarrierTypeId == "int HxArray.t" && (producerFieldCount == 0 || producerFieldCount == 2);
+			case "Array<String>": payload.inputCarrierTypeId == "string HxArray.t" && producerFieldCount == 2;
+			case _: false;
+		};
+		return familyAdmitted
 			&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
 			&& isSha256Revision(payload.representationRevision ?? "")
 			&& payload.arrayDescriptorId == 'represented-array:${payload.inputSemanticTypeId}'
@@ -1534,7 +1539,15 @@ class OcamlControlPlan {
 				&& identity.carrierTypeId == payload.inputCarrierTypeId;
 		}
 		if (payload.arrayDescriptorId != null) {
-			final normalized = OcamlRepresentationRegistry.normalizedDirectFlatArray(expression.t);
+			final hasLiteralProducer = payload.arrayLiteralProducerId != null && payload.arrayLiteralProducerPlanRevision != null;
+			final normalized = if (hasLiteralProducer) {
+				switch (expression.expr) {
+					case TArrayDecl(_): OcamlDirectArraySourceIdentity.normalize(expression.t);
+					case _: null;
+				}
+			} else {
+				OcamlRepresentationRegistry.normalizedDirectFlatArray(expression.t);
+			};
 			return normalized != null
 				&& normalized.arraySemanticTypeId == payload.inputSemanticTypeId
 				&& isAdmittedRepresentedArrayThrowPayload(payload);
@@ -1738,9 +1751,9 @@ class OcamlControlPlan {
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
 	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
-	immutable-local or directly constructed `Array<Int>`, one whole-program-monomorphic class payload, or
+	immutable-local `Array<Int>` or directly constructed `Array<Int>`/`Array<String>`, one whole-program-monomorphic class payload, or
 	a directly visible ordinary enum constructor. The array case reuses the
-	already-sealed `int HxArray.t` value. A direct literal is admitted only when a
+	already-sealed descriptor-backed `HxArray.t` value. A direct literal is admitted only when a
 	separate producer plan has fixed its container creation and element evaluation
 	order; control does not reconstruct that work. Fields, calls, and generic arrays
 	remain unsupported. A direct enum throw means the thrown expression
@@ -2310,61 +2323,70 @@ class OcamlControlPlanner {
 		literal must already have a producer decision that fixes its result carrier,
 		descriptor, and exactly-once element schedule. This prevents control from
 		choosing array construction, element types, fields, call results, generic
-		arrays, or mutable/captured storage carriers. The descriptor registry still
-		recognizes only direct flat `Array<Int>`; this consumer follows exact
-		revisions chosen by the owning producer instead of selecting that family.
+		arrays, or mutable/captured storage carriers. General represented-array
+		admission remains `Array<Int>`-only. A direct literal may additionally use the
+		proved String producer, whose descriptor and representation were selected
+		before control planning.
 	**/
 	function representedArrayThrowRepresentation(expression:TypedExpr):Null<OcamlRepresentedArrayThrowSelection> {
-		final normalized = OcamlRepresentationRegistry.normalizedDirectFlatArray(expression.t);
-		if (normalized == null)
-			return null;
 		final unwrapped = unwrapTransparent(expression);
 		return switch (unwrapped.expr) {
 			case TLocal(local):
-				final reference = localRepresentations.referenceFor(localIdentities.requireHostId(local.id).id);
-				if (reference == null
-					|| reference.semanticTypeId != normalized.arraySemanticTypeId
-					|| reference.domain != OcamlRepresentationDomain.InternalValue
-					|| !StringTools.startsWith(reference.representationRevision, "sha256:")) {
+				final normalized = OcamlRepresentationRegistry.normalizedDirectFlatArray(unwrapped.t);
+				if (normalized == null) {
 					null;
 				} else {
-					final representation = representations.require(reference.representationId, binding.programRevision);
-					if (representation.revision != reference.representationRevision
-						|| representation.semanticTypeId != normalized.arraySemanticTypeId
-						|| representation.domain != OcamlRepresentationDomain.InternalValue
-						|| representation.arrayDescriptorId == null
-						|| representation.arrayDescriptorRevision == null) {
+					final reference = localRepresentations.referenceFor(localIdentities.requireHostId(local.id).id);
+					if (reference == null
+						|| reference.semanticTypeId != normalized.arraySemanticTypeId
+						|| reference.domain != OcamlRepresentationDomain.InternalValue
+						|| !StringTools.startsWith(reference.representationRevision, "sha256:")) {
 						null;
 					} else {
-						final descriptor = representations.requireRepresentedArray(representation.arrayDescriptorId, representation.arrayDescriptorRevision,
-							binding.programRevision);
-						descriptor.arraySemanticTypeId == normalized.arraySemanticTypeId
-						&& descriptor.elementSemanticTypeId == normalized.elementSemanticTypeId && descriptor.arrayCarrierTypeId == representation.carrierTypeId ? {
-							representation: representation,
-							arrayLiteralProducerId: null,
-							arrayLiteralProducerPlanRevision: null
-						} : null;
+						final representation = representations.require(reference.representationId, binding.programRevision);
+						if (representation.revision != reference.representationRevision
+							|| representation.semanticTypeId != normalized.arraySemanticTypeId
+							|| representation.domain != OcamlRepresentationDomain.InternalValue
+							|| representation.arrayDescriptorId == null
+							|| representation.arrayDescriptorRevision == null) {
+							null;
+						} else {
+							final descriptor = representations.requireRepresentedArray(representation.arrayDescriptorId,
+								representation.arrayDescriptorRevision, binding.programRevision);
+							descriptor.arraySemanticTypeId == normalized.arraySemanticTypeId
+							&& descriptor.elementSemanticTypeId == normalized.elementSemanticTypeId && descriptor.arrayCarrierTypeId == representation.carrierTypeId ? {
+								representation: representation,
+								arrayLiteralProducerId: null,
+								arrayLiteralProducerPlanRevision: null
+							} : null;
+						}
 					}
 				}
 			case TArrayDecl(_):
-				final producer = arrayLiteralProducers.decisionFor(unwrapped);
-				if (producer == null) {
+				final normalized = OcamlDirectArraySourceIdentity.normalize(unwrapped.t);
+				if (normalized == null) {
 					null;
 				} else {
-					final sealed = arrayLiteralProducers.requireFor(unwrapped, representations);
-					if (sealed.functionId != binding.functionId
-						|| sealed.programRevision != binding.programRevision
-						|| sealed.bodyRevision != binding.bodyRevision
-						|| sealed.pipelineRevision != binding.pipelineRevision
-						|| sealed.arraySemanticTypeId != normalized.arraySemanticTypeId
-						|| sealed.elementSemanticTypeId != normalized.elementSemanticTypeId) {
+					final producer = arrayLiteralProducers.decisionFor(unwrapped);
+					if (producer == null) {
 						null;
 					} else {
-						{
-							representation: representations.require(sealed.resultRepresentationId, binding.programRevision),
-							arrayLiteralProducerId: sealed.id,
-							arrayLiteralProducerPlanRevision: arrayLiteralProducers.revision
-						};
+						final sealed = arrayLiteralProducers.requireFor(unwrapped, representations);
+						if (sealed.functionId != binding.functionId
+							|| sealed.programRevision != binding.programRevision
+							|| sealed.bodyRevision != binding.bodyRevision
+							|| sealed.pipelineRevision != binding.pipelineRevision
+							|| sealed.arraySemanticTypeId != normalized.arraySemanticTypeId
+							|| sealed.elementSemanticTypeId != normalized.elementSemanticTypeId) {
+							null;
+						} else {
+							final representation = representations.require(sealed.resultRepresentationId, binding.programRevision);
+							representation.revision != sealed.resultRepresentationRevision ? null : {
+								representation: representation,
+								arrayLiteralProducerId: sealed.id,
+								arrayLiteralProducerPlanRevision: arrayLiteralProducers.revision
+							};
+						}
 					}
 				}
 			case _:

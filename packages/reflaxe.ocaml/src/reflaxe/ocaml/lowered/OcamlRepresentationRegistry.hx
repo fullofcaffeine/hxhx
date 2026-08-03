@@ -361,37 +361,17 @@ class OcamlRepresentationRegistry {
 	}
 
 	/**
-		Normalizes one currently admitted direct array shape into plain values.
+		Returns the direct array identity admitted by general represented consumers.
 
-		This first hard cut recognizes only the existing direct `Array<Int>`
-		family. Returning null for every other element or wrapper is deliberate:
-		the caller cannot create a represented-array descriptor until the element
-		has an independently proved `ArrayElement` representation.
+		The shared source parser can now describe direct `Array<Int>` and
+		`Array<String>`, but recognizing a source type is not permission to expose its
+		carrier. Locals, places, calls, returns, and fields still enter through this
+		narrow Int-only function. The String literal producer has its own reviewed
+		admission boundary and cannot broaden these consumers accidentally.
 	**/
 	public static function normalizedDirectFlatArray(type:Type):Null<OcamlNormalizedRepresentedArray> {
-		return switch (type) {
-			case TInst(classRef, [elementType]):
-				final classType = classRef.get();
-				final directIntElement = switch (elementType) {
-					case TAbstract(abstractRef, parameters): final abstractType = abstractRef.get(); parameters.length == 0 && abstractType.pack.length == 0 && abstractType.name == "Int";
-					case _:
-						false;
-				};
-				if (classType.pack.length == 0 && classType.name == "Array" && directIntElement) {
-					{
-						arraySemanticTypeId: "Array<Int>",
-						elementSemanticTypeId: "Int",
-						sourceForm: "direct-builtin-array",
-						closureKind: "closed-monomorphic",
-						outerWrapperKind: "none",
-						nestingKind: "flat"
-					};
-				} else {
-					null;
-				}
-			case _:
-				null;
-		}
+		final candidate = OcamlDirectArraySourceIdentity.normalize(type);
+		return candidate != null && candidate.elementSemanticTypeId == "Int" ? candidate : null;
 	}
 
 	/**

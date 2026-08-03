@@ -5,6 +5,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer;
+import reflaxe.ocaml.lowered.OcamlDirectArraySourceIdentity;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
@@ -124,7 +125,18 @@ class RepresentationRegistryFixture {
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<Float>))) == null,
 			"Array<Float> should remain outside the exact Array<Int> slice");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : Array<String>))) == null,
-			"the String element proof must not implicitly admit an Array<String> descriptor");
+			"the String literal proof must not implicitly admit Array<String> to general represented consumers");
+		final stringLiteralCandidate = OcamlDirectArraySourceIdentity.normalize(Context.typeof(macro([] : Array<String>)));
+		assertTrue(stringLiteralCandidate != null
+			&& stringLiteralCandidate.arraySemanticTypeId == "Array<String>"
+			&& stringLiteralCandidate.elementSemanticTypeId == "String",
+			"the shared source parser should describe direct Array<String> without granting general carrier admission");
+		assertTrue(OcamlDirectArraySourceIdentity.normalize(Context.typeof(macro([] : Array<Float>))) == null,
+			"the source parser should reject element families without a proved literal contract");
+		assertTrue(OcamlDirectArraySourceIdentity.normalize(Context.typeof(macro([] : IntArrayAlias))) == null,
+			"the source parser should not follow an outer array typedef");
+		assertTrue(OcamlDirectArraySourceIdentity.normalize(Context.typeof(macro([] : Array<IntAlias>))) == null,
+			"the source parser should not follow an element typedef");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro(null : Null<Array<Int>>))) == null,
 			"an explicit nullable Array<Int> wrapper should remain outside the slice");
 		assertTrue(OcamlRepresentationRegistry.normalizedDirectFlatArray(Context.typeof(macro([] : IntArrayAlias))) == null,

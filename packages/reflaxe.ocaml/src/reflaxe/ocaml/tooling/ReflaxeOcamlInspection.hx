@@ -67,8 +67,8 @@ class ReflaxeOcamlInspection {
 	static inline final DIRECT_INSTANCE_SIGNATURE_PROOF_ID = "direct-instance-receiver-signature-v1";
 	static inline final DIRECT_CONSTRUCTOR_SIGNATURE_PROOF_ID = "direct-constructor-nominal-result-v1";
 	static inline final FUNCTION_VALUE_SIGNATURE_PROOF_ID_PREFIX = "typed-function-value-signature-matrix-v1:";
-	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v70";
-	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v9";
+	static inline final FUNCTION_PLAN_PIPELINE_REVISION = "ocaml-function-plans-v71";
+	static inline final NESTED_FUNCTION_PIPELINE_REVISION = "ocaml-nested-function-plans-v10";
 	static inline final STANDALONE_EXPRESSION_PIPELINE_REVISION = "ocaml-standalone-expression-plans-v3";
 
 	/** Inspects one output directory without modifying or rebuilding the project. **/
@@ -405,8 +405,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 58) {
-						throw 'Unsupported lowering report schema $version; expected 58.';
+					if (version != 59) {
+						throw 'Unsupported lowering report schema $version; expected 59.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -486,7 +486,7 @@ class ReflaxeOcamlInspection {
 	}
 
 	/**
-		Validates every direct `Array<Int>` construction before showing it publicly.
+		Validates every admitted direct represented-array construction before showing it publicly.
 
 		A producer is the compiler's plain-data recipe for allocating one array,
 		evaluating each source element once, storing those values in order, and
@@ -636,7 +636,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v19")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v20")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -2151,7 +2151,7 @@ class ReflaxeOcamlInspection {
 			representedArrayRevision: representedArrayRevision,
 			representedArrays: representedArrays,
 			scope: scope,
-			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} and ${representedArrays.length} represented-array descriptor${representedArrays.length == 1 ? "" : "s"}. The first array descriptor covers only direct flat Array<Int> and binds it to the exact Int array-element representation; it does not admit another array family or boundary. Exact primitives, the narrow Float internal value, the exact nominal Int64 value, nullable primitives, and proven whole-program monomorphic classes keep their existing bounded contracts.'
+			message: 'The compiler reported ${decisions.length} program-owned carrier decision${decisions.length == 1 ? "" : "s"} and ${representedArrays.length} represented-array descriptor${representedArrays.length == 1 ? "" : "s"}. Each descriptor binds one direct flat array identity to an exact array-element representation. Array<Int> remains the only generally admitted local/place family; Array<String> may appear only when an independently sealed literal producer requires it. Exact primitives, the narrow Float internal value, the exact nominal Int64 value, nullable primitives, and proven whole-program monomorphic classes keep their existing bounded contracts.'
 		};
 	}
 
@@ -2835,8 +2835,10 @@ class ReflaxeOcamlInspection {
 			referenced.set(requirementId, true);
 		}
 		for (decision in representation.decisions) {
+			final expectedStringProofId = decision.domain == "array-element" ? "nullable-string-array-element-carrier-v1" : "nullable-string-runtime-sentinel-carrier-v1";
 			final selectsExactStringSentinel = decision.boxingPolicy == "nullable-string-carrier"
-				|| decision.proofId == "nullable-string-runtime-sentinel-carrier-v1";
+				|| decision.proofId == "nullable-string-runtime-sentinel-carrier-v1"
+				|| decision.proofId == "nullable-string-array-element-carrier-v1";
 			if (!selectsExactStringSentinel)
 				continue;
 			if (decision.semanticTypeId != "String"
@@ -2844,7 +2846,7 @@ class ReflaxeOcamlInspection {
 				|| decision.nullPolicy != "runtime-sentinel"
 				|| decision.boxingPolicy != "nullable-string-carrier"
 				|| decision.implicitDefaultPolicy != "runtime-null-sentinel"
-				|| decision.proofId != "nullable-string-runtime-sentinel-carrier-v1") {
+				|| decision.proofId != expectedStringProofId) {
 				throw 'Representation decision "${decision.id}" does not match the sealed exact String null-sentinel contract.';
 			}
 			final requirementId = decision.id + ":runtime:haxe-string-null-sentinel";

@@ -11,6 +11,11 @@ The practical rule is that `return` exits the function that owns it. A source
 return inside a function literal must target that function literal rather than
 its enclosing method.
 
+The represented-array cases also make construction observable. Their element
+helpers record left-to-right evaluation, and the catch mutates the received
+array through one alias. Matching output therefore proves behavior and object
+identity; it does not treat generated OCaml text as the expected result.
+
 Run the upstream Haxe 4.3.7 oracle with:
 
 ```bash

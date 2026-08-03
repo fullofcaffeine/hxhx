@@ -72,7 +72,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		for (index in 0...conversions.length) {
 			final current = conversions[index];
 			OcamlIMapInterfaceContract.requireConversion(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v70")
+			if (current.pipelineRevision != "ocaml-function-plans-v71")
 				throw 'IMap interface conversion "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
 			if (index > 0 && Reflect.compare(conversions[index - 1].id, current.id) >= 0)
 				throw 'The IMap interface conversion inventory is not in strict identity order at "${current.id}".';
@@ -83,7 +83,7 @@ class ReflaxeOcamlIMapInterfaceInspection {
 		for (index in 0...calls.length) {
 			final current = calls[index];
 			OcamlIMapInterfaceContract.requireCall(current);
-			if (current.pipelineRevision != "ocaml-function-plans-v70")
+			if (current.pipelineRevision != "ocaml-function-plans-v71")
 				throw 'IMap interface call "${current.id}" belongs to unsupported pipeline "${current.pipelineRevision}".';
 			if (index > 0 && Reflect.compare(calls[index - 1].id, current.id) >= 0)
 				throw 'The IMap interface call inventory is not in strict identity order at "${current.id}".';

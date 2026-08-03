@@ -8,7 +8,7 @@ typedef IntArrayAlias = Array<Int>;
 	The macro fixture reads these functions after Haxe has typed them. They are
 	not runtime tests: their purpose is to prove which literal shapes the active
 	planner accepts and which later shapes can form a detached construction record
-	without becoming generated OCaml.
+	before generated OCaml consumes them.
 **/
 class ArrayLiteralProducerCases {
 	public static function ordered(first:Int, second:Int):Array<Int> {

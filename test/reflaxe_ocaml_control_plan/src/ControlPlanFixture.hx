@@ -251,6 +251,7 @@ class ControlPlanFixture {
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case "Array<Int>": "int HxArray.t";
+			case "Array<String>": "string HxArray.t";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + semanticTypeId : "unsupported";
@@ -262,11 +263,12 @@ class ControlPlanFixture {
 			case "Null<Int>", "Null<Bool>", "Dynamic": "Obj.t";
 			case "String": "string";
 			case "Array<Int>": "int HxArray.t";
+			case "Array<String>": "string HxArray.t";
 			case "haxe.Exception": "Haxe_Exception.t";
 			case "haxe.ValueException": "Haxe_ValueException.t";
 			case _: directEnum ? OcamlEnumDynamicCarrier.CARRIER_MODEL + ":" + outputSemanticType : "unsupported";
 		};
-		final representedArray = semanticTypeId == "Array<Int>";
+		final representedArray = semanticTypeId == "Array<Int>" || semanticTypeId == "Array<String>";
 		var selectedConversion = conversion ?? OcamlControlPlan.expectedThrowConversion(semanticTypeId, false, directEnum, representedArray);
 		if (selectedConversion == null)
 			selectedConversion = cast "unsupported";
@@ -306,7 +308,7 @@ class ControlPlanFixture {
 				outputCarrierTypeId: outputCarrierTypeId,
 				outputRepresentationId: outputRepresentationId,
 				representationRevision: representedArray ? "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" : null,
-				arrayDescriptorId: representedArray ? "represented-array:Array<Int>" : null,
+				arrayDescriptorId: representedArray ? 'represented-array:$semanticTypeId' : null,
 				arrayDescriptorRevision: representedArray ? "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" : null,
 				conversion: selectedConversion,
 				proofId: selectedProofId,
@@ -743,6 +745,16 @@ class ControlPlanFixture {
 		OcamlControlPlan.requireDecision(literalArrayThrow);
 		if (literalArrayThrow.payload == null || !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(literalArrayThrow.payload))
 			throw "The direct Array<Int> literal throw lost its paired producer identity and plan revision";
+		final literalStringArrayThrow = throwDecision("control:throw:array-string-literal", 195, "Array<String>");
+		Reflect.setField(literalStringArrayThrow.payload, "arrayLiteralProducerId", "array-literal-producer:fedcba9876543210fedcba9876543210");
+		Reflect.setField(literalStringArrayThrow.payload, "arrayLiteralProducerPlanRevision",
+			"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
+		OcamlControlPlan.requireDecision(literalStringArrayThrow);
+		if (literalStringArrayThrow.payload == null
+			|| !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(literalStringArrayThrow.payload)
+			|| literalStringArrayThrow.runtimeTags.join(",") != "Dynamic,Array") {
+			throw "The direct Array<String> literal throw lost its mandatory producer or represented-array tags";
+		}
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-exception", 197, "haxe.Exception"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-value-exception", 198, "haxe.ValueException"));
@@ -878,8 +890,13 @@ class ControlPlanFixture {
 		Reflect.setField(intThrowWithArrayProducer.payload, "arrayLiteralProducerPlanRevision",
 			"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [intThrowWithArrayProducer]));
-		final unsupportedGenericArrayThrow = throwDecision("control:throw:generic-array", 255, "Array<String>");
-		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [unsupportedGenericArrayThrow]));
+		final stringArrayThrowWithoutProducer = throwDecision("control:throw:string-array-without-producer", 255, "Array<String>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [stringArrayThrowWithoutProducer]));
+		final stringArrayThrowWithHalfProducer = throwDecision("control:throw:string-array-half-producer", 255, "Array<String>");
+		Reflect.setField(stringArrayThrowWithHalfProducer.payload, "arrayLiteralProducerId", "array-literal-producer:fedcba9876543210fedcba9876543210");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [stringArrayThrowWithHalfProducer]));
+		final unsupportedBoolArrayThrow = throwDecision("control:throw:bool-array", 255, "Array<Bool>");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [unsupportedBoolArrayThrow]));
 		final dynamicThrowWithProgramRepresentation = throwDecision("control:throw:dynamic-program-representation", 256, "Dynamic");
 		if (dynamicThrowWithProgramRepresentation.payload == null)
 			throw "The Dynamic representation-corruption fixture lost its payload";
