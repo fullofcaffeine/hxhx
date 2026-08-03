@@ -106,7 +106,9 @@ typedef OcamlFunctionSyntaxInput = {
 	This is request-local because `controls` keeps exact typed-expression keys for
 	the active compiler request. The copied decisions can appear in reports, but
 	the plan object itself must be discarded when `beginProgram` starts the next
-	request.
+	request. `arrayLiteralProducers` is required even when it is empty. Therefore,
+	target syntax can treat a missing literal decision as an error instead of
+	quietly rebuilding the literal through the older generic array path.
 **/
 typedef OcamlSealedNestedFunctionPlan = {
 	final occurrenceId:String;
@@ -114,7 +116,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final callableBoundary:OcamlCallableBoundaryPlan;
 	final controls:OcamlControlPlan;
-	final ?arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
+	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 }
 
 /**
@@ -369,8 +371,7 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
 		plan.controls.requirePlanBinding(plan.binding);
-		if (plan.arrayLiteralProducers != null)
-			plan.arrayLiteralProducers.requirePlanBinding(plan.binding);
+		plan.arrayLiteralProducers.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
 		// The planner omits unsupported transfers and catch chains. Validate both
@@ -841,12 +842,9 @@ class OcamlFunctionPlanRegistry {
 		for (record in sealedFunctions)
 			for (decision in record.plan.arrayLiteralProducers.decisions())
 				decisions.push(decision);
-		for (nested in nestedFunctionsByOccurrence) {
-			final plan = nested.arrayLiteralProducers;
-			if (plan != null)
-				for (decision in plan.decisions())
-					decisions.push(decision);
-		}
+		for (nested in nestedFunctionsByOccurrence)
+			for (decision in nested.arrayLiteralProducers.decisions())
+				decisions.push(decision);
 		decisions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		return decisions;
 	}

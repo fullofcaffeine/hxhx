@@ -12,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchBranchResultPolicy;
 import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlCatchChainDecision;
@@ -600,7 +601,8 @@ class ControlPlanFixture {
 				parentBinding: parent,
 				binding: planBinding,
 				callableBoundary: nestedBoundary(planBinding),
-				controls: controls
+				controls: controls,
+				arrayLiteralProducers: new OcamlArrayLiteralProducerPlan([])
 			}
 		};
 	}
@@ -1256,12 +1258,14 @@ class ControlPlanFixture {
 			null, null, admittedBinding, admittedReturnSource);
 		final admittedControls = new OcamlControlPlan(true, true, true, admittedBinding, [], [admittedDecision], [],
 			[{expression: admittedReturn, decisionId: admittedDecision.id}], [], []);
+		final noArrayLiteralProducers = new OcamlArrayLiteralProducerPlan([]);
 		final admittedPlan:OcamlSealedNestedFunctionPlan = {
 			occurrenceId: admittedOccurrence.id,
 			parentBinding: nestedParent,
 			binding: admittedBinding,
 			callableBoundary: nestedBoundary(admittedBinding),
-			controls: admittedControls
+			controls: admittedControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		final noncanonicalIdentities = LexicalLocalIdentityPlan.build(nestedParent.functionId, admittedExpression);
 		final noncanonicalOccurrence = noncanonicalIdentities.requireFunctionOccurrence(admittedExpression);
@@ -1277,7 +1281,8 @@ class ControlPlanFixture {
 			parentBinding: nestedParent,
 			binding: noncanonicalBinding,
 			callableBoundary: nestedBoundary(noncanonicalBinding),
-			controls: noncanonicalControls
+			controls: noncanonicalControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("foreign-root-identities",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, noncanonicalBinding.bodyRevision, noncanonicalPlan,
@@ -1293,7 +1298,8 @@ class ControlPlanFixture {
 			parentBinding: nestedParent,
 			binding: wrongNestedBinding,
 			callableBoundary: admittedPlan.callableBoundary,
-			controls: admittedPlan.controls
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("binding-mismatch",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, wrongNestedBindingPlan,
@@ -1309,15 +1315,19 @@ class ControlPlanFixture {
 			parentBinding: staleRootParent,
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
-			controls: admittedPlan.controls
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("stale-root-binding",
 			() -> nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, staleRootPlan,
 				admittedIdentities));
 		expectThrows("conflicting-root-binding", () -> nestedRegistry.registerRootIdentityPlan(staleRootParent, admittedIdentities));
 		nestedRegistry.sealNestedFunction(admittedExpression, admittedExternalLocals, admittedBinding.bodyRevision, admittedPlan, admittedIdentities);
-		if (nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent) == null)
+		final sealedAdmittedPlan = nestedRegistry.nestedFunctionPlanFor(admittedExpression, nestedParent);
+		if (sealedAdmittedPlan == null)
 			throw "An admitted nested function did not return its sealed plan";
+		if (sealedAdmittedPlan.arrayLiteralProducers.decisions().length != 0)
+			throw "A nested function without array literals did not preserve its explicit empty producer plan";
 		final malformedOccurrenceExpression = Context.typeExpr(macro function(value:Int):Int {
 			if (value > 0)
 				return 6;
@@ -1329,7 +1339,8 @@ class ControlPlanFixture {
 			parentBinding: admittedPlan.parentBinding,
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
-			controls: admittedPlan.controls
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("missing-identity",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1339,7 +1350,8 @@ class ControlPlanFixture {
 			parentBinding: admittedPlan.parentBinding,
 			binding: admittedPlan.binding,
 			callableBoundary: admittedPlan.callableBoundary,
-			controls: admittedPlan.controls
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("foreign-occurrence",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1363,7 +1375,8 @@ class ControlPlanFixture {
 			parentBinding: ordinaryImpostorParent,
 			binding: ordinaryImpostorBinding,
 			callableBoundary: admittedPlan.callableBoundary,
-			controls: admittedPlan.controls
+			controls: admittedPlan.controls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("foreign-root-identities",
 			() -> nestedRegistry.sealNestedFunction(malformedOccurrenceExpression, nestedExternalLocals(malformedOccurrenceExpression),
@@ -1397,7 +1410,8 @@ class ControlPlanFixture {
 			parentBinding: ordinaryImpostorParent,
 			binding: impostorRootBinding,
 			callableBoundary: nestedBoundary(impostorRootBinding),
-			controls: impostorRootControls
+			controls: impostorRootControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		nestedRegistry.sealNestedFunction(impostorRootExpression, impostorRootExternalLocals, impostorRootBinding.bodyRevision, impostorRootPlan,
 			impostorRootIdentities);
@@ -1433,7 +1447,8 @@ class ControlPlanFixture {
 			parentBinding: impostorRootBinding,
 			binding: crossRootChildBinding,
 			callableBoundary: nestedBoundary(crossRootChildBinding),
-			controls: crossRootChildControls
+			controls: crossRootChildControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("foreign-parent-occurrence",
 			() -> nestedRegistry.sealNestedFunction(crossRootChildExpression, crossRootChildExternalLocals, crossRootChildBinding.bodyRevision,
@@ -1539,7 +1554,8 @@ class ControlPlanFixture {
 			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding, "Bool"),
-			controls: mismatchedControls
+			controls: mismatchedControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("return-boundary-mismatch",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, mismatchedPlan,
@@ -1555,7 +1571,8 @@ class ControlPlanFixture {
 			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
-			controls: unadmittedThrowControls
+			controls: unadmittedThrowControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedThrowPlan,
@@ -1568,7 +1585,8 @@ class ControlPlanFixture {
 			parentBinding: otherParent,
 			binding: mismatchedBinding,
 			callableBoundary: nestedBoundary(mismatchedBinding),
-			controls: unadmittedLoopControls
+			controls: unadmittedLoopControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(mismatchedExpression, mismatchedExternalLocals, mismatchedBinding.bodyRevision, unadmittedLoopPlan,
@@ -1643,7 +1661,8 @@ class ControlPlanFixture {
 			parentBinding: caughtParent,
 			binding: caughtBinding,
 			callableBoundary: nestedBoundary(caughtBinding),
-			controls: caughtControls
+			controls: caughtControls,
+			arrayLiteralProducers: noArrayLiteralProducers
 		};
 		expectThrows("unsupported-control",
 			() -> nestedRegistry.sealNestedFunction(caughtExpression, caughtExternalLocals, caughtBinding.bodyRevision, caughtPlan, caughtIdentities));
