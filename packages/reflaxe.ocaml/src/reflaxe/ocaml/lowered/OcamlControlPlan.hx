@@ -178,6 +178,12 @@ typedef OcamlControlPayloadPlan = {
 	/** Exact content revision of `arrayDescriptorId`. */
 	final ?arrayDescriptorRevision:String;
 
+	/** Exact direct-array literal occurrence consumed by this throw, when any. */
+	final ?arrayLiteralProducerId:String;
+
+	/** Revision of the function's complete literal-construction plan. */
+	final ?arrayLiteralProducerPlanRevision:String;
+
 	final conversion:OcamlControlPayloadConversion;
 	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final proofId:String;
@@ -199,8 +205,17 @@ private typedef OcamlControlThrowRepresentation = {
 	final representationRevision:Null<String>;
 	final arrayDescriptorId:Null<String>;
 	final arrayDescriptorRevision:Null<String>;
+	final arrayLiteralProducerId:Null<String>;
+	final arrayLiteralProducerPlanRevision:Null<String>;
 	final nominalRepresentation:Null<OcamlControlNominalRepresentationProof>;
 	final enumIdentity:Null<OcamlEnumDynamicCarrierIdentity>;
+}
+
+/** One represented array selection and its optional direct-literal owner. */
+private typedef OcamlRepresentedArrayThrowSelection = {
+	final representation:OcamlRepresentationDecision;
+	final arrayLiteralProducerId:Null<String>;
+	final arrayLiteralProducerPlanRevision:Null<String>;
 }
 
 /** One deterministic lexical loop target owned by a sealed function body. */
@@ -792,6 +807,8 @@ class OcamlControlPlan {
 				if (decision.runtimeCapabilityId != RETURN_SIGNAL_CAPABILITY_ID
 					|| payload == null
 					|| payload.signalCarrierTypeId != "Obj.t"
+					|| payload.arrayLiteralProducerId != null
+					|| payload.arrayLiteralProducerPlanRevision != null
 					|| payload.proofClaim.length == 0) {
 					throw 'reflaxe.ocaml [ocaml-control:invalid-plan]: return decision "${decision.id}" has an incomplete value payload crossing';
 				}
@@ -871,6 +888,8 @@ class OcamlControlPlan {
 
 	static function requireThrowDecision(decision:OcamlControlDecision):Void {
 		final payload = decision.payload;
+		final literalProducerFieldCount = payload == null ? 0 : (payload.arrayLiteralProducerId == null ? 0 : 1)
+			+ (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
 		final hasEnumRepresentation = payload != null && isEnumThrowPayloadIdentity(payload);
 		if (decision.effect != OcamlControlEffect.RaiseHaxeValue
 			|| decision.targetKind != OcamlControlTargetKind.HaxeExceptionChannel
@@ -878,6 +897,7 @@ class OcamlControlPlan {
 			|| decision.mechanism != OcamlControlTargetMechanism.RuntimeTypedHaxeExceptionSignal
 			|| decision.runtimeCapabilityId != THROW_SIGNAL_CAPABILITY_ID
 			|| payload == null
+			|| (literalProducerFieldCount != 0 && (literalProducerFieldCount != 2 || payload.arrayDescriptorId == null))
 			|| payload.signalCarrierTypeId != "Obj.t"
 			|| !samePayloadSides(payload)
 			|| payload.conversion != expectedThrowConversion(payload.inputSemanticTypeId, payload.nominalRepresentation != null, hasEnumRepresentation,
@@ -1173,6 +1193,8 @@ class OcamlControlPlan {
 			representationRevision: payload.representationRevision,
 			arrayDescriptorId: payload.arrayDescriptorId,
 			arrayDescriptorRevision: payload.arrayDescriptorRevision,
+			arrayLiteralProducerId: payload.arrayLiteralProducerId,
+			arrayLiteralProducerPlanRevision: payload.arrayLiteralProducerPlanRevision,
 			conversion: payload.conversion,
 			nominalRepresentation: copyNominalRepresentation(payload.nominalRepresentation),
 			proofId: payload.proofId,
@@ -1436,6 +1458,7 @@ class OcamlControlPlan {
 		call boundaries, and array-valued returns remain outside this boundary.
 	**/
 	public static function isAdmittedRepresentedArrayThrowPayload(payload:OcamlControlPayloadPlan):Bool {
+		final producerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
 		return payload.inputSemanticTypeId.length > 0
 			&& payload.inputCarrierTypeId.length > 0
 			&& payload.inputRepresentationId == 'representation:${payload.inputSemanticTypeId}:internal-value'
@@ -1445,7 +1468,11 @@ class OcamlControlPlan {
 			&& payload.signalCarrierTypeId == "Obj.t"
 			&& samePayloadSides(payload)
 			&& payload.conversion == OcamlControlPayloadConversion.BoxRepresentedArrayThrowCarrier
-			&& payload.nominalRepresentation == null;
+			&& payload.nominalRepresentation == null
+			&& (producerFieldCount == 0
+				|| (producerFieldCount == 2
+					&& StringTools.startsWith(payload.arrayLiteralProducerId, "array-literal-producer:")
+					&& isSha256Revision(payload.arrayLiteralProducerPlanRevision)));
 	}
 
 	/**
@@ -1589,6 +1616,8 @@ class OcamlControlPlan {
 			payload.representationRevision ?? "",
 			payload.arrayDescriptorId ?? "",
 			payload.arrayDescriptorRevision ?? "",
+			payload.arrayLiteralProducerId ?? "",
+			payload.arrayLiteralProducerPlanRevision ?? "",
 			(payload.conversion : String),
 			nominalPayloadFingerprint(payload.nominalRepresentation),
 			payload.proofId,
@@ -1709,10 +1738,12 @@ class OcamlControlPlan {
 	admission is independent and records `while`/`do ... while` targets in every
 	sealed function body. Throw-family admission is independent and accepts exact
 	`Int`, `Bool`, represented `String`, `Null<Int>`, `Null<Bool>`, one exact
-	immutable-local `Array<Int>`, one whole-program-monomorphic class payload, or
+	immutable-local or directly constructed `Array<Int>`, one whole-program-monomorphic class payload, or
 	a directly visible ordinary enum constructor. The array case reuses the
-	already-sealed `int HxArray.t` local and does not admit array literals, fields,
-	calls, or generic arrays. A direct enum throw means the thrown expression
+	already-sealed `int HxArray.t` value. A direct literal is admitted only when a
+	separate producer plan has fixed its container creation and element evaluation
+	order; control does not reconstruct that work. Fields, calls, and generic arrays
+	remain unsupported. A direct enum throw means the thrown expression
 	itself is the constructor value or call; values reached through locals, casts,
 	fields, or other expressions remain outside this slice. Nested function literals own
 	independent boundaries and are deliberately skipped. Each source `try` is
@@ -1730,14 +1761,16 @@ class OcamlControlPlanner {
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final binding:OcamlFunctionPlanBinding;
 	final localIdentities:LexicalLocalIdentityPlan;
+	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 	final nominalCatchRepresentations:Map<Int, OcamlRepresentationDecision> = [];
 
 	public function new(representations:OcamlRepresentationRegistry, localRepresentations:OcamlLocalRepresentationPlan, binding:OcamlFunctionPlanBinding,
-			localIdentities:LexicalLocalIdentityPlan) {
+			localIdentities:LexicalLocalIdentityPlan, ?arrayLiteralProducers:OcamlArrayLiteralProducerPlan) {
 		this.representations = representations;
 		this.localRepresentations = localRepresentations;
 		this.binding = binding;
 		this.localIdentities = localIdentities;
+		this.arrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 	}
 
 	public function plan(body:Null<TypedExpr>, boundary:Null<OcamlCallableBoundaryPlan>):OcamlControlPlan {
@@ -1886,7 +1919,9 @@ class OcamlControlPlanner {
 						throwFamilyAdmitted = false;
 						return;
 					}
-					final proofClaim = if (representedArray) {
+					final proofClaim = if (representedArray && representation.arrayLiteralProducerId != null) {
+						'The final typed Haxe body throws one directly constructed ${representation.semanticTypeId}/${representation.carrierTypeId} value through the compiler-owned Haxe exception channel. Producer ${representation.arrayLiteralProducerId} fixes container creation, ordered element evaluation, and one store per element before control consumes the finished array. The representation and array-descriptor revisions preserve that same mutable array object; Obj.t is only the in-flight carrier, and the runtime tags identify the value as Dynamic and Array without admitting another array boundary.';
+					} else if (representedArray) {
 						'The final typed Haxe body throws one already-sealed ${representation.semanticTypeId}/${representation.carrierTypeId} local through the compiler-owned Haxe exception channel. The representation and array-descriptor revisions preserve the same mutable array object; Obj.t is only the in-flight carrier, and the runtime tags identify the value as Dynamic and Array without admitting another array boundary.';
 					} else switch (representation.semanticTypeId) {
 						case "Null<Int>":
@@ -1922,6 +1957,8 @@ class OcamlControlPlanner {
 							representationRevision: representation.representationRevision,
 							arrayDescriptorId: representation.arrayDescriptorId,
 							arrayDescriptorRevision: representation.arrayDescriptorRevision,
+							arrayLiteralProducerId: representation.arrayLiteralProducerId,
+							arrayLiteralProducerPlanRevision: representation.arrayLiteralProducerPlanRevision,
 							conversion: conversion,
 							nominalRepresentation: nominalRepresentation,
 							proofId: proofId,
@@ -2267,16 +2304,17 @@ class OcamlControlPlanner {
 	}
 
 	/**
-		Selects an existing immutable-local represented-array decision for a throw.
+		Selects an already represented local or direct literal for a throw.
 
-		Only a typed local already sealed by the local-representation planner is
-		eligible. This prevents throw planning from treating an array literal,
-		field, call result, generic array, or a mutable/captured storage carrier as
-		if it had the same proven boundary. The descriptor registry currently
-		recognizes only direct flat `Array<Int>`, but this consumer depends on the
-		descriptor and its exact revisions rather than selecting that type itself.
+		A local must already be sealed by the local-representation planner. A direct
+		literal must already have a producer decision that fixes its result carrier,
+		descriptor, and exactly-once element schedule. This prevents control from
+		choosing array construction, element types, fields, call results, generic
+		arrays, or mutable/captured storage carriers. The descriptor registry still
+		recognizes only direct flat `Array<Int>`; this consumer follows exact
+		revisions chosen by the owning producer instead of selecting that family.
 	**/
-	function representedArrayThrowRepresentation(expression:TypedExpr):Null<OcamlRepresentationDecision> {
+	function representedArrayThrowRepresentation(expression:TypedExpr):Null<OcamlRepresentedArrayThrowSelection> {
 		final normalized = OcamlRepresentationRegistry.normalizedDirectFlatArray(expression.t);
 		if (normalized == null)
 			return null;
@@ -2301,7 +2339,32 @@ class OcamlControlPlanner {
 						final descriptor = representations.requireRepresentedArray(representation.arrayDescriptorId, representation.arrayDescriptorRevision,
 							binding.programRevision);
 						descriptor.arraySemanticTypeId == normalized.arraySemanticTypeId
-						&& descriptor.elementSemanticTypeId == normalized.elementSemanticTypeId && descriptor.arrayCarrierTypeId == representation.carrierTypeId ? representation : null;
+						&& descriptor.elementSemanticTypeId == normalized.elementSemanticTypeId && descriptor.arrayCarrierTypeId == representation.carrierTypeId ? {
+							representation: representation,
+							arrayLiteralProducerId: null,
+							arrayLiteralProducerPlanRevision: null
+						} : null;
+					}
+				}
+			case TArrayDecl(_):
+				final producer = arrayLiteralProducers.decisionFor(unwrapped);
+				if (producer == null) {
+					null;
+				} else {
+					final sealed = arrayLiteralProducers.requireFor(unwrapped, representations);
+					if (sealed.functionId != binding.functionId
+						|| sealed.programRevision != binding.programRevision
+						|| sealed.bodyRevision != binding.bodyRevision
+						|| sealed.pipelineRevision != binding.pipelineRevision
+						|| sealed.arraySemanticTypeId != normalized.arraySemanticTypeId
+						|| sealed.elementSemanticTypeId != normalized.elementSemanticTypeId) {
+						null;
+					} else {
+						{
+							representation: representations.require(sealed.resultRepresentationId, binding.programRevision),
+							arrayLiteralProducerId: sealed.id,
+							arrayLiteralProducerPlanRevision: arrayLiteralProducers.revision
+						};
 					}
 				}
 			case _:
@@ -2335,6 +2398,8 @@ class OcamlControlPlanner {
 				representationRevision: null,
 				arrayDescriptorId: null,
 				arrayDescriptorRevision: null,
+				arrayLiteralProducerId: null,
+				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
 				enumIdentity: null
 			} : {
@@ -2344,6 +2409,8 @@ class OcamlControlPlanner {
 				representationRevision: null,
 				arrayDescriptorId: null,
 				arrayDescriptorRevision: null,
+				arrayLiteralProducerId: null,
+				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
 				enumIdentity: null
 				};
@@ -2357,6 +2424,8 @@ class OcamlControlPlanner {
 				representationRevision: exact.revision,
 				arrayDescriptorId: exact.arrayDescriptorId,
 				arrayDescriptorRevision: exact.arrayDescriptorRevision,
+				arrayLiteralProducerId: null,
+				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: nominalProofFor(exact),
 				enumIdentity: null
 			};
@@ -2364,12 +2433,14 @@ class OcamlControlPlanner {
 		final representedArray = representedArrayThrowRepresentation(expression);
 		if (representedArray != null) {
 			return {
-				semanticTypeId: representedArray.semanticTypeId,
-				carrierTypeId: representedArray.carrierTypeId,
-				representationId: representedArray.id,
-				representationRevision: representedArray.revision,
-				arrayDescriptorId: representedArray.arrayDescriptorId,
-				arrayDescriptorRevision: representedArray.arrayDescriptorRevision,
+				semanticTypeId: representedArray.representation.semanticTypeId,
+				carrierTypeId: representedArray.representation.carrierTypeId,
+				representationId: representedArray.representation.id,
+				representationRevision: representedArray.representation.revision,
+				arrayDescriptorId: representedArray.representation.arrayDescriptorId,
+				arrayDescriptorRevision: representedArray.representation.arrayDescriptorRevision,
+				arrayLiteralProducerId: representedArray.arrayLiteralProducerId,
+				arrayLiteralProducerPlanRevision: representedArray.arrayLiteralProducerPlanRevision,
 				nominalRepresentation: null,
 				enumIdentity: null
 			};
@@ -2383,6 +2454,8 @@ class OcamlControlPlanner {
 					representationRevision: null,
 					arrayDescriptorId: null,
 					arrayDescriptorRevision: null,
+					arrayLiteralProducerId: null,
+					arrayLiteralProducerPlanRevision: null,
 					nominalRepresentation: null,
 					enumIdentity: null
 				};
@@ -2397,6 +2470,8 @@ class OcamlControlPlanner {
 				representationRevision: null,
 				arrayDescriptorId: null,
 				arrayDescriptorRevision: null,
+				arrayLiteralProducerId: null,
+				arrayLiteralProducerPlanRevision: null,
 				nominalRepresentation: null,
 				enumIdentity: enumIdentity
 			};
@@ -2412,6 +2487,8 @@ class OcamlControlPlanner {
 			representationRevision: representation.revision,
 			arrayDescriptorId: representation.arrayDescriptorId,
 			arrayDescriptorRevision: representation.arrayDescriptorRevision,
+			arrayLiteralProducerId: null,
+			arrayLiteralProducerPlanRevision: null,
 			nominalRepresentation: nominalProofFor(representation),
 			enumIdentity: null
 		};

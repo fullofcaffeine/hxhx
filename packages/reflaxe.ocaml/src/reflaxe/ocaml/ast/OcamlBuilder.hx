@@ -23,6 +23,7 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlAnonymousStructureSyntax;
+import reflaxe.ocaml.ast.OcamlArrayLiteralSyntax;
 import reflaxe.ocaml.ast.OcamlBytesAccessSyntax;
 import reflaxe.ocaml.ast.OcamlBytesMutationSyntax;
 import reflaxe.ocaml.ast.OcamlBytesProducerSyntax;
@@ -44,6 +45,8 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationKind;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerLookup;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructurePlan;
 import reflaxe.ocaml.lowered.OcamlBytesAccessPlan;
 import reflaxe.ocaml.lowered.OcamlBytesMutationPlan;
@@ -136,6 +139,7 @@ class OcamlBuilder {
 	var currentIMapInterfacePlan:Null<OcamlIMapInterfacePlan> = null;
 	var currentCallPlan:Null<OcamlCallPlan> = null;
 	var currentControlPlan:Null<OcamlControlPlan> = null;
+	var currentArrayLiteralProducerPlan:Null<OcamlArrayLiteralProducerPlan> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -224,6 +228,14 @@ class OcamlBuilder {
 
 	function containerElementInvariant(message:String, position:Position):Dynamic {
 		final diagnostic = "reflaxe.ocaml [ocaml-lowering:container-element-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	function arrayLiteralProducerInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-array-literal:plan-invariant]: " + message;
 		#if macro
 		Context.error(diagnostic, position);
 		#end
@@ -1097,6 +1109,51 @@ class OcamlBuilder {
 			OcamlExpr.EConst(OcamlConst.CString(conversion.inputSemanticTypeId)),
 			nativeVariant
 		]);
+	}
+
+	/**
+		Builds one typed array literal from its planning disposition.
+
+		A direct `Array<Int>` literal must consume its producer's explicit
+		create/evaluate/store/result schedule. Other array shapes remain on the older
+		container-element path until their own representation and construction
+		contracts exist. `Unknown` is never a fallback: it means planning and syntax
+		did not observe the same final typed root.
+	**/
+	function buildArrayLiteral(container:TypedExpr, items:Array<TypedExpr>):OcamlExpr {
+		final producerPlan = currentArrayLiteralProducerPlan;
+		if (producerPlan != null) {
+			switch (producerPlan.syntaxLookup(container)) {
+				case Unknown:
+					return arrayLiteralProducerInvariant("typed array literal is absent from the sealed request-local syntax lookup", container.pos);
+				case Required(_):
+					final decision = try {
+						producerPlan.requireFor(container, representationRegistry);
+					} catch (error:Dynamic) {
+						return arrayLiteralProducerInvariant(Std.string(error), container.pos);
+					}
+					return try {
+						OcamlArrayLiteralSyntax.build(decision, items, buildExpr, freshTmp);
+					} catch (error:Dynamic) {
+						arrayLiteralProducerInvariant(Std.string(error), container.pos);
+					}
+				case Excluded:
+			}
+		}
+
+		final temporary = freshTmp("arr");
+		final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+		final sequence:Array<OcamlExpr> = [];
+		for (elementIndex in 0...items.length) {
+			sequence.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [
+					OcamlExpr.EIdent(temporary),
+					buildArrayLiteralElement(container, items[elementIndex], elementIndex)
+				])
+			]));
+		}
+		sequence.push(OcamlExpr.EIdent(temporary));
+		return OcamlExpr.ELet(temporary, create, OcamlExpr.ESeq(sequence), false);
 	}
 
 	/** Returns the typed carrier entering an exact `Null<Int>` local write. */
@@ -4457,19 +4514,7 @@ class OcamlBuilder {
 					}
 				}
 			case TArrayDecl(items):
-				// Haxe array literal: build runtime array and push all values.
-				final tmp = freshTmp("arr");
-				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-				final seq:Array<OcamlExpr> = [];
-				for (elementIndex in 0...items.length) {
-					final item = items[elementIndex];
-					seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
-							[OcamlExpr.EIdent(tmp), buildArrayLiteralElement(e, item, elementIndex)])
-					]));
-				}
-				seq.push(OcamlExpr.EIdent(tmp));
-				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
+				buildArrayLiteral(e, items);
 			case TObjectDecl(fields):
 				// Anonymous structure literal: `{ foo: 1, bar: "x" }`.
 				//
@@ -7539,6 +7584,7 @@ class OcamlBuilder {
 		final previousIMapInterfacePlan = currentIMapInterfacePlan;
 		final previousCallPlan = currentCallPlan;
 		final previousControlPlan = currentControlPlan;
+		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentFunctionPlanBinding = functionPlan.binding;
@@ -7547,6 +7593,7 @@ class OcamlBuilder {
 		functionPlan.bytesProducers.requireRepresentations(representationRegistry);
 		functionPlan.bytesReads.requireRepresentations(representationRegistry);
 		functionPlan.anonymousStructures.requireRepresentations(representationRegistry);
+		functionPlan.arrayLiteralProducers.requireRepresentations(representationRegistry);
 		functionPlan.imapInterfaces.requirePlanBinding(functionPlan.binding);
 		currentAnonymousStructurePlan = functionPlan.anonymousStructures;
 		currentStructuralFieldPlan = functionPlan.structuralFields;
@@ -7557,6 +7604,7 @@ class OcamlBuilder {
 		currentIMapInterfacePlan = functionPlan.imapInterfaces;
 		currentCallPlan = functionPlan.calls;
 		currentControlPlan = functionPlan.controls;
+		currentArrayLiteralProducerPlan = functionPlan.arrayLiteralProducers;
 		loopDepth = 0;
 		currentLoopTargetIds = [];
 		#if macro
@@ -7719,6 +7767,7 @@ class OcamlBuilder {
 		currentIMapInterfacePlan = previousIMapInterfacePlan;
 		currentCallPlan = previousCallPlan;
 		currentControlPlan = previousControlPlan;
+		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		#if macro
@@ -7778,10 +7827,12 @@ class OcamlBuilder {
 		}
 
 		final previousControlPlan = currentControlPlan;
+		final previousArrayLiteralProducerPlan = currentArrayLiteralProducerPlan;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		final previousLoopDepth = loopDepth;
 		final previousLoopTargetIds = currentLoopTargetIds;
 		currentControlPlan = nestedPlan == null ? null : nestedPlan.controls;
+		currentArrayLiteralProducerPlan = nestedPlan == null ? null : nestedPlan.arrayLiteralProducers;
 		if (nestedPlan != null)
 			currentFunctionPlanBinding = nestedPlan.binding;
 		loopDepth = 0;
@@ -7851,6 +7902,7 @@ class OcamlBuilder {
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentControlPlan = previousControlPlan;
+		currentArrayLiteralProducerPlan = previousArrayLiteralProducerPlan;
 		loopDepth = previousLoopDepth;
 		currentLoopTargetIds = previousLoopTargetIds;
 		return OcamlExpr.EFun(params, body);

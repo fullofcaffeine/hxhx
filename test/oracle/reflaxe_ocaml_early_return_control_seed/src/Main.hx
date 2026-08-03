@@ -7,6 +7,9 @@ private class NestedReturnBox {
 }
 
 class Main {
+	static var arrayLiteralThrowOrder = "";
+	static var arrayLiteralThrowCount = 0;
+
 	static function printLine(value:String):Void {
 		#if js
 		js.Syntax.code("console.log({0})", value);
@@ -178,6 +181,44 @@ class Main {
 		return result;
 	}
 
+	/** Records one observable element evaluation for the direct-array tracer. */
+	static function arrayLiteralThrowElement(label:String, value:Int):Int {
+		if (arrayLiteralThrowOrder.length > 0)
+			arrayLiteralThrowOrder += ",";
+		arrayLiteralThrowOrder += label;
+		arrayLiteralThrowCount += 1;
+		return value;
+	}
+
+	/**
+		Throws a newly constructed `Array<Int>` from a nested function.
+
+		The false branch exposes the literal's element order and evaluation count,
+		then mutates the caught object through an alias. This makes construction,
+		exception transport, identity, and normal array mutation observable on every
+		Haxe 4.3.7 oracle route and on generated native OCaml.
+	**/
+	static function nestedArrayLiteralThrowClosure(enabled:Bool):String {
+		arrayLiteralThrowOrder = "";
+		arrayLiteralThrowCount = 0;
+		final local = function(enabled:Bool):Int {
+			if (enabled)
+				return 59;
+			throw [arrayLiteralThrowElement("first", 3), arrayLiteralThrowElement("second", 5)];
+		};
+		if (enabled)
+			return Std.string(local(true));
+		try {
+			local(false);
+		} catch (caught:Dynamic) {
+			final actual:Array<Int> = cast caught;
+			final alias = actual;
+			actual.push(7);
+			return arrayLiteralThrowOrder + ":" + arrayLiteralThrowCount + ":" + (actual == alias) + ":" + alias.length + ":" + alias[2];
+		}
+		return "unreachable";
+	}
+
 	/** Keeps a generic array throw outside the exact Array<Int> proof. */
 	static function nestedUnsupportedGenericThrowClosure():Int {
 		final local = function(enabled:Bool):Int {
@@ -293,6 +334,8 @@ class Main {
 		printLine("zeroArgumentClosure=" + nestedZeroArgumentClosure());
 		printLine("arrayThrowReturn=" + nestedArrayThrowClosure(true));
 		printLine("arrayThrowCatch=" + nestedArrayThrowClosure(false));
+		printLine("arrayLiteralThrowReturn=" + nestedArrayLiteralThrowClosure(true));
+		printLine("arrayLiteralThrowCatch=" + nestedArrayLiteralThrowClosure(false));
 		printLine("unsupportedGenericThrowClosure=" + nestedUnsupportedGenericThrowClosure());
 		printLine("nominalClosure=" + nestedNominalClosure());
 		printLine("deepClosure=" + deepNestedClosure());

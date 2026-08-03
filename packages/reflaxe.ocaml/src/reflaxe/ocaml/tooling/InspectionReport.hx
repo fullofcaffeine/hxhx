@@ -1,5 +1,7 @@
 package reflaxe.ocaml.tooling;
 
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+
 /** One runtime module and the current report's reasons for selecting it. **/
 typedef InspectionRuntimeReason = {
 	final module:String;
@@ -618,6 +620,8 @@ typedef InspectionControlPayload = {
 	final representationRevision:Null<String>;
 	final arrayDescriptorId:Null<String>;
 	final arrayDescriptorRevision:Null<String>;
+	final arrayLiteralProducerId:Null<String>;
+	final arrayLiteralProducerPlanRevision:Null<String>;
 	final conversion:String;
 	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;
@@ -749,6 +753,9 @@ typedef InspectionLowering = {
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
 	final representation:InspectionRepresentation;
+	final arrayLiteralProducerModel:Null<String>;
+	final arrayLiteralProducerRevision:Null<String>;
+	final arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>;
 	final anonymousStructureRevision:Null<String>;
 	final anonymousStructures:Array<InspectionAnonymousStructure>;
 	final anonymousStructureOperations:Array<InspectionAnonymousStructureOperation>;
@@ -800,6 +807,7 @@ typedef InspectionSummary = {
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
 	final representedArrayCount:Int;
+	final arrayLiteralProducerCount:Int;
 	final anonymousStructureCount:Int;
 	final anonymousStructureOperationCount:Int;
 	final structuralFieldCount:Int;

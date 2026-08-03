@@ -11,6 +11,8 @@ import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureContract;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureDecision;
 import reflaxe.ocaml.lowered.OcamlAnonymousStructureModel.OcamlAnonymousStructureOperationDecision;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
@@ -55,7 +57,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 57;
+	public static inline final SCHEMA_VERSION = 58;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -127,12 +129,13 @@ class OcamlLoweringReportWriter {
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, representedArrays:Array<OcamlRepresentedArrayDescriptor>,
-			anonymousStructures:Array<OcamlAnonymousStructureDecision>, anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>,
-			structuralFields:Array<OcamlStructuralFieldDecision>, localConversions:Array<OcamlLocalConversionDecision>,
-			containerElementRequiredConversionIds:Array<String>, containerElementConversions:Array<OcamlContainerElementDecision>,
-			unsafeOperations:Array<OcamlUnsafeOperationRecord>, iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>,
-			iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>, calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>,
-			controls:Array<OcamlControlDecision>, controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
+			arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
+			anonymousOperations:Array<OcamlAnonymousStructureOperationDecision>, structuralFields:Array<OcamlStructuralFieldDecision>,
+			localConversions:Array<OcamlLocalConversionDecision>, containerElementRequiredConversionIds:Array<String>,
+			containerElementConversions:Array<OcamlContainerElementDecision>, unsafeOperations:Array<OcamlUnsafeOperationRecord>,
+			iMapInterfaceConversions:Array<OcamlIMapInterfaceConversionDecision>, iMapInterfaceCalls:Array<OcamlIMapInterfaceCallDecision>,
+			calls:Array<OcamlCallDecision>, callableBoundaries:Array<OcamlCallableBoundaryPlan>, controls:Array<OcamlControlDecision>,
+			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String, artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
@@ -172,6 +175,40 @@ class OcamlLoweringReportWriter {
 				throw 'Program representation "${representation.id}" does not match ${representation.arrayDescriptorId}@${representation.arrayDescriptorRevision}.';
 			}
 		}
+		final sortedArrayLiteralProducers = arrayLiteralProducers.copy();
+		sortedArrayLiteralProducers.sort((left, right) -> Reflect.compare(left.id, right.id));
+		final arrayLiteralProducerById:Map<String, OcamlArrayLiteralProducerDecision> = [];
+		final arrayLiteralProducersByBinding:Map<String, Array<OcamlArrayLiteralProducerDecision>> = [];
+		for (producer in sortedArrayLiteralProducers) {
+			OcamlArrayLiteralProducerContract.requireDecision(producer);
+			if (arrayLiteralProducerById.exists(producer.id))
+				throw 'Array-literal producer identity "${producer.id}" occurs more than once.';
+			requireRepresentation(representationById, producer.resultRepresentationId, producer.arraySemanticTypeId, producer.arrayCarrierTypeId,
+				OcamlRepresentationDomain.InternalValue, 'Array-literal producer "${producer.id}" result', producer.resultRepresentationRevision);
+			final descriptor = representedArrayById.get(producer.arrayDescriptorId);
+			if (descriptor == null
+				|| descriptor.revision != producer.arrayDescriptorRevision
+				|| descriptor.programRevision != producer.programRevision
+				|| descriptor.arraySemanticTypeId != producer.arraySemanticTypeId
+				|| descriptor.arrayCarrierTypeId != producer.arrayCarrierTypeId
+				|| descriptor.elementSemanticTypeId != producer.elementSemanticTypeId
+				|| descriptor.elementCarrierTypeId != producer.elementCarrierTypeId
+				|| descriptor.elementRepresentationId != producer.elementRepresentationId
+				|| descriptor.elementRepresentationRevision != producer.elementRepresentationRevision) {
+				throw 'Array-literal producer "${producer.id}" does not match its represented-array descriptor and representation leaves.';
+			}
+			final bindingKey = OcamlArrayLiteralProducerContract.bindingKey(producer.functionId, producer.programRevision, producer.bodyRevision,
+				producer.pipelineRevision);
+			final bindingProducers = arrayLiteralProducersByBinding.get(bindingKey);
+			if (bindingProducers == null)
+				arrayLiteralProducersByBinding.set(bindingKey, [producer]);
+			else
+				bindingProducers.push(producer);
+			arrayLiteralProducerById.set(producer.id, producer);
+		}
+		final arrayLiteralProducerPlanRevisionByBinding:Map<String, String> = [];
+		for (bindingKey => producers in arrayLiteralProducersByBinding)
+			arrayLiteralProducerPlanRevisionByBinding.set(bindingKey, OcamlArrayLiteralProducerContract.planRevision(producers));
 		final sortedAnonymousStructures = anonymousStructures.copy();
 		sortedAnonymousStructures.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final anonymousStructureById:Map<String, OcamlAnonymousStructureDecision> = [];
@@ -323,6 +360,9 @@ class OcamlLoweringReportWriter {
 			controlById.set(control.id, true);
 			final payload = control.payload;
 			if (payload != null) {
+				final literalProducerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
+				if (literalProducerFieldCount != 0 && literalProducerFieldCount != 2)
+					throw 'Control decision "${control.id}" has an incomplete array-literal producer reference.';
 				if (payload.representationRevision != null) {
 					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" revision-bound input', payload.representationRevision);
@@ -337,6 +377,26 @@ class OcamlLoweringReportWriter {
 						|| representation.arrayDescriptorRevision != descriptor.revision
 						|| !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(payload)) {
 						throw 'Control decision "${control.id}" does not match its represented-array descriptor and representation revisions.';
+					}
+				}
+				if (literalProducerFieldCount == 2) {
+					final producerId:String = cast payload.arrayLiteralProducerId;
+					final producer = arrayLiteralProducerById.get(producerId);
+					final bindingKey = OcamlArrayLiteralProducerContract.bindingKey(control.functionId, control.programRevision, control.bodyRevision,
+						control.pipelineRevision);
+					final planRevision = arrayLiteralProducerPlanRevisionByBinding.get(bindingKey);
+					if (producer == null
+						|| planRevision == null
+						|| payload.arrayLiteralProducerPlanRevision != planRevision
+						|| producer.functionId != control.functionId
+						|| producer.programRevision != control.programRevision
+						|| producer.bodyRevision != control.bodyRevision
+						|| producer.pipelineRevision != control.pipelineRevision
+						|| producer.resultRepresentationId != payload.inputRepresentationId
+						|| producer.resultRepresentationRevision != payload.representationRevision
+						|| producer.arrayDescriptorId != payload.arrayDescriptorId
+						|| producer.arrayDescriptorRevision != payload.arrayDescriptorRevision) {
+						throw 'Control decision "${control.id}" does not consume its exact revision-bound array-literal producer.';
 					}
 				}
 				if (payload.inputSemanticTypeId == "Dynamic") {
@@ -597,6 +657,7 @@ class OcamlLoweringReportWriter {
 			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local or container-element conversion.";
 		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
 		final canonicalRepresentedArrays = haxe.Json.stringify(sortedRepresentedArrays);
+		final canonicalArrayLiteralProducerRevision = OcamlArrayLiteralProducerContract.planRevision(sortedArrayLiteralProducers);
 		final canonicalContainerElementRequiredConversionIds = haxe.Json.stringify(sortedContainerElementRequiredConversionIds);
 		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
 		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
@@ -627,6 +688,10 @@ class OcamlLoweringReportWriter {
 			representedArrayRevision: "sha256:" + Sha256.encode(canonicalRepresentedArrays),
 			representedArrayCount: sortedRepresentedArrays.length,
 			representedArrays: sortedRepresentedArrays,
+			arrayLiteralProducerModel: OcamlArrayLiteralProducerContract.MODEL_REVISION,
+			arrayLiteralProducerRevision: canonicalArrayLiteralProducerRevision,
+			arrayLiteralProducerCount: sortedArrayLiteralProducers.length,
+			arrayLiteralProducers: sortedArrayLiteralProducers,
 			anonymousStructureModel: OcamlAnonymousStructureContract.MODEL_REVISION,
 			anonymousStructureRevision: "sha256:" + Sha256.encode(canonicalAnonymousStructures),
 			anonymousStructureCount: sortedAnonymousStructures.length,
@@ -667,7 +732,7 @@ class OcamlLoweringReportWriter {
 			calls: sortedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
 			callableBoundaries: sortedCallableBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v18",
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v19",
 			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,

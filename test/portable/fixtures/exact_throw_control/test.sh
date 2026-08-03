@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 57
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
+if (report.schemaVersion !== 58
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v19'
 	|| report.controlCount !== report.controls.length
 	|| !sha256.test(report.controlRevision)) {
 	fail('unexpected exact-throw control report schema, model, inventory, or revision')
@@ -291,7 +291,7 @@ const throws = report.lowering.controls.filter(control =>
 const wrapperClauses = report.lowering.controlCatches.flatMap(chain =>
 	chain.clauses.filter(clause => clause.semanticTypeId === 'haxe.Exception'
 		|| clause.semanticTypeId === 'haxe.ValueException'))
-if (report.schemaVersion !== 35
+if (report.schemaVersion !== 36
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| throws.length !== 12

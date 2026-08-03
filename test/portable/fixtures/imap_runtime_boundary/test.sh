@@ -5,7 +5,7 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 57
+if (report.schemaVersion !== 58
 	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v20') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
@@ -96,7 +96,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 35
+if (report.schemaVersion !== 36
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 3
 	|| report.summary.iMapInterfaceCallCount !== 53) {

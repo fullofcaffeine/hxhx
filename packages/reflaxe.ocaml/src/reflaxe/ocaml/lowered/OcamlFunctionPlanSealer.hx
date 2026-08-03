@@ -10,6 +10,8 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.lifecycle.FunctionBodyRevision;
 import reflaxe.lifecycle.LexicalLocalIdentityPlan;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
@@ -122,7 +124,7 @@ class OcamlFunctionPlanSealer {
 			registry.sealFunction(binding, localIdentities, OcamlLocalStoragePlanner.planExpressions([], localIdentities),
 				new OcamlLocalRepresentationPlan([]), new OcamlContainerElementPlan([]), new OcamlBytesAccessPlan([]), new OcamlBytesMutationPlan([]),
 				new OcamlBytesProducerPlan([]), new OcamlBytesReadPlan([]), imapInterfaces, new OcamlCallPlan([]), controls, callableBoundary,
-				constructionBoundary, new OcamlAnonymousStructurePlan([], []), new OcamlStructuralFieldPlan([]));
+				constructionBoundary, new OcamlAnonymousStructurePlan([], []), new OcamlStructuralFieldPlan([]), new OcamlArrayLiteralProducerPlan([]));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr, localIdentities);
@@ -133,6 +135,9 @@ class OcamlFunctionPlanSealer {
 		final containerElements = OcamlContainerElementPlanner.planExpression(data.expr, binding);
 		containerElements.requirePlanBinding(binding);
 		OcamlContainerElementPlanner.requireCompleteness(data.expr, binding, containerElements);
+		final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(binding, representations).plan(data.expr);
+		arrayLiteralProducers.requirePlanBinding(binding);
+		arrayLiteralProducers.requireRepresentations(representations);
 		final imapInterfaces = new OcamlIMapInterfacePlanner(context, binding).plan(data.expr, functionResultType);
 		for (conversion in imapInterfaces.conversions())
 			context.recordIMapInterfaceRuntimeRequirements(conversion);
@@ -144,7 +149,8 @@ class OcamlFunctionPlanSealer {
 		final bytesMutations = new OcamlBytesMutationPlanner(binding, representations).plan(data.expr);
 		final bytesProducers = new OcamlBytesProducerPlanner(binding, representations).plan(data.expr);
 		final bytesReads = new OcamlBytesReadPlanner(binding, representations).plan(data.expr);
-		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities).plan(data.expr, callableBoundary);
+		final controls = new OcamlControlPlanner(representations, localRepresentations, binding, localIdentities,
+			arrayLiteralProducers).plan(data.expr, callableBoundary);
 		sealNestedFunctions(data.expr, binding, localIdentities, localRepresentations);
 
 		final moduleId = data.classType.module;
@@ -224,7 +230,7 @@ class OcamlFunctionPlanSealer {
 		for (decision in bytesReads.decisions())
 			context.recordBytesReadRuntimeRequirements(decision);
 		registry.sealFunction(binding, localIdentities, localStorage, localRepresentations, containerElements, bytesAccesses, bytesMutations, bytesProducers,
-			bytesReads, imapInterfaces, calls, controls, callableBoundary, constructionBoundary, anonymousStructures, structuralFields);
+			bytesReads, imapInterfaces, calls, controls, callableBoundary, constructionBoundary, anonymousStructures, structuralFields, arrayLiteralProducers);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
@@ -278,8 +284,11 @@ class OcamlFunctionPlanSealer {
 						// return with the same carrier. The nested planner still sees only locals
 						// present in its typed body and validates every selected representation
 						// against the current complete-program revision.
-						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding,
-							localIdentities).plan(tfunc.expr, boundary);
+						final arrayLiteralProducers = new OcamlArrayLiteralProducerPlanner(nestedBinding, representations).plan(tfunc.expr);
+						arrayLiteralProducers.requirePlanBinding(nestedBinding);
+						arrayLiteralProducers.requireRepresentations(representations);
+						final controls = new OcamlControlPlanner(representations, localRepresentations, nestedBinding, localIdentities,
+							arrayLiteralProducers).plan(tfunc.expr, boundary);
 						// An unsupported transfer or catch is omitted from the admitted lists.
 						// Compare both the family flags and the observed catch count so one valid
 						// return cannot make a partly represented closure look complete.
@@ -296,7 +305,8 @@ class OcamlFunctionPlanSealer {
 								parentBinding: lexicalParentBinding,
 								binding: nestedBinding,
 								callableBoundary: boundary,
-								controls: controls
+								controls: controls,
+								arrayLiteralProducers: arrayLiteralProducers
 							};
 							registry.sealNestedFunction(expression, bodyExternalLocals, observedBodyRevision, plan, localIdentities);
 							childParentBinding = nestedBinding;

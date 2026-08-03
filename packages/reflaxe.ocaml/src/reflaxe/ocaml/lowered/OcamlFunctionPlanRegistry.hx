@@ -17,6 +17,9 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultKind;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableBoundaryPlan;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallableDeclarationPlan;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerPlan.OcamlArrayLiteralProducerPlanner;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementPlanner;
@@ -69,6 +72,7 @@ typedef OcamlSealedFunctionPlan = {
 	final localStorage:OcamlLocalStoragePlan;
 	final localRepresentations:OcamlLocalRepresentationPlan;
 	final containerElements:OcamlContainerElementPlan;
+	final arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 	final anonymousStructures:OcamlAnonymousStructurePlan;
 	final structuralFields:OcamlStructuralFieldPlan;
 	final bytesAccesses:OcamlBytesAccessPlan;
@@ -110,6 +114,7 @@ typedef OcamlSealedNestedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final callableBoundary:OcamlCallableBoundaryPlan;
 	final controls:OcamlControlPlan;
+	final ?arrayLiteralProducers:OcamlArrayLiteralProducerPlan;
 }
 
 /**
@@ -364,6 +369,8 @@ class OcamlFunctionPlanRegistry {
 			throw 'reflaxe.ocaml [ocaml-nested-function:unsupported-boundary]: nested function "${plan.binding.functionId}" is outside the represented callable-result slice';
 		}
 		plan.controls.requirePlanBinding(plan.binding);
+		if (plan.arrayLiteralProducers != null)
+			plan.arrayLiteralProducers.requirePlanBinding(plan.binding);
 		if (!plan.controls.returnFamilyAdmitted || !plan.controls.hasReturnTransfers())
 			throw 'reflaxe.ocaml [ocaml-nested-function:missing-return-plan]: nested function "${plan.binding.functionId}" has no admitted early-return transfer';
 		// The planner omits unsupported transfers and catch chains. Validate both
@@ -389,7 +396,8 @@ class OcamlFunctionPlanRegistry {
 			parentBinding: copyBinding(plan.parentBinding),
 			binding: copyBinding(plan.binding),
 			callableBoundary: OcamlCallPlan.copyBoundary(plan.callableBoundary),
-			controls: plan.controls
+			controls: plan.controls,
+			arrayLiteralProducers: plan.arrayLiteralProducers
 		};
 		nestedFunctionsByExpression.set(expression, {
 			parentBinding: copyBinding(plan.parentBinding),
@@ -763,7 +771,7 @@ class OcamlFunctionPlanRegistry {
 			bytesMutations:OcamlBytesMutationPlan, bytesProducers:OcamlBytesProducerPlan, bytesReads:OcamlBytesReadPlan,
 			imapInterfaces:OcamlIMapInterfacePlan, calls:OcamlCallPlan, controls:OcamlControlPlan, callableBoundary:Null<OcamlCallableBoundaryPlan>,
 			?constructionBoundary:Null<OcamlCallableBoundaryPlan>, ?anonymousStructures:OcamlAnonymousStructurePlan,
-			?structuralFields:OcamlStructuralFieldPlan):Void {
+			?structuralFields:OcamlStructuralFieldPlan, ?arrayLiteralProducers:OcamlArrayLiteralProducerPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final canonicalRoot = rootIdentityRecordsByFunctionId.get(binding.functionId);
@@ -777,6 +785,7 @@ class OcamlFunctionPlanRegistry {
 		}
 		final sealedAnonymousStructures = anonymousStructures ?? new OcamlAnonymousStructurePlan([], []);
 		final sealedStructuralFields = structuralFields ?? new OcamlStructuralFieldPlan([]);
+		final sealedArrayLiteralProducers = arrayLiteralProducers ?? new OcamlArrayLiteralProducerPlan([]);
 		sealedAnonymousStructures.requirePlanBinding(binding);
 		sealedStructuralFields.requirePlanBinding(binding);
 		bytesAccesses.requirePlanBinding(binding);
@@ -786,6 +795,7 @@ class OcamlFunctionPlanRegistry {
 		imapInterfaces.requirePlanBinding(binding);
 		localRepresentations.requirePlanBinding(binding);
 		containerElements.requirePlanBinding(binding);
+		sealedArrayLiteralProducers.requirePlanBinding(binding);
 		for (call in calls.decisions()) {
 			OcamlCallPlan.requireCall(call);
 			requireCallBinding(call, binding);
@@ -807,6 +817,7 @@ class OcamlFunctionPlanRegistry {
 				localStorage: localStorage,
 				localRepresentations: localRepresentations,
 				containerElements: containerElements,
+				arrayLiteralProducers: sealedArrayLiteralProducers,
 				anonymousStructures: sealedAnonymousStructures,
 				structuralFields: sealedStructuralFields,
 				bytesAccesses: bytesAccesses,
@@ -822,6 +833,22 @@ class OcamlFunctionPlanRegistry {
 			localIdentities: localIdentities,
 			originIds: originIds
 		});
+	}
+
+	/** Returns every represented array-literal construction decision in stable order. */
+	public function arrayLiteralProducerDecisions():Array<OcamlArrayLiteralProducerDecision> {
+		final decisions:Array<OcamlArrayLiteralProducerDecision> = [];
+		for (record in sealedFunctions)
+			for (decision in record.plan.arrayLiteralProducers.decisions())
+				decisions.push(decision);
+		for (nested in nestedFunctionsByOccurrence) {
+			final plan = nested.arrayLiteralProducers;
+			if (plan != null)
+				for (decision in plan.decisions())
+					decisions.push(decision);
+		}
+		decisions.sort((left, right) -> Reflect.compare(left.id, right.id));
+		return decisions;
 	}
 
 	function registerCallableBoundary(boundary:OcamlCallableBoundaryPlan, binding:OcamlFunctionPlanBinding):Void {

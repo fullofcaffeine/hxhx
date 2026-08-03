@@ -28,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 57
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
+if (report.schemaVersion !== 58
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v19'
 	|| report.controlCount !== report.controls.length) {
 	fail('unexpected nullable-return control report schema, model, or inventory')
 }
@@ -221,7 +221,7 @@ const preserved = controls.filter(control =>
 const directional = controls.filter(control =>
 	control.payload?.conversion === 'box-exact-int-to-nullable-carrier'
 	|| control.payload?.conversion === 'box-exact-bool-to-nullable-carrier')
-if (report.schemaVersion !== 35
+if (report.schemaVersion !== 36
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| controls.length !== 12

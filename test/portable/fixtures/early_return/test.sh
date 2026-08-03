@@ -8,7 +8,8 @@ REPORT_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
 INVALID_NOMINAL_ROOT="$(mktemp -d)"
 INVALID_ARRAY_ROOT="$(mktemp -d)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT"' EXIT
+INVALID_LITERAL_ROOT="$(mktemp -d)"
+trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
 	echo "Missing generated early-return source or lowering report" >&2
@@ -27,8 +28,8 @@ function fail(message) {
 	throw new Error(message)
 }
 
-if (report.schemaVersion !== 57
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v18'
+if (report.schemaVersion !== 58
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v19'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
 	|| report.controlCount !== report.controls.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -38,8 +39,8 @@ if (report.schemaVersion !== 57
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 34) {
-	fail(`expected 34 represented return decisions, including the nested exact Array<Int> throw path, got ${returnControls.length}`)
+if (returnControls.length !== 37) {
+	fail(`expected 37 represented return decisions, including both nested exact Array<Int> throw paths, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -78,6 +79,7 @@ const representedNestedFunctions = new Map([
 	['nestedDynamicClosure', 'Dynamic'],
 	['nestedZeroArgumentClosure', 'Int'],
 	['nestedArrayThrowClosure', 'Int'],
+	['nestedArrayLiteralThrowClosure', 'Int'],
 	['nestedNominalClosure', '_Main.NestedReturnBox']
 ])
 for (const [functionName, semanticType] of representedNestedFunctions) {
@@ -152,6 +154,84 @@ if (nestedArrayRepresentation?.revision !== nestedArrayThrows[0].payload.represe
 	|| nestedArrayDescriptor?.elementRepresentationId !== 'representation:Int:array-element'
 	|| !sha256.test(nestedArrayDescriptor?.elementRepresentationRevision ?? '')) {
 	fail('nestedArrayThrowClosure did not bind the exact representation, array descriptor, and element revisions')
+}
+if (nestedArrayThrows[0].payload.arrayLiteralProducerId != null
+	|| nestedArrayThrows[0].payload.arrayLiteralProducerPlanRevision != null) {
+	fail('the local Array<Int> throw incorrectly claimed a direct-literal producer')
+}
+
+if (report.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v1'
+	|| report.arrayLiteralProducerCount !== report.arrayLiteralProducers.length
+	|| report.arrayLiteralProducerCount !== 3
+	|| !sha256.test(report.arrayLiteralProducerRevision)) {
+	fail('unexpected direct Array<Int> literal producer model, inventory, or revision')
+}
+const literalProducers = report.arrayLiteralProducers.filter(producer =>
+	producer.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& producer.functionId.includes('|nested-function|'))
+if (literalProducers.length !== 1) {
+	fail(`nestedArrayLiteralThrowClosure produced ${literalProducers.length} direct-literal plans instead of one`)
+}
+const literalProducer = literalProducers[0]
+const expectedSchedule = [
+	'create-array:-:-',
+	'evaluate-element:0:0',
+	'store-element:0:0',
+	'evaluate-element:1:1',
+	'store-element:1:1',
+	'result-array:-:-'
+]
+const actualSchedule = literalProducer.evaluationSchedule.map(step => {
+	const elementIndex = step.elementIndex == null ? '-' : String(step.elementIndex)
+	const producerIndex = step.elementProducerId == null
+		? '-'
+		: String(literalProducer.elements.findIndex(element => element.id === step.elementProducerId))
+	return `${step.kind}:${elementIndex}:${producerIndex}`
+})
+if (!literalProducer.id.startsWith('array-literal-producer:')
+	|| literalProducer.literalOrdinal !== 0
+	|| literalProducer.arraySemanticTypeId !== 'Array<Int>'
+	|| literalProducer.arrayCarrierTypeId !== 'int HxArray.t'
+	|| literalProducer.resultRepresentationId !== 'representation:Array<Int>:internal-value'
+	|| !sha256.test(literalProducer.resultRepresentationRevision)
+	|| literalProducer.arrayDescriptorId !== 'represented-array:Array<Int>'
+	|| !sha256.test(literalProducer.arrayDescriptorRevision)
+	|| literalProducer.elementSemanticTypeId !== 'Int'
+	|| literalProducer.elementCarrierTypeId !== 'int'
+	|| literalProducer.elementRepresentationId !== 'representation:Int:array-element'
+	|| !sha256.test(literalProducer.elementRepresentationRevision)
+	|| literalProducer.constructionPolicy !== 'create-then-evaluate-and-push-in-order'
+	|| literalProducer.proofId !== 'direct-array-int-literal-construction-v1'
+	|| literalProducer.profileEligibility.join(',') !== 'metal,portable'
+	|| literalProducer.elements.length !== 2
+	|| literalProducer.elements.some((element, index) =>
+		element.index !== index
+		|| element.semanticTypeId !== 'Int'
+		|| element.carrierTypeId !== 'int'
+		|| element.representationId !== literalProducer.elementRepresentationId
+		|| element.representationRevision !== literalProducer.elementRepresentationRevision
+		|| !element.source.file
+		|| element.source.max < element.source.min)
+	|| actualSchedule.join(',') !== expectedSchedule.join(',')) {
+	fail('nestedArrayLiteralThrowClosure did not seal its exact ordered Array<Int> literal construction')
+}
+const literalThrows = report.controls.filter(control =>
+	control.kind === 'throw'
+	&& control.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (literalThrows.length !== 1
+	|| literalThrows[0].payload?.arrayLiteralProducerId !== literalProducer.id
+	|| !sha256.test(literalThrows[0].payload?.arrayLiteralProducerPlanRevision ?? '')
+	|| literalThrows[0].functionId !== literalProducer.functionId
+	|| literalThrows[0].programRevision !== literalProducer.programRevision
+	|| literalThrows[0].bodyRevision !== literalProducer.bodyRevision
+	|| literalThrows[0].pipelineRevision !== literalProducer.pipelineRevision
+	|| literalThrows[0].payload.inputRepresentationId !== literalProducer.resultRepresentationId
+	|| literalThrows[0].payload.representationRevision !== literalProducer.resultRepresentationRevision
+	|| literalThrows[0].payload.arrayDescriptorId !== literalProducer.arrayDescriptorId
+	|| literalThrows[0].payload.arrayDescriptorRevision !== literalProducer.arrayDescriptorRevision
+	|| !literalThrows[0].proofClaim.includes(literalProducer.id)) {
+	fail('the direct Array<Int> literal throw did not consume its exact producer and representation graph')
 }
 const nestedCatches = report.controlCatches.filter(catchChain =>
 	catchChain.functionId.includes('|nested-function|')
@@ -423,6 +503,32 @@ if (arrayThrowStart < 0
 	|| arrayLocalBody.includes('Obj.magic')) {
 	fail('nestedArrayThrowClosure did not consume its exact Array<Int> throw and return plans')
 }
+const literalThrowStart = source.indexOf('let nestedArrayLiteralThrowClosure =')
+const literalThrowEnd = source.indexOf('\nlet nestedUnsupportedGenericThrowClosure =', literalThrowStart)
+const literalThrowBody = source.slice(literalThrowStart, literalThrowEnd)
+const literalLocalStart = literalThrowBody.indexOf('let local = fun')
+const literalLocalEnd = literalThrowBody.indexOf(' : int) in (', literalLocalStart)
+const literalLocalBody = literalThrowBody.slice(literalLocalStart, literalLocalEnd)
+const createIndex = literalLocalBody.indexOf('HxArray.create ()')
+const firstElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement')
+const secondElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement', firstElementIndex + 1)
+if (literalThrowStart < 0
+	|| literalThrowEnd < 0
+	|| literalLocalStart < 0
+	|| literalLocalEnd < 0
+	|| (literalLocalBody.match(/HxArray\.create \(\)/g) ?? []).length !== 1
+	|| (literalLocalBody.match(/arrayLiteralThrowElement/g) ?? []).length !== 2
+	|| (literalLocalBody.match(/HxArray\.push/g) ?? []).length !== 2
+	|| createIndex < 0
+	|| firstElementIndex <= createIndex
+	|| secondElementIndex <= firstElementIndex
+	|| !literalLocalBody.includes('HxType.hx_throw_typed_rtti')
+	|| !literalLocalBody.includes('["Dynamic"; "Array"]')
+	|| !literalLocalBody.includes('HxRuntime.Hx_return (Obj.repr 59)')
+	|| literalLocalBody.includes('__fallback_result')
+	|| literalLocalBody.includes('Obj.magic')) {
+	fail('nestedArrayLiteralThrowClosure did not consume one ordered direct-literal producer before its exact throw plan')
+}
 const nominalClosureStart = source.indexOf('let nestedNominalClosure =')
 const nominalClosureEnd = source.indexOf('\nlet deepNestedClosure =', nominalClosureStart)
 const nominalClosureBody = source.slice(nominalClosureStart, nominalClosureEnd)
@@ -496,13 +602,15 @@ haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 35
+if (report.schemaVersion !== 36
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 34
+	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
+	|| report.summary.arrayLiteralProducerCount !== 3
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 37
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 34 validated represented return decisions')
+	throw new Error('public inspection did not expose the 37 returns and three direct Array<Int> literal producers')
 }
 const arrayThrow = report.lowering.controls.find(control =>
 	control.kind === 'throw'
@@ -529,6 +637,34 @@ if (arrayRepresentation?.revision !== arrayThrow.payload.representationRevision
 	|| arrayDescriptor?.revision !== arrayThrow.payload.arrayDescriptorRevision
 	|| arrayDescriptor?.elementRepresentationId !== 'representation:Int:array-element') {
 	throw new Error('public inspection did not validate the represented-array revision graph')
+}
+if (arrayThrow.payload.arrayLiteralProducerId != null
+	|| arrayThrow.payload.arrayLiteralProducerPlanRevision != null) {
+	throw new Error('public inspection attached a direct-literal producer to the existing local Array<Int> throw')
+}
+const literalProducer = report.lowering.arrayLiteralProducers.find(producer =>
+	producer.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& producer.functionId.includes('|nested-function|'))
+const literalThrow = report.lowering.controls.find(control =>
+	control.kind === 'throw'
+	&& control.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& control.functionId.includes('|nested-function|'))
+if (report.lowering.arrayLiteralProducerModel !== 'ocaml-represented-array-literal-producer-v1'
+	|| !/^sha256:[0-9a-f]{64}$/.test(report.lowering.arrayLiteralProducerRevision ?? '')
+	|| literalProducer?.elements.length !== 2
+	|| literalProducer.evaluationSchedule.map(step => step.kind).join(',')
+		!== 'create-array,evaluate-element,store-element,evaluate-element,store-element,result-array'
+	|| literalThrow?.payload?.arrayLiteralProducerId !== literalProducer.id
+	|| !/^sha256:[0-9a-f]{64}$/.test(literalThrow.payload.arrayLiteralProducerPlanRevision ?? '')
+	|| literalThrow.functionId !== literalProducer.functionId
+	|| literalThrow.programRevision !== literalProducer.programRevision
+	|| literalThrow.bodyRevision !== literalProducer.bodyRevision
+	|| literalThrow.pipelineRevision !== literalProducer.pipelineRevision
+	|| literalThrow.payload.inputRepresentationId !== literalProducer.resultRepresentationId
+	|| literalThrow.payload.representationRevision !== literalProducer.resultRepresentationRevision
+	|| literalThrow.payload.arrayDescriptorId !== literalProducer.arrayDescriptorId
+	|| literalThrow.payload.arrayDescriptorRevision !== literalProducer.arrayDescriptorRevision) {
+	throw new Error('public inspection did not validate the direct Array<Int> literal producer/control link')
 }
 const nominalCall = report.lowering.calls.find(call =>
 	call.kind === 'typed-function-value'
@@ -677,4 +813,70 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=34"
+for mutation in missing-producer producer-id reordered-elements duplicated-element reordered-schedule stale-binding control-plan-revision; do
+	invalid_output="$INVALID_LITERAL_ROOT/$mutation"
+	cp -R out "$invalid_output"
+	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
+const fs = require('fs')
+const path = process.argv[2]
+const mutation = process.argv[3]
+const report = JSON.parse(fs.readFileSync(path, 'utf8'))
+const producerIndex = report.arrayLiteralProducers?.findIndex(item =>
+	item.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& item.functionId.includes('|nested-function|'))
+const control = report.controls?.find(item =>
+	item.kind === 'throw'
+	&& item.functionId.includes('|function|nestedArrayLiteralThrowClosure|')
+	&& item.functionId.includes('|nested-function|'))
+if (producerIndex == null || producerIndex < 0 || control?.payload == null) {
+	throw new Error('missing direct Array<Int> literal producer/control proof to corrupt')
+}
+const producer = report.arrayLiteralProducers[producerIndex]
+switch (mutation) {
+	case 'missing-producer':
+		report.arrayLiteralProducers.splice(producerIndex, 1)
+		report.arrayLiteralProducerCount = report.arrayLiteralProducers.length
+		break
+	case 'producer-id':
+		producer.id = `array-literal-producer:${'0'.repeat(32)}`
+		break
+	case 'reordered-elements':
+		producer.elements.reverse()
+		break
+	case 'duplicated-element':
+		producer.elements[1] = {...producer.elements[0]}
+		break
+	case 'reordered-schedule':
+		[producer.evaluationSchedule[1], producer.evaluationSchedule[2]] = [producer.evaluationSchedule[2], producer.evaluationSchedule[1]]
+		break
+	case 'stale-binding':
+		producer.bodyRevision = `0:${'0'.repeat(64)}`
+		break
+	case 'control-plan-revision':
+		control.payload.arrayLiteralProducerPlanRevision = `sha256:${'0'.repeat(64)}`
+		break
+	default:
+		throw new Error(`unsupported corruption ${mutation}`)
+}
+fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
+NODE
+	if [ "$mutation" = "control-plan-revision" ]; then
+		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+			"$invalid_output/ocaml_lowering_report.json"
+	fi
+	invalid_log="$INVALID_LITERAL_ROOT/$mutation.log"
+	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
+		--macro 'nullSafety("reflaxe.ocaml")' \
+		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
+		echo "The public inspector accepted a direct Array<Int> literal producer with corrupted $mutation metadata" >&2
+		exit 1
+	fi
+	if ! grep -Eq 'Array literal producer|Array-literal producer|array-literal producer|array literal producer|ocaml-array-literal|Control decision' "$invalid_log"; then
+		echo "The public inspector rejected corrupted direct-literal $mutation metadata for an unrelated reason" >&2
+		cat "$invalid_log" >&2
+		exit 1
+	fi
+done
+
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=37 producers=3"

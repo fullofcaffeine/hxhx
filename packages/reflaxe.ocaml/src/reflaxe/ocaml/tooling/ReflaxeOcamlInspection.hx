@@ -35,6 +35,10 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnsafeOperation;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralElementProducer;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEvaluationStep;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
+import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlFloatRepresentationModel.OcamlFloatRepresentationContract;
 import reflaxe.ocaml.lowered.OcamlInt64RepresentationModel.OcamlInt64RepresentationContract;
 
@@ -95,7 +99,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 35,
+			schemaVersion: 36,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -117,6 +121,7 @@ class ReflaxeOcamlInspection {
 				loweredPlanCount: lowering.plans.length,
 				representationDecisionCount: representation.decisions.length,
 				representedArrayCount: representation.representedArrays.length,
+				arrayLiteralProducerCount: lowering.arrayLiteralProducers.length,
 				anonymousStructureCount: lowering.anonymousStructures.length,
 				anonymousStructureOperationCount: lowering.anonymousStructureOperations.length,
 				structuralFieldCount: lowering.structuralFields.length,
@@ -166,6 +171,9 @@ class ReflaxeOcamlInspection {
 				}
 			}
 			lines.push('[PASS] Anonymous objects: ${report.lowering.anonymousStructures.length} runtime shape${report.lowering.anonymousStructures.length == 1 ? "" : "s"} and ${report.lowering.anonymousStructureOperations.length} create, initialize, read, plain-write, or compound-write occurrence${report.lowering.anonymousStructureOperations.length == 1 ? "" : "s"} were validated before target syntax.');
+			lines.push('[PASS] Direct represented array literals: ${report.lowering.arrayLiteralProducers.length} construction occurrence${report.lowering.arrayLiteralProducers.length == 1 ? "" : "s"} fixed container creation and source-order element evaluation before target syntax.');
+			for (producer in report.lowering.arrayLiteralProducers)
+				lines.push('  - ${producer.source.file} bytes ${producer.source.min}-${producer.source.max}: ${producer.arraySemanticTypeId}/${producer.arrayCarrierTypeId} via ${producer.id}');
 			for (structure in report.lowering.anonymousStructures) {
 				final fields = structure.fields.map(field -> '${field.name}:${field.semanticTypeId}/${field.carrierTypeId}');
 				lines.push('  - ${structure.semanticTypeId} -> ${structure.carrierTypeId}: ${fields.join(", ")}');
@@ -358,6 +366,9 @@ class ReflaxeOcamlInspection {
 					plans: [],
 					representation: representationFailure("not-enabled", path,
 						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
+					arrayLiteralProducerModel: null,
+					arrayLiteralProducerRevision: null,
+					arrayLiteralProducers: [],
 					anonymousStructureRevision: null,
 					anonymousStructures: [],
 					anonymousStructureOperations: [],
@@ -394,8 +405,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 57) {
-						throw 'Unsupported lowering report schema $version; expected 57.';
+					if (version != 58) {
+						throw 'Unsupported lowering report schema $version; expected 58.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -409,6 +420,7 @@ class ReflaxeOcamlInspection {
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
+					final arrayLiteralProducers = inspectArrayLiteralProducers(value, representation);
 					final anonymousStructures = ReflaxeOcamlAnonymousStructureInspection.inspect(value, representation);
 					final structuralFields = ReflaxeOcamlStructuralFieldInspection.inspect(value);
 					final iMapInterfaces = ReflaxeOcamlIMapInterfaceInspection.inspect(value);
@@ -418,7 +430,7 @@ class ReflaxeOcamlInspection {
 					final unsafeOperations = inspectUnsafeOperations(value, localConversions, containerElementConversions);
 					final callInventory = inspectCalls(value, representation);
 					final controlTargets = inspectControlTargets(value);
-					final controls = inspectControls(value, representation, controlTargets);
+					final controls = inspectControls(value, representation, arrayLiteralProducers, controlTargets);
 					final controlCatches = inspectControlCatches(value, representation);
 					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans, representation, localConversions,
@@ -433,6 +445,9 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						representation: representation,
+						arrayLiteralProducerModel: requiredString(value, "arrayLiteralProducerModel"),
+						arrayLiteralProducerRevision: requiredSha256Revision(value, "arrayLiteralProducerRevision"),
+						arrayLiteralProducers: arrayLiteralProducers,
 						anonymousStructureRevision: anonymousStructures.revision,
 						anonymousStructures: anonymousStructures.structures,
 						anonymousStructureOperations: anonymousStructures.operations,
@@ -462,12 +477,132 @@ class ReflaxeOcamlInspection {
 						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
 						staticStorage: staticStorage,
 						scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",
-						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
+						message: 'Typed lowering report contains ${plans.length} sealed place operation${plans.length == 1 ? "" : "s"}, ${arrayLiteralProducers.length} direct represented array-literal producer${arrayLiteralProducers.length == 1 ? "" : "s"}, ${anonymousStructures.structures.length} anonymous-object runtime shape${anonymousStructures.structures.length == 1 ? "" : "s"}, ${anonymousStructures.operations.length} anonymous-object operation${anonymousStructures.operations.length == 1 ? "" : "s"}, ${structuralFields.decisions.length} typed structural-field decision${structuralFields.decisions.length == 1 ? "" : "s"}, ${iMapInterfaces.conversions.length} IMap conversion${iMapInterfaces.conversions.length == 1 ? "" : "s"}, ${iMapInterfaces.calls.length} IMap interface call${iMapInterfaces.calls.length == 1 ? "" : "s"}, ${localConversions.length} occurrence-bound local conversion${localConversions.length == 1 ? "" : "s"}, ${containerElementConversions.length} typed container-element conversion${containerElementConversions.length == 1 ? "" : "s"}, ${unsafeOperations.length} proof-backed unsafe operation${unsafeOperations.length == 1 ? "" : "s"}, ${callInventory.calls.length} typed call${callInventory.calls.length == 1 ? "" : "s"}, ${controls.length} function, loop, or Haxe-exception transfer${controls.length == 1 ? "" : "s"}, ${controlCatches.length} represented primitive, monomorphic-class, or Dynamic catch chain${controlCatches.length == 1 ? "" : "s"}, ${controlTargets.length} lexical loop target${controlTargets.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is a bounded typed decision report, not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
 				}
 		};
+	}
+
+	/**
+		Validates every direct `Array<Int>` construction before showing it publicly.
+
+		A producer is the compiler's plain-data recipe for allocating one array,
+		evaluating each source element once, storing those values in order, and
+		returning that same mutable object. Inspection recomputes the recipe revision
+		and checks its representation graph, so edited report JSON cannot masquerade
+		as compiler-owned construction evidence.
+	**/
+	static function inspectArrayLiteralProducers(value:Dynamic, representation:InspectionRepresentation):Array<OcamlArrayLiteralProducerDecision> {
+		if (requiredString(value, "arrayLiteralProducerModel") != OcamlArrayLiteralProducerContract.MODEL_REVISION)
+			throw "Unsupported array-literal producer report model.";
+		final raw = requiredArray(value, "arrayLiteralProducers");
+		if (raw.length != requiredInt(value, "arrayLiteralProducerCount"))
+			throw "Array-literal producer count does not match its inventory.";
+		final producers = [for (entry in raw) arrayLiteralProducer(entry)];
+		producers.sort((left, right) -> compareStrings(left.id, right.id));
+		final expectedRevision = OcamlArrayLiteralProducerContract.planRevision(producers);
+		if (requiredSha256Revision(value, "arrayLiteralProducerRevision") != expectedRevision)
+			throw "Array-literal producer revision does not match its ordered construction inventory.";
+
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final descriptorById:Map<String, InspectionRepresentedArrayDescriptor> = [];
+		for (descriptor in representation.representedArrays)
+			descriptorById.set(descriptor.id, descriptor);
+		final ids:Map<String, Bool> = [];
+		for (producer in producers) {
+			if (ids.exists(producer.id))
+				throw 'Array-literal producer report contains duplicate identity "${producer.id}".';
+			final result = representationById.get(producer.resultRepresentationId);
+			final descriptor = descriptorById.get(producer.arrayDescriptorId);
+			if (result == null || descriptor == null)
+				throw 'Array-literal producer "${producer.id}" refers to a missing program representation or represented-array descriptor.';
+			if (result.programRevision != producer.programRevision
+				|| result.revision != producer.resultRepresentationRevision
+				|| result.semanticTypeId != producer.arraySemanticTypeId
+				|| result.carrierTypeId != producer.arrayCarrierTypeId
+				|| result.domain != "internal-value"
+				|| result.arrayDescriptorId != producer.arrayDescriptorId
+				|| result.arrayDescriptorRevision != producer.arrayDescriptorRevision
+				|| descriptor.programRevision != producer.programRevision
+				|| descriptor.revision != producer.arrayDescriptorRevision
+				|| descriptor.arraySemanticTypeId != producer.arraySemanticTypeId
+				|| descriptor.arrayCarrierTypeId != producer.arrayCarrierTypeId
+				|| descriptor.elementSemanticTypeId != producer.elementSemanticTypeId
+				|| descriptor.elementCarrierTypeId != producer.elementCarrierTypeId
+				|| descriptor.elementRepresentationId != producer.elementRepresentationId
+				|| descriptor.elementRepresentationRevision != producer.elementRepresentationRevision) {
+				throw 'Array-literal producer "${producer.id}" does not match its program representation and represented-array descriptor.';
+			}
+			ids.set(producer.id, true);
+		}
+		return producers;
+	}
+
+	static function arrayLiteralProducer(value:Dynamic):OcamlArrayLiteralProducerDecision {
+		final source = requiredObject(value, "source");
+		final elements:Array<OcamlArrayLiteralElementProducer> = [
+			for (entry in requiredArray(value, "elements")) {
+				final elementSource = requiredObject(entry, "source");
+				{
+					id: requiredString(entry, "id"),
+					index: requiredInt(entry, "index"),
+					source: {
+						file: requiredString(elementSource, "file"),
+						min: requiredInt(elementSource, "min"),
+						max: requiredInt(elementSource, "max")
+					},
+					semanticTypeId: requiredString(entry, "semanticTypeId"),
+					carrierTypeId: requiredString(entry, "carrierTypeId"),
+					representationId: requiredString(entry, "representationId"),
+					representationRevision: requiredSha256Revision(entry, "representationRevision")
+				};
+			}
+		];
+		final evaluationSchedule:Array<OcamlArrayLiteralEvaluationStep> = [
+			for (entry in requiredArray(value, "evaluationSchedule")) {
+				{
+					ordinal: requiredInt(entry, "ordinal"),
+					kind: cast requiredString(entry, "kind"),
+					elementIndex: optionalInt(entry, "elementIndex"),
+					elementProducerId: optionalString(entry, "elementProducerId")
+				};
+			}
+		];
+		final producer:OcamlArrayLiteralProducerDecision = {
+			id: requiredString(value, "id"),
+			source: {
+				file: requiredString(source, "file"),
+				min: requiredInt(source, "min"),
+				max: requiredInt(source, "max")
+			},
+			literalOrdinal: requiredInt(value, "literalOrdinal"),
+			arraySemanticTypeId: requiredString(value, "arraySemanticTypeId"),
+			arrayCarrierTypeId: requiredString(value, "arrayCarrierTypeId"),
+			resultRepresentationId: requiredString(value, "resultRepresentationId"),
+			resultRepresentationRevision: requiredSha256Revision(value, "resultRepresentationRevision"),
+			arrayDescriptorId: requiredString(value, "arrayDescriptorId"),
+			arrayDescriptorRevision: requiredSha256Revision(value, "arrayDescriptorRevision"),
+			elementSemanticTypeId: requiredString(value, "elementSemanticTypeId"),
+			elementCarrierTypeId: requiredString(value, "elementCarrierTypeId"),
+			elementRepresentationId: requiredString(value, "elementRepresentationId"),
+			elementRepresentationRevision: requiredSha256Revision(value, "elementRepresentationRevision"),
+			elements: elements,
+			evaluationSchedule: evaluationSchedule,
+			constructionPolicy: requiredString(value, "constructionPolicy"),
+			proofId: requiredString(value, "proofId"),
+			proofClaim: requiredString(value, "proofClaim"),
+			profileEligibility: requiredStringArray(value, "profileEligibility"),
+			functionId: requiredString(value, "functionId"),
+			programRevision: requiredString(value, "programRevision"),
+			bodyRevision: requiredString(value, "bodyRevision"),
+			pipelineRevision: requiredString(value, "pipelineRevision")
+		};
+		OcamlArrayLiteralProducerContract.requireDecision(producer);
+		return producer;
 	}
 
 	static function inspectControlTargets(value:Dynamic):Array<InspectionControlLoopTarget> {
@@ -499,9 +634,9 @@ class ReflaxeOcamlInspection {
 		return targets;
 	}
 
-	static function inspectControls(value:Dynamic, representation:InspectionRepresentation,
+	static function inspectControls(value:Dynamic, representation:InspectionRepresentation, arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>,
 			targets:Array<InspectionControlLoopTarget>):Array<InspectionControl> {
-		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v18")
+		if (requiredString(value, "controlModel") != "typed-ocaml-function-loop-throw-and-catch-control-v19")
 			throw "Unsupported control report model.";
 		final rawControls = requiredArray(value, "controls");
 		if (rawControls.length != requiredInt(value, "controlCount"))
@@ -521,6 +656,21 @@ class ReflaxeOcamlInspection {
 		final representedArrayById:Map<String, InspectionRepresentedArrayDescriptor> = [];
 		for (descriptor in representation.representedArrays)
 			representedArrayById.set(descriptor.id, descriptor);
+		final arrayLiteralProducerById:Map<String, OcamlArrayLiteralProducerDecision> = [];
+		final arrayLiteralProducersByBinding:Map<String, Array<OcamlArrayLiteralProducerDecision>> = [];
+		for (producer in arrayLiteralProducers) {
+			arrayLiteralProducerById.set(producer.id, producer);
+			final bindingKey = OcamlArrayLiteralProducerContract.bindingKey(producer.functionId, producer.programRevision, producer.bodyRevision,
+				producer.pipelineRevision);
+			final bindingProducers = arrayLiteralProducersByBinding.get(bindingKey);
+			if (bindingProducers == null)
+				arrayLiteralProducersByBinding.set(bindingKey, [producer]);
+			else
+				bindingProducers.push(producer);
+		}
+		final arrayLiteralProducerPlanRevisionByBinding:Map<String, String> = [];
+		for (bindingKey => producers in arrayLiteralProducersByBinding)
+			arrayLiteralProducerPlanRevisionByBinding.set(bindingKey, OcamlArrayLiteralProducerContract.planRevision(producers));
 		final targetById:Map<String, InspectionControlLoopTarget> = [];
 		for (target in targets)
 			targetById.set(target.id, target);
@@ -549,6 +699,13 @@ class ReflaxeOcamlInspection {
 				throw 'Control decision "${control.id}" disagrees with another decision owned by function "${control.functionId}" about its program, body, or pipeline revision.';
 			}
 			final payload = control.payload;
+			if (payload != null) {
+				final producerFieldCount = (payload.arrayLiteralProducerId == null ? 0 : 1) + (payload.arrayLiteralProducerPlanRevision == null ? 0 : 1);
+				if (producerFieldCount != 0 && producerFieldCount != 2)
+					throw 'Control decision "${control.id}" has an incomplete array-literal producer reference.';
+				if (producerFieldCount == 2 && payload.arrayDescriptorId == null)
+					throw 'Control decision "${control.id}" attaches an array-literal producer to a non-array payload.';
+			}
 			switch (control.kind) {
 				case "return":
 					if (control.effect != "exit-function"
@@ -725,6 +882,26 @@ class ReflaxeOcamlInspection {
 							|| descriptor.arraySemanticTypeId != payload.inputSemanticTypeId
 							|| descriptor.arrayCarrierTypeId != payload.inputCarrierTypeId) {
 							throw 'Control decision "${control.id}" does not match its represented-array descriptor and representation revisions.';
+						}
+						if (payload.arrayLiteralProducerId != null) {
+							final producerId:String = cast payload.arrayLiteralProducerId;
+							final producer = arrayLiteralProducerById.get(producerId);
+							final bindingKey = OcamlArrayLiteralProducerContract.bindingKey(control.functionId, control.programRevision, control.bodyRevision,
+								control.pipelineRevision);
+							final planRevision = arrayLiteralProducerPlanRevisionByBinding.get(bindingKey);
+							if (producer == null
+								|| planRevision == null
+								|| payload.arrayLiteralProducerPlanRevision != planRevision
+								|| producer.functionId != control.functionId
+								|| producer.programRevision != control.programRevision
+								|| producer.bodyRevision != control.bodyRevision
+								|| producer.pipelineRevision != control.pipelineRevision
+								|| producer.resultRepresentationId != payload.inputRepresentationId
+								|| producer.resultRepresentationRevision != payload.representationRevision
+								|| producer.arrayDescriptorId != payload.arrayDescriptorId
+								|| producer.arrayDescriptorRevision != payload.arrayDescriptorRevision) {
+								throw 'Control decision "${control.id}" does not consume its exact revision-bound array-literal producer.';
+							}
 						}
 					}
 					if (payload.inputSemanticTypeId == "Dynamic") {
@@ -1054,6 +1231,8 @@ class ReflaxeOcamlInspection {
 			representationRevision: optionalString(value, "representationRevision"),
 			arrayDescriptorId: optionalString(value, "arrayDescriptorId"),
 			arrayDescriptorRevision: optionalString(value, "arrayDescriptorRevision"),
+			arrayLiteralProducerId: optionalString(value, "arrayLiteralProducerId"),
+			arrayLiteralProducerPlanRevision: optionalString(value, "arrayLiteralProducerPlanRevision"),
 			conversion: requiredString(value, "conversion"),
 			nominalRepresentation: nominalValue == null ? null : controlNominalRepresentation(nominalValue),
 			proofId: requiredString(value, "proofId"),
@@ -3198,6 +3377,9 @@ class ReflaxeOcamlInspection {
 			controlCatches: [],
 			controlTargetRevision: null,
 			controlTargets: [],
+			arrayLiteralProducerModel: null,
+			arrayLiteralProducerRevision: null,
+			arrayLiteralProducers: [],
 			staticStorageRevision: null,
 			staticStorage: [],
 			scope: "typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families",

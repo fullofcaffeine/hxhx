@@ -734,6 +734,13 @@ class ControlPlanFixture {
 			|| arrayIntThrow.runtimeTags.join(",") != "Dynamic,Array") {
 			throw "The exact Array<Int> throw lost its sealed carrier, identity, or runtime tags";
 		}
+		final literalArrayThrow = throwDecision("control:throw:array-int-literal", 195, "Array<Int>");
+		Reflect.setField(literalArrayThrow.payload, "arrayLiteralProducerId", "array-literal-producer:0123456789abcdef0123456789abcdef");
+		Reflect.setField(literalArrayThrow.payload, "arrayLiteralProducerPlanRevision",
+			"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
+		OcamlControlPlan.requireDecision(literalArrayThrow);
+		if (literalArrayThrow.payload == null || !OcamlControlPlan.isAdmittedRepresentedArrayThrowPayload(literalArrayThrow.payload))
+			throw "The direct Array<Int> literal throw lost its paired producer identity and plan revision";
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:dynamic", 196, "Dynamic"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-exception", 197, "haxe.Exception"));
 		OcamlControlPlan.requireDecision(throwDecision("control:throw:haxe-value-exception", 198, "haxe.ValueException"));
@@ -861,6 +868,14 @@ class ControlPlanFixture {
 		final arrayThrowWithWrongProof = throwDecision("control:throw:array-wrong-proof", 255, "Array<Int>");
 		Reflect.setField(arrayThrowWithWrongProof.payload, "proofId", OcamlControlPlan.EXACT_VALUE_THROW_PROOF_ID);
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithWrongProof]));
+		final arrayThrowWithHalfProducer = throwDecision("control:throw:array-half-producer", 255, "Array<Int>");
+		Reflect.setField(arrayThrowWithHalfProducer.payload, "arrayLiteralProducerId", "array-literal-producer:0123456789abcdef0123456789abcdef");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [arrayThrowWithHalfProducer]));
+		final intThrowWithArrayProducer = throwDecision("control:throw:int-array-producer", 255, "Int");
+		Reflect.setField(intThrowWithArrayProducer.payload, "arrayLiteralProducerId", "array-literal-producer:0123456789abcdef0123456789abcdef");
+		Reflect.setField(intThrowWithArrayProducer.payload, "arrayLiteralProducerPlanRevision",
+			"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
+		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [intThrowWithArrayProducer]));
 		final unsupportedGenericArrayThrow = throwDecision("control:throw:generic-array", 255, "Array<String>");
 		expectThrows("invalid-plan", () -> new OcamlControlPlan(false, false, true, binding(), [], [unsupportedGenericArrayThrow]));
 		final dynamicThrowWithProgramRepresentation = throwDecision("control:throw:dynamic-program-representation", 256, "Dynamic");
