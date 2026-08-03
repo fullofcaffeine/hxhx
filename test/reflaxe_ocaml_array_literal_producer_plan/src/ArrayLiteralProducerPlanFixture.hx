@@ -5,6 +5,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
+import haxe.ds.ObjectMap;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralEvaluationKind;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerContract;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
@@ -118,6 +119,15 @@ class ArrayLiteralProducerPlanFixture {
 			case _:
 				Context.error("A detached String producer became reachable from target syntax.", stringLiteral.pos);
 		}
+		final forgedLookup:ObjectMap<TypedExpr, Null<String>> = new ObjectMap();
+		forgedLookup.set(stringLiteral, firstStringDecision.id);
+		final forgedStringPlan = new OcamlArrayLiteralProducerPlan([firstStringDecision], forgedLookup);
+		switch (forgedStringPlan.syntaxLookup(stringLiteral)) {
+			case OcamlArrayLiteralProducerLookup.Required(_):
+			case _:
+				Context.error("The forged lookup fixture did not reach the final admission guard.", stringLiteral.pos);
+		}
+		expectThrows("unadmitted-producer", () -> forgedStringPlan.requireFor(stringLiteral, representations));
 
 		for (name => elementCount in ["emptyStrings" => 0, "effectfulStrings" => 2]) {
 			final literal = firstLiteral(fieldBody(requiredField(fields, name)));
@@ -141,6 +151,9 @@ class ArrayLiteralProducerPlanFixture {
 		expectThrows("typed-identity-mismatch", () -> stringPlanner.planDetachedLiteral(boolLiteral, normalizedArray("Bool"), 0));
 		expectThrows("not-array-literal", () -> stringPlanner.planDetachedLiteral(fieldBody(requiredField(fields, "strings")), stringNormalized, 0));
 		expectThrows("invalid-literal-ordinal", () -> stringPlanner.planDetachedLiteral(stringLiteral, stringNormalized, -1));
+		expectThrows("stale-representation",
+			() -> new OcamlArrayLiteralProducerPlanner(changedProgramBinding("strings"),
+				representations).planDetachedLiteral(stringLiteral, stringNormalized, 0));
 		expectThrows("unsupported-element-family", () -> OcamlArrayLiteralProducerContract.proofIdFor("Bool"));
 		expectThrows("unsupported-element-family", () -> OcamlArrayLiteralProducerContract.proofClaimFor("Bool"));
 		expectThrows("invalid-producer", () -> new OcamlArrayLiteralProducerPlan([copy(firstStringDecision, {arraySemanticTypeId: "Array<Int>"})]));
@@ -149,6 +162,7 @@ class ArrayLiteralProducerPlanFixture {
 		expectThrows("invalid-producer", () -> new OcamlArrayLiteralProducerPlan([
 			copy(firstStringDecision, {proofId: OcamlArrayLiteralProducerContract.INT_PROOF_ID})
 		]));
+		expectThrows("invalid-producer", () -> new OcamlArrayLiteralProducerPlan([copy(firstStringDecision, {proofClaim: "changed"})]));
 		expectThrows("invalid-element-producer", () -> {
 			final corrupted = copy(firstStringDecision, {});
 			final corruptedElements:Dynamic = corrupted.elements;
@@ -191,6 +205,16 @@ class ArrayLiteralProducerPlanFixture {
 			programRevision: PROGRAM_REVISION,
 			bodyRevision: "body:array-literal-producer-fixture:" + name,
 			pipelineRevision: "pipeline:array-literal-producer-fixture"
+		};
+	}
+
+	static function changedProgramBinding(name:String):OcamlFunctionPlanBinding {
+		final value = binding(name);
+		return {
+			functionId: value.functionId,
+			programRevision: value.programRevision + ":changed",
+			bodyRevision: value.bodyRevision,
+			pipelineRevision: value.pipelineRevision
 		};
 	}
 

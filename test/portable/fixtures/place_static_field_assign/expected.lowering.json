@@ -1816,7 +1816,7 @@
   "iMapInterfaceRevision": "sha256:50c2a93065dd7f153c3458b9aa7f4ba264e5a93c2f55836e413d106c0d0a0d10",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
-  "arrayLiteralProducerRevision": "sha256:4b7133b30b6013a3cacfb0695ceeb8de6e9dedaf7a56475a85b3a3db0b1033d4",
+  "arrayLiteralProducerRevision": "sha256:ffef4aac71640e7229c81e00459c2fc25541976e4d01737d4e43fe765211516e",
   "iMapInterfaceModel": "typed-imap-interface-adapter-v1",
   "arrayLiteralProducers": [
     {
@@ -1843,7 +1843,7 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
       "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:766ee297cfefe2d855732ab3818fd770",
+      "id": "array-literal-producer:31a85b779e1a4c3ef9dae659cb074251",
       "source": {
         "min": 963,
         "max": 965,
@@ -9070,7 +9070,7 @@
   "planCount": 21,
   "localConversionRevision": "sha256:3785719e7843dd63328e100cf815e15097d1af69a165209e7641081c64f8b866",
   "representationModel": "typed-ocaml-program-representation",
-  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v1",
+  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v2",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-anonymous-structure-v1",

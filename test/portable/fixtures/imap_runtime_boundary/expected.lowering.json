@@ -1743,54 +1743,9 @@
   "iMapInterfaceRevision": "sha256:1d756123da7eb82a79f6db51c406a535ff2fd7af9b65bd67ae9fc359b00c16ff",
   "unsafeOperationModel": "proof-backed-admitted-unsafe-operations-v1",
   "controlCatchCount": 0,
-  "arrayLiteralProducerRevision": "sha256:0702bff74d39690c737b049c1fd1b456ffb1dc0388b9814227520855e6d7b077",
+  "arrayLiteralProducerRevision": "sha256:8c9707454f85904289f2dd5f50e81a106d72ec9ba48cf572ef93b16e8a77769f",
   "iMapInterfaceModel": "typed-imap-interface-adapter-v1",
   "arrayLiteralProducers": [
-    {
-      "arrayDescriptorId": "represented-array:Array<Int>",
-      "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
-      "evaluationSchedule": [
-        {
-          "elementIndex": null,
-          "elementProducerId": null,
-          "ordinal": 0,
-          "kind": "create-array"
-        },
-        {
-          "elementIndex": null,
-          "elementProducerId": null,
-          "ordinal": 1,
-          "kind": "result-array"
-        }
-      ],
-      "resultRepresentationId": "representation:Array<Int>:internal-value",
-      "proofClaim": "This occurrence allocates one direct represented Array<Int>, evaluates each exact Int element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.",
-      "arrayDescriptorRevision": "sha256:6edd3419b1ed67155798a22b7781a12bdbe6d939c35f8044a60014c405bafda2",
-      "constructionPolicy": "create-then-evaluate-and-push-in-order",
-      "elements": [],
-      "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
-      "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:523930a4ab5981415ac897f8b81bcba0",
-      "source": {
-        "min": 2298,
-        "max": 2327,
-        "file": "src/Main.hx"
-      },
-      "functionId": "Main|Main|static|function|runInts|generics:0|required:haxe.IMap<Int, String>->Void",
-      "proofId": "direct-array-int-literal-construction-v1",
-      "arrayCarrierTypeId": "int HxArray.t",
-      "elementCarrierTypeId": "int",
-      "pipelineRevision": "ocaml-function-plans-v70",
-      "elementSemanticTypeId": "Int",
-      "arraySemanticTypeId": "Array<Int>",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "f0f3b5db20ddbb9107eb161109b551f2a5a0862f7f5aaa2299ebf6198b4136bf",
-      "elementRepresentationId": "representation:Int:array-element",
-      "literalOrdinal": 0
-    },
     {
       "arrayDescriptorId": "represented-array:Array<Int>",
       "bodyRevision": "12:0e084bd498ec6e0418d6a4fc6430c20fcbd44222ae6fb692ed5130f65722c817",
@@ -1815,13 +1770,58 @@
       "elements": [],
       "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
       "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
-      "id": "array-literal-producer:b7b8a51c61833894d3cf7fea9e867b21",
+      "id": "array-literal-producer:a4bbb5028d1fcf2e37fb64134f47e33d",
       "source": {
         "min": 963,
         "max": 965,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx"
       },
       "functionId": "haxe.io.BytesBuffer|BytesBuffer|instance|function|new|generics:0|->Void",
+      "proofId": "direct-array-int-literal-construction-v1",
+      "arrayCarrierTypeId": "int HxArray.t",
+      "elementCarrierTypeId": "int",
+      "pipelineRevision": "ocaml-function-plans-v70",
+      "elementSemanticTypeId": "Int",
+      "arraySemanticTypeId": "Array<Int>",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "f0f3b5db20ddbb9107eb161109b551f2a5a0862f7f5aaa2299ebf6198b4136bf",
+      "elementRepresentationId": "representation:Int:array-element",
+      "literalOrdinal": 0
+    },
+    {
+      "arrayDescriptorId": "represented-array:Array<Int>",
+      "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
+      "evaluationSchedule": [
+        {
+          "elementIndex": null,
+          "elementProducerId": null,
+          "ordinal": 0,
+          "kind": "create-array"
+        },
+        {
+          "elementIndex": null,
+          "elementProducerId": null,
+          "ordinal": 1,
+          "kind": "result-array"
+        }
+      ],
+      "resultRepresentationId": "representation:Array<Int>:internal-value",
+      "proofClaim": "This occurrence allocates one direct represented Array<Int>, evaluates each exact Int element once in increasing source order, stores each evaluated carrier once, and returns the same mutable HxArray object. The claim ends at literal construction and does not admit another array shape, element family, call, return, field, typed catch, or public/native boundary.",
+      "arrayDescriptorRevision": "sha256:6edd3419b1ed67155798a22b7781a12bdbe6d939c35f8044a60014c405bafda2",
+      "constructionPolicy": "create-then-evaluate-and-push-in-order",
+      "elements": [],
+      "resultRepresentationRevision": "sha256:2a33dacf0d480f302be46a8fe2a8a063b0b915369e4d0c2ff6c2185509ededde",
+      "elementRepresentationRevision": "sha256:cdf0bd2fd7552635e7d1824fea905fc94e7b1db7b84e0c8d753481d7919ea1f3",
+      "id": "array-literal-producer:f31b57dcfecf62f0e3e224bf9c729b50",
+      "source": {
+        "min": 2298,
+        "max": 2327,
+        "file": "src/Main.hx"
+      },
+      "functionId": "Main|Main|static|function|runInts|generics:0|required:haxe.IMap<Int, String>->Void",
       "proofId": "direct-array-int-literal-construction-v1",
       "arrayCarrierTypeId": "int HxArray.t",
       "elementCarrierTypeId": "int",
@@ -11691,7 +11691,7 @@
   "planCount": 1,
   "localConversionRevision": "sha256:8426672155a019812315a88c031df0b2bb7bc1752d6d9ea301e9b7d65e172246",
   "representationModel": "typed-ocaml-program-representation",
-  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v1",
+  "arrayLiteralProducerModel": "ocaml-represented-array-literal-producer-v2",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-anonymous-structure-v1",

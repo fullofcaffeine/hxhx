@@ -85,22 +85,12 @@ class OcamlArrayLiteralProducerContract {
 
 	/** Returns the exact construction proof for one already-admitted element family. */
 	public static function proofIdFor(elementSemanticTypeId:String):String {
-		return switch (elementSemanticTypeId) {
-			case "Int": INT_PROOF_ID;
-			case "String": STRING_PROOF_ID;
-			case _:
-				throw 'reflaxe.ocaml [ocaml-array-literal:unsupported-element-family]: $elementSemanticTypeId has no literal-construction proof';
-		};
+		return requiredFamily(elementSemanticTypeId).proofId;
 	}
 
 	/** Returns the human-readable behavior protected by one family proof. */
 	public static function proofClaimFor(elementSemanticTypeId:String):String {
-		return switch (elementSemanticTypeId) {
-			case "Int": INT_PROOF_CLAIM;
-			case "String": STRING_PROOF_CLAIM;
-			case _:
-				throw 'reflaxe.ocaml [ocaml-array-literal:unsupported-element-family]: $elementSemanticTypeId has no literal-construction proof';
-		};
+		return requiredFamily(elementSemanticTypeId).proofClaim;
 	}
 
 	/** True only for the complete revision form emitted by the compiler. */
@@ -354,6 +344,22 @@ class OcamlArrayLiteralProducerContract {
 				};
 			case _: null;
 		};
+	}
+
+	static function requiredFamily(elementSemanticTypeId:String):{
+		final arraySemanticTypeId:String;
+		final arrayCarrierTypeId:String;
+		final resultRepresentationId:String;
+		final arrayDescriptorId:String;
+		final elementCarrierTypeId:String;
+		final elementRepresentationId:String;
+		final proofId:String;
+		final proofClaim:String;
+	} {
+		final family = familyFor(elementSemanticTypeId);
+		if (family == null)
+			throw 'reflaxe.ocaml [ocaml-array-literal:unsupported-element-family]: $elementSemanticTypeId has no literal-construction proof';
+		return family;
 	}
 }
 #end
