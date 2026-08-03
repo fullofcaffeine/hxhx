@@ -110,6 +110,8 @@ const stdioReadBytes = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('sys.io.Stdio|OcamlStdioInput|instance|function|readBytes|'))
 const stdioWriteBytes = report.controlAdmissions.find(admission =>
 	admission.functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeBytes|'))
+const stdioWriteString = report.controlAdmissions.find(admission =>
+	admission.functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeString|'))
 if (instanceExactIntResults.length !== 2) {
 	fail(`expected the two concrete stdio instance Int results, got ${instanceExactIntResults.length}`)
 }
@@ -132,6 +134,19 @@ for (const [name, admission] of [['readBytes', stdioReadBytes], ['writeBytes', s
 		|| report.callableBoundaries.some(boundary => boundary.functionId === admission.functionId)) {
 		fail(`OcamlStdio ${name} did not receive an exact-Int result without receiver, argument, or call admission`)
 	}
+}
+const stdioWriteStringResult = report.functionResultBoundaries.find(boundary =>
+	boundary.functionId === stdioWriteString?.functionId)
+if (familyFor(stdioWriteString, 'return')?.status !== 'admitted'
+	|| familyFor(stdioWriteString, 'return')?.occurrenceCount !== 1
+	|| familyFor(stdioWriteString, 'return')?.decisionCount !== 1
+	|| stdioWriteStringResult?.source !== 'non-generic-instance-effect-only-void-declaration'
+	|| stdioWriteStringResult.callableBoundaryId != null
+	|| stdioWriteStringResult.resultKind !== 'effect-only-void'
+	|| stdioWriteStringResult.result != null
+	|| stdioWriteStringResult.proofId !== 'non-generic-instance-effect-only-void-function-result-v1'
+	|| report.callableBoundaries.some(boundary => boundary.functionId === stdioWriteString.functionId)) {
+	fail('OcamlStdio writeString did not receive a payloadless result without receiver, argument, or call admission')
 }
 if (familyFor(stdioReadBytes, 'throw')?.status !== 'blocked'
 	|| familyFor(stdioReadBytes, 'throw')?.blockers[0]?.code !== 'throw-value-unrepresented'
@@ -165,10 +180,20 @@ for (const functionName of ['ocamlstdioinput_readBytes__impl', 'ocamlstdiooutput
 		fail(`${functionName} still recovers its exact Int result through the legacy fallback`)
 	}
 }
+const writeStringStart = stdioSource.indexOf('let ocamlstdiooutput_writeString__impl =')
+const writeStringEnd = stdioSource.indexOf('\nlet ', writeStringStart + 1)
+const writeStringBody = stdioSource.slice(writeStringStart, writeStringEnd)
+if (writeStringStart < 0
+	|| writeStringEnd < 0
+	|| !writeStringBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !writeStringBody.includes('| HxRuntime.Hx_return_void -> ()')
+	|| writeStringBody.includes('Hx_return (Obj.repr ())')) {
+	fail('ocamlstdiooutput_writeString__impl still packages its payloadless return as a value')
+}
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 47) {
-	fail(`expected 47 represented return decisions, including StringTools._hexValue, the two stdio instance methods, and Exception.details, got ${returnControls.length}`)
+if (returnControls.length !== 48) {
+	fail(`expected 48 represented return decisions, including StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -461,6 +486,32 @@ if (nestedLoopTargets.length !== 1
 
 const ids = new Set()
 for (const control of returnControls) {
+	const effectOnlyVoid = control.proofId === 'effect-only-void-early-return-control-v1'
+	if (effectOnlyVoid) {
+		if (ids.has(control.id)
+			|| control.kind !== 'return'
+			|| control.effect !== 'exit-function'
+			|| control.targetKind !== 'function'
+			|| control.targetId !== control.functionId
+			|| control.mechanism !== 'runtime-void-return-signal'
+			|| control.runtimeCapabilityId !== 'hxhx-runtime:function-void-return-signal-v1'
+			|| control.payload != null
+			|| control.runtimeTags.length !== 0
+			|| control.runtimeTagPolicy !== 'no-runtime-tags'
+			|| control.profileEligibility.join(',') !== 'metal,portable'
+			|| !control.reason
+			|| !control.proofClaim
+			|| !control.source.file
+			|| control.source.min < 0
+			|| control.source.max < control.source.min
+			|| !rawSha256.test(control.programRevision)
+			|| !bodyRevision.test(control.bodyRevision)
+			|| control.pipelineRevision !== 'ocaml-function-plans-v74') {
+			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
+		}
+		ids.add(control.id)
+		continue
+	}
 	if (ids.has(control.id)
 		|| control.kind !== 'return'
 		|| control.effect !== 'exit-function'
@@ -806,9 +857,9 @@ if (report.schemaVersion !== 41
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 47
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 48
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 47 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 48 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -841,6 +892,17 @@ if (instanceExactIntResults.length !== 2
 		|| boundary.proofId !== 'non-generic-instance-exact-int-function-result-v1'
 		|| report.lowering.callableBoundaries.some(callable => callable.functionId === boundary.functionId))) {
 	throw new Error('public inspection did not preserve result-only ownership for the two stdio instance methods')
+}
+const instanceVoidResults = report.lowering.functionResultBoundaries.filter(boundary =>
+	boundary.source === 'non-generic-instance-effect-only-void-declaration')
+if (instanceVoidResults.length !== 1
+	|| !instanceVoidResults[0].functionId.includes('sys.io.Stdio|OcamlStdioOutput|instance|function|writeString|')
+	|| instanceVoidResults[0].callableBoundaryId != null
+	|| instanceVoidResults[0].resultKind !== 'effect-only-void'
+	|| instanceVoidResults[0].result != null
+	|| instanceVoidResults[0].proofId !== 'non-generic-instance-effect-only-void-function-result-v1'
+	|| report.lowering.callableBoundaries.some(callable => callable.functionId === instanceVoidResults[0].functionId)) {
+	throw new Error('public inspection did not preserve result-only ownership for the stdio Void instance method')
 }
 const blockedParseAdmission = report.lowering.controlAdmissions.find(admission =>
 	admission.functionId.includes('haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|'))
@@ -1316,4 +1378,4 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=47 function_results=52 producers=4"
+echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=48 function_results=53 producers=4"
